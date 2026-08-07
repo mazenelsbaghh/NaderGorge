@@ -141,6 +141,15 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
             .ToListAsync(ct);
 
         var matchedSms = exactMatches.Count == 1 ? exactMatches[0] : null;
+        if (matchedSms is not null)
+        {
+            var uniqueRequest = await RechargeMatchCandidateSelector.UniquePendingRequestAsync(
+                _db.RechargeRequests,
+                new RechargeMatchKey(rechargeRequest.Amount, senderPhoneNumber, matchedSms.ReceivedAt),
+                ct);
+            if (uniqueRequest?.Id != rechargeRequest.Id)
+                matchedSms = null;
+        }
 
         bool isMatched = false;
         string message;

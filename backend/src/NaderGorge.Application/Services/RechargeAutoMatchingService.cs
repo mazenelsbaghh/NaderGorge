@@ -87,6 +87,13 @@ public sealed class RechargeAutoMatchingService(
             }
 
             var sms = exactCandidates[0];
+            var uniqueRequest = await RechargeMatchCandidateSelector.UniquePendingRequestAsync(
+                db.RechargeRequests,
+                new RechargeMatchKey(request.Amount, request.SenderPhoneNumber, sms.ReceivedAt),
+                ct);
+            if (uniqueRequest?.Id != request.Id)
+                return false;
+
             var resolvedAt = DateTime.UtcNow;
             request.WalletId = sms.WalletId;
             request.Wallet = sms.Wallet;

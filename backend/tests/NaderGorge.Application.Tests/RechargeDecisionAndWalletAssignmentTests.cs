@@ -260,6 +260,51 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Reconciliation_does_not_credit_when_two_students_claim_the_same_transfer()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var firstStudent = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000051");
+        var secondStudent = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000052");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000051");
+        var firstWallet = Wallet("01010000051");
+        var receivingWallet = Wallet("01010000052");
+        var firstRequest = PendingRequest(firstStudent, firstWallet, 490m, teacher.Id);
+        var secondRequest = PendingRequest(secondStudent, receivingWallet, 490m, teacher.Id);
+        firstRequest.SenderPhoneNumber = "01013677402";
+        secondRequest.SenderPhoneNumber = "01013677402";
+        firstRequest.ScreenshotUrl = "/first-proof.webp";
+        secondRequest.ScreenshotUrl = "/second-proof.webp";
+        firstRequest.UpdatedAt = DateTime.UtcNow;
+        secondRequest.UpdatedAt = firstRequest.UpdatedAt.Value.AddMinutes(1);
+        var sms = new IncomingSmsLog
+        {
+            WalletId = receivingWallet.Id,
+            Wallet = receivingWallet,
+            Sender = "VodafoneCash",
+            Body = "تم استلام مبلغ 490 ج.م من 01013677402",
+            ReceivedAt = firstRequest.UpdatedAt.Value.AddMinutes(2),
+            ParsedAmount = 490m,
+            ParsedSenderPhone = "01013677402",
+            DeduplicationHash = Guid.NewGuid().ToString("N")
+        };
+        db.AddRange(firstWallet, receivingWallet, firstRequest, secondRequest, sms);
+        await db.SaveChangesAsync();
+
+        var matcher = new RechargeAutoMatchingService(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            NullLogger<RechargeAutoMatchingService>.Instance);
+
+        var matched = await matcher.ReconcilePendingAsync(CancellationToken.None);
+
+        Assert.Equal(0, matched);
+        Assert.Equal(RechargeRequestStatus.Pending, firstRequest.Status);
+        Assert.Equal(RechargeRequestStatus.Pending, secondRequest.Status);
+        Assert.False(sms.IsMatched);
+        Assert.Empty(await db.PromotionalBalanceAllocations.ToListAsync());
+    }
+
+    [Fact]
     public async Task Initiate_does_not_move_an_existing_pending_request_to_another_wallet()
     {
         await using var db = TestAppDbContextFactory.Create();

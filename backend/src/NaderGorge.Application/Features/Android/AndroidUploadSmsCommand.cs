@@ -116,20 +116,10 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             var amount = parserResult.Amount!.Value;
             var senderPhone = parserResult.SenderPhone!;
 
-            // Search window: resolved within 2 hours of SMS receipt
-            var startTime = request.ReceivedAt.AddHours(-2);
-            var endTime = request.ReceivedAt.AddHours(2);
-
-            matchedRequest = await _db.RechargeRequests
-                .Include(r => r.User)
-                .FirstOrDefaultAsync(r => 
-                    r.WalletId == wallet.Id &&
-                    r.Amount == amount &&
-                    r.SenderPhoneNumber == senderPhone &&
-                    r.ScreenshotUrl != null && r.ScreenshotUrl != "" &&
-                    r.Status == RechargeRequestStatus.Pending &&
-                    (r.UpdatedAt ?? r.CreatedAt) >= startTime &&
-                    (r.UpdatedAt ?? r.CreatedAt) <= endTime, ct);
+            matchedRequest = await RechargeMatchCandidateSelector.UniquePendingRequestAsync(
+                _db.RechargeRequests.Include(r => r.User),
+                new RechargeMatchKey(amount, senderPhone, request.ReceivedAt),
+                ct);
 
             if (matchedRequest != null)
             {
