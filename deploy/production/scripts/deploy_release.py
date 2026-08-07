@@ -1006,6 +1006,31 @@ def main() -> int:
                     require_drained=False,
                     allow_target_drained=resumable,
                 )
+                # A previous attempt may have completed this node, then failed
+                # before the cluster-wide post-update gate.  Its recovery marker
+                # must remain until every node advances, but deploying it again
+                # would correctly refuse to overwrite that marker.  Treat a
+                # healthy node already serving this exact release as resumed and
+                # continue the rolling sequence from the next node.
+                if resumable and node_ready(
+                    transport, target, node.overlay_address
+                ) == args.release:
+                    advanced_nodes.append(node_id)
+                    traffic(
+                        root, args.inventory, args.known_hosts,
+                        args.identity, node_id, "undrain",
+                    )
+                    assert_rollout_quorum(
+                        root=root,
+                        inventory_path=args.inventory,
+                        known_hosts=args.known_hosts,
+                        identity=args.identity,
+                        inventory=inventory,
+                        transport=transport,
+                        rollout_node=node_id,
+                        require_drained=False,
+                    )
+                    continue
                 traffic(
                     root, args.inventory, args.known_hosts,
                     args.identity, node_id, "drain",

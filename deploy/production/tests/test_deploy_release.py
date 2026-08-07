@@ -124,6 +124,11 @@ def configure_main_boundaries(
     )
     monkeypatch.setattr(deploy, "StrictSshTransport", lambda *_args: object())
     monkeypatch.setattr(deploy, "RolloutLock", SuccessfulLock)
+    monkeypatch.setattr(
+        deploy,
+        "reconcile_inconsistent_ingress_traffic",
+        lambda **_kwargs: (),
+    )
     monkeypatch.setattr(deploy, "node_ready", read_node_release)
     monkeypatch.setattr(
         deploy,
@@ -286,6 +291,21 @@ def test_cleanup_failure_retry_finishes_same_release_without_redeploying(
     assert deploy.main() == 0
     assert set(current_rollout["releases"].values()) == {candidate_release}
     assert current_rollout["deploy_calls"] == ["node-3", "node-2", "node-1"]
+    assert current_rollout["markers"] == set()
+
+
+def test_interrupted_rollout_resumes_healthy_marked_node_without_redeploying(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_rollout = rollout_state()
+    candidate_release = current_rollout["candidate_release"]
+    current_rollout["releases"]["node-3"] = candidate_release
+    current_rollout["markers"].add("node-3")
+    configure_main_boundaries(monkeypatch, current_rollout)
+
+    assert deploy.main() == 0
+    assert current_rollout["deploy_calls"] == ["node-2", "node-1"]
+    assert set(current_rollout["releases"].values()) == {candidate_release}
     assert current_rollout["markers"] == set()
 
 
