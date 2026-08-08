@@ -66,6 +66,7 @@ public class BalanceService
         decimal amount,
         string description,
         Guid issuedByUserId,
+        Guid? sourceRequestId = null,
         CancellationToken ct = default)
     {
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
@@ -92,7 +93,7 @@ public class BalanceService
         };
         var issuance = new GiftIssuance
         {
-            RequestId = Guid.NewGuid(),
+            RequestId = sourceRequestId ?? Guid.NewGuid(),
             TargetType = GiftTargetType.TeacherBalance,
             TeacherId = teacherId,
             Amount = amount,

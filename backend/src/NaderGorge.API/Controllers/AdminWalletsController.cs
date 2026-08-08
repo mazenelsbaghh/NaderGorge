@@ -107,6 +107,28 @@ public class AdminWalletsController : ControllerBase
             dto.WalletId), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("recharge-shift-review")]
+    public async Task<IActionResult> GetRechargeShiftReview(
+        [FromQuery] DateTime from,
+        [FromQuery] DateTime to,
+        [FromQuery] Guid? walletId,
+        [FromQuery] Guid? resolvedByUserId,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetRechargeShiftReviewQuery(from, to, walletId, resolvedByUserId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("recharge-requests/{id:guid}/reverse-credit")]
+    public async Task<IActionResult> ReverseRechargeCredit(
+        [FromRoute] Guid id,
+        [FromBody] ReverseRechargeCreditRequestDto dto,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ReverseRechargeCreditCommand(id, User.RequireUserId(), dto.Reason), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
 
 public record CreateWalletRequestDto(
@@ -129,3 +151,5 @@ public record ResolveRechargeRequestDto(
     string? RejectionReason,
     Guid? SmsLogId,
     Guid? WalletId);
+
+public record ReverseRechargeCreditRequestDto(string Reason);

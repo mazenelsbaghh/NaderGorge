@@ -242,7 +242,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
     private Task CreditRechargeAsync(RechargeRequest rechargeRequest, Guid issuedByUserId, string source, CancellationToken ct) =>
         rechargeRequest.TeacherId.HasValue
             ? _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value, rechargeRequest.Amount,
-                $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct)
+                $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, rechargeRequest.Id, ct)
             : _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
                 $"شحن رصيد عام - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})",
                 rechargeRequest.Id, "RechargeCredit", ct);

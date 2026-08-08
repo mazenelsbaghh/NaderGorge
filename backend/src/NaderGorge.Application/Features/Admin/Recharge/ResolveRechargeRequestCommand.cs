@@ -140,7 +140,7 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                 {
                     await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value,
                         rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
-                        request.AdminId, ct);
+                        request.AdminId, rechargeRequest.Id, ct);
                 }
                 else
                 {

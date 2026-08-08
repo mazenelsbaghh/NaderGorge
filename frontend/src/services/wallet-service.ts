@@ -75,6 +75,42 @@ export interface AdminIncomingSmsLogDto {
   deduplicationHash: string;
 }
 
+export interface RechargeShiftReviewItemDto {
+  rechargeRequestId: string;
+  studentId: string;
+  studentName: string;
+  studentPhoneNumber: string;
+  amount: number;
+  balanceScope: string;
+  teacherName?: string;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  currentBalance: number;
+  acceptanceMethod: 'يدوي' | 'آلي';
+  resolvedAt: string;
+  resolvedByUserId?: string;
+  resolvedByUserName: string;
+  walletId: string;
+  walletLabel: string;
+  walletPhoneNumber: string;
+  senderPhoneNumber: string;
+  matchedSmsLogId?: string;
+  suspectedDuplicate: boolean;
+  duplicateReason?: string;
+  isReversed: boolean;
+  canReverse: boolean;
+  reverseBlockedReason?: string;
+}
+
+export interface RechargeShiftReviewDto {
+  items: RechargeShiftReviewItemDto[];
+  acceptedCount: number;
+  manualCount: number;
+  automaticCount: number;
+  suspectedDuplicateCount: number;
+  totalAmount: number;
+}
+
 export const walletService = {
   getWallets: async () => {
     const { data } = await apiClient.get<{ success: boolean; data: WalletDto[] }>('/admin/wallets');
@@ -130,6 +166,16 @@ export const walletService = {
       `/admin/wallets/recharge-requests/${id}/resolve`,
       { approve, rejectionReason, smsLogId, walletId }
     );
+    return data;
+  },
+
+  getRechargeShiftReview: async (params: { from: string; to: string; walletId?: string; resolvedByUserId?: string }) => {
+    const { data } = await apiClient.get<{ success: boolean; data: RechargeShiftReviewDto }>('/admin/wallets/recharge-shift-review', { params });
+    return data.data;
+  },
+
+  reverseRechargeCredit: async (id: string, reason: string) => {
+    const { data } = await apiClient.post<{ success: boolean; message: string }>(`/admin/wallets/recharge-requests/${id}/reverse-credit`, { reason });
     return data;
   },
 };

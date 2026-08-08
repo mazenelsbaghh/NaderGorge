@@ -110,6 +110,7 @@ public sealed class RechargeAutoMatchingService(
                 request.Amount,
                 $"شحن رصيد للمدرس - مطابقة تلقائية مؤجلة (محفظة {request.Wallet.Label})",
                 request.UserId,
+                request.Id,
                 ct);
 
             if (transaction is not null)

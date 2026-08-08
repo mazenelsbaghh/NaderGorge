@@ -17,7 +17,7 @@ import {
   Headphones, Home, LogOut, Menu, MessageSquareText, PanelRightClose,
   PanelRightOpen, PhoneCall, Search, Shield, Star, X, type LucideIcon,
   WalletCards, Users, BarChart3, MessageSquareMore,
-  KeyRound,
+  KeyRound, ClipboardCheck,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -39,7 +39,7 @@ export type AssistantShellRoute =
   | '/assistant/live-support' | '/assistant/attendance' | '/assistant/vacations'
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
-  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/students' | '/assistant/reports'
+  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/students' | '/assistant/reports'
   | '/assistant/codes';
 
 type AssistantShellChromeProps = {
@@ -80,6 +80,7 @@ const navItems: AssistantNavItem[] = [
   { href: '/assistant/live-support', label: 'الدعم المباشر', icon: Headphones, group: 'communication' },
   { href: '/assistant/recharge-verification', label: 'مطابقة الشحن', icon: WalletCards, group: 'operations', permission: 'payments.manage' },
   { href: '/assistant/wallet-messages', label: 'رسائل المحافظ', icon: MessageSquareMore, group: 'operations', permission: 'payments.manage' },
+  { href: '/assistant/recharge-shift-review', label: 'مراجعة شحن الشيفت', icon: ClipboardCheck, group: 'operations', permission: 'payments.manage' },
   { href: '/assistant/students', label: 'إدارة الطلاب', icon: Users, group: 'operations', permission: 'users.manage' },
   { href: '/assistant/reports', label: 'مركز التقارير', icon: BarChart3, group: 'operations', permission: 'reports.manage' },
   { href: '/assistant/chat', label: 'التواصل الداخلي', icon: MessageSquareText, group: 'communication', permission: 'chat.manage' },

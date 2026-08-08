@@ -175,6 +175,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         var allocation = await db.PromotionalBalanceAllocations.SingleAsync();
         Assert.Equal(teacher.Id, allocation.TeacherId);
         Assert.Equal(200m, allocation.AvailableAmount);
+        Assert.Equal(pending.Id, (await db.GiftIssuances.SingleAsync()).RequestId);
     }
 
     [Fact]
@@ -528,6 +529,57 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         Assert.Empty(await db.BalanceTransactions.ToListAsync());
     }
 
+    [Fact]
+    public async Task Shift_review_includes_manual_and_automatic_acceptance()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Shift Student", "01000000201");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Shift Admin", "01000000202");
+        var wallet = Wallet("01010000201");
+        wallet.CurrentBalance = 300m;
+        var manual = AcceptedRequest(student, wallet, 100m, RechargeRequestStatus.Approved, admin);
+        var automatic = AcceptedRequest(student, wallet, 200m, RechargeRequestStatus.Matched);
+        var balance = new StudentBalance { UserId = student.Id, CurrentBalance = 300m };
+        db.AddRange(wallet, manual, automatic, balance);
+        db.BalanceTransactions.AddRange(
+            RechargeCredit(balance, manual, 100m),
+            RechargeCredit(balance, automatic, 300m));
+        await db.SaveChangesAsync();
+
+        var response = await new GetRechargeShiftReviewQueryHandler(db).Handle(
+            new GetRechargeShiftReviewQuery(DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddHours(1)),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal(2, response.Data!.AcceptedCount);
+        Assert.Equal(1, response.Data.ManualCount);
+        Assert.Equal(1, response.Data.AutomaticCount);
+    }
+
+    [Fact]
+    public async Task Reversing_general_recharge_debits_student_and_wallet_once()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Reverse Student", "01000000211");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Reverse Admin", "01000000212");
+        var wallet = Wallet("01010000211");
+        wallet.CurrentBalance = 200m;
+        var recharge = AcceptedRequest(student, wallet, 200m, RechargeRequestStatus.Approved, admin);
+        var balance = new StudentBalance { UserId = student.Id, CurrentBalance = 200m };
+        db.AddRange(wallet, recharge, balance, RechargeCredit(balance, recharge, 200m));
+        await db.SaveChangesAsync();
+        var handler = new ReverseRechargeCreditCommandHandler(db);
+
+        var first = await handler.Handle(new ReverseRechargeCreditCommand(recharge.Id, admin.Id, "قبول مكرر"), CancellationToken.None);
+        var second = await handler.Handle(new ReverseRechargeCreditCommand(recharge.Id, admin.Id, "محاولة ثانية"), CancellationToken.None);
+
+        Assert.True(first.Success);
+        Assert.False(second.Success);
+        Assert.Equal(0m, balance.CurrentBalance);
+        Assert.Equal(0m, wallet.CurrentBalance);
+        Assert.Single(await db.BalanceTransactions.Where(transaction => transaction.TransactionType == "RechargeReversal").ToListAsync());
+    }
+
     private static DigitalWallet Wallet(string phoneNumber, decimal dailyLimit = 10_000m) => new()
     {
         PhoneNumber = phoneNumber,
@@ -535,6 +587,36 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         DailyLimit = dailyLimit,
         MonthlyLimit = 100_000m,
         IsActive = true
+    };
+
+    private static RechargeRequest AcceptedRequest(
+        User student,
+        DigitalWallet wallet,
+        decimal amount,
+        RechargeRequestStatus status,
+        User? resolver = null) => new()
+    {
+        UserId = student.Id,
+        User = student,
+        WalletId = wallet.Id,
+        Wallet = wallet,
+        Amount = amount,
+        Status = status,
+        SenderPhoneNumber = "01099999201",
+        ResolvedAt = DateTime.UtcNow,
+        ResolvedByUserId = resolver?.Id,
+        ResolvedByUser = resolver
+    };
+
+    private static BalanceTransaction RechargeCredit(StudentBalance balance, RechargeRequest request, decimal balanceAfter) => new()
+    {
+        StudentBalanceId = balance.Id,
+        StudentBalance = balance,
+        Amount = request.Amount,
+        BalanceAfter = balanceAfter,
+        TransactionType = "RechargeCredit",
+        ReferenceId = request.Id,
+        Description = "شحن رصيد"
     };
 
     [Fact]

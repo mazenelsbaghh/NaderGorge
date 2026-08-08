@@ -66,6 +66,7 @@ import {
   Search,
   Coffee,
   ScrollText,
+  ClipboardCheck,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -143,6 +144,7 @@ export type AdminShellRoute =
   | '/admin/wallets'
   | '/admin/recharge-verification'
   | '/admin/wallet-messages'
+  | '/admin/recharge-shift-review'
   | '/teacher'
   | '/teacher/packages'
   | '/teacher/codes'
@@ -508,6 +510,12 @@ const navItems: AdminNavItem[] = [
     permission: 'payments.manage',
   },
   {
+    href: '/admin/recharge-shift-review',
+    label: 'مراجعة شحن الشيفت',
+    icon: ClipboardCheck,
+    permission: 'payments.manage',
+  },
+  {
     href: '/admin/live-support',
     label: 'الدعم المباشر',
     icon: Headphones,
@@ -634,6 +642,7 @@ const GROUP_CONFIG = [
       '/admin/wallets',
       '/admin/recharge-verification',
       '/admin/wallet-messages',
+      '/admin/recharge-shift-review',
     ],
   },
   {
