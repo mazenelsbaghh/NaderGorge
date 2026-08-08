@@ -42,6 +42,11 @@ type StudentContentCatalogProps = {
   onPurchaseComplete?: () => void | Promise<void>;
 };
 
+type SectionParent = { packageId: string; term?: TermDto };
+type TermGroup = { pkg: PackageDto; terms: TermDto[] };
+type SectionGroup = { pkg: PackageDto; term?: TermDto; sections: ContentSectionDto[] };
+type LessonGroup = { packageId: string; lessons: LessonSummaryDto[] };
+
 const LEVELS: Array<{
   key: CatalogLevel;
   label: string;
@@ -60,6 +65,38 @@ const levelLabels: Record<CatalogLevel, string> = {
   lessons: "الحصص المتاحة",
 };
 
+async function fetchTermGroups(packages: PackageDto[]): Promise<TermGroup[]> {
+  const termPackages = packages.filter((pkg) => (pkg.contentMode ?? "TermWithSections") === "TermWithSections");
+  return Promise.all(termPackages.map(async (pkg) => ({
+    pkg,
+    terms: (await contentService.getTerms(pkg.id)).data.data,
+  })));
+}
+
+async function fetchSectionGroups(packages: PackageDto[], termGroups: TermGroup[]): Promise<SectionGroup[]> {
+  const directGroups = packages
+    .filter((pkg) => pkg.contentMode === "SectionWithLessons")
+    .map((pkg) => ({ pkg, term: undefined, sections: (pkg.directSections ?? []) as ContentSectionDto[] }));
+  const nestedGroups = await Promise.all(termGroups.flatMap((group) => group.terms.map(async (term) => ({
+    pkg: group.pkg,
+    term,
+    sections: (await contentService.getSections(term.id)).data.data,
+  }))));
+  return [...directGroups, ...nestedGroups];
+}
+
+async function fetchLessonGroups(packages: PackageDto[], sectionGroups: SectionGroup[]): Promise<LessonGroup[]> {
+  const nestedGroups = await Promise.all(sectionGroups.flatMap((group) => group.sections.map(async (section) => ({
+    packageId: group.pkg.id,
+    lessons: (await contentService.getLessons(section.id)).data.data,
+  }))));
+  const directGroups = packages.filter((pkg) => pkg.contentMode === "LessonsOnly").map((pkg) => ({
+    packageId: pkg.id,
+    lessons: (pkg.directLessons ?? []).map((lesson) => ({ ...lesson, hasAccess: lesson.hasAccess ?? false, isCompleted: false, videos: [] })),
+  }));
+  return [...directGroups, ...nestedGroups];
+}
+
 export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentContentCatalogProps) {
   const [level, setLevel] = useState<CatalogLevel>("packages");
   const [selectedPackage, setSelectedPackage] = useState<PackageDto | null>(null);
@@ -71,6 +108,9 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [purchaseTarget, setPurchaseTarget] = useState<PurchaseTarget | null>(null);
+  const [termPackageIds, setTermPackageIds] = useState<Map<string, string>>(new Map());
+  const [sectionParents, setSectionParents] = useState<Map<string, SectionParent>>(new Map());
+  const [lessonPackageIds, setLessonPackageIds] = useState<Map<string, string>>(new Map());
 
   const loadTerms = useCallback(async (packageId: string) => {
     setLoading(true);
@@ -111,16 +151,41 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
     }
   }, []);
 
-  const availableLevels = useMemo(() => {
-    if (!selectedPackage) return new Set<CatalogLevel>(["packages"]);
-    if (selectedPackage.contentMode === "LessonsOnly") {
-      return new Set<CatalogLevel>(["packages", "lessons"]);
+  const availableLevels = useMemo(
+    () => new Set<CatalogLevel>(packages.length > 0 ? LEVELS.map((item) => item.key) : ["packages"]),
+    [packages.length],
+  );
+
+  const loadCatalogLevel = useCallback(async (nextLevel: Exclude<CatalogLevel, "packages">) => {
+    setLoading(true);
+    setError(null);
+    setSelectedPackage(null);
+    setSelectedTerm(null);
+    setSelectedSection(null);
+    try {
+      const termGroups = await fetchTermGroups(packages);
+      const allTerms = termGroups.flatMap((group) => group.terms);
+      const nextTermPackageIds = new Map(termGroups.flatMap((group) => group.terms.map((term) => [term.id, group.pkg.id] as const)));
+      setTerms(allTerms);
+      setTermPackageIds(nextTermPackageIds);
+      if (nextLevel === "terms") return;
+
+      const sectionGroups = await fetchSectionGroups(packages, termGroups);
+      const allSections = sectionGroups.flatMap((group) => group.sections);
+      const nextSectionParents = new Map(sectionGroups.flatMap((group) => group.sections.map((section) => [section.id, { packageId: group.pkg.id, term: group.term }] as const)));
+      setSections(allSections);
+      setSectionParents(nextSectionParents);
+      if (nextLevel === "months") return;
+
+      const lessonGroups = await fetchLessonGroups(packages, sectionGroups);
+      setLessons(lessonGroups.flatMap((group) => group.lessons));
+      setLessonPackageIds(new Map(lessonGroups.flatMap((group) => group.lessons.map((lesson) => [lesson.id, group.packageId] as const))));
+    } catch {
+      setError(`تعذر تحميل ${levelLabels[nextLevel]} حاليًا.`);
+    } finally {
+      setLoading(false);
     }
-    if (selectedPackage.contentMode === "SectionWithLessons") {
-      return new Set<CatalogLevel>(["packages", "months", ...(selectedSection ? ["lessons" as const] : [])]);
-    }
-    return new Set<CatalogLevel>(["packages", "terms", ...(selectedTerm ? ["months" as const] : []), ...(selectedSection ? ["lessons" as const] : [])]);
-  }, [selectedPackage, selectedSection, selectedTerm]);
+  }, [packages]);
 
   const choosePackage = (pkg: PackageDto) => {
     setSelectedPackage(pkg);
@@ -159,7 +224,9 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
   };
 
   const chooseTerm = (term: TermDto) => {
-    if (!selectedPackage) return;
+    const parentPackage = selectedPackage ?? packages.find((pkg) => pkg.id === termPackageIds.get(term.id)) ?? null;
+    if (!parentPackage) return;
+    setSelectedPackage(parentPackage);
     setSelectedTerm(term);
     setSelectedSection(null);
     setSections([]);
@@ -169,6 +236,11 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
   };
 
   const chooseSection = (section: ContentSectionDto) => {
+    const parent = sectionParents.get(section.id);
+    if (!selectedPackage && parent) {
+      setSelectedPackage(packages.find((pkg) => pkg.id === parent.packageId) ?? null);
+      setSelectedTerm(parent.term ?? null);
+    }
     setSelectedSection(section);
     setLessons([]);
     setLevel("lessons");
@@ -188,6 +260,19 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
 
   const goToLevel = (nextLevel: CatalogLevel) => {
     if (!availableLevels.has(nextLevel)) return;
+    if (nextLevel === "packages") {
+      resetToPackages();
+      return;
+    }
+    const canUseCurrentPath =
+      (nextLevel === "terms" && selectedPackage?.contentMode === "TermWithSections") ||
+      (nextLevel === "months" && (selectedTerm !== null || selectedPackage?.contentMode === "SectionWithLessons")) ||
+      (nextLevel === "lessons" && (selectedSection !== null || selectedPackage?.contentMode === "LessonsOnly"));
+    if (!canUseCurrentPath) {
+      setLevel(nextLevel);
+      void loadCatalogLevel(nextLevel);
+      return;
+    }
     setLevel(nextLevel);
     setError(null);
   };
@@ -294,6 +379,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
               if (selectedPackage && level === "terms") void loadTerms(selectedPackage.id);
               else if (selectedTerm && level === "months") void loadSections(selectedTerm.id);
               else if (selectedSection && level === "lessons") void loadLessons(selectedSection.id);
+              else if (level !== "packages") void loadCatalogLevel(level);
             }}
             className="min-h-10 rounded-xl border border-current px-4 transition hover:bg-[var(--admin-danger)]/10"
           >
@@ -382,7 +468,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
                 key={lesson.id}
                 lesson={lesson}
                 index={index}
-                packageId={selectedPackage?.id}
+                packageId={selectedPackage?.id ?? lessonPackageIds.get(lesson.id)}
                 onPurchase={() => setPurchaseTarget({ contentType: "Lesson", contentId: lesson.id, contentName: lesson.title, price: lesson.price ?? 0 })}
               />
             ))}

@@ -246,6 +246,8 @@ interface ContentApiResponse<T> {
   data?: T;
 }
 
+type ContentListApiResponse<T> = Omit<ContentApiResponse<T[]>, 'data'> & { data: T[] };
+
 type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
 
 export const contentService = {
@@ -255,12 +257,12 @@ export const contentService = {
     return apiClient.get('/content/packages', { signal: options?.signal });
   },
   getTerms: (packageId: string, includeSystemContainers = false) =>
-    apiClient.get(`/content/packages/${packageId}/terms`, {
+    apiClient.get<ContentListApiResponse<TermDto>>(`/content/packages/${packageId}/terms`, {
       params: includeSystemContainers ? { includeSystemContainers: true } : undefined,
     }),
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
-  getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
-  getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),
+  getSections: (termId: string) => apiClient.get<ContentListApiResponse<ContentSectionDto>>(`/content/terms/${termId}/sections`),
+  getLessons: (sectionId: string) => apiClient.get<ContentListApiResponse<LessonSummaryDto>>(`/content/sections/${sectionId}/lessons`),
   getLessonDetail: (lessonId: string) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`),
   getLessonComments: (lessonId: string, offset = 0, limit = 50) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments?offset=${offset}&limit=${limit}`),
   getLessonResources: (lessonId: string) => apiClient.get<ContentApiResponse<ResourceDto[]>>(`/content/lessons/${lessonId}/resources`),

@@ -51,6 +51,11 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
         {
             // Normal disconnect during bootstrap; suppress HubConnectionHandler fail logs.
         }
+        catch (LiveSupportException exception) when (StaffUserId is not null)
+        {
+            logger.LogInformation("Live support connection rejected during staff bootstrap: {ErrorCode}", exception.Code);
+            Context.Abort();
+        }
     }
 
     public async Task Heartbeat()
@@ -91,7 +96,7 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
     {
         var key = $"{Context.ConnectionId}:{conversationId:N}";
         var now = DateTime.UtcNow;
-        if (TypingWindows.TryGetValue(key, out var prior) && now - prior < TimeSpan.FromMilliseconds(750)) throw new HubException("RATE_LIMITED");
+        if (TypingWindows.TryGetValue(key, out var prior) && now - prior < TimeSpan.FromMilliseconds(750)) return;
         TypingWindows[key] = now;
         await JoinConversation(conversationId);
         if (StaffUserId is null)
@@ -105,6 +110,8 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        foreach (var key in TypingWindows.Keys.Where(key => key.StartsWith($"{Context.ConnectionId}:", StringComparison.Ordinal)))
+            TypingWindows.TryRemove(key, out _);
         if (StaffUserId is { } staffId) await presence.DisconnectedAsync(staffId, Context.ConnectionId);
         await base.OnDisconnectedAsync(exception);
     }
