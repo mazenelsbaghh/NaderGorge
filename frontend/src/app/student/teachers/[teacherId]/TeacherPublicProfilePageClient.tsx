@@ -259,6 +259,7 @@ export default function TeacherPublicProfilePageClient({ teacherId, visitor = fa
               showImages
               visitor={visitor}
               publicBaseHref="/packages"
+              returnHref={`/student/teachers/${teacherId}`}
             />
             <ContentList
               title="حصص للمعاينة والتصفح"
@@ -348,6 +349,7 @@ function ContentList({
   showImages = false,
   visitor = false,
   publicBaseHref,
+  returnHref,
 }: {
   title: string;
   subtitle: string;
@@ -359,6 +361,7 @@ function ContentList({
   showImages?: boolean;
   visitor?: boolean;
   publicBaseHref?: string;
+  returnHref?: string;
 }) {
   return (
     <section className="rounded-2xl border border-[var(--student-border)] bg-[var(--student-card)] p-5">
@@ -411,7 +414,7 @@ function ContentList({
           );
           const href = visitor
             ? publicBaseHref ? `${publicBaseHref}/${item.id}` : '/register'
-            : baseHref === '/student/shared-packages' ? baseHref : baseHref ? `${baseHref}/${item.id}` : null;
+            : baseHref === '/student/shared-packages' ? baseHref : baseHref ? `${baseHref}/${item.id}${returnHref ? `?returnTo=${encodeURIComponent(returnHref)}` : ''}` : null;
           return href ? <Link key={item.id} href={href}>{content}</Link> : <div key={item.id}>{content}</div>;
         })}
         {items.length === 0 && (

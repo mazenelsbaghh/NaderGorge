@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import { formatCairoDateTime } from '@/lib/cairo-time';
 import type { LiveSupportAIPendingDecision, LiveSupportAIVerificationSession, LiveSupportMessage } from '@/services/live-support-service';
 import { AIPendingActionCard } from './AIPendingActionCard';
@@ -40,8 +42,21 @@ export function ParticipantConversation({
   onEditMessage,
   onDeleteMessage
 }: ParticipantConversationProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const shouldStickToBottom = useRef(true);
+
+  useEffect(() => { shouldStickToBottom.current = true; }, [conversationId]);
+  useEffect(() => {
+    if (!shouldStickToBottom.current) return;
+    const frame = requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [conversationId, messages.length, isAiTyping, activeAction, activeVerification]);
+
   return (
-    <div role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+    <div ref={viewportRef} onScroll={(event) => { const viewport = event.currentTarget; shouldStickToBottom.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-contain pb-3 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
       {messages.map((message) => (
         <article
           dir="auto"

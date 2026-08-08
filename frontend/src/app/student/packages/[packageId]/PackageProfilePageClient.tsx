@@ -14,7 +14,7 @@ import { devConsole } from '@/utils/dev-console';
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,6 +58,8 @@ export default function PackageProfilePageClient() {
   const params = useParams();
   const router = useRouter();
   const packageId = params.packageId as string;
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   const [pkg, setPkg] = useState<PackageDto | null>(null);
   const [terms, setTerms] = useState<TermDto[]>([]);
@@ -154,7 +156,7 @@ export default function PackageProfilePageClient() {
       <motion.div variants={fadeUp}>
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => returnTo?.startsWith("/student/") ? router.push(returnTo) : router.back()}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
         >
           <ArrowRight className="h-4 w-4" />

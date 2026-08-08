@@ -421,6 +421,56 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Pending_request_without_evidence_can_be_rejected_with_a_reason()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000103");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01000000104");
+        var wallet = Wallet("01010000104");
+        var recharge = PendingRequest(student, wallet, 200m);
+        recharge.SenderPhoneNumber = string.Empty;
+        recharge.ScreenshotUrl = null;
+        db.AddRange(wallet, recharge);
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveRechargeRequestCommandHandler(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var result = await handler.Handle(
+            new ResolveRechargeRequestCommand(recharge.Id, false, admin.Id, "لم يتم رفع إثبات التحويل"),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(RechargeRequestStatus.Rejected, recharge.Status);
+        Assert.Equal("لم يتم رفع إثبات التحويل", recharge.RejectionReason);
+    }
+
+    [Fact]
+    public async Task Pending_request_without_evidence_cannot_be_approved_without_linked_sms()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000105");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01000000106");
+        var wallet = Wallet("01010000106");
+        var recharge = PendingRequest(student, wallet, 200m);
+        recharge.SenderPhoneNumber = string.Empty;
+        recharge.ScreenshotUrl = null;
+        db.AddRange(wallet, recharge);
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveRechargeRequestCommandHandler(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var result = await handler.Handle(
+            new ResolveRechargeRequestCommand(recharge.Id, true, admin.Id, WalletId: wallet.Id),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(RechargeRequestStatus.Pending, recharge.Status);
+        Assert.Empty(await db.BalanceTransactions.ToListAsync());
+    }
+
+    [Fact]
     public async Task Manual_approval_wallet_can_be_corrected_without_crediting_the_student_twice()
     {
         await using var db = TestAppDbContextFactory.Create();

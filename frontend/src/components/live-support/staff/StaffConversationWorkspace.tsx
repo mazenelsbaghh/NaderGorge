@@ -36,6 +36,8 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
   const [pendingImage, setPendingImage] = useState<{ conversationId: string; file: File }>();
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>();
   const replyInputRef = useRef<HTMLInputElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const shouldStickToBottom = useRef(true);
   const shouldRestoreReplyFocus = useRef(false);
   const pendingImageForConversation = pendingImage && pendingImage.conversationId === conversation?.id ? pendingImage.file : undefined;
 
@@ -57,6 +59,24 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
     });
     return () => cancelAnimationFrame(frame);
   }, [ownershipLost, pendingAction, uploading]);
+
+  useEffect(() => {
+    shouldStickToBottom.current = true;
+    const frame = requestAnimationFrame(() => {
+      const viewport = messagesViewportRef.current;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [conversation?.id]);
+
+  useEffect(() => {
+    if (!shouldStickToBottom.current) return;
+    const frame = requestAnimationFrame(() => {
+      const viewport = messagesViewportRef.current;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages.length, participantDraft]);
 
   const sendAndRestoreFocus = () => {
     if (!draft.trim()) return;
@@ -85,7 +105,9 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
       <div className="flex gap-2"><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onTransfer} className="min-h-11 rounded-xl border border-[var(--admin-warning-20)] px-3 text-sm font-semibold text-[var(--admin-warning)] hover:bg-[var(--admin-warning-10)] disabled:opacity-50">{pendingAction === 'transfer' ? 'جارٍ التحويل…' : 'تحويل'}</button><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onClose} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-danger-20)] px-3 text-sm font-semibold text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)] disabled:opacity-50"><XCircle size={17}/>{pendingAction === 'close' ? 'جارٍ الإغلاق…' : 'إغلاق'}</button></div>
     </header>
     {ownershipLost && <p role="alert" className="border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-medium text-[var(--admin-warning)]">تم نقل ملكية المحادثة. تم إيقاف الرد والإجراءات فورًا.</p>}
+    <div ref={messagesViewportRef} onScroll={(event) => { const viewport = event.currentTarget; shouldStickToBottom.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable] [&>div]:!overflow-visible">
     <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4">{messagesLoading ? <p role="status" className="text-sm text-[var(--admin-muted)]">جارٍ تحميل الرسائل…</p> : messagesError ? <div role="alert" className="space-y-2 text-sm text-[var(--admin-danger)]"><p>{messagesError}</p><button type="button" onClick={onRetryMessages} className="font-semibold underline">إعادة المحاولة</button></div> : messages.map(message => { const isStaffMessage = ['Staff', 'Admin'].includes(message.senderType); const requestedBackground = isStaffMessage ? preferences.staffBubbleColor : preferences.studentBubbleColor; const colors = accessibleColorPair(requestedBackground); return <article dir="auto" key={message.id} style={{ backgroundColor: colors.backgroundColor, color: colors.color, fontSize: fontSize(preferences.fontScale) }} className={`max-w-[72%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 ${isStaffMessage ? 'mr-auto' : 'ml-auto'}`}><LiveSupportMessageContent message={message} audience="staff"/>{isStaffMessage ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}<LiveSupportMessageMeta message={message} audience="staff"/></article>; })}{participantDraft !== null && participantDraft !== undefined ? <article className="ml-auto max-w-[72%] rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-950"><p className="mb-1 text-xs font-bold text-cyan-700">الطالب يكتب الآن…</p><p dir="auto" className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{participantDraft || '…'}</p></article> : null}</div>
+    </div>
     <div className="shrink-0 border-t border-[var(--admin-border)] p-4">
       {pendingImageForConversation && imagePreviewUrl && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3" role="status" aria-label="معاينة الصورة قبل الإرسال">
         <Image src={imagePreviewUrl} alt="معاينة الصورة قبل الإرسال" width={160} height={112} unoptimized className="h-28 w-40 rounded-lg bg-[var(--admin-card)] object-contain" />

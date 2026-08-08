@@ -62,8 +62,13 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
         if (rechargeRequest.Status is not (RechargeRequestStatus.Pending or RechargeRequestStatus.Rejected))
             return ApiResponse<bool>.Fail("لا يمكن تعديل قرار طلب الشحن في حالته الحالية.");
 
-        if (string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl) || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber))
-            return ApiResponse<bool>.Fail("لا يمكن معالجة طلب الشحن قبل رفع صورة إثبات التحويل وكتابة رقم المحول منه.");
+        if (!request.Approve && string.IsNullOrWhiteSpace(request.RejectionReason))
+            return ApiResponse<bool>.Fail("سبب رفض طلب الشحن مطلوب.");
+
+        var evidenceMissing = string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl)
+            || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber);
+        if (request.Approve && evidenceMissing && !request.SmsLogId.HasValue)
+            return ApiResponse<bool>.Fail("للموافقة قبل رفع الإثبات يجب ربط رسالة تحويل مستلمة فعلياً بالطلب.");
 
         var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
         await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
@@ -86,6 +91,9 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                     if (smsLog.IsMatched)
                         return ApiResponse<bool>.Fail("تم مطابقة رسالة التأكيد هذه مع طلب آخر مسبقاً");
 
+                    if (evidenceMissing && smsLog.ParsedAmount != rechargeRequest.Amount)
+                        return ApiResponse<bool>.Fail("مبلغ رسالة التحويل لا يطابق مبلغ طلب الشحن.");
+
                     if (request.WalletId.HasValue && request.WalletId.Value != smsLog.WalletId)
                         return ApiResponse<bool>.Fail("المحفظة المختارة لا تطابق المحفظة التي استقبلت رسالة التأكيد.");
 
@@ -94,6 +102,11 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                     smsLog.IsMatched = true;
                     smsLog.MatchedRechargeRequestId = rechargeRequest.Id;
                     rechargeRequest.MatchedSmsLogId = smsLog.Id;
+                    if (string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber)
+                        && !string.IsNullOrWhiteSpace(smsLog.ParsedSenderPhone))
+                    {
+                        rechargeRequest.SenderPhoneNumber = smsLog.ParsedSenderPhone;
+                    }
                 }
                 else if (request.WalletId.HasValue && request.WalletId.Value != rechargeRequest.WalletId)
                 {
@@ -156,7 +169,7 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                     request.AdminId,
                     resolvedAt,
                     null,
-                    request.RejectionReason ?? "تم الرفض بواسطة الإدارة",
+                    request.RejectionReason!.Trim(),
                     ct);
                 if (!transition.Success)
                     return transition;

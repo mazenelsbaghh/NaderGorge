@@ -32,7 +32,7 @@ import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDt
 import toast from 'react-hot-toast';
 
 type RechargeStatusValue = AdminRechargeRequestDto['status'];
-type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'all';
+type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'awaiting-evidence' | 'all';
 type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
 type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
 type SuspectedSenderPhone = {
@@ -75,6 +75,9 @@ const normalizeRechargeStatus = (status: RechargeStatusValue): number | null => 
 
 const isRechargeStatus = (status: RechargeStatusValue, expected: number) =>
   normalizeRechargeStatus(status) === expected;
+
+const isAwaitingEvidenceRequest = (request: AdminRechargeRequestDto) =>
+  isRechargeStatus(request.status, 0) && (!request.screenshotUrl || !request.senderPhoneNumber);
 
 const normalizePhoneDigits = (value?: string | null) => (value ?? '')
   .replace(/[٠-٩۰-۹]/g, (digit) => {
@@ -225,6 +228,10 @@ export function RechargeVerificationWorkspace() {
   const handleApprove = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!approveModalRequest) return;
+    if (isAwaitingEvidenceRequest(approveModalRequest) && !selectedSmsId) {
+      toast.error('اربط رسالة تحويل مستلمة فعلياً قبل قبول الطلب بدون إثبات.');
+      return;
+    }
 
     setActionLoading(true);
     try {
@@ -344,7 +351,8 @@ export function RechargeVerificationWorkspace() {
   };
 
   // Calculations for stats
-  const pendingCount = requests.filter(r => isRechargeStatus(r.status, 0)).length;
+  const awaitingEvidenceCount = requests.filter(isAwaitingEvidenceRequest).length;
+  const pendingCount = requests.filter(r => isRechargeStatus(r.status, 0) && !isAwaitingEvidenceRequest(r)).length;
   const totalPendingAmount = requests.filter(r => isRechargeStatus(r.status, 0)).reduce((acc, r) => acc + r.amount, 0);
   const unmatchedSmsCount = unmatchedSms.length;
   const filteredUnmatchedSms = useMemo(
@@ -394,7 +402,10 @@ export function RechargeVerificationWorkspace() {
   // Filtered requests
   const filteredRequests = requests.filter(r => {
     const suspectedPhone = suspectedSenderPhones.get(r.id)?.phoneNumber;
-    const matchesStatus = statusFilter === 'all' || isRechargeStatus(r.status, statusFilter);
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'awaiting-evidence'
+        ? isAwaitingEvidenceRequest(r)
+        : isRechargeStatus(r.status, statusFilter) && (statusFilter !== 0 || !isAwaitingEvidenceRequest(r)));
     const matchesSearch =
       r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.studentPhoneNumber.includes(searchQuery) ||
@@ -533,10 +544,7 @@ export function RechargeVerificationWorkspace() {
         const isPending = isRechargeStatus(r.status, 0);
         const isRejected = isRechargeStatus(r.status, 3);
         const isManualApproval = isRechargeStatus(r.status, 2) && !r.matchedSmsLogId;
-        const isAwaitingEvidence = isPending && (!r.screenshotUrl || !r.senderPhoneNumber);
-        if (isAwaitingEvidence) {
-          return <div className="max-w-48 text-right text-xs font-bold text-amber-700">الطالب حجز المحفظة ولم يرفع الصورة ورقم التحويل بعد.</div>;
-        }
+        const isAwaitingEvidence = isAwaitingEvidenceRequest(r);
         if (!isPending && !isRejected && !isManualApproval) {
           if (isRechargeStatus(r.status, 5)) {
             return <div className="max-w-48 text-right text-xs font-bold text-rose-600">سبب الإلغاء: {r.rejectionReason || 'غير مسجل'}</div>;
@@ -557,7 +565,9 @@ export function RechargeVerificationWorkspace() {
           </NeumorphButton>;
         }
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-44 flex-col gap-2">
+            {isAwaitingEvidence ? <p className="text-right text-[10px] font-bold leading-5 text-amber-700">يمكن القبول بعد ربط رسالة تحويل، أو الرفض مع كتابة السبب.</p> : null}
+            <div className="flex items-center gap-2">
             <NeumorphButton
               type="button"
               onClick={() => openApproveModal(r)}
@@ -577,6 +587,7 @@ export function RechargeVerificationWorkspace() {
             >
               <X className="h-3.5 w-3.5" /> {isRejected ? 'تعديل سبب الرفض' : 'رفض'}
             </NeumorphButton>
+            </div>
           </div>
         );
       }
@@ -623,6 +634,12 @@ export function RechargeVerificationWorkspace() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Status Tabs */}
           <div className="flex flex-wrap gap-1 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] p-1 rounded-xl">
+            <button
+              onClick={() => setStatusFilter('awaiting-evidence')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'awaiting-evidence' ? 'bg-[var(--admin-primary)] text-white shadow' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+            >
+              بانتظار رفع الإثبات ({awaitingEvidenceCount})
+            </button>
             <button
               onClick={() => setStatusFilter(0)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -954,7 +971,7 @@ export function RechargeVerificationWorkspace() {
             {!isRechargeStatus(approveModalRequest.status, 2) && <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-1">
                 <LinkIcon className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
-                ربط رسالة SMS تأكيدية (اختياري)
+                ربط رسالة SMS تأكيدية {isAwaitingEvidenceRequest(approveModalRequest) ? '(مطلوب)' : '(اختياري)'}
               </label>
 
               <div className="relative">
@@ -986,7 +1003,7 @@ export function RechargeVerificationWorkspace() {
                 }}
                 className="admin-input text-xs"
               >
-                <option value="">-- موافقة مباشرة بدون ربط رسالة SMS --</option>
+                <option value="">{isAwaitingEvidenceRequest(approveModalRequest) ? '-- اختر رسالة تحويل مستلمة --' : '-- موافقة مباشرة بدون ربط رسالة SMS --'}</option>
                 {filteredApprovalSms.map(sms => {
                   const isAmountMatch = sms.parsedAmount === approveModalRequest.amount;
                   const isPhoneMatch = sms.parsedSenderPhone === approveModalRequest.senderPhoneNumber;
@@ -1004,7 +1021,7 @@ export function RechargeVerificationWorkspace() {
                 })}
               </select>
               <span className="text-[10px] text-[var(--admin-muted)]">
-                الرقم المحوّل منه يساعد في البحث فقط وليس شرطاً للموافقة. يمكنك اختيار المحفظة والموافقة مباشرة إذا لم تجد الرسالة.
+                {isAwaitingEvidenceRequest(approveModalRequest) ? 'لأن الطالب لم يرفع الإثبات، لا يتم إضافة الرصيد إلا بعد ربط رسالة تحويل حقيقية.' : 'الرقم المحوّل منه يساعد في البحث فقط. يمكنك اختيار المحفظة والموافقة مباشرة إذا كان الإثبات مرفوعاً.'}
               </span>
             </div>}
 
@@ -1026,6 +1043,7 @@ export function RechargeVerificationWorkspace() {
                 type="submit"
                 intent="primary"
                 loading={actionLoading}
+                disabled={actionLoading || (isAwaitingEvidenceRequest(approveModalRequest) && !selectedSmsId)}
               >
                 {isRechargeStatus(approveModalRequest.status, 2) ? 'حفظ تصحيح المحفظة' : 'تأكيد الموافقة وتعبئة الرصيد'}
               </NeumorphButton>
