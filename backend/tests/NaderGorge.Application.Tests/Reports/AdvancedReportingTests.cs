@@ -221,6 +221,31 @@ public sealed class AdvancedReportingTests
     }
 
     [Fact]
+    public async Task Export_AppendsStudentIdentityColumns_ToOldExplicitColumnSelections()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, "Identity Student", "01035555555", true, GradeLevel.SecondSecondary);
+        var profile = await db.StudentProfiles.SingleAsync(item => item.UserId == student.Id);
+        profile.EducationStage = EducationStage.Secondary;
+        profile.StudyTrack = StudyTrack.Science;
+        await db.SaveChangesAsync();
+        var service = new ReportQueryService(db);
+
+        var result = await service.ExecuteForExportAsync(
+            new ExecuteReportRequest(ReportDomains.Students, Columns: ["studentName"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        Assert.Equal(["studentName", "phone", "stage", "grade", "studyTrack"], result.Columns.Select(column => column.Key));
+        var row = Assert.Single(result.Rows);
+        Assert.Equal("01035555555", row["phone"]);
+        Assert.Equal(EducationStage.Secondary.ToString(), row["stage"]);
+        Assert.Equal(GradeLevel.SecondSecondary.ToString(), row["grade"]);
+        Assert.Equal(StudyTrack.Science.ToString(), row["studyTrack"]);
+    }
+
+    [Fact]
     public async Task StudentLedger_ExportsOneSheetWithPurchasedAndMissingPackages()
     {
         await using var db = TestAppDbContextFactory.Create();

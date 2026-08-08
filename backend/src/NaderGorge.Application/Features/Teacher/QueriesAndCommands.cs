@@ -13,7 +13,19 @@ public record TeacherDashboardStatsDto(
     int ActiveStudentsCount,
     int PackagesCount,
     int ExamsCount,
-    int PendingEssaysCount
+    int PendingEssaysCount,
+    IReadOnlyList<TeacherPackageSalesBreakdownDto> PackageSales
+);
+
+public record TeacherPackageSalesBreakdownDto(
+    Guid PackageId,
+    string PackageName,
+    int PackageBuyers,
+    int TermBuyers,
+    int SectionBuyers,
+    int LessonBuyers,
+    int PurchasedStudents,
+    int GiftStudents
 );
 
 public record GetTeacherStudentsQuery(Guid TeacherUserId) : IRequest<ApiResponse<List<TeacherStudentDto>>>;
@@ -111,7 +123,12 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
             .Distinct()
             .CountAsync(ct);
 
-        var packagesCount = await _db.Packages.CountAsync(p => p.TeacherId == teacherProfile.Id, ct);
+        var teacherPackages = await _db.Packages.AsNoTracking()
+            .Where(package => package.TeacherId == teacherProfile.Id)
+            .OrderBy(package => package.Name)
+            .Select(package => new { package.Id, package.Name })
+            .ToListAsync(ct);
+        var packagesCount = teacherPackages.Count;
 
         var examsCount = await _db.Exams.CountAsync(e => e.CreatedByTeacherId == teacherProfile.Id, ct);
 
@@ -119,9 +136,57 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
             .Include(es => es.Question)
             .CountAsync(es => es.Status == EssaySubmissionStatus.WaitTeacher && es.Question.CreatedByTeacherId == teacherProfile.Id, ct);
 
-        var dto = new TeacherDashboardStatsDto(activeStudentsCount, packagesCount, examsCount, pendingEssaysCount);
+        var packageIds = teacherPackages.Select(package => package.Id).ToArray();
+        var grantRows = await PackageGrantRows(packageIds)
+            .Concat(TermGrantRows(packageIds))
+            .Concat(SectionGrantRows(packageIds))
+            .Concat(LessonGrantRows(packageIds))
+            .ToListAsync(ct);
+        var packageSales = teacherPackages.Select(package =>
+        {
+            var rows = grantRows.Where(row => row.PackageId == package.Id).ToArray();
+            return new TeacherPackageSalesBreakdownDto(
+                package.Id,
+                package.Name,
+                DistinctStudents(rows, CodeType.Package),
+                DistinctStudents(rows, CodeType.Term),
+                DistinctStudents(rows, CodeType.Month),
+                DistinctStudents(rows, CodeType.Lesson),
+                rows.Where(row => !row.IsGift).Select(row => row.UserId).Distinct().Count(),
+                rows.Where(row => row.IsGift).Select(row => row.UserId).Distinct().Count());
+        }).ToArray();
+
+        var dto = new TeacherDashboardStatsDto(activeStudentsCount, packagesCount, examsCount, pendingEssaysCount, packageSales);
         return ApiResponse<TeacherDashboardStatsDto>.Ok(dto);
     }
+
+    private IQueryable<TeacherPackageGrantRow> PackageGrantRows(Guid[] packageIds) =>
+        _db.StudentAccessGrants.AsNoTracking()
+            .Where(grant => !grant.CancelledAt.HasValue && grant.PackageId.HasValue && packageIds.Contains(grant.PackageId.Value))
+            .Select(grant => new TeacherPackageGrantRow(grant.PackageId!.Value, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue));
+
+    private IQueryable<TeacherPackageGrantRow> TermGrantRows(Guid[] packageIds) =>
+        from grant in _db.StudentAccessGrants.AsNoTracking()
+        join term in _db.Terms.AsNoTracking() on grant.TermId equals term.Id
+        where !grant.CancelledAt.HasValue && packageIds.Contains(term.PackageId)
+        select new TeacherPackageGrantRow(term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
+
+    private IQueryable<TeacherPackageGrantRow> SectionGrantRows(Guid[] packageIds) =>
+        from grant in _db.StudentAccessGrants.AsNoTracking()
+        join section in _db.ContentSections.AsNoTracking() on grant.ContentSectionId equals section.Id
+        where !grant.CancelledAt.HasValue && packageIds.Contains(section.Term.PackageId)
+        select new TeacherPackageGrantRow(section.Term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
+
+    private IQueryable<TeacherPackageGrantRow> LessonGrantRows(Guid[] packageIds) =>
+        from grant in _db.StudentAccessGrants.AsNoTracking()
+        join lesson in _db.Lessons.AsNoTracking() on grant.LessonId equals lesson.Id
+        where !grant.CancelledAt.HasValue && packageIds.Contains(lesson.ContentSection.Term.PackageId)
+        select new TeacherPackageGrantRow(lesson.ContentSection.Term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
+
+    private static int DistinctStudents(IEnumerable<TeacherPackageGrantRow> rows, CodeType type) =>
+        rows.Where(row => row.GrantType == type).Select(row => row.UserId).Distinct().Count();
+
+    private sealed record TeacherPackageGrantRow(Guid PackageId, Guid UserId, CodeType GrantType, bool IsGift);
 }
 
 public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudentsQuery, ApiResponse<List<TeacherStudentDto>>>

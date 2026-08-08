@@ -119,7 +119,11 @@ public sealed class ReportQueryService : IReportQueryService
     public async Task<ReportResultDto> ExecuteForExportAsync(ExecuteReportRequest request, Guid actorUserId, bool isTeacher, CancellationToken ct)
     {
         await ValidateAsync(request, isTeacher, ct);
-        return await ExecuteValidatedAsync(request with { Page = 1, PageSize = 5_000 }, actorUserId, isTeacher, ct);
+        var domain = ReportCatalog.Find(request.Domain, isTeacher)!;
+        var columns = (request.Columns is { Count: > 0 } ? request.Columns : domain.DefaultColumns).ToList();
+        foreach (var key in ReportCatalog.StudentIdentityColumnKeys.Where(key => domain.Fields.Any(field => field.Key == key)))
+            if (!columns.Contains(key, StringComparer.OrdinalIgnoreCase)) columns.Add(key);
+        return await ExecuteValidatedAsync(request with { Page = 1, PageSize = 5_000, Columns = columns }, actorUserId, isTeacher, ct);
     }
 
     private async Task<ReportResultDto> ExecuteValidatedAsync(ExecuteReportRequest request, Guid actorUserId, bool isTeacher, CancellationToken ct)
@@ -135,6 +139,7 @@ public sealed class ReportQueryService : IReportQueryService
             ? await GetTeacherStudentIdsAsync(teacherId.Value, ct)
             : null;
         var rows = await LoadRowsAsync(request.Domain, teacherId, teacherStudentIds, ct);
+        await EnrichStudentIdentityAsync(rows, ct);
         var filtered = rows.Where(row => MatchesGroup(row, request.FilterGroup)).ToList();
         var domain = ReportCatalog.Find(request.Domain, isTeacher)!;
         var sort = request.Sort ?? new ReportSort(domain.DefaultColumns[0]);
@@ -242,9 +247,9 @@ public sealed class ReportQueryService : IReportQueryService
         var query = _db.StudentProfiles.AsNoTracking().AsQueryable();
         if (scope != null) query = query.Where(profile => scope.Contains(profile.UserId));
         var data = await query.OrderByDescending(profile => profile.CreatedAt).Take(SourceRowLimit)
-            .Select(profile => new { profile.User.FullName, profile.User.PhoneNumber, profile.SecondaryPhone, profile.StudentCode, Grade = profile.GradeLevel.ToString(), Stage = profile.EducationStage.ToString(), profile.Governorate, profile.District, profile.Address, profile.SchoolName, profile.ParentPhone, profile.MotherPhone, profile.Nationality, profile.User.IsActive, RegisteredAt = profile.User.CreatedAt })
+            .Select(profile => new { profile.UserId, profile.User.FullName, profile.User.PhoneNumber, profile.SecondaryPhone, profile.StudentCode, Grade = profile.GradeLevel.ToString(), Stage = profile.EducationStage.ToString(), profile.Governorate, profile.District, profile.Address, profile.SchoolName, profile.ParentPhone, profile.MotherPhone, profile.Nationality, profile.User.IsActive, RegisteredAt = profile.User.CreatedAt })
             .ToListAsync(ct);
-        return data.Select(item => Row(("studentName", item.FullName), ("phone", item.PhoneNumber), ("secondaryPhone", item.SecondaryPhone), ("studentCode", item.StudentCode), ("grade", item.Grade), ("stage", item.Stage), ("governorate", item.Governorate), ("district", item.District), ("address", item.Address), ("schoolName", item.SchoolName), ("parentPhone", item.ParentPhone), ("motherPhone", item.MotherPhone), ("nationality", item.Nationality), ("isActive", item.IsActive), ("registeredAt", item.RegisteredAt))).ToList();
+        return data.Select(item => Row(("_studentId", item.UserId.ToString()), ("studentName", item.FullName), ("phone", item.PhoneNumber), ("secondaryPhone", item.SecondaryPhone), ("studentCode", item.StudentCode), ("grade", item.Grade), ("stage", item.Stage), ("governorate", item.Governorate), ("district", item.District), ("address", item.Address), ("schoolName", item.SchoolName), ("parentPhone", item.ParentPhone), ("motherPhone", item.MotherPhone), ("nationality", item.Nationality), ("isActive", item.IsActive), ("registeredAt", item.RegisteredAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadPurchasesAsync(Guid? teacherId, CancellationToken ct)
@@ -413,7 +418,7 @@ public sealed class ReportQueryService : IReportQueryService
                 ? "noHomework"
                 : homeworks.SubmittedStudentPackages.Contains(key) ? "submitted" : "notSubmitted";
             return Row(
-                ("studentName", pair.StudentName), ("packageName", pair.PackageName),
+                ("_studentId", pair.StudentId.ToString()), ("studentName", pair.StudentName), ("packageName", pair.PackageName),
                 ("teacherName", pair.TeacherName), ("purchaseStatus", pair.PurchaseStatus),
                 ("attendanceStatus", hasWatch ? "present" : "absent"),
                 ("videoStatus", hasWatch ? "watched" : "notWatched"),
@@ -437,9 +442,9 @@ public sealed class ReportQueryService : IReportQueryService
         var query = _db.AccessCodes.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) query = query.Where(code => code.CodeGroup.TeacherId == teacherId);
         var data = await query.OrderByDescending(code => code.CreatedAt).Take(SourceRowLimit)
-            .Select(code => new { GroupName = code.CodeGroup.Name, CodeType = code.CodeGroup.CodeType.ToString(), code.IsConsumed, StudentName = code.ConsumedByUser != null ? code.ConsumedByUser.FullName : null, code.ConsumedAt, ExpiresAt = code.ExpiresAt ?? code.CodeGroup.ExpiresAt })
+            .Select(code => new { code.ConsumedByUserId, GroupName = code.CodeGroup.Name, CodeType = code.CodeGroup.CodeType.ToString(), code.IsConsumed, StudentName = code.ConsumedByUser != null ? code.ConsumedByUser.FullName : null, code.ConsumedAt, ExpiresAt = code.ExpiresAt ?? code.CodeGroup.ExpiresAt })
             .ToListAsync(ct);
-        return data.Select(item => Row(("groupName", item.GroupName), ("codeType", item.CodeType), ("isConsumed", item.IsConsumed), ("studentName", item.StudentName), ("consumedAt", item.ConsumedAt), ("expiresAt", item.ExpiresAt))).ToList();
+        return data.Select(item => Row(("_studentId", item.ConsumedByUserId?.ToString()), ("groupName", item.GroupName), ("codeType", item.CodeType), ("isConsumed", item.IsConsumed), ("studentName", item.StudentName), ("consumedAt", item.ConsumedAt), ("expiresAt", item.ExpiresAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadBalanceRechargeAsync(Guid? teacherId, HashSet<Guid>? students, CancellationToken ct)
@@ -447,7 +452,7 @@ public sealed class ReportQueryService : IReportQueryService
         var rechargeQuery = _db.RechargeRequests.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) rechargeQuery = rechargeQuery.Where(request => request.TeacherId == teacherId);
         var recharges = await rechargeQuery.OrderByDescending(request => request.CreatedAt).Take(SourceRowLimit / 2)
-            .Select(request => new { request.User.FullName, request.Amount, Status = request.Status.ToString(), request.CreatedAt }).ToListAsync(ct);
+            .Select(request => new { request.UserId, request.User.FullName, request.Amount, Status = request.Status.ToString(), request.CreatedAt }).ToListAsync(ct);
         var transactionQuery = _db.BalanceTransactions.AsNoTracking().AsQueryable();
         if (teacherId.HasValue)
         {
@@ -456,9 +461,9 @@ public sealed class ReportQueryService : IReportQueryService
         }
         else if (students != null) transactionQuery = transactionQuery.Where(transaction => students.Contains(transaction.StudentBalance.UserId));
         var transactions = await transactionQuery.OrderByDescending(transaction => transaction.CreatedAt).Take(SourceRowLimit / 2)
-            .Select(transaction => new { transaction.StudentBalance.User.FullName, transaction.Amount, transaction.TransactionType, transaction.CreatedAt }).ToListAsync(ct);
-        return recharges.Select(item => Row(("recordType", "recharge"), ("studentName", item.FullName), ("amount", item.Amount), ("status", item.Status), ("transactionType", null), ("createdAt", item.CreatedAt)))
-            .Concat(transactions.Select(item => Row(("recordType", "balance"), ("studentName", item.FullName), ("amount", item.Amount), ("status", null), ("transactionType", item.TransactionType), ("createdAt", item.CreatedAt)))).ToList();
+            .Select(transaction => new { transaction.StudentBalance.UserId, transaction.StudentBalance.User.FullName, transaction.Amount, transaction.TransactionType, transaction.CreatedAt }).ToListAsync(ct);
+        return recharges.Select(item => Row(("_studentId", item.UserId.ToString()), ("recordType", "recharge"), ("studentName", item.FullName), ("amount", item.Amount), ("status", item.Status), ("transactionType", null), ("createdAt", item.CreatedAt)))
+            .Concat(transactions.Select(item => Row(("_studentId", item.UserId.ToString()), ("recordType", "balance"), ("studentName", item.FullName), ("amount", item.Amount), ("status", null), ("transactionType", item.TransactionType), ("createdAt", item.CreatedAt)))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadContentAsync(Guid? teacherId, CancellationToken ct)
@@ -479,9 +484,9 @@ public sealed class ReportQueryService : IReportQueryService
         if (teacherId.HasValue)
             query = query.Where(watch => watch.LessonVideo.Lesson.ContentSection.Term.Package.TeacherId == teacherId);
         var data = await query.OrderByDescending(watch => watch.UpdatedAt ?? watch.CreatedAt).Take(SourceRowLimit)
-            .Select(watch => new { StudentName = watch.User.FullName, VideoName = watch.LessonVideo.Title, TeacherName = watch.LessonVideo.Lesson.ContentSection.Term.Package.Teacher.User.FullName, WatchedSeconds = watch.ActualWatchedSeconds, watch.WatchCount, watch.IsLocked, LastActivityAt = watch.UpdatedAt ?? watch.CreatedAt })
+            .Select(watch => new { watch.UserId, StudentName = watch.User.FullName, VideoName = watch.LessonVideo.Title, TeacherName = watch.LessonVideo.Lesson.ContentSection.Term.Package.Teacher.User.FullName, WatchedSeconds = watch.ActualWatchedSeconds, watch.WatchCount, watch.IsLocked, LastActivityAt = watch.UpdatedAt ?? watch.CreatedAt })
             .ToListAsync(ct);
-        return data.Select(item => Row(("studentName", item.StudentName), ("videoName", item.VideoName), ("teacherName", item.TeacherName), ("watchedSeconds", item.WatchedSeconds), ("watchCount", item.WatchCount), ("isLocked", item.IsLocked), ("lastActivityAt", item.LastActivityAt))).ToList();
+        return data.Select(item => Row(("_studentId", item.UserId.ToString()), ("studentName", item.StudentName), ("videoName", item.VideoName), ("teacherName", item.TeacherName), ("watchedSeconds", item.WatchedSeconds), ("watchCount", item.WatchCount), ("isLocked", item.IsLocked), ("lastActivityAt", item.LastActivityAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadAttendanceAsync(Guid? teacherId, CancellationToken ct)
@@ -494,7 +499,7 @@ public sealed class ReportQueryService : IReportQueryService
         var rows = await grants.OrderByDescending(grant => grant.GrantedAt).Take(SourceRowLimit)
             .Select(grant => new
             {
-                StudentName = grant.User.FullName,
+                grant.UserId, StudentName = grant.User.FullName,
                 PackageName = _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Name).FirstOrDefault(),
                 TeacherName = _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Teacher.User.FullName).FirstOrDefault(),
                 grant.GrantedAt,
@@ -504,7 +509,7 @@ public sealed class ReportQueryService : IReportQueryService
                     .Max(),
             }).ToListAsync(ct);
         return rows.Select(row => Row(
-            ("studentName", row.StudentName), ("packageName", row.PackageName), ("teacherName", row.TeacherName),
+            ("_studentId", row.UserId.ToString()), ("studentName", row.StudentName), ("packageName", row.PackageName), ("teacherName", row.TeacherName),
             ("attendanceStatus", row.LastActivityAt.HasValue ? "present" : "absent"), ("grantedAt", row.GrantedAt), ("lastActivityAt", row.LastActivityAt))).ToList();
     }
 
@@ -513,13 +518,13 @@ public sealed class ReportQueryService : IReportQueryService
         var attemptsQuery = _db.StudentExamAttempts.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) attemptsQuery = attemptsQuery.Where(attempt => attempt.Exam.CreatedByTeacherId == teacherId);
         var attempts = await attemptsQuery.OrderByDescending(attempt => attempt.CreatedAt).Take(SourceRowLimit / 2)
-            .Select(attempt => new { attempt.Exam.Title, attempt.User.FullName, Score = attempt.ScoreAchieved, Passed = attempt.IsPassed, attempt.CreatedAt }).ToListAsync(ct);
+            .Select(attempt => new { attempt.UserId, attempt.Exam.Title, attempt.User.FullName, Score = attempt.ScoreAchieved, Passed = attempt.IsPassed, attempt.CreatedAt }).ToListAsync(ct);
         var homeworkQuery = _db.HomeworkSubmissions.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) homeworkQuery = homeworkQuery.Where(submission => _db.Lessons.Any(lesson => lesson.Id == submission.Homework.LessonId && lesson.ContentSection.Term.Package.TeacherId == teacherId));
         var homeworks = await homeworkQuery.OrderByDescending(submission => submission.StartedAt).Take(SourceRowLimit / 2)
-            .Select(submission => new { submission.Homework.Title, submission.Student.FullName, Score = submission.OverallScore, Passed = submission.Homework.PassingScoreThreshold == null || submission.OverallScore >= submission.Homework.PassingScoreThreshold, CreatedAt = submission.StartedAt }).ToListAsync(ct);
-        return attempts.Select(item => Row(("assessmentType", "exam"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))
-            .Concat(homeworks.Select(item => Row(("assessmentType", "homework"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))).ToList();
+            .Select(submission => new { submission.StudentId, submission.Homework.Title, submission.Student.FullName, Score = submission.OverallScore, Passed = submission.Homework.PassingScoreThreshold == null || submission.OverallScore >= submission.Homework.PassingScoreThreshold, CreatedAt = submission.StartedAt }).ToListAsync(ct);
+        return attempts.Select(item => Row(("_studentId", item.UserId.ToString()), ("assessmentType", "exam"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))
+            .Concat(homeworks.Select(item => Row(("_studentId", item.StudentId.ToString()), ("assessmentType", "homework"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadTeacherFinanceAsync(Guid? teacherId, CancellationToken ct)
@@ -527,8 +532,8 @@ public sealed class ReportQueryService : IReportQueryService
         var query = _db.TeacherFinancialAllocations.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) query = query.Where(allocation => allocation.TeacherId == teacherId);
         var data = await query.OrderByDescending(allocation => allocation.TeacherFinancialEvent.OccurredAt).Take(SourceRowLimit)
-            .Select(allocation => new { TeacherName = allocation.Teacher.User.FullName, StudentName = allocation.StudentNameSnapshot, ContentName = allocation.ContentNameSnapshot, GrossAmount = allocation.GrossBasisAmount, TeacherShare = allocation.TeacherShareAmount, PayoutStatus = allocation.PayoutStatus.ToString(), allocation.TeacherFinancialEvent.OccurredAt }).ToListAsync(ct);
-        return data.Select(item => Row(("teacherName", item.TeacherName), ("studentName", item.StudentName), ("contentName", item.ContentName), ("grossAmount", item.GrossAmount), ("teacherShare", item.TeacherShare), ("payoutStatus", item.PayoutStatus), ("occurredAt", item.OccurredAt))).ToList();
+            .Select(allocation => new { allocation.TeacherFinancialEvent.StudentId, TeacherName = allocation.Teacher.User.FullName, StudentName = allocation.StudentNameSnapshot, ContentName = allocation.ContentNameSnapshot, GrossAmount = allocation.GrossBasisAmount, TeacherShare = allocation.TeacherShareAmount, PayoutStatus = allocation.PayoutStatus.ToString(), allocation.TeacherFinancialEvent.OccurredAt }).ToListAsync(ct);
+        return data.Select(item => Row(("_studentId", item.StudentId?.ToString()), ("teacherName", item.TeacherName), ("studentName", item.StudentName), ("contentName", item.ContentName), ("grossAmount", item.GrossAmount), ("teacherShare", item.TeacherShare), ("payoutStatus", item.PayoutStatus), ("occurredAt", item.OccurredAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadStaffAsync(CancellationToken ct)
@@ -542,8 +547,8 @@ public sealed class ReportQueryService : IReportQueryService
     private async Task<List<Dictionary<string, object?>>> LoadSupportAsync(CancellationToken ct)
     {
         var data = await _db.LiveSupportConversations.AsNoTracking().OrderByDescending(conversation => conversation.CreatedAt).Take(SourceRowLimit)
-            .Select(conversation => new { Status = conversation.Status.ToString(), Channel = conversation.ParticipantType.ToString(), StudentName = conversation.StudentUserId.HasValue ? _db.Users.Where(user => user.Id == conversation.StudentUserId).Select(user => user.FullName).FirstOrDefault() : null, conversation.CreatedAt }).ToListAsync(ct);
-        return data.Select(item => Row(("status", item.Status), ("channel", item.Channel), ("studentName", item.StudentName), ("createdAt", item.CreatedAt))).ToList();
+            .Select(conversation => new { conversation.StudentUserId, Status = conversation.Status.ToString(), Channel = conversation.ParticipantType.ToString(), StudentName = conversation.StudentUserId.HasValue ? _db.Users.Where(user => user.Id == conversation.StudentUserId).Select(user => user.FullName).FirstOrDefault() : null, conversation.CreatedAt }).ToListAsync(ct);
+        return data.Select(item => Row(("_studentId", item.StudentUserId?.ToString()), ("status", item.Status), ("channel", item.Channel), ("studentName", item.StudentName), ("createdAt", item.CreatedAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadCommentsAsync(Guid? teacherId, CancellationToken ct)
@@ -551,13 +556,13 @@ public sealed class ReportQueryService : IReportQueryService
         var lessonQuery = _db.LessonComments.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) lessonQuery = lessonQuery.Where(comment => comment.Lesson.ContentSection.Term.Package.TeacherId == teacherId);
         var lessonComments = await lessonQuery.OrderByDescending(comment => comment.CreatedAt).Take(SourceRowLimit / 2)
-            .Select(comment => new { AuthorName = comment.AuthorUser.FullName, ContentName = comment.Lesson.Title, Status = comment.Status.ToString(), comment.CreatedAt }).ToListAsync(ct);
+            .Select(comment => new { comment.AuthorUserId, AuthorName = comment.AuthorUser.FullName, ContentName = comment.Lesson.Title, Status = comment.Status.ToString(), comment.CreatedAt }).ToListAsync(ct);
         var postQuery = _db.CommunityPosts.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) postQuery = postQuery.Where(post => post.TeacherId == teacherId);
         var posts = await postQuery.OrderByDescending(post => post.CreatedAt).Take(SourceRowLimit / 2)
-            .Select(post => new { AuthorName = post.AuthorUser.FullName, ContentName = post.Body, Status = post.Status.ToString(), post.CreatedAt }).ToListAsync(ct);
-        return lessonComments.Select(item => Row(("recordType", "lesson-comment"), ("authorName", item.AuthorName), ("contentName", item.ContentName), ("status", item.Status), ("createdAt", item.CreatedAt)))
-            .Concat(posts.Select(item => Row(("recordType", "community-post"), ("authorName", item.AuthorName), ("contentName", item.ContentName), ("status", item.Status), ("createdAt", item.CreatedAt)))).ToList();
+            .Select(post => new { post.AuthorUserId, AuthorName = post.AuthorUser.FullName, ContentName = post.Body, Status = post.Status.ToString(), post.CreatedAt }).ToListAsync(ct);
+        return lessonComments.Select(item => Row(("_studentId", item.AuthorUserId.ToString()), ("recordType", "lesson-comment"), ("authorName", item.AuthorName), ("contentName", item.ContentName), ("status", item.Status), ("createdAt", item.CreatedAt)))
+            .Concat(posts.Select(item => Row(("_studentId", item.AuthorUserId.ToString()), ("recordType", "community-post"), ("authorName", item.AuthorName), ("contentName", item.ContentName), ("status", item.Status), ("createdAt", item.CreatedAt)))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadParentTrackingAsync(HashSet<Guid>? scope, CancellationToken ct)
@@ -565,8 +570,8 @@ public sealed class ReportQueryService : IReportQueryService
         var query = _db.StudentProfiles.AsNoTracking().AsQueryable();
         if (scope != null) query = query.Where(profile => scope.Contains(profile.UserId));
         var data = await query.OrderByDescending(profile => profile.CreatedAt).Take(SourceRowLimit)
-            .Select(profile => new { profile.User.FullName, HasCode = profile.ParentTrackingCode != null, PopupSeen = profile.HasSeenTrackingCodePopup, RegisteredAt = profile.User.CreatedAt }).ToListAsync(ct);
-        return data.Select(item => Row(("studentName", item.FullName), ("hasCode", item.HasCode), ("popupSeen", item.PopupSeen), ("registeredAt", item.RegisteredAt))).ToList();
+            .Select(profile => new { profile.UserId, profile.User.FullName, HasCode = profile.ParentTrackingCode != null, PopupSeen = profile.HasSeenTrackingCodePopup, RegisteredAt = profile.User.CreatedAt }).ToListAsync(ct);
+        return data.Select(item => Row(("_studentId", item.UserId.ToString()), ("studentName", item.FullName), ("hasCode", item.HasCode), ("popupSeen", item.PopupSeen), ("registeredAt", item.RegisteredAt))).ToList();
     }
 
     private async Task<List<Dictionary<string, object?>>> LoadOperationsAsync(CancellationToken ct)
@@ -575,6 +580,52 @@ public sealed class ReportQueryService : IReportQueryService
             .Select(log => new { log.Action, log.EntityType, PerformedBy = log.PerformedByUser != null ? log.PerformedByUser.FullName : null, log.CreatedAt }).ToListAsync(ct);
         return data.Select(item => Row(("action", item.Action), ("entityType", item.EntityType), ("performedBy", item.PerformedBy), ("createdAt", item.CreatedAt))).ToList();
     }
+
+    private async Task EnrichStudentIdentityAsync(List<Dictionary<string, object?>> rows, CancellationToken ct)
+    {
+        var studentIds = StudentIds(rows);
+        if (studentIds.Length == 0) return;
+
+        var profiles = await _db.StudentProfiles.AsNoTracking()
+            .Where(profile => studentIds.Contains(profile.UserId))
+            .Select(profile => new
+            {
+                profile.UserId,
+                profile.User.PhoneNumber,
+                profile.EducationStage,
+                profile.GradeLevel,
+                profile.StudyTrack
+            })
+            .ToListAsync(ct);
+        var identities = profiles.ToDictionary(
+            profile => profile.UserId,
+            profile => new StudentIdentity(
+                profile.PhoneNumber,
+                profile.EducationStage.ToString(),
+                profile.GradeLevel.ToString(),
+                profile.StudyTrack.HasValue ? profile.StudyTrack.Value.ToString() : null));
+
+        foreach (var row in rows) ApplyStudentIdentity(row, identities);
+    }
+
+    private static Guid[] StudentIds(IEnumerable<Dictionary<string, object?>> rows) => rows
+        .Select(row => Convert.ToString(row.GetValueOrDefault("_studentId"), CultureInfo.InvariantCulture))
+        .Where(studentId => Guid.TryParse(studentId, out _))
+        .Select(studentId => Guid.Parse(studentId!))
+        .Distinct()
+        .ToArray();
+
+    private static void ApplyStudentIdentity(Dictionary<string, object?> row, IReadOnlyDictionary<Guid, StudentIdentity> identities)
+    {
+        if (!Guid.TryParse(Convert.ToString(row.GetValueOrDefault("_studentId"), CultureInfo.InvariantCulture), out var studentId) ||
+            !identities.TryGetValue(studentId, out var identity)) return;
+        row["phone"] = identity.Phone;
+        row["stage"] = identity.Stage;
+        row["grade"] = identity.Grade;
+        row["studyTrack"] = identity.StudyTrack;
+    }
+
+    private sealed record StudentIdentity(string? Phone, string Stage, string Grade, string? StudyTrack);
 
     private static Dictionary<string, object?> Row(params (string Key, object? Value)[] values) =>
         values.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);

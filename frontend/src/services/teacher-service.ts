@@ -43,6 +43,18 @@ export interface TeacherDashboardStatsDto {
   packagesCount: number;
   examsCount: number;
   pendingEssaysCount: number;
+  packageSales: TeacherPackageSalesBreakdownDto[];
+}
+
+export interface TeacherPackageSalesBreakdownDto {
+  packageId: string;
+  packageName: string;
+  packageBuyers: number;
+  termBuyers: number;
+  sectionBuyers: number;
+  lessonBuyers: number;
+  purchasedStudents: number;
+  giftStudents: number;
 }
 
 export interface TeacherActiveStudentDto {
