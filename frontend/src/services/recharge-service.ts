@@ -32,6 +32,7 @@ export interface StudentRechargeRequestDto {
   rejectionReason?: string;
   createdAt: string;
   resolvedAt?: string;
+  reservationExpiresAt?: string;
 }
 
 export const rechargeService = {

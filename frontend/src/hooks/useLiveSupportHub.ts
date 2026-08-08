@@ -18,6 +18,9 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
   const snapshotCallback = useRef(onSnapshotRequired);
   const participantTypingCallback = useRef(onParticipantTypingChanged);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTypingDraftRef = useRef('');
+  const lastTypingSentAtRef = useRef(0);
   useEffect(() => { snapshotCallback.current = onSnapshotRequired; }, [onSnapshotRequired]);
   useEffect(() => { participantTypingCallback.current = onParticipantTypingChanged; }, [onParticipantTypingChanged]);
   useEffect(() => {
@@ -98,6 +101,10 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
     return () => {
       disposed = true;
       if (heartbeat) clearInterval(heartbeat);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+      pendingTypingDraftRef.current = '';
+      lastTypingSentAtRef.current = 0;
       connection.off('LiveSupportEvent', durableEvent);
       connection.off('ParticipantTypingChanged');
       connectionRef.current = null;
@@ -113,7 +120,17 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
   }, [conversationId, markEventProcessed, recordSequence, setOwnershipLost]);
   const sendTyping = useCallback((draft: string) => {
     if (!conversationId || !draft.trim() || connectionRef.current?.state !== signalR.HubConnectionState.Connected) return;
-    void connectionRef.current.invoke('Typing', conversationId, draft).catch(() => undefined);
+    pendingTypingDraftRef.current = draft;
+    if (typingTimerRef.current) return;
+    const elapsed = Date.now() - lastTypingSentAtRef.current;
+    typingTimerRef.current = setTimeout(() => {
+      typingTimerRef.current = null;
+      const connection = connectionRef.current;
+      const pendingDraft = pendingTypingDraftRef.current;
+      if (!pendingDraft.trim() || connection?.state !== signalR.HubConnectionState.Connected) return;
+      lastTypingSentAtRef.current = Date.now();
+      void connection.invoke('Typing', conversationId, pendingDraft).catch(() => undefined);
+    }, Math.max(0, 800 - elapsed));
   }, [conversationId]);
   return { connected, sendTyping };
 }

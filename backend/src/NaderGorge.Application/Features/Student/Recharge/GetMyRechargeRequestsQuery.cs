@@ -31,6 +31,7 @@ public class StudentRechargeRequestDto
     public string? RejectionReason { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? ResolvedAt { get; set; }
+    public DateTime? ReservationExpiresAt { get; set; }
 }
 
 public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRequestsQuery, ApiResponse<List<StudentRechargeRequestDto>>>
@@ -70,7 +71,8 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
                 ScreenshotUrl = r.ScreenshotUrl,
                 RejectionReason = r.RejectionReason,
                 CreatedAt = r.CreatedAt,
-                ResolvedAt = r.ResolvedAt
+                ResolvedAt = r.ResolvedAt,
+                ReservationExpiresAt = r.ReservationExpiresAt
             })
             .ToList();
 

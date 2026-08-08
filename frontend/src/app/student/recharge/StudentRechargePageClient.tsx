@@ -412,6 +412,25 @@ export default function StudentRechargePageClient() {
     }
   };
 
+  const resumePendingRecharge = () => {
+    if (!pendingRequest || pendingRequest.screenshotUrl || !pendingRequest.reservationExpiresAt) return;
+    setRechargeData({
+      rechargeRequestId: pendingRequest.id,
+      reviewCode: pendingRequest.reviewCode,
+      walletPhoneNumber: pendingRequest.walletPhoneNumber,
+      walletLabel: pendingRequest.walletLabel,
+      expirationTime: pendingRequest.reservationExpiresAt,
+    });
+    setAmount(pendingRequest.amount);
+    setTeacherId(pendingRequest.teacherId ?? '');
+    setReviewCode(pendingRequest.reviewCode);
+    setSenderPhone(pendingRequest.senderPhoneNumber ?? '');
+    setScreenshot(null);
+    setScreenshotPreview(null);
+    setShowPendingRequestDialog(false);
+    setStep(2);
+  };
+
   const handleCopyNumber = (num: string) => {
     navigator.clipboard.writeText(num);
     toast.success('تم نسخ رقم المحفظة.');
@@ -829,7 +848,7 @@ export default function StudentRechargePageClient() {
           <div className="w-full max-w-md space-y-5 rounded-2xl border border-amber-300 bg-[var(--admin-card)] p-5 shadow-2xl sm:p-6">
             <div className="space-y-2">
               <h2 id="pending-recharge-title" className="text-xl font-black text-[var(--admin-text)]">يوجد طلب شحن معلق</h2>
-              <p className="text-sm font-semibold leading-6 text-[var(--admin-muted)]">لا يمكن إرسال طلبين في نفس الوقت. ألغِ هذا الطلب أو انتظر موافقة الإدارة أو رفضها.</p>
+              <p className="text-sm font-semibold leading-6 text-[var(--admin-muted)]">{pendingRequest.screenshotUrl ? 'تم رفع الإثبات والطلب ظاهر للإدارة وتحت المراجعة. يمكنك الانتظار أو إلغاء الطلب.' : 'هذا حجز لم يكتمل رفع إثباته بعد. استكمل نفس الطلب بدل إلغائه وإنشاء طلب جديد.'}</p>
             </div>
             <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm">
               <div><dt className="font-bold text-[var(--admin-muted)]">المبلغ</dt><dd className="mt-1 font-mono font-black text-[var(--admin-text)]">{pendingRequest.amount} ج.م</dd></div>
@@ -837,6 +856,11 @@ export default function StudentRechargePageClient() {
               <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">المحفظة</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.walletLabel}</dd></div>
               <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">نوع الرصيد</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.teacherName ? `للأستاذ ${pendingRequest.teacherName}` : 'عام'}</dd></div>
             </dl>
+            {!pendingRequest.screenshotUrl ? (
+              <button type="button" disabled={cancelling || !pendingRequest.walletPhoneNumber} onClick={resumePendingRecharge} className="min-h-11 w-full rounded-xl bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+                استكمال الطلب ورفع الإثبات
+              </button>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <button type="button" disabled={cancelling} onClick={() => void cancelPendingRecharge()} className="min-h-11 rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
                 {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب'}

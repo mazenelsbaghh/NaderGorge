@@ -192,12 +192,16 @@ export function RechargeVerificationWorkspace() {
   const [expandedAmountKey, setExpandedAmountKey] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchData(true);
+    }, 15_000);
+    return () => window.clearInterval(refreshTimer);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError('');
 
       // Fetch requests and unmatched SMS logs in parallel
@@ -214,7 +218,7 @@ export function RechargeVerificationWorkspace() {
       console.error(err);
       setError('فشل في تحميل بيانات طلبات الشحن والتحويلات.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -398,6 +402,7 @@ export function RechargeVerificationWorkspace() {
       suspectedPhone?.includes(searchQuery) ||
       r.walletLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.walletPhoneNumber.includes(searchQuery) ||
+      r.id.slice(0, 8).toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
       r.amount.toString().includes(searchQuery);
     return matchesStatus && matchesSearch;
   });
@@ -430,6 +435,7 @@ export function RechargeVerificationWorkspace() {
         <div>
           <div className="font-mono font-bold text-sm text-[var(--admin-text)]">{r.amount} ج.م</div>
           <div className="text-xs text-[var(--admin-muted)] mt-0.5">الرصيد: <span className="font-semibold">{r.teacherName ? `للمدرس ${r.teacherName}` : 'عام'}</span></div>
+          <div className="mt-0.5 text-[10px] font-bold text-[var(--admin-muted)]">كود المراجعة: <bdi className="font-mono text-[var(--admin-primary)]">{r.id.slice(0, 8).toUpperCase()}</bdi></div>
         </div>
       )
     },
@@ -515,7 +521,9 @@ export function RechargeVerificationWorkspace() {
     {
       key: 'status',
       label: 'الحالة',
-      render: (r) => getStatusBadge(r.status)
+      render: (r) => isRechargeStatus(r.status, 0) && (!r.screenshotUrl || !r.senderPhoneNumber)
+        ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-700"><Clock className="h-3.5 w-3.5" /> بانتظار رفع الإثبات</span>
+        : getStatusBadge(r.status)
     },
     {
       key: 'actions',
@@ -525,6 +533,10 @@ export function RechargeVerificationWorkspace() {
         const isPending = isRechargeStatus(r.status, 0);
         const isRejected = isRechargeStatus(r.status, 3);
         const isManualApproval = isRechargeStatus(r.status, 2) && !r.matchedSmsLogId;
+        const isAwaitingEvidence = isPending && (!r.screenshotUrl || !r.senderPhoneNumber);
+        if (isAwaitingEvidence) {
+          return <div className="max-w-48 text-right text-xs font-bold text-amber-700">الطالب حجز المحفظة ولم يرفع الصورة ورقم التحويل بعد.</div>;
+        }
         if (!isPending && !isRejected && !isManualApproval) {
           if (isRechargeStatus(r.status, 5)) {
             return <div className="max-w-48 text-right text-xs font-bold text-rose-600">سبب الإلغاء: {r.rejectionReason || 'غير مسجل'}</div>;
@@ -704,7 +716,7 @@ export function RechargeVerificationWorkspace() {
           <div className="min-w-0 lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[var(--admin-text)]">قائمة طلبات الشحن</h2>
-              <NeumorphButton type="button" onClick={fetchData} intent="ghost" size="sm">
+              <NeumorphButton type="button" onClick={() => void fetchData()} intent="ghost" size="sm">
                 تحديث
               </NeumorphButton>
             </div>

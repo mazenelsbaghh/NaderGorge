@@ -31,9 +31,8 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
             .Include(r => r.Wallet)
             .Include(r => r.Teacher!).ThenInclude(t => t.User)
             .Include(r => r.ResolvedByUser)
-            // A pending reservation is created before the student uploads the proof.
-            // It is not an admin-reviewable request until the required evidence is submitted.
-            .Where(r => r.Status == RechargeRequestStatus.Cancelled ||
+            .Where(r => r.Status == RechargeRequestStatus.Pending ||
+                r.Status == RechargeRequestStatus.Cancelled ||
                 (r.ScreenshotUrl != null && r.ScreenshotUrl != "" && r.SenderPhoneNumber != ""))
             .AsQueryable();
 

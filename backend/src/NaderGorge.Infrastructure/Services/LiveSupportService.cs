@@ -1009,6 +1009,21 @@ public sealed class LiveSupportService(
 
     private async Task AssignOldestWaitingAsync(CancellationToken ct, Guid? excludedStaffUserId = null)
     {
+        if (_relationalDb?.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true &&
+            _relationalDb.Database.CurrentTransaction is null)
+        {
+            await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+            await AcquireRoutingLockAsync(ct);
+            await AssignOldestWaitingCoreAsync(ct, excludedStaffUserId);
+            await tx.CommitAsync(ct);
+            return;
+        }
+
+        await AssignOldestWaitingCoreAsync(ct, excludedStaffUserId);
+    }
+
+    private async Task AssignOldestWaitingCoreAsync(CancellationToken ct, Guid? excludedStaffUserId)
+    {
         while (true)
         {
             var candidates = await EligibleStaffQuery().Where(c => !excludedStaffUserId.HasValue || c.UserId != excludedStaffUserId.Value).Select(c => new { Config = c, Load = _db.LiveSupportAssignments.Count(a => a.StaffUserId == c.UserId && a.EndedAt == null) })

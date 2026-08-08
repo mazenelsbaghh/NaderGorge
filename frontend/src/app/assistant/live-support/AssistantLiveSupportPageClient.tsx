@@ -24,6 +24,7 @@ export default function AssistantLiveSupportPageClient() {
   const [selected, setSelected] = useState<LiveSupportConversation>();
   const [messages, setMessages] = useState<LiveSupportMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [participantDraft, setParticipantDraft] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [needsStaffActivation, setNeedsStaffActivation] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -41,6 +42,7 @@ export default function AssistantLiveSupportPageClient() {
   const refreshAbort = useRef<AbortController | null>(null);
   const messagesAbort = useRef<AbortController | null>(null);
   const mutationInFlight = useRef(false);
+  const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const knownMessageIds = useRef<Record<string, Set<string>>>({});
   const knownConversationIds = useRef<Set<string> | undefined>(undefined);
   const selectedId = selected?.id;
@@ -156,7 +158,19 @@ export default function AssistantLiveSupportPageClient() {
       setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
     }
   }, [alertForIncomingConversation, loadMessages, selectConversation, selectedId, selectedOwnerUserId, setOwnershipLost]);
-  const { connected } = useLiveSupportHub(selected?.id, () => void refresh());
+  const showParticipantDraft = useCallback((preview: string | null) => {
+    setParticipantDraft(preview);
+    if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    typingClearTimer.current = setTimeout(() => setParticipantDraft(null), 2_000);
+  }, []);
+  const { connected } = useLiveSupportHub(selected?.id, () => void refresh(), showParticipantDraft);
+
+  useEffect(() => {
+    setParticipantDraft(null);
+    return () => {
+      if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    };
+  }, [selectedId]);
 
   useEffect(() => {
     void refresh();
@@ -332,6 +346,7 @@ export default function AssistantLiveSupportPageClient() {
             conversation={selected}
             messages={messages}
             draft={draft}
+            participantDraft={participantDraft}
             ownershipLost={ownershipLost}
             pendingAction={pendingAction}
             messagesLoading={messagesLoading}
