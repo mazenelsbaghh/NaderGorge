@@ -16,7 +16,7 @@ import {
   Bell, BookOpen, BookOpenText, Calendar, ChevronDown, ClipboardList, Compass,
   Headphones, Home, LogOut, Menu, MessageSquareText, PanelRightClose,
   PanelRightOpen, PhoneCall, Search, Shield, Star, X, type LucideIcon,
-  WalletCards, Users, BarChart3,
+  WalletCards, Users, BarChart3, MessageSquareMore,
   KeyRound,
 } from 'lucide-react';
 
@@ -39,7 +39,7 @@ export type AssistantShellRoute =
   | '/assistant/live-support' | '/assistant/attendance' | '/assistant/vacations'
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
-  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/students' | '/assistant/reports'
+  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/students' | '/assistant/reports'
   | '/assistant/codes';
 
 type AssistantShellChromeProps = {
@@ -79,6 +79,7 @@ const navItems: AssistantNavItem[] = [
   { href: '/assistant/crm', label: 'الكول سنتر', icon: PhoneCall, group: 'communication', permission: 'crm.manage' },
   { href: '/assistant/live-support', label: 'الدعم المباشر', icon: Headphones, group: 'communication' },
   { href: '/assistant/recharge-verification', label: 'مطابقة الشحن', icon: WalletCards, group: 'operations', permission: 'payments.manage' },
+  { href: '/assistant/wallet-messages', label: 'رسائل المحافظ', icon: MessageSquareMore, group: 'operations', permission: 'payments.manage' },
   { href: '/assistant/students', label: 'إدارة الطلاب', icon: Users, group: 'operations', permission: 'users.manage' },
   { href: '/assistant/reports', label: 'مركز التقارير', icon: BarChart3, group: 'operations', permission: 'reports.manage' },
   { href: '/assistant/chat', label: 'التواصل الداخلي', icon: MessageSquareText, group: 'communication', permission: 'chat.manage' },

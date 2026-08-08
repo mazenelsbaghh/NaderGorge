@@ -446,6 +446,33 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Expired_request_without_evidence_can_be_rejected_by_admin()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000113");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01000000114");
+        var wallet = Wallet("01010000114");
+        var recharge = PendingRequest(student, wallet, 200m);
+        recharge.Status = RechargeRequestStatus.Expired;
+        recharge.ReservationExpiresAt = null;
+        recharge.RejectionReason = RechargeRequestExpiryService.ReservationExpiredReason;
+        db.AddRange(wallet, recharge);
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveRechargeRequestCommandHandler(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var result = await handler.Handle(
+            new ResolveRechargeRequestCommand(recharge.Id, false, admin.Id, "لم يتم رفع إثبات التحويل"),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(RechargeRequestStatus.Rejected, recharge.Status);
+        Assert.Equal("لم يتم رفع إثبات التحويل", recharge.RejectionReason);
+        Assert.Equal(admin.Id, recharge.ResolvedByUserId);
+    }
+
+    [Fact]
     public async Task Pending_request_without_evidence_cannot_be_approved_without_linked_sms()
     {
         await using var db = TestAppDbContextFactory.Create();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -191,6 +191,7 @@ export function RechargeVerificationWorkspace() {
   const [rejectModalRequest, setRejectModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const actionInFlightRef = useRef(false);
   const [expandedWalletId, setExpandedWalletId] = useState<string | null>(null);
   const [expandedAmountKey, setExpandedAmountKey] = useState<string | null>(null);
 
@@ -273,12 +274,13 @@ export function RechargeVerificationWorkspace() {
 
   const handleReject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rejectModalRequest) return;
+    if (!rejectModalRequest || actionInFlightRef.current) return;
     if (!rejectionReason.trim()) {
       toast.error('يرجى تحديد سبب الرفض.');
       return;
     }
 
+    actionInFlightRef.current = true;
     setActionLoading(true);
     try {
       const response = await walletService.resolveRechargeRequest(
@@ -299,6 +301,7 @@ export function RechargeVerificationWorkspace() {
       console.error(err);
       toast.error(err.response?.data?.message || 'فشل في رفض الطلب.');
     } finally {
+      actionInFlightRef.current = false;
       setActionLoading(false);
     }
   };
@@ -1102,6 +1105,7 @@ export function RechargeVerificationWorkspace() {
                 type="submit"
                 intent="danger"
                 loading={actionLoading}
+                disabled={actionLoading}
               >
                 تأكيد الرفض
               </NeumorphButton>

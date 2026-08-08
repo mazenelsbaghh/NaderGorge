@@ -59,7 +59,9 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
             return await CorrectApprovedWalletAsync(rechargeRequest, request.WalletId.Value, request.AdminId, ct);
         }
 
-        if (rechargeRequest.Status is not (RechargeRequestStatus.Pending or RechargeRequestStatus.Rejected))
+        var canResolve = rechargeRequest.Status is RechargeRequestStatus.Pending or RechargeRequestStatus.Rejected
+            || (!request.Approve && rechargeRequest.Status == RechargeRequestStatus.Expired);
+        if (!canResolve)
             return ApiResponse<bool>.Fail("لا يمكن تعديل قرار طلب الشحن في حالته الحالية.");
 
         if (!request.Approve && string.IsNullOrWhiteSpace(request.RejectionReason))
@@ -213,9 +215,12 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
     {
         if (_db is DbContext efDb && efDb.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
         {
+            var allowExpiredRejection = nextStatus == RechargeRequestStatus.Rejected;
             var affectedRows = await _db.RechargeRequests
                 .Where(row => row.Id == rechargeRequest.Id
-                    && (row.Status == RechargeRequestStatus.Pending || row.Status == RechargeRequestStatus.Rejected))
+                    && (row.Status == RechargeRequestStatus.Pending
+                        || row.Status == RechargeRequestStatus.Rejected
+                        || (allowExpiredRejection && row.Status == RechargeRequestStatus.Expired)))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(row => row.Status, nextStatus)
                     .SetProperty(row => row.ResolvedByUserId, adminId)

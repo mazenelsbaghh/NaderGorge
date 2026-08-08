@@ -145,7 +145,9 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
   'payments.manage': [
     '/admin/wallets',
     '/admin/recharge-verification',
-    '/assistant/recharge-verification'
+    '/admin/wallet-messages',
+    '/assistant/recharge-verification',
+    '/assistant/wallet-messages'
   ],
   'finance.manage': [
     '/admin/finance',

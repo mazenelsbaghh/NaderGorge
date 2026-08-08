@@ -113,6 +113,17 @@ const toArray = (v: unknown): any[] => {
   return [];
 };
 
+type PackageSalesBreakdown = {
+  packageId: string;
+  packageName: string;
+  packageBuyers: number;
+  termBuyers: number;
+  sectionBuyers: number;
+  lessonBuyers: number;
+  purchasedStudents: number;
+  giftStudents: number;
+};
+
 /* ──────────────────────────────────────────────────────────────────
    Component
    ────────────────────────────────────────────────────────────────── */
@@ -332,6 +343,65 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     </div>
   );
 
+  const PackageSalesCards = () => {
+    const packageSales = toArray(stats?.packageSales) as PackageSalesBreakdown[];
+
+    return (
+      <section aria-labelledby="package-sales-title">
+        <div className="mb-4">
+          <h3 id="package-sales-title" className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+            تفاصيل الطلاب لكل باقة
+          </h3>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">كل رقم يمثل عدد طلاب مختلفين حصلوا على هذا النوع من المحتوى.</p>
+        </div>
+
+        {packageSales.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-8 text-center text-sm font-bold text-[var(--admin-muted)]">
+            لا توجد باقات أو اشتراكات مسجلة لهذا المدرس.
+          </div>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {packageSales.map((item) => (
+              <article key={item.packageId} className="overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-bg)]">
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-border)] px-5 py-4">
+                  <h4 className="min-w-0 truncate text-base font-black text-[var(--admin-text)]">{item.packageName}</h4>
+                  <span className="shrink-0 rounded-full bg-[var(--admin-primary-15)] px-3 py-1 text-xs font-black text-[var(--admin-primary)]">
+                    {item.purchasedStudents + item.giftStudents} طالب
+                  </span>
+                </div>
+
+                <dl className="grid grid-cols-2 gap-px bg-[var(--admin-border)] sm:grid-cols-4">
+                  {[
+                    ['الباقة كاملة', item.packageBuyers],
+                    ['الترم', item.termBuyers],
+                    ['القسم / الشهر', item.sectionBuyers],
+                    ['الحصة', item.lessonBuyers],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="bg-[var(--admin-bg)] px-4 py-4 text-right">
+                      <dt className="text-[11px] font-bold text-[var(--admin-muted)]">{label}</dt>
+                      <dd className="mt-1 text-2xl font-black tabular-nums text-[var(--admin-text)]">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <dl className="grid grid-cols-2 border-t border-[var(--admin-border)]">
+                  <div className="px-5 py-3">
+                    <dt className="text-[11px] font-bold text-[var(--admin-muted)]">شراء</dt>
+                    <dd className="mt-0.5 text-lg font-black tabular-nums text-emerald-700">{item.purchasedStudents}</dd>
+                  </div>
+                  <div className="border-r border-[var(--admin-border)] px-5 py-3">
+                    <dt className="text-[11px] font-bold text-[var(--admin-muted)]">هدية</dt>
+                    <dd className="mt-0.5 text-lg font-black tabular-nums text-amber-700">{item.giftStudents}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
   return (
     <AdminPage
       activePath="/admin/teachers"
@@ -400,12 +470,14 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             <div>
               <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">ملخص الإحصاءات</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                <AdminStatCard variant="accent" icon={Users} label="عدد الطلاب" value={stats?.studentsCount ?? students.length ?? 0} />
+                <AdminStatCard variant="accent" icon={Users} label="عدد الطلاب" value={stats?.studentsCount ?? 0} />
                 <AdminStatCard variant="light" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? 0} />
                 <AdminStatCard variant="muted" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? 0} />
                 <AdminStatCard variant="accent" icon={PenLine} label="مقالات قيد التصحيح" value={stats?.pendingEssaysCount ?? essays.length ?? 0} />
               </div>
             </div>
+
+            <PackageSalesCards />
 
             {/* Personal info */}
             <SectionCard icon={User} title="البيانات الشخصية">
@@ -536,9 +608,11 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         {activeTab === 'students' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب المسجلين" value={students.length} />
-              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={students.filter((s: any) => s.isActive !== false).length} />
+              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب المسجلين" value={stats?.studentsCount ?? 0} />
+              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={stats?.activeStudentsCount ?? 0} />
             </div>
+
+            <PackageSalesCards />
 
             <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
               {/* Header with title + download button */}
