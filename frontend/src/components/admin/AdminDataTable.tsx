@@ -120,7 +120,7 @@ export function AdminDataTable<T>({
         <span>اسحب الجدول أفقيًا لرؤية الأعمدة الإضافية.</span>
       </div>
       <div
-        className="overflow-x-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-width:thin] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]"
+        className="horizontal-scroll-region scroll-hint-provided"
         tabIndex={0}
         role="region"
         aria-label="جدول قابل للتمرير أفقيًا"

@@ -270,7 +270,7 @@ export default function TaskDetailsModal({
           {/* Status Transitions for Assignee / Staff */}
           {isAssignee && details.task.status !== 4 && details.task.status !== 3 && (
             <div className="flex flex-wrap items-center gap-2 bg-[var(--admin-primary-15)] p-4 rounded-2xl border border-[var(--admin-primary)]/20">
-              <span className="text-xs font-bold text-[var(--admin-primary)] ml-auto">إجراءات الموظف المسند إليه:</span>
+              <span className="text-xs font-bold text-[var(--admin-primary)] ms-auto">إجراءات الموظف المسند إليه:</span>
               <div className="flex gap-2">
                 {details.task.status === 1 && (
                   <NeumorphButton onClick={() => handleUpdateStatus(2)} disabled={updatingStatus} intent="primary" size="sm" className="font-bold text-xs">
@@ -335,11 +335,11 @@ export default function TaskDetailsModal({
               ) : (
                 <div className="flex gap-2 justify-end">
                   <NeumorphButton onClick={() => handleResolveApproval(true)} disabled={!!resolvingId} intent="primary" size="sm" className="!bg-emerald-500 !text-white hover:!bg-emerald-600 text-xs font-bold">
-                    <Check className="h-3.5 w-3.5 inline ml-1" />
+                    <Check className="h-3.5 w-3.5 inline ms-1" />
                     الموافقة والإغلاق
                   </NeumorphButton>
                   <NeumorphButton onClick={() => setShowRejectForm(true)} disabled={!!resolvingId} intent="danger" size="sm" className="text-xs font-bold">
-                    <CloseIcon className="h-3.5 w-3.5 inline ml-1" />
+                    <CloseIcon className="h-3.5 w-3.5 inline ms-1" />
                     رفض وإرجاع للعمل
                   </NeumorphButton>
                 </div>
@@ -357,7 +357,7 @@ export default function TaskDetailsModal({
             </h4>
 
             {/* Comments List */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-60 overflow-y-auto pe-1">
               {details.comments.length === 0 ? (
                 <p className="text-xs text-[var(--admin-muted)] italic text-center py-4">لا توجد تعليقات أو نقاشات حول هذه المهمة بعد.</p>
               ) : (

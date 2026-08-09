@@ -216,7 +216,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
             return (
               <div
                 key={student.studentId}
-                className={`p-5 rounded-3xl border bg-[var(--admin-card)] transition-all flex flex-col justify-between gap-4 ${
+                className={`p-5 rounded-3xl border bg-[var(--admin-card)] transition-[color,background-color,border-color,opacity,transform,box-shadow] flex flex-col justify-between gap-4 ${
                   isOverdue ? "border-red-400 dark:border-red-600 shadow-sm" : "border-[var(--admin-border)] shadow-sm hover:border-[var(--admin-primary)]"
                 }`}
               >
@@ -225,7 +225,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                     <div>
                       <h3 className="text-sm font-black text-[var(--admin-text-strong)]">{student.studentName}</h3>
                       <p className="text-xs text-[var(--admin-muted)] mt-0.5" dir="ltr">{student.studentPhone}</p>
-                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-[var(--admin-primary-10)] px-2 py-1 font-mono text-[11px] font-bold text-[var(--admin-primary)]">
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-[var(--admin-primary-10)] px-2 py-1 font-mono text-sm font-bold text-[var(--admin-primary)]">
                         <ScanLine className="h-3 w-3" />
                         رقم المتابعة: {student.parentTrackingCode || 'غير متوفر'}
                       </p>

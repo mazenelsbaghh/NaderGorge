@@ -29,11 +29,12 @@ const navigationRoutes = [
   ...navigation.matchAll(/href:\s*['"]([^'"]+)['"]/g),
 ].map((match) => match[1]);
 const uniqueRoutes = [...new Set(navigationRoutes)];
-const missing = uniqueRoutes.filter(
-  (route) =>
-    !policy.includes('adminNavigationRoutePermissions') &&
-    !policy.includes(`pattern: '${route}'`)
-);
+const consumesCanonicalNavigation =
+  policy.includes('adminAllNavigationRoutePermissions') ||
+  policy.includes('adminNavigationRoutePermissions');
+const missing = consumesCanonicalNavigation
+  ? []
+  : uniqueRoutes.filter((route) => !policy.includes(`pattern: '${route}'`));
 
 if (missing.length > 0) {
   throw new Error(
@@ -48,6 +49,37 @@ if (!layout.includes('canAccessAdminRoute')) {
 }
 if (!shell.includes('canAccessAdminRoute(item.href, user)')) {
   throw new Error('Admin menu visibility must consume the canonical route policy.');
+}
+
+const shellNavigationBlock = shell.match(
+  /const navItems: AdminNavItem\[\] = \[([\s\S]*?)\n\];\n\nexport function resolveAdminShellRoute/
+)?.[1];
+const shellGroupBlock = shell.match(
+  /const GROUP_CONFIG = \[([\s\S]*?)\n\];\n\nconst MOBILE_QUICK_ROUTE_ORDER/
+)?.[1];
+
+if (!shellNavigationBlock || !shellGroupBlock) {
+  throw new Error('Unable to inspect the admin shell navigation inventory.');
+}
+
+const shellRoutes = [
+  ...shellNavigationBlock.matchAll(/href:\s*['"](\/admin\/[^'"]+)['"]/g),
+].map((match) => match[1]);
+const groupedShellRoutes = new Set(
+  [...shellGroupBlock.matchAll(/['"](\/admin\/[^'"]+)['"]/g)].map(
+    (match) => match[1]
+  )
+);
+const ungroupedShellRoutes = [...new Set(shellRoutes)].filter(
+  (route) =>
+    !(route === '/admin/hr' || route.startsWith('/admin/hr/')) &&
+    !groupedShellRoutes.has(route)
+);
+
+if (ungroupedShellRoutes.length > 0) {
+  throw new Error(
+    `Admin shell destinations are hidden because they have no navigation group: ${ungroupedShellRoutes.join(', ')}`
+  );
 }
 
 const assistantNavigationRoutes = [

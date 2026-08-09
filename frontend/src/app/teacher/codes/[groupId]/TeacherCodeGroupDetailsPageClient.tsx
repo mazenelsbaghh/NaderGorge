@@ -234,7 +234,7 @@ export default function TeacherCodeGroupDetailsPageClient() {
           <div className="flex gap-1.5 p-1 bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)]">
             <button
               onClick={() => setShowQrPrint(false)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 !showQrPrint 
                   ? "bg-[var(--admin-primary)] text-white shadow-sm" 
                   : "text-[var(--admin-muted)] hover:text-[var(--admin-text)]"
@@ -244,7 +244,7 @@ export default function TeacherCodeGroupDetailsPageClient() {
             </button>
             <button
               onClick={() => setShowQrPrint(true)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+              className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 showQrPrint 
                   ? "bg-[var(--admin-primary)] text-white shadow-sm" 
                   : "text-[var(--admin-muted)] hover:text-[var(--admin-text)]"

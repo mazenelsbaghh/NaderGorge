@@ -66,7 +66,7 @@ export function AssistantDashboardTabs() {
               اختر المتابعة الأكاديمية أو العمليات، ثم نفّذ الإجراء المطلوب من مكان واحد.
             </p>
           </div>
-          <div className="flex items-center gap-3 border-t border-white/20 pt-4 lg:border-t-0 lg:border-r lg:pr-6 lg:pt-0">
+          <div className="flex items-center gap-3 border-t border-white/20 pt-4 lg:border-t-0 lg:border-r lg:pe-6 lg:pt-0">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
             </span>
@@ -105,7 +105,7 @@ export function AssistantDashboardTabs() {
                   </span>
                   <span className="mt-1 block text-xs font-medium leading-5">{description}</span>
                 </span>
-                <span className={`absolute bottom-0 right-0 h-0.5 transition-[width] duration-200 ${isActive ? 'w-full bg-[var(--admin-primary)]' : 'w-0 bg-transparent'}`} />
+                <span className={`absolute bottom-0 end-0 h-0.5 transition-[width] duration-200 ${isActive ? 'w-full bg-[var(--admin-primary)]' : 'w-0 bg-transparent'}`} />
               </button>
             );
           })}

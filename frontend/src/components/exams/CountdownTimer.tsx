@@ -80,7 +80,7 @@ export function CountdownTimer({
 
   return (
     <div
-      className={`sticky top-6 z-40 mr-auto flex w-max items-center gap-3 rounded-full border px-6 py-3 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-xl transition-colors ${
+      className={`sticky top-6 z-40 mr-auto flex w-max items-center gap-3 rounded-full border px-6 py-3 shadow-sm backdrop-blur-md transition-colors ${
         isWarning
           ? "bg-[var(--admin-danger-10)] border-[var(--admin-danger-20)] text-[var(--admin-danger)]"
           : "bg-[var(--admin-card)]/95 border-[var(--admin-border)] text-[var(--admin-text)]"

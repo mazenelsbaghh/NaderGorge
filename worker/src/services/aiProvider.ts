@@ -3,6 +3,13 @@ import { classifyAIError } from './aiErrors.js';
 const RETRY_DELAYS_MS = [2_000, 5_000, 10_000];
 let waitBeforeRetry = (delayMs: number) => new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 
+class GeminiRequestDeadlineError extends Error {
+  constructor() {
+    super('Gemini request exceeded its deadline.');
+    this.name = 'GeminiRequestDeadlineError';
+  }
+}
+
 export class GeminiDeveloperApiError extends Error {
   constructor(
     public readonly category: string,
@@ -33,20 +40,54 @@ function providerStatus(error: unknown) {
   return typeof status === 'number' ? status : undefined;
 }
 
+function requestDeadlineMs() {
+  const configuredDeadline = Number.parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || '120000', 10);
+  return Number.isFinite(configuredDeadline) && configuredDeadline > 0 ? configuredDeadline : 120_000;
+}
+
+async function requestBeforeDeadline<T>(request: () => Promise<T>): Promise<T> {
+  let deadlineTimer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    deadlineTimer = setTimeout(() => reject(new GeminiRequestDeadlineError()), requestDeadlineMs());
+  });
+
+  try {
+    return await Promise.race([request(), deadline]);
+  } finally {
+    if (deadlineTimer) clearTimeout(deadlineTimer);
+  }
+}
+
+function geminiFailure(error: unknown) {
+  if (error instanceof GeminiRequestDeadlineError) {
+    return new GeminiDeveloperApiError('provider-timeout', error.name);
+  }
+  const failure = classifyAIError(error);
+  return new GeminiDeveloperApiError(failure.category, providerErrorName(error), failure.status ?? providerStatus(error));
+}
+
 export async function executeGeminiRequest<T>(request: () => Promise<T>): Promise<T> {
   try {
-    return await request();
+    return await requestBeforeDeadline(request);
   } catch (error) {
-    const failure = classifyAIError(error);
-    throw new GeminiDeveloperApiError(failure.category, providerErrorName(error), failure.status ?? providerStatus(error));
+    throw geminiFailure(error);
   }
 }
 
 export async function executeRetriableGeminiRequest<T>(request: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await request();
+      return await requestBeforeDeadline(request);
     } catch (error) {
+      if (error instanceof GeminiRequestDeadlineError) {
+        const retryDelay = RETRY_DELAYS_MS[attempt];
+        if (retryDelay !== undefined) {
+          console.warn('[AI provider] Gemini request deadline exceeded; retrying request.', { attempt: attempt + 1 });
+          await waitBeforeRetry(retryDelay);
+          continue;
+        }
+        throw geminiFailure(error);
+      }
       const failure = classifyAIError(error);
       const status = failure.status ?? providerStatus(error);
       const retryDelay = RETRY_DELAYS_MS[attempt];
@@ -55,7 +96,7 @@ export async function executeRetriableGeminiRequest<T>(request: () => Promise<T>
         await waitBeforeRetry(retryDelay);
         continue;
       }
-      throw new GeminiDeveloperApiError(failure.category, providerErrorName(error), status);
+      throw geminiFailure(error);
     }
   }
 }

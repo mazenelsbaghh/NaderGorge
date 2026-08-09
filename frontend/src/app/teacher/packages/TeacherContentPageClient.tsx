@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { BookOpenText, Plus, ChevronLeft, Sparkles, Video, Eye, Folder, FolderOpen, FileText, Upload } from "lucide-react";
-import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard } from "@/components/admin";
+import { BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Eye, Folder, FolderOpen, FileText, Upload, Layers3 } from "lucide-react";
+import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard, AdminTabBar, ContentSummaryPanel } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { contentService, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from "@/services/content-service";
 import { adminService } from "@/services/admin-service";
@@ -448,7 +448,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm transition-all hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-3 hover:bg-[var(--admin-card)] transition-colors sm:px-5">
         <button
           type="button"
@@ -518,6 +518,7 @@ export default function TeacherContentPageClient() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<'summary' | 'content'>('summary');
 
   const loadPackages = useCallback(async () => {
     try {
@@ -556,6 +557,19 @@ export default function TeacherContentPageClient() {
         <AdminPageSkeleton />
       ) : (
         <div className="space-y-8">
+          <AdminTabBar
+            tabs={[
+              { key: 'summary', label: 'الملخص', icon: BarChart3 },
+              { key: 'content', label: 'المحتوى', icon: Layers3 },
+            ]}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+          />
+
+          {activeTab === 'summary' ? (
+            <ContentSummaryPanel scope="teacher" />
+          ) : (
+            <>
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <AdminStatCard variant="accent" icon={BookOpenText} label="إجمالي الباقات" value={packages.length} />
@@ -577,6 +591,8 @@ export default function TeacherContentPageClient() {
             {filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)}
             <CreatePackageRow onSuccess={loadPackages} subjects={subjects} profile={profile} />
           </div>
+            </>
+          )}
         </div>
       )}
     </TeacherPage>

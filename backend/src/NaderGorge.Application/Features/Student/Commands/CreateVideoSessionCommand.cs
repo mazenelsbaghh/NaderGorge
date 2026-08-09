@@ -8,7 +8,17 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
 
-public record CreateVideoSessionCommand(Guid LessonVideoId, Guid UserId, string? IpAddress = null) : IRequest<ApiResponse<VideoSessionDto>>;
+public enum VideoSessionMode
+{
+    Standard,
+    AdminPreview
+}
+
+public record CreateVideoSessionCommand(
+    Guid LessonVideoId,
+    Guid UserId,
+    string? IpAddress = null,
+    VideoSessionMode Mode = VideoSessionMode.Standard) : IRequest<ApiResponse<VideoSessionDto>>;
 
 public record VideoSessionDto(
     Guid SessionId,
@@ -16,7 +26,8 @@ public record VideoSessionDto(
     string Provider,
     WatchInfoDto WatchInfo,
     string VideoTitle,
-    int ThresholdPercentage
+    int ThresholdPercentage,
+    bool IsPreview
 );
 
 public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds);
@@ -42,6 +53,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
     {
+        var isAdminPreview = request.Mode == VideoSessionMode.AdminPreview;
         var video = await _db.LessonVideos
             .Include(v => v.Lesson)
             .FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
@@ -116,7 +128,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             .Select(e => e.Id)
             .ToListAsync(ct);
 
-        if (videoExams.Any())
+        if (!isAdminPreview && videoExams.Any())
         {
             var passedVideoExamIds = await _db.StudentExamAttempts
                 .Where(a => a.UserId == request.UserId && videoExams.Contains(a.ExamId) && a.IsPassed)
@@ -143,7 +155,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             .Include(ur => ur.Role)
             .AnyAsync(ur => ur.UserId == request.UserId && ur.Role.Type != RoleType.Student, ct);
 
-        if (isLocked && !isStaffOrTeacher)
+        if (isLocked && !isStaffOrTeacher && !isAdminPreview)
         {
             // Also ensure the flag is persisted so future checks are fast
             if (watchEvent != null && !watchEvent.IsLocked)
@@ -163,13 +175,14 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     IsLocked: true,
                     TotalTrackedSeconds: Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
                 video.Title,
-                30);
+                30,
+                IsPreview: false);
             return ApiResponse<VideoSessionDto>.Fail("Watch limit reached for this video", new List<string> { "WATCH_LIMIT_REACHED" }, lockedDto);
         }
         else
         {
             // Self-repair out-of-sync DB flag
-            if (watchEvent != null && watchEvent.IsLocked)
+            if (!isAdminPreview && watchEvent != null && watchEvent.IsLocked)
             {
                 watchEvent.IsLocked = false;
                 await _db.SaveChangesAsync(ct);
@@ -219,7 +232,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             studentPhone);
 
         _db.VideoPlaybackSessions.Add(session);
-        if (!hasLessonAccess && !hasNonGiftVideoAccess && _giftUsage != null)
+        if (!isAdminPreview && !hasLessonAccess && !hasNonGiftVideoAccess && _giftUsage != null)
         {
             var consumed = await _giftUsage.TryConsumeAsync(
                 request.UserId,
@@ -246,13 +259,17 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             thresholdPercentage = parsed;
         }
 
+        var sessionWatchInfo = isAdminPreview
+            ? new WatchInfoDto(0, 0, IsLocked: false, TotalTrackedSeconds: 0)
+            : new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0));
         var dto = new VideoSessionDto(
             session.Id,
             session.ExpiresAt,
             video.Provider,
-            new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
+            sessionWatchInfo,
             video.Title,
-            thresholdPercentage
+            thresholdPercentage,
+            isAdminPreview
         );
 
         return ApiResponse<VideoSessionDto>.Ok(dto);

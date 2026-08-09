@@ -20,6 +20,7 @@ export default function HrAdminPageClient() {
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
   const [now, setNow] = useState(() => Date.now());
+  const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   const load = useCallback(async (silent = false) => {
@@ -32,7 +33,10 @@ export default function HrAdminPageClient() {
       setSessions(sessionRows);
       setDailyReport(dailyRows);
       setLastUpdatedAt(new Date());
-      setNow(Date.now());
+      const receivedAt = Date.now();
+      const serverNowUtc = sessionRows[0]?.serverNowUtc ?? dailyRows[0]?.serverNowUtc;
+      if (serverNowUtc) setServerClockOffsetMs(receivedAt - parseUtcDateTime(serverNowUtc).getTime());
+      setNow(receivedAt);
     } catch {
       if (!silent) toast.error('تعذر تحميل الحضور اللحظي');
     } finally {
@@ -67,10 +71,12 @@ export default function HrAdminPageClient() {
   }, [dailyReport, search]);
 
   const elapsedTodayMinutes = (clockedInAt: string) =>
-    Math.max(0, Math.floor((now - parseUtcDateTime(clockedInAt).getTime()) / 60_000));
+    Math.max(0, Math.floor((now - serverClockOffsetMs - parseUtcDateTime(clockedInAt).getTime()) / 60_000));
   const durationMinutes = (row: AdminBreakSessionDto) => row.clockedOutAt
     ? row.workedMinutes
     : elapsedTodayMinutes(row.clockedInAt);
+  const dailyWorkedMinutes = (row: AdminDailyAttendanceReportDto) => row.workedMinutes
+    + (row.openClockedInAt ? elapsedTodayMinutes(row.openClockedInAt) : 0);
   const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} س ${Math.max(0, minutes % 60)} د`;
   const formatTime = (value: string) => formatCairoDateTime(value, { hour: '2-digit', minute: '2-digit' });
 
@@ -91,8 +97,8 @@ export default function HrAdminPageClient() {
     { key: 'employee', label: 'الموظف', render: (row) => <div><p className="font-black">{row.employee}</p><p className="mt-0.5 text-xs text-[var(--admin-muted)]" dir="ltr">{row.employeePhone}</p></div> },
     { key: 'workDate', label: 'اليوم', render: (row) => <span className="font-bold" dir="ltr">{row.workDate}</span> },
     { key: 'clockedInAt', label: 'الحضور', render: (row) => <span className="font-black">{formatTime(row.clockedInAt)}</span> },
-    { key: 'clockedOutAt', label: 'الانصراف', render: (row) => row.clockedOutAt ? <span className="font-black">{formatTime(row.clockedOutAt)}</span> : <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">ما زال يعمل</span> },
-    { key: 'workedMinutes', label: 'صافي مدة العمل', render: (row) => <span className="font-black text-[var(--admin-primary)]">{formatDuration(row.hasOpenSession ? elapsedTodayMinutes(row.clockedInAt) : row.workedMinutes)}</span> },
+    { key: 'clockedOutAt', label: 'الانصراف', render: (row) => row.hasOpenSession ? <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">ما زال يعمل</span> : row.clockedOutAt ? <span className="font-black">{formatTime(row.clockedOutAt)}</span> : '—' },
+    { key: 'workedMinutes', label: 'صافي مدة العمل', render: (row) => <span className="font-black text-[var(--admin-primary)]">{formatDuration(dailyWorkedMinutes(row))}</span> },
     { key: 'lateMinutes', label: 'التأخير', render: (row) => row.lateMinutes > 0 ? <span className="font-black text-rose-700">{row.lateMinutes} د</span> : '—' },
     { key: 'earlyLeaveMinutes', label: 'خروج مبكر', render: (row) => row.earlyLeaveMinutes > 0 ? <span className="font-black text-amber-700">{row.earlyLeaveMinutes} د</span> : '—' },
     { key: 'overtimeMinutes', label: 'إضافي', render: (row) => row.overtimeMinutes > 0 ? <span className="font-black text-emerald-700">{row.overtimeMinutes} د</span> : '—' },
@@ -104,7 +110,7 @@ export default function HrAdminPageClient() {
         <AdminStatCard icon={UsersRound} label="يعملون الآن" value={active.length} variant="accent" subtitle="جلسات مفتوحة" />
         <AdminStatCard icon={Coffee} label="في استراحة" value={onBreak.length} variant="light" subtitle="ضمن الحاضرين" />
         <AdminStatCard icon={TimerOff} label="متأخرون" value={late.length} variant="light" subtitle="داخل الفترة المحددة" />
-        <AdminStatCard icon={Clock3} label="إجمالي السجلات" value={sessions.length} variant="light" subtitle={lastUpdatedAt ? `آخر تحديث ${lastUpdatedAt.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}` : 'جارٍ التحديث'} />
+        <AdminStatCard icon={Clock3} label="إجمالي السجلات" value={sessions.length} variant="light" subtitle={lastUpdatedAt ? `آخر تحديث ${lastUpdatedAt.toLocaleTimeString('ar-EG', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}` : 'جارٍ التحديث'} />
       </section>
       <section className="admin-panel flex flex-wrap items-end gap-3">
         <label className="min-w-56 flex-1 text-sm font-bold">بحث<div className="admin-input mt-1 flex items-center gap-2"><Search className="h-4 w-4 text-[var(--admin-muted)]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="اسم الموظف أو الهاتف" className="w-full bg-transparent outline-none" /></div></label>

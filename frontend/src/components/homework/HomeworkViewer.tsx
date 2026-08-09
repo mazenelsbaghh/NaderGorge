@@ -137,7 +137,7 @@ function HomeworkQuestionCard({
                   />
                   <label
                     htmlFor={`audio-upload-${q.id}`}
-                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-all duration-200"
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200"
                   >
                     <span className="text-sm font-bold text-muted-foreground">
                       أو ارفع إجابة صوتية بدلاً من الكتابة
@@ -155,9 +155,9 @@ function HomeworkQuestionCard({
               return (
                 <label
                   key={optIdx}
-                  className={`group flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 ${
+                  className={`group flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 hover:border-primary/40 hover:bg-primary/5 ${
                     isSelected
-                      ? 'border-primary bg-primary/8 shadow-[0_2px_16px_color-mix(in_srgb,var(--primary)_12%,transparent)]'
+                      ? 'border-primary bg-primary/8 shadow-sm'
                       : 'border-border bg-background/50'
                   }`}
                 >
@@ -374,7 +374,7 @@ export function HomeworkViewer({
           aria-valuetext={`${answeredCount} من ${totalQ} أسئلة تمت الإجابة عنها`}
         >
           <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -408,7 +408,7 @@ export function HomeworkViewer({
                   title={`سؤال ${idx + 1}: ${stateLabel}`}
                   aria-label={`سؤال ${idx + 1}: ${stateLabel}`}
                   aria-current={isCurrent ? 'step' : undefined}
-                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
                     isCurrent
                       ? 'scale-110 bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_30%,transparent)]'
                       : hasAns
@@ -466,7 +466,7 @@ export function HomeworkViewer({
             type="button"
             onClick={() => navigateTo(currentIdx + 1)}
             disabled={loading}
-            className="flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_4px_16px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
           >
             التالي
             <ChevronLeft className="h-4 w-4" />
@@ -476,7 +476,7 @@ export function HomeworkViewer({
             type="button"
             onClick={() => handleSubmit(false)}
             disabled={loading}
-            className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-[0_4px_20px_color-mix(in_srgb,var(--foreground)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
           >
             {loading ? (
               'جاري التسليم...'

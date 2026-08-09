@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { evaluateStaffAccess } from "@/hooks/useHasPermission";
 
 function hasAssistantRole(roles: string[] | undefined) {
   return !!roles?.length && roles.some(r =>
@@ -19,7 +20,7 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
 
   const isAuthorized = user?.allowedDomains?.length
     ? user.allowedDomains.includes("all") || user.allowedDomains.includes("assistant")
-    : hasAssistantRole(user?.roles);
+    : hasAssistantRole(user?.roles) || evaluateStaffAccess(user);
 
 
 
@@ -43,7 +44,7 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
         dir="rtl"
         className="flex min-h-dvh items-center justify-center bg-[var(--admin-bg)] px-6 text-[var(--admin-text)]"
       >
-        <div className="relative overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-[0_18px_48px_var(--admin-shadow)]">
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-sm">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
           <p className="relative text-sm font-bold text-[var(--admin-muted)]">
             جارٍ التحقق من صلاحيات المساعد...

@@ -15,7 +15,7 @@ import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 
 const formatDateTime = (value: string | null) => {
   if (!value) return "غير معروف";
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat("ar-EG", { timeZone: 'Africa/Cairo',
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

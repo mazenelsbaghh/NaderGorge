@@ -87,7 +87,7 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
               <button
                 type="button"
                 onClick={() => setLookupKey('phone.full')}
-                className={`flex-1 h-9 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex-1 h-9 rounded-xl border text-xs font-semibold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                   lookupKey === 'phone.full'
                     ? 'border-cyan-600 bg-cyan-100/50 text-cyan-800'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -98,7 +98,7 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
               <button
                 type="button"
                 onClick={() => setLookupKey('student_code.full')}
-                className={`flex-1 h-9 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex-1 h-9 rounded-xl border text-xs font-semibold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                   lookupKey === 'student_code.full'
                     ? 'border-cyan-600 bg-cyan-100/50 text-cyan-800'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -222,7 +222,7 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
           />
         </label>
 
-        <div className="flex justify-between text-[10px] font-medium text-slate-500 px-1">
+        <div className="flex justify-between text-sm font-medium text-slate-500 px-1">
           <span>المحاولات المستخدمة: {session.attemptCount}</span>
           <span>الحد الأقصى: {session.maxAttempts}</span>
         </div>

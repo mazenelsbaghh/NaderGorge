@@ -137,11 +137,7 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
             .CountAsync(es => es.Status == EssaySubmissionStatus.WaitTeacher && es.Question.CreatedByTeacherId == teacherProfile.Id, ct);
 
         var packageIds = teacherPackages.Select(package => package.Id).ToArray();
-        var grantRows = await PackageGrantRows(packageIds)
-            .Concat(TermGrantRows(packageIds))
-            .Concat(SectionGrantRows(packageIds))
-            .Concat(LessonGrantRows(packageIds))
-            .ToListAsync(ct);
+        var grantRows = await LoadGrantRowsAsync(packageIds, ct);
         var packageSales = teacherPackages.Select(package =>
         {
             var rows = grantRows.Where(row => row.PackageId == package.Id).ToArray();
@@ -158,6 +154,15 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
 
         var dto = new TeacherDashboardStatsDto(activeStudentsCount, packagesCount, examsCount, pendingEssaysCount, packageSales);
         return ApiResponse<TeacherDashboardStatsDto>.Ok(dto);
+    }
+
+    private async Task<List<TeacherPackageGrantRow>> LoadGrantRowsAsync(Guid[] packageIds, CancellationToken ct)
+    {
+        var grantRows = await PackageGrantRows(packageIds).ToListAsync(ct);
+        grantRows.AddRange(await TermGrantRows(packageIds).ToListAsync(ct));
+        grantRows.AddRange(await SectionGrantRows(packageIds).ToListAsync(ct));
+        grantRows.AddRange(await LessonGrantRows(packageIds).ToListAsync(ct));
+        return grantRows;
     }
 
     private IQueryable<TeacherPackageGrantRow> PackageGrantRows(Guid[] packageIds) =>

@@ -28,8 +28,6 @@ export function ParentCodePopup() {
     return () => clearInterval(interval);
   }, []);
 
-  console.log('ParentCodePopup RENDERING: code =', parentTrackingCode, 'seen =', hasSeenTrackingCodePopup, 'isContractOpen =', isContractOpen);
-
   if (!mounted) {
     return null;
   }
@@ -64,7 +62,7 @@ export function ParentCodePopup() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -83,7 +81,7 @@ export function ParentCodePopup() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="popup-title"
-          className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[var(--admin-card)]/80 backdrop-blur-xl p-6 shadow-2xl text-[var(--admin-text)] flex flex-col items-center text-center"
+          className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[var(--admin-card)]/80 backdrop-blur-md p-6 shadow-2xl text-[var(--admin-text)] flex flex-col items-center text-center"
         >
           {/* Close button icon at the top corner */}
           <button

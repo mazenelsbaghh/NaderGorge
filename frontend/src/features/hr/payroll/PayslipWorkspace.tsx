@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown, FileText, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronDown, FileText, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { hrPayrollService, PayslipDto } from '@/services/hr-payroll-service';
 
@@ -12,22 +12,34 @@ function money(value: number, currency: string) {
 export function PayslipWorkspace() {
   const [rows, setRows] = useState<PayslipDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    hrPayrollService
-      .myPayslips()
-      .then(setRows)
-      .catch(() => toast.error('تعذر تحميل كشوف الرواتب'))
-      .finally(() => setLoading(false));
-  }, []);
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      setRows(await hrPayrollService.myPayslips());
+    } catch {
+      setError('تعذر تحميل كشوف الرواتب. لم يتم اعتبارها قائمة فارغة.');
+      toast.error('تعذر تحميل كشوف الرواتب');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
 
   if (loading) {
     return (
       <div className="hr-loading" role="status">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--admin-accent)]" />
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--admin-accent)] motion-reduce:animate-none" />
         <p className="mt-3">جارٍ تحميل كشوف الرواتب…</p>
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="hr-empty" role="alert"><AlertCircle className="mx-auto mb-3 h-6 w-6 text-[var(--admin-danger)]" aria-hidden="true" /><p>{error}</p><button type="button" onClick={() => void load()} className="admin-btn-secondary mt-4 min-h-11">إعادة المحاولة</button></div>;
   }
 
   if (rows.length === 0) {

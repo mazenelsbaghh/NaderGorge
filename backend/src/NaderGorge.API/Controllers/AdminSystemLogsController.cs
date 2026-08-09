@@ -22,6 +22,7 @@ public sealed class AdminSystemLogsController(IConnectionMultiplexer redis) : Co
             .Where(entry => Matches(entry.Log, filter))
             .Select(entry => entry.Log)
             .OrderByDescending(entry => entry.Timestamp)
+            .ThenByDescending(entry => entry.Id)
             .Take(limit)
             .ToArray();
 
@@ -36,6 +37,7 @@ public sealed class AdminSystemLogsController(IConnectionMultiplexer redis) : Co
             .Where(entry => Matches(entry.Log, filter))
             .Select(entry => entry.Log)
             .OrderByDescending(entry => entry.Timestamp)
+            .ThenByDescending(entry => entry.Id)
             .Select(Format)
             .ToArray();
 

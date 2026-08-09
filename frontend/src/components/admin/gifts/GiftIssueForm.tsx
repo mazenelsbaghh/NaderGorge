@@ -130,8 +130,8 @@ export function GiftIssueForm() {
         {!isBalance(targetType) ? (
           <div className="mt-5 space-y-3">
             <label className="relative block">
-              <Search className="absolute right-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />
-              <input className="admin-input pr-10" value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="ابحث بالاسم أو الكود الداخلي" />
+              <Search className="absolute end-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />
+              <input className="admin-input pe-10" value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="ابحث بالاسم أو الكود الداخلي" />
             </label>
             <select className="admin-input" value={targetId} onChange={(event) => setTargetId(event.target.value)} required>
               <option value="">اختر {giftTargetLabels[targetType]}</option>
@@ -140,7 +140,7 @@ export function GiftIssueForm() {
             {selectedTarget?.academicScopes?.length ? (
               <div className="flex flex-wrap gap-1.5">
                 {selectedTarget.academicScopes.map((scope, index) => (
-                  <span key={`${selectedTarget.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-[11px] font-black text-[var(--admin-primary)]">
+                  <span key={`${selectedTarget.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-sm font-black text-[var(--admin-primary)]">
                     {getAcademicScopeLabel(scope)}
                   </span>
                 ))}
@@ -158,8 +158,8 @@ export function GiftIssueForm() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-black text-[var(--admin-text)]">الطلاب <span className="text-[var(--admin-primary)]">({selectedStudents.length})</span></h2>
           <label className="relative w-full max-w-sm">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />
-            <input className="admin-input pr-10" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="ابحث بالاسم أو الهاتف" />
+            <Search className="absolute end-3 top-3 h-4 w-4 text-[var(--admin-muted)]" />
+            <input className="admin-input pe-10" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="ابحث بالاسم أو الهاتف" />
           </label>
         </div>
         {selectedStudentRows.length > 0 ? (

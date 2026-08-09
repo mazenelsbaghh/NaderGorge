@@ -37,20 +37,20 @@ export function SidebarBalance() {
   return (
     <Link 
       href="/student/balance"
-      className="group/balance relative flex h-12 w-12 group-hover/sidebar:w-full group-hover/sidebar:px-4 flex-col group-hover/sidebar:flex-row items-center justify-center group-hover/sidebar:justify-start gap-2 overflow-hidden rounded-[18px] border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)] text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+      className="group/balance relative flex h-12 w-12 group-hover/sidebar:w-full group-hover/sidebar:px-4 flex-col group-hover/sidebar:flex-row items-center justify-center group-hover/sidebar:justify-start gap-2 overflow-hidden rounded-[18px] border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)] text-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-15)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
       title={`رصيد المحفظة: ${formatFullBalance(balance)} ج.م`}
     >
       {loading ? (
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--admin-primary-strong)] border-r-transparent flex-shrink-0" />
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--admin-primary-strong)] border-e-transparent flex-shrink-0" />
       ) : (
         <>
           <Wallet className="absolute top-1.5 h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity group-hover/sidebar:static group-hover/sidebar:h-5 group-hover/sidebar:w-5 flex-shrink-0" />
-          <span className="absolute bottom-1.5 flex max-w-[2.85rem] items-baseline justify-center gap-0.5 overflow-hidden font-sans text-[10px] font-black leading-none tracking-tight group-hover/sidebar:static group-hover/sidebar:max-w-none group-hover/sidebar:text-sm flex-shrink-0">
+          <span className="absolute bottom-1.5 flex max-w-[2.85rem] items-baseline justify-center gap-0.5 overflow-hidden font-sans text-sm font-black leading-none tracking-tight group-hover/sidebar:static group-hover/sidebar:max-w-none group-hover/sidebar:text-sm flex-shrink-0">
             <span className="truncate group-hover/sidebar:hidden">{formatCompactBalance(balance)}</span>
             <span className="hidden truncate group-hover/sidebar:inline">{formatFullBalance(balance)}</span>
-            <span className="text-[8px] font-bold group-hover/sidebar:text-[10px]">ج.م</span>
+            <span className="text-[8px] font-bold group-hover/sidebar:text-sm">ج.م</span>
           </span>
-          <span className="hidden group-hover/sidebar:block text-xs font-bold text-[var(--admin-muted)] truncate whitespace-nowrap mr-auto">
+          <span className="hidden group-hover/sidebar:block text-xs font-bold text-[var(--admin-muted)] truncate whitespace-nowrap me-auto">
             المحفظة
           </span>
         </>

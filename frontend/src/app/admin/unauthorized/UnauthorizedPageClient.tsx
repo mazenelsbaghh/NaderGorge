@@ -16,7 +16,7 @@ export default function UnauthorizedPageClient() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--admin-bg)] px-4 py-12">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 text-center shadow-[0_12px_40px_var(--admin-shadow)]">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 text-center shadow-sm">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-danger-10)] text-[var(--admin-danger)]">
           <ShieldAlert className="h-8 w-8" />
         </div>

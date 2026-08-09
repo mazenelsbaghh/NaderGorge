@@ -223,19 +223,16 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   return (
     <div
-      dir="rtl"
       data-testid="student-shell"
       data-shell-instance={shellInstanceId}
       style={studentShellTokenAliases}
-      className="student-app-background relative h-screen h-dvh max-h-screen max-h-dvh overflow-x-hidden text-[var(--student-text)]"
+      className="student-app-background relative h-screen h-dvh max-h-screen max-h-dvh overflow-x-clip text-[var(--student-text)]"
     >
       <SkipToContentLink />
       <NavigationFocusManager />
       {showAmbientBackground ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,var(--admin-primary-15),transparent_38%),radial-gradient(circle_at_16%_86%,var(--admin-primary-10),transparent_34%),linear-gradient(135deg,transparent_0_44%,var(--admin-primary-10)_44%_45%,transparent_45%_100%)]" />
-          <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(var(--admin-border)_1px,transparent_1px),linear-gradient(90deg,var(--admin-border)_1px,transparent_1px)] [background-size:28px_28px]" />
-          <div className="absolute bottom-28 right-[14%] h-36 w-36 rounded-[32px] border border-[var(--admin-primary-15)] rotate-12" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,var(--admin-primary-10),transparent_34%)]" />
           {!shouldReduceMotion ? (
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[var(--admin-primary)]/35 to-transparent" />
           ) : null}
@@ -248,7 +245,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             animate={{ x: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { x: '100%' }}
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="group/sidebar fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] transition-all duration-300 ease-in-out hover:w-64 focus-within:w-64 lg:flex"
+            className="group/sidebar fixed start-0 top-0 z-50 hidden h-full w-20 flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-6 transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex"
             role="navigation"
             aria-label="القائمة الرئيسية"
           >
@@ -274,7 +271,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   href="/student"
                   aria-label="لوحة التحكم"
                   aria-current={activePath === '/student' ? 'page' : undefined}
-                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
+                  className={`flex h-12 items-center justify-start ps-[18px] pe-4 rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
                     ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
@@ -293,7 +290,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <IntentLink
                       key={item.href}
                       href={item.href}
-                      className={`flex h-12 items-center justify-between pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
+                      className={`flex h-12 items-center justify-between ps-[18px] pe-4 rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                         }`}
@@ -305,7 +302,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                         <div className="relative">
                           <Icon className="h-5 w-5 flex-shrink-0" />
                           {item.href === '/student/notifications' && unreadCount > 0 && (
-                            <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
+                            <span className="absolute -top-1 -end-1 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
                           )}
                         </div>
                         <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
@@ -313,7 +310,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                         </span>
                       </div>
                       {item.href === '/student/notifications' && unreadCount > 0 && (
-                        <span className="mr-2 hidden h-5 items-center justify-center rounded-full bg-[var(--admin-primary)] px-1.5 text-xs font-black text-[var(--admin-primary-contrast)] group-hover/sidebar:flex group-focus-within/sidebar:flex">
+                        <span className="ms-2 hidden h-5 items-center justify-center rounded-full bg-[var(--admin-primary)] px-1.5 text-xs font-black text-[var(--admin-primary-contrast)] group-hover/sidebar:flex group-focus-within/sidebar:flex">
                           {unreadCount}
                         </span>
                       )}
@@ -324,11 +321,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             </div>
 
             <div className="space-y-3 px-3">
-              <div className="flex flex-col gap-2 justify-start px-4 transition-all duration-300 w-full">
+              <div className="flex flex-col gap-2 justify-start px-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 w-full">
                 <SidebarBalance />
                 <SidebarGamification />
               </div>
-              <div className="flex justify-start px-1 items-center transition-all duration-300">
+              <div className="flex justify-start px-1 items-center transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300">
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}
@@ -336,15 +333,15 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
                 />
-                <span className="mr-3 hidden self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)] group-hover/sidebar:block group-focus-within/sidebar:block">
+                <span className="ms-3 hidden self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)] group-hover/sidebar:block group-focus-within/sidebar:block">
                   {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
                 </span>
               </div>
               <IntentLink
                 href="/student/profile"
-                className={`flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${
+                className={`flex h-12 w-full items-center justify-start ps-[18px] pe-4 rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${
                   pathname === '/student/profile'
-                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-sm'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                 }`}
                 aria-label="الملف الشخصي"
@@ -359,7 +356,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 ref={drawerTriggerRef}
                 type="button"
                 onClick={handleLogout}
-                className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                className="flex h-12 w-full items-center justify-start ps-[18px] pe-4 rounded-full text-[var(--admin-danger)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
                 title="تسجيل الخروج"
                 aria-label="تسجيل الخروج"
               >
@@ -378,8 +375,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         id="main-content"
         className={`app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain ${
           isFocusMode
-            ? 'px-0 py-0 pb-0 lg:mr-0 lg:px-0 lg:py-0 lg:pb-0'
-            : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
+            ? 'px-0 py-0 pb-0 lg:ms-0 lg:px-0 lg:py-0 lg:pb-0'
+            : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:ms-24 lg:px-8 lg:py-10 lg:pb-10'
         }`}
       >
         <AnimatePresence>
@@ -389,7 +386,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="mb-8 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-3 shadow-[0_12px_30px_var(--admin-shadow)] backdrop-blur lg:mb-10 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0"
+              className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-3 lg:mb-8 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
             >
               <div className="mb-3 flex min-h-11 items-center justify-between gap-3 lg:hidden">
                 <HeaderParentBadge />
@@ -409,7 +406,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 </Link>
               </div>
               <div className="flex items-center justify-between w-full">
-                <nav className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--admin-muted)] lg:gap-2 lg:text-xs lg:tracking-[0.3em]">
+                <nav className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[var(--admin-muted)] lg:gap-2 lg:text-xs">
                   <span className="truncate">المساحة الدراسية</span>
                   <ChevronLeft className="h-3 w-3 shrink-0" />
                   <span className="truncate text-[var(--admin-primary-strong)]">بوابة الطالب</span>
@@ -433,7 +430,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       {unreadCount > 0 && (
                         <span
                           aria-hidden="true"
-                          className="absolute left-1 top-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-xs font-black text-[var(--admin-primary-contrast)]"
+                          className="absolute end-1 top-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-xs font-black text-[var(--admin-primary-contrast)]"
                         >
                           {unreadCount}
                         </span>
@@ -505,7 +502,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         triggerRef={drawerTriggerRef}
         backdropClassName="backdrop-blur-sm"
         layerClassName="lg:hidden"
-        className="right-0 top-0 h-full w-72 max-w-[88vw] overflow-y-auto overscroll-contain bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)]"
+        className="end-0 top-0 h-full w-72 max-w-[88vw] overflow-y-auto overscroll-contain bg-[var(--admin-sidebar)] shadow-sm"
         testId="student-mobile-drawer"
       >
             <div id={drawerId} className="min-h-full">
@@ -552,7 +549,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                         key={item.href}
                         href={item.href}
                         onClick={closeDrawer}
-                        className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition-all ${isActive
+                        className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${isActive
                           ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                           : 'text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
                           }`}

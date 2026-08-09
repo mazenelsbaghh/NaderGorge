@@ -313,7 +313,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages, selec
               key={ct.type}
               type="button"
               onClick={() => setType(ct.type)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 isSelected
                   ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
                   : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'

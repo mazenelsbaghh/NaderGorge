@@ -43,7 +43,7 @@ function getCodeTypeLabel(type: CodeGroupDto['codeType']) {
 function InfoCell({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2">
-      <div className="text-[10px] font-bold text-[var(--admin-muted)]">{label}</div>
+      <div className="text-sm font-bold text-[var(--admin-muted)]">{label}</div>
       <div className="mt-1 break-all text-xs font-black text-[var(--admin-text)]">{value}</div>
     </div>
   );
@@ -617,7 +617,7 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
           <div className="flex gap-1.5 p-1 bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)]">
             <button
               onClick={() => setShowQrPrint(false)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 !showQrPrint 
                   ? 'bg-[var(--admin-primary)] text-white shadow-sm' 
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -627,7 +627,7 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
             </button>
             <button
               onClick={openQrPrint}
-              className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+              className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 showQrPrint 
                   ? 'bg-[var(--admin-primary)] text-white shadow-sm' 
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'

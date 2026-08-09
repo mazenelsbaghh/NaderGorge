@@ -104,7 +104,7 @@ export function AssistantProfileModal({ open, onClose, assistant }: AssistantPro
             animate={{ opacity: 0.4 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-floating)] bg-black/60 backdrop-blur-sm"
           />
 
           {/* Modal */}
@@ -114,13 +114,13 @@ export function AssistantProfileModal({ open, onClose, assistant }: AssistantPro
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="assistant-profile-title"
           >
-            <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
+            <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
               
               {/* Header */}
               <div className="flex shrink-0 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
@@ -174,7 +174,7 @@ export function AssistantProfileModal({ open, onClose, assistant }: AssistantPro
                     <div>
                       <p className="text-xs text-[var(--admin-muted)]">تاريخ الإنشاء</p>
                       <p className="text-sm font-bold text-[var(--admin-text)]">
-                        {new Date(assistant.createdAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
+                        {new Date(assistant.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
                       </p>
                     </div>
                   </div>

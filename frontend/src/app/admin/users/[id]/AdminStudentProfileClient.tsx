@@ -424,7 +424,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
 
   const formatDate = (d?: string | null) => {
     if (!d) return 'غير متوفر';
-    return new Date(d).toLocaleDateString('en-GB');
+    return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
   };
 
   const toDateInputValue = (d?: string | null) => {
@@ -717,7 +717,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                       >
                         <button
                           onClick={() => { setBalanceInput({ scope: 'general', operation: 'credit', amount: 0, teacherId: '', reason: '' }); setModalOpen('balance'); }}
-                          className="mt-4 flex items-center justify-center gap-2 w-full rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-all duration-300 shadow-sm"
+                          className="mt-4 flex items-center justify-center gap-2 w-full rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 shadow-sm"
                           title="تعديل الرصيد"
                         >
                           <PenLine size={14} />
@@ -782,7 +782,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             return <span className="font-bold">{statuses[row.status] || row.status}</span>;
                           }},
                           {key: 'matched', label: 'ربط SMS', render: (row) => row.hasMatchedSms ? 'تم الربط' : 'بدون ربط'},
-                          {key: 'createdAt', label: 'تاريخ الطلب', render: (row) => new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                          {key: 'createdAt', label: 'تاريخ الطلب', render: (row) => new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}
                         ]}
                         data={studentData?.rechargeRequests || []}
                         rowKey={(row) => row.id}
@@ -824,8 +824,8 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                               {row.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}
                             </span>
                           )},
-                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
-                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد'},
+                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد'},
                           {key: 'status', label: 'الحالة', render: (row) => {
                             const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
                             const isGrantActive = row.isActive;
@@ -850,7 +850,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                     <p className="text-red-500 font-bold">بواسطة: {row.cancelledByName}</p>
                                   )}
                                   {row.cancelledAt && (
-                                    <p className="text-[var(--admin-muted)]">{new Date(row.cancelledAt).toLocaleDateString('en-GB')}</p>
+                                    <p className="text-[var(--admin-muted)]">{new Date(row.cancelledAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' })}</p>
                                   )}
                                   {row.cancellationReason && (
                                     <p className="text-[var(--admin-muted)] italic">{row.cancellationReason}</p>
@@ -862,7 +862,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             return (
                               <button
                                 onClick={() => handleOpenCancelPackageModal(row)}
-                                className="flex items-center gap-1 px-2.5 py-1 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-lg text-xs font-bold transition-all duration-200"
+                                className="flex items-center gap-1 px-2.5 py-1 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200"
                               >
                                 إلغاء الباقة
                               </button>
@@ -922,7 +922,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                           {key: 'adminName', label: 'بواسطة', render: (row) => (
                             <span className="text-sm font-semibold text-[var(--admin-text)]">{row.adminName}</span>
                           )},
-                          {key: 'createdAt', label: 'التاريخ والوقت', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                          {key: 'createdAt', label: 'التاريخ والوقت', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                         ]}
                         data={studentData?.balanceTransactions || []}
                         rowKey={(row) => row.id}
@@ -960,7 +960,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                         )},
                         {key: 'reason', label: 'السبب', render: (row: any) => row.reason || '—'},
                         {key: 'overrideBy', label: 'بواسطة', render: (row: any) => row.overrideBy || 'مدير النظام'},
-                        {key: 'createdAt', label: 'التاريخ والوقت', render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                        {key: 'createdAt', label: 'التاريخ والوقت', render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                     ]}
                     data={studentData?.overrides || []}
                     rowKey={(row: any) => row.id || `${row.videoId}-${row.addedViews}-${row.reason || 'override'}`}
@@ -1000,7 +1000,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                        return (
                          <div
                            key={device.id}
-                           className={`relative flex flex-col gap-4 rounded-3xl border p-5 transition-all ${
+                           className={`relative flex flex-col gap-4 rounded-3xl border p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                              device.isActive
                                ? 'bg-[var(--admin-card)] border-[var(--admin-border)]'
                                : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)]/40 opacity-60'
@@ -1039,7 +1039,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                              </div>
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2 col-span-2">
                                <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">آخر نشاط</p>
-                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
                              </div>
                            </div>
 
@@ -1124,7 +1124,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             required
                             rows={4}
                             placeholder="اكتب ملاحظتك هنا عن الطالب..."
-                            className="w-full bg-[var(--admin-bg)] p-4 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)]/40 focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] outline-none resize-none transition-all duration-200 placeholder:text-[var(--admin-muted)]/70 text-sm shadow-[inset_0_2px_4px_rgba(78,70,57,0.03)]"
+                            className="w-full bg-[var(--admin-bg)] p-4 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)]/40 focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] outline-none resize-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 placeholder:text-[var(--admin-muted)]/70 text-sm shadow-[inset_0_2px_4px_rgba(78,70,57,0.03)]"
                             value={noteInput.content}
                             onChange={e => setNoteInput(p => ({...p, content: e.target.value}))}
                           />
@@ -1147,7 +1147,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
 
                             <button
                               type="submit"
-                              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-6 py-2.5 font-bold text-xs text-[var(--admin-primary-contrast)] cursor-pointer hover:filter hover:brightness-110 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_12px_var(--admin-primary-15)]"
+                              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-6 py-2.5 font-bold text-xs text-[var(--admin-primary-contrast)] cursor-pointer hover:filter hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 shadow-[0_4px_12px_var(--admin-primary-15)]"
                             >
                               <PenLine size={16} />
                               <span>إضافة ملاحظة</span>
@@ -1161,8 +1161,8 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                         <div
                           key={note.id}
                           className={note.isPinned
-                            ? "bg-gradient-to-br from-[var(--admin-primary-15)] to-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005]"
-                            : "bg-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005] hover:bg-[var(--admin-card-strong)]"
+                            ? "bg-gradient-to-br from-[var(--admin-primary-15)] to-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 hover:shadow-md hover:scale-[1.005]"
+                            : "bg-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 hover:shadow-md hover:scale-[1.005] hover:bg-[var(--admin-card-strong)]"
                           }
                         >
                           <div className="flex flex-col justify-between h-full min-h-[90px]">
@@ -1181,7 +1181,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                 </span>
                                 <span>بواسطة <strong className="text-[var(--admin-text)] font-semibold">{note.adminName}</strong></span>
                                 <span>•</span>
-                                <span>{new Date(note.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                <span>{new Date(note.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</span>
                               </div>
                               <button
                                 onClick={async () => {
@@ -1358,7 +1358,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                      {isLessonExpanded && (
                                                        <div className="p-3 bg-[var(--admin-bg)] space-y-2 border-t border-[var(--admin-border)]/10">
                                                          {lesson.activities.map((activity) => (
-                                                           <div key={activity.lessonVideoId} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 p-3 bg-[var(--admin-card-soft)]/40 hover:bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/20 rounded-xl transition-all mr-4">
+                                                           <div key={activity.lessonVideoId} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 p-3 bg-[var(--admin-card-soft)]/40 hover:bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/20 rounded-xl transition-[color,background-color,border-color,opacity,transform,box-shadow] mr-4">
                                                              {/* Video Details */}
                                                              <div className="flex items-center gap-2 min-w-0">
                                                                <MonitorPlay size={14} className="text-[var(--admin-primary)] shrink-0" />
@@ -1374,7 +1374,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  <span className="font-bold" dir="rtl">متوسط السرعة:</span> {activity.averagePlaybackRate.toFixed(2).replace(/\.00$/, '')}×
                                                                </div>
                                                                {activity.playbackRateSeconds && Object.entries(activity.playbackRateSeconds).length > 0 && (
-                                                                 <div className="w-full text-[11px] text-[var(--admin-muted)]">
+                                                                 <div className="w-full text-sm text-[var(--admin-muted)]">
                                                                    <span className="font-bold">وقت كل سرعة:</span>{' '}
                                                                    {Object.entries(activity.playbackRateSeconds)
                                                                      .sort(([first], [second]) => Number(first) - Number(second))
@@ -1386,7 +1386,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  <span className="font-bold">المشاهدات:</span> {activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}
                                                                </div>
                                                                <div>
-                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' }) : 'غير متوفر'}
+                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }) : 'غير متوفر'}
                                                                </div>
                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                  {activity.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
@@ -1466,7 +1466,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                  </div>
                  <div className="flex gap-4 mt-4">
                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                        {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                      </button>
                  </div>
@@ -1492,7 +1492,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                  </div>
                  <div className="flex gap-4 mt-4">
                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                        {submitting ? 'جاري الحفظ...' : 'حفظ التجاوز'}
                      </button>
                  </div>
@@ -1528,7 +1528,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   </div>
                   <div className="flex gap-4 mt-4">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                         {submitting ? 'جاري الحفظ...' : 'حفظ'}
                       </button>
                   </div>
@@ -1625,7 +1625,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   )}
                   <div className="flex gap-4 mt-2">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                         {submitting ? 'جاري الحفظ...' : 'حفظ'}
                       </button>
                   </div>
@@ -1759,7 +1759,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   </div>
                   <div className="flex gap-4 mt-4 sticky bottom-0 bg-[var(--admin-bg)] pt-3">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                         {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                       </button>
                   </div>
@@ -1778,7 +1778,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   </div>
                   <div className="flex gap-4 mt-2">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
                         {submitting ? 'جاري التغيير...' : 'تغيير كلمة المرور'}
                       </button>
                   </div>
@@ -1803,7 +1803,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                       <button
                         disabled={submitting}
                         onClick={() => toggleStatusDirect(false, suspensionReasonInput)}
-                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                       >
                          {submitting ? 'جاري الإيقاف...' : 'تأكيد الإيقاف'}
                       </button>
@@ -1858,7 +1858,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                         <button
                           disabled={submitting}
                           onClick={handleCancelPackageConfirm}
-                          className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                          className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
                             {submitting ? 'جاري الإلغاء...' : 'تأكيد إلغاء الباقة'}
                         </button>

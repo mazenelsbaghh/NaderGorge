@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight } from "lucide-react";
+import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users } from "lucide-react";
 import {
   AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
-  PackageCodeProfileSummary, ContentImageUpload, PackageDirectContentPanel
+  PackageCodeProfileSummary, ContentImageUpload, PackageDirectContentPanel, ContentSubscribersTab
 } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
@@ -16,12 +16,13 @@ import { contentService, TermDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "terms" | "direct" | "codeProfile";
+type ActiveTab = "overview" | "terms" | "direct" | "subscribers" | "codeProfile";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "terms", label: "الأترام", icon: Calendar },
   { key: "direct", label: "المحتوى المباشر", icon: BookOpenText },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
   { key: "codeProfile", label: "صفحة الأكواد", icon: KeyRound },
 ];
 
@@ -210,6 +211,10 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
             <PackageDetailsForm pkg={pkg} />
           </div>
         </div>
+      )}
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="package" contentId={pkg.id} contentName={pkg.name} surface="teacher" />
       )}
 
       {activeTab === "codeProfile" && (

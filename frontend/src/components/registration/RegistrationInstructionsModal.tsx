@@ -114,7 +114,7 @@ export function RegistrationInstructionsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="ins-modal-title"
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4"
         dir="rtl"
       >
         {/* Backdrop */}
@@ -202,7 +202,7 @@ export function RegistrationInstructionsModal({
           <div className="flex justify-end border-t border-[var(--admin-border)] p-6 bg-[var(--admin-card-soft)]/50">
             <button
               onClick={onClose}
-              className="h-12 w-full sm:w-auto rounded-2xl bg-[var(--admin-primary)] hover:brightness-110 text-[var(--admin-primary-contrast)] font-black text-sm px-10 transition-all shadow-lg shadow-[var(--admin-primary)]/35 active:scale-[0.98]"
+              className="h-12 w-full sm:w-auto rounded-2xl bg-[var(--admin-primary)] hover:brightness-110 text-[var(--admin-primary-contrast)] font-black text-sm px-10 transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-lg shadow-[var(--admin-primary)]/35 active:scale-[0.98]"
             >
               {confirmLabel}
             </button>

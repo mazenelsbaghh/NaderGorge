@@ -71,7 +71,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: stepIdx * 0.1 }}
                             className={cn(
-                                "relative z-50 rounded-full px-4 py-2 transition-all duration-300 ease-in-out flex items-center gap-2",
+                                "relative z-50 rounded-full px-4 py-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-in-out flex items-center gap-2",
                                 isCompleted ? "bg-[var(--admin-success-10)]" : "",
                                 isCurrent ? "bg-[var(--admin-primary-10)] border border-[var(--admin-primary)]/20" : "",
                                 isFuture ? "bg-[var(--admin-card-soft)]" : "",
@@ -124,7 +124,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                         {video.title}
                                     </motion.span>
                                     {video.isUnlockedByCode && (
-                                        <span className="hidden items-center gap-1 rounded-full bg-[var(--admin-success-10)] px-2 py-0.5 text-[10px] font-black text-[var(--admin-success)] sm:inline-flex">
+                                        <span className="hidden items-center gap-1 rounded-full bg-[var(--admin-success-10)] px-2 py-0.5 text-sm font-black text-[var(--admin-success)] sm:inline-flex">
                                             <BadgeCheck className="h-3 w-3" />
                                             {video.unlockLabel || "مفتوح بالكود"}
                                         </span>
@@ -217,7 +217,7 @@ export function LessonCarousel({
                                             disabled={precedingVideoExamUnpassed && !examPassed}
                                             onClick={() => router.push(`/student/exams/${examId}?packageId=${packageId}&lessonId=${lessonId}`)}
                                             className={cn(
-                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
+                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-[1.02] shadow-sm",
                                                 examPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
                                                     : precedingVideoExamUnpassed
@@ -235,7 +235,7 @@ export function LessonCarousel({
                                             type="button"
                                             onClick={() => router.push(`/student/homework/${homeworkId}?packageId=${packageId}&lessonId=${lessonId}`)}
                                             className={cn(
-                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
+                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-[1.02] shadow-sm",
                                                 homeworkPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
                                                     : "bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25"
@@ -286,7 +286,7 @@ export function LessonCarousel({
                                             type="button"
                                             onClick={() => router.push(`/student/exams/${activeVideo.examId}?packageId=${packageId}&lessonId=${lessonId}`)}
                                             className={cn(
-                                                "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm w-fit mt-2",
+                                                "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-[1.02] shadow-sm w-fit mt-2",
                                                 activeVideo.examPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
                                                     : "bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] border border-[var(--admin-primary)]/20 hover:bg-[var(--admin-primary)] hover:text-white"

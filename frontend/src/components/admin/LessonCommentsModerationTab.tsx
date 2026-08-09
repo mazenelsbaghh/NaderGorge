@@ -30,7 +30,7 @@ const filterLabel: Record<FilterStatus, string> = {
 
 const formatDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat('ar-EG', {
+    ? new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo',
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(value))
@@ -313,7 +313,7 @@ export function LessonCommentsModerationTab({
             >
               {selectedIds.size === pendingComments.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </button>
-            <div className="mr-auto flex flex-wrap gap-2">
+            <div className="me-auto flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={selectedIds.size === 0 || isMutating}

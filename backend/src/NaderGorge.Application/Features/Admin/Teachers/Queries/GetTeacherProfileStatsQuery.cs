@@ -89,11 +89,7 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
         var questionBankItemsCount = await _db.QuestionBankItems
             .CountAsync(q => q.CreatedByTeacherId == request.TeacherId, ct);
 
-        var grantRows = await PackageGrantRows(packageIds)
-            .Concat(TermGrantRows(packageIds))
-            .Concat(SectionGrantRows(packageIds))
-            .Concat(LessonGrantRows(packageIds))
-            .ToListAsync(ct);
+        var grantRows = await LoadGrantRowsAsync(packageIds, ct);
         var packageSales = teacherPackages.Select(package =>
         {
             var rows = grantRows.Where(row => row.PackageId == package.Id).ToArray();
@@ -148,6 +144,15 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
         join lesson in _db.Lessons.AsNoTracking() on grant.LessonId equals lesson.Id
         where !grant.CancelledAt.HasValue && packageIds.Contains(lesson.ContentSection.Term.PackageId)
         select new TeacherPackageGrantRow(lesson.ContentSection.Term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
+
+    private async Task<List<TeacherPackageGrantRow>> LoadGrantRowsAsync(Guid[] packageIds, CancellationToken ct)
+    {
+        var grantRows = await PackageGrantRows(packageIds).ToListAsync(ct);
+        grantRows.AddRange(await TermGrantRows(packageIds).ToListAsync(ct));
+        grantRows.AddRange(await SectionGrantRows(packageIds).ToListAsync(ct));
+        grantRows.AddRange(await LessonGrantRows(packageIds).ToListAsync(ct));
+        return grantRows;
+    }
 
     private static int DistinctStudents(IEnumerable<TeacherPackageGrantRow> rows, CodeType grantType) =>
         rows.Where(row => row.GrantType == grantType).Select(row => row.UserId).Distinct().Count();

@@ -43,6 +43,16 @@ public class SmsParserTests
         Assert.Equal(208.93m, result.CurrentBalance);
     }
 
+    [Fact]
+    public void Production_2026_08_09_balance_inquiry_extracts_current_wallet_balance()
+    {
+        const string body = "رصيد حسابك فى فودافون كاش الحالي90718.95 جنيه؛ تاريخ العملية 14:38 26-08-09 رقم العملية022523021340.";
+
+        var parsedSms = SmsParser.Parse(body);
+
+        Assert.Equal(90718.95m, parsedSms.CurrentBalance);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

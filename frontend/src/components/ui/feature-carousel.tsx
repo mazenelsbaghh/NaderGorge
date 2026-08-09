@@ -362,7 +362,7 @@ function FeatureCard({
     >
       <div
         className={clsx(
-          "group relative w-full overflow-hidden rounded-[28px] sm:rounded-[36px] bg-clip-padding transition duration-300 ring-1 ring-[var(--admin-border)]",
+          "group relative w-full overflow-hidden rounded-2xl sm:rounded-2xl bg-clip-padding transition duration-300 ring-1 ring-[var(--admin-border)]",
           bgClass || "bg-[var(--admin-card)]"
         )}
       >
@@ -448,7 +448,7 @@ function Steps({
               variants={stepVariants}
               transition={{ duration: 0.3 }}
               className={cn(
-                "relative z-50 rounded-full px-2 py-1 transition-all duration-300 ease-in-out sm:px-3 md:flex",
+                "relative z-50 rounded-full px-2 py-1 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-in-out sm:px-3 md:flex",
                 isCompleted ? "bg-[var(--admin-primary-15)]" : "bg-[var(--admin-card-soft)]"
               )}
             >
@@ -524,17 +524,17 @@ function Steps({
 
 const defaultClasses = {
   step1img1:
-    "pointer-events-none w-[50%] border border-border-100/10 transition-all duration-500 dark:border-border-700/50 rounded-2xl",
+    "pointer-events-none w-[50%] border border-border-100/10 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 dark:border-border-700/50 rounded-2xl",
   step1img2:
-    "pointer-events-none w-[60%] border border-border-100/10 dark:border-border-700/50 transition-all duration-500 overflow-hidden rounded-2xl",
+    "pointer-events-none w-[60%] border border-border-100/10 dark:border-border-700/50 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden rounded-2xl",
   step2img1:
-    "pointer-events-none w-[50%] border border-border-100/10 transition-all duration-500 dark:border-border-700 rounded-2xl overflow-hidden",
+    "pointer-events-none w-[50%] border border-border-100/10 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 dark:border-border-700 rounded-2xl overflow-hidden",
   step2img2:
-    "pointer-events-none w-[40%] border border-border-100/10 dark:border-border-700 transition-all duration-500 rounded-2xl overflow-hidden",
+    "pointer-events-none w-[40%] border border-border-100/10 dark:border-border-700 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 rounded-2xl overflow-hidden",
   step3img:
-    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-all duration-500 overflow-hidden",
+    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden",
   step4img:
-    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-all duration-500 overflow-hidden",
+    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden",
 } as const
 
 /**

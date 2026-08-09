@@ -236,6 +236,9 @@ export function CircularGallerySection() {
                 ? `${activeTeacher.name}، العنصر ${currentIndex + 1} من ${teachers.length}`
                 : 'جاري تحميل المعلمين'}
             </p>
+            <p className="absolute inset-x-0 top-0 text-center text-xs font-bold text-[var(--landing-muted)] sm:hidden">
+              اسحب أو استخدم الأسهم للتنقل بين المعلمين
+            </p>
             <div
               aria-hidden="true"
               className="absolute inset-x-8 top-[47%] h-px bg-[linear-gradient(90deg,transparent,rgba(14,143,143,.32),transparent)]"
@@ -252,7 +255,7 @@ export function CircularGallerySection() {
                 const x =
                   offset === 0
                     ? 0
-                    : Math.sign(offset) * (distance === 2 ? 590 : 320);
+                    : Math.sign(offset) * (distance === 2 ? 480 : 260);
                 const href = teacher.id
                   ? `/teachers/${teacher.id}`
                   : '/teachers';
@@ -293,7 +296,7 @@ export function CircularGallerySection() {
                           ? `عرض بروفايل ${teacher.name}`
                           : 'عرض قائمة المعلمين'
                       }
-                      className="group block overflow-hidden rounded-[1.4rem] bg-[var(--landing-card-strong)] shadow-[0_20px_42px_rgba(10,29,61,.18)] ring-1 ring-[var(--landing-line)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--landing-accent)]"
+                      className="group block overflow-hidden rounded-[1.4rem] bg-[var(--landing-card-strong)] shadow-sm ring-1 ring-[var(--landing-line)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--landing-accent)]"
                     >
                       <div className="relative h-[26rem] lg:h-[34rem]">
                         <Image
@@ -302,7 +305,7 @@ export function CircularGallerySection() {
                           width={384}
                           height={400}
                           unoptimized
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="h-full w-full object-cover"
                         />
                       </div>
                     </Link>
@@ -346,7 +349,7 @@ export function CircularGallerySection() {
                   type="button"
                   onClick={() => paginate(-1)}
                   aria-label="المعلم السابق"
-                  className="grid h-10 w-10 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
+                  className="grid h-11 w-11 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
@@ -369,7 +372,7 @@ export function CircularGallerySection() {
                   type="button"
                   onClick={() => paginate(1)}
                   aria-label="المعلم التالي"
-                  className="grid h-10 w-10 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
+                  className="grid h-11 w-11 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -412,7 +415,7 @@ export function CircularGallerySection() {
         </motion.div>
         <Link
           href="/register"
-          className="mt-6 inline-flex items-center gap-2 text-sm font-black text-[var(--landing-accent)] transition-colors hover:text-[var(--landing-ink)]"
+          className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-black text-[var(--landing-accent)] transition-colors hover:text-[var(--landing-ink)]"
         >
           ابدأ رحلتك التعليمية <ArrowUpLeft className="h-4 w-4" />
         </Link>

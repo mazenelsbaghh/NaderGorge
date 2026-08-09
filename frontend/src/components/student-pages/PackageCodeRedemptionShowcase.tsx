@@ -14,7 +14,7 @@ export function PackageCodeRedemptionShowcase({ page }: { page: PackageCodePageD
   const gradient = themeStyles[page.themeAccentKey] ?? themeStyles['default-gold'];
 
   return (
-    <section className={`rounded-[28px] bg-gradient-to-br ${gradient} p-5 shadow-[0_24px_60px_var(--admin-shadow)] sm:rounded-2xl sm:p-7 md:p-9`}>
+    <section className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 shadow-sm sm:rounded-2xl sm:p-7 md:p-9`}>
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <div>
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card)]/75 text-[var(--admin-primary)] backdrop-blur">
@@ -36,7 +36,7 @@ export function PackageCodeRedemptionShowcase({ page }: { page: PackageCodePageD
 
 function PanelCard({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="rounded-[24px] bg-[var(--admin-card)]/80 p-5 backdrop-blur">
+    <div className="rounded-2xl bg-[var(--admin-card)]/80 p-5 backdrop-blur">
       <div className="flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
         <span className="text-[var(--admin-primary)]">{icon}</span>
         <span>{title}</span>

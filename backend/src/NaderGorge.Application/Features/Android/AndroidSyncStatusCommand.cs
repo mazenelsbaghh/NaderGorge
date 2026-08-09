@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -62,6 +63,8 @@ public class AndroidSyncStatusCommandHandler : IRequestHandler<AndroidSyncStatus
         // Update heartbeat and status
         wallet.DeviceStatus = "Connected";
         wallet.LastSeenAt = DateTime.UtcNow;
+        wallet.CurrentBalance = await _db.ReadLatestReportedBalanceAsync(wallet.Id, ct)
+            ?? wallet.CurrentBalance;
 
         await _db.SaveChangesAsync(ct);
 

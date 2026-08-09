@@ -82,7 +82,7 @@ export function StudentThemeSettingsPanel({
                     className={cn(
                       'relative flex flex-col items-center gap-2 p-2 rounded-2xl border transition duration-300',
                       'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)] hover:scale-105',
-                      isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] ring-2 ring-[var(--admin-primary)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                      isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] ring-2 ring-[var(--admin-primary)] shadow-sm'
                     )}
                   >
                     <div className="relative w-12 h-12 rounded-full overflow-hidden border border-[var(--admin-border)] bg-[var(--admin-bg)]">
@@ -117,7 +117,7 @@ export function StudentThemeSettingsPanel({
                   />
                 </div>
                 <div className="space-y-0.5">
-                  <h5 className="text-[12px] font-black text-[var(--admin-primary-strong)]">
+                  <h5 className="text-sm font-black text-[var(--admin-primary-strong)]">
                     {AVATAR_LIST.find(a => a.slug === selectedAvatarSlug)?.name}
                   </h5>
                   <p className="text-xs font-bold text-[var(--admin-muted)] leading-normal">
@@ -179,9 +179,9 @@ function PaletteSection({
               onClick={() => onSelect(palette.id)}
               disabled={isSaving}
               className={cn(
-                'flex items-center justify-between rounded-[24px] border p-4 text-right transition',
+                'flex items-center justify-between rounded-2xl border p-4 text-right transition',
                 'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)]',
-                isSelected && 'border-[color:var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-[0_12px_30px_var(--admin-shadow)]',
+                isSelected && 'border-[color:var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-sm',
               )}
             >
               <div className="flex items-center gap-4">

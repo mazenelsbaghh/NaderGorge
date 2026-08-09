@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, LoaderCircle, Play, X } from 'lucide-react';
 import {
   liveSupportService,
@@ -17,6 +18,15 @@ type StudentActionContext = { balance: number; points: number; videos: VideoOpti
 
 const emptyVideoSelection: VideoSelection = { teacher: '', subject: '', packageName: '', term: '', course: '', videoId: '' };
 const unique = (items: string[]) => [...new Set(items.filter(Boolean))];
+
+function actionValues(actionKey: string, draft: Record<string, string | number | boolean | null>) {
+  return Object.fromEntries((studentActionFields[actionKey] ?? []).map((field) => [
+    field.key,
+    draft[field.key] === null || draft[field.key] === undefined
+      ? field.type === 'checkbox' ? false : ''
+      : draft[field.key],
+  ])) as Record<string, FieldValue>;
+}
 
 export function StudentActionsPanel({
   conversationId,
@@ -121,12 +131,7 @@ export function StudentActionsPanel({
       if (!freshAction) throw new Error('ACTION_NOT_AVAILABLE');
       setCatalog(freshCatalog);
       setSelected(freshAction);
-      setValues(Object.fromEntries((studentActionFields[action.key] ?? []).map((field) => [
-        field.key,
-        draft[field.key] === null || draft[field.key] === undefined
-          ? field.type === 'checkbox' ? false : ''
-          : draft[field.key],
-      ])) as Record<string, FieldValue>);
+      setValues(actionValues(action.key, draft));
     } catch {
       setValues(Object.fromEntries((studentActionFields[action.key] ?? []).map((field) => [field.key, field.type === 'checkbox' ? false : ''])));
       setResult('تعذر تحميل البيانات الحالية؛ راجع القيم قبل التنفيذ.');
@@ -152,6 +157,33 @@ export function StudentActionsPanel({
     
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
+  }
+
+  async function review() {
+    if (!selected || !validateForm()) return;
+    setBusy(true);
+    setResult('');
+    try {
+      const freshCatalog = await liveSupportService.getActionCatalog(conversationId);
+      const freshAction = freshCatalog.find((action) => action.key === selected.key);
+      if (!freshAction) {
+        setResult('هذا الإجراء لم يعد متاحًا للطالب.');
+        return;
+      }
+      setCatalog(freshCatalog);
+      setSelected(freshAction);
+      if (freshAction.confirmationVersion !== selected.confirmationVersion) {
+        const draft = await liveSupportService.getActionDraft(conversationId, selected.key);
+        setValues(actionValues(selected.key, draft));
+        setResult('تغيرت بيانات الطالب، فتم تحديث القيم الحالية. راجعها ثم اضغط مراجعة وتأكيد.');
+        return;
+      }
+      setConfirming(true);
+    } catch {
+      setResult('تعذر التحقق من أحدث بيانات الطالب. أعد المحاولة.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function execute() {
@@ -188,13 +220,17 @@ export function StudentActionsPanel({
       const errors = (cause as { response?: { data?: { errors?: string[] } } }).response?.data?.errors;
       if (errors?.includes('CONFIRMATION_STALE')) {
         try {
-          const freshCatalog = await liveSupportService.getActionCatalog(conversationId);
+          const [freshCatalog, draft] = await Promise.all([
+            liveSupportService.getActionCatalog(conversationId),
+            liveSupportService.getActionDraft(conversationId, selected.key),
+          ]);
           const freshAction = freshCatalog.find((item) => item.key === selected.key);
           if (freshAction) {
             setCatalog(freshCatalog);
             setSelected(freshAction);
+            setValues(actionValues(selected.key, draft));
             setConfirming(false);
-            setResult('تم تحديث بيانات التأكيد. راجع القيم ثم أكد التنفيذ مرة أخرى.');
+            setResult('تغيرت بيانات الطالب أثناء التأكيد، فتم تحديث القيم الحالية. راجعها ثم أكد التنفيذ مرة أخرى.');
             return;
           }
         } catch {
@@ -243,9 +279,9 @@ export function StudentActionsPanel({
           </button>
         ))}
       </div>}
-      {selected && (
+      {selected && createPortal(
         <div
-          className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/60 p-4"
+          className="fixed inset-0 z-[var(--z-critical)] grid place-items-center bg-slate-950/60 p-4"
           onClick={() => !busy && setSelected(undefined)}
         >
           <div
@@ -277,9 +313,7 @@ export function StudentActionsPanel({
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (validateForm()) {
-                    setConfirming(true);
-                  }
+                  void review();
                 }}
                 className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2"
               >
@@ -384,7 +418,7 @@ export function StudentActionsPanel({
                   disabled={busy}
                   className="h-11 w-full rounded-xl bg-slate-900 font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300 transition-colors"
                 >
-                  مراجعة وتأكيد
+                  {busy ? 'جارٍ تحديث البيانات…' : 'مراجعة وتأكيد'}
                 </button>
                 </div>
               </form>
@@ -435,7 +469,8 @@ export function StudentActionsPanel({
             )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

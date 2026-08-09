@@ -141,7 +141,7 @@ export function HomeworkResultPanel({
                     : '/student'
               )
             }
-            className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_8px_24px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary"
           >
             العودة للحصة
             <ArrowRight className="h-4 w-4" />

@@ -88,9 +88,9 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
   return (
     <div
       className={cn(
-        "relative z-[60] mx-auto hidden w-[min(1280px,94vw)] flex-row items-center justify-between self-start rounded-full px-5 py-4 lg:flex transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out gap-5 pointer-events-auto",
+        "relative z-[var(--z-navigation)] mx-auto hidden w-[min(1280px,94vw)] flex-row items-center justify-between self-start rounded-full px-5 py-4 lg:flex transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out gap-5 pointer-events-auto",
         visible && "translate-y-3",
-        visible && "bg-[var(--landing-card-strong)] border border-[var(--landing-line)] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+        visible && "bg-[var(--landing-card-strong)] border border-[var(--landing-line)] backdrop-blur-md shadow-sm",
         !visible && "bg-transparent border border-transparent",
         className,
       )}
@@ -138,7 +138,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
       className={cn(
         "relative z-50 mx-auto flex w-[min(1180px,92vw)] flex-col items-center justify-between rounded-2xl px-4 py-3 lg:hidden transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out pointer-events-auto",
         visible && "translate-y-2",
-        visible && "bg-[var(--landing-card-strong)] border border-[var(--landing-line)] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+        visible && "bg-[var(--landing-card-strong)] border border-[var(--landing-line)] backdrop-blur-md shadow-sm",
         !visible && "bg-transparent border border-transparent",
         className,
       )}
@@ -178,7 +178,7 @@ export const MobileNavMenu = ({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
           className={cn(
-            "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-xl border border-[var(--landing-line)] bg-[var(--landing-card-strong)] px-4 py-8 shadow-xl backdrop-blur-3xl",
+            "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-xl border border-[var(--landing-line)] bg-[var(--landing-card-strong)] px-4 py-8 shadow-xl backdrop-blur-md",
             className,
           )}
         >
@@ -242,7 +242,7 @@ export const NavbarButton = ({
 
   const variantStyles = {
     primary:
-      "bg-[var(--landing-accent)] text-[var(--landing-accent-foreground)] shadow-[0_10px_24px_rgba(145,95,42,0.28)] hover:bg-[var(--landing-accent-strong)]",
+      "bg-[var(--landing-accent)] text-[var(--landing-accent-foreground)] shadow-sm hover:bg-[var(--landing-accent-strong)]",
     secondary:
       "text-[var(--landing-ink)] hover:bg-[var(--landing-card-strong)] border border-[var(--landing-line)] shadow-sm",
     danger:

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -45,6 +46,8 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
 
         foreach (var w in wallets)
         {
+            var reportedBalance = await _db.ReadLatestReportedBalanceAsync(w.Id, ct);
+
             // Calculate Daily Received (resolved today in Egypt time)
             var dailyReceived = rechargeRequests
                 .Where(r => r.WalletId == w.Id && r.ResolvedAt >= dayStartUtc && r.ResolvedAt < dayEndUtc)
@@ -83,7 +86,7 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
                 Label = w.Label,
                 DailyLimit = w.DailyLimit,
                 MonthlyLimit = w.MonthlyLimit,
-                CurrentBalance = w.CurrentBalance,
+                CurrentBalance = reportedBalance ?? w.CurrentBalance,
                 PairingToken = w.PairingToken,
                 DeviceStatus = status,
                 LastSeenAt = w.LastSeenAt,

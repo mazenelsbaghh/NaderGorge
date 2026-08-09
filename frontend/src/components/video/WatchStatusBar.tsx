@@ -26,7 +26,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
 
   return (
     <motion.div
-      className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-4 py-3 rounded-2xl bg-[var(--admin-card)]/90 backdrop-blur-xl border border-[var(--admin-border)] shadow-sm"
+      className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-4 py-3 rounded-2xl bg-[var(--admin-card)]/90 backdrop-blur-md border border-[var(--admin-border)] shadow-sm"
       dir="rtl"
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -111,7 +111,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
             exit={{ opacity: 0 }}
           >
             <InlineLoader className="text-[var(--admin-primary)] !w-3 !h-3" />
-            <span className="text-[10px] xs:text-xs leading-normal whitespace-normal break-words sm:whitespace-nowrap">
+            <span className="text-sm xs:text-xs leading-normal whitespace-normal break-words sm:whitespace-nowrap">
               {status
                 ? `${watchedInThreshold}ث من ${status.thresholdSeconds}ث · تُحتسب المشاهدة عند اكتمال المدة`
                 : "جاري التجهيز..."}

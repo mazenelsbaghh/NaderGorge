@@ -16,7 +16,7 @@ export function LiveSupportMessageMeta({ message, audience }: LiveSupportMessage
     ? ['Staff', 'Admin'].includes(message.senderType)
     : ['Student', 'Guest'].includes(message.senderType);
   const label = message.readAt ? 'تمت القراءة' : message.deliveredAt ? 'تم الوصول' : 'تم الإرسال';
-  return <span className="mt-1 flex items-center justify-end gap-1 text-[10px] opacity-75" dir="rtl">
+  return <span className="mt-1 flex items-center justify-end gap-1 text-sm opacity-75" dir="rtl">
     {message.editedAt && !message.deletedAt ? <span>معدّلة</span> : null}
     <time dateTime={message.sentAt}>{formatCairoDateTime(message.sentAt, { hour: '2-digit', minute: '2-digit' })}</time>
     {outgoing && (message.readAt ? <CheckCheck size={14} className="text-sky-400" aria-label={label}/> : message.deliveredAt ? <CheckCheck size={14} aria-label={label}/> : <Check size={14} aria-label={label}/>)}

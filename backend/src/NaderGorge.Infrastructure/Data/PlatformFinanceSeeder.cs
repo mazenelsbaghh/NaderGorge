@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 
@@ -96,7 +97,7 @@ public static class PlatformFinanceSeeder
         }
         await db.SaveChangesAsync(cancellationToken);
 
-        var today = DateTime.UtcNow.Date;
+        var today = CairoTime.GetCurrentDate().ToDateTime(TimeOnly.MinValue);
         if (!await db.AccountingPeriods.AnyAsync(x => x.StartDate <= today && x.EndDate >= today, cancellationToken))
         {
             db.AccountingPeriods.Add(new AccountingPeriod

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -66,14 +67,13 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
     public async Task<PlatformFinanceDashboardDto> GetDashboardAsync(DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var start = (from ?? DateTime.UtcNow.Date.AddMonths(-1)).Date;
-        var end = (to ?? DateTime.UtcNow.Date).Date.AddDays(1).AddTicks(-1);
-        if (end < start) throw new ArgumentException("The report end date must be after the start date.");
+        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
+        if (end <= start) throw new ArgumentException("The report end date must be after the start date.");
 
         var groupedAccounts = await _db.JournalLines.AsNoTracking()
             .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
                 && line.JournalEntry.OccurredAt >= start
-                && line.JournalEntry.OccurredAt <= end)
+                && line.JournalEntry.OccurredAt < end)
             .GroupBy(line => new
             {
                 line.FinancialAccountId,
@@ -113,7 +113,7 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
         return new PlatformFinanceDashboardDto(
             start,
-            end,
+            end.AddTicks(-1),
             GetRole(FinancialAccountRole.Treasury),
             GetRole(FinancialAccountRole.GeneralStudentLiability),
             GetRole(FinancialAccountRole.TeacherStudentLiability),
@@ -128,15 +128,14 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
     public async Task<IReadOnlyList<PlatformFinanceJournalDto>> GetLedgerAsync(DateTime? from, DateTime? to, int page, int pageSize, CancellationToken ct)
     {
-        var start = (from ?? DateTime.UtcNow.Date.AddMonths(-1)).Date;
-        var end = (to ?? DateTime.UtcNow.Date).Date.AddDays(1).AddTicks(-1);
+        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
         var entries = await _db.JournalEntries.AsNoTracking()
             .Include(entry => entry.Lines)
             .ThenInclude(line => line.FinancialAccount)
-            .Where(entry => entry.Status == JournalEntryStatus.Posted && entry.OccurredAt >= start && entry.OccurredAt <= end)
+            .Where(entry => entry.Status == JournalEntryStatus.Posted && entry.OccurredAt >= start && entry.OccurredAt < end)
             .OrderByDescending(entry => entry.OccurredAt)
             .ThenByDescending(entry => entry.SequenceNumber)
             .Skip((page - 1) * pageSize)
@@ -176,8 +175,7 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
     public async Task<IReadOnlyList<PlatformFinanceTeacherSummaryDto>> GetTeacherSummaryAsync(DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var start = (from ?? DateTime.UtcNow.Date.AddMonths(-1)).Date;
-        var end = (to ?? DateTime.UtcNow.Date).Date.AddDays(1);
+        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
         var rows = await _db.JournalLines.AsNoTracking()
             .Where(line => line.TeacherId.HasValue
                 && line.JournalEntry.Status == JournalEntryStatus.Posted

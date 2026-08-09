@@ -95,7 +95,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
       onClose={close}
       label="متابعة المحادثة"
       backdropClassName="bg-[color-mix(in_srgb,var(--admin-primary)_72%,transparent)]"
-      className="inset-x-4 top-1/2 mx-auto flex max-h-[calc(100dvh-2rem)] max-w-4xl -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]"
+      className="inset-x-4 top-1/2 mx-auto flex h-[calc(100dvh-2rem)] max-w-4xl -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)] sm:h-[min(46rem,calc(100dvh-2rem))]"
     >
       <div className="flex min-h-0 flex-1 flex-col" dir="rtl">
         <header className="flex items-center justify-between border-b border-[var(--admin-border)] px-5 py-4">
@@ -108,13 +108,13 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
         {canSend && <div className="flex flex-wrap gap-2 border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-5 py-3"><span className="ml-auto text-sm font-semibold text-[var(--admin-text)]">تدخل إداري مسجل بالكامل</span><button type="button" disabled={intervening} onClick={() => void intervene('queue')} className="min-h-10 rounded-lg border border-[var(--admin-warning-20)] px-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-card)] disabled:opacity-50">إعادة للطابور</button><button type="button" disabled={intervening} onClick={() => void intervene('close')} className="min-h-10 rounded-lg bg-[var(--admin-danger)] px-3 text-sm font-bold text-[var(--admin-primary-contrast)] disabled:opacity-50">إغلاق إداري</button></div>}
 
         <div className="grid min-h-0 flex-1 lg:grid-cols-[1.35fr_.65fr]">
-          <div className="flex min-h-[420px] flex-col border-l border-[var(--admin-border)]">
+          <div className="flex min-h-0 flex-col border-l border-[var(--admin-border)] lg:min-h-[420px]">
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[var(--admin-card-soft)] p-4" aria-live="polite">
               {loading ? <div className="grid h-full place-items-center gap-3" aria-label="جارٍ تحميل الرسائل"><div className="h-12 w-2/3 animate-pulse rounded-xl bg-[var(--admin-card-strong)]" /><div className="mr-auto h-16 w-1/2 animate-pulse rounded-xl bg-[var(--admin-card-strong)]" /></div> : messages.length === 0 ? <p className="grid h-full place-items-center text-sm text-[var(--admin-muted)]">لا توجد رسائل بعد.</p> : messages.map((message) => {
                 const fromTeam = message.senderType === 'Staff' || message.senderType === 'Admin' || message.senderType === 'System' || message.senderType === 'AI';
                 return <article key={message.id} className={`max-w-[82%] rounded-2xl px-4 py-3 ${fromTeam ? 'mr-auto bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'ml-auto bg-[var(--admin-card)] text-[var(--admin-text)] shadow-sm'}`}>
                   <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
-                  <div className={`mt-2 flex items-center justify-between gap-4 text-[11px] ${fromTeam ? 'text-[color-mix(in_srgb,var(--admin-primary-contrast)_76%,transparent)]' : 'text-[var(--admin-muted)]'}`}>
+                  <div className={`mt-2 flex items-center justify-between gap-4 text-sm ${fromTeam ? 'text-[color-mix(in_srgb,var(--admin-primary-contrast)_76%,transparent)]' : 'text-[var(--admin-muted)]'}`}>
                     <span>{senderLabel(message.senderType)}</span>
                     <time>{formatCairoDateTime(message.sentAt)}</time>
                   </div>

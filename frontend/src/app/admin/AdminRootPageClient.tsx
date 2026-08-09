@@ -49,6 +49,27 @@ export default function AdminRootPageClient() {
     );
   }
 
+  const renderLink = (item: (typeof filteredLinks)[number]) => {
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        prefetch={false}
+        className="group flex min-h-20 items-center gap-4 border-b border-[var(--admin-border)] px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-black text-[var(--admin-text)]">{item.title}</h3>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--admin-muted)]">{item.body}</p>
+        </div>
+        <ArrowLeft className="h-5 w-5 shrink-0 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-1" aria-hidden="true" />
+      </Link>
+    );
+  };
+
   return (
     <AdminPage
       activePath="/admin"
@@ -70,36 +91,12 @@ export default function AdminRootPageClient() {
         <ClockInOutWidget />
       </div>
 
-      <section aria-labelledby="admin-sections-title" className="overflow-hidden rounded-2xl bg-[var(--admin-card)]">
+      <section aria-labelledby="admin-sections-title" className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
         <div className="border-b border-[var(--admin-border)] px-5 py-4">
-          <h2 id="admin-sections-title" className="text-lg font-black text-[var(--admin-text)]">
-            أدوات الإدارة
-          </h2>
-          <p className="mt-1 text-sm text-[var(--admin-muted)]">
-            اختر القسم المطلوب لبدء العمل.
-          </p>
+          <h2 id="admin-sections-title" className="text-lg font-black text-[var(--admin-text)]">كل أدوات الإدارة</h2>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">كل الأقسام المتاحة ظاهرة هنا حسب صلاحيات حسابك.</p>
         </div>
-        {filteredLinks.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch={false}
-              className="group flex min-h-20 items-center gap-4 border-b border-[var(--admin-border)] px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]"
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-black text-[var(--admin-text)]">{item.title}</h3>
-                <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--admin-muted)]">{item.body}</p>
-              </div>
-              <ArrowLeft className="h-5 w-5 shrink-0 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-1" aria-hidden="true" />
-            </Link>
-          );
-        })}
+        {filteredLinks.map(renderLink)}
       </section>
     </AdminPage>
   );

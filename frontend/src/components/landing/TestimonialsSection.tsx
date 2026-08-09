@@ -124,11 +124,13 @@ export function TestimonialsSection() {
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
           >
-            {orderedTestimonials.map((review) => (
+            {orderedTestimonials.map((review, index) => (
               <motion.figure
                 key={review.name}
                 variants={itemVariants}
-                className="landing-panel px-6 py-6 text-right hover:scale-[1.02] transition-transform duration-300"
+                className={`landing-panel px-6 py-6 text-right md:block ${
+                  index > 0 ? "hidden" : "block"
+                }`}
               >
                 <div className="flex items-center gap-4">
                   <Image

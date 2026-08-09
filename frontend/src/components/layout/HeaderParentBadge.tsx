@@ -33,7 +33,7 @@ export function HeaderParentBadge() {
       type="button"
       onClick={handleCopy}
       data-testid="header-parent-badge"
-      className="group relative flex h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)] px-3 sm:px-4 text-xs font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] hover:-translate-y-0.5 active:scale-95 shadow-sm"
+      className="group relative flex h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)] px-3 sm:px-4 text-xs font-bold text-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-15)] hover:-translate-y-0.5 active:scale-95 shadow-sm"
       title="انقر لنسخ رمز متابعة ولي الأمر"
     >
       <Users className="h-3.5 w-3.5 text-[var(--admin-primary)] shrink-0" />

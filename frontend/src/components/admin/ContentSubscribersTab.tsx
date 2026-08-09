@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Download, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminDataTable, type AdminColumn } from './AdminDataTable';
 import { adminService, type ContentSubscriberDto } from '@/services/admin-service';
+import { teacherService } from '@/services/teacher-service';
 import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 import toast from 'react-hot-toast';
 
@@ -12,13 +13,14 @@ interface ContentSubscribersTabProps {
   contentType: 'package' | 'term' | 'section' | 'lesson';
   contentId: string;
   contentName: string;
+  surface?: 'admin' | 'teacher';
 }
 
 const PAGE_SIZE = 10;
 
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('ar-EG', {
+    return new Date(iso).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -45,6 +47,7 @@ export default function ContentSubscribersTab({
   contentType,
   contentId,
   contentName,
+  surface = 'admin',
 }: ContentSubscribersTabProps) {
   const router = useRouter();
   const [subscribers, setSubscribers] = useState<ContentSubscriberDto[]>([]);
@@ -60,7 +63,8 @@ export default function ContentSubscribersTab({
     try {
       setLoading(true);
       setError(null);
-      const result = await adminService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
+      const subscribersService = surface === 'teacher' ? teacherService : adminService;
+      const result = await subscribersService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
       if (result) {
         setSubscribers(result.items ?? []);
         setTotalCount(result.totalCount ?? 0);
@@ -70,7 +74,7 @@ export default function ContentSubscribersTab({
     } finally {
       setLoading(false);
     }
-  }, [contentType, contentId]);
+  }, [contentType, contentId, surface]);
 
   useEffect(() => {
     void fetchSubscribers(page, search);
@@ -94,7 +98,8 @@ export default function ContentSubscribersTab({
   const handleExport = async () => {
     try {
       setExporting(true);
-      await adminService.exportContentSubscribersCsv(contentType, contentId, contentName);
+      const subscribersService = surface === 'teacher' ? teacherService : adminService;
+      await subscribersService.exportContentSubscribersCsv(contentType, contentId, contentName);
       toast.success('تم تنزيل ملف المشتركين');
     } catch {
       toast.error('تعذر تنزيل الملف');
@@ -181,7 +186,7 @@ export default function ContentSubscribersTab({
           <h3 className="text-lg font-black text-[var(--admin-text)]">
             الطلاب المشتركين
             {!loading && (
-              <span className="mr-2 text-sm font-bold text-[var(--admin-muted)]">
+              <span className="me-2 text-sm font-bold text-[var(--admin-muted)]">
                 ({totalCount})
               </span>
             )}
@@ -190,12 +195,12 @@ export default function ContentSubscribersTab({
         <div className="flex items-center gap-3">
           {/* Search */}
           <div className="relative">
-            <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+            <Search className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
             <input
               type="text"
               placeholder="بحث بالاسم أو رقم الهاتف..."
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-10 w-64 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] pr-10 pl-4 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
+              className="h-10 w-64 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] pe-10 ps-4 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
             />
           </div>
           {/* Export */}
@@ -221,7 +226,7 @@ export default function ContentSubscribersTab({
         errorMessage={error}
         onRetry={() => fetchSubscribers(page, search)}
         pagination={false}
-        onRowClick={(row) => router.push(`/admin/users/${row.studentId}`)}
+        onRowClick={surface === 'admin' ? (row) => router.push(`/admin/users/${row.studentId}`) : undefined}
       />
 
       {/* Server-side pagination */}

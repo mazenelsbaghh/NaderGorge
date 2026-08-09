@@ -186,7 +186,7 @@ const CustomSlider = ({
           return (
             <div
               key={ch.id || i}
-              className="h-full bg-white/20 relative overflow-hidden backdrop-blur-sm transition-all duration-300"
+              className="h-full bg-white/20 relative overflow-hidden backdrop-blur-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300"
               style={{ width: `${widthPercent}%` }}
             >
               {/* Filled progress bar */}
@@ -269,7 +269,7 @@ export default function PlayerControls({
       {visible && (
         <motion.div
           className={cn(
-            "absolute bottom-0 left-0 right-0 z-[100] mx-auto bg-[#11111198] backdrop-blur-md",
+            "absolute bottom-0 left-0 right-0 z-[var(--z-modal)] mx-auto bg-[#11111198] backdrop-blur-md",
             compact
               ? "mb-2 max-w-[calc(100%-1rem)] rounded-xl p-2.5 sm:mb-4 sm:max-w-xl sm:rounded-2xl sm:p-4"
               : "mb-4 max-w-[90%] rounded-2xl p-4 md:max-w-xl"
@@ -284,7 +284,7 @@ export default function PlayerControls({
           onMouseLeave={() => { if (onControlHover) onControlHover(false); }}
         >
           <div className={cn("flex items-center px-1", compact ? "mb-2 gap-2" : "mb-3 gap-3")}>
-            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-[10px]" : "w-10 text-xs")}>
+            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-sm" : "w-10 text-xs")}>
               {currentTimeFormatted}
             </span>
             <CustomSlider
@@ -295,7 +295,7 @@ export default function PlayerControls({
               keyboardStepPercent={durationSeconds && durationSeconds > 0 ? (10 / durationSeconds) * 100 : undefined}
               ariaLabel="تقدم الفيديو"
             />
-            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-[10px]" : "w-10 text-xs")}>
+            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-sm" : "w-10 text-xs")}>
               {durationFormatted}
             </span>
           </div>
@@ -402,7 +402,7 @@ export default function PlayerControls({
                       }}
                       variant="ghost"
                       aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
-                      className={cn("rounded-full text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact ? "h-7 px-1.5 text-[10px]" : "h-8 px-2")}
+                      className={cn("rounded-full text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact ? "h-7 px-1.5 text-sm" : "h-8 px-2")}
                     >
                       {playbackSpeed}x
                     </Button>

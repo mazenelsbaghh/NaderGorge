@@ -261,10 +261,47 @@ public sealed class AdvancedReportingTests
 
         Assert.Equal("سجل الطلاب", sheet.Name);
         Assert.Equal("Ledger Student", sheet.Cell(7, 1).GetString());
-        Assert.Contains("مشترى", sheet.Row(7).CellsUsed().Select(cell => cell.GetString()));
+        Assert.Contains("باقة / كورس: A Purchased", sheet.Row(7).CellsUsed().Select(cell => cell.GetString()));
         Assert.Contains("لم يشترِ", sheet.Row(7).CellsUsed().Select(cell => cell.GetString()));
-        Assert.Equal(XLColor.FromHtml("#DCFCE7"), sheet.Cell(7, 5).Style.Fill.BackgroundColor);
-        Assert.Equal(XLColor.FromHtml("#FEE2E2"), sheet.Cell(7, 6).Style.Fill.BackgroundColor);
+        Assert.Equal(XLColor.FromHtml("#DCFCE7"), sheet.Cell(7, 10).Style.Fill.BackgroundColor);
+        Assert.Equal(XLColor.FromHtml("#FEE2E2"), sheet.Cell(7, 11).Style.Fill.BackgroundColor);
+    }
+
+    [Fact]
+    public async Task StudentLedger_StageFilterIncludesParentContactsAndAcademicIdentity()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacher = await SeedTeacherAsync(db, "Filtered Ledger Teacher", "01171000001");
+        var included = await SeedStudentAsync(db, "Included Student", "01271000001", true, GradeLevel.SecondSecondary);
+        var excluded = await SeedStudentAsync(db, "Excluded Student", "01271000002", true, GradeLevel.PrimaryGrade6);
+        var profile = await db.StudentProfiles.SingleAsync(studentProfile => studentProfile.UserId == included.Id);
+        profile.EducationStage = EducationStage.Secondary;
+        profile.StudyTrack = StudyTrack.Science;
+        profile.ParentPhone = "01010000001";
+        profile.SecondaryParentPhone = "01010000002";
+        profile.MotherPhone = "01010000003";
+        await db.SaveChangesAsync();
+        await SeedPackageGrantAsync(db, teacher.Profile.Id, included.Id, "Secondary Package");
+        await SeedPackageGrantAsync(db, teacher.Profile.Id, excluded.Id, "Primary Package");
+
+        var export = await new StudentLedgerExportService(db).ExportAsync(
+            teacher.Profile.Id,
+            teacher.User.Id,
+            new StudentLedgerFilter(EducationStage.Secondary, StudyTrack.Science),
+            default);
+
+        using var workbook = new XLWorkbook(new MemoryStream(export.Content));
+        var sheet = workbook.Worksheet("سجل الطلاب");
+        Assert.Equal("هاتف الأب", sheet.Cell(3, 3).GetString());
+        Assert.Equal("هاتف ولي الأمر الإضافي", sheet.Cell(3, 4).GetString());
+        Assert.Equal("هاتف الأم", sheet.Cell(3, 5).GetString());
+        Assert.Equal("Included Student", sheet.Cell(7, 1).GetString());
+        Assert.Equal("01010000001", sheet.Cell(7, 3).GetString());
+        Assert.Equal("01010000002", sheet.Cell(7, 4).GetString());
+        Assert.Equal("01010000003", sheet.Cell(7, 5).GetString());
+        Assert.Equal("ثانوي", sheet.Cell(7, 6).GetString());
+        Assert.Equal("علمي", sheet.Cell(7, 8).GetString());
+        Assert.True(sheet.Cell(8, 1).IsEmpty());
     }
 
     [Fact]
@@ -278,7 +315,7 @@ public sealed class AdvancedReportingTests
         using var workbook = new XLWorkbook(new MemoryStream(export.Content));
         var sheet = workbook.Worksheet("سجل الطلاب");
         Assert.Equal("اسم الطالب", sheet.Cell(3, 1).GetString());
-        Assert.Equal(4, sheet.LastColumnUsed()!.ColumnNumber());
+        Assert.Equal(9, sheet.LastColumnUsed()!.ColumnNumber());
     }
 
     [Fact]
@@ -288,6 +325,11 @@ public sealed class AdvancedReportingTests
         var teacher = await SeedTeacherAsync(db, "Video Ledger Teacher", "01190000001");
         var student = await SeedStudentAsync(db, "Video Ledger Student", "01290000001", true, GradeLevel.SecondaryGrade3);
         var package = await SeedPackageWithVideoAsync(db, teacher.Profile.Id, student.Id);
+        var termGrant = await db.StudentAccessGrants.SingleAsync(grant => grant.UserId == student.Id);
+        termGrant.PackageId = null;
+        termGrant.TermId = package.Terms.Single().Id;
+        termGrant.GrantType = CodeType.Term;
+        await db.SaveChangesAsync();
         var export = await new StudentLedgerExportService(db).ExportAsync(teacher.Profile.Id, teacher.User.Id, default);
 
         using var workbook = new XLWorkbook(new MemoryStream(export.Content));
@@ -298,6 +340,7 @@ public sealed class AdvancedReportingTests
         Assert.Contains("الفيديو الأول - دقائق المشاهدة", headers.Keys);
         Assert.Contains("الفيديو الأول - عدد المشاهدات", headers.Keys);
         Assert.Contains("الفيديو الأول - آخر مشاهدة", headers.Keys);
+        Assert.Equal("ترم: الترم الأول", sheet.Cell(7, 10).GetString());
         Assert.Equal("1×، 1.5×، 2×", sheet.Cell(7, headers["الفيديو الأول - سرعات المشاهدة"]).GetString());
         var speedPackageHeader = sheet.MergedRanges.Single(range => range.Contains(sheet.Cell(3, headers["الفيديو الأول - سرعات المشاهدة"]))).FirstCell();
         Assert.Equal(package.Name, speedPackageHeader.GetString());

@@ -41,9 +41,9 @@ export const ShinyButton = React.forwardRef<
   ShinyButtonProps
 >(({ children, className, href, ...props }, ref) => {
   const commonClassName = cn(
-    "relative inline-block cursor-pointer rounded-lg border px-6 py-2 font-medium backdrop-blur-xl transition-shadow duration-300 ease-in-out hover:shadow",
+    "relative inline-block cursor-pointer rounded-lg border px-6 py-2 font-medium backdrop-blur-md transition-shadow duration-300 ease-in-out hover:shadow",
     "bg-[radial-gradient(circle_at_50%_0%,color-mix(in_srgb,var(--landing-accent)_10%,transparent)_0%,transparent_60%)]",
-    "hover:shadow-[0_0_20px_color-mix(in_srgb,var(--landing-accent)_10%,transparent)]",
+    "hover:shadow-sm",
     className
   );
 

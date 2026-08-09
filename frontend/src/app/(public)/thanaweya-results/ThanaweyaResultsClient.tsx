@@ -73,7 +73,7 @@ export function ThanaweyaResultsClient() {
     <main className="relative isolate min-h-[calc(100svh-4rem)] overflow-hidden bg-[var(--landing-bg)] px-4 py-10 text-[var(--landing-ink)] sm:px-6 sm:py-16">
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_82%_8%,color-mix(in_srgb,var(--landing-accent)_16%,transparent),transparent_24%),radial-gradient(circle_at_12%_88%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_30%)]" />
 
-      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-[var(--landing-line)] bg-[var(--landing-card)] shadow-[0_24px_70px_rgba(10,29,61,0.12)] lg:grid-cols-[.9fr_1.1fr]">
+      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--landing-line)] bg-[var(--landing-card)] shadow-sm lg:grid-cols-[.9fr_1.1fr]">
         <div className="relative overflow-hidden bg-[var(--landing-accent)] px-6 py-10 text-[var(--landing-accent-foreground)] sm:px-10 lg:flex lg:flex-col lg:justify-between lg:p-12">
           <div aria-hidden="true" className="absolute -left-20 -top-24 h-64 w-64 rounded-full border-[32px] border-white/10" />
           <div aria-hidden="true" className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full border-[32px] border-white/10" />

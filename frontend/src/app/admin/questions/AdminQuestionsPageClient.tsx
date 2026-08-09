@@ -436,7 +436,7 @@ export default function AdminQuestionsPageClient({ mode }: { mode?: 'admin' | 'a
               type="file" 
               accept="audio/*"
               onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-              className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+              className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer"
             />
           </div>
 

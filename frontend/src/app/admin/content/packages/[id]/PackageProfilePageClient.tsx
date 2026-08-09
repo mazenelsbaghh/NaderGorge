@@ -189,7 +189,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           type="button"
           onClick={handleToggleActive}
           disabled={togglingActive}
-          className={`rounded-2xl border p-4 text-center transition-all hover:brightness-95 active:scale-[0.98] cursor-pointer ${
+          className={`rounded-2xl border p-4 text-center transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-95 active:scale-[0.98] cursor-pointer ${
             pkg.isActive !== false
               ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30'
               : 'border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30'

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Folder, ChevronRight, BookOpenText } from "lucide-react";
-import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from "@/components/admin";
+import { Folder, ChevronRight, BookOpenText, Users } from "lucide-react";
+import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
@@ -11,11 +11,12 @@ import { contentService, ContentSectionDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "sections";
+type ActiveTab = "overview" | "sections" | "subscribers";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "sections", label: "الشهور / الأقسام", icon: Folder },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
 ];
 
 export default function TeacherTermProfilePageClient(props: { params: { id: string } }) {
@@ -149,6 +150,10 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
             onRetry={loadSections}
           />
         </div>
+      )}
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="term" contentId={term.id} contentName={term.title} surface="teacher" />
       )}
     </TeacherPage>
   );

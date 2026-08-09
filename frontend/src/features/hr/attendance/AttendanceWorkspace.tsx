@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { AttendanceSessionDto, hrService } from '@/services/hr-service';
 import { createClientId } from '@/lib/client-id';
 import { AttendanceCorrectionForm } from './AttendanceCorrectionForm';
-import { formatCairoDateTime } from '@/lib/cairo-time';
+import { formatCairoDateTime, parseUtcDateTime } from '@/lib/cairo-time';
 
 const errorMessages: Record<string, string> = {
   OUTSIDE_GEOFENCE: 'أنت خارج نطاق موقع العمل المسموح.', LOCATION_ACCURACY_LOW: 'دقة الموقع غير كافية؛ فعّل GPS وحاول مجددًا.',
@@ -23,8 +23,8 @@ function formatDuration(totalMinutes: number) {
 
 function formatSessionDuration(totalMinutes: number, clockedInAt: string, clockedOutAt?: string | null) {
   if (totalMinutes > 0) return formatDuration(totalMinutes);
-  const endedAt = clockedOutAt ? new Date(clockedOutAt).getTime() : Date.now();
-  return endedAt > new Date(clockedInAt).getTime() ? 'أقل من دقيقة' : formatDuration(0);
+  const endedAt = clockedOutAt ? parseUtcDateTime(clockedOutAt).getTime() : Date.now();
+  return endedAt > parseUtcDateTime(clockedInAt).getTime() ? 'أقل من دقيقة' : formatDuration(0);
 }
 
 export function AttendanceWorkspace() {
@@ -33,7 +33,26 @@ export function AttendanceWorkspace() {
   const [history, setHistory] = useState<AttendanceSessionDto[]>([]);
   const [loading, setLoading] = useState(true); const [acting, setActing] = useState(false); const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const [current, rows] = await Promise.all([hrService.getAttendanceToday(), hrService.getAttendanceHistory()]); setIsGeneralAdmin(false); setToday(current); setHistory(rows); } catch (cause: unknown) { const code = isAxiosError<{ errors?: string[] }>(cause) ? cause.response?.data?.errors?.[0] : undefined; if (code === 'ADMIN_ATTENDANCE_NOT_APPLICABLE') setIsGeneralAdmin(true); else setError('تعذر تحميل سجل الحضور.'); } finally { setLoading(false); } }, []);
+  const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [current, rows] = await Promise.all([hrService.getAttendanceToday(), hrService.getAttendanceHistory()]);
+      const receivedAt = Date.now();
+      setIsGeneralAdmin(false);
+      setToday(current);
+      setHistory(rows);
+      setNow(receivedAt);
+      if (current?.serverNowUtc) setServerClockOffsetMs(receivedAt - parseUtcDateTime(current.serverNowUtc).getTime());
+    } catch (cause: unknown) {
+      const code = isAxiosError<{ errors?: string[] }>(cause) ? cause.response?.data?.errors?.[0] : undefined;
+      if (code === 'ADMIN_ATTENDANCE_NOT_APPLICABLE') setIsGeneralAdmin(true);
+      else setError('تعذر تحميل سجل الحضور.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (!today?.clockedInAt || today.clockedOutAt) return;
@@ -41,10 +60,10 @@ export function AttendanceWorkspace() {
     return () => window.clearInterval(timer);
   }, [today?.clockedInAt, today?.clockedOutAt]);
   const openBreak = today?.breaks?.find((item) => !item.endedAt);
-  const used = (kind: 'Regular' | 'ShortPermission') => today?.breaks?.filter((item) => item.kind === kind && item.endedAt).reduce((sum, item) => sum + Math.floor((new Date(item.endedAt!).getTime() - new Date(item.startedAt).getTime()) / 60000), 0) ?? 0;
+  const used = (kind: 'Regular' | 'ShortPermission') => today?.breaks?.filter((item) => item.kind === kind && item.endedAt).reduce((sum, item) => sum + Math.floor((parseUtcDateTime(item.endedAt!).getTime() - parseUtcDateTime(item.startedAt).getTime()) / 60000), 0) ?? 0;
   const deviceToken = useMemo(() => { if (typeof window === 'undefined') return ''; const key = 'hr-attendance-device-token'; const existing = localStorage.getItem(key); if (existing) return existing; const next = createClientId(); localStorage.setItem(key, next); return next; }, []);
   const todayElapsedMinutes = today?.clockedInAt
-    ? Math.max(today.workedMinutes, Math.floor(((today.clockedOutAt ? new Date(today.clockedOutAt).getTime() : now) - new Date(today.clockedInAt).getTime()) / 60_000))
+    ? Math.max(today.workedMinutes, Math.floor(((today.clockedOutAt ? parseUtcDateTime(today.clockedOutAt).getTime() : now - serverClockOffsetMs) - parseUtcDateTime(today.clockedInAt).getTime()) / 60_000))
     : 0;
   const run = async (action: () => Promise<unknown>) => {
     setActing(true);

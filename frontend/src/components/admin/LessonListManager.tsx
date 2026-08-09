@@ -113,7 +113,7 @@ export const LessonListManager = forwardRef<LessonListManagerRef, LessonListMana
           <div
             key={lesson.id}
             onClick={() => router.push(`/admin/content/lessons/${lesson.id}`)}
-            className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm transition-all hover:border-[var(--admin-primary-15)] cursor-pointer"
+            className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary-15)] cursor-pointer"
           >
             <div className="flex items-center gap-4">
               <div className="flex cursor-grab items-center px-1 text-[var(--admin-muted)] opacity-50 hover:opacity-100">
@@ -141,19 +141,19 @@ export const LessonListManager = forwardRef<LessonListManagerRef, LessonListMana
                 <NeumorphButton disabled intent="icon" size="icon" title="إعدادات الحصة قريباً">
                   <Settings className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/settings:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 end-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/settings:opacity-100">قريباً</span>
               </div>
               <div className="relative group/edit">
                 <NeumorphButton disabled intent="icon" size="icon" title="تعديل الحصة قريباً">
                   <Edit2 className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 end-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
               </div>
               <div className="relative group/del">
                 <NeumorphButton disabled intent="danger" size="icon" title="حذف الحصة قريباً">
                   <Trash2 className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 end-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
               </div>
             </div>
           </div>

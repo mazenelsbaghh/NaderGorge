@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Check, Clock, Sparkles } from "lucide-react";
+import { Bell, Check, Clock, RefreshCw, Sparkles } from "lucide-react";
+import { AsyncRegionState } from "@/components/ui/AsyncRegionState";
 import { studentService, StudentNotificationDto } from "@/services/student-service";
-import { useStudentTheme } from "@/hooks/useStudentTheme";
-import { fadeSlideUp } from "@/lib/motion";
-
 import { registerCacheStore } from "@/lib/cache-invalidation";
 
 export default function StudentNotificationsPageClient() {
-  const { isReady } = useStudentTheme();
   const [notifications, setNotifications] = useState<StudentNotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,11 +57,8 @@ export default function StudentNotificationsPageClient() {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center" dir="rtl">
-        <div className="text-center space-y-4">
-          <div className="h-12 w-12 border-4 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm text-[var(--admin-muted)]">جاري تحميل الإشعارات...</p>
-        </div>
+      <div className="mx-auto max-w-4xl" dir="rtl">
+        <AsyncRegionState status="loading" message="جاري تحميل إشعاراتك" />
       </div>
     );
   }
@@ -73,12 +67,14 @@ export default function StudentNotificationsPageClient() {
     return (
       <div className="flex h-[60vh] items-center justify-center px-4" dir="rtl">
         <div className="max-w-md space-y-4 text-center">
-          <p role="alert" className="text-sm font-bold text-[var(--admin-danger)]">{error}</p>
+          <p role="alert" className="text-base font-bold text-[var(--admin-danger)]">{error}</p>
+          <p className="text-sm leading-7 text-[var(--admin-muted)]">تحقق من اتصالك، ثم حاول تحميل الصفحة مرة أخرى.</p>
           <button
             type="button"
             onClick={fetchNotifications}
-            className="rounded-xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-bold text-[var(--admin-primary-contrast)]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-bold text-[var(--admin-primary-contrast)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
           >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             إعادة المحاولة
           </button>
         </div>
@@ -89,15 +85,12 @@ export default function StudentNotificationsPageClient() {
   return (
     <motion.div
       className="space-y-8 max-w-4xl mx-auto"
-      variants={fadeSlideUp}
-      initial="hidden"
-      animate={isReady ? "show" : undefined}
+      initial={false}
       dir="rtl"
     >
       {/* Page Header */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="rounded-2xl bg-[var(--admin-card-soft)] p-6 md:p-8">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-1 text-xs font-black text-[var(--admin-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
@@ -114,7 +107,7 @@ export default function StudentNotificationsPageClient() {
       </div>
 
       {/* Notifications List */}
-      <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
         {actionError && (
           <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-3 text-xs font-bold text-[var(--admin-danger)]">
             <span>{actionError}</span>
@@ -138,7 +131,7 @@ export default function StudentNotificationsPageClient() {
                 <Bell className="h-10 w-10" />
               </div>
               <h4 className="font-bold text-[var(--admin-text)] text-sm">صندوق إشعاراتك فارغ</h4>
-              <p className="text-xs text-[var(--admin-muted)]">الإشعارات العامة أو المطابقة لبياناتك الدراسية ستظهر هنا عند وصولها.</p>
+              <p className="mx-auto max-w-md text-sm leading-7 text-[var(--admin-muted)]">الإشعارات العامة أو المطابقة لبياناتك الدراسية ستظهر هنا عند وصولها. لا يلزمك إجراء الآن.</p>
             </div>
           ) : (
             notifications.map((notif) => (
@@ -164,7 +157,7 @@ export default function StudentNotificationsPageClient() {
                   </p>
                   <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {new Date(notif.createdAt).toLocaleDateString("ar-EG", {
+                    {new Date(notif.createdAt).toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo',
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -178,7 +171,7 @@ export default function StudentNotificationsPageClient() {
                   <button
                     onClick={() => handleMarkAsRead(notif.id)}
                     disabled={actioningId === notif.id}
-                    className="self-start md:self-center bg-[var(--admin-primary)] hover:brightness-110 text-[var(--admin-primary-contrast)] font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+                    className="flex min-h-11 items-center gap-2 self-stretch rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)] transition-colors hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50 md:self-center"
                   >
                     <Check className="h-3.5 w-3.5" />
                     تحديد كمقروء

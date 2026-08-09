@@ -25,6 +25,7 @@ using StackExchange.Redis;
 using NaderGorge.API.Hubs;
 using NaderGorge.API.BackgroundServices;
 using NaderGorge.API.Services;
+using NaderGorge.API.Serialization;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Features.Auth.Services;
 using NaderGorge.API.Authorization;
@@ -159,6 +160,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceOperationsService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceOperationsService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ITeacherFinanceExportService, NaderGorge.Infrastructure.Services.Finance.TeacherFinanceExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceMigrationService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceMigrationService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Reports.PlatformFinancialReportQueries>();
 builder.Services.AddScoped<NaderGorge.Infrastructure.Services.Finance.Migration.FinancialReconciliationService>();
@@ -218,6 +220,10 @@ builder.Services.AddHttpClient<NaderGorge.Application.Features.Admin.Ocr.IAssess
 builder.Services.AddHostedService<ThanaweyaResultsImportHostedService>();
 builder.Services.AddScoped<WhatsAppExamNotificationService>();
 builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+    })
     .AddStackExchangeRedis(options =>
     {
         options.Configuration = redisConfiguration;
@@ -318,6 +324,7 @@ builder.Services.AddRateLimitingPolicies();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();

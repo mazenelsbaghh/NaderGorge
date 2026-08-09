@@ -6,7 +6,10 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands.MindmapOps;
 
-public record GenerateChapterMindmapsCommand(Guid VideoId) : IRequest<ApiResponse>;
+public record GenerateChapterMindmapsCommand(
+    Guid VideoId,
+    IReadOnlyCollection<string>? VisualStyles = null,
+    IReadOnlyCollection<string>? TeacherStyles = null) : IRequest<ApiResponse>;
 
 public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateChapterMindmapsCommand, ApiResponse>
 {
@@ -65,6 +68,8 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
             summaryText = c.SummaryText,
             order = c.Order
         }).ToList();
+        var visualStyles = MindmapStyleOptions.ValidVisualStyles(request.VisualStyles);
+        var teacherStyles = MindmapStyleOptions.ValidTeacherStyles(request.TeacherStyles);
 
         try
         {
@@ -72,6 +77,8 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
             {
                 lessonVideoId = video.Id,
                 teacherPhotoUrls = teacherPhotoUrls,
+                visualStyles,
+                teacherStyles,
                 chapters = chaptersData
             });
         }

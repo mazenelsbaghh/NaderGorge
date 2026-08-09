@@ -39,7 +39,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
 
   if (!codePage) {
     return (
-      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 text-center text-[var(--admin-muted)] backdrop-blur-xl">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 text-center text-[var(--admin-muted)] backdrop-blur-md">
         تعذر تحميل صفحة الكود الخاصة بهذه الباقة.
       </div>
     );
@@ -50,7 +50,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
       <PackageCodeRedemptionShowcase page={codePage} />
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
+        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md md:p-8">
           <div className="mb-6">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
               {codePage.isUsingCustomProfile ? 'صفحة مخصصة' : 'الوضع الافتراضي'}
@@ -63,7 +63,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
             </p>
           </div>
 
-          <div className="rounded-[28px] bg-[var(--admin-card-soft)] p-4 sm:p-5">
+          <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">
             <CodeActivationForm
               onSuccess={() =>
                 setRecentActivations((current) => [
@@ -75,7 +75,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
+        <aside className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md md:p-8">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
             {codePage.packageName}
           </p>
@@ -92,7 +92,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
       </div>
 
       {recentActivations.length > 0 && (
-        <section className="rounded-[30px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-xl">
+        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-success-10)] text-[var(--admin-success)]">
               <Sparkles className="h-5 w-5" />
@@ -122,7 +122,7 @@ export default function PackageCodeRedemptionPageClient({ params }: { params: { 
 
 function InfoCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-[24px] bg-[var(--admin-card-soft)] p-5">
+    <div className="rounded-2xl bg-[var(--admin-card-soft)] p-5">
       <h3 className="text-lg font-black text-[var(--admin-text)]">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">{description}</p>
     </div>

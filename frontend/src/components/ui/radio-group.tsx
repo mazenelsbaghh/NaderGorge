@@ -77,7 +77,7 @@ export function Radio({ value, className, children }: RadioProps) {
   return (
     <RadioItemContext.Provider value={{ isSelected }}>
       <label
-        className={`group flex flex-1 cursor-pointer items-center gap-2.5 rounded-[18px] border-2 p-3 transition-all ${
+        className={`group flex flex-1 cursor-pointer items-center gap-2.5 rounded-[18px] border-2 p-3 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
           isSelected
             ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5'
             : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:border-[var(--admin-text)]/20'

@@ -15,7 +15,7 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
   }, [context, mobileView]);
 
   return (
-    <div className="h-[min(700px,calc(100dvh-12rem))] min-h-[500px] min-w-0 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+    <div className="h-[min(700px,calc(100dvh-2rem))] min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] sm:h-[min(700px,calc(100dvh-8rem))]">
       {/* Mobile/Tablet Header */}
       <div className="flex items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 lg:hidden">
         {mobileView === 'queue' && (

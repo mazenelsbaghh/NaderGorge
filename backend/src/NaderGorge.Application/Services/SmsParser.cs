@@ -41,6 +41,7 @@ public static class SmsParser
     private static readonly Regex[] CurrentBalanceRegexes = new[]
     {
         new Regex(@"رصيدك\s+الحالي\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:ج\.م|جنيه|EGP)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"رصيد\s+حسابك\s+(?:في|فى)\s+فودافون\s+كاش\s+الحالي\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:ج\.م|جنيه|EGP)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         new Regex(@"(?:current\s+balance|balance)\s*[:：]?\s*(?:EGP\s*)?(\d+(?:\.\d+)?)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
     };
     private static readonly Regex OutgoingRecipientRegex = new(@"(?:لرقم|إلى\s+رقم|الي\s+رقم|to)\s*[:：]?\s*(01[0125]\d{8})", RegexOptions.Compiled | RegexOptions.IgnoreCase);

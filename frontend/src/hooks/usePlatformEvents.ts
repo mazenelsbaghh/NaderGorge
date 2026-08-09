@@ -7,6 +7,7 @@ import { invalidateCanonicalKeys, invalidateForStaffDataChanged, resetRealtimeEv
 import { parseStaffDataChangedPayload } from '@/lib/data-changed-event';
 import { recordRealtimeMetric, recordReconnectDuration, recordSnapshotReconciliation } from '@/lib/realtime-observability';
 import type { StaffDataChangedPayload } from '@/lib/staff-realtime-scopes';
+import { devConsole } from '@/utils/dev-console';
 
 // Keep every platform event on the canonical scope-to-query mapping. Detail
 // keys remain supported by the adapter for entity-specific refreshes.
@@ -672,7 +673,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
         });
 
         sharedConnection.onreconnected(async (connectionId) => {
-          console.log('Platform SignalR reconnected:', connectionId);
+          devConsole.log('Platform SignalR reconnected:', connectionId);
           recordRealtimeMetric('reconnect');
           if (reconnectStartedAt !== null) {
             recordReconnectDuration(Date.now() - reconnectStartedAt);
@@ -695,7 +696,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           for (const packageId of activePackages) {
             try {
               await sharedConnection?.invoke('JoinPackage', packageId);
-              console.log(`Re-joined package group on reconnect: ${packageId}`);
+              devConsole.log(`Re-joined package group on reconnect: ${packageId}`);
             } catch (err) {
               console.error(`Failed to re-join package group ${packageId} on reconnect:`, err);
             }
@@ -705,7 +706,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           for (const lessonId of activeLessons) {
             try {
               await sharedConnection?.invoke('JoinLesson', lessonId);
-              console.log(`Re-joined lesson group on reconnect: ${lessonId}`);
+              devConsole.log(`Re-joined lesson group on reconnect: ${lessonId}`);
             } catch (err) {
               console.error(`Failed to re-join lesson group ${lessonId} on reconnect:`, err);
             }
@@ -1342,7 +1343,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             for (const packageId of activePackages) {
               try {
                 await sharedConnection?.invoke('JoinPackage', packageId);
-                console.log(`Joined active package group on startup: ${packageId}`);
+                devConsole.log(`Joined active package group on startup: ${packageId}`);
               } catch (e) {
                 console.error(`Error joining package group ${packageId} on startup:`, e);
               }
@@ -1352,7 +1353,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             for (const lessonId of activeLessons) {
               try {
                 await sharedConnection?.invoke('JoinLesson', lessonId);
-                console.log(`Joined active lesson group on startup: ${lessonId}`);
+                devConsole.log(`Joined active lesson group on startup: ${lessonId}`);
               } catch (e) {
                 console.error(`Error joining lesson group ${lessonId} on startup:`, e);
               }

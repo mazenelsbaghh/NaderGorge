@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import { translateRole } from '@/packages/brand';
 
 // ── Types for new endpoints (wrapped in try/catch) ──────────────────────
@@ -358,7 +359,7 @@ export default function AssistantProfilePageClient() {
   // ── Helpers ────────────────────────────────────────────────────────────
   const formatDate = (d?: string | null) => {
     if (!d) return 'غير متوفر';
-    return new Date(d).toLocaleDateString('en-GB');
+    return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
   };
 
   const mapRole = (roles: string[]) => {
@@ -611,8 +612,8 @@ export default function AssistantProfilePageClient() {
                       {translateTaskStatus(row.status)}
                     </span>
                   )},
-                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB') : '—' },
-                  { key: 'completedAt', label: 'تاريخ الاكتمال', render: (row) => row.completedAt ? new Date(row.completedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
+                  { key: 'completedAt', label: 'تاريخ الاكتمال', render: (row) => row.completedAt ? new Date(row.completedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={filteredTasks}
                 rowKey={(row) => row.id}
@@ -662,7 +663,7 @@ export default function AssistantProfilePageClient() {
                       {row.status === 'Graded' ? 'مصحح' : row.status}
                     </span>
                   )},
-                  { key: 'gradedAt', label: 'تاريخ التصحيح', render: (row) => row.gradedAt ? new Date(row.gradedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'gradedAt', label: 'تاريخ التصحيح', render: (row) => row.gradedAt ? new Date(row.gradedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={homeworkReviews}
                 rowKey={(row) => row.id}
@@ -698,8 +699,8 @@ export default function AssistantProfilePageClient() {
                   { key: 'resolutionNotes', label: 'ملاحظات الحل', render: (row) => (
                     <span className="text-sm text-[var(--admin-text)]">{row.resolutionNotes || '—'}</span>
                   )},
-                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB') : '—' },
-                  { key: 'resolvedAt', label: 'تاريخ الحل', render: (row) => row.resolvedAt ? new Date(row.resolvedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
+                  { key: 'resolvedAt', label: 'تاريخ الحل', render: (row) => row.resolvedAt ? new Date(row.resolvedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={warningsResolved}
                 rowKey={(row) => row.id}
@@ -726,7 +727,7 @@ export default function AssistantProfilePageClient() {
                 </div>
                 <button
                   onClick={() => setModalOpen('hrSettings')}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-all duration-300 shadow-sm"
+                  className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 shadow-sm"
                 >
                   <PenLine size={14} />
                   تعديل الإعدادات الوظيفية
@@ -779,18 +780,18 @@ export default function AssistantProfilePageClient() {
                 columns={[
                   { key: 'date', label: 'التاريخ', render: (a) => (
                     <span className="font-bold text-[var(--admin-text)]">
-                      {new Date(a.date).toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
+                      {new Date(a.date).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
                     </span>
                   )},
                   { key: 'clockIn', label: 'وقت الحضور', render: (a) => (
                     <span className="font-mono text-sm">
-                      {new Date(a.clockIn).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                      {formatCairoDateTime(a.clockIn, { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )},
                   { key: 'clockOut', label: 'وقت الانصراف', render: (a) =>
                     a.clockOut ? (
                       <span className="font-mono text-sm">
-                        {new Date(a.clockOut).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                        {formatCairoDateTime(a.clockOut, { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     ) : (
                       <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">
@@ -905,7 +906,7 @@ export default function AssistantProfilePageClient() {
           ))}
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
             </button>
           </div>
@@ -930,7 +931,7 @@ export default function AssistantProfilePageClient() {
           </div>
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
             </button>
           </div>
@@ -954,7 +955,7 @@ export default function AssistantProfilePageClient() {
             <button
               disabled={submitting}
               onClick={handleStatusToggle}
-              className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power size={16} />}
               {submitting ? 'جاري الإيقاف...' : 'تأكيد الإيقاف'}
@@ -1010,7 +1011,7 @@ export default function AssistantProfilePageClient() {
           </div>
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             </button>
           </div>

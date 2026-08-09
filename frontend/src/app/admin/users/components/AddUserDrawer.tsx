@@ -17,6 +17,7 @@ import {
   type ShiftTemplateDto,
   type WorkCalendarDto,
 } from '@/services/hr-service';
+import { cairoCurrentDate } from '@/lib/cairo-time';
 
 type Role = string;
 
@@ -50,13 +51,7 @@ const ROLES: { value: string; label: string; icon: React.ReactNode; desc: string
 
 const supportDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const defaultSupportWindow: LiveSupportScheduleWindow = { dayOfWeek: 0, startLocalTime: '09:00:00', endLocalTime: '17:00:00' };
-const todayInputValue = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+const todayInputValue = cairoCurrentDate;
 
 function supportScheduleFromShift(
   shift: ShiftTemplateDto | undefined,
@@ -368,7 +363,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[90] bg-[var(--admin-text)]/35 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-floating)] bg-[var(--admin-text)]/35 backdrop-blur-sm"
             onClick={() => {
               if (!submitting) onClose();
             }}
@@ -381,7 +376,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
             role="dialog"
             aria-modal="true"
@@ -431,7 +426,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
                           key={r.value}
                           type="button"
                           onClick={() => setRole(r.value)}
-                          className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all duration-200 ${
+                          className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${
                             role === r.value
                               ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)] shadow-[0_0_0_1px_var(--admin-primary)]'
                               : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/40 hover:text-[var(--admin-text)]'
@@ -752,7 +747,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
                             return (
                               <label
                                 key={pkg.id}
-                                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-all ${
+                                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                                   checked
                                     ? 'border-[var(--admin-primary)]/40 bg-[var(--admin-primary-15)]'
                                     : 'border-transparent bg-[var(--admin-bg)] hover:bg-[var(--admin-hover)]'
@@ -806,7 +801,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-sm transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? (
                       <>

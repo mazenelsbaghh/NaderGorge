@@ -350,7 +350,7 @@ export default function ExamProfilePageClient({
         <div className="flex border-b border-[var(--admin-border)] gap-2">
           <button
             onClick={() => setActiveTab('questions')}
-            className={`pb-3 px-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 font-bold text-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] border-b-2 flex items-center gap-2 ${
               activeTab === 'questions'
                 ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
                 : 'border-transparent text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -361,7 +361,7 @@ export default function ExamProfilePageClient({
           </button>
           <button
             onClick={() => setActiveTab('attempts')}
-            className={`pb-3 px-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 font-bold text-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] border-b-2 flex items-center gap-2 ${
               activeTab === 'attempts'
                 ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
                 : 'border-transparent text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -490,7 +490,7 @@ export default function ExamProfilePageClient({
                   return (
                     <div
                       key={q.examQuestionId}
-                      className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                      className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                     >
                       <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
 
@@ -592,7 +592,7 @@ export default function ExamProfilePageClient({
                                     style={{ width: `${q.correctPercentage}%` }}
                                   />
                                 </div>
-                                <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
+                                <div className="grid grid-cols-3 gap-1 text-sm font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
                                   <div>
                                     <div className="font-bold text-green-600 dark:text-green-400">{q.correctCount}</div>
                                     <div>صح</div>
@@ -610,7 +610,7 @@ export default function ExamProfilePageClient({
                             ) : (
                               <div className="space-y-2">
                                 <p className="text-xs font-bold text-[var(--admin-muted)]">لا توجد إحصائيات</p>
-                                <p className="text-[10px] leading-relaxed text-[var(--admin-muted)] opacity-70">
+                                <p className="text-sm leading-relaxed text-[var(--admin-muted)] opacity-70">
                                   لم يقم أي طالب بإرسال إجابة على هذا السؤال بعد.
                                 </p>
                               </div>
@@ -724,7 +724,7 @@ export default function ExamProfilePageClient({
                             )}
                           </td>
                           <td className="p-4 text-xs text-[var(--admin-muted)] font-medium">
-                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG') : '—'}
+                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) : '—'}
                           </td>
                         </tr>
                       ))}

@@ -1,7 +1,15 @@
 import apiClient from './api-client';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
-import type { CodeAccountingTiming, CodeRevenueAllocationMode, CodeRevenueOwner, CodeType } from './code-service';
-import type { AcademicScopePayload, AcademicScopeSummary } from '@/lib/academic-labels';
+import type {
+  CodeAccountingTiming,
+  CodeRevenueAllocationMode,
+  CodeRevenueOwner,
+  CodeType,
+} from './code-service';
+import type {
+  AcademicScopePayload,
+  AcademicScopeSummary,
+} from '@/lib/academic-labels';
 
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
 
@@ -37,7 +45,10 @@ export type CreateVideoPayload = {
   isActive?: boolean;
 };
 
-export type UpdateVideoPayload = Omit<CreateVideoPayload, 'lessonId' | 'isActive'>;
+export type UpdateVideoPayload = Omit<
+  CreateVideoPayload,
+  'lessonId' | 'isActive'
+>;
 
 export type BunnyTusUploadRequest = {
   teacherId?: string;
@@ -103,8 +114,20 @@ export type BunnyCostReport = {
     isBandwidthEstimated: boolean;
     bandwidthSource: string;
   }>;
-  teachers: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
-  packages: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
+  teachers: Array<{
+    id: string;
+    name: string;
+    storageBytes: number;
+    bandwidthBytes: number;
+    totalCostUsd: number;
+  }>;
+  packages: Array<{
+    id: string;
+    name: string;
+    storageBytes: number;
+    bandwidthBytes: number;
+    totalCostUsd: number;
+  }>;
 };
 
 export interface ApiResponse<T = any> {
@@ -176,10 +199,10 @@ export interface AdminUserListDto {
   isFatherAlive?: boolean;
   isMotherAlive?: boolean;
   governorate?: string;
-  district?: string;                    // NEW
+  district?: string; // NEW
   address?: string;
-  secondaryPhone?: string;              // NEW
-  secondaryParentPhone?: string;        // NEW
+  secondaryPhone?: string; // NEW
+  secondaryParentPhone?: string; // NEW
   parentPhone?: string;
   motherPhone?: string;
   schoolName?: string;
@@ -400,7 +423,6 @@ export interface AdminWatchRequestDto {
   videoDurationSeconds?: number | null;
   hasPreviousRequest: boolean;
 }
-
 
 export interface StudentProfileExtendedDto {
   id: string;
@@ -706,6 +728,11 @@ export interface LessonCockpitVideoChapterDto {
   order: number;
 }
 
+export interface MindmapStyleSelection {
+  visualStyles: string[];
+  teacherStyles: string[];
+}
+
 export interface LessonCockpitVideoDto {
   id: string;
   internalCode: string;
@@ -786,7 +813,6 @@ export interface PackageCodeProfilePayload {
   themeAccentKey?: string;
 }
 
-
 export interface AdminCreateUserPayload {
   fullName: string;
   phoneNumber: string;
@@ -813,11 +839,19 @@ export interface AdminPackageListItemDto {
 
 export const adminService = {
   sendWhatsAppTestMessage: async (payload: WhatsAppTestMessagePayload) => {
-    const res = await apiClient.post<WhatsAppTestMessageResult>('/whatsapp/admin/test-message', payload);
+    const res = await apiClient.post<WhatsAppTestMessageResult>(
+      '/whatsapp/admin/test-message',
+      payload
+    );
     return res.data;
   },
-  sendWhatsAppExamResultMessage: async (payload: WhatsAppExamResultMessagePayload) => {
-    const res = await apiClient.post<WhatsAppExamResultMessageResult>('/whatsapp/admin/exam-result-message', payload);
+  sendWhatsAppExamResultMessage: async (
+    payload: WhatsAppExamResultMessagePayload
+  ) => {
+    const res = await apiClient.post<WhatsAppExamResultMessageResult>(
+      '/whatsapp/admin/exam-result-message',
+      payload
+    );
     return res.data;
   },
 
@@ -833,29 +867,32 @@ export const adminService = {
     governorate?: string,
     role?: string,
     signal?: AbortSignal,
-    staffOnly?: boolean,
+    staffOnly?: boolean
   ) => {
-    const res = await apiClient.get<ApiResponse<PagedResult<AdminUserListDto>>>('/admin/users', {
-      signal,
-      params: {
-        page,
-        pageSize,
-        ...(search ? { search } : {}),
-        ...(educationStage ? { educationStage } : {}),
-        ...(gradeLevel ? { gradeLevel } : {}),
-        ...(studyTrack ? { studyTrack } : {}),
-        ...(gender ? { gender } : {}),
-        ...(governorate ? { governorate } : {}),
-        ...(role ? { role } : {}),
-        ...(staffOnly ? { staffOnly: true } : {}),
+    const res = await apiClient.get<ApiResponse<PagedResult<AdminUserListDto>>>(
+      '/admin/users',
+      {
+        signal,
+        params: {
+          page,
+          pageSize,
+          ...(search ? { search } : {}),
+          ...(educationStage ? { educationStage } : {}),
+          ...(gradeLevel ? { gradeLevel } : {}),
+          ...(studyTrack ? { studyTrack } : {}),
+          ...(gender ? { gender } : {}),
+          ...(governorate ? { governorate } : {}),
+          ...(role ? { role } : {}),
+          ...(staffOnly ? { staffOnly: true } : {}),
+        },
       }
-    });
+    );
     return res.data?.data;
   },
 
   listAllUsers: async (
     filters: AdminUserFilters = {},
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ) => {
     const pageSize = 100;
     const matchingUsers: AdminUserListDto[] = [];
@@ -873,11 +910,14 @@ export const adminService = {
         filters.governorate,
         filters.role,
         signal,
-        filters.staffOnly,
+        filters.staffOnly
       );
       matchingUsers.push(...usersPage.items);
 
-      if (matchingUsers.length >= usersPage.totalCount || usersPage.items.length === 0) {
+      if (
+        matchingUsers.length >= usersPage.totalCount ||
+        usersPage.items.length === 0
+      ) {
         return matchingUsers;
       }
 
@@ -885,24 +925,26 @@ export const adminService = {
     }
   },
 
-  exportUsers: async (
-    filters: AdminUserFilters,
-    signal?: AbortSignal,
-  ) => adminService.listAllUsers(filters, signal),
+  exportUsers: async (filters: AdminUserFilters, signal?: AbortSignal) =>
+    adminService.listAllUsers(filters, signal),
 
   createUser: async (payload: AdminCreateUserPayload) => {
-    const res = await apiClient.post<ApiResponse<AdminCreateUserResult>>('/admin/users', {
-      ...payload,
-      packageIds: payload.packageIds ?? []
-    });
+    const res = await apiClient.post<ApiResponse<AdminCreateUserResult>>(
+      '/admin/users',
+      {
+        ...payload,
+        packageIds: payload.packageIds ?? [],
+      }
+    );
     return res.data;
   },
 
   listAllPackages: async (): Promise<AdminPackageListItemDto[]> => {
-    const res = await apiClient.get<ApiResponse<AdminPackageListItemDto[]>>('/admin/packages/list');
+    const res = await apiClient.get<ApiResponse<AdminPackageListItemDto[]>>(
+      '/admin/packages/list'
+    );
     return res.data?.data ?? [];
   },
-
 
   updateUserStatus: async (id: string, status: string) => {
     const res = await apiClient.put(`/admin/users/${id}/status`, { status });
@@ -914,53 +956,84 @@ export const adminService = {
     return res.data?.data;
   },
 
-  uploadTeacherPhoto: async (teacherId: string, base64Image: string, fileName: string) => {
-    const res = await apiClient.post<ApiResponse>('/admin/teacher-photos/upload', {
-      teacherId,
-      base64Image,
-      fileName
-    });
+  uploadTeacherPhoto: async (
+    teacherId: string,
+    base64Image: string,
+    fileName: string
+  ) => {
+    const res = await apiClient.post<ApiResponse>(
+      '/admin/teacher-photos/upload',
+      {
+        teacherId,
+        base64Image,
+        fileName,
+      }
+    );
     return res.data;
   },
 
   getActiveTeacherPhoto: async (teacherId: string) => {
-    const res = await apiClient.get<ApiResponse<{ url: string | null }>>(`/admin/teachers/${teacherId}/active-photo`);
+    const res = await apiClient.get<ApiResponse<{ url: string | null }>>(
+      `/admin/teachers/${teacherId}/active-photo`
+    );
     return res;
   },
 
   getTeachers: async (): Promise<AdminTeacherOptionDto[]> => {
-    const res = await apiClient.get<ApiResponse<AdminTeacherOptionDto[]>>('/admin/teachers');
+    const res =
+      await apiClient.get<ApiResponse<AdminTeacherOptionDto[]>>(
+        '/admin/teachers'
+      );
     return res.data?.data ?? [];
   },
 
   getTeacherPhotos: async (teacherId: string) => {
-    const res = await apiClient.get<ApiResponse<{ id: string; url: string; isActive: boolean; uploadedAt: string }[]>>(`/admin/teachers/${teacherId}/photos`);
+    const res = await apiClient.get<
+      ApiResponse<
+        { id: string; url: string; isActive: boolean; uploadedAt: string }[]
+      >
+    >(`/admin/teachers/${teacherId}/photos`);
     return res.data;
   },
 
   setTeacherPhotoActive: async (teacherId: string, photoId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/teachers/${teacherId}/photos/${photoId}/active`);
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/teachers/${teacherId}/photos/${photoId}/active`
+    );
     return res.data;
   },
 
   deleteTeacherPhoto: async (teacherId: string, photoId: string) => {
-    const res = await apiClient.delete<ApiResponse>(`/admin/teachers/${teacherId}/photos/${photoId}`);
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/teachers/${teacherId}/photos/${photoId}`
+    );
     return res.data;
   },
 
-  uploadTeacherProfileImage: async (teacherId: string, base64Image: string, fileName: string) => {
-    const res = await apiClient.post<ApiResponse<string>>('/admin/teachers/upload-profile-image', {
-      teacherId,
-      base64Image,
-      fileName
-    });
+  uploadTeacherProfileImage: async (
+    teacherId: string,
+    base64Image: string,
+    fileName: string
+  ) => {
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/teachers/upload-profile-image',
+      {
+        teacherId,
+        base64Image,
+        fileName,
+      }
+    );
     return res.data;
   },
 
   uploadFormCoverImage: async (base64Image: string, fileName: string) => {
-    const res = await apiClient.post<{ success: boolean; data: string; message?: string }>('/admin/forms/cover/upload', {
+    const res = await apiClient.post<{
+      success: boolean;
+      data: string;
+      message?: string;
+    }>('/admin/forms/cover/upload', {
       base64Image,
-      fileName
+      fileName,
     });
     return res.data;
   },
@@ -971,22 +1044,30 @@ export const adminService = {
   },
 
   getUserDevices: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<DeviceDto[]>>(`/admin/users/${id}/devices`);
+    const res = await apiClient.get<ApiResponse<DeviceDto[]>>(
+      `/admin/users/${id}/devices`
+    );
     return res.data?.data;
   },
 
   getUserAuditLogs: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<UserAuditLogDto[]>>(`/admin/users/${id}/audit-logs`);
+    const res = await apiClient.get<ApiResponse<UserAuditLogDto[]>>(
+      `/admin/users/${id}/audit-logs`
+    );
     return res.data?.data;
   },
 
   disconnectDevice: async (userId: string, deviceId: string) => {
-    const res = await apiClient.delete(`/admin/users/students/${userId}/devices/${deviceId}`);
+    const res = await apiClient.delete(
+      `/admin/users/students/${userId}/devices/${deviceId}`
+    );
     return res;
   },
 
   disconnectAllDevices: async (userId: string) => {
-    const res = await apiClient.delete(`/admin/users/students/${userId}/devices`);
+    const res = await apiClient.delete(
+      `/admin/users/students/${userId}/devices`
+    );
     return res;
   },
 
@@ -995,25 +1076,54 @@ export const adminService = {
     return res.data?.data;
   },
 
-  toggleStudentStatus: async (userId: string, isActive: boolean, reason: string) => {
-    const res = await apiClient.patch(`/admin/users/students/${userId}/status`, { isActive, reason });
+  toggleStudentStatus: async (
+    userId: string,
+    isActive: boolean,
+    reason: string
+  ) => {
+    const res = await apiClient.patch(
+      `/admin/users/students/${userId}/status`,
+      { isActive, reason }
+    );
     return res;
   },
 
-  overrideVideoLimit: async (userId: string, videoId: string, addedViews: number, reason: string) => {
-    const res = await apiClient.post(`/admin/users/students/${userId}/overrides`, { videoId, addedViews, reason });
+  overrideVideoLimit: async (
+    userId: string,
+    videoId: string,
+    addedViews: number,
+    reason: string
+  ) => {
+    const res = await apiClient.post(
+      `/admin/users/students/${userId}/overrides`,
+      { videoId, addedViews, reason }
+    );
     return res;
   },
 
-  adjustGamification: async (userId: string, points: number, reason: string) => {
-    const res = await apiClient.post(`/admin/users/students/${userId}/gamification/adjust`, { points, reason });
+  adjustGamification: async (
+    userId: string,
+    points: number,
+    reason: string
+  ) => {
+    const res = await apiClient.post(
+      `/admin/users/students/${userId}/gamification/adjust`,
+      { points, reason }
+    );
     return res;
   },
 
   // Codes
-  bulkGenerateCodes: async (payload: { packageId?: string; lessonId?: string; count: number; codeLength: number }) => {
+  bulkGenerateCodes: async (payload: {
+    packageId?: string;
+    lessonId?: string;
+    count: number;
+    codeLength: number;
+  }) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/codes/bulk-generate' : '/admin/codes/bulk-generate';
+    const path = isTeacher
+      ? '/teacher/codes/bulk-generate'
+      : '/admin/codes/bulk-generate';
     const res = await apiClient.post(path, payload);
     return res.data?.data;
   },
@@ -1028,27 +1138,40 @@ export const adminService = {
 
   getCodeGroupDetails: async (id: string) => {
     const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? `/teacher/codes/groups/${id}/details` : `/admin/codes/groups/${id}/details`;
+    const path = isTeacher
+      ? `/teacher/codes/groups/${id}/details`
+      : `/admin/codes/groups/${id}/details`;
     const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(path);
     return res.data?.data;
   },
 
-  updateCodeGroupSettings: async (id: string, payload: UpdateCodeGroupSettingsPayload) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/codes/groups/${id}/settings`, payload);
+  updateCodeGroupSettings: async (
+    id: string,
+    payload: UpdateCodeGroupSettingsPayload
+  ) => {
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/codes/groups/${id}/settings`,
+      payload
+    );
     return res.data;
   },
 
   removeUnusedCodes: async (id: string, keepEmptyGroup = true) => {
-    const res = await apiClient.delete<ApiResponse<RemoveUnusedCodesResponse>>(`/admin/codes/groups/${id}/unused`, {
-      data: { keepEmptyGroup },
-    });
+    const res = await apiClient.delete<ApiResponse<RemoveUnusedCodesResponse>>(
+      `/admin/codes/groups/${id}/unused`,
+      {
+        data: { keepEmptyGroup },
+      }
+    );
     return res.data;
   },
 
   // Questions
   listQuestions: async (page = 1, pageSize = 20, search = '') => {
-    const res = await apiClient.get<ApiResponse<PagedResult<QuestionBankItemDto>>>('/admin/questions', {
-      params: { page, pageSize, search }
+    const res = await apiClient.get<
+      ApiResponse<PagedResult<QuestionBankItemDto>>
+    >('/admin/questions', {
+      params: { page, pageSize, search },
     });
     return res.data?.data;
   },
@@ -1068,35 +1191,51 @@ export const adminService = {
     subjectId: string;
     teacherId?: string;
   }) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/questions', {
-      ...payload,
-      type: payload.type || 0 // Default to MCQ if omitted
-    });
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      '/admin/questions',
+      {
+        ...payload,
+        type: payload.type || 0, // Default to MCQ if omitted
+      }
+    );
     return res.data?.data;
   },
 
   uploadQuestionAudio: async (questionId: string, file: File) => {
     const formData = new FormData();
     formData.append('audio', file);
-    const res = await apiClient.post<ApiResponse<string>>(`/admin/questions/${questionId}/audio`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const res = await apiClient.post<ApiResponse<string>>(
+      `/admin/questions/${questionId}/audio`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
     return res.data?.data;
   },
 
   getPendingEssays: async () => {
-    const res = await apiClient.get<ApiResponse<EssaySubmissionDto[]>>('/admin/essays/pending');
+    const res = await apiClient.get<ApiResponse<EssaySubmissionDto[]>>(
+      '/admin/essays/pending'
+    );
     return res.data?.data;
   },
 
-  gradeEssay: async (essaySubmissionId: string, teacherScore: number, teacherFeedback?: string) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/essays/${essaySubmissionId}/grade`, {
-      essaySubmissionId,
-      teacherScore,
-      teacherFeedback
-    });
+  gradeEssay: async (
+    essaySubmissionId: string,
+    teacherScore: number,
+    teacherFeedback?: string
+  ) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(
+      `/admin/essays/${essaySubmissionId}/grade`,
+      {
+        essaySubmissionId,
+        teacherScore,
+        teacherFeedback,
+      }
+    );
     return res.data?.data;
   },
 
@@ -1111,7 +1250,10 @@ export const adminService = {
     academicScopes?: AcademicScopePayload[];
     contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly';
   }) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      '/admin/packages',
+      payload
+    );
     return res.data?.data;
   },
   uploadContentImage: async (
@@ -1129,7 +1271,9 @@ export const adminService = {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total && onProgress) {
-            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
             onProgress(percent);
           }
         },
@@ -1142,26 +1286,50 @@ export const adminService = {
     return res.data?.data;
   },
   updatePackage: async (id: string, payload: any) => {
-    const res = await apiClient.put<ApiResponse<any>>(`/admin/packages/${id}`, payload);
+    const res = await apiClient.put<ApiResponse<any>>(
+      `/admin/packages/${id}`,
+      payload
+    );
     return res.data?.data;
   },
   getPackageCodeProfile: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<PackageCodeProfileDto>>(`/admin/packages/${id}/code-profile`);
+    const res = await apiClient.get<ApiResponse<PackageCodeProfileDto>>(
+      `/admin/packages/${id}/code-profile`
+    );
     return res.data?.data;
   },
-  upsertPackageCodeProfile: async (id: string, payload: PackageCodeProfilePayload) => {
-    const res = await apiClient.put<ApiResponse<any>>(`/admin/packages/${id}/code-profile`, payload);
+  upsertPackageCodeProfile: async (
+    id: string,
+    payload: PackageCodeProfilePayload
+  ) => {
+    const res = await apiClient.put<ApiResponse<any>>(
+      `/admin/packages/${id}/code-profile`,
+      payload
+    );
     return res.data?.data;
   },
   resetPackageCodeProfile: async (id: string) => {
-    const res = await apiClient.delete<ApiResponse>(`/admin/packages/${id}/code-profile`);
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/packages/${id}/code-profile`
+    );
     return res.data;
   },
-  createTerm: async (payload: { packageId: string; title: string; order: number; price: number }) => {
-    const res = await apiClient.post<ApiResponse<string>>('/admin/terms', payload);
+  createTerm: async (payload: {
+    packageId: string;
+    title: string;
+    order: number;
+    price: number;
+  }) => {
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/terms',
+      payload
+    );
     return res.data?.data;
   },
-  updateTerm: async (id: string, payload: { title: string; order: number; price: number }) => {
+  updateTerm: async (
+    id: string,
+    payload: { title: string; order: number; price: number }
+  ) => {
     const res = await apiClient.put<ApiResponse>(`/admin/terms/${id}`, payload);
     return res.data;
   },
@@ -1178,100 +1346,168 @@ export const adminService = {
     return res.data?.data;
   },
   createSection: async (payload: any) => {
-    const res = await apiClient.post<ApiResponse<string>>('/admin/sections', payload);
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/sections',
+      payload
+    );
     return res.data?.data;
   },
-  updateSection: async (id: string, payload: { title: string; order: number; price: number }) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/sections/${id}`, payload);
+  updateSection: async (
+    id: string,
+    payload: { title: string; order: number; price: number }
+  ) => {
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/sections/${id}`,
+      payload
+    );
     return res.data;
   },
   createLesson: async (payload: any) => {
-    const res = await apiClient.post<ApiResponse<string>>('/admin/lessons', payload);
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/lessons',
+      payload
+    );
     return res.data?.data;
   },
-  updateLesson: async (id: string, payload: { title: string; summary: string; order: number; price: number }) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/lessons/${id}`, payload);
+  updateLesson: async (
+    id: string,
+    payload: { title: string; summary: string; order: number; price: number }
+  ) => {
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/lessons/${id}`,
+      payload
+    );
     return res.data;
   },
   getLessonCockpit: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(`/admin/lessons/${id}/cockpit`);
+    const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(
+      `/admin/lessons/${id}/cockpit`
+    );
     return res;
   },
   listVideoTypes: async (includeInactive = false) => {
-    const res = await apiClient.get<ApiResponse<VideoTypeDto[]>>('/admin/video-types', {
-      params: { includeInactive },
-    });
+    const res = await apiClient.get<ApiResponse<VideoTypeDto[]>>(
+      '/admin/video-types',
+      {
+        params: { includeInactive },
+      }
+    );
     return res.data?.data ?? [];
   },
   createVideoType: async (payload: CreateVideoTypePayload) => {
-    const res = await apiClient.post<ApiResponse<VideoTypeDto>>('/admin/video-types', payload);
+    const res = await apiClient.post<ApiResponse<VideoTypeDto>>(
+      '/admin/video-types',
+      payload
+    );
     return res.data?.data;
   },
   updateVideoType: async (id: string, payload: UpdateVideoTypePayload) => {
-    const res = await apiClient.put<ApiResponse<VideoTypeDto>>(`/admin/video-types/${id}`, payload);
+    const res = await apiClient.put<ApiResponse<VideoTypeDto>>(
+      `/admin/video-types/${id}`,
+      payload
+    );
     return res.data?.data;
   },
   setVideoTypeStatus: async (id: string, isActive: boolean) => {
-    const res = await apiClient.patch<ApiResponse<VideoTypeDto>>(`/admin/video-types/${id}/status`, { isActive });
+    const res = await apiClient.patch<ApiResponse<VideoTypeDto>>(
+      `/admin/video-types/${id}/status`,
+      { isActive }
+    );
     return res.data?.data;
   },
   deleteVideoType: async (id: string) => {
     await apiClient.delete(`/admin/video-types/${id}`);
   },
   getCommunityPostsForModeration: async (status?: string) => {
-    const res = await apiClient.get<ApiResponse<ModerationCommunityPostDto[]>>('/admin/community/posts', {
-      params: status && status !== 'All' ? { status } : undefined,
-    });
+    const res = await apiClient.get<ApiResponse<ModerationCommunityPostDto[]>>(
+      '/admin/community/posts',
+      {
+        params: status && status !== 'All' ? { status } : undefined,
+      }
+    );
     return res.data?.data ?? [];
   },
   approveCommunityPost: async (postId: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateCommunityPostResponse>>(`/admin/community/posts/${postId}/approve`, {});
+    const res = await apiClient.post<
+      ApiResponse<ModerateCommunityPostResponse>
+    >(`/admin/community/posts/${postId}/approve`, {});
     return res.data?.data;
   },
   rejectCommunityPost: async (postId: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateCommunityPostResponse>>(`/admin/community/posts/${postId}/reject`, {});
+    const res = await apiClient.post<
+      ApiResponse<ModerateCommunityPostResponse>
+    >(`/admin/community/posts/${postId}/reject`, {});
     return res.data?.data;
   },
   getPendingCommunityComments: async () => {
-    const res = await apiClient.get<ApiResponse<ModerationCommunityCommentDto[]>>('/admin/community/comments/pending');
+    const res = await apiClient.get<
+      ApiResponse<ModerationCommunityCommentDto[]>
+    >('/admin/community/comments/pending');
     return res.data?.data ?? [];
   },
   approveCommunityComment: async (commentId: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateCommunityCommentResponse>>(`/admin/community/comments/${commentId}/approve`, {});
+    const res = await apiClient.post<
+      ApiResponse<ModerateCommunityCommentResponse>
+    >(`/admin/community/comments/${commentId}/approve`, {});
     return res.data?.data;
   },
   rejectCommunityComment: async (commentId: string, reason: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateCommunityCommentResponse>>(`/admin/community/comments/${commentId}/reject`, { reason });
+    const res = await apiClient.post<
+      ApiResponse<ModerateCommunityCommentResponse>
+    >(`/admin/community/comments/${commentId}/reject`, { reason });
     return res.data?.data;
   },
   getLessonCommentsForModeration: async (lessonId: string, status?: string) => {
-    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>(`/admin/lessons/${lessonId}/comments`, {
-      params: status && status !== 'All' ? { status } : undefined,
-    });
+    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>(
+      `/admin/lessons/${lessonId}/comments`,
+      {
+        params: status && status !== 'All' ? { status } : undefined,
+      }
+    );
     return res.data?.data ?? [];
   },
   getAllLessonComments: async (teacherId?: string, status?: string) => {
-    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>('/admin/comments', { params: { ...(teacherId ? { teacherId } : {}), ...(status && status !== 'All' ? { status } : {}) } });
+    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>(
+      '/admin/comments',
+      {
+        params: {
+          ...(teacherId ? { teacherId } : {}),
+          ...(status && status !== 'All' ? { status } : {}),
+        },
+      }
+    );
     return res.data?.data ?? [];
   },
   approveLessonComment: async (commentId: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateLessonCommentResponse>>(`/admin/comments/${commentId}/approve`, {});
+    const res = await apiClient.post<
+      ApiResponse<ModerateLessonCommentResponse>
+    >(`/admin/comments/${commentId}/approve`, {});
     return res.data?.data;
   },
   rejectLessonComment: async (commentId: string) => {
-    const res = await apiClient.post<ApiResponse<ModerateLessonCommentResponse>>(`/admin/comments/${commentId}/reject`, {});
+    const res = await apiClient.post<
+      ApiResponse<ModerateLessonCommentResponse>
+    >(`/admin/comments/${commentId}/reject`, {});
     return res.data?.data;
   },
   createVideo: async (payload: CreateVideoPayload) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/videos', payload);
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      '/admin/videos',
+      payload
+    );
     return res.data?.data;
   },
   updateVideo: async (videoId: string, payload: UpdateVideoPayload) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}`, payload);
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/videos/${videoId}`,
+      payload
+    );
     return res.data;
   },
   toggleVideoActive: async (videoId: string) => {
-    const res = await apiClient.patch<ApiResponse<{ videoId: string; isActive: boolean }>>(`/admin/videos/${videoId}/toggle-active`);
+    const res = await apiClient.patch<
+      ApiResponse<{ videoId: string; isActive: boolean }>
+    >(`/admin/videos/${videoId}/toggle-active`);
     return res.data?.data;
   },
   deleteVideo: async (videoId: string) => {
@@ -1279,64 +1515,117 @@ export const adminService = {
     return res.data;
   },
   triggerVideoAiAnalysis: async (videoId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/analyze-ai`);
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/videos/${videoId}/analyze-ai`
+    );
     return res.data;
   },
-  generateVideoMindmaps: async (videoId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/generate-mindmaps`);
+  generateVideoMindmaps: async (
+    videoId: string,
+    styles?: MindmapStyleSelection
+  ) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/videos/${videoId}/generate-mindmaps`,
+      styles ?? {}
+    );
     return res.data;
   },
   cancelVideoAiAnalysis: async (videoId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/cancel-ai`);
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/videos/${videoId}/cancel-ai`
+    );
     return res.data;
   },
   cancelMindmapGeneration: async (videoId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/cancel-mindmap`);
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/videos/${videoId}/cancel-mindmap`
+    );
     return res.data;
   },
   createBunnyTusUpload: async (payload: BunnyTusUploadRequest) => {
-    const res = await apiClient.post<ApiResponse<BunnyTusUploadSession>>('/admin/bunny/uploads/tus', payload);
+    const res = await apiClient.post<ApiResponse<BunnyTusUploadSession>>(
+      '/admin/bunny/uploads/tus',
+      payload
+    );
     return res.data?.data;
   },
   completeBunnyUpload: async (assetId: string) => {
-    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(`/admin/bunny/uploads/${assetId}/complete`);
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(
+      `/admin/bunny/uploads/${assetId}/complete`
+    );
     return res.data?.data;
   },
   fetchBunnyVideo: async (payload: BunnyFetchVideoRequest) => {
-    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>('/admin/bunny/uploads/fetch', payload);
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(
+      '/admin/bunny/uploads/fetch',
+      payload
+    );
     return res.data?.data;
   },
   refreshBunnyVideoStatus: async (assetId: string) => {
-    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(`/admin/bunny/videos/${assetId}/refresh-status`);
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(
+      `/admin/bunny/videos/${assetId}/refresh-status`
+    );
     return res.data?.data;
   },
-  syncBunnyUsage: async (payload: { periodStart: string; periodEnd: string; teacherId?: string; packageId?: string; forceRefresh?: boolean }) => {
+  syncBunnyUsage: async (payload: {
+    periodStart: string;
+    periodEnd: string;
+    teacherId?: string;
+    packageId?: string;
+    forceRefresh?: boolean;
+  }) => {
     const res = await apiClient.post<ApiResponse>('/admin/bunny/usage/sync', {
       ...payload,
       forceRefresh: payload.forceRefresh ?? false,
     });
     return res.data;
   },
-  getBunnyCostReport: async (params: { month: string; teacherId?: string; packageId?: string }) => {
-    const res = await apiClient.get<ApiResponse<BunnyCostReport>>('/admin/bunny/reports/costs', { params });
+  getBunnyCostReport: async (params: {
+    month: string;
+    teacherId?: string;
+    packageId?: string;
+  }) => {
+    const res = await apiClient.get<ApiResponse<BunnyCostReport>>(
+      '/admin/bunny/reports/costs',
+      { params }
+    );
     return res.data?.data;
   },
-  regenerateChapterMindmap: async (chapterId: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/chapters/${chapterId}/regenerate-mindmap`);
+  regenerateChapterMindmap: async (
+    chapterId: string,
+    styles?: MindmapStyleSelection
+  ) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/chapters/${chapterId}/regenerate-mindmap`,
+      styles ?? {}
+    );
     return res.data;
   },
-  createResource: async (payload: { lessonId: string; title: string; fileUrl: string; resourceType: string }) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/resources', payload);
+  createResource: async (payload: {
+    lessonId: string;
+    title: string;
+    fileUrl: string;
+    resourceType: string;
+  }) => {
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      '/admin/resources',
+      payload
+    );
     return res.data?.data;
   },
   uploadResourceFile: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await apiClient.post<ApiResponse<{ url: string }>>('/admin/resources/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const res = await apiClient.post<ApiResponse<{ url: string }>>(
+      '/admin/resources/upload',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
     return res.data?.data;
   },
   attachHomework: async (
@@ -1361,10 +1650,13 @@ export const adminService = {
         baseText?: string;
         mistakeStartIndex?: number | null;
         mistakeEndIndex?: number | null;
-      }[]
+      }[];
     }
   ) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>(`/admin/content/lessons/${lessonId}/homework`, payload);
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      `/admin/content/lessons/${lessonId}/homework`,
+      payload
+    );
     return res.data?.data;
   },
   uploadQuestionImage: async (
@@ -1373,156 +1665,319 @@ export const adminService = {
   ) => {
     const formData = new FormData();
     formData.append('image', image);
-    const res = await apiClient.post<ApiResponse<string>>('/admin/questions/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total && onProgress) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
-        }
-      },
-    });
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/questions/image',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            onProgress(percent);
+          }
+        },
+      }
+    );
     return res.data.data;
   },
-  uploadPlatformPopupImage: async (image: File, onProgress?: (percent: number) => void) => {
+  uploadPlatformPopupImage: async (
+    image: File,
+    onProgress?: (percent: number) => void
+  ) => {
     const formData = new FormData();
     formData.append('image', image);
-    const res = await apiClient.post<ApiResponse<string>>('/admin/popup/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total && onProgress) {
-          onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
-        }
-      },
-    });
+    const res = await apiClient.post<ApiResponse<string>>(
+      '/admin/popup/image',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            onProgress(
+              Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            );
+          }
+        },
+      }
+    );
     return res.data.data;
   },
   linkLessonExam: async (lessonId: string, examId: string | null) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/lessons/${lessonId}/exam`, { examId });
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/lessons/${lessonId}/exam`,
+      { examId }
+    );
     return res.data;
   },
   linkVideoExam: async (videoId: string, examId: string | null) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}/exam`, { examId });
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/videos/${videoId}/exam`,
+      { examId }
+    );
     return res.data;
   },
   unlinkVideoExam: async (videoId: string, examId: string) => {
-    const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}/exams/${examId}`);
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/videos/${videoId}/exams/${examId}`
+    );
     return res.data;
   },
   setExamStatus: async (examId: string, isActive: boolean) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/exams/${examId}/status`, { isActive });
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/exams/${examId}/status`,
+      { isActive }
+    );
     return res.data;
   },
   setHomeworkStatus: async (homeworkId: string, isActive: boolean) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/homework/${homeworkId}/status`, { isActive });
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/homework/${homeworkId}/status`,
+      { isActive }
+    );
     return res.data;
   },
-  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; isMandatory?: boolean; isRandomized?: boolean; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; imageUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/exams/inline', payload);
+  createInlineExam: async (payload: {
+    title: string;
+    description: string;
+    passingScore: number;
+    totalScore: number;
+    isMandatory?: boolean;
+    isRandomized?: boolean;
+    durationMinutes?: number;
+    timePerQuestionSeconds?: number;
+    displayQuestionCount?: number;
+    target: { type: string; id: string };
+    questions: {
+      text: string;
+      type: string;
+      points: number;
+      order: number;
+      options: { text: string; isCorrect: boolean }[];
+      audioUrl?: string;
+      imageUrl?: string;
+      writtenCorrection?: string;
+      hintText?: string;
+      baseText?: string;
+      mistakeStartIndex?: number | null;
+      mistakeEndIndex?: number | null;
+    }[];
+  }) => {
+    const res = await apiClient.post<ApiResponse<{ id: string }>>(
+      '/admin/exams/inline',
+      payload
+    );
     return res.data?.data;
   },
-  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; imageUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/exams/${examId}/questions`, payload);
+  addQuestionsToExam: async (
+    examId: string,
+    payload: {
+      questions: {
+        text: string;
+        type: string;
+        points: number;
+        order: number;
+        options: { text: string; isCorrect: boolean }[];
+        audioUrl?: string;
+        imageUrl?: string;
+        writtenCorrection?: string;
+        hintText?: string;
+        baseText?: string;
+        mistakeStartIndex?: number | null;
+        mistakeEndIndex?: number | null;
+      }[];
+    }
+  ) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/exams/${examId}/questions`,
+      payload
+    );
     return res.data;
   },
 
   getExamDashboard: async (examId: string) => {
-    const res = await apiClient.get<ApiResponse<ExamDashboardDto>>(`/admin/exams/${examId}/dashboard`);
+    const res = await apiClient.get<ApiResponse<ExamDashboardDto>>(
+      `/admin/exams/${examId}/dashboard`
+    );
     return res.data?.data;
   },
   getHomeworkDashboard: async (homeworkId: string) => {
-    const res = await apiClient.get<ApiResponse<HomeworkDashboardDto>>(`/admin/homework/${homeworkId}/dashboard`);
+    const res = await apiClient.get<ApiResponse<HomeworkDashboardDto>>(
+      `/admin/homework/${homeworkId}/dashboard`
+    );
     return res.data?.data;
   },
   extractAssessmentQuestionsFromImages: async (files: File[]) => {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
-    const res = await apiClient.post<ApiResponse<AssessmentOcrQuestionDto[]>>('/admin/assessments/ocr/questions', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await apiClient.post<ApiResponse<AssessmentOcrQuestionDto[]>>(
+      '/admin/assessments/ocr/questions',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
     return res.data?.data ?? [];
   },
 
   deleteExamQuestion: async (examId: string, examQuestionId: string) => {
-    const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`);
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/exams/${examId}/questions/${examQuestionId}`
+    );
     return res.data;
   },
   deleteExamAttempt: async (examId: string, attemptId: string) => {
-    const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/attempts/${attemptId}`);
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/exams/${examId}/attempts/${attemptId}`
+    );
     return res.data;
   },
 
-  updateExamQuestion: async (examId: string, examQuestionId: string, payload: any) => {
-    const res = await apiClient.put<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`, payload);
+  updateExamQuestion: async (
+    examId: string,
+    examQuestionId: string,
+    payload: any
+  ) => {
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/exams/${examId}/questions/${examQuestionId}`,
+      payload
+    );
     return res.data;
   },
 
   // Overrides
   manualUnlockLesson: async (lessonId: string, studentId: string) => {
-    const res = await apiClient.post(`/exams/admin/lessons/${lessonId}/students/${studentId}/unlock`);
+    const res = await apiClient.post(
+      `/exams/admin/lessons/${lessonId}/students/${studentId}/unlock`
+    );
     return res.data?.data;
   },
 
   resetWatchLimit: async (lessonVideoId: string, studentId: string) => {
-    const res = await apiClient.post('/admin/overrides/reset-watch', { lessonVideoId, studentId });
+    const res = await apiClient.post('/admin/overrides/reset-watch', {
+      lessonVideoId,
+      studentId,
+    });
     return res.data?.data;
   },
 
-  setWatchCount: async (lessonVideoId: string, studentId: string, newWatchCount: number) => {
-    const res = await apiClient.put('/admin/overrides/set-watch-count', { lessonVideoId, studentId, newWatchCount });
+  setWatchCount: async (
+    lessonVideoId: string,
+    studentId: string,
+    newWatchCount: number
+  ) => {
+    const res = await apiClient.put('/admin/overrides/set-watch-count', {
+      lessonVideoId,
+      studentId,
+      newWatchCount,
+    });
     return res.data?.data;
   },
 
   adjustBalance: async (
     studentId: string,
-    payload: { amount: number; reason: string; scope?: 'general' | 'teacher'; operation?: 'credit' | 'debit'; teacherId?: string | null }
+    payload: {
+      amount: number;
+      reason: string;
+      scope?: 'general' | 'teacher';
+      operation?: 'credit' | 'debit';
+      teacherId?: string | null;
+    }
   ) => {
-    const res = await apiClient.post(`/admin/users/students/${studentId}/balance/adjust`, payload);
+    const res = await apiClient.post(
+      `/admin/users/students/${studentId}/balance/adjust`,
+      payload
+    );
     return res.data?.data;
   },
 
-  updateStudentProfile: async (studentId: string, data: Record<string, unknown>) => {
-    const res = await apiClient.put(`/admin/users/students/${studentId}/profile`, data);
+  updateStudentProfile: async (
+    studentId: string,
+    data: Record<string, unknown>
+  ) => {
+    const res = await apiClient.put(
+      `/admin/users/students/${studentId}/profile`,
+      data
+    );
     return res.data?.data;
   },
 
-  updateStaffProfile: async (staffId: string, data: { fullName: string; phoneNumber: string }) => {
-    const res = await apiClient.put(`/admin/users/staff/${staffId}/profile`, data);
+  updateStaffProfile: async (
+    staffId: string,
+    data: { fullName: string; phoneNumber: string }
+  ) => {
+    const res = await apiClient.put(
+      `/admin/users/staff/${staffId}/profile`,
+      data
+    );
     return res.data?.data;
   },
 
   adminResetPassword: async (studentId: string, newPassword: string) => {
-    const res = await apiClient.post(`/admin/users/students/${studentId}/reset-password`, { newPassword });
+    const res = await apiClient.post(
+      `/admin/users/students/${studentId}/reset-password`,
+      { newPassword }
+    );
     return res.data?.data;
   },
 
-  addStudentNote: async (studentId: string, content: string, isPinned: boolean) => {
-    const res = await apiClient.post(`/admin/users/students/${studentId}/notes`, { content, isPinned });
+  addStudentNote: async (
+    studentId: string,
+    content: string,
+    isPinned: boolean
+  ) => {
+    const res = await apiClient.post(
+      `/admin/users/students/${studentId}/notes`,
+      { content, isPinned }
+    );
     return res.data?.data;
   },
 
   deleteStudentNote: async (studentId: string, noteId: string) => {
-    const res = await apiClient.delete(`/admin/users/students/${studentId}/notes/${noteId}`);
+    const res = await apiClient.delete(
+      `/admin/users/students/${studentId}/notes/${noteId}`
+    );
     return res.data?.data;
   },
 
   getWatchRequests: async () => {
-    const res = await apiClient.get<ApiResponse<AdminWatchRequestDto[]>>('/admin/watch-requests');
+    const res = await apiClient.get<ApiResponse<AdminWatchRequestDto[]>>(
+      '/admin/watch-requests'
+    );
     return res.data;
   },
 
-  approveWatchRequest: async (id: string, reason?: string, addedViews?: number) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, { reason, addedViews });
+  approveWatchRequest: async (
+    id: string,
+    reason?: string,
+    addedViews?: number
+  ) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(
+      `/admin/watch-requests/${id}/approve`,
+      { reason, addedViews }
+    );
     return res.data;
   },
 
   rejectWatchRequest: async (id: string, reason?: string) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/reject`, { reason });
+    const res = await apiClient.post<ApiResponse<boolean>>(
+      `/admin/watch-requests/${id}/reject`,
+      { reason }
+    );
     return res.data;
   },
 
-  cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean, reason?: string) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance, reason });
+  cancelStudentPackage: async (
+    userId: string,
+    accessGrantId: string,
+    refundBalance: boolean,
+    reason?: string
+  ) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/users/students/${userId}/packages/${accessGrantId}/cancel`,
+      { refundBalance, reason }
+    );
     return res.data;
   },
 
@@ -1532,7 +1987,9 @@ export const adminService = {
   },
 
   updatePlatformSettings: async (settings: Record<string, string>) => {
-    const res = await apiClient.put<ApiResponse<boolean>>('/admin/settings', { settings });
+    const res = await apiClient.put<ApiResponse<boolean>>('/admin/settings', {
+      settings,
+    });
     return res.data;
   },
 
@@ -1541,13 +1998,29 @@ export const adminService = {
     return res.data?.data;
   },
 
-  createRole: async (payload: { name: string; permissions: string[]; allowedDomain: string; allowedNavbarItems: string[] }) => {
+  createRole: async (payload: {
+    name: string;
+    permissions: string[];
+    allowedDomain: string;
+    allowedNavbarItems: string[];
+  }) => {
     const res = await apiClient.post<ApiResponse<any>>('/admin/roles', payload);
     return res.data;
   },
 
-  updateRole: async (id: string, payload: { name: string; permissions: string[]; allowedDomain: string; allowedNavbarItems: string[] }) => {
-    const res = await apiClient.put<ApiResponse<any>>(`/admin/roles/${id}`, payload);
+  updateRole: async (
+    id: string,
+    payload: {
+      name: string;
+      permissions: string[];
+      allowedDomain: string;
+      allowedNavbarItems: string[];
+    }
+  ) => {
+    const res = await apiClient.put<ApiResponse<any>>(
+      `/admin/roles/${id}`,
+      payload
+    );
     return res.data;
   },
 
@@ -1559,90 +2032,139 @@ export const adminService = {
   // ── Teacher Profile Page endpoints ──────────────────────────────
   getTeacherStats: async (teacherId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/admin/teachers/${teacherId}/stats`);
+      const res = await apiClient.get<ApiResponse<any>>(
+        `/admin/teachers/${teacherId}/stats`
+      );
       return res.data?.data ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
 
   getTeacherStudents: async (teacherId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/students`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/teachers/${teacherId}/students`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   getTeacherEssays: async (teacherId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/essays`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/teachers/${teacherId}/essays`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   getTeacherActivations: async (teacherId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/activations`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/teachers/${teacherId}/activations`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   getFinancePayouts: async (teacherId?: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>('/admin/finance/payouts', {
-        params: teacherId ? { teacherId } : {},
-      });
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        '/admin/finance/payouts',
+        {
+          params: teacherId ? { teacherId } : {},
+        }
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   // ── Assistant Profile Page endpoints ──────────────────────────────
   getAssistantStats: async (assistantId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/admin/assistants/${assistantId}/stats`);
+      const res = await apiClient.get<ApiResponse<any>>(
+        `/admin/assistants/${assistantId}/stats`
+      );
       return res.data?.data ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
 
   getAssistantTasks: async (assistantId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/tasks`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/assistants/${assistantId}/tasks`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   getAssistantHomeworkReviews: async (assistantId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/homework-reviews`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/assistants/${assistantId}/homework-reviews`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   getAssistantWarnings: async (assistantId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/warnings`);
+      const res = await apiClient.get<ApiResponse<any[]>>(
+        `/admin/assistants/${assistantId}/warnings`
+      );
       return res.data?.data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   // ── Content Stats endpoints ───────────────────────────────────────
   getPackageStats: async (id: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/admin/packages/${id}/stats`);
+      const res = await apiClient.get<ApiResponse<any>>(
+        `/admin/packages/${id}/stats`
+      );
       return res.data?.data ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
 
   getTermStats: async (id: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/admin/terms/${id}/stats`);
+      const res = await apiClient.get<ApiResponse<any>>(
+        `/admin/terms/${id}/stats`
+      );
       return res.data?.data ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
 
   getSectionStats: async (id: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/admin/sections/${id}/stats`);
+      const res = await apiClient.get<ApiResponse<any>>(
+        `/admin/sections/${id}/stats`
+      );
       return res.data?.data ?? null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
 
   // ── Content Subscribers ────────────────────────────────────────────
@@ -1665,9 +2187,12 @@ export const adminService = {
     id: string,
     contentName: string
   ) => {
-    const res = await apiClient.get(`/admin/${contentType}s/${id}/subscribers/export`, {
-      responseType: 'blob',
-    });
+    const res = await apiClient.get(
+      `/admin/${contentType}s/${id}/subscribers/export`,
+      {
+        responseType: 'blob',
+      }
+    );
     const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

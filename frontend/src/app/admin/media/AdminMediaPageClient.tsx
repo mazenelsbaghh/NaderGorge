@@ -47,7 +47,7 @@ export default function AdminMediaPageClient() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer ${
                   isActive
                     ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
                     : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'

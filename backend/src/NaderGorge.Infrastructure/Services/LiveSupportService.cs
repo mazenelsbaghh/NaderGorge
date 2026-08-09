@@ -364,8 +364,16 @@ public sealed class LiveSupportService(
             x.Status != LiveSupportConversationStatus.Closed && x.Status != LiveSupportConversationStatus.Abandoned &&
             (isAdmin || x.CurrentOwnerUserId == staffUserId)).OrderByDescending(x => x.LastMessageAt).ToListAsync(ct);
         return new LiveSupportStaffBootstrapDto(config?.IsEnabled ?? isAdmin, checkedIn, conversations.Count, config?.MaxActiveConversations ?? 50,
-            await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null, ct), await MapManyAsync(conversations, ct), await GetRepliesForStaffAsync(staffUserId, ct));
+            await WaitingConversationCountAsync(ct), await MapManyAsync(conversations, ct), await GetRepliesForStaffAsync(staffUserId, ct));
     }
+
+    private Task<int> WaitingConversationCountAsync(CancellationToken ct) =>
+        ActiveQueueEntries().CountAsync(ct);
+
+    private IQueryable<LiveSupportQueueEntry> ActiveQueueEntries() =>
+        _db.LiveSupportQueueEntries.Where(entry => entry.DequeuedAt == null &&
+            _db.LiveSupportConversations.Any(conversation =>
+                conversation.Id == entry.ConversationId && conversation.Status == LiveSupportConversationStatus.Waiting));
 
     public async Task<IReadOnlyList<LiveSupportMessageDto>> GetStaffMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, int pageSize, CancellationToken ct)
     {
@@ -1192,8 +1200,7 @@ public sealed class LiveSupportService(
         var participantGuestNames = await _db.LiveSupportGuestSessions.AsNoTracking()
             .Where(x => participantGuestIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, x => x.DisplayName, ct);
-        var activeQueue = await _db.LiveSupportQueueEntries.AsNoTracking()
-            .Where(x => x.DequeuedAt == null)
+        var activeQueue = await ActiveQueueEntries().AsNoTracking()
             .OrderBy(x => x.EnteredAt)
             .Select(x => new { x.ConversationId, x.EnteredAt })
             .ToListAsync(ct);
@@ -1309,7 +1316,7 @@ public sealed class LiveSupportService(
     {
         int? position = null;
         if (c.Status == LiveSupportConversationStatus.Waiting && c.QueuedAt.HasValue)
-            position = await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null && x.EnteredAt <= c.QueuedAt, ct);
+            position = await ActiveQueueEntries().CountAsync(entry => entry.EnteredAt <= c.QueuedAt, ct);
         var isAiActive = await _db.LiveSupportAIConversationStates.AnyAsync(x => x.ConversationId == c.Id && x.Mode == LiveSupportAIMode.AiActive, ct);
         var isAiTyping = isAiActive && await _db.LiveSupportAITurns.AnyAsync(x => x.ConversationId == c.Id && (x.Status == LiveSupportAITurnStatus.Queued || x.Status == LiveSupportAITurnStatus.Processing), ct);
         
@@ -2142,7 +2149,7 @@ public sealed class LiveSupportService(
             request.FullName,
             request.PhoneNumber,
             request.Password,
-            DateTime.UtcNow.Date.AddYears(-15),
+            CurrentCairoDate().AddYears(-15).ToDateTime(TimeOnly.MinValue),
             "Male",
             request.Governorate,
             "Address",
@@ -2230,7 +2237,7 @@ public sealed class LiveSupportService(
             .Select(x => (long?)x.Sequence).MaxAsync(ct) ?? 0;
         int? queuePosition = null;
         if (conversation.Status == LiveSupportConversationStatus.Waiting && conversation.QueuedAt.HasValue)
-            queuePosition = await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null && x.EnteredAt <= conversation.QueuedAt, ct);
+            queuePosition = await ActiveQueueEntries().CountAsync(entry => entry.EnteredAt <= conversation.QueuedAt, ct);
 
         return new LiveSupportAIParticipantSnapshotDto(
             conversation.Id,

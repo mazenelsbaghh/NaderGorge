@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags,
+  BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags, Layers3,
 } from 'lucide-react';
-import { AdminPage, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, ContentSummaryPanel } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
@@ -516,7 +517,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm transition-all hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] overflow-hidden">
       {/* Header card area */}
       <div
         onClick={toggleOpen}
@@ -583,6 +584,9 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
@@ -591,7 +595,22 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
   const selectedTeacherId = 'All';
-  const [activeTeacherId, setActiveTeacherId] = useState<string | null>(null);
+  const activeTab = searchParams.get('view') === 'content' ? 'content' : 'summary';
+  const activeTeacherId = activeTab === 'content' ? searchParams.get('teacher') : null;
+
+  function navigateContentState(tab: 'summary' | 'content', teacherId?: string) {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (tab === 'content') nextParams.set('view', 'content');
+    else nextParams.delete('view');
+
+    if (tab === 'content' && teacherId) nextParams.set('teacher', teacherId);
+    else nextParams.delete('teacher');
+
+    const query = nextParams.toString();
+    const nextUrl = query ? `${pathname}?${query}` : pathname;
+    const currentUrl = searchParams.size > 0 ? `${pathname}?${searchParams}` : pathname;
+    if (nextUrl !== currentUrl) router.push(nextUrl, { scroll: false });
+  }
 
   const loadPackages = useCallback(async () => {
     try {
@@ -651,6 +670,19 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
         <AdminPageSkeleton />
       ) : (
         <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
+          <AdminTabBar
+            tabs={[
+              { key: 'summary', label: 'الملخص', icon: BarChart3 },
+              { key: 'content', label: 'المحتوى', icon: Layers3 },
+            ]}
+            activeTab={activeTab}
+            onSelect={(tab) => navigateContentState(tab)}
+          />
+
+          {activeTab === 'summary' ? (
+            <ContentSummaryPanel scope="admin" />
+          ) : (
+            <>
           {mode !== 'assistant' && user?.roles.includes('Admin') && (
             <div className="flex justify-end">
               <Link
@@ -672,7 +704,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                   size="md"
                   pill
                   onClick={() => {
-                    setActiveTeacherId(null);
+                    navigateContentState('content');
                     setSearch('');
                   }}
                   className="flex items-center gap-1.5"
@@ -811,11 +843,11 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                       <div
                         key={teacher.id}
                         onClick={() => {
-                          setActiveTeacherId(teacher.id);
+                          navigateContentState('content', teacher.id);
                           setSelectedSubjectId('All');
                           setSearch('');
                         }}
-                        className="group relative overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[var(--admin-primary)] hover:shadow-md cursor-pointer flex flex-col justify-between min-h-[220px]"
+                        className="group relative overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-6 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 hover:-translate-y-1 hover:border-[var(--admin-primary)] hover:shadow-md cursor-pointer flex flex-col justify-between min-h-[220px]"
                       >
                         <div>
                           <div className="flex items-center gap-4 mb-4">
@@ -883,11 +915,14 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                   })}
                 </div>
               ) : (
-                <div className="text-center py-20 rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/50 text-[var(--admin-muted)] font-bold text-sm">
+                <div className="text-center py-20 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/50 text-[var(--admin-muted)] font-bold text-sm">
                   لا توجد نتائج مطابقة لفلترة المعلمين.
                 </div>
               )}
             </div>
+          )}
+
+            </>
           )}
 
         </div>

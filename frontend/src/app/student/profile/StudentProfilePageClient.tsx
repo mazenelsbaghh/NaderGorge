@@ -141,9 +141,8 @@ export default function StudentProfilePageClient() {
       dir="rtl"
     >
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="rounded-2xl bg-[var(--admin-card-soft)] p-6 md:p-8">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-1 text-xs font-black text-[var(--admin-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
@@ -173,12 +172,12 @@ export default function StudentProfilePageClient() {
       )}
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 p-1.5 rounded-2xl border border-[var(--admin-border)]/50 bg-[var(--admin-card)]/50 backdrop-blur-md w-fit">
+      <div className="flex w-fit gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1.5">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] flex items-center gap-2",
             activeTab === 'profile'
               ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
               : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
@@ -191,7 +190,7 @@ export default function StudentProfilePageClient() {
           type="button"
           onClick={() => setActiveTab('appearance')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] flex items-center gap-2",
             activeTab === 'appearance'
               ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
               : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
@@ -206,7 +205,7 @@ export default function StudentProfilePageClient() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column: Read-Only Registration Info & Devices */}
         <div className="space-y-6 lg:col-span-1">
-          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+          <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
             <div className="text-center pb-6 border-b border-[var(--admin-border)]">
               <div className="inline-flex p-4 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] mb-3">
                 <User className="h-10 w-10" />
@@ -217,7 +216,7 @@ export default function StudentProfilePageClient() {
 
             {/* Academic Info */}
             <div className="space-y-4">
-              <h4 className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider">البيانات الأكاديمية</h4>
+              <h4 className="text-xs font-black text-[var(--admin-muted)]">البيانات الأكاديمية</h4>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                   <span className="text-[var(--admin-muted)]">المرحلة الدراسية:</span>
@@ -252,7 +251,7 @@ export default function StudentProfilePageClient() {
 
             {/* Device Limits */}
             <div className="pt-6 border-t border-[var(--admin-border)] space-y-3">
-              <h4 className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="flex items-center gap-1.5 text-xs font-black text-[var(--admin-muted)]">
                 <Smartphone className="h-4 w-4 text-[var(--admin-primary)]" />
                 الأجهزة النشطة والحد المسموح
               </h4>
@@ -263,7 +262,7 @@ export default function StudentProfilePageClient() {
                 </div>
                 <div className="w-full bg-[var(--admin-border)] h-2 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
+                    className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                       profile.deviceCount >= profile.maxDevices ? "bg-amber-500" : "bg-[var(--admin-primary)]"
                     }`}
                     style={{ width: `${Math.min(100, (profile.deviceCount / profile.maxDevices) * 100)}%` }}
@@ -279,7 +278,7 @@ export default function StudentProfilePageClient() {
 
         {/* Right Column: Editable Contact & Parent Info Forms & Customize settings */}
         <div className="lg:col-span-2 space-y-8">
-          <form onSubmit={handleSubmit} className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
             <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)]">تحديث بياناتك الشخصية والدراسية</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -301,7 +300,7 @@ export default function StudentProfilePageClient() {
               </div>
 
               <div className="md:col-span-2 pt-2 border-t border-[var(--admin-border)]">
-                <p className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider">البيانات الدراسية</p>
+                <p className="text-xs font-black text-[var(--admin-muted)]">البيانات الدراسية</p>
               </div>
 
               <div className="space-y-2">
@@ -358,7 +357,7 @@ export default function StudentProfilePageClient() {
               )}
 
               <div className="md:col-span-2 pt-2 border-t border-[var(--admin-border)]">
-                <p className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider">بيانات التواصل والمدرسة</p>
+                <p className="text-xs font-black text-[var(--admin-muted)]">بيانات التواصل والمدرسة</p>
               </div>
 
               {/* Address */}
@@ -472,7 +471,7 @@ export default function StudentProfilePageClient() {
       ) : (
         <div className="max-w-4xl mx-auto">
           {/* ── Appearance & Theme Settings ── */}
-          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+          <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
             <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)] flex items-center gap-2">
               <Palette className="h-5 w-5 text-[var(--admin-primary)]" />
               تخصيص مظهر حسابك وألوانه
@@ -480,7 +479,7 @@ export default function StudentProfilePageClient() {
 
             {/* Avatar Selection Section */}
             <section className="space-y-4">
-              <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+              <h4 className="text-xs font-black text-[var(--admin-muted)]">
                 شخصيتك الكارتونية (كورة وعلوم وفن)
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -545,7 +544,7 @@ export default function StudentProfilePageClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[var(--admin-border)]">
               {/* Light Mode Palettes */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                <h4 className="text-xs font-black text-[var(--admin-muted)]">
                   ألوان الوضع الفاتح
                 </h4>
                 <div className="grid grid-cols-1 gap-3">
@@ -601,7 +600,7 @@ export default function StudentProfilePageClient() {
 
               {/* Dark Mode Palettes */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                <h4 className="text-xs font-black text-[var(--admin-muted)]">
                   ألوان الوضع الداكن
                 </h4>
                 <div className="grid grid-cols-1 gap-3">

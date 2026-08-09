@@ -60,7 +60,10 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
 
     public async Task Heartbeat()
     {
-        if (StaffUserId is { } staffId) await presence.HeartbeatAsync(staffId);
+        if (StaffUserId is not { } staffId) return;
+        await presence.HeartbeatAsync(staffId);
+        if (service is ILiveSupportAssignmentCoordinator coordinator)
+            await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
     }
 
     public async Task<object> JoinConversation(Guid conversationId)

@@ -159,7 +159,7 @@ export function AdminModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[color-mix(in_srgb,var(--admin-text)_30%,transparent)] p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[var(--z-navigation)] flex items-center justify-center bg-[color-mix(in_srgb,var(--admin-text)_30%,transparent)] p-4 backdrop-blur-[2px]"
           onClick={onClose}
           transition={{ duration: prefersReducedMotion ? 0.05 : 0.2 }}
         >
@@ -176,7 +176,7 @@ export function AdminModal({
             aria-labelledby={title ? titleId : undefined}
             aria-describedby={subtitle ? subtitleId : undefined}
             tabIndex={-1}
-            className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 shadow-[0_16px_40px_var(--admin-shadow)] sm:p-6 ${maxWidth}`}
+            className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 shadow-sm sm:p-6 ${maxWidth}`}
           >
             {(title || subtitle) && (
               <div className="mb-5 flex items-start justify-between gap-4">

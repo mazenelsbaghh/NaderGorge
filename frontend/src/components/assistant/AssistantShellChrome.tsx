@@ -99,6 +99,12 @@ const GROUPS: Array<{ id: AssistantNavItem['group']; label: string; icon: Lucide
   { id: 'employee', label: 'شؤون الموظف', icon: Calendar },
 ];
 
+const ASSISTANT_MOBILE_QUICK_ORDER: AssistantShellRoute[] = [
+  '/assistant/tasks',
+  '/assistant/students',
+  '/assistant/live-support',
+];
+
 export function resolveAssistantShellRoute(pathname: string): AssistantShellRoute {
   if (pathname === '/assistant') return '/assistant/dashboard';
   return (
@@ -255,20 +261,28 @@ function AssistantShellFrame({
   const toggleGroup = (id: string) => setExpandedGroups((current) => ({ ...current, [id]: !current[id] }));
   const handleLogout = () => void logout().finally(() => router.replace('/login'));
   const isDashboardActive = activePath === '/assistant/dashboard';
-  const mobileQuickItems = filteredNavItems.slice(0, 3);
-  const mobileMoreItems = filteredNavItems.slice(3);
+  const mobileQuickItems = [...filteredNavItems]
+    .sort((left, right) => {
+      const leftPriority = ASSISTANT_MOBILE_QUICK_ORDER.indexOf(left.href);
+      const rightPriority = ASSISTANT_MOBILE_QUICK_ORDER.indexOf(right.href);
+      return (leftPriority < 0 ? Number.MAX_SAFE_INTEGER : leftPriority) -
+        (rightPriority < 0 ? Number.MAX_SAFE_INTEGER : rightPriority);
+    })
+    .slice(0, 3);
+  const mobileQuickHrefs = new Set(mobileQuickItems.map((item) => item.href));
+  const mobileMoreItems = filteredNavItems.filter((item) => !mobileQuickHrefs.has(item.href));
   const isMoreActive = mobileMoreItems.some((item) => item.href === activePath);
 
   const renderGroups = (mobile = false) => navGroups.map((group) => {
     const GroupIcon = group.icon;
     const isActive = group.items.some((item) => item.href === activePath);
-    const isExpanded = mobile || normalizedQuery.length > 0 || Boolean(expandedGroups[group.id]);
+    const isExpanded = normalizedQuery.length > 0 || Boolean(expandedGroups[group.id]);
     return <div key={group.id} className="space-y-1">
-      <button type="button" onClick={() => toggleGroup(group.id)} className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-right transition-colors ${isActive ? 'bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'} ${isSidebarCollapsed && !mobile ? 'justify-center' : 'justify-between'}`} title={group.label}>
+      <button type="button" onClick={() => mobile ? setExpandedGroups((current) => ({ [group.id]: !current[group.id] })) : toggleGroup(group.id)} className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-right transition-colors ${isActive ? 'bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'} ${isSidebarCollapsed && !mobile ? 'justify-center' : 'justify-between'}`} title={group.label} aria-expanded={isExpanded}>
         <span className="flex items-center gap-3"><GroupIcon className="h-5 w-5 shrink-0" />{(!isSidebarCollapsed || mobile) && <span className="text-sm font-bold">{group.label}</span>}</span>
         {(!isSidebarCollapsed || mobile) && <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />}
       </button>
-      {isExpanded && (!isSidebarCollapsed || mobile) && <div className="mt-1 space-y-1 pr-4">
+      {isExpanded && (!isSidebarCollapsed || mobile) && <div className="mt-1 space-y-1 ps-4">
         {group.items.map((item) => {
           const Icon = item.icon;
           const isItemActive = item.href === activePath;
@@ -281,22 +295,21 @@ function AssistantShellFrame({
   });
 
   return <AssistantShellContext.Provider value={shellContext}><div
-    dir="rtl"
-    className="relative h-dvh max-h-dvh overflow-x-hidden bg-[var(--admin-bg)] text-[var(--admin-text)]"
+    className="relative h-dvh max-h-dvh overflow-x-clip bg-[var(--admin-bg)] text-[var(--admin-text)]"
     style={themeVars}
     data-testid="assistant-shell"
     data-shell-instance={shellInstanceId}
   >
     <SkipToContentLink />
     <NavigationFocusManager />
-    <aside className={`fixed right-0 top-0 z-50 hidden h-full flex-col justify-between border-l border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 transition-[width] duration-200 ease-out lg:flex ${isSidebarCollapsed ? 'w-20' : 'w-72'}`} role="navigation" aria-label="قائمة الموظف الرئيسية">
+    <aside className={`fixed start-0 top-0 z-50 hidden h-full flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 transition-[width] duration-200 ease-out lg:flex ${isSidebarCollapsed ? 'w-20' : 'w-72'}`} role="navigation" aria-label="قائمة الموظف الرئيسية">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className={`mb-5 flex items-center ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-between px-5'}`}>
           <div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]"><BookOpenText className="h-5 w-5" /></div>{!isSidebarCollapsed && <span className="truncate text-sm font-bold">مساحة الموظفين</span>}</div>
-          <button type="button" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`${isSidebarCollapsed ? 'absolute left-[-1.25rem] top-5 rounded-l-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)]' : ''} flex h-10 w-10 items-center justify-center rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]`} aria-label={isSidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}>{isSidebarCollapsed ? <PanelRightOpen className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}</button>
+          <button type="button" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`${isSidebarCollapsed ? 'absolute end-[-1.25rem] top-5 rounded-e-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)]' : ''} flex h-10 w-10 items-center justify-center rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]`} aria-label={isSidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}>{isSidebarCollapsed ? <PanelRightOpen className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}</button>
         </div>
-        {!isSidebarCollapsed && <label className="relative mx-4 mb-4 block"><Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" /><input value={navQuery} onChange={(event) => setNavQuery(event.target.value)} className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 pr-10 pl-3 text-sm font-medium outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]" placeholder="ابحث عن صفحة أو أداة" aria-label="ابحث في صفحات الموظف" /></label>}
-        <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}><IntentLink href="/assistant/dashboard" aria-current={isDashboardActive ? 'page' : undefined} className={`flex h-11 items-center gap-3 rounded-xl transition-colors ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'} ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}><Home className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">الرئيسية</span>}</IntentLink>{renderGroups()}</nav>
+        {!isSidebarCollapsed && <label className="relative mx-4 mb-4 block"><Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" /><input value={navQuery} onChange={(event) => setNavQuery(event.target.value)} className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]" placeholder="ابحث عن صفحة أو أداة" aria-label="ابحث في صفحات الموظف" /></label>}
+        <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}><IntentLink href="/assistant/dashboard" aria-current={isDashboardActive ? 'page' : undefined} className={`flex h-11 items-center gap-3 rounded-xl transition-colors ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'} ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}><Home className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">الرئيسية</span>}</IntentLink>{renderGroups()}</nav>
       </div>
       <div className={`mt-4 space-y-2 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
         <div
@@ -307,11 +320,11 @@ function AssistantShellFrame({
           <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" />
           {!isSidebarCollapsed && <div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div>}
         </div>
-        <div className={`flex items-center px-1 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />{!isSidebarCollapsed && <span className="mr-3 text-sm font-bold text-[var(--admin-muted)]">{isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}</span>}</div>
+        <div className={`flex items-center px-1 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />{!isSidebarCollapsed && <span className="ms-3 text-sm font-bold text-[var(--admin-muted)]">{isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}</span>}</div>
         <button type="button" onClick={handleLogout} className={`flex h-11 w-full items-center gap-3 rounded-xl text-[var(--admin-danger)] transition-colors hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'}`}><LogOut className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">تسجيل الخروج</span>}</button>
       </div>
     </aside>
-    <main ref={mainScrollRef} id="main-content" className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] transition-[margin] duration-200 lg:px-7 lg:py-8 lg:pb-10 ${isSidebarCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+    <main ref={mainScrollRef} id="main-content" tabIndex={-1} className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] transition-[margin] duration-200 focus:outline-none lg:px-7 lg:py-8 lg:pb-10 ${isSidebarCollapsed ? 'lg:ms-20' : 'lg:ms-72'}`}>
       <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9"><div className="w-full"><div className="mb-4 flex items-center justify-end gap-2 lg:hidden"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" /><button type="button" onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-danger)] hover:bg-[var(--admin-hover)]" aria-label="تسجيل الخروج"><LogOut className="h-4 w-4" /></button></div><div className="flex flex-wrap items-center gap-3"><div><p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">{sectionLabel}</p><h1 className="mb-1 text-3xl font-extrabold tracking-tight lg:text-4xl">{pageTitle}</h1>{subtitle && <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">{subtitle}</p>}</div>{headerAccessory}</div></div>{action}</header>
       {children}<footer className="mt-14 flex select-none flex-col items-center opacity-60"><div className="mb-4 h-px w-full bg-[var(--admin-border)]" /><p className="text-xs font-bold text-[var(--admin-muted)]">منصة مسار</p></footer>
     </main>
@@ -339,13 +352,14 @@ function AssistantShellFrame({
       label="قائمة الموظفين الإضافية"
       triggerRef={mobileMenuTriggerRef}
       layerClassName="lg:hidden"
-      className="left-0 top-0 flex h-full w-72 max-w-[86vw] flex-col bg-[var(--admin-sidebar)] px-4 py-5 shadow-[12px_0_40px_var(--admin-shadow)]"
+      className="end-0 top-0 flex h-full w-72 max-w-[86vw] flex-col border-s border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 py-5"
       testId="assistant-mobile-drawer"
     >
+      <label className="relative mb-4 block"><Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" /><input value={navQuery} onChange={(event) => setNavQuery(event.target.value)} className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)]" placeholder="ابحث عن صفحة أو أداة" aria-label="ابحث في صفحات الموظف" /></label>
       <div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold">مساحة الموظفين</span><button type="button" onClick={() => setIsMobileMenuOpen(false)} className="rounded-lg p-2 hover:bg-[var(--admin-hover)]" aria-label="إغلاق القائمة"><X className="h-5 w-5" /></button></div>
       <div className="mb-4 flex items-center gap-3 rounded-xl bg-[var(--admin-hover)] p-3"><UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div></div>
       <nav className="min-h-0 flex-1 overflow-y-auto"><Link href="/assistant/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`mb-2 flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)]'}`}><Home className="h-5 w-5" />الرئيسية</Link>{renderGroups(true)}</nav>
-      <div className="mt-4 flex items-center justify-between border-t border-[var(--admin-border)] pt-4"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} /><button type="button" onClick={handleLogout} className="flex h-10 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[var(--admin-danger)]"><LogOut className="h-5 w-5" />تسجيل الخروج</button></div>
+      <div className="mt-4 flex items-center justify-between border-t border-[var(--admin-border)] pt-4"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} /><button type="button" onClick={handleLogout} className="flex h-10 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[var(--admin-danger)]"><LogOut className="h-5 w-5" />تسجيل الخروج</button></div>
     </AccessibleOverlay>
   </div></AssistantShellContext.Provider>;
 }

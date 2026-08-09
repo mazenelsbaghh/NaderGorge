@@ -125,7 +125,7 @@ export function EmployeeProfileDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[90] bg-[var(--admin-text)]/35 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-floating)] bg-[var(--admin-text)]/35 backdrop-blur-sm"
             onClick={() => {
               if (!submitting) onClose();
             }}
@@ -138,7 +138,7 @@ export function EmployeeProfileDrawer({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
             role="dialog"
             aria-modal="true"
@@ -265,7 +265,7 @@ export function EmployeeProfileDrawer({
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-sm transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {submitting ? (
                           <>

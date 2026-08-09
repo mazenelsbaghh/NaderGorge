@@ -28,3 +28,9 @@ test('claim validates the deadline and bounded collection shape', async () => {
   const client = createLiveSupportCallbackClient({ token, baseUrl: 'http://backend', fetchImpl: async () => response(claim) });
   await assert.rejects(() => client.claim(turnId), /CALLBACK_INVALID_RESPONSE/);
 });
+
+test('rejected callback exposes the safe HTTP status for production diagnosis', async () => {
+  const client = createLiveSupportCallbackClient({ token, baseUrl: 'http://backend', fetchImpl: async () => response({ code: 'IDEMPOTENCY_CONFLICT' }, 409) });
+  await assert.rejects(() => client.claim(turnId), (error: unknown) =>
+    error instanceof LiveSupportCallbackError && error.code === 'CALLBACK_REJECTED' && error.httpStatus === 409 && !error.retryable);
+});

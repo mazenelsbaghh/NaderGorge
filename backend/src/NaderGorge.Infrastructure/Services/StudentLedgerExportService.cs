@@ -5,6 +5,7 @@ using System.Text.Json;
 using NaderGorge.Application.Features.Reporting;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -12,11 +13,15 @@ namespace NaderGorge.Infrastructure.Services;
 public sealed class StudentLedgerExportService : IStudentLedgerExportService
 {
     private const string ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    private const int StudentIdentityColumnCount = 9;
     private readonly IAppDbContext _db;
 
     public StudentLedgerExportService(IAppDbContext db) => _db = db;
 
     public async Task<ReportExportDto> ExportForTeacherAsync(Guid actorUserId, CancellationToken ct)
+        => await ExportForTeacherAsync(actorUserId, new StudentLedgerFilter(), ct);
+
+    public async Task<ReportExportDto> ExportForTeacherAsync(Guid actorUserId, StudentLedgerFilter filter, CancellationToken ct)
     {
         var teacherId = await _db.TeacherProfiles.AsNoTracking()
             .Where(profile => profile.UserId == actorUserId)
@@ -31,10 +36,13 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         if (!teacherId.HasValue)
             throw new UnauthorizedAccessException("لا يوجد نطاق مدرس متاح لهذا الحساب.");
 
-        return await ExportAsync(teacherId.Value, actorUserId, ct);
+        return await ExportAsync(teacherId.Value, actorUserId, filter, ct);
     }
 
     public async Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, CancellationToken ct)
+        => await ExportAsync(teacherId, actorUserId, new StudentLedgerFilter(), ct);
+
+    public async Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, StudentLedgerFilter filter, CancellationToken ct)
     {
         var teacher = await _db.TeacherProfiles.AsNoTracking()
             .Where(profile => profile.Id == teacherId)
@@ -44,7 +52,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         var packageIds = packages.Select(package => package.Id).ToHashSet();
         var grants = await LoadGrantsAsync(teacherId, ct);
         var studentIds = await LoadStudentIdsAsync(teacherId, grants, ct);
-        var students = await LoadStudentsAsync(studentIds, ct);
+        var students = await LoadStudentsAsync(studentIds, filter, ct);
         var activity = await LoadActivityAsync(studentIds, packageIds, ct);
         var bytes = BuildWorkbook(teacher.FullName, packages, students, grants, activity);
 
@@ -76,11 +84,18 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
             .Select(grant => new GrantRow(grant.UserId, grant.PackageId, grant.TermId, grant.ContentSectionId, grant.LessonId, grant.LessonVideoId,
                 grant.ExamId, grant.IsActive, grant.CancelledAt, grant.ExpiresAt)).ToListAsync(ct);
 
-    private async Task<List<StudentRow>> LoadStudentsAsync(Guid[] studentIds, CancellationToken ct) =>
-        await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id))
+    private async Task<List<StudentRow>> LoadStudentsAsync(Guid[] studentIds, StudentLedgerFilter filter, CancellationToken ct) =>
+        await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id)
+                && (!filter.Stage.HasValue || user.StudentProfile!.EducationStage == filter.Stage)
+                && (!filter.StudyTrack.HasValue || user.StudentProfile!.StudyTrack == filter.StudyTrack))
             .OrderBy(user => user.FullName)
             .Select(user => new StudentRow(user.Id, user.FullName, user.PhoneNumber,
                 user.StudentProfile != null ? user.StudentProfile.ParentPhone : null,
+                user.StudentProfile != null ? user.StudentProfile.SecondaryParentPhone : null,
+                user.StudentProfile != null ? user.StudentProfile.MotherPhone : null,
+                user.StudentProfile != null ? user.StudentProfile.EducationStage : EducationStage.Secondary,
+                user.StudentProfile != null ? user.StudentProfile.GradeLevel : GradeLevel.FirstSecondary,
+                user.StudentProfile != null ? user.StudentProfile.StudyTrack : null,
                 user.StudentProfile != null ? user.StudentProfile.StudentCode : null))
             .ToListAsync(ct);
 
@@ -140,7 +155,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         sheet.RightToLeft = true;
         sheet.ShowGridLines = false;
         var columns = BuildColumns(packages, activity.Homeworks);
-        WriteTitle(sheet, teacherName, columns.Count + 4);
+        WriteTitle(sheet, teacherName, columns.Count + StudentIdentityColumnCount);
         WriteHeaders(sheet, columns);
         StyleSheet(sheet, columns, students.Count + 6);
         WriteStudents(sheet, packages, columns, students, grants, activity);
@@ -180,7 +195,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
 
     private static void WriteHeaders(IXLWorksheet sheet, IReadOnlyList<LedgerColumn> columns)
     {
-        var baseHeaders = new[] { "اسم الطالب", "رقم الهاتف", "هاتف ولي الأمر", "كود الطالب" };
+        var baseHeaders = new[] { "اسم الطالب", "رقم الهاتف", "هاتف الأب", "هاتف ولي الأمر الإضافي", "هاتف الأم", "المرحلة", "الصف", "الشعبة", "كود الطالب" };
         for (var index = 0; index < baseHeaders.Length; index++)
         {
             sheet.Range(3, index + 1, 6, index + 1).Merge().Value = baseHeaders[index];
@@ -189,7 +204,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         for (var index = 0; index < columns.Count; index++)
         {
             var column = columns[index];
-            var excelColumn = index + 5;
+            var excelColumn = index + StudentIdentityColumnCount + 1;
             sheet.Cell(3, excelColumn).Value = column.PackageName;
             sheet.Cell(4, excelColumn).Value = column.TermTitle;
             sheet.Cell(5, excelColumn).Value = column.SectionTitle;
@@ -199,7 +214,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         MergeEqualHeaders(sheet, columns, 4, column => $"{column.PackageId}:{column.TermTitle}", "#0E8F8F");
         MergeEqualHeaders(sheet, columns, 5, column => $"{column.PackageId}:{column.TermTitle}:{column.SectionTitle}", "#2E3A47");
         for (var index = 0; index < columns.Count; index++)
-            StyleHeader(sheet.Range(6, index + 5, 6, index + 5), HeaderFill(columns[index].Kind), XLColor.FromHtml("#0A1D3D"));
+            StyleHeader(sheet.Range(6, index + StudentIdentityColumnCount + 1, 6, index + StudentIdentityColumnCount + 1), HeaderFill(columns[index].Kind), XLColor.FromHtml("#0A1D3D"));
     }
 
     private static void MergeEqualHeaders(IXLWorksheet sheet, IReadOnlyList<LedgerColumn> columns, int row, Func<LedgerColumn, string> key, string color)
@@ -209,7 +224,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         {
             var end = start;
             while (end + 1 < columns.Count && key(columns[end + 1]) == key(columns[start])) end++;
-            var range = sheet.Range(row, start + 5, row, end + 5);
+            var range = sheet.Range(row, start + StudentIdentityColumnCount + 1, row, end + StudentIdentityColumnCount + 1);
             if (end > start) range.Merge();
             StyleHeader(range, color);
             start = end + 1;
@@ -226,13 +241,18 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
             sheet.Cell(row, 1).Value = student.Name;
             sheet.Cell(row, 2).Value = student.Phone;
             sheet.Cell(row, 3).Value = student.ParentPhone ?? string.Empty;
-            sheet.Cell(row, 4).Value = student.StudentCode ?? string.Empty;
+            sheet.Cell(row, 4).Value = student.SecondaryParentPhone ?? string.Empty;
+            sheet.Cell(row, 5).Value = student.MotherPhone ?? string.Empty;
+            sheet.Cell(row, 6).Value = EducationStageLabel(student.Stage);
+            sheet.Cell(row, 7).Value = GradeLevelLabel(student.Grade);
+            sheet.Cell(row, 8).Value = student.StudyTrack.HasValue ? StudyTrackLabel(student.StudyTrack.Value) : string.Empty;
+            sheet.Cell(row, 9).Value = student.StudentCode ?? string.Empty;
             var studentGrants = grants.Where(grant => grant.UserId == student.Id).ToList();
             for (var columnIndex = 0; columnIndex < columns.Count; columnIndex++)
             {
                 var column = columns[columnIndex];
-                var cell = sheet.Cell(row, columnIndex + 5);
-                var access = ResolveAccess(column, studentGrants, packageMap);
+                var cell = sheet.Cell(row, columnIndex + StudentIdentityColumnCount + 1);
+                var access = ResolveAccess(column, studentGrants, packageMap, packages);
                 if (column.Kind == LedgerColumnKind.PackageStatus) WritePurchaseCell(cell, access);
                 else if (!access.Active) WriteUnavailableCell(cell);
                 else if (column.VideoId.HasValue) WriteVideoMetricCell(cell, student.Id, column, activity);
@@ -274,7 +294,11 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         }
     }
 
-    private static AccessState ResolveAccess(LedgerColumn column, IEnumerable<GrantRow> grants, IReadOnlyDictionary<Guid, Guid> packageMap)
+    private static AccessState ResolveAccess(
+        LedgerColumn column,
+        IEnumerable<GrantRow> grants,
+        IReadOnlyDictionary<Guid, Guid> packageMap,
+        IReadOnlyList<Package> packages)
     {
         var samePackage = grants.Where(grant => grant.TargetIds().Any(id => packageMap.GetValueOrDefault(id) == column.PackageId)).ToList();
         var matching = column.Kind == LedgerColumnKind.PackageStatus
@@ -283,16 +307,65 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         var now = DateTime.UtcNow;
         var active = matching.Any(grant => grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now));
         var direct = matching.Any(grant => grant.PackageId == column.PackageId && grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now));
-        return new AccessState(samePackage.Count > 0, active, direct);
+        var activeLabels = samePackage
+            .Where(grant => grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
+            .Select(grant => AccessLabel(grant, packages, packageMap))
+            .Distinct()
+            .ToArray();
+        return new AccessState(samePackage.Count > 0, active, direct, activeLabels);
     }
 
     private static void WritePurchaseCell(IXLCell cell, AccessState access)
     {
-        if (access.Direct) SetStatus(cell, "مشترى", "#DCFCE7", "#166534");
-        else if (access.Active) SetStatus(cell, "وصول جزئي", "#DBEAFE", "#1E40AF");
+        if (access.Direct) SetStatus(cell, string.Join("\n", access.ActiveLabels), "#DCFCE7", "#166534");
+        else if (access.Active) SetStatus(cell, string.Join("\n", access.ActiveLabels), "#DBEAFE", "#1E40AF");
         else if (access.HasAny) SetStatus(cell, "منتهي", "#FEF3C7", "#92400E");
         else SetStatus(cell, "لم يشترِ", "#FEE2E2", "#991B1B");
     }
+
+    private static string AccessLabel(GrantRow grant, IReadOnlyList<Package> packages, IReadOnlyDictionary<Guid, Guid> packageMap)
+    {
+        var packageId = grant.TargetIds().Select(packageMap.GetValueOrDefault).First(id => id != Guid.Empty);
+        var package = packages.First(package => package.Id == packageId);
+        if (grant.PackageId.HasValue) return $"باقة / كورس: {package.Name}";
+        if (grant.TermId.HasValue) return $"ترم: {package.Terms.First(term => term.Id == grant.TermId).Title}";
+        if (grant.SectionId.HasValue) return $"كورس / قسم: {package.Terms.SelectMany(term => term.Sections).First(section => section.Id == grant.SectionId).Title}";
+        if (grant.LessonId.HasValue) return $"حصة: {package.Terms.SelectMany(term => term.Sections).SelectMany(section => section.Lessons).First(lesson => lesson.Id == grant.LessonId).Title}";
+        if (grant.VideoId.HasValue) return $"فيديو: {package.Terms.SelectMany(term => term.Sections).SelectMany(section => section.Lessons).SelectMany(lesson => lesson.Videos).First(video => video.Id == grant.VideoId).Title}";
+        return "اختبار";
+    }
+
+    private static string EducationStageLabel(EducationStage stage) => stage switch
+    {
+        EducationStage.Primary => "ابتدائي",
+        EducationStage.Preparatory => "إعدادي",
+        EducationStage.Secondary => "ثانوي",
+        EducationStage.Baccalaureate => "بكالوريا",
+        EducationStage.Azhari => "أزهري",
+        EducationStage.American => "أمريكي",
+        _ => stage.ToString()
+    };
+
+    private static string StudyTrackLabel(StudyTrack track) => track switch
+    {
+        StudyTrack.Arts => "أدبي",
+        StudyTrack.Science => "علمي",
+        StudyTrack.MedicineAndLifeSciences => "الطب وعلوم الحياة",
+        StudyTrack.EngineeringAndComputerScience => "الهندسة وعلوم الحاسب",
+        StudyTrack.Business => "قطاع الأعمال",
+        StudyTrack.ArtsAndHumanities => "الآداب والفنون",
+        _ => track.ToString()
+    };
+
+    private static string GradeLevelLabel(GradeLevel grade) => grade switch
+    {
+        GradeLevel.FirstSecondary => "الأول الثانوي",
+        GradeLevel.SecondSecondary => "الثاني الثانوي",
+        GradeLevel.SecondaryGrade3 => "الثالث الثانوي",
+        GradeLevel.FirstBaccalaureate => "الأول بكالوريا",
+        GradeLevel.SecondBaccalaureate => "الثاني بكالوريا",
+        _ => grade.ToString()
+    };
 
     private static void WriteUnavailableCell(IXLCell cell) => SetStatus(cell, "لم يشترِ", "#FEE2E2", "#991B1B");
 
@@ -438,14 +511,14 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
 
     private static void StyleSheet(IXLWorksheet sheet, IReadOnlyList<LedgerColumn> columns, int lastRow)
     {
-        var lastColumn = columns.Count + 4;
+        var lastColumn = columns.Count + StudentIdentityColumnCount;
         sheet.SheetView.FreezeRows(6);
-        sheet.SheetView.FreezeColumns(4);
+        sheet.SheetView.FreezeColumns(StudentIdentityColumnCount);
         sheet.Range(3, 1, lastRow, lastColumn).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         sheet.Range(3, 1, lastRow, lastColumn).Style.Border.InsideBorderColor = XLColor.FromHtml("#DCE1E6");
         sheet.Range(3, 1, lastRow, lastColumn).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-        sheet.Columns(1, 4).AdjustToContents(1, 40);
-        if (lastColumn >= 5) sheet.Columns(5, lastColumn).Width = 24;
+        sheet.Columns(1, StudentIdentityColumnCount).AdjustToContents(1, 40);
+        if (lastColumn > StudentIdentityColumnCount) sheet.Columns(StudentIdentityColumnCount + 1, lastColumn).Width = 24;
         sheet.Rows(3, 6).Height = 28;
         sheet.Row(1).Height = 32;
         StyleMetricColumns(sheet, columns, lastRow);
@@ -456,7 +529,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
     {
         if (lastRow < 7) return;
         for (var index = 0; index < columns.Count; index++)
-            sheet.Range(7, index + 5, lastRow, index + 5).Style.Fill.BackgroundColor = XLColor.FromHtml(BodyFill(columns[index].Kind));
+            sheet.Range(7, index + StudentIdentityColumnCount + 1, lastRow, index + StudentIdentityColumnCount + 1).Style.Fill.BackgroundColor = XLColor.FromHtml(BodyFill(columns[index].Kind));
     }
 
     private static void StyleColumnGroups(IXLWorksheet sheet, IReadOnlyList<LedgerColumn> columns, int lastRow)
@@ -466,7 +539,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         {
             var end = start;
             while (end + 1 < columns.Count && columns[end + 1].PackageId == columns[start].PackageId) end++;
-            SetVerticalBorders(sheet.Range(3, start + 5, lastRow, end + 5), XLBorderStyleValues.Medium, "#0A1D3D");
+            SetVerticalBorders(sheet.Range(3, start + StudentIdentityColumnCount + 1, lastRow, end + StudentIdentityColumnCount + 1), XLBorderStyleValues.Medium, "#0A1D3D");
             start = end + 1;
         }
 
@@ -474,7 +547,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         {
             var nextIsDifferentItem = index == columns.Count - 1 || ColumnItemKey(columns[index + 1]) != ColumnItemKey(columns[index]);
             if (!nextIsDifferentItem) continue;
-            var boundary = sheet.Range(5, index + 5, lastRow, index + 5);
+            var boundary = sheet.Range(5, index + StudentIdentityColumnCount + 1, lastRow, index + StudentIdentityColumnCount + 1);
             boundary.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
             boundary.Style.Border.LeftBorderColor = XLColor.FromHtml("#94A3B8");
         }
@@ -509,7 +582,17 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         _ => "#F0FDFA"
     };
 
-    private sealed record StudentRow(Guid Id, string Name, string Phone, string? ParentPhone, string? StudentCode);
+    private sealed record StudentRow(
+        Guid Id,
+        string Name,
+        string Phone,
+        string? ParentPhone,
+        string? SecondaryParentPhone,
+        string? MotherPhone,
+        EducationStage Stage,
+        GradeLevel Grade,
+        StudyTrack? StudyTrack,
+        string? StudentCode);
     private sealed record GrantRow(Guid UserId, Guid? PackageId, Guid? TermId, Guid? SectionId, Guid? LessonId, Guid? VideoId, Guid? ExamId, bool IsActive, DateTime? CancelledAt, DateTime? ExpiresAt)
     {
         public IEnumerable<Guid> TargetIds() => new Guid?[] { PackageId, TermId, SectionId, LessonId, VideoId, ExamId }.OfType<Guid>();
@@ -519,7 +602,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
     private sealed record HomeworkRow(Guid Id, Guid LessonId, string Title);
     private sealed record SubmissionRow(Guid StudentId, Guid HomeworkId, SubmissionStatus Status, decimal Score, DateTime? SubmittedAt);
     private sealed record ActivityData(List<WatchRow> Watches, List<AttemptRow> Attempts, List<HomeworkRow> Homeworks, List<SubmissionRow> Submissions);
-    private sealed record AccessState(bool HasAny, bool Active, bool Direct);
+    private sealed record AccessState(bool HasAny, bool Active, bool Direct, IReadOnlyList<string> ActiveLabels);
     private enum LedgerColumnKind
     {
         PackageStatus,

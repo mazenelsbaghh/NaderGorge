@@ -148,7 +148,7 @@ export default function AdminAdminsPageClient() {
           u.phoneNumber,
           u.roles.map(translateRole).join(' | '),
           statusLabel(u.status),
-          new Date(u.createdAt).toLocaleDateString('ar-EG'),
+          new Date(u.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' }),
         ];
 
         const escapedRow = rowData.map((val) => {

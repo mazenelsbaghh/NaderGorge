@@ -395,6 +395,14 @@ export const financeService = {
     return res.data?.data ?? [];
   },
 
+  exportTeacherFinanceDay: async (date: string): Promise<Blob> => {
+    const res = await apiClient.get('/teacher/finance/calendar/export', {
+      params: { date },
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
   getTeacherPayouts: async (): Promise<TeacherPayoutDto[]> => {
     const res = await apiClient.get<ApiResponse<TeacherPayoutDto[]>>(
       '/teacher/finance/payouts'

@@ -246,6 +246,37 @@ interface ContentApiResponse<T> {
   data?: T;
 }
 
+export interface ContentAcquisitionCountDto {
+  purchased: number;
+  gifts: number;
+}
+
+export interface ContentPackageSummaryDto {
+  packageId: string;
+  packageName: string;
+  teacherName: string;
+  package: ContentAcquisitionCountDto;
+  term: ContentAcquisitionCountDto;
+  section: ContentAcquisitionCountDto;
+  lesson: ContentAcquisitionCountDto;
+  purchasedStudents: number;
+  giftStudents: number;
+  totalStudents: number;
+}
+
+export interface PackageCombinationSummaryDto {
+  packageIds: string[];
+  packageNames: string[];
+  studentsCount: number;
+}
+
+export interface ContentSummaryDto {
+  fromUtc?: string | null;
+  toUtc?: string | null;
+  packages: ContentPackageSummaryDto[];
+  packageCombinations: PackageCombinationSummaryDto[];
+}
+
 type ContentListApiResponse<T> = Omit<ContentApiResponse<T[]>, 'data'> & { data: T[] };
 
 type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
@@ -269,4 +300,8 @@ export const contentService = {
   getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
   createLessonComment: (lessonId: string, body: string) =>
     apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
+  getContentSummary: (scope: 'admin' | 'teacher', fromUtc?: string, toUtc?: string) =>
+    apiClient.get<ContentApiResponse<ContentSummaryDto>>(`/${scope}/content/summary`, {
+      params: { fromUtc, toUtc },
+    }),
 };

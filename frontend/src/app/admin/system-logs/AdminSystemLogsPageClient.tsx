@@ -5,6 +5,7 @@ import { AlertTriangle, Clipboard, Download, RefreshCw, Search, Server, Trash2, 
 import toast from 'react-hot-toast';
 
 import { AdminPage } from '@/components/admin';
+import { cairoCurrentDate, cairoDateAfterDays, cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
 import { clearAllSystemLogs, deleteSystemLogs, exportSystemLogs, getSystemLogs, type SystemLogEntry } from '@/services/system-logs-service';
 
 export default function AdminSystemLogsPageClient() {
@@ -89,7 +90,7 @@ export default function AdminSystemLogsPageClient() {
         toast('لا توجد أخطاء محفوظة للتنزيل');
         return;
       }
-      downloadBlob(blob, `system-errors-all-periods-${new Date().toISOString().slice(0, 10)}.txt`);
+      downloadBlob(blob, `system-errors-all-periods-${cairoCurrentDate()}.txt`);
       toast.success('تم تنزيل كل الأخطاء المحفوظة من جميع الفترات');
     } catch {
       toast.error('تعذر تنزيل كل الأخطاء');
@@ -141,7 +142,7 @@ export default function AdminSystemLogsPageClient() {
           <label className="text-sm"><span className="mb-1 block text-[var(--admin-text-muted)]">إلى</span><input type="datetime-local" className="admin-input" value={to} onChange={(event) => { setPeriod('custom'); setTo(event.target.value); }} /></label>
           <div className="mr-auto flex flex-wrap gap-2">
             <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length || actionLoading} onClick={async () => { await navigator.clipboard.writeText(exportText); toast.success('تم نسخ السجلات'); }}><Clipboard className="h-4 w-4" />نسخ الظاهر</button>
-            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length || actionLoading} onClick={() => downloadBlob(new Blob([exportText], { type: 'text/plain;charset=utf-8' }), `system-logs-${new Date().toISOString().slice(0, 10)}.txt`)}><Download className="h-4 w-4" />تنزيل الظاهر</button>
+            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length || actionLoading} onClick={() => downloadBlob(new Blob([exportText], { type: 'text/plain;charset=utf-8' }), `system-logs-${cairoCurrentDate()}.txt`)}><Download className="h-4 w-4" />تنزيل الظاهر</button>
             <button className="admin-btn-ghost flex items-center gap-2" disabled={actionLoading} onClick={() => void downloadAllErrors()}><Download className="h-4 w-4" />تنزيل كل الأخطاء</button>
             <button className="admin-btn-ghost flex items-center gap-2 text-red-500" disabled={!logs.length || actionLoading} onClick={() => void clearVisibleLogs()}><Trash2 className="h-4 w-4" />مسح الظاهر</button>
             <button className="admin-btn-ghost flex items-center gap-2 text-red-700" disabled={actionLoading} onClick={() => void clearAllLogs()}><Trash2 className="h-4 w-4" />مسح الكل</button>
@@ -158,7 +159,7 @@ export default function AdminSystemLogsPageClient() {
 }
 
 function filterParams(filters: { source: string; level: string; search: string; from: string; to: string }) {
-  return { source: filters.source || undefined, level: filters.level || undefined, search: filters.search.trim() || undefined, from: filters.from ? new Date(filters.from).toISOString() : undefined, to: filters.to ? new Date(filters.to).toISOString() : undefined };
+  return { source: filters.source || undefined, level: filters.level || undefined, search: filters.search.trim() || undefined, from: filters.from ? cairoDateTimeLocalToUtcISOString(filters.from) : undefined, to: filters.to ? cairoDateTimeLocalToUtcISOString(filters.to) : undefined };
 }
 
 function formatLog(log: SystemLogEntry) {
@@ -174,14 +175,9 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function localDateTimeInput(date: Date) {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-function startOfTodayInput() { const date = new Date(); date.setHours(0, 0, 0, 0); return localDateTimeInput(date); }
-function endOfTodayInput() { const date = new Date(); date.setHours(23, 59, 59, 999); return localDateTimeInput(date); }
-function daysAgoInput(days: number) { const date = new Date(); date.setDate(date.getDate() - days + 1); date.setHours(0, 0, 0, 0); return localDateTimeInput(date); }
+function startOfTodayInput() { return `${cairoCurrentDate()}T00:00`; }
+function endOfTodayInput() { return `${cairoCurrentDate()}T23:59`; }
+function daysAgoInput(days: number) { return `${cairoDateAfterDays(-(days - 1))}T00:00`; }
 
 function LogCard({ log }: { log: SystemLogEntry }) {
   const fullText = formatLog(log);
@@ -197,7 +193,7 @@ function LogCard({ log }: { log: SystemLogEntry }) {
           <code className="rounded bg-black/5 px-2 py-1 dark:bg-white/5">{log.category}</code>
         </div>
         <div className="flex items-center gap-3 text-xs text-[var(--admin-text-muted)]">
-          <time>{new Date(log.timestamp).toLocaleString('ar-EG')}</time>
+          <time>{new Date(log.timestamp).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</time>
           <button className="admin-btn-icon" title="نسخ الخطأ كاملًا" onClick={async () => { await navigator.clipboard.writeText(fullText); toast.success('تم نسخ السجل'); }}><Clipboard className="h-4 w-4" /></button>
         </div>
       </div>

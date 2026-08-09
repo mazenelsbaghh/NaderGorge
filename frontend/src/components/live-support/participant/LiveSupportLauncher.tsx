@@ -315,14 +315,14 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     if (!supportVisibility.showSupportOutsideAccount || !whatsappNumber) return null;
     const compactOnRegistration = pathname === '/register';
 
-    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-4 z-[90] inline-flex items-center justify-center gap-2 bg-[#25D366] text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6 ${compactOnRegistration ? 'size-12 rounded-full p-0 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3' : 'rounded-2xl px-4 py-3'}`}>
+    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] inline-flex items-center justify-center gap-2 bg-[#25D366] text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6 ${compactOnRegistration ? 'size-12 rounded-full p-0 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3' : 'rounded-2xl px-4 py-3'}`}>
       <MessageCircle size={22}/><span className={compactOnRegistration ? 'sr-only sm:not-sr-only' : undefined}>واتساب الدعم</span>
     </a>;
   }
 
   if (!supportVisibility.liveSupportEnabled) return null;
 
-  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[90] sm:left-6`}>
+  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] sm:left-6`}>
     {open && <section role="dialog" aria-modal="true" aria-label="الدعم المباشر" className="mb-3 flex h-[min(680px,calc(100dvh-7rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <div className="flex items-center gap-2"><span className="grid size-9 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><Headphones size={19}/></span><div><h2 className="font-bold text-slate-900">الدعم المباشر</h2><p className="text-xs text-slate-500">فريق مسار</p></div></div>

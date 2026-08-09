@@ -201,7 +201,7 @@ export default function ForgotPasswordPageClient() {
         </div>
 
         {/* Glass Card */}
-        <div className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
+        <div className="space-y-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 sm:rounded-2xl sm:p-7 shadow-sm">
           
           {error && <div className="auth-error-banner mb-2">{error}</div>}
 

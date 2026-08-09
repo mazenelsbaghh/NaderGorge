@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import axios from 'axios';
 import { BookOpen, CheckCircle2, XCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { reportService, ParentReportDto } from '@/services/report-service';
 import { FullScreenLoader } from '@/components/ui/loading-indicator';
@@ -27,8 +29,11 @@ export default function ParentReportPageClient() {
             try {
                 const res = await reportService.getParentSummary(studentId, token);
                 setReport(res.data.data);
-            } catch (err: any) {
-                setError(err.response?.data?.message || 'فشل في تحميل التقرير.');
+            } catch (cause: unknown) {
+                const message = axios.isAxiosError<{ message?: string }>(cause)
+                    ? cause.response?.data?.message
+                    : undefined;
+                setError(message || 'تعذر تحميل التقرير. قد يكون الرابط منتهي الصلاحية.');
             } finally {
                 setLoading(false);
             }
@@ -48,12 +53,16 @@ export default function ParentReportPageClient() {
     if (error || !report) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-4">
-                <div className="w-full max-w-md rounded-[28px] border border-[var(--admin-danger-20)] bg-[var(--card)] p-8 text-center shadow-[0_20px_60px_rgba(78,70,57,0.08)]">
+                <div className="w-full max-w-md rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--card)] p-8 text-center shadow-sm">
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--admin-danger-10)]">
                         <AlertTriangle className="h-8 w-8 text-[var(--admin-danger)]" />
                     </div>
-                    <h2 className="text-2xl font-black text-[var(--foreground)]">تنبيه</h2>
-                    <p className="mt-2 text-sm font-bold text-[var(--admin-danger)]">{error || 'التقرير غير موجود'}</p>
+                    <h2 className="text-2xl font-black text-[var(--foreground)]">تعذر فتح التقرير</h2>
+                    <p className="mt-2 text-sm font-bold leading-7 text-[var(--admin-danger)]">{error || 'التقرير غير موجود'}</p>
+                    <p className="mt-3 text-sm leading-7 text-[var(--muted-foreground)]">اطلب من الطالب رابط متابعة جديدًا، أو استخدم رمز المتابعة لفتح أحدث البيانات.</p>
+                    <Link href="/parent" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-[var(--primary-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2">
+                        فتح متابعة ولي الأمر
+                    </Link>
                 </div>
             </div>
         );
@@ -113,16 +122,16 @@ export default function ParentReportPageClient() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[var(--background)] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
             <div className="mx-auto max-w-4xl space-y-8">
 
                 {/* Header Profile */}
-                <div className="relative overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] p-8 shadow-[0_20px_60px_var(--admin-shadow)]">
+                <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm sm:p-8">
                     <div className="absolute left-0 top-0 h-64 w-64 rounded-br-full bg-[var(--secondary)] opacity-40" />
 
                     <div className="relative flex flex-col items-center justify-between gap-6 md:flex-row md:items-start">
                         <div className="flex flex-col items-center gap-6 md:flex-row">
-                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary)] to-[color:rgba(100,116,139,0.72)] text-4xl font-black text-[var(--primary-foreground)] shadow-[0_12px_40px_rgba(15,23,42,0.15)]">
+                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary)] to-[color:rgba(100,116,139,0.72)] text-4xl font-black text-[var(--primary-foreground)] shadow-sm">
                                 {studentName.charAt(0)}
                             </div>
                             <div className="text-center md:text-right">
@@ -150,7 +159,7 @@ export default function ParentReportPageClient() {
                     {metrics.map((m, i) => {
                         const Icon = m.icon;
                         return (
-                            <div key={i} className="flex items-center gap-4 rounded-[24px] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_12px_40px_var(--admin-shadow)]">
+                            <div key={i} className="flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
                                 <div
                                     className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
                                     style={{ backgroundColor: m.bg }}
@@ -167,7 +176,7 @@ export default function ParentReportPageClient() {
                 </div>
 
                 {/* Warnings */}
-                <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_var(--admin-shadow)]">
+                <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
                     <div className="bg-[var(--secondary)] p-6">
                         <h2 className="flex items-center gap-3 text-xl font-black text-[var(--foreground)]">
                             <AlertTriangle className="h-6 w-6 text-[var(--admin-warning)]" />
@@ -204,7 +213,7 @@ export default function ParentReportPageClient() {
                                                     {warning.reason}
                                                 </p>
                                                 <p className="mt-2 text-xs font-bold tracking-wider text-[var(--muted-foreground)] opacity-60">
-                                                    {new Date(warning.generatedAt).toLocaleDateString('en-GB')}
+                                                    {new Date(warning.generatedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' })}
                                                 </p>
                                             </div>
                                         </div>

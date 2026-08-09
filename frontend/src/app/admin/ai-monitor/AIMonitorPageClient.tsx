@@ -1362,7 +1362,7 @@ export default function AIMonitorPageClient() {
           </div>
         )}
 
-        <div className="ai-settings-area flex flex-col gap-6 bg-[var(--admin-card-strong)] p-6 rounded-[2rem] border border-[var(--admin-border)] mb-6 shadow-sm">
+        <div className="ai-settings-area flex flex-col gap-6 bg-[var(--admin-card-strong)] p-6 rounded-2xl border border-[var(--admin-border)] mb-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-[var(--admin-text)]">اختر المدرس</h3>

@@ -153,7 +153,7 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
       {(isWorking || (!status && !isFailed)) && (
         <div className="w-full h-1 rounded-full overflow-hidden border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/10">
           <div
-            className="h-full bg-[var(--admin-primary)] transition-all duration-[800ms] ease-out"
+            className="h-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-[800ms] ease-out"
             style={{ width: `${Math.max(4, progressVal)}%` }}
           />
         </div>
@@ -289,7 +289,7 @@ function ChaptersInline({ chapters, onRefresh }: { chapters: any[]; onRefresh?: 
                     unoptimized
                     className="h-auto w-full max-w-[200px] transition-transform duration-200 group-hover:scale-[1.03]"
                   />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] gap-1 font-bold">
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-sm gap-1 font-bold">
                     <ZoomIn className="w-3.5 h-3.5" />
                     تكبير
                   </div>
@@ -495,7 +495,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
         return (
           <div
             key={video.id}
-            className={`rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden transition-all ${
+            className={`rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
               !video.isActive ? 'opacity-60 border-dashed bg-[var(--admin-bg)]' : ''
             }`}
           >
@@ -681,7 +681,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="مثال: الدرس الأول - مراجعة"
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                       required
                     />
                   </div>
@@ -715,7 +715,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                         setEditUrlOrEmbedCode(val);
                       }}
                       placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : editProvider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                       required
                     />
                   </div>
@@ -749,7 +749,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                       </NumberField.Group>
                     </NumberField>
                   </div>
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-2 ms-auto">
                     <NeumorphButton
                       type="button"
                       onClick={() => setEditingVideoId(null)}
@@ -786,7 +786,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
       {/* Video Preview Modal */}
       {previewVideoId && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 md:p-8"
           role="dialog"
           aria-modal="true"
           aria-labelledby="lesson-video-preview-title"

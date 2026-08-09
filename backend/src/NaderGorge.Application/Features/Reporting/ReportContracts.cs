@@ -1,4 +1,5 @@
 using System.Text.Json;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Reporting;
 
@@ -91,6 +92,7 @@ public sealed record ReportDefinitionDto(
     DateTime? UpdatedAt);
 
 public sealed record ReportExportDto(byte[] Content, string ContentType, string FileName);
+public sealed record StudentLedgerFilter(EducationStage? Stage = null, StudyTrack? StudyTrack = null);
 
 public interface IReportExportService
 {
@@ -100,5 +102,7 @@ public interface IReportExportService
 public interface IStudentLedgerExportService
 {
     Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, CancellationToken ct);
+    Task<ReportExportDto> ExportAsync(Guid teacherId, Guid actorUserId, StudentLedgerFilter filter, CancellationToken ct);
     Task<ReportExportDto> ExportForTeacherAsync(Guid actorUserId, CancellationToken ct);
+    Task<ReportExportDto> ExportForTeacherAsync(Guid actorUserId, StudentLedgerFilter filter, CancellationToken ct);
 }

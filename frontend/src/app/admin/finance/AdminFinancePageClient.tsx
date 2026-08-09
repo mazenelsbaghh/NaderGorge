@@ -441,7 +441,7 @@ export default function AdminFinancePageClient() {
   };
 
   const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleDateString('ar-EG', {
+    return new Date(isoString).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -903,7 +903,7 @@ export default function AdminFinancePageClient() {
       {activeTab === 'payroll' && (
         <div id="finance-panel-payroll" role="tabpanel" aria-labelledby="finance-tab-payroll">
           {/* Filters Bar */}
-          <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex flex-wrap gap-4 items-center justify-between">
+          <div className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-[var(--admin-muted)]">الشهر:</span>
@@ -968,7 +968,7 @@ export default function AdminFinancePageClient() {
       {activeTab === 'payouts' && (
         <div id="finance-panel-payouts" role="tabpanel" aria-labelledby="finance-tab-payouts">
           {/* Status filter bar */}
-          <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex items-center justify-between">
+          <div className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-[var(--admin-muted)]">حالة الطلبات:</span>
               <select
@@ -1007,7 +1007,7 @@ export default function AdminFinancePageClient() {
       {activeTab === 'codes' && (
         <div id="finance-panel-codes" role="tabpanel" aria-labelledby="finance-tab-codes">
           {/* Detailed Filters ledger */}
-          <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+          <div className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
             <h4 className="text-sm font-black mb-3 text-[var(--admin-text)]">فلاتر البحث والمطابقة</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
@@ -1126,7 +1126,7 @@ export default function AdminFinancePageClient() {
 
       {activeTab === 'review' && (
         <div id="finance-panel-review" role="tabpanel" aria-labelledby="finance-tab-review">
-          <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+          <div className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
             <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">مراجعة مستحقات المدرسين</h4>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
@@ -1177,7 +1177,7 @@ export default function AdminFinancePageClient() {
             emptyMessage="لا توجد بنود مالية مطابقة للفلاتر الحالية."
           />
 
-          <div className="mt-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+          <div className="mt-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
             <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">تعويض يدوي صريح</h4>
             <p className="mb-4 text-xs font-bold text-[var(--admin-muted)]">
               يستخدم فقط لتعويض مدرس عن عملية مجانية/خصم كامل أو حالة خاصة. بدون هذا التسجيل لا تضاف مستحقات على العمليات ذات القيمة صفر.

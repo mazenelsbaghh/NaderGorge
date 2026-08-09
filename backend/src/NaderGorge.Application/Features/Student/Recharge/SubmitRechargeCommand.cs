@@ -176,8 +176,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
                 matchedSms.IsMatched = true;
                 matchedSms.MatchedRechargeRequestId = rechargeRequest.Id;
 
-                var matchedSmsBalance = SmsParser.Parse(matchedSms.Body).CurrentBalance;
-                rechargeRequest.Wallet.CurrentBalance = matchedSmsBalance ?? rechargeRequest.Wallet.CurrentBalance + rechargeRequest.Amount;
+                await _db.ApplyIfLatestAsync(rechargeRequest.Wallet, matchedSms, rechargeRequest.Amount, ct);
 
                 await _db.SaveChangesAsync(ct);
 

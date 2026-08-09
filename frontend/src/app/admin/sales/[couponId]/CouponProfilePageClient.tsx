@@ -260,7 +260,7 @@ export default function CouponProfilePageClient({ couponId }: CouponProfilePageC
                     <p className="text-xs font-bold text-[var(--admin-muted)]">النطاقات الأكاديمية</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {coupon.academicScopes.map((scope, index) => (
-                        <span key={`${coupon.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-[11px] font-black text-[var(--admin-primary)]">
+                        <span key={`${coupon.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-sm font-black text-[var(--admin-primary)]">
                           {getAcademicScopeLabel(scope)}
                         </span>
                       ))}

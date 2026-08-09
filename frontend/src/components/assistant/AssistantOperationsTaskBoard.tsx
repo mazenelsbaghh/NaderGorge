@@ -14,11 +14,13 @@ export function AssistantOperationsTaskBoard() {
   const { user } = useAuthStore();
   const [tasks, setTasks] = useState<TaskItemDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await assistantService.getMyOperationsTasks();
       if (res.data?.success) {
@@ -43,9 +45,12 @@ export function AssistantOperationsTaskBoard() {
         }));
         setTasks(normalized);
       } else {
-        toast.error(res.data?.message || 'تعذر تحميل المهام التشغيلية');
+        const message = res.data?.message || 'تعذر تحميل المهام التشغيلية';
+        setLoadError(message);
+        toast.error(message);
       }
     } catch {
+      setLoadError('تعذر الاتصال وتحميل المهام التشغيلية.');
       toast.error('حدث خطأ أثناء تحميل المهام التشغيلية');
     } finally {
       setLoading(false);
@@ -121,8 +126,8 @@ export function AssistantOperationsTaskBoard() {
   return (
     <div className="space-y-6 text-right" dir="rtl">
       {/* Top Filter and Search Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-[var(--admin-card-soft)] p-4 rounded-3xl border border-[var(--admin-border)]">
-        <label className="flex min-w-0 w-full flex-1 items-center gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex min-w-0 w-full flex-1 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2">
           <Search className="h-4 w-4 text-[var(--admin-muted)]" />
           <span className="sr-only">البحث في المهام التشغيلية</span>
           <input
@@ -141,20 +146,26 @@ export function AssistantOperationsTaskBoard() {
           disabled={loading}
           className="flex w-full shrink-0 items-center gap-1.5 sm:w-auto"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin motion-reduce:animate-none' : ''}`} />
           تحديث المهام
         </NeumorphButton>
       </div>
 
       {/* Grid of task cards */}
-      {loading && filteredTasks.length === 0 ? (
+      {loadError && filteredTasks.length === 0 ? (
+        <div role="alert" className="rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-6 text-center text-[var(--admin-danger)]">
+          <AlertTriangle className="mx-auto mb-3 h-8 w-8" aria-hidden="true" />
+          <p className="font-bold">{loadError}</p>
+          <button type="button" onClick={() => void fetchTasks()} className="admin-btn-secondary mt-4 min-h-11">إعادة المحاولة</button>
+        </div>
+      ) : loading && filteredTasks.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse bg-[var(--admin-card)] rounded-[2rem] h-[180px] border border-[var(--admin-border)]" />
+            <div key={i} className="h-[180px] animate-pulse rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] motion-reduce:animate-none" />
           ))}
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="py-16 text-center border border-[var(--admin-border)] rounded-3xl bg-[var(--admin-card-soft)]">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] py-16 text-center">
           <AlertTriangle className="mx-auto h-12 w-12 text-[var(--admin-muted)] mb-3 opacity-40" />
           <h3 className="text-lg font-bold text-[var(--admin-text)]">لا توجد مهام تشغيلية مسندة إليك!</h3>
           <p className="text-sm text-[var(--admin-muted)] mt-1">عند تكليفك بمهمة جديدة من الإدارة، ستظهر هنا فوراً.</p>
@@ -166,7 +177,7 @@ export function AssistantOperationsTaskBoard() {
               type="button"
               key={task.id}
               onClick={() => setSelectedTaskId(task.id)}
-              className="group flex w-full flex-col rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all duration-200 hover:shadow-[0_12px_28px_var(--admin-shadow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+              className="group flex w-full flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right transition-colors duration-200 hover:border-[var(--admin-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
               aria-label={`فتح تفاصيل المهمة: ${task.title}`}
             >
               <div className="flex justify-between items-center mb-3">

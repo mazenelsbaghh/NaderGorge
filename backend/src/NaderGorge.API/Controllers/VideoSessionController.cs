@@ -39,7 +39,8 @@ public class VideoSessionController : ControllerBase
         var command = new CreateVideoSessionCommand(
             request.LessonVideoId,
             userId,
-            GetIpAddress()
+            GetIpAddress(),
+            User.IsInRole("Admin") ? VideoSessionMode.AdminPreview : VideoSessionMode.Standard
         );
 
         var result = await _mediator.Send(command, ct);
@@ -96,6 +97,8 @@ public class VideoSessionController : ControllerBase
     [HttpPost("{lessonVideoId}/track-progress")]
     public async Task<IActionResult> TrackProgress(Guid lessonVideoId, [FromBody] TrackProgressRequest request, CancellationToken ct)
     {
+        if (User.IsInRole("Admin")) return NoContent();
+
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
         if (request.TotalDurationSeconds <= 0) return BadRequest(new { success = false, errors = new[] { "DURATION_REQUIRED" } });

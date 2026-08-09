@@ -9,6 +9,8 @@ import { throwIfCancellationRequested } from '../cancellation.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { atomicWriteFileSync, sharedSubtitlesRoot } from '../config/storage.js';
 import { createVideoAnalysisCheckpoint } from '../services/aiVideoCheckpoint.js';
+import { isFinalJobAttempt, removeJobTempFile } from '../utils/jobTempFiles.js';
+import { logWarn } from '../logging.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +30,9 @@ async function notifyProgress(jobId: string, percentage: number, stage: string, 
             headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
             body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
         });
-    } catch { /* best-effort, don't block the pipeline */ }
+    } catch (error) {
+        logWarn('ai-progress', 'Progress callback failed; pipeline will continue.', { jobId, error });
+    }
 }
 
 export interface AnalyzeVideoJobData {
@@ -154,12 +158,9 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         console.error(`[Job ${job.id}] Failed processing video:`, error);
         throw error;
     } finally {
-        // Cleanup temp audio file ONLY when the pipeline is completely successful.
-        // If it failed midway, we keep the audio file so we can jump straight into the AI next time.
-        if (isSuccess && audioPath && fs.existsSync(audioPath)) {
-            try {
-               fs.unlinkSync(audioPath);
-            } catch(e) { /* ignore */ }
+        // Keep audio only while BullMQ can retry this attempt; terminal jobs must not leak disk space.
+        if (isSuccess || isFinalJobAttempt(job)) {
+            removeJobTempFile(audioPath, job.id);
         }
     }
 }

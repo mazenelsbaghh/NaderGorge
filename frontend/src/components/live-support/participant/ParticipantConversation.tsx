@@ -122,9 +122,9 @@ export function ParticipantConversation({
           className="ml-auto max-w-[85%] rounded-2xl bg-slate-100 px-4 py-3 text-slate-800"
         >
           <div className="flex items-center gap-1.5 py-0.5">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]"></span>
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]"></span>
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500 [animation-delay:-0.3s]"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500 [animation-delay:-0.15s]"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500"></span>
           </div>
         </article>
       )}

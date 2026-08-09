@@ -16,7 +16,9 @@ import {
   Sparkles,
   UserRound,
   ReceiptText,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { cairoCurrentDate } from '@/lib/cairo-time';
 import {
   AdminDataTable,
   AdminColumn,
@@ -62,12 +64,12 @@ export default function TeacherFinancePageClient() {
   const [txTotalCount, setTxTotalCount] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    return new Date(`${cairoCurrentDate().slice(0, 7)}-01T12:00:00`);
   });
   const [calendarDays, setCalendarDays] = useState<TeacherFinanceDayDto[]>([]);
   const [calendarLoading, setCalendarLoading] = useState<boolean>(false);
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<TeacherFinanceDayDto | null>(null);
+  const [exportingCalendarDay, setExportingCalendarDay] = useState(false);
 
   // Payout requests ledger states
   const [payouts, setPayouts] = useState<TeacherPayoutDto[]>([]);
@@ -208,11 +210,33 @@ export default function TeacherFinancePageClient() {
   };
 
   const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleDateString('ar-EG-u-nu-latn', {
+    return new Date(isoString).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const handleExportCalendarDay = async () => {
+    if (!selectedCalendarDay || exportingCalendarDay) return;
+    setExportingCalendarDay(true);
+    try {
+      const date = selectedCalendarDay.date.slice(0, 10);
+      const blob = await financeService.exportTeacherFinanceDay(date);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `مدفوعات-${date}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('تم تحميل ملف Excel بنجاح');
+    } catch {
+      toast.error('تعذر تحميل ملف Excel');
+    } finally {
+      setExportingCalendarDay(false);
+    }
   };
 
   const calendarRowsByDate = new Map(
@@ -420,7 +444,7 @@ export default function TeacherFinancePageClient() {
               <ChevronRight className="h-4 w-4" />
             </button>
             <span className="min-w-36 text-center text-sm font-black text-[var(--admin-text)]">
-              {calendarMonth.toLocaleDateString('ar-EG-u-nu-latn', { month: 'long', year: 'numeric' })}
+              {calendarMonth.toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' })}
             </span>
             <button
               type="button"
@@ -477,12 +501,12 @@ export default function TeacherFinancePageClient() {
                   <span className={`mt-2 block text-xs ${isSelected ? 'text-white/70' : 'text-[var(--admin-muted)]'}`}>0</span>
                 )}
                 {row?.transactionCount ? (
-                  <span className={`mt-1 block text-[10px] font-bold ${isSelected ? 'text-white/80' : 'text-[var(--admin-muted)]'}`}>
+                  <span className={`mt-1 block text-sm font-bold ${isSelected ? 'text-white/80' : 'text-[var(--admin-muted)]'}`}>
                     {row.transactionCount.toLocaleString('en-US')} عملية
                   </span>
                 ) : null}
                 {row?.pendingReviewCount ? (
-                  <span className={`mt-1 block text-[10px] font-bold ${isSelected ? 'text-white' : 'text-amber-600'}`}>
+                  <span className={`mt-1 block text-sm font-bold ${isSelected ? 'text-white' : 'text-amber-600'}`}>
                     {row.pendingReviewCount.toLocaleString('en-US')} مراجعة
                   </span>
                 ) : null}
@@ -639,6 +663,17 @@ export default function TeacherFinancePageClient() {
       >
         {selectedCalendarDay && (
           <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => void handleExportCalendarDay()}
+                disabled={exportingCalendarDay || selectedCalendarDay.transactions.length === 0}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-[var(--admin-primary-contrast)] transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+                {exportingCalendarDay ? 'جاري تجهيز الملف...' : 'تحميل Excel'}
+              </button>
+            </div>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
                 <p className="text-xs font-bold text-[var(--admin-muted)]">إجمالي المدفوع</p>

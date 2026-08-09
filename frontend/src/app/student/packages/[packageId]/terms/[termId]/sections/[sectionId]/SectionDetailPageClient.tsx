@@ -134,7 +134,7 @@ export default function SectionDetailPageClient() {
     return (
       <div className="space-y-6 animate-pulse pb-10">
         <div className="h-9 w-48 rounded-full bg-[var(--admin-card-strong)]" />
-        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)]" />
+        <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)]" />
         <div className="h-6 w-2/3 rounded-xl bg-[var(--admin-card-strong)]" />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
@@ -160,7 +160,7 @@ export default function SectionDetailPageClient() {
         <button
           type="button"
           onClick={() => router.push(`/student/packages/${packageId}/terms/${termId}`)}
-          className="group inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] shadow-sm transition-all hover:bg-[var(--admin-card-strong)] hover:shadow-md"
+          className="group inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-card-strong)] hover:shadow-md"
         >
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           العودة إلى الترم
@@ -170,7 +170,7 @@ export default function SectionDetailPageClient() {
       {/* ── Hero banner ── */}
       <motion.div variants={fadeUp}>
         <div
-          className="relative aspect-video w-full overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-800 to-teal-700 shadow-xl sm:rounded-2xl"
+          className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-teal-700 shadow-xl sm:rounded-2xl"
           style={{ viewTransitionName: `section-image-${sectionId}` }}
         >
           {section?.imageUrl && (
@@ -214,7 +214,7 @@ export default function SectionDetailPageClient() {
       {error && (
         <motion.div
           variants={fadeUp}
-          className="flex flex-col items-center gap-4 rounded-[2rem] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
+          className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-card)] text-[var(--admin-danger)]">
             <TriangleAlert className="h-7 w-7" />
@@ -244,7 +244,7 @@ export default function SectionDetailPageClient() {
             </div>
 
             {lessons.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
                 <BookOpen className="mb-4 h-10 w-10 text-[var(--admin-muted)] opacity-40" />
                 <p className="font-bold text-[var(--admin-muted)]">لا توجد حصص في هذا القسم بعد.</p>
               </div>
@@ -278,7 +278,7 @@ export default function SectionDetailPageClient() {
                           setPurchaseLesson(lesson);
                         }
                       }}
-                      className={`group relative flex w-full flex-col gap-4 rounded-2xl border p-4 text-right transition-all cursor-pointer sm:p-5 ${
+                      className={`group relative flex w-full flex-col gap-4 rounded-2xl border p-4 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer sm:p-5 ${
                         canAccess
                           ? "border-[var(--admin-border)] bg-[var(--admin-card)] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)]"
                           : lesson.isLocked && hasContentAccess
@@ -413,7 +413,7 @@ export default function SectionDetailPageClient() {
                                     <span className="block truncate text-xs font-black text-current">{video.title}</span>
                                     <span className="mt-1 flex items-center gap-1.5">
                                       {video.videoTypeName && (
-                                        <span className={`max-w-[88px] truncate rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                        <span className={`max-w-[88px] truncate rounded-full px-2 py-0.5 text-sm font-black ${
                                           isVideoOpen
                                             ? "bg-white/70 text-emerald-900"
                                             : "bg-[var(--admin-card-soft)] text-[var(--admin-muted)]"
@@ -421,7 +421,7 @@ export default function SectionDetailPageClient() {
                                           {video.videoTypeName}
                                         </span>
                                       )}
-                                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                      <span className={`rounded-full px-2 py-0.5 text-sm font-black ${
                                         isVideoOpen
                                           ? "bg-emerald-700 text-white"
                                           : "bg-[var(--admin-card-strong)] text-[var(--admin-muted)]"
@@ -472,7 +472,7 @@ export default function SectionDetailPageClient() {
                   <button
                     type="button"
                     onClick={() => setIsPurchaseModalOpen(true)}
-                    className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                    className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                   >
                     <Sparkles className="h-4 w-4" />
                     {displayPrice > 0

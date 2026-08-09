@@ -3106,6 +3106,8 @@ public class AppDbContext : DbContext, IAppDbContext
                 .IsUnique()
                 .HasFilter("\"TransferReference\" IS NOT NULL");
         });
+
+        UtcDateTimeModelConvention.Apply(modelBuilder);
     }
 
     private static void ConfigureHrLookup<TEntity>(ModelBuilder modelBuilder, string tableName)

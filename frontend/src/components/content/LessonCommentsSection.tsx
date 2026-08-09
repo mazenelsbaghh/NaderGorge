@@ -18,7 +18,7 @@ type LessonCommentsSectionProps = {
 };
 
 const formatCommentDate = (value: string) =>
-  new Intl.DateTimeFormat('ar-EG', {
+  new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo',
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -139,13 +139,13 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 sm:p-6">
+      <form onSubmit={handleSubmit} className="mt-8 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 sm:p-6">
         <label htmlFor="lesson-comment-body" className="mb-3 block text-sm font-bold text-[var(--admin-text)]">
           أضف تعليقًا جديدًا
         </label>
         <textarea
           id="lesson-comment-body"
-          className="admin-input min-h-[140px] w-full resize-y rounded-[24px] bg-[var(--admin-card)] px-5 py-4 text-base"
+          className="admin-input min-h-[140px] w-full resize-y rounded-2xl bg-[var(--admin-card)] px-5 py-4 text-base"
           placeholder="اكتب تعليقك أو سؤالك بوضوح..."
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -158,7 +158,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[20px] border border-[var(--admin-primary)] bg-[var(--admin-primary)] px-6 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary)]/20 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[20px] border border-[var(--admin-primary)] bg-[var(--admin-primary)] px-6 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary)]/20 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
             {submitting ? 'جارٍ الإرسال...' : 'إرسال التعليق'}
@@ -167,7 +167,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
       </form>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 sm:p-6">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-[var(--admin-text)]">التعليقات الظاهرة للجميع</h3>
@@ -182,11 +182,11 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
 
           {loading ? (
             <div className="space-y-3">
-              <div className="h-24 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
-              <div className="h-24 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
+              <div className="h-24 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
+              <div className="h-24 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
             </div>
           ) : approvedComments.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-10 text-center">
+            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-10 text-center">
               <p className="text-base font-bold text-[var(--admin-text)]">لا توجد تعليقات معتمدة حتى الآن.</p>
               <p className="mt-2 text-sm font-medium text-[var(--admin-muted)]">
                 يمكنك أن تكون أول من يبدأ النقاش حول هذا الدرس.
@@ -197,7 +197,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
               {approvedComments.map((comment) => (
                 <article
                   key={comment.id}
-                  className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4"
+                  className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -226,7 +226,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
           )}
         </div>
 
-        <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 sm:p-6">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <Clock3 className="h-5 w-5 text-[var(--admin-primary)]" />
             <div>
@@ -239,11 +239,11 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
 
           {loading ? (
             <div className="space-y-3">
-              <div className="h-20 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
-              <div className="h-20 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
+              <div className="h-20 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
+              <div className="h-20 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
             </div>
           ) : myComments.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-10 text-center">
+            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-10 text-center">
               <p className="text-base font-bold text-[var(--admin-text)]">لم ترسل أي تعليقات بعد.</p>
               <p className="mt-2 text-sm font-medium text-[var(--admin-muted)]">
                 بعد الإرسال ستظهر هنا حالة كل تعليق.
@@ -254,7 +254,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
               {myComments.map((comment) => (
                 <article
                   key={comment.id}
-                  className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4"
+                  className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">

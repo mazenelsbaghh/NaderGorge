@@ -137,7 +137,7 @@ export function CommunityPostLikeButton({
               type="button"
               onClick={() => handleReactionSelect(id)}
               disabled={loading}
-              className={`group flex min-w-[72px] flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-bold transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`group flex min-w-[72px] flex-col items-center gap-1 rounded-lg px-2 py-2 text-sm font-bold transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${
                 isSelected ? activeClass : 'text-[var(--admin-muted)]'
               }`}
               title={label}

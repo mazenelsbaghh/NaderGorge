@@ -8,14 +8,13 @@ import {
   Award,
   RefreshCw
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { mediaService, MediaKpisDto } from '@/services/media-service';
-import NeumorphButton from '@/components/ui/neumorph-button';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export default function MediaKpiDashboard() {
   const [kpis, setKpis] = useState<MediaKpisDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKpis();
@@ -25,11 +24,12 @@ export default function MediaKpiDashboard() {
 
   const fetchKpis = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await mediaService.getMediaKpis();
       setKpis(data);
     } catch {
-      toast.error('حدث خطأ أثناء تحميل مؤشرات الأداء');
+      setError('لم نتمكن من تحميل مؤشرات الأداء. تحقق من اتصالك ثم أعد المحاولة؛ لن تتأثر أي بيانات محفوظة.');
     } finally {
       setLoading(false);
     }
@@ -45,83 +45,82 @@ export default function MediaKpiDashboard() {
           <h2 className="text-xl font-bold text-[var(--admin-text)]">لوحة مؤشرات الأداء والتقارير</h2>
           <p className="text-sm text-[var(--admin-muted)] mt-1">رصد جودة وسرعة عمليات المونتاج والإنتاج، وتتبع تقييم المحررين.</p>
         </div>
-        <NeumorphButton intent="ghost" size="sm" onClick={fetchKpis} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ml-1.5 ${loading ? 'animate-spin' : ''}`} />
+        <button type="button" className="admin-btn-ghost min-h-11 px-4" onClick={fetchKpis} disabled={loading}>
+          <RefreshCw className={`ms-1.5 h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           تحديث المؤشرات
-        </NeumorphButton>
+        </button>
       </div>
 
+      {error && (
+        <div role="alert" className="mb-6 flex flex-col gap-3 rounded-xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-bold leading-6 text-[var(--admin-text)]">{error}</p>
+          <button type="button" className="admin-btn-ghost min-h-11 shrink-0 px-4" onClick={fetchKpis}>إعادة المحاولة</button>
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-pulse">
+        <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3" aria-busy="true" aria-label="جارٍ تحميل المؤشرات">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-32 rounded-3xl bg-[var(--admin-card-soft)] border border-[var(--admin-border)]" />
+            <div key={n} className="h-24 animate-pulse rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]" />
           ))}
         </div>
       ) : (
         <>
           {/* Metrics Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <dl className="mb-8 grid grid-cols-1 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] md:grid-cols-3">
             {/* Total Published */}
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-md backdrop-blur-md relative overflow-hidden group hover:border-[var(--admin-primary-30)] transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-[var(--admin-muted)]">إجمالي الفيديوهات المنشورة</span>
-                <span className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
-                  <Video className="h-5 w-5" />
+            <div className="border-b border-[var(--admin-border)] p-5 md:border-b-0 md:border-s">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="rounded-xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
+                  <Video className="h-5 w-5" aria-hidden="true" />
                 </span>
+                <dt className="text-sm font-bold text-[var(--admin-muted)]">إجمالي الفيديوهات المنشورة</dt>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-[var(--admin-text)]">{kpis?.totalPublished || 0}</span>
+              <dd className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-[var(--admin-text)]">{kpis?.totalPublished ?? 0}</span>
                 <span className="text-xs text-[var(--admin-muted)]">فيديو مكتمل ونشط</span>
-              </div>
-              <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
-                <Video className="h-32 w-32 text-indigo-500" />
-              </div>
+              </dd>
             </div>
 
             {/* Average Editing Time */}
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-md backdrop-blur-md relative overflow-hidden group hover:border-[var(--admin-primary-30)] transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-[var(--admin-muted)]">متوسط وقت المونتاج والإنتاج</span>
-                <span className="p-3 rounded-2xl bg-amber-500/10 text-amber-500">
-                  <Clock className="h-5 w-5" />
+            <div className="border-b border-[var(--admin-border)] p-5 md:border-b-0 md:border-s">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="rounded-xl bg-[var(--admin-warning-10)] p-2.5 text-[var(--admin-warning)]">
+                  <Clock className="h-5 w-5" aria-hidden="true" />
                 </span>
+                <dt className="text-sm font-bold text-[var(--admin-muted)]">متوسط وقت المونتاج والإنتاج</dt>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-[var(--admin-text)]">{kpis?.averageEditingDays || 0}</span>
+              <dd className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-[var(--admin-text)]">{kpis?.averageEditingDays ?? 0}</span>
                 <span className="text-xs text-[var(--admin-muted)]">أيام للفيديو الواحد</span>
-              </div>
-              <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
-                <Clock className="h-32 w-32 text-amber-500" />
-              </div>
+              </dd>
             </div>
 
             {/* Total Editing Errors */}
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-md backdrop-blur-md relative overflow-hidden group hover:border-[var(--admin-primary-30)] transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-bold text-[var(--admin-muted)]">إجمالي أخطاء المونتاج المرصودة</span>
-                <span className="p-3 rounded-2xl bg-rose-500/10 text-rose-500">
-                  <AlertTriangle className="h-5 w-5" />
+            <div className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="rounded-xl bg-[var(--admin-danger-10)] p-2.5 text-[var(--admin-danger)]">
+                  <AlertTriangle className="h-5 w-5" aria-hidden="true" />
                 </span>
+                <dt className="text-sm font-bold text-[var(--admin-muted)]">إجمالي أخطاء المونتاج المرصودة</dt>
               </div>
-              <div className="flex items-baseline gap-2">
+              <dd className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-[var(--admin-text)]">{totalErrors}</span>
                 <span className="text-xs text-[var(--admin-muted)]">ملاحظة خطأ تعديل</span>
-              </div>
-              <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
-                <AlertTriangle className="h-32 w-32 text-rose-500" />
-              </div>
+              </dd>
             </div>
-          </div>
+          </dl>
 
           {/* Leaderboard Table Panel */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-lg">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-6">
               <Award className="h-5 w-5 text-[var(--admin-primary)]" />
               <h3 className="text-lg font-bold text-[var(--admin-text)]">ترتيب وتقييم أداء المحررين</h3>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="horizontal-scroll-region overflow-x-auto" tabIndex={0} role="region" aria-label="جدول ترتيب المحررين؛ يمكن تمريره أفقياً">
               <table className="w-full text-right border-collapse">
+                <caption className="sr-only">ترتيب المحررين حسب الإنتاج والأخطاء ومتوسط الجودة</caption>
                 <thead>
                   <tr className="border-b border-[var(--admin-border)] text-xs text-[var(--admin-muted)] font-bold">
                     <th className="pb-3 pr-4">اسم محرر المونتاج</th>
@@ -171,7 +170,7 @@ export default function MediaKpiDashboard() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="py-6 text-center text-xs text-[var(--admin-muted)]">
-                        لا توجد بيانات متاحة للمحررين في الوقت الحالي.
+                        لا توجد بيانات بعد. ستظهر المؤشرات عند إسناد أول مادة لمحرر وتسجيل نتيجة الإنتاج.
                       </td>
                     </tr>
                   )}

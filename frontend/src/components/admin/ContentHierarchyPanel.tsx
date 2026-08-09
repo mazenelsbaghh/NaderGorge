@@ -393,7 +393,7 @@ export function ContentHierarchyPanel({
           const Row = (
             <div
               key={item.id}
-              className={`group flex items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3.5 shadow-sm transition-all ${
+              className={`group flex items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3.5 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 item.href
                   ? 'cursor-pointer hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] hover:bg-[var(--admin-card)]'
                   : ''
@@ -490,7 +490,7 @@ export function ContentHierarchyPanel({
                     startEditing(item);
                   }}
                   disabled={isDeleting}
-                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 transition-all hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] group-hover:opacity-100 disabled:opacity-40"
+                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] group-hover:opacity-100 disabled:opacity-40"
                   title="تعديل"
                   aria-label={`تعديل ${item.title}`}
                 >
@@ -503,7 +503,7 @@ export function ContentHierarchyPanel({
                   type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!isDeleting) setConfirmTarget(item); }}
                   disabled={isDeleting}
-                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
                   title="حذف"
                 >
                   <Trash2 className="h-4 w-4" />

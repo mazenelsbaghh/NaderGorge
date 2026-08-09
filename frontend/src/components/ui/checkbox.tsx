@@ -133,7 +133,7 @@ const CheckboxControl = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
       ref={ref}
       aria-hidden="true"
       className={cn(
-        "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all duration-300 ease-out overflow-hidden",
+        "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-out overflow-hidden",
         isSelected || isIndeterminate
           ? "border-[var(--admin-primary)] bg-[var(--admin-primary)] shadow-[0_4px_12px_var(--admin-primary-15)] scale-100"
           : "border-[var(--admin-border)] bg-[var(--admin-card)] group-hover:border-[var(--admin-primary)]/60 scale-95 group-hover:scale-100",
@@ -163,7 +163,7 @@ const CheckboxIndicator = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "flex h-full w-full items-center justify-center text-white transition-all duration-300 ease-out",
+        "flex h-full w-full items-center justify-center text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-out",
         isSelected || isIndeterminate ? "opacity-100 scale-100" : "opacity-0 scale-50",
         className
       )}

@@ -178,7 +178,7 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
         </div>
       )}
 
-      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-4 shadow-sm">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-4 shadow-sm">
         <label htmlFor={inputId} className="mb-3 flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
           <KeyRound className="h-4 w-4 text-[var(--admin-primary)]" />
           كود التفعيل
@@ -192,7 +192,7 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
             placeholder="مثال: MASSAR-2026"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-3.5 text-sm font-mono tracking-[0.28em] text-[var(--admin-text)] placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(100,116,139,0.14)] transition-all"
+            className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-3.5 text-sm font-mono tracking-[0.28em] text-[var(--admin-text)] placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(100,116,139,0.14)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
             dir="ltr"
             autoCapitalize="characters"
             autoCorrect="off"
@@ -202,7 +202,7 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
           <button
             type="submit"
             disabled={loading || code.length < 6}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_12px_24px_rgba(145,95,42,0.24)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "جارٍ التحقق..." : "تفعيل الكود"}
             <ArrowUpLeft className="h-4 w-4" />

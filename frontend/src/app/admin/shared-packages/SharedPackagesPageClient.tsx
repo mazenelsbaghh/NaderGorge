@@ -463,7 +463,7 @@ export default function SharedPackagesPageClient() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-6 text-center text-white">
                     <span className="mb-2 text-sm font-bold">جاري رفع وتحويل الصورة... {imageProgress}%</span>
                     <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-white/20">
-                      <div className="h-full rounded-full bg-[var(--admin-primary)] transition-all" style={{ width: `${imageProgress}%` }} />
+                      <div className="h-full rounded-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]" style={{ width: `${imageProgress}%` }} />
                     </div>
                   </div>
                 )}
@@ -688,7 +688,7 @@ export default function SharedPackagesPageClient() {
                     {item.academicScopes?.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {item.academicScopes.map((scope, index) => (
-                          <span key={`${item.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-[11px] font-black text-[var(--admin-primary)]">
+                          <span key={`${item.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-sm font-black text-[var(--admin-primary)]">
                             {getAcademicScopeLabel(scope)}
                           </span>
                         ))}

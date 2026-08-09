@@ -7,8 +7,10 @@ using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
+using NaderGorge.Application.Features.Admin.Content.Queries;
 using NaderGorge.Application.Features.Admin.Sales;
 using NaderGorge.Application.Features.Community.Commands;
+using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -123,6 +125,46 @@ public class TeacherController : ControllerBase
         var result = await _mediator.Send(new GetTeacherDashboardStatsQuery(context.TeacherUserId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("content/summary")]
+    public async Task<IActionResult> GetContentSummary([FromQuery] DateTime? fromUtc, [FromQuery] DateTime? toUtc)
+    {
+        var context = await ResolveTeacherContextAsync();
+        if (MissingPermission(context, TeacherStaffPermissions.Content)) return Forbid();
+        var result = await _mediator.Send(new GetContentSummaryQuery(context.TeacherUserId, fromUtc, toUtc));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("content/{contentType}/{contentId:guid}/subscribers")]
+    public async Task<IActionResult> GetContentSubscribers(string contentType, Guid contentId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Content)) return Forbid();
+        if (!await OwnsContentAsync(context.TeacherId, contentType, contentId, ct)) return NotFound();
+
+        return Ok(await _mediator.Send(new GetContentSubscribersQuery(contentType, contentId, page, pageSize, search), ct));
+    }
+
+    [HttpGet("content/{contentType}/{contentId:guid}/subscribers/export")]
+    public async Task<IActionResult> ExportContentSubscribers(string contentType, Guid contentId, [FromQuery] string? search = null, CancellationToken ct = default)
+    {
+        var context = await ResolveTeacherContextAsync(ct);
+        if (MissingPermission(context, TeacherStaffPermissions.Content)) return Forbid();
+        if (!await OwnsContentAsync(context.TeacherId, contentType, contentId, ct)) return NotFound();
+
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery(contentType, contentId, search), ct);
+        return File(bytes, "text/csv", $"subscribers_{contentType}_{contentId:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
+    private Task<bool> OwnsContentAsync(Guid teacherId, string contentType, Guid contentId, CancellationToken ct) =>
+        contentType.ToLowerInvariant() switch
+        {
+            "package" => _db.Packages.AnyAsync(package => package.Id == contentId && package.TeacherId == teacherId, ct),
+            "term" => _db.Terms.AnyAsync(term => term.Id == contentId && term.Package.TeacherId == teacherId, ct),
+            "section" => _db.ContentSections.AnyAsync(section => section.Id == contentId && section.Term.Package.TeacherId == teacherId, ct),
+            "lesson" => _db.Lessons.AnyAsync(lesson => lesson.Id == contentId && lesson.ContentSection.Term.Package.TeacherId == teacherId, ct),
+            _ => Task.FromResult(false)
+        };
 
     [HttpGet("students")]
     public async Task<IActionResult> GetStudents()

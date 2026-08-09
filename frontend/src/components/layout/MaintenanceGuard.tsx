@@ -40,7 +40,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div dir="rtl" className="flex min-h-dvh items-center justify-center bg-[var(--admin-bg)] px-6 text-[var(--admin-text)]">
-        <div className="relative overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-[0_18px_48px_var(--admin-shadow)]">
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-sm">
           <div className="w-6 h-6 border-2 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
           <p className="text-sm font-bold text-[var(--admin-muted)]">جاري التحقق من حالة المنصة...</p>
         </div>
@@ -52,8 +52,8 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     return (
       <div dir="rtl" className="flex min-h-dvh flex-col items-center justify-center bg-[#050e1a] px-6 text-slate-100 font-[family-name:var(--font-tajawal)] overflow-hidden relative">
         {/* Modern ambient branding glow elements */}
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#0E8F8F]/15 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#D4A017]/10 blur-[120px] pointer-events-none" />
+        <div className="absolute top-[-10%] end-[-10%] w-[50%] h-[50%] rounded-full bg-[#0E8F8F]/15 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-10%] start-[-10%] w-[50%] h-[50%] rounded-full bg-[#D4A017]/10 blur-3xl pointer-events-none" />
         
         {/* Brand Logo Header */}
         <div className="relative mb-8 text-center animate-fade-in">

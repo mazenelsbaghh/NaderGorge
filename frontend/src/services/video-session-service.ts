@@ -14,6 +14,7 @@ export interface VideoSession {
   watchInfo: WatchInfo;
   videoTitle: string;
   thresholdPercentage: number;
+  isPreview: boolean;
 }
 
 export interface TrackProgressRequest {

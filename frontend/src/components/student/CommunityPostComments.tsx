@@ -18,7 +18,7 @@ type CommunityPostCommentsProps = {
 };
 
 const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
 export function CommunityPostComments({ postId, commentCount }: CommunityPostCommentsProps) {
   const [comments, setComments] = useState<CommunityPostCommentDto[]>([]);
@@ -87,7 +87,7 @@ export function CommunityPostComments({ postId, commentCount }: CommunityPostCom
           <div
             className={
               comment.isPinned
-                ? 'bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-3 py-2 max-w-[85%] relative shadow-sm transition-all duration-300 hover:shadow-md'
+                ? 'bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-3 py-2 max-w-[85%] relative shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 hover:shadow-md'
                 : 'bg-[#f0f2f5] dark:bg-[var(--admin-card-soft)] rounded-2xl px-3 py-2 max-w-[85%]'
             }
           >
@@ -97,14 +97,14 @@ export function CommunityPostComments({ postId, commentCount }: CommunityPostCom
                 <span>تعليق مثبت</span>
               </div>
             )}
-            <span className="font-bold text-[13px] text-gray-900 dark:text-[var(--admin-text)] hover:underline cursor-pointer block leading-tight mb-0.5">
+            <span className="font-bold text-sm text-gray-900 dark:text-[var(--admin-text)] hover:underline cursor-pointer block leading-tight mb-0.5">
               {comment.authorName}
             </span>
             <p className="text-[14px] text-gray-900 dark:text-gray-200 leading-snug whitespace-pre-wrap">
               {comment.body}
             </p>
           </div>
-          <div className="flex items-center gap-3 px-3 mt-1 text-[12px] font-bold text-gray-500 hover:text-gray-700 dark:text-[var(--admin-muted)] transition-colors">
+          <div className="flex items-center gap-3 px-3 mt-1 text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-[var(--admin-muted)] transition-colors">
             <span className="cursor-pointer hover:underline">أعجبني</span>
             <button
               type="button"

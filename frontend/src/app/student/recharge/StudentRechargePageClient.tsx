@@ -450,8 +450,8 @@ export default function StudentRechargePageClient() {
     <div className="space-y-8 pb-10">
 
       {/* Hero Section */}
-      <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all sm:p-8">
-        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[48px] transition-all duration-700 pointer-events-none" />
+      <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] sm:p-8">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-3xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-700 pointer-events-none" />
         <div className="relative z-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-3">
             <Link
@@ -541,7 +541,7 @@ export default function StudentRechargePageClient() {
                     key={val}
                     type="button"
                     onClick={() => setAmount(val)}
-                    className={`rounded-xl border py-2.5 font-mono text-sm font-bold transition-all ${
+                    className={`rounded-xl border py-2.5 font-mono text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                       amount === val
                         ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]'
                         : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
@@ -551,7 +551,7 @@ export default function StudentRechargePageClient() {
                   </button>
                   ))}
               </div>
-              <p className="text-[11px] font-semibold text-[var(--admin-muted)]">
+              <p className="text-sm font-semibold text-[var(--admin-muted)]">
                 الأزرار اختصارات فقط. يمكنك كتابة أي رقم في خانة المبلغ.
               </p>
               <div className="space-y-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
@@ -560,14 +560,14 @@ export default function StudentRechargePageClient() {
                   <option value="">اختر المدرس</option>
                   {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>)}
                 </select>
-                <p className="text-[11px] font-semibold text-[var(--admin-muted)]">سيُستخدم الرصيد لشراء محتوى هذا المدرس فقط.</p>
+                <p className="text-sm font-semibold text-[var(--admin-muted)]">سيُستخدم الرصيد لشراء محتوى هذا المدرس فقط.</p>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3.5 text-base font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3.5 text-base font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50"
             >
               {loading ? (
                 <span className="h-5 w-5 animate-spin border-2 border-white border-t-transparent rounded-full" />
@@ -591,7 +591,7 @@ export default function StudentRechargePageClient() {
                 <div className="font-black text-2xl font-mono tracking-wider text-amber-600 dark:text-amber-500">
                   {formatTimer(timeLeft)}
                 </div>
-                <div className="text-[11px] font-semibold text-[var(--admin-muted)] leading-relaxed">
+                <div className="text-sm font-semibold text-[var(--admin-muted)] leading-relaxed">
                   يتم حجز المحفظة مؤقتاً لتفادي تخطي حدود الاستقبال. كود المراجعة: <span className="font-mono font-black text-[var(--admin-text)]">{reviewCode}</span>
                 </div>
               </div>
@@ -612,7 +612,7 @@ export default function StudentRechargePageClient() {
                 <button
                   type="button"
                   onClick={() => handleCopyNumber(rechargeData.walletPhoneNumber)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] text-xs font-bold text-[var(--admin-muted)] hover:text-[var(--admin-primary)] transition-all"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] text-xs font-bold text-[var(--admin-muted)] hover:text-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                 >
                   <Copy className="h-3.5 w-3.5" />
                   <span>نسخ الرقم</span>
@@ -643,7 +643,7 @@ export default function StudentRechargePageClient() {
                   onChange={(e) => setSenderPhone(normalizePhoneInput(e.target.value))}
                   className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 font-mono text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
                 />
-                <span className="text-[11px] text-[var(--admin-muted)] font-semibold">
+                <span className="text-sm text-[var(--admin-muted)] font-semibold">
                   اكتب رقم المحفظة المحول منها كامل 11 رقم. الرقم الناقص لن تتم مطابقته.
                 </span>
               </div>
@@ -665,13 +665,13 @@ export default function StudentRechargePageClient() {
                         setScreenshot(null);
                         setScreenshotPreview(null);
                       }}
-                      className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg px-2.5 py-1 text-xs font-bold transition-all"
+                      className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg px-2.5 py-1 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                     >
                       إلغاء الصورة
                     </button>
                   </div>
                 ) : (
-                  <label className="border-2 border-dashed border-[var(--admin-border)] hover:border-[var(--admin-primary)] rounded-2xl p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)]">
+                  <label className="border-2 border-dashed border-[var(--admin-border)] hover:border-[var(--admin-primary)] rounded-2xl p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-[color,background-color,border-color,opacity,transform,box-shadow] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)]">
                     <Upload className="h-8 w-8 text-[var(--admin-muted)]" />
                     <span className="font-bold text-sm text-[var(--admin-text)]">اضغط لرفع لقطة الشاشة</span>
                     <span className="text-xs text-[var(--admin-muted)]">JPG أو PNG أو WEBP، بحد أقصى 10 ميجابايت</span>
@@ -693,14 +693,14 @@ export default function StudentRechargePageClient() {
                 type="button"
                 onClick={() => void cancelActiveRecharge()}
                 disabled={loading || cancelling}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-3 text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-all disabled:opacity-50"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-3 text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50"
               >
                 {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب والعودة'}
               </button>
               <button
                 type="submit"
                 disabled={loading || !canSubmitProof}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50"
               >
                 {loading ? (
                   <span className="h-5 w-5 animate-spin border-2 border-white border-t-transparent rounded-full" />
@@ -785,7 +785,7 @@ export default function StudentRechargePageClient() {
             <div className="pt-4 border-t border-[var(--admin-border)] flex flex-col gap-2">
               <Link
                 href="/student/balance"
-                className="w-full py-3 rounded-xl bg-[var(--admin-primary)] text-sm font-bold text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-95 transition-all block text-center"
+                className="w-full py-3 rounded-xl bg-[var(--admin-primary)] text-sm font-bold text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] block text-center"
               >
                 الذهاب للمحفظة لرؤية الرصيد
               </Link>
@@ -799,7 +799,7 @@ export default function StudentRechargePageClient() {
                   setReviewState('manual');
                   setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
                 }}
-                className="w-full py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-all"
+                className="w-full py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow]"
               >
                 شحن عملية جديدة
               </button>

@@ -77,9 +77,9 @@ export interface EssayAIResult {
   feedback: string;
 }
 
-const srtPrompt = `You are an expert Arabic transcription AI for an Egyptian educational platform.
+const srtPrompt = `You are an expert verbatim transcription AI for an educational platform.
 
-Listen to the attached audio file and produce a COMPLETE, verbatim Arabic transcription in standard SRT subtitle format.
+Listen to the attached audio file and produce a COMPLETE, verbatim transcription in standard SRT subtitle format.
 
 RULES:
 - Output ONLY the raw SRT content. No JSON. No markdown fences. No extra commentary.
@@ -87,10 +87,11 @@ RULES:
 - Each subtitle block must follow EXACTLY this format:
   [number]
   [HH:MM:SS,mmm --> HH:MM:SS,mmm]
-  [Arabic text]
+  [spoken text in its original language]
   [blank line]
 - Timestamps must be precise to the millisecond.
-- Text direction is Right-to-Left Arabic — preserve it exactly.
+- Preserve the language actually spoken in every subtitle cue. English speech MUST remain English and Arabic speech MUST remain Arabic. Never translate speech in either direction.
+- Preserve deliberate code-switching and technical terms exactly as spoken. Use the appropriate writing direction for each language.
 - Do NOT add any text before block 1 or after the last block.`;
 
 const chaptersPrompt = `You are an expert educational content analyst for an Egyptian learning platform.
@@ -265,10 +266,19 @@ export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: s
   return { isCorrect: parsed.isCorrect, feedback: parsed.feedback };
 }
 
-function mindmapParts(chapter: { title: string; summaryText: string; order: number }, teacherPhotoPaths?: string[]) {
+export interface MindmapGenerationOptions {
+  visualStyles?: string[];
+  teacherStyles?: string[];
+}
+
+function mindmapParts(
+  chapter: { title: string; summaryText: string; order: number },
+  teacherPhotoPaths: string[],
+  options: MindmapGenerationOptions,
+) {
   const parts: Array<Record<string, unknown>> = [];
   let hasPhoto = false;
-  if (teacherPhotoPaths && teacherPhotoPaths.length > 0) {
+  if (teacherPhotoPaths.length > 0) {
     for (const photoPath of teacherPhotoPaths) {
       if (photoPath && fs.existsSync(photoPath)) {
         const mimeType = photoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
@@ -277,11 +287,15 @@ function mindmapParts(chapter: { title: string; summaryText: string; order: numb
       }
     }
   }
-  parts.push({ text: mindmapPrompt(chapter, hasPhoto) });
+  parts.push({ text: mindmapPrompt(chapter, hasPhoto, options) });
   return parts;
 }
 
-function mindmapPrompt(chapter: { title: string; summaryText: string; order: number }, hasPhoto: boolean) {
+function mindmapPrompt(
+  chapter: { title: string; summaryText: string; order: number },
+  hasPhoto: boolean,
+  options: MindmapGenerationOptions,
+) {
   const visualDirections = [
     'a clean editorial infographic with layered paper-cut depth and crisp diagrammatic hierarchy',
     'a cinematic 3D diorama that turns the lesson concept into a meaningful scene',
@@ -289,7 +303,17 @@ function mindmapPrompt(chapter: { title: string; summaryText: string; order: num
     'a premium museum-exhibit composition with symbolic artifacts arranged around the concept',
     'a modern motion-design poster with rich spatial depth, purposeful icons, and a clear learning path',
   ];
-  const visualDirection = visualDirections[(Math.max(chapter.order, 1) - 1) % visualDirections.length];
+  const teacherDirections = ['photorealistic', 'cartoon', '3D character', 'digital illustration'];
+  const selectedVisualStyles = options.visualStyles?.includes('random')
+    ? visualDirections[Math.floor(Math.random() * visualDirections.length)]
+    : options.visualStyles?.length
+      ? options.visualStyles.join(', ')
+    : visualDirections[(Math.max(chapter.order, 1) - 1) % visualDirections.length];
+  const selectedTeacherStyles = options.teacherStyles?.includes('random')
+    ? teacherDirections[Math.floor(Math.random() * teacherDirections.length)]
+    : options.teacherStyles?.length
+      ? options.teacherStyles.join(', ')
+    : 'photorealistic';
 
   return `Create one premium educational visual mind map about "${chapter.title}".
 Format: strictly 16:9 wide landscape. Never create a portrait or square composition.
@@ -297,12 +321,12 @@ Lesson context: ${chapter.summaryText}
 
 LANGUAGE RULE (non-negotiable): Detect the language used in the lesson context. Every visible word in the image—the central title and all labels—MUST use that same language and script. Do not translate it. Do not force Arabic into an English lesson or English into an Arabic lesson. Use only the exact central title "${chapter.title}" and at most 3 short labels, each copied or faithfully condensed from the lesson context.
 
-ART DIRECTION: Use ${visualDirection}. Make the background, objects, symbols, color palette, and visual metaphors specific to the chapter's actual topic, period, subject, examples, and learning goal. Avoid generic classroom scenery, repeated neon branches, stock floating icons, or a one-size-fits-all "AI mind map" look. The illustration must communicate the lesson even before its labels are read.
+ART DIRECTION: Combine these selected visual treatments into one coherent composition: ${selectedVisualStyles}. Make the background, objects, symbols, color palette, and visual metaphors specific to the chapter's actual topic, period, subject, examples, and learning goal. Avoid generic classroom scenery, repeated neon branches, stock floating icons, or a one-size-fits-all "AI mind map" look. The illustration must communicate the lesson even before its labels are read.
 
 INFORMATION DESIGN: Put the central idea prominently in the center or strongest focal point. Connect 3-5 distinct concepts with a readable hierarchy and generous spacing. Use relevant objects, diagrams, timelines, processes, maps, formulas, or historical/scientific symbols when the context calls for them. Keep all text large, minimal, high-contrast, and fully inside safe margins; no tiny paragraphs and no illegible pseudo-text.
 
 ${hasPhoto
-    ? 'TEACHER REFERENCE: The supplied images are identity references for the teacher. If the teacher appears, preserve their actual facial identity precisely: face shape, eye shape and spacing, eyebrows, nose, lips, skin tone, hairline, hairstyle, facial hair, glasses, and distinguishing marks. Do not turn the teacher into a generic person, celebrity, caricature, or a different ethnicity. Keep the likeness realistic and recognizable, with natural proportions. The teacher should support the explanation, not block the map.'
+    ? `TEACHER IDENTITY LOCK (highest priority): ALL supplied photos show the same teacher and MUST be considered together as identity references. Show that exact teacher, not an approximation. Preserve facial geometry, face shape, eye shape and spacing, eyebrows, nose, lips, ears, skin tone, hairline, hairstyle, facial hair, glasses, age, body proportions, and every distinguishing mark. Never beautify, age, de-age, slim, widen, replace, merge, or reinterpret the face. Never create a generic person, celebrity, caricature, or different ethnicity. The ONLY allowed changes are clothing, pose, background, lighting, and the explicitly selected rendering treatment. Selected teacher rendering treatments: ${selectedTeacherStyles}. Even for cartoon, 3D, or illustration treatments, identity and recognizable facial features must remain exact. The teacher should support the explanation without blocking the map.`
     : 'TEACHER: Do not add a generic teacher, portrait, or face when no teacher reference image is supplied. Focus entirely on lesson-specific visual concepts.'}
 
 TYPOGRAPHY: Match the detected language. For Arabic, preserve right-to-left direction, connected letters, and correct spelling. For Latin-script languages, use correct left-to-right spelling and punctuation. Never mix scripts unless the source title itself does.
@@ -350,6 +374,7 @@ export async function generateChapterMindmap(
   chapter: { title: string; summaryText: string; order: number },
   lessonVideoId: string,
   teacherPhotoPathOrPaths?: string | string[],
+  options: MindmapGenerationOptions = {},
 ): Promise<string> {
   try {
     const runtime = createRuntime();
@@ -358,7 +383,7 @@ export async function generateChapterMindmap(
       : (teacherPhotoPathOrPaths || []);
     const request = {
       model: runtime.config.imageModel,
-      contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths) }],
+      contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths, options) }],
       config: { aspectRatio: '16:9' },
     } as any;
     const response = await executeGeminiRequest(() => runtime.developer.models.generateContent(request));

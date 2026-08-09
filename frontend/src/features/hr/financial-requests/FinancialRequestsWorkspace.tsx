@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Landmark, Loader2, Paperclip, Send } from 'lucide-react';
+import { AlertCircle, Landmark, Loader2, Paperclip, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   FinancialRequestDto,
@@ -29,13 +29,16 @@ export function FinancialRequestsWorkspace() {
   const [rows, setRows] = useState<FinancialRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       setRows(await hrPayrollService.myFinancialRequests());
     } catch {
+      setError('تعذر تحميل الطلبات المالية. لم يتم اعتبارها قائمة فارغة.');
       toast.error('تعذر تحميل الطلبات المالية');
     } finally {
       setLoading(false);
@@ -73,10 +76,14 @@ export function FinancialRequestsWorkspace() {
   if (loading) {
     return (
       <div className="hr-loading" role="status">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--admin-accent)]" />
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--admin-accent)] motion-reduce:animate-none" />
         <p className="mt-3">جارٍ تحميل طلباتك المالية…</p>
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="hr-empty" role="alert"><AlertCircle className="mx-auto mb-3 h-6 w-6 text-[var(--admin-danger)]" aria-hidden="true" /><p>{error}</p><button type="button" onClick={() => void load()} className="admin-btn-secondary mt-4 min-h-11">إعادة المحاولة</button></div>;
   }
 
   return (

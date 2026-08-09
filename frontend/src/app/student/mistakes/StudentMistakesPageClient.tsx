@@ -42,7 +42,7 @@ export default function StudentMistakesPageClient() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-[0_24px_60px_var(--admin-shadow)] sm:p-8">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-danger-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-danger)]">
@@ -57,7 +57,7 @@ export default function StudentMistakesPageClient() {
             </p>
           </div>
 
-          <dl className="grid gap-3 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 sm:grid-cols-3 lg:grid-cols-1">
+          <dl className="grid gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 sm:grid-cols-3 lg:grid-cols-1">
             <div>
               <dt className="text-xs font-black tracking-[0.16em] text-[var(--admin-muted)]">أخطاء الامتحانات</dt>
               <dd className="mt-2 text-2xl font-black text-[var(--admin-text)]">{mistakes.totalExamMistakes}</dd>
@@ -92,7 +92,7 @@ export default function StudentMistakesPageClient() {
           ) : (
             <div className="mt-6 space-y-5">
               {mistakes.examMistakes.map((group) => (
-                <article key={group.examId} className="rounded-[28px] bg-[var(--admin-card-soft)] p-5">
+                <article key={group.examId} className="rounded-2xl bg-[var(--admin-card-soft)] p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -178,7 +178,7 @@ export default function StudentMistakesPageClient() {
           ) : (
             <div className="mt-6 space-y-4">
               {mistakes.homeworkWeaknesses.map((item) => (
-                <article key={`${item.homeworkId}-${item.lessonId}`} className="rounded-[24px] bg-[var(--admin-card-soft)] p-4">
+                <article key={`${item.homeworkId}-${item.lessonId}`} className="rounded-2xl bg-[var(--admin-card-soft)] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="rounded-full bg-[var(--admin-warning-10)] px-3 py-1 text-xs font-black text-[var(--admin-warning)]">
                       {item.status === "Missed" ? "واجب فاتك" : "واجب معديتوش"}
@@ -225,7 +225,7 @@ function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-center ${compact ? "mt-6 px-4 py-10" : "mt-6 px-6 py-14"}`}>
+    <div className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-center ${compact ? "mt-6 px-4 py-10" : "mt-6 px-6 py-14"}`}>
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--admin-card)] text-[var(--admin-primary)]">
         {icon}
       </div>

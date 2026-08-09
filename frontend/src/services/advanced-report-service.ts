@@ -185,9 +185,9 @@ export const advancedReportService = {
     );
     return response.data;
   },
-  async exportStudentLedger(audience: ReportAudience, teacherId?: string) {
+  async exportStudentLedger(audience: ReportAudience, filters: { teacherId?: string; stage?: string; studyTrack?: string }) {
     const response = await apiClient.get<Blob>(`${endpoint(audience)}/student-ledger/export`, {
-      params: teacherId ? { teacherId } : undefined,
+      params: filters,
       responseType: 'blob',
     });
     return response.data;

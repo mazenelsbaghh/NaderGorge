@@ -262,7 +262,7 @@ export default function AdminWalletsPageClient() {
               )}
             </span>
             {w.lastSeenAt && (
-              <span className="text-[10px] text-[var(--admin-muted)]">
+              <span className="text-sm text-[var(--admin-muted)]">
                 نشط {formatRelativeDate(w.lastSeenAt)}
               </span>
             )}
@@ -284,7 +284,7 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
+                className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
                 style={{ width: `${Math.min(100, ratio)}%` }}
@@ -308,7 +308,7 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
+                className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
                 style={{ width: `${Math.min(100, ratio)}%` }}
@@ -368,7 +368,7 @@ export default function AdminWalletsPageClient() {
               disabled={actionLoading === w.id}
               onChange={() => handleToggleActive(w.id, w.isActive)}
             />
-            <div className="w-11 h-6 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--admin-primary-15)] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-[var(--admin-muted)] peer-checked:after:bg-[var(--admin-primary)] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--admin-primary-15)] peer-checked:border-[var(--admin-primary)] disabled:opacity-50"></div>
+            <div className="w-11 h-6 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--admin-primary-15)] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-[var(--admin-muted)] peer-checked:after:bg-[var(--admin-primary)] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-[color,background-color,border-color,opacity,transform,box-shadow] peer-checked:bg-[var(--admin-primary-15)] peer-checked:border-[var(--admin-primary)] disabled:opacity-50"></div>
           </label>
         </div>
       )
@@ -462,7 +462,7 @@ export default function AdminWalletsPageClient() {
         )}
 
         {/* Table/Content */}
-        <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
+        <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-sm">
           <h2 className="text-xl font-black text-[var(--admin-text)] mb-4">قائمة المحافظ المتصلة</h2>
 
           <AdminDataTable
@@ -552,12 +552,12 @@ export default function AdminWalletsPageClient() {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{option.label}</span>
-                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                    <span className="block text-sm font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
                   </span>
                 </label>
               ))}
             </div>
-            <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
+            <span className="text-sm text-[var(--admin-muted)] leading-relaxed">
               اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>
@@ -645,12 +645,12 @@ export default function AdminWalletsPageClient() {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{option.label}</span>
-                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                    <span className="block text-sm font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
                   </span>
                 </label>
               ))}
             </div>
-            <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
+            <span className="text-sm text-[var(--admin-muted)] leading-relaxed">
               اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>

@@ -48,7 +48,7 @@ const STATUS_COPY: Record<string, { label: string; className: string; Icon: type
 };
 
 function formatDate(date: string) {
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' }).format(new Date(`${date}T12:00:00`));
+  return new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }).format(new Date(`${date}T12:00:00`));
 }
 
 function getStatus(state: string) {

@@ -87,9 +87,9 @@ export const CrmCallLogModal: React.FC<CrmCallLogModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-      <div className="bg-[var(--admin-card)] border border-[var(--admin-border)] w-full max-w-4xl rounded-[2rem] shadow-[0_24px_70px_var(--admin-shadow)] overflow-hidden flex flex-col md:flex-row h-[80vh] max-h-[700px]" dir="rtl">
+      <div className="flex h-[min(700px,calc(100dvh-2rem))] min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm md:flex-row" dir="rtl">
         {/* Right side: Log Call Form */}
-        <div className="flex-1 p-6 border-l border-[var(--admin-border)] flex flex-col justify-between overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto border-l border-[var(--admin-border)] p-6 [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-black text-[var(--admin-text-strong)] flex items-center gap-2">

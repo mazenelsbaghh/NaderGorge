@@ -434,7 +434,7 @@ export function RegistrationForm() {
       case 0:
         return (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)] flex flex-col justify-between">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">بطاقة الطالب</p>
                 <div className="mt-4 flex items-center gap-3">
@@ -450,7 +450,7 @@ export function RegistrationForm() {
               </div>
             </div>
             <div className="grid gap-4">
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">المنطقة السكنية</p>
                 <p className="mt-2 text-xl font-black text-[var(--admin-text)]">{formData.district || 'اختر المنطقة السكنية'}</p>
               </div>
@@ -458,7 +458,7 @@ export function RegistrationForm() {
                 const info = computeBirthdayInfo(formData.dateOfBirth);
                 return (
                   <>
-                    <div className="rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                    <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-card-soft)]/90 p-5">
                       <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">سنك دلوقتي</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-primary)] flex flex-wrap gap-1 items-baseline">
                         {info.ageYears} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">سنة</span>
@@ -466,14 +466,14 @@ export function RegistrationForm() {
                         {info.ageDays > 0 && <> و {info.ageDays} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">يوم</span></>}
                       </p>
                     </div>
-                    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                       <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">عيد ميلادك 🎂</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-text)]">باقي {info.daysToNextBirthday} <span className="text-base font-bold text-[var(--admin-muted)]">يوم</span></p>
                     </div>
                   </>
                 );
               })() : (
-                <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                   <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">تاريخ الميلاد</p>
                   <p className="mt-2 text-xl font-black text-[var(--admin-muted)]/50">اختر تاريخ الميلاد</p>
                 </div>
@@ -484,17 +484,17 @@ export function RegistrationForm() {
       case 1:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جهة المتابعة</p>
               <h3 className="mt-4 text-2xl font-black text-[var(--admin-text)] tracking-wider">{formData.parentPhone || 'رقم هاتف ولي الأمر'}</h3>
               <p className="mt-2 text-sm text-[var(--admin-muted)] leading-7">هذا الرقم سيستخدم للتواصل والمتابعة عند الحاجة.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)]">الأب</p>
                 <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isFatherAlive ? 'على قيد الحياة' : 'متوفى'}</p>
               </div>
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)]">الأم</p>
                 <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isMotherAlive ? 'على قيد الحياة' : 'متوفاة'}</p>
               </div>
@@ -504,7 +504,7 @@ export function RegistrationForm() {
       case 2:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
@@ -520,7 +520,7 @@ export function RegistrationForm() {
                 ) : null}
               </div>
             </div>
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-6 backdrop-blur-sm">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-6">
               <p className="text-sm leading-7 text-[var(--admin-muted)] font-medium">
                 بمجرد تثبيت هذه الخطوة، النظام سيعرض لك الخطة والواجبات والاختبارات الملائمة تمامًا لمرحلتك.
               </p>
@@ -530,11 +530,11 @@ export function RegistrationForm() {
       default:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جاهزية الحساب</p>
               <div className="mt-5 space-y-3">
                 {passwordChecklist.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4 backdrop-blur-md">
+                  <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4">
                     <span className="text-[0.85rem] font-bold text-[var(--admin-text)]">{item.label}</span>
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${item.valid ? 'bg-[var(--admin-primary)] text-[var(--admin-bg)]' : 'bg-[var(--admin-border)] text-[var(--admin-muted)]'}`}>
                       {item.valid ? <Check className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" />}
@@ -557,7 +557,7 @@ export function RegistrationForm() {
               <label className="auth-label">اختر الأفاتار الخاص بك (مطلوب)</label>
               <div className="relative min-w-0 max-w-full">
                 <div
-                  className="flex min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-3 pt-1 [scrollbar-width:none] touch-pan-x [&::-webkit-scrollbar]:hidden"
+                  className="flex min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-3 pt-1 touch-pan-x [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]"
                   role="radiogroup"
                   aria-label="اختر الأفاتار الخاص بك"
                 >
@@ -572,7 +572,7 @@ export function RegistrationForm() {
                         onClick={() => updateFieldValue('avatarSlug', avatar.slug)}
                         className={`relative flex w-[5.75rem] shrink-0 snap-start flex-col items-center gap-2 rounded-2xl border p-2 transition-[transform,border-color,background-color,box-shadow] duration-200 active:scale-[0.98] sm:w-24 sm:hover:-translate-y-0.5 ${
                           isSelected
-                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-sm'
                             : 'border-[var(--admin-border)] bg-[var(--admin-bg)] hover:border-[var(--admin-text)]'
                         }`}
                       >
@@ -620,7 +620,7 @@ export function RegistrationForm() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <h5 className="text-[12px] font-black text-[var(--admin-primary-strong)]">
+                    <h5 className="text-sm font-black text-[var(--admin-primary-strong)]">
                       {AVATAR_LIST.find(a => a.slug === formData.avatarSlug)?.name}
                     </h5>
                     <p className="text-xs font-bold text-[var(--admin-muted)] leading-normal">
@@ -661,7 +661,7 @@ export function RegistrationForm() {
                 {fieldError('phoneNumber') && <p className="auth-field-error">{fieldError('phoneNumber')}</p>}
                 {/* WhatsApp auto-check indicator */}
                 {whatsAppState.status !== 'idle' && (
-                  <div className={`mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                  <div className={`mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                     whatsAppState.color === 'green' ? 'bg-emerald-500/10 text-emerald-600' :
                     whatsAppState.color === 'red' ? 'bg-red-500/10 text-red-500' :
                     whatsAppState.color === 'amber' ? 'bg-amber-500/10 text-amber-600' :
@@ -992,7 +992,7 @@ export function RegistrationForm() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
               <p className="mb-3 text-sm font-bold text-[var(--admin-text)]">متطلبات إنشاء الحساب:</p>
               <div className="space-y-2">
                 {passwordChecklist.map((item) => (
@@ -1028,13 +1028,13 @@ export function RegistrationForm() {
         onStepChange={goToStep}
         autoPlay={false}
         clickToAdvance={false}
-        bgClass="bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[560px] lg:min-h-[650px] shadow-[0_28px_70px_var(--admin-shadow)]"
-        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
-        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
-        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
+        bgClass="bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[560px] lg:min-h-[650px] shadow-sm"
+        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] shadow-sm"
+        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] shadow-sm"
+        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] shadow-sm"
+        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] shadow-sm"
+        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-sm"
+        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-sm"
         image={{
           step1light1: '/images/register-stage-1a.svg',
           step1light2: '/images/register-stage-1b.svg',
@@ -1065,7 +1065,7 @@ export function RegistrationForm() {
 
               <div className="min-h-[420px] w-full sm:min-h-[520px]">
                 <AnimatePresence mode="wait">
-                  <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
+                  <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 sm:rounded-2xl sm:p-7 shadow-sm">
                     {renderStepFields()}
                   </motion.div>
                 </AnimatePresence>

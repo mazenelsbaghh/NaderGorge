@@ -171,7 +171,7 @@ export default function AdminFormsPageClient() {
         <button
           type="button"
           onClick={() => handleToggleActive(row)}
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black transition-all hover:scale-105 active:scale-95 ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:scale-105 active:scale-95 ${
             row.isActive
               ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
               : 'bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20'
@@ -187,7 +187,7 @@ export default function AdminFormsPageClient() {
     {
       key: 'createdAt',
       label: 'تاريخ الإنشاء',
-      render: (row) => new Date(row.createdAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' }),
+      render: (row) => new Date(row.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }),
     },
     {
       key: 'actions',

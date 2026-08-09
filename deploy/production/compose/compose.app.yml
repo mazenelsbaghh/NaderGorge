@@ -39,6 +39,10 @@ x-frontend-defaults: &frontend-defaults
     retries: 4
     start_period: 45s
 
+x-frontend-internal-api: &frontend-internal-api
+  INTERNAL_API_URL: http://backend:5245/api
+  INTERNAL_BACKEND_URL: http://backend:5245
+
 services:
   backend:
     <<: *app-defaults
@@ -90,30 +94,35 @@ services:
   landing:
     <<: *frontend-defaults
     environment:
+      <<: *frontend-internal-api
       APP_SURFACE: landing
       NEXT_PUBLIC_APP_SURFACE: landing
 
   student:
     <<: *frontend-defaults
     environment:
+      <<: *frontend-internal-api
       APP_SURFACE: student
       NEXT_PUBLIC_APP_SURFACE: student
 
   admin:
     <<: *frontend-defaults
     environment:
+      <<: *frontend-internal-api
       APP_SURFACE: admin
       NEXT_PUBLIC_APP_SURFACE: admin
 
   teacher:
     <<: *frontend-defaults
     environment:
+      <<: *frontend-internal-api
       APP_SURFACE: teacher
       NEXT_PUBLIC_APP_SURFACE: teacher
 
   staff:
     <<: *frontend-defaults
     environment:
+      <<: *frontend-internal-api
       APP_SURFACE: assistant
       NEXT_PUBLIC_APP_SURFACE: assistant
 

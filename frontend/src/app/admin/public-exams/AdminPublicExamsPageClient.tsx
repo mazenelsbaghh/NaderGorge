@@ -220,7 +220,7 @@ export default function AdminPublicExamsPageClient() {
                     {exam.academicScopes?.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {exam.academicScopes.map((scope, index) => (
-                          <span key={`${exam.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-[11px] font-black text-[var(--admin-primary)]">
+                          <span key={`${exam.id}-scope-${index}`} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-sm font-black text-[var(--admin-primary)]">
                             {getAcademicScopeLabel(scope)}
                           </span>
                         ))}

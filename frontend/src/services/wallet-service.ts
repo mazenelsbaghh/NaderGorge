@@ -38,6 +38,11 @@ export interface AdminRechargeRequestDto {
   userId: string;
   studentName: string;
   studentPhoneNumber: string;
+  studentBalance: number;
+  teacherBalance: number;
+  hasPreviousRequest: boolean;
+  previousRequestStatus?: number | string;
+  previousRequestCreatedAt?: string;
   walletId: string;
   walletLabel: string;
   walletPhoneNumber: string;

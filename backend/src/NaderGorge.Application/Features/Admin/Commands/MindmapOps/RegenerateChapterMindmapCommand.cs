@@ -6,7 +6,10 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands.MindmapOps;
 
-public record RegenerateChapterMindmapCommand(Guid ChapterId) : IRequest<ApiResponse>;
+public record RegenerateChapterMindmapCommand(
+    Guid ChapterId,
+    IReadOnlyCollection<string>? VisualStyles = null,
+    IReadOnlyCollection<string>? TeacherStyles = null) : IRequest<ApiResponse>;
 
 public class RegenerateChapterMindmapCommandHandler : IRequestHandler<RegenerateChapterMindmapCommand, ApiResponse>
 {
@@ -44,12 +47,17 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
                 .ToListAsync(ct);
         }
 
+        var visualStyles = MindmapStyleOptions.ValidVisualStyles(request.VisualStyles);
+        var teacherStyles = MindmapStyleOptions.ValidTeacherStyles(request.TeacherStyles);
+
         // Enqueue a single-chapter mindmap job (worker handles chapterId payload)
         await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "regenerate-single-mindmap", new
         {
             chapterId = chapter.Id,
             lessonVideoId = chapter.LessonVideoId,
             teacherPhotoUrls = teacherPhotoUrls,
+            visualStyles,
+            teacherStyles,
             chapter = new
             {
                 title = chapter.Title,

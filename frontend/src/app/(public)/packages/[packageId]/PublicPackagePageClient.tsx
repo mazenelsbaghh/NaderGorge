@@ -194,7 +194,7 @@ export default function PublicPackagePageClient({
 
       {isPurchaseDialogOpen && (
         <div
-          className="fixed inset-0 z-[100] grid place-items-center bg-[color-mix(in_srgb,var(--public-primary)_72%,transparent)] p-4"
+          className="fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-[color-mix(in_srgb,var(--public-primary)_72%,transparent)] p-4"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget)

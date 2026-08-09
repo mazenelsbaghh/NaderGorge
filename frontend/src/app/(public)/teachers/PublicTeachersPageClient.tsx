@@ -252,7 +252,7 @@ export default function PublicTeachersPageClient() {
                   <Link
                     key={teacher.id}
                     href={href}
-                    className="group overflow-hidden rounded-2xl bg-[var(--public-surface)] transition hover:-translate-y-1 hover:shadow-[0_8px_18px_rgba(10,29,61,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--public-accent)]"
+                    className="group overflow-hidden rounded-2xl bg-[var(--public-surface)] transition hover:-translate-y-1 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--public-accent)]"
                   >
                     <div className="relative aspect-[4/3] bg-[var(--public-surface-muted)] p-3">
                       {image ? (

@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 
 import {
-  ContinueLearningCard,
   StudentDestinationsPanel,
   StudentGettingStartedPanel,
+  StudentMomentumRail,
   PackageGrid,
   StatsStrip,
   StudentHero,
@@ -147,7 +148,7 @@ export default function StudentDashboardClient() {
   };
 
   return (
-    <div className="space-y-8 pb-4">
+    <div className="space-y-6 pb-4">
       {loadError && (
         <div
           role="alert"
@@ -166,22 +167,22 @@ export default function StudentDashboardClient() {
 
       <StudentHero data={d} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] xl:items-stretch">
-        <ContinueLearningCard
-          resumePoint={d.resumePoint ?? undefined}
-          hasActivePackages={d.activePackages.length > 0}
-          onContinue={() => {
-            if (d.resumePoint) {
-              router.push(
-                `/student/packages/${d.resumePoint.packageId}/lessons/${d.resumePoint.lessonId}`,
-              );
-              return;
-            }
-            router.push("/student/packages");
-          }}
-        />
+      <StudentMomentumRail data={d} />
 
-        <div className="grid gap-4 xl:min-h-[32rem] xl:grid-rows-2">
+      {(d.activePackages.length === 0 || (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
+        <StudentGettingStartedPanel data={d} />
+      )}
+
+      {(d.upcomingExams.length > 0 || d.upcomingHomeworks.length > 0) && (
+        <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]" open>
+          <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+            <span className="flex-1">المواعيد القريبة</span>
+            <span className="text-xs font-bold text-[var(--admin-muted)]">
+              {d.upcomingExams.length + d.upcomingHomeworks.length} عناصر
+            </span>
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="grid gap-4 border-t border-[var(--admin-border)] p-4 lg:grid-cols-2">
           <UpcomingExamsPanel
             exams={d.upcomingExams}
             onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
@@ -190,32 +191,46 @@ export default function StudentDashboardClient() {
             homeworks={d.upcomingHomeworks}
             onStartHomework={(homeworkId) => router.push(`/student/homework/${homeworkId}`)}
           />
-        </div>
-      </div>
-
-      {(d.activePackages.length === 0 || (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
-        <StudentGettingStartedPanel data={d} />
+          </div>
+        </details>
       )}
 
-      <PackageGrid
-        packages={d.activePackages}
-        onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
-        onBrowsePackages={() => router.push("/student/packages")}
-      />
+      <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+          <span className="flex-1">باقاتي الدراسية</span>
+          <span className="text-xs font-bold text-[var(--admin-muted)]">{d.activePackages.length} باقات</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="border-t border-[var(--admin-border)] p-4">
+          <PackageGrid
+            packages={d.activePackages}
+            onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
+            onBrowsePackages={() => router.push("/student/packages")}
+          />
+        </div>
+      </details>
 
-      {quickAccessItems.length > 0 && <QuickAccessPanel items={quickAccessItems} />}
-
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <StudentDestinationsPanel />
-        <StatsStrip data={d} />
-      </div>
+      <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+          <span className="flex-1">المزيد من أدواتي</span>
+          <span className="text-xs font-bold text-[var(--admin-muted)]">الوصول السريع والإحصاءات</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--admin-border)] p-4">
+          {quickAccessItems.length > 0 && <QuickAccessPanel items={quickAccessItems} />}
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <StudentDestinationsPanel />
+            <StatsStrip data={d} />
+          </div>
+        </div>
+      </details>
 
       <RegistrationInstructionsModal
-        open={showInstructionsOnboard}
+        open={showInstructionsOnboard && !d.resumePoint}
         onClose={handleCloseOnboard}
-        confirmLabel="أوافق وأرغب في استكمال استخدام المنصة"
-        title="تعليمات وشروط هامة قبل الدخول"
-        subtitle="يرجى قراءتها بدقة قبل تسجيل الدخول للجنة التعليمية واستخدام المنصة."
+        confirmLabel="قرأت التعليمات، ابدأ رحلتي"
+        title="قبل أول خطوة في مسارك"
+        subtitle="راجع تعليمات الاستخدام مرة واحدة، ثم ابدأ دراستك مباشرة."
       />
     </div>
   );

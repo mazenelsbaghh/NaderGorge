@@ -33,6 +33,16 @@ def test_every_node_runs_the_complete_application_stack() -> None:
     assert "subnet: 172.29.0.0/24" in compose
 
 
+def test_frontend_server_requests_use_the_internal_backend() -> None:
+    """Regression for the 2026-08-09 video preview connection failure."""
+    compose = (ROOT / "deploy/production/compose/compose.app.yml").read_text()
+    internal_api = compose.split("x-frontend-internal-api:", 1)[1].split("\nservices:", 1)[0]
+
+    assert "INTERNAL_API_URL: http://backend:5245/api" in internal_api
+    assert "INTERNAL_BACKEND_URL: http://backend:5245" in internal_api
+    assert compose.count("<<: *frontend-internal-api") == 5
+
+
 def test_worker_keeps_shared_storage_group_after_dropping_root() -> None:
     # Regression for the 2026-07-30 subtitle EACCES incident on shared storage.
     compose = (ROOT / "deploy/production/compose/compose.app.yml").read_text()

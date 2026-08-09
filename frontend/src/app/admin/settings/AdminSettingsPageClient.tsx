@@ -332,6 +332,13 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
+    key: '/assistant/wallet-messages',
+    label: 'رسائل المحافظ',
+    subItems: [
+      { key: '/assistant/wallet-messages', label: 'مراجعة رسائل التحويل الواردة لمحافظ الشحن' }
+    ]
+  },
+  {
     key: '/assistant/recharge-shift-review',
     label: 'مراجعة شحن الشيفت',
     subItems: [
@@ -646,11 +653,11 @@ export default function AdminSettingsPageClient() {
     >
       {/* Dynamic Tab Switcher */}
       <div className="mb-8 flex justify-center">
-        <div className="inline-flex gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-xl">
+        <div className="inline-flex gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-md">
           <button
             onClick={() => setActiveTab('settings')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'settings'
-              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
               : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
             }`}
           >
@@ -668,7 +675,7 @@ export default function AdminSettingsPageClient() {
           <button
             onClick={() => setActiveTab('roles')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'roles'
-              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
               : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
             }`}
           >
@@ -677,7 +684,7 @@ export default function AdminSettingsPageClient() {
           <button
             onClick={() => setActiveTab('whatsapp')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'whatsapp'
-              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
               : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
             }`}
           >
@@ -704,7 +711,7 @@ export default function AdminSettingsPageClient() {
                 dir="rtl"
               >
                 {/* Panel 1: General & Communication */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Globe className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات عامة وتواصل الدعم</span>
@@ -809,7 +816,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 2: Video Settings & Device Limits */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <LockKeyhole className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>الحماية وإعدادات الفيديو</span>
@@ -922,7 +929,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 3: Watch Requests & Hint Penalty */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Info className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات الطلبات والمكافآت</span>
@@ -961,7 +968,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 4: Maintenance Mode */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
@@ -1008,7 +1015,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 5: Parent App Update Gate */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
@@ -1066,7 +1073,7 @@ export default function AdminSettingsPageClient() {
                   <button
                     onClick={handleSaveSettings}
                     disabled={isSaving}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-[var(--admin-primary)] text-white font-bold rounded-2xl hover:bg-[var(--admin-primary-strong)] transition-all shadow-[0_4px_15px_var(--admin-shadow)] disabled:opacity-50"
+                    className="flex items-center gap-2 px-8 py-3.5 bg-[var(--admin-primary)] text-white font-bold rounded-2xl hover:bg-[var(--admin-primary-strong)] transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-[0_4px_15px_var(--admin-shadow)] disabled:opacity-50"
                   >
                     {isSaving ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -1186,7 +1193,7 @@ export default function AdminSettingsPageClient() {
                   </div>
                   <button
                     onClick={() => handleOpenRoleModal(null)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--admin-primary)] text-white font-bold rounded-full hover:bg-[var(--admin-primary-strong)] transition-all shadow-[0_4px_15px_var(--admin-shadow)]"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--admin-primary)] text-white font-bold rounded-full hover:bg-[var(--admin-primary-strong)] transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-[0_4px_15px_var(--admin-shadow)]"
                   >
                     <Plus className="w-4 h-4" />
                     <span>إضافة دور جديد</span>
@@ -1350,7 +1357,7 @@ export default function AdminSettingsPageClient() {
                           <div key={item.key} className="space-y-2 border-b border-[var(--admin-border)]/50 pb-3 last:border-0 last:pb-0">
                             <div
                               onClick={() => toggleParentNavbarItem(item)}
-                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none text-right ${
+                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
                                 isParentChecked
                                   ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)]/40 text-[var(--admin-primary)]'
                                   : 'bg-[var(--admin-card-strong)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
@@ -1391,7 +1398,7 @@ export default function AdminSettingsPageClient() {
                                     <div
                                       key={sub.key}
                                       onClick={() => toggleSubNavbarItem(sub.key, item.key)}
-                                      className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer select-none text-right ${
+                                      className={`flex items-center gap-2.5 p-2 rounded-lg border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
                                         isSubChecked
                                           ? 'bg-[var(--admin-primary-5)] border-[var(--admin-primary)]/20 text-[var(--admin-primary)]'
                                           : 'bg-[var(--admin-card)] border-[var(--admin-border)]/50 text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
@@ -1424,7 +1431,7 @@ export default function AdminSettingsPageClient() {
                         <div
                           key={perm.key}
                           onClick={() => togglePermission(perm.key)}
-                          className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none text-right ${
+                          className={`flex items-start gap-3 p-3 rounded-2xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
                             isChecked
                               ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]'
                               : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
@@ -1697,7 +1704,7 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
 
   return <div className="relative aspect-video overflow-hidden rounded-xl bg-black" onMouseMove={() => setShadowVisible(true)}>
     {videoId ? <iframe key={src} src={src} title="معاينة مشغل الفيديو" className="absolute inset-0 size-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <div className="grid size-full place-items-center text-sm text-white/70">أدخل رابط الفيديو أو المعرّف للمعاينة</div>}
-    <AnimatePresence>{shadowVisible && isShadowEnabled && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[80]" style={{ background: backgroundGradient }} />}</AnimatePresence>
+    <AnimatePresence>{shadowVisible && isShadowEnabled && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[var(--z-overlay)]" style={{ background: backgroundGradient }} />}</AnimatePresence>
     <button type="button" onClick={() => setShadowVisible(true)} className="absolute bottom-3 right-3 z-10 rounded-lg bg-black/70 px-3 py-2 text-xs font-bold text-white">إظهار الظل مجددًا</button>
   </div>;
 }

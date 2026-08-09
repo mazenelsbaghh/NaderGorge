@@ -663,11 +663,11 @@ function TeacherChoicePhoto({ teacher, selected }: { teacher: TeacherChoice; sel
     )}>
       {teacher.teacherProfileImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={resolveMediaUrl(teacher.teacherProfileImageUrl)} alt="" className="h-full w-full object-cover" />
+        <img src={resolveMediaUrl(teacher.teacherProfileImageUrl)} alt={`صورة ${teacher.teacherName}`} className="h-full w-full object-cover" />
       ) : (
         <GraduationCap className="h-9 w-9 text-[#0E8F8F]" />
       )}
-      <span className="absolute bottom-2 right-2 rounded-lg bg-[#0A1D3D] px-2 py-1 text-[11px] font-black text-white">
+      <span className="absolute bottom-2 right-2 rounded-lg bg-[#0A1D3D] px-2 py-1 text-sm font-black text-white">
         أ.
       </span>
     </span>
@@ -695,7 +695,7 @@ function PurchasedSharedPackages({ items }: { items: PurchasedSharedPackage[] })
               <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-2xl bg-[var(--student-card-soft)]">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={resolveMediaUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />
+                  <img src={resolveMediaUrl(item.imageUrl)} alt={`غلاف ${item.name}`} className="h-full w-full object-cover" />
                 ) : (
                   <PackageOpen className="h-9 w-9 text-[#0E8F8F]" />
                 )}
@@ -724,7 +724,7 @@ function PurchasedSharedPackages({ items }: { items: PurchasedSharedPackage[] })
                 >
                   {teacher.teacherProfileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={resolveMediaUrl(teacher.teacherProfileImageUrl)} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                    <img src={resolveMediaUrl(teacher.teacherProfileImageUrl)} alt={`صورة ${teacher.teacherName}`} className="h-12 w-12 rounded-xl object-cover" />
                   ) : (
                     <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#0E8F8F]/10 text-[#0E8F8F]">
                       <GraduationCap className="h-5 w-5" />
@@ -760,7 +760,7 @@ function PackageStat({ label, value }: { label: string; value: string | number }
   return (
     <div className="rounded-xl bg-[var(--student-card)] px-3 py-2 text-center">
       <div className="text-base font-black text-[var(--student-text)]">{value}</div>
-      <div className="text-[11px] font-bold text-[var(--student-muted)]">{label}</div>
+      <div className="text-sm font-bold text-[var(--student-muted)]">{label}</div>
     </div>
   );
 }

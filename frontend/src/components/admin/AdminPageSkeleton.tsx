@@ -13,12 +13,12 @@ export function AdminPageSkeleton() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="relative h-36 overflow-hidden rounded-[2rem] bg-[var(--admin-card-strong)] shadow-sm"
+            className="relative h-36 overflow-hidden rounded-2xl bg-[var(--admin-card-strong)] shadow-sm"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--admin-bg)] to-transparent opacity-10 animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%' }} />
-            <div className="absolute left-6 top-6 h-12 w-12 rounded-2xl bg-[var(--admin-muted)] opacity-20" />
-            <div className="absolute right-6 top-6 h-6 w-24 rounded-md bg-[var(--admin-muted)] opacity-20" />
-            <div className="absolute right-6 bottom-6 h-8 w-32 rounded-lg bg-[var(--admin-muted)] opacity-30" />
+            <div className="absolute start-6 top-6 h-12 w-12 rounded-2xl bg-[var(--admin-muted)] opacity-20" />
+            <div className="absolute end-6 top-6 h-6 w-24 rounded-md bg-[var(--admin-muted)] opacity-20" />
+            <div className="absolute end-6 bottom-6 h-8 w-32 rounded-lg bg-[var(--admin-muted)] opacity-30" />
           </div>
         ))}
       </section>

@@ -7,6 +7,7 @@ import { throwIfCancellationRequested } from '../cancellation.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { GeminiDeveloperApiError } from '../services/aiProvider.js';
 import { sharedMindmapsRoot, sharedPublicRoot } from '../config/storage.js';
+import { logWarn } from '../logging.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -28,11 +29,23 @@ async function notifyProgress(jobId: string, percentage: number, stage: string, 
             headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
             body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
         });
-    } catch { /* best-effort */ }
+    } catch (error) {
+        logWarn('mindmap-progress', 'Progress callback failed; generation will continue.', { jobId, error });
+    }
 }
 
-function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+async function waitForRetryOrCancellation(job: Job, delayMs: number) {
+    const pollingIntervalMs = Math.min(1_000, delayMs);
+    let remainingMs = delayMs;
+    while (remainingMs > 0) {
+        await sleep(Math.min(pollingIntervalMs, remainingMs));
+        await throwIfCancellationRequested(job);
+        remainingMs -= pollingIntervalMs;
+    }
+}
+
+function sleep(delayMs: number) {
+    return new Promise(resolve => setTimeout(resolve, delayMs));
 }
 
 function isQuotaError(error: unknown) {
@@ -63,11 +76,12 @@ async function generateWithQuotaBackoff(
     chapter: ChapterMindmapInput,
     lessonVideoId: string,
     teacherPhotoPaths: string[],
+    options: { visualStyles: string[]; teacherStyles: string[] },
     job: Job<GenerateMindmapsJobData>,
 ) {
     for (let attempt = 0; attempt <= MAX_CHAPTER_QUOTA_RETRIES; attempt++) {
         try {
-            return await generateChapterMindmap(chapter, lessonVideoId, teacherPhotoPaths);
+            return await generateChapterMindmap(chapter, lessonVideoId, teacherPhotoPaths, options);
         } catch (error) {
             if (!isQuotaError(error) || attempt === MAX_CHAPTER_QUOTA_RETRIES) {
                 throw error;
@@ -77,8 +91,7 @@ async function generateWithQuotaBackoff(
             console.warn(`[Job ${job.id}] ${stage}`);
             await job.updateProgress({ percentage: 50, stage });
             await notifyProgress(`${lessonVideoId}_mindmaps`, 50, stage);
-            await sleep(QUOTA_RETRY_DELAY_MS);
-            await throwIfCancellationRequested(job);
+            await waitForRetryOrCancellation(job, QUOTA_RETRY_DELAY_MS);
         }
     }
 
@@ -99,6 +112,10 @@ export interface GenerateMindmapsJobData {
     TeacherPhotoUrl?: string;
     teacherPhotoUrls?: string[];
     TeacherPhotoUrls?: string[];
+    visualStyles?: string[];
+    VisualStyles?: string[];
+    teacherStyles?: string[];
+    TeacherStyles?: string[];
     // Batch mode
     chapters?: ChapterMindmapInput[];
     Chapters?: ChapterMindmapInput[];
@@ -119,6 +136,10 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
     const lessonVideoId = job.data.lessonVideoId || job.data.LessonVideoId;
     const teacherPhotoUrl = job.data.teacherPhotoUrl || job.data.TeacherPhotoUrl;
     const teacherPhotoUrls = job.data.teacherPhotoUrls || job.data.TeacherPhotoUrls;
+    const options = {
+        visualStyles: job.data.visualStyles || job.data.VisualStyles || ['editorial-infographic'],
+        teacherStyles: job.data.teacherStyles || job.data.TeacherStyles || ['photorealistic'],
+    };
     const chapterId = job.data.chapterId || job.data.ChapterId;
     const singleChapter = job.data.chapter || job.data.Chapter;
     const isSingleChapter = !!chapterId && !!singleChapter;
@@ -184,7 +205,7 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
                 console.error(`[Job ${job.id}] Failed to check existing mindmaps:`, err);
             }
 
-            const generatedUrl = existingUrl || await generateWithQuotaBackoff(chapter, lessonVideoId, activeTeacherPhotoLocalPaths, job);
+            const generatedUrl = existingUrl || await generateWithQuotaBackoff(chapter, lessonVideoId, activeTeacherPhotoLocalPaths, options, job);
             results.push({ title: chapter.title, imageUrl: generatedUrl });
             completedCount++;
             const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);

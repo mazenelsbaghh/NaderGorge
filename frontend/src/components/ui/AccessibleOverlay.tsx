@@ -26,6 +26,7 @@ type AccessibleOverlayProps = {
   children: ReactNode;
   label?: string;
   labelledBy?: string;
+  describedBy?: string;
   className?: string;
   backdropClassName?: string;
   layerClassName?: string;
@@ -41,6 +42,7 @@ export function AccessibleOverlay({
   children,
   label,
   labelledBy,
+  describedBy,
   className = '',
   backdropClassName = '',
   layerClassName = '',
@@ -160,7 +162,7 @@ export function AccessibleOverlay({
 
   const content = (
     <div
-      className={`fixed inset-0 z-[100] ${layerClassName}`.trim()}
+      className={`fixed inset-0 z-[var(--z-modal)] ${layerClassName}`.trim()}
       data-testid={testId}
     >
       <button
@@ -176,6 +178,7 @@ export function AccessibleOverlay({
         aria-modal="true"
         aria-label={label}
         aria-labelledby={labelledBy ?? (label ? undefined : generatedLabelId)}
+        aria-describedby={describedBy}
         tabIndex={-1}
         className={`absolute outline-none ${className}`.trim()}
         style={style}

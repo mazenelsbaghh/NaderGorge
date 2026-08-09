@@ -30,9 +30,9 @@ export function AdminSearchToolbar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="admin-input py-3 pl-4 pr-12 text-sm font-bold"
+          className="admin-input py-3 ps-4 pe-12 text-sm font-bold"
         />
-        <Search aria-hidden="true" className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--admin-muted)]" />
+        <Search aria-hidden="true" className="absolute end-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--admin-muted)]" />
       </div>
       
       {actions && <div className="flex items-center gap-3">{actions}</div>}

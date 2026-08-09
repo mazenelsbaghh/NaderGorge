@@ -24,6 +24,7 @@ import {
 } from '@/services/advanced-report-service';
 import { reportCatalog, type ReportDomainDefinition, type ReportFieldDefinition } from './report-catalog';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
+import { cairoCurrentDate, cairoDateAfterDays } from '@/lib/cairo-time';
 
 const PAGE_SIZE = 20;
 type QuickReportType = 'purchase' | 'attendance' | 'video' | 'exam' | 'homework';
@@ -45,6 +46,24 @@ const quickReportTypes: Array<{
 const initialQuickValues: QuickReportValues = {
   purchase: ['purchased'], attendance: ['present'], video: ['watched'], exam: ['passed'], homework: ['submitted'],
 };
+const ledgerStageOptions = [
+  { value: 'Primary', label: 'ابتدائي' },
+  { value: 'Preparatory', label: 'إعدادي' },
+  { value: 'Secondary', label: 'ثانوي' },
+  { value: 'Baccalaureate', label: 'بكالوريا' },
+  { value: 'Azhari', label: 'أزهري' },
+  { value: 'American', label: 'أمريكي' },
+];
+const secondaryTrackOptions = [
+  { value: 'Arts', label: 'أدبي' },
+  { value: 'Science', label: 'علمي' },
+];
+const baccalaureateTrackOptions = [
+  { value: 'MedicineAndLifeSciences', label: 'الطب وعلوم الحياة' },
+  { value: 'EngineeringAndComputerScience', label: 'الهندسة وعلوم الحاسب' },
+  { value: 'Business', label: 'قطاع الأعمال' },
+  { value: 'ArtsAndHumanities', label: 'الآداب والفنون' },
+];
 const quickReportValueLabels = new Map(quickReportTypes.flatMap((type) =>
   type.options.map((option) => [`${type.field}:${option.value}`, option.label] as const)));
 const operators: Array<{ value: ReportFilterOperator; label: string }> = [
@@ -186,24 +205,15 @@ const numberOptions = [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000]
   .map((value) => ({ value: String(value), label: value.toLocaleString('ar-EG') }));
 
 function dateOptions() {
-  const now = new Date();
-  const asDate = (date: Date) => [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
-  const shiftDays = (days: number) => {
-    const date = new Date(now);
-    date.setDate(date.getDate() - days);
-    return date;
-  };
+  const today = cairoCurrentDate();
+  const dateAtCairoNoon = new Date(`${today}T12:00:00Z`);
   return [
-    { value: asDate(now), label: 'اليوم' },
-    { value: asDate(shiftDays(1)), label: 'أمس' },
-    { value: asDate(shiftDays(7)), label: 'منذ 7 أيام' },
-    { value: asDate(shiftDays(30)), label: 'منذ 30 يومًا' },
-    { value: asDate(new Date(now.getFullYear(), now.getMonth(), 1)), label: 'بداية الشهر الحالي' },
-    { value: asDate(new Date(now.getFullYear(), 0, 1)), label: 'بداية السنة الحالية' },
+    { value: today, label: 'اليوم' },
+    { value: cairoDateAfterDays(-1, dateAtCairoNoon), label: 'أمس' },
+    { value: cairoDateAfterDays(-7, dateAtCairoNoon), label: 'منذ 7 أيام' },
+    { value: cairoDateAfterDays(-30, dateAtCairoNoon), label: 'منذ 30 يومًا' },
+    { value: `${today.slice(0, 7)}-01`, label: 'بداية الشهر الحالي' },
+    { value: `${today.slice(0, 4)}-01-01`, label: 'بداية السنة الحالية' },
   ];
 }
 
@@ -346,7 +356,7 @@ function ResultsChart({ result }: { result: AdvancedReportResult }) {
   const points = result.chart?.points ?? [];
   const max = Math.max(...points.map((point) => point.value), 1);
   return (
-    <section aria-labelledby="report-chart-title" className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 lg:p-6">
+    <section aria-labelledby="report-chart-title" className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 lg:p-6">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div><p className="text-xs font-black text-[var(--admin-primary)]">الرسم البياني</p><h2 id="report-chart-title" className="mt-1 text-lg font-extrabold">{result.chart?.label || result.chart?.title || 'توزيع النتائج'}</h2></div>
         <BarChart3 className="h-5 w-5 text-[var(--admin-muted)]" />
@@ -355,9 +365,9 @@ function ResultsChart({ result }: { result: AdvancedReportResult }) {
         <div role="img" aria-label={`${result.chart.label || result.chart.title}: ${points.map((point) => `${point.label} ${point.value}`).join('، ')}`} className="flex h-64 items-end gap-2 overflow-x-auto border-b border-[var(--admin-border)] px-1 pt-4">
           {points.map((point) => (
             <div key={point.label} className="flex h-full min-w-14 flex-1 flex-col items-center justify-end gap-2">
-              <span className="text-[11px] font-black text-[var(--admin-text)]">{point.value.toLocaleString('ar-EG')}</span>
+              <span className="text-sm font-black text-[var(--admin-text)]">{point.value.toLocaleString('ar-EG')}</span>
               <div className="w-full max-w-16 rounded-t-xl bg-[var(--admin-primary)] transition-[height] duration-500 motion-reduce:transition-none" style={{ height: `${Math.max(4, (point.value / max) * 78)}%` }} />
-              <span className="h-9 max-w-20 truncate text-[10px] font-bold text-[var(--admin-muted)]" title={point.label}>{point.label}</span>
+              <span className="h-9 max-w-20 truncate text-sm font-bold text-[var(--admin-muted)]" title={point.label}>{point.label}</span>
             </div>
           ))}
         </div>
@@ -376,6 +386,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
   const [loading, setLoading] = useState(false);
   const [savedLoading, setSavedLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quickReportError, setQuickReportError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [search, setSearch] = useState('');
   const [reportName, setReportName] = useState('');
@@ -390,6 +401,8 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
   const [quickValues, setQuickValues] = useState<QuickReportValues>(initialQuickValues);
   const [ledgerTeachers, setLedgerTeachers] = useState<TeacherDto[]>([]);
   const [ledgerTeacherId, setLedgerTeacherId] = useState('');
+  const [ledgerStage, setLedgerStage] = useState('');
+  const [ledgerStudyTrack, setLedgerStudyTrack] = useState('');
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const domain = domains.find((item) => item.id === domainId) ?? domains[0];
 
@@ -439,10 +452,12 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
     .find((field) => field.key === 'packageName')?.options ?? [], [domains]);
 
   const toggleQuickType = (type: QuickReportType) => {
+    setQuickReportError(null);
     setQuickTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : [...current, type]);
   };
 
   const toggleQuickValue = (type: QuickReportType, value: string) => {
+    setQuickReportError(null);
     setQuickValues((current) => ({
       ...current,
       [type]: current[type].includes(value) ? current[type].filter((item) => item !== value) : [...current[type], value],
@@ -450,9 +465,10 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
   };
 
   const runQuickReport = () => {
-    if (!quickCourses.length) { toast.error('اختر كورسًا واحدًا على الأقل.'); return; }
-    if (!quickTypes.length) { toast.error('اختر نوع بيانات واحدًا على الأقل.'); return; }
-    if (quickTypes.some((type) => quickValues[type].length === 0)) { toast.error('اختر حالة واحدة على الأقل لكل نوع.'); return; }
+    if (!quickCourses.length) { setQuickReportError('اختر كورسًا واحدًا على الأقل لإظهار الطلاب المرتبطين به.'); return; }
+    if (!quickTypes.length) { setQuickReportError('اختر نوع بيانات واحدًا على الأقل، مثل الحضور أو الامتحانات.'); return; }
+    if (quickTypes.some((type) => quickValues[type].length === 0)) { setQuickReportError('اختر حالة واحدة على الأقل داخل كل نوع محدد. اختياراتك الحالية محفوظة.'); return; }
+    setQuickReportError(null);
     const nextDomain = 'student-journey';
     const nextGroup = newGroup();
     const courseFilter = newFilter('packageName');
@@ -476,7 +492,11 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
     if (audience === 'admin' && !ledgerTeacherId) { toast.error('اختر المدرس أولًا.'); return; }
     setLedgerLoading(true);
     try {
-      const blob = await advancedReportService.exportStudentLedger(audience, audience === 'admin' ? ledgerTeacherId : undefined);
+      const blob = await advancedReportService.exportStudentLedger(audience, {
+        teacherId: audience === 'admin' ? ledgerTeacherId : undefined,
+        stage: ledgerStage || undefined,
+        studyTrack: ledgerStudyTrack || undefined,
+      });
       const teacherName = ledgerTeachers.find((teacher) => teacher.id === ledgerTeacherId)?.fullName;
       downloadBlob(blob, `سجل-الطلاب${teacherName ? `-${teacherName}` : ''}.xlsx`);
       toast.success('تم تجهيز سجل الطلاب');
@@ -489,7 +509,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
   };
 
   const saveDefinition = async () => {
-    const automaticName = reportName.trim() || `${domain.label} - ${new Date().toLocaleDateString('ar-EG')}`;
+    const automaticName = reportName.trim() || `${domain.label} - ${new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`;
     setIsSavingDefinition(true);
     try {
       const payload = { name: automaticName, configuration: query };
@@ -536,7 +556,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
 
   const totalPages = Math.max(1, Math.ceil((result?.totalCount ?? 0) / PAGE_SIZE));
 
-  if (forbidden) return <div role="alert" className="rounded-[28px] border border-[var(--admin-danger)]/30 bg-[var(--admin-card)] px-6 py-16 text-center"><ShieldMessage title="غير مصرح بعرض التقارير" body="اطلب صلاحية التقارير من مدير المنصة." /></div>;
+  if (forbidden) return <div role="alert" className="rounded-2xl border border-[var(--admin-danger)]/30 bg-[var(--admin-card)] px-6 py-16 text-center"><ShieldMessage title="غير مصرح بعرض التقارير" body="اطلب صلاحية التقارير من مدير المنصة." /></div>;
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -589,7 +609,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
               {courseOptions.map((option) => {
                 const checked = quickCourses.includes(option.value);
                 return <label key={option.value} className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${checked ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-text)]'}`}>
-                  <input type="checkbox" checked={checked} onChange={() => setQuickCourses((current) => checked ? current.filter((value) => value !== option.value) : [...current, option.value])} className="h-4 w-4 accent-[var(--admin-primary)]" />
+                  <input type="checkbox" checked={checked} onChange={() => { setQuickReportError(null); setQuickCourses((current) => checked ? current.filter((value) => value !== option.value) : [...current, option.value]); }} className="h-4 w-4 accent-[var(--admin-primary)]" />
                   <span className="min-w-0 truncate" title={option.label}>{option.label}</span>
                 </label>;
               })}
@@ -597,17 +617,30 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
             </div>
           </fieldset>
 
-          <button type="button" onClick={runQuickReport} disabled={!quickCourses.length || !quickTypes.length || loading} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48">
+          {quickReportError ? <p id="quick-report-error" role="alert" className="rounded-xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-3 text-sm font-bold text-[var(--admin-text)]">{quickReportError}</p> : null}
+
+          <button type="button" onClick={runQuickReport} disabled={loading} aria-describedby={quickReportError ? 'quick-report-error' : undefined} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48">
             {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />} عرض الطلاب
           </button>
 
           <details className="border-t border-[var(--admin-border)] pt-4">
             <summary className="cursor-pointer text-xs font-black text-[var(--admin-muted)]">تقرير مختلف: الطلاب أو الأكواد أو الرصيد أو المحتوى…</summary>
             <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-              <select aria-label="نوع التقرير المختلف" value={domainId === 'student-journey' ? '' : domainId} onChange={(event) => { const selectedDomain = domains.find((option) => option.id === event.target.value); if (selectedDomain) selectDomain(selectedDomain); }} className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-bold text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary)]/20">
-                <option value="">اختر التقرير المختلف</option>
-                {domains.filter((option) => option.id !== 'student-journey').map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
+              <Dropdown
+                value={domainId === 'student-journey' ? '' : domainId}
+                onChange={(value) => {
+                  const selectedValue = Array.isArray(value) ? value[0] : value;
+                  const selectedDomain = domains.find((option) => option.id === selectedValue);
+                  if (selectedDomain) selectDomain(selectedDomain);
+                }}
+                options={domains
+                  .filter((option) => option.id !== 'student-journey')
+                  .map((option) => ({ value: option.id, label: option.label }))}
+                placeholder="اختر التقرير المختلف"
+                searchable
+                searchPlaceholder="ابحث عن نوع التقرير"
+                size="sm"
+              />
               <button type="button" onClick={() => void runReport()} disabled={loading || domainId === 'student-journey'} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary)] disabled:opacity-50">عرض التقرير المختلف</button>
             </div>
           </details>
@@ -615,13 +648,22 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
       </section>
 
       <section aria-labelledby="student-ledger-title" className="relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:flex sm:items-end sm:gap-4">
-        <div className="min-w-0 flex-1"><p className="text-xs font-black text-[var(--admin-primary)]">سجل حياة الطالب</p><h2 id="student-ledger-title" className="mt-1 text-base font-extrabold">تحميل سجل الطلاب في شيت واحد</h2><p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">صف لكل طالب، وكل باقات المدرس والحضور والواجبات وامتحانات الحصة والفيديو في أعمدة متجاورة.</p>{audience === 'admin' ? <Dropdown value={ledgerTeacherId} onChange={(value) => setLedgerTeacherId(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerTeachers.map((teacher) => ({ value: teacher.id, label: teacher.fullName }))} placeholder="اختر المدرس" searchable searchPlaceholder="ابحث باسم المدرس" className="mt-3" /> : <p className="mt-3 rounded-xl bg-[var(--admin-primary-15)] px-3 py-2 text-xs font-bold text-[var(--admin-primary)]">سيتم تحميل طلابك وكل باقاتك تلقائيًا.</p>}</div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-black text-[var(--admin-primary)]">سجل حياة الطالب</p>
+          <h2 id="student-ledger-title" className="mt-1 text-base font-extrabold">تحميل سجل الطلاب في شيت واحد</h2>
+          <p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">يشمل أرقام الأب والأم وولي الأمر الإضافي، والمرحلة والشعبة، ونوع الشراء الفعلي لكل طالب.</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {audience === 'admin' ? <Dropdown value={ledgerTeacherId} onChange={(value) => setLedgerTeacherId(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerTeachers.map((teacher) => ({ value: teacher.id, label: teacher.fullName }))} placeholder="١. اختر المدرس" searchable searchPlaceholder="ابحث باسم المدرس" /> : <p className="flex min-h-11 items-center rounded-xl bg-[var(--admin-primary-15)] px-3 text-xs font-bold text-[var(--admin-primary)]">طلاب المدرس الحالي</p>}
+            <Dropdown value={ledgerStage} onChange={(value) => { setLedgerStage(Array.isArray(value) ? value[0] ?? '' : value); setLedgerStudyTrack(''); }} options={ledgerStageOptions} placeholder={audience === 'admin' ? '٢. اختر المرحلة (اختياري)' : '١. اختر المرحلة (اختياري)'} />
+            <Dropdown value={ledgerStudyTrack} onChange={(value) => setLedgerStudyTrack(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerStage === 'Secondary' ? secondaryTrackOptions : ledgerStage === 'Baccalaureate' ? baccalaureateTrackOptions : []} placeholder={audience === 'admin' ? '٣. اختر الشعبة (إن وجدت)' : '٢. اختر الشعبة (إن وجدت)'} disabled={!['Secondary', 'Baccalaureate'].includes(ledgerStage)} />
+          </div>
+        </div>
         <button type="button" onClick={() => void exportStudentLedger()} disabled={ledgerLoading} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] disabled:opacity-60 sm:mt-0">{ledgerLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />} تحميل سجل الطلاب</button>
       </section>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_290px]">
         <div className="space-y-6">
-          <section className="overflow-hidden rounded-[30px] border border-[var(--admin-border)] bg-[var(--admin-card)]">
+          <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
             <div className="border-b border-[var(--admin-border)] p-5 lg:p-6">
               <div><p className="text-xs font-black text-[var(--admin-primary)]">منشئ التقرير</p><h2 className="mt-1 text-xl font-extrabold">{domain.label}</h2><p className="mt-1 text-sm font-medium text-[var(--admin-muted)]">{domain.description}</p></div>
             </div>
@@ -660,10 +702,10 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
                 {(result.summary ?? []).map((kpi) => <div key={kpi.key} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4"><p className="text-xs font-bold text-[var(--admin-muted)]">{kpi.label}</p><p className="mt-2 text-2xl font-black tabular-nums">{valueText(kpi.value)}</p>{typeof kpi.change === 'number' ? <p className={`mt-1 text-xs font-black ${kpi.change >= 0 ? 'text-emerald-600' : 'text-[var(--admin-danger)]'}`}>{kpi.change >= 0 ? '+' : ''}{kpi.change}٪ عن الفترة السابقة</p> : null}</div>)}
               </section>
               <ResultsChart result={result} />
-              <section className="overflow-hidden rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)]">
+              <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
                 <div className="flex flex-col gap-3 border-b border-[var(--admin-border)] p-4 md:flex-row md:items-center md:justify-between">
                   <div><h2 className="text-lg font-extrabold">الجدول التفصيلي</h2><p className="text-xs font-bold text-[var(--admin-muted)]">{result.totalCount.toLocaleString('ar-EG')} نتيجة</p></div>
-                  <div className="flex flex-wrap items-start gap-2"><label className="relative min-w-52 flex-1"><Search className="absolute right-3 top-3 h-4 w-4 text-[var(--admin-muted)]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث في النتائج الظاهرة" className="h-10 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] pr-9 pl-3 text-sm outline-none" /><span className="mt-1 block px-1 text-[10px] font-bold text-[var(--admin-muted)]">البحث داخل الصفحة الحالية فقط</span></label><button type="button" onClick={() => void exportReport('xlsx')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><FileSpreadsheet className="h-4 w-4" />Excel</button><button type="button" onClick={() => void exportReport('pdf')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><Download className="h-4 w-4" />PDF</button></div>
+                  <div className="flex flex-wrap items-start gap-2"><label className="relative min-w-52 flex-1"><Search className="absolute right-3 top-3 h-4 w-4 text-[var(--admin-muted)]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث في النتائج الظاهرة" className="h-10 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] pr-9 pl-3 text-sm outline-none" /><span className="mt-1 block px-1 text-sm font-bold text-[var(--admin-muted)]">البحث داخل الصفحة الحالية فقط</span></label><button type="button" onClick={() => void exportReport('xlsx')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><FileSpreadsheet className="h-4 w-4" />Excel</button><button type="button" onClick={() => void exportReport('pdf')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><Download className="h-4 w-4" />PDF</button></div>
                 </div>
                 {searchedRows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-right text-sm"><thead><tr className="bg-[var(--admin-bg)]">{result.columns.map((column) => <th key={column.key} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-black text-[var(--admin-muted)]"><button type="button" onClick={() => { const direction = sort?.field === column.key && sort.direction === 'asc' ? 'desc' : 'asc'; setSort({ field: column.key, direction }); setPage(1); void runReport({ ...query, sort: { field: column.key, direction }, page: 1 }); }} className="hover:text-[var(--admin-primary)]">{column.label}{sort?.field === column.key ? sort.direction === 'asc' ? ' ↑' : ' ↓' : ''}</button></th>)}</tr></thead><tbody>{searchedRows.map((row, rowIndex) => <tr key={String(row.id ?? rowIndex)} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-hover)]">{result.columns.map((column) => <td key={column.key} className="max-w-72 whitespace-nowrap px-4 py-3 font-medium" title={formatCell(row[column.key], column)}>{formatCell(row[column.key], column)}</td>)}</tr>)}</tbody></table></div> : <EmptyState />}
                 <div className="flex items-center justify-between border-t border-[var(--admin-border)] px-4 py-3"><span className="text-xs font-bold text-[var(--admin-muted)]">صفحة {page.toLocaleString('ar-EG')} من {totalPages.toLocaleString('ar-EG')}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => { const next = page - 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة السابقة" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button><button type="button" disabled={page >= totalPages} onClick={() => { const next = page + 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة التالية" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button></div></div>
@@ -672,9 +714,9 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
           ) : <StartState />}
         </div>
 
-        <aside className="rounded-[26px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 xl:sticky xl:top-6">
+        <aside className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 xl:sticky xl:top-6">
           <div className="mb-4 flex items-center justify-between"><div><p className="text-xs font-black text-[var(--admin-primary)]">المحفوظة</p><h2 className="mt-1 font-extrabold">تقاريري</h2></div><RefreshCw className={`h-4 w-4 text-[var(--admin-muted)] ${savedLoading ? 'animate-spin' : ''}`} /></div>
-          {savedLoading ? <div className="space-y-2">{[1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl bg-[var(--admin-hover)]" />)}</div> : saved.length ? <div className="max-h-[520px] space-y-2 overflow-y-auto">{saved.map((definition) => <div key={definition.id} className={`rounded-2xl border p-3 ${activeDefinitionId === definition.id ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)]' : 'border-[var(--admin-border)]'}`}><button type="button" onClick={() => loadDefinition(definition)} className="w-full text-right"><span className="block truncate text-sm font-black">{definition.name}</span><span className="mt-1 block text-[11px] font-bold text-[var(--admin-muted)]">{domains.find((item) => item.id === definition.domain)?.label ?? definition.domain}</span></button><div className="mt-2 flex justify-end gap-1"><button type="button" onClick={() => void duplicateDefinition(definition)} aria-label={`نسخ ${definition.name}`} className="rounded-lg p-1.5 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"><Copy className="h-3.5 w-3.5" /></button><button type="button" onClick={() => void removeDefinition(definition)} aria-label={`حذف ${definition.name}`} className="rounded-lg p-1.5 text-[var(--admin-danger)] hover:bg-[var(--admin-danger)]/10"><Trash2 className="h-3.5 w-3.5" /></button></div></div>)}</div> : <p className="rounded-2xl bg-[var(--admin-bg)] p-5 text-center text-xs font-bold leading-6 text-[var(--admin-muted)]">احفظ تركيبة الفلاتر لتشغيلها مرة أخرى بضغطة واحدة.</p>}
+          {savedLoading ? <div className="space-y-2">{[1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl bg-[var(--admin-hover)]" />)}</div> : saved.length ? <div className="max-h-[520px] space-y-2 overflow-y-auto">{saved.map((definition) => <div key={definition.id} className={`rounded-2xl border p-3 ${activeDefinitionId === definition.id ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)]' : 'border-[var(--admin-border)]'}`}><button type="button" onClick={() => loadDefinition(definition)} className="w-full text-right"><span className="block truncate text-sm font-black">{definition.name}</span><span className="mt-1 block text-sm font-bold text-[var(--admin-muted)]">{domains.find((item) => item.id === definition.domain)?.label ?? definition.domain}</span></button><div className="mt-2 flex justify-end gap-1"><button type="button" onClick={() => void duplicateDefinition(definition)} aria-label={`نسخ ${definition.name}`} className="rounded-lg p-1.5 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"><Copy className="h-3.5 w-3.5" /></button><button type="button" onClick={() => void removeDefinition(definition)} aria-label={`حذف ${definition.name}`} className="rounded-lg p-1.5 text-[var(--admin-danger)] hover:bg-[var(--admin-danger)]/10"><Trash2 className="h-3.5 w-3.5" /></button></div></div>)}</div> : <p className="rounded-2xl bg-[var(--admin-bg)] p-5 text-center text-xs font-bold leading-6 text-[var(--admin-muted)]">احفظ تركيبة الفلاتر لتشغيلها مرة أخرى بضغطة واحدة.</p>}
         </aside>
       </div>
 
@@ -699,7 +741,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
               autoFocus
               value={reportName}
               onChange={(event) => setReportName(event.target.value)}
-              placeholder={`${domain.label} - ${new Date().toLocaleDateString('ar-EG')}`}
+              placeholder={`${domain.label} - ${new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`}
               className="mt-2 h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-medium text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary)]/20"
             />
           </label>
@@ -718,7 +760,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
 }
 
 function ShieldMessage({ title, body }: { title: string; body: string }) { return <><h2 className="text-xl font-black">{title}</h2><p className="mt-2 text-sm font-bold text-[var(--admin-muted)]">{body}</p></>; }
-function LoadingState() { return <div aria-live="polite" className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] py-20 text-center"><LoaderCircle className="mx-auto h-8 w-8 animate-spin text-[var(--admin-primary)]" /><p className="mt-3 text-sm font-black">نجمع البيانات ونبني التقرير…</p></div>; }
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) { return <div role="alert" className="rounded-[28px] border border-[var(--admin-danger)]/30 bg-[var(--admin-card)] py-16 text-center"><ShieldMessage title="لم يكتمل التقرير" body={message} /><button type="button" onClick={onRetry} className="mt-5 rounded-xl bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-black text-[var(--admin-primary-contrast)]">إعادة المحاولة</button></div>; }
+function LoadingState() { return <div aria-live="polite" className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-20 text-center"><LoaderCircle className="mx-auto h-8 w-8 animate-spin text-[var(--admin-primary)]" /><p className="mt-3 text-sm font-black">نجمع البيانات ونبني التقرير…</p></div>; }
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) { return <div role="alert" className="rounded-2xl border border-[var(--admin-danger)]/30 bg-[var(--admin-card)] py-16 text-center"><ShieldMessage title="لم يكتمل التقرير" body={message} /><button type="button" onClick={onRetry} className="mt-5 rounded-xl bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-black text-[var(--admin-primary-contrast)]">إعادة المحاولة</button></div>; }
 function EmptyState() { return <div className="py-16 text-center"><Search className="mx-auto h-7 w-7 text-[var(--admin-muted)]" /><p className="mt-3 text-sm font-black">لا توجد نتائج مطابقة</p><p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">غيّر البحث أو وسّع الفلاتر.</p></div>; }
-function StartState() { return <div className="rounded-[28px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] py-20 text-center"><BarChart3 className="mx-auto h-9 w-9 text-[var(--admin-primary)]" /><h2 className="mt-4 text-lg font-black">ابدأ من المجال والفلاتر</h2><p className="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-[var(--admin-muted)]">يمكنك تشغيل تقرير شامل بلا فلاتر، أو دمج عدة شروط ومجموعات و/أو للوصول إلى الشريحة المطلوبة.</p></div>; }
+function StartState() { return <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] py-20 text-center"><BarChart3 className="mx-auto h-9 w-9 text-[var(--admin-primary)]" /><h2 className="mt-4 text-lg font-black">ابدأ من المجال والفلاتر</h2><p className="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-[var(--admin-muted)]">يمكنك تشغيل تقرير شامل بلا فلاتر، أو دمج عدة شروط ومجموعات و/أو للوصول إلى الشريحة المطلوبة.</p></div>; }

@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { easeQuart, exitScale, feedbackTransition } from '@/lib/motion';
+import { exitScale, feedbackTransition } from '@/lib/motion';
 import { AssistantTaskDto, assistantService } from '@/services/assistant-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -44,8 +44,7 @@ export function AssistantTaskBoard() {
       await assistantService.resolveTask(taskId, resolutionNotes);
       setResolvingTaskId(null);
       setResolutionNotes('');
-      // Refresh list
-      fetchTasks();
+      void fetchTasks();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'فشل في حل المهمة');
     }
@@ -64,8 +63,8 @@ export function AssistantTaskBoard() {
       return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1,2,3,4,5,6].map(i => (
-                <div key={i} className="animate-pulse bg-[var(--admin-card)] rounded-[2rem] h-[200px] border border-[var(--admin-border)] shadow-sm">
-                   <div className="h-16 w-full border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] rounded-t-[2rem]" />
+                <div key={i} className="h-[200px] animate-pulse rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+                   <div className="h-16 w-full rounded-t-2xl border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)]" />
                    <div className="p-4 space-y-4">
                      <div className="h-4 w-3/4 rounded bg-[var(--admin-muted)] opacity-20" />
                      <div className="h-4 w-1/2 rounded bg-[var(--admin-muted)] opacity-20" />
@@ -132,21 +131,21 @@ export function AssistantTaskBoard() {
               <p className="text-[var(--admin-muted)] mt-1">لا توجد مهام بحاجة للمراجعة حاليًا.</p>
            </motion.div>
         ) : (
-          tasks.map((task, i) => {
+          tasks.map((task) => {
               const typeInfo = getTaskTypeLabel(task.taskType);
               
               return (
                   <motion.div
                     key={task.id}
                     layout
-                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: i * 0.06, duration: 0.4, ease: easeQuart } }}
+                    initial={false}
+                    animate={{ opacity: 1 }}
                     exit={exitScale}
-                    className="flex flex-col rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm hover:shadow-[0_12px_32px_var(--admin-shadow)] transition-shadow"
+                    className="flex flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] transition-colors hover:border-[var(--admin-primary)]"
                   >
                       <div className="p-6 flex-1">
                           <div className="flex justify-between items-start mb-4">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${typeInfo.style}`}>
+                              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${typeInfo.style}`}>
                                   {typeInfo.label}
                               </span>
                               <span className="text-xs text-[var(--admin-muted)] font-medium">
@@ -183,7 +182,7 @@ export function AssistantTaskBoard() {
                           )}
                       </div>
                       
-                      <div className="px-6 py-4 bg-[var(--admin-card-soft)] rounded-b-[24px] border-t border-[var(--admin-border)] flex justify-end gap-3">
+                      <div className="flex justify-end gap-3 rounded-b-2xl border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-6 py-4">
                           {resolvingTaskId === task.id ? (
                               <>
                                   <NeumorphButton

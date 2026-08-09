@@ -15,7 +15,7 @@ type CommunityFeedProps = {
 };
 
 const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
 export function CommunityFeed({ posts, loading = false }: CommunityFeedProps) {
   return (
@@ -49,7 +49,7 @@ export function CommunityFeed({ posts, loading = false }: CommunityFeedProps) {
                   />
                   <div>
                     <h4 className="text-[15px] font-bold text-[var(--admin-text)] hover:underline cursor-pointer">{post.authorName}</h4>
-                    <div className="flex items-center gap-1 text-[13px] text-[var(--admin-muted)]">
+                    <div className="flex items-center gap-1 text-sm text-[var(--admin-muted)]">
                       <span>{formatDate(post.createdAt)}</span>
                       <span>·</span>
                       <Globe2 className="h-3 w-3" />
@@ -74,7 +74,7 @@ export function CommunityFeed({ posts, loading = false }: CommunityFeedProps) {
 
               {/* Stats Row */}
               {(post.likeCount > 0 || post.commentCount > 0) && (
-                <div className="mx-4 flex items-center justify-between border-b border-[var(--admin-border)] pb-2 text-[13px] text-[var(--admin-muted)]">
+                <div className="mx-4 flex items-center justify-between border-b border-[var(--admin-border)] pb-2 text-sm text-[var(--admin-muted)]">
                   <div className="flex items-center gap-1">
                     {post.likeCount > 0 && (
                       <>

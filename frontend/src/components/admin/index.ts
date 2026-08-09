@@ -18,6 +18,7 @@ export * from './AdminShellChrome';
 export * from './useAdminTheme';
 export * from './AdminStatCard';
 export * from './AdminTabBar';
+export * from './ContentSummaryPanel';
 export * from './AdminPageSkeleton';
 export * from './AdminBackButton';
 export * from './AdminBreadcrumbs';

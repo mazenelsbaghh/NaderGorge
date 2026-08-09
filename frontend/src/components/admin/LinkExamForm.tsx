@@ -114,7 +114,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
               <button
                 type="button"
                 onClick={() => router.push(`/admin/content/exams/${linkedExamId}/dashboard`)}
-                className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+                className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-sm hover:shadow-md transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5"
               >
                 <LayoutDashboard className="h-4 w-4 text-[var(--admin-primary)]" />
                 بروفايل الامتحان (الكامل)
@@ -122,7 +122,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
               <button
                 type="button"
                 onClick={() => router.push(`/admin/content/exams/${linkedExamId}/add-question`)}
-                className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 font-bold text-white shadow-sm hover:bg-[var(--admin-primary)]/90 transition-all hover:-translate-y-0.5"
+                className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 font-bold text-white shadow-sm hover:bg-[var(--admin-primary)]/90 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5"
               >
                 <Plus className="h-4 w-4" />
                 إضافة أسئلة أُخرى
@@ -200,7 +200,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                             </span>
                             {row.isTimeExpired && (
                               <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-[var(--admin-warning-10)] text-[var(--admin-warning)]" title="نفذ الوقت وتم التسليم تلقائياً">
-                                <AlertCircle className="w-3.5 h-3.5 mr-1" /> تأخير
+                                <AlertCircle className="w-3.5 h-3.5 me-1" /> تأخير
                               </span>
                             )}
                           </div>
@@ -227,7 +227,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                 value={examId}
                 onChange={(e) => setExamId(e.target.value)}
                 placeholder="أدخل معرف الامتحان المراد ربطه"
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                 required
               />
             </div>

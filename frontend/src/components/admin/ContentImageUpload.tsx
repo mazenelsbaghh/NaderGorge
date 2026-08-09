@@ -79,7 +79,7 @@ export function ContentImageUpload({
             <span className="mb-2 text-sm font-bold">جاري رفع وتحويل الصورة... {progress}%</span>
             <div className="w-full max-w-[200px] h-1.5 rounded-full bg-white/20 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[var(--admin-primary)] transition-all duration-300"
+                className="h-full rounded-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>

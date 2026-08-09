@@ -105,7 +105,7 @@ export default function TeacherStudentsPageClient() {
         return (
           <div className="flex items-center gap-2 text-sm text-[var(--admin-muted)]">
             <Calendar className="h-4 w-4 text-[var(--admin-primary)]" />
-            <span>{date.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</span>
+            <span>{date.toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo', year: "numeric", month: "long", day: "numeric" })}</span>
           </div>
         );
       },
@@ -179,7 +179,7 @@ export default function TeacherStudentsPageClient() {
                   </div>
 
                   <div className="mt-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-xs font-bold text-[var(--admin-muted)]">
-                    آخر باقة: <span className="text-[var(--admin-primary)]">{student.activatedPackageName}</span>، عدد الصلاحيات: {student.activeGrantCount}، آخر تفعيل: {student.lastActivationAt ? new Date(student.lastActivationAt).toLocaleDateString("ar-EG") : "—"}
+                    آخر باقة: <span className="text-[var(--admin-primary)]">{student.activatedPackageName}</span>، عدد الصلاحيات: {student.activeGrantCount}، آخر تفعيل: {student.lastActivationAt ? new Date(student.lastActivationAt).toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo' }) : "—"}
                   </div>
                 </article>
               ))}

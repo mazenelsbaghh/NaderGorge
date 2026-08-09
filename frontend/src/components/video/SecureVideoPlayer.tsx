@@ -462,6 +462,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const playbackRateRef = useRef(1);
   const flushInFlight = useRef(false);
   const activeSessionIdRef = useRef<string | null>(null);
+  const trackingEnabledRef = useRef(true);
   const consumedSessionIdRef = useRef<string | null>(null);
   const nextProgressSequenceRef = useRef(1);
   const activeProgressRequestRef = useRef<{ sequence: number; seconds: number } | null>(null);
@@ -511,6 +512,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [duration]);
 
   const flushTrackedProgress = useCallback(async () => {
+    if (!trackingEnabledRef.current) return;
+
     const sessionId = activeSessionIdRef.current;
     if (flushInFlight.current || !sessionId) {
       return;
@@ -558,7 +561,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [applyProgressResponse, duration, lessonVideoId, stopSessionTracking]);
 
   useEffect(() => {
-    if (status !== 'ready') return;
+    if (status !== 'ready' || !trackingEnabledRef.current) return;
 
     if (trackingInterval.current) clearInterval(trackingInterval.current);
 
@@ -660,6 +663,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       
       const response = await videoSessionService.createSession(lessonVideoId);
       const session = response.data.data;
+      trackingEnabledRef.current = !session.isPreview;
       activeSessionIdRef.current = session.sessionId;
       consumedSessionIdRef.current = null;
       nextProgressSequenceRef.current = 1;
@@ -879,14 +883,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             <button 
               type="button"
               onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
-              className="px-6 py-3 bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] border border-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
+              className="px-6 py-3 bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] border border-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold rounded-lg transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
             >
               اذهب للامتحان
             </button>
             <button 
               type="button"
               onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
             >
               عرض النتيجة
             </button>
@@ -905,8 +909,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         aria-label="تحميل وتشغيل الفيديو"
       >
         <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-30 transition-opacity" style={{ backgroundImage: "url('/images/lesson-placeholder.webp')" }}></div>
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex items-center justify-center transition-all duration-300 pointer-events-auto">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex items-center justify-center transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 pointer-events-auto">
+          <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-sm cursor-pointer">
             <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
           </div>
         </div>
@@ -928,7 +932,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                 type="button"
                 onClick={handleRepurchaseLesson}
                 disabled={isBuyingAgain}
-                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center min-w-[200px] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 flex items-center justify-center min-w-[200px] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
               >
                 {isBuyingAgain ? 'جاري الشراء...' : `شراء الحصة مجدداً (${lessonPrice} ج.م)`}
               </button>
@@ -1100,7 +1104,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }
 
   return (
-    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[100] !rounded-none' : ''}`}>
+    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[var(--z-modal)] !rounded-none' : ''}`}>
       
       {/* Video Container */}
       <div 
@@ -1130,7 +1134,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute inset-0 z-[80]"
+              className="pointer-events-none absolute inset-0 z-[var(--z-overlay)]"
               style={{
                 background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top}) ${Math.min(shadowSolid.top, shadowCoverage.top)}%, transparent ${shadowCoverage.top}%, transparent ${100 - shadowCoverage.bottom}%, rgba(0,0,0,${shadowOpacity.bottom}) ${100 - Math.min(shadowSolid.bottom, shadowCoverage.bottom)}%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)`
               }}
@@ -1141,7 +1145,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         {/* Floating Chapter Info Overlay */}
         {activeChapterDesktop && activeChapterDesktop.summaryText && status === 'ready' && (showControls || isChapterInfoOpen) && (
           <div 
-            className="absolute top-4 right-4 bottom-16 z-[90] flex flex-col items-end pointer-events-none"
+            className="absolute top-4 right-4 bottom-16 z-[var(--z-floating)] flex flex-col items-end pointer-events-none"
             onMouseEnter={() => setIsHoveringControls(true)}
             onMouseLeave={() => setIsHoveringControls(false)}
             onClick={(e) => e.stopPropagation()}
@@ -1156,7 +1160,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsChapterInfoOpen(true)} 
-                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)]"
+                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 text-white shadow-sm backdrop-blur transition hover:bg-[var(--admin-primary)]"
                    aria-label="فتح معلومات الفصل الحالي"
                  >
                     <Info className="w-5 h-5" />
@@ -1168,7 +1172,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, y: 0 }}
                    exit={{ opacity: 0, y: -20 }}
                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                   className="pointer-events-auto bg-black/70 backdrop-blur-xl border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[350px] h-full overflow-y-auto custom-scrollbar shadow-[0_10px_40px_rgba(0,0,0,0.6)] relative flex flex-col"
+                   className="pointer-events-auto bg-black/70 backdrop-blur-md border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[350px] h-full overflow-y-auto custom-scrollbar shadow-sm relative flex flex-col"
                  >
                     <button 
                       type="button"
@@ -1206,7 +1210,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             intentionally auto-hide, but that must not hide the mind-map trigger. */}
         {activeMindmapChapter && status === 'ready' && (
           <div 
-            className="pointer-events-none absolute left-3 top-3 z-[90] flex flex-col items-start sm:left-4 sm:top-4"
+            className="pointer-events-none absolute left-3 top-3 z-[var(--z-floating)] flex flex-col items-start sm:left-4 sm:top-4"
             onMouseEnter={() => setIsHoveringControls(true)}
             onMouseLeave={() => setIsHoveringControls(false)}
             onClick={(e) => e.stopPropagation()}
@@ -1221,7 +1225,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsMindmapOpen(true)} 
-                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-3 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-3 text-white shadow-sm backdrop-blur transition hover:bg-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
                    aria-label="فتح الخريطة الذهنية للفصل"
                  >
                     <Map className="h-5 w-5 sm:mr-2" />
@@ -1234,7 +1238,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, y: 0 }}
                    exit={{ opacity: 0, y: -20 }}
                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                   className="pointer-events-auto bg-black/70 backdrop-blur-xl border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[500px] h-full overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.6)] relative flex flex-col"
+                   className="pointer-events-auto bg-black/70 backdrop-blur-md border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[500px] h-full overflow-hidden shadow-sm relative flex flex-col"
                  >
                     <button 
                       type="button"
@@ -1277,7 +1281,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         {status === 'ready' && !isPlaying && !isBuffering && (
           <button
             type="button"
-            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-all duration-300 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
+            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
             aria-label="تشغيل الفيديو"
             tabIndex={requiresDirectPlayback ? -1 : 0}
             onClick={(e) => {
@@ -1285,7 +1289,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               togglePlay();
             }}
           >
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform hover:scale-110 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform hover:scale-110 transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-sm cursor-pointer">
               <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
             </div>
           </button>

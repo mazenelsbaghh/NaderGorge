@@ -28,6 +28,7 @@ public sealed class HrAttendanceController : ControllerBase
         var userId = User.RequireUserId();
         if (await IsGeneralAdminAsync(userId, ct)) return AdminAttendanceNotApplicable();
         var today = CairoTime.GetCurrentDate();
+        var serverNowUtc = DateTime.UtcNow;
         var session = await _db.AttendanceSessions.AsNoTracking().Where(item =>
                 item.Employee!.UserId == userId &&
                 (item.State == AttendanceSessionState.Open || item.WorkDate == today))
@@ -39,6 +40,7 @@ public sealed class HrAttendanceController : ControllerBase
                 breakAllowanceMinutes = item.Employee!.DailyBreakAllowanceMinutes,
                 shortPermissionMaxMinutes = item.Employee.ShortPermissionMaxMinutes,
                 dailyShortPermissionAllowanceMinutes = item.Employee.DailyShortPermissionAllowanceMinutes,
+                serverNowUtc,
                 breaks = item.Breaks.OrderBy(row => row.StartedAt).Select(row => new { row.Id, row.StartedAt, row.EndedAt, kind = row.Kind.ToString(), row.AllowedMinutes })
             }).FirstOrDefaultAsync(ct);
         return Ok(session);
@@ -108,16 +110,23 @@ public sealed class HrAttendanceController : ControllerBase
 
     [HttpGet("admin/attendance/sessions")]
     [HasPermission(HrPermissions.AttendanceTeamRead)]
-    public async Task<IActionResult> Sessions(DateOnly? from, DateOnly? to, CancellationToken ct) => Ok(await _db.AttendanceSessions.AsNoTracking()
+    public async Task<IActionResult> Sessions(DateOnly? from, DateOnly? to, CancellationToken ct)
+    {
+        var serverNowUtc = DateTime.UtcNow;
+        return Ok(await _db.AttendanceSessions.AsNoTracking()
         .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
         .OrderByDescending(item => item.WorkDate).Select(item => new { item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(), item.WorkedMinutes,
             employeePhone = item.Employee!.User!.PhoneNumber, item.LateMinutes, item.EarlyLeaveMinutes, item.OvertimeMinutes,
             breakAllowanceMinutes = item.Employee!.DailyBreakAllowanceMinutes, shortPermissionMaxMinutes = item.Employee.ShortPermissionMaxMinutes,
-            openBreak = item.Breaks.Where(b => !b.EndedAt.HasValue).Select(b => new { b.Id, b.StartedAt, kind = b.Kind.ToString(), b.AllowedMinutes }).FirstOrDefault() }).Take(100).ToListAsync(ct));
+            serverNowUtc, openBreak = item.Breaks.Where(b => !b.EndedAt.HasValue).Select(b => new { b.Id, b.StartedAt, kind = b.Kind.ToString(), b.AllowedMinutes }).FirstOrDefault() }).Take(100).ToListAsync(ct));
+    }
 
     [HttpGet("admin/attendance/daily-report")]
     [HasPermission(HrPermissions.AttendanceTeamRead)]
-    public async Task<IActionResult> DailyReport(DateOnly? from, DateOnly? to, CancellationToken ct) => Ok(await _db.AttendanceSessions.AsNoTracking()
+    public async Task<IActionResult> DailyReport(DateOnly? from, DateOnly? to, CancellationToken ct)
+    {
+        var serverNowUtc = DateTime.UtcNow;
+        return Ok(await _db.AttendanceSessions.AsNoTracking()
         .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
         .GroupBy(item => new
         {
@@ -136,14 +145,17 @@ public sealed class HrAttendanceController : ControllerBase
             workDate = group.Key.WorkDate,
             clockedInAt = group.Min(item => item.ClockedInAt),
             clockedOutAt = group.Max(item => item.ClockedOutAt),
+            openClockedInAt = group.Where(item => !item.ClockedOutAt.HasValue).Select(item => (DateTime?)item.ClockedInAt).Max(),
             workedMinutes = group.Sum(item => item.WorkedMinutes),
             lateMinutes = group.Sum(item => item.LateMinutes),
             earlyLeaveMinutes = group.Sum(item => item.EarlyLeaveMinutes),
             overtimeMinutes = group.Sum(item => item.OvertimeMinutes),
             hasOpenSession = group.Any(item => !item.ClockedOutAt.HasValue),
+            serverNowUtc,
         })
         .Take(1000)
         .ToListAsync(ct));
+    }
 
     [HttpGet("admin/attendance/attempts")]
     [HasPermission(HrPermissions.AttendanceManage)]

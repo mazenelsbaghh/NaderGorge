@@ -41,7 +41,7 @@ export default function AssistantNotificationsPageClient() {
           return (
             <button type="button" onClick={() => void markRead(notif)}
               key={notif.id}
-              className={`flex w-full gap-4 items-start p-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right hover:shadow-md transition duration-200 ${notif.readAt ? 'opacity-70' : ''}`}
+              className={`flex w-full gap-4 items-start p-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-right hover:shadow-md transition duration-200 ${notif.readAt ? 'opacity-70' : ''}`}
             >
               <div className="p-3 rounded-2xl shrink-0 text-amber-500 bg-amber-50 dark:bg-amber-950/20">
                 <Bell className="h-5 w-5" />

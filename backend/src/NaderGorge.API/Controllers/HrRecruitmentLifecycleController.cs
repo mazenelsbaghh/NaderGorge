@@ -24,6 +24,8 @@ public sealed class HrRecruitmentLifecycleController(IAppDbContext db, Recruitme
     [HttpPost("admin/recruitment/requisitions"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> CreateRequisition(CreateRequisitionRequest request, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 300 || request.Openings <= 0 ||
+            string.IsNullOrWhiteSpace(request.Requirements) || request.Requirements.Length > 10000) return BadRequest();
         var row = new Requisition { RequisitionNumber = $"REQ-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..27].ToUpperInvariant(), Title = request.Title.Trim(),
             OrganizationUnitId = request.OrganizationUnitId, Openings = request.Openings, Requirements = request.Requirements.Trim(), RequestedByUserId = User.RequireUserId(), State = RequisitionState.Open };
         db.Requisitions.Add(row); await db.SaveChangesAsync(ct); return Ok(new { row.Id });
@@ -32,6 +34,10 @@ public sealed class HrRecruitmentLifecycleController(IAppDbContext db, Recruitme
     [HttpPost("admin/recruitment/requisitions/{requisitionId:guid}/candidates"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> AddCandidate(Guid requisitionId, AddCandidateRequest request, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(request.FullName) || request.FullName.Length > 300 ||
+            string.IsNullOrWhiteSpace(request.PhoneNumber) || request.PhoneNumber.Length > 30 ||
+            request.Email?.Length > 320 || request.CvAssetReference?.Length > 1000) return BadRequest();
+        if (!await db.Requisitions.AnyAsync(item => item.Id == requisitionId && item.State == RequisitionState.Open, ct)) return NotFound();
         var candidate = new Candidate { RequisitionId = requisitionId, FullName = request.FullName.Trim(), PhoneNumber = request.PhoneNumber.Trim(), Email = request.Email, CvAssetReference = request.CvAssetReference };
         db.Candidates.Add(candidate); await db.SaveChangesAsync(ct); return Ok(new { candidate.Id });
     }
@@ -39,7 +45,10 @@ public sealed class HrRecruitmentLifecycleController(IAppDbContext db, Recruitme
     [HttpPost("admin/recruitment/candidates/{candidateId:guid}/interviews"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> ScheduleInterview(Guid candidateId, ScheduleInterviewRequest request, CancellationToken ct)
     {
-        var candidate = await db.Candidates.SingleAsync(item => item.Id == candidateId, ct); candidate.Stage = CandidateStage.Interview; candidate.Version++;
+        if (request.InterviewerUserId == Guid.Empty || request.ScheduledAt <= DateTime.UtcNow) return BadRequest();
+        var candidate = await db.Candidates.SingleOrDefaultAsync(item => item.Id == candidateId, ct);
+        if (candidate is null) return NotFound();
+        candidate.Stage = CandidateStage.Interview; candidate.Version++;
         var interview = new CandidateInterview { CandidateId = candidateId, ScheduledAt = request.ScheduledAt, InterviewerUserId = request.InterviewerUserId };
         db.CandidateInterviews.Add(interview); await db.SaveChangesAsync(ct); return Ok(new { interview.Id });
     }
@@ -47,7 +56,10 @@ public sealed class HrRecruitmentLifecycleController(IAppDbContext db, Recruitme
     [HttpPost("admin/recruitment/candidates/{candidateId:guid}/offers"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> CreateOffer(Guid candidateId, CreateCandidateOfferRequest request, CancellationToken ct)
     {
-        var candidate = await db.Candidates.SingleAsync(item => item.Id == candidateId, ct); candidate.Stage = CandidateStage.Offer; candidate.Version++;
+        if (request.BaseSalary < 0 || string.IsNullOrWhiteSpace(request.Currency) || request.Currency.Length != 3) return BadRequest();
+        var candidate = await db.Candidates.SingleOrDefaultAsync(item => item.Id == candidateId, ct);
+        if (candidate is null) return NotFound();
+        candidate.Stage = CandidateStage.Offer; candidate.Version++;
         var offer = new CandidateOffer { CandidateId = candidateId, OfferNumber = $"OFF-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..27].ToUpperInvariant(), BaseSalary = request.BaseSalary, Currency = request.Currency.ToUpperInvariant(), ProposedStartDate = request.ProposedStartDate, State = OfferState.Sent };
         db.CandidateOffers.Add(offer); await db.SaveChangesAsync(ct); return Ok(new { offer.Id });
     }
@@ -55,13 +67,16 @@ public sealed class HrRecruitmentLifecycleController(IAppDbContext db, Recruitme
     [HttpPost("admin/recruitment/offers/{offerId:guid}/accept"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> AcceptOffer(Guid offerId, CandidateVersionRequest request, CancellationToken ct)
     {
-        var offer = await db.CandidateOffers.SingleAsync(item => item.Id == offerId, ct); if (offer.Version != request.ExpectedVersion) return Conflict();
+        var offer = await db.CandidateOffers.SingleOrDefaultAsync(item => item.Id == offerId, ct);
+        if (offer is null) return NotFound();
+        if (offer.Version != request.ExpectedVersion || offer.State != OfferState.Sent) return Conflict();
         offer.State = OfferState.Accepted; offer.AcceptedAt = DateTime.UtcNow; offer.Version++; await db.SaveChangesAsync(ct); return Ok();
     }
 
     [HttpPost("admin/recruitment/candidates/{candidateId:guid}/hire"), HasPermission(HrPermissions.RecruitmentManage)]
     public async Task<IActionResult> Hire(Guid candidateId, HireCandidateRequest request, CancellationToken ct)
     {
+        if (request.OfferId == Guid.Empty || string.IsNullOrWhiteSpace(request.TemporaryPassword) || request.TemporaryPassword.Length < 6) return BadRequest();
         var result = await recruitmentService.HireAcceptedCandidateAsync(candidateId, request.OfferId, BCrypt.Net.BCrypt.HashPassword(request.TemporaryPassword), User.RequireUserId(), ct);
         return result.Success ? Ok(result) : Conflict(result);
     }

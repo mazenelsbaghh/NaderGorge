@@ -43,8 +43,8 @@ export type LiveSupportCallbackErrorCode =
   | 'CALLBACK_INVALID_RESPONSE';
 
 export class LiveSupportCallbackError extends Error {
-  constructor(public readonly code: LiveSupportCallbackErrorCode, public readonly retryable: boolean) {
-    super(code);
+  constructor(public readonly code: LiveSupportCallbackErrorCode, public readonly retryable: boolean, public readonly httpStatus?: number) {
+    super(httpStatus ? `${code}_HTTP_${httpStatus}` : code);
     this.name = 'LiveSupportCallbackError';
   }
 }
@@ -121,7 +121,7 @@ export function createLiveSupportCallbackClient(options: ClientOptions = {}): Li
       if (!response.ok) {
         if (response.status === 404 && path.endsWith('/claim')) return { status: response.status, body };
         const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
-        throw new LiveSupportCallbackError('CALLBACK_REJECTED', retryable);
+        throw new LiveSupportCallbackError('CALLBACK_REJECTED', retryable, response.status);
       }
       return { status: response.status, body };
     } catch (error) {

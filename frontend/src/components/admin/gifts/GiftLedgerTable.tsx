@@ -5,7 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { giftTargetLabels, type GiftListItemDto } from '@/services/admin-gifts-service';
 import { GiftStatusBadge } from './GiftStatusBadge';
 
-const date = (value?: string | null) => value ? new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' }).format(new Date(value)) : 'بدون انتهاء';
+const date = (value?: string | null) => value ? new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }).format(new Date(value)) : 'بدون انتهاء';
 
 export function GiftLedgerTable({ items }: { items: GiftListItemDto[] }) {
   return (

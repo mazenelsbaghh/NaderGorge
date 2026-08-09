@@ -108,7 +108,7 @@ export default function TermDetailPageClient() {
     return (
       <div className="space-y-6 animate-pulse pb-10">
         <div className="h-9 w-48 rounded-full bg-[var(--admin-card-strong)]" />
-        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-2xl" />
+        <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)] sm:rounded-2xl" />
         <div className="h-6 w-2/3 rounded-xl bg-[var(--admin-card-strong)]" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -189,7 +189,7 @@ export default function TermDetailPageClient() {
       {error && (
         <motion.div
           variants={fadeUp}
-          className="flex flex-col items-center gap-4 rounded-[2rem] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
+          className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-card)] text-[var(--admin-danger)]">
             <TriangleAlert className="h-7 w-7" />
@@ -224,7 +224,7 @@ export default function TermDetailPageClient() {
           {!error && (
             <div>
               {sections.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
                   <BookOpen className="mb-4 h-10 w-10 text-[var(--admin-muted)] opacity-40" />
                   <p className="font-bold text-[var(--admin-muted)]">لا توجد أقسام في هذا الترم بعد.</p>
                 </div>
@@ -246,7 +246,7 @@ export default function TermDetailPageClient() {
                       <Link
                           href={`/student/packages/${packageId}/terms/${termId}/sections/${section.id}`}
                           prefetch={false}
-                          className="group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-md hover:-translate-y-1.5 hover:shadow-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                          className="group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-md hover:-translate-y-1.5 hover:shadow-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
                           style={{
                             boxShadow: `0 4px 20px color-mix(in srgb, ${pal.from} 15%, transparent)`,
                           }}
@@ -347,7 +347,7 @@ export default function TermDetailPageClient() {
                               ) : (
                                 <span />
                               )}
-                              <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
+                              <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-[color,background-color,border-color,opacity,transform,box-shadow] group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
                             </div>
                           </div>
                       </Link>
@@ -387,7 +387,7 @@ export default function TermDetailPageClient() {
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
                   {term != null ? ((term.price ?? 0) > 0 ? 'شراء الترم' : 'تفعيل الترم مجاناً') : 'شراء الباقة'}

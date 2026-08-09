@@ -72,7 +72,7 @@ export function AttachedHomeworkViewer({
     <div className="space-y-6">
       {/* Homework Overview Summary */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-full w-2 bg-[var(--admin-primary)]" />
+        <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
           <div>
             <h3 className="mb-2 text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
@@ -85,10 +85,10 @@ export function AttachedHomeworkViewer({
           </div>
           <div className="flex flex-wrap gap-3">
             <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
-              <Power className="w-4 h-4 ml-2" /> {data.isActive ? 'تعطيل الواجب' : 'تفعيل الواجب'}
+              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الواجب' : 'تفعيل الواجب'}
             </NeumorphButton>
             <NeumorphButton type="button" onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)} intent="primary" size="md" pill className="shrink-0">
-              <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
+              <Plus className="w-4 h-4 ms-2" /> إدراج أو تعديل الأسئلة
             </NeumorphButton>
           </div>
         </div>
@@ -115,7 +115,7 @@ export function AttachedHomeworkViewer({
             data.questions.map((q, idx) => (
                 <div 
                   key={q.homeworkQuestionId} 
-                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                 >
                   <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
                     <div className="flex gap-4 flex-1">
@@ -135,7 +135,7 @@ export function AttachedHomeworkViewer({
                           </div>
                         )}
                         {q.baseText && (
-                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3">
+                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-e-2 border-[var(--admin-border)] pe-3">
                             {q.baseText}
                           </p>
                         )}
@@ -172,7 +172,7 @@ export function AttachedHomeworkViewer({
                 size="sm"
                 pill
               >
-                <Plus className="w-4 h-4 ml-1" /> إضافة أسئلة الآن
+                <Plus className="w-4 h-4 ms-1" /> إضافة أسئلة الآن
               </NeumorphButton>
             </div>
           )}
@@ -214,7 +214,7 @@ export function AttachedHomeworkViewer({
                     <td className="px-4 py-4 text-[var(--admin-muted)]">{submission.evaluation}</td>
                     <td className="px-4 py-4 text-[var(--admin-muted)]">
                       {submission.submittedAt
-                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG')
+                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })
                         : 'لم يتم التسليم'}
                     </td>
                   </tr>

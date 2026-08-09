@@ -23,17 +23,16 @@
 		000000000000000000000114 /* Services/KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000214 /* Services/KeychainService.swift */; };
 		000000000000000000000115 /* ViewModels/DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000215 /* ViewModels/DashboardViewModel.swift */; };
 		000000000000000000000116 /* ViewModels/LinkingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000216 /* ViewModels/LinkingViewModel.swift */; };
-		000000000000000000000122 /* Services/ParentNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000222 /* Services/ParentNotificationService.swift */; };
 		000000000000000000000117 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000217 /* Resources/Assets.xcassets */; };
 		000000000000000000000118 /* Resources/Fonts/Tajawal-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000218 /* Resources/Fonts/Tajawal-Black.ttf */; };
 		000000000000000000000119 /* Resources/Fonts/Tajawal-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000219 /* Resources/Fonts/Tajawal-Bold.ttf */; };
 		000000000000000000000120 /* Resources/Fonts/Tajawal-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000220 /* Resources/Fonts/Tajawal-Medium.ttf */; };
 		000000000000000000000121 /* Resources/Fonts/Tajawal-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000221 /* Resources/Fonts/Tajawal-Regular.ttf */; };
+		000000000000000000000122 /* Services/ParentNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000222 /* Services/ParentNotificationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		000000000000000000000005 /* NaderGorgeParent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NaderGorgeParent.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		000000000000000000000223 /* NaderGorgeParent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NaderGorgeParent.entitlements; sourceTree = "<group>"; };
 		000000000000000000000201 /* NaderGorgeParentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NaderGorgeParentApp.swift; sourceTree = "<group>"; };
 		000000000000000000000202 /* Views/ParentAppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ParentAppContainer.swift; sourceTree = "<group>"; };
 		000000000000000000000203 /* Views/SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SplashScreenView.swift; sourceTree = "<group>"; };
@@ -50,12 +49,13 @@
 		000000000000000000000214 /* Services/KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/KeychainService.swift; sourceTree = "<group>"; };
 		000000000000000000000215 /* ViewModels/DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/DashboardViewModel.swift; sourceTree = "<group>"; };
 		000000000000000000000216 /* ViewModels/LinkingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/LinkingViewModel.swift; sourceTree = "<group>"; };
-		000000000000000000000222 /* Services/ParentNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ParentNotificationService.swift; sourceTree = "<group>"; };
 		000000000000000000000217 /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000218 /* Resources/Fonts/Tajawal-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Black.ttf"; sourceTree = "<group>"; };
 		000000000000000000000219 /* Resources/Fonts/Tajawal-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Bold.ttf"; sourceTree = "<group>"; };
 		000000000000000000000220 /* Resources/Fonts/Tajawal-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Medium.ttf"; sourceTree = "<group>"; };
 		000000000000000000000221 /* Resources/Fonts/Tajawal-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Regular.ttf"; sourceTree = "<group>"; };
+		000000000000000000000222 /* Services/ParentNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ParentNotificationService.swift; sourceTree = "<group>"; };
+		000000000000000000000223 /* NaderGorgeParent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NaderGorgeParent.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -257,11 +257,12 @@
 		000000000000000000000012 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = NaderGorgeParent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 13;
-				DEVELOPMENT_TEAM = CDZTQC2B3J;
+				DEVELOPMENT_TEAM = CDZTQC2BJ3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "متابعة ولي الأمر - مسار";
 				INFOPLIST_KEY_CFBundleName = "متابعة ولي الأمر - مسار";
@@ -273,7 +274,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				APS_ENVIRONMENT = development;
 				PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.parent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -287,11 +287,12 @@
 		000000000000000000000013 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = NaderGorgeParent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 13;
-				DEVELOPMENT_TEAM = CDZTQC2B3J;
+				DEVELOPMENT_TEAM = CDZTQC2BJ3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "متابعة ولي الأمر - مسار";
 				INFOPLIST_KEY_CFBundleName = "متابعة ولي الأمر - مسار";
@@ -302,7 +303,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				APS_ENVIRONMENT = production;
 				PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.parent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

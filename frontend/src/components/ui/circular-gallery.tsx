@@ -850,11 +850,11 @@ export default function CircularGallery({
 
     return (
       <div className="flex h-full w-full items-center overflow-hidden px-4">
-        <div className="flex min-w-full gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-full gap-4 overflow-x-auto pb-4 [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
           {fallbackItems.map((item, index) => (
             <figure
               key={`${item.image}-${index}`}
-              className="min-w-[72vw] overflow-hidden rounded-[28px] bg-[var(--landing-card)] shadow-[0_18px_42px_rgba(88,55,18,0.10)] sm:min-w-[340px]"
+              className="min-w-[72vw] overflow-hidden rounded-2xl bg-[var(--landing-card)] shadow-sm sm:min-w-[340px]"
             >
               <Image
                 src={item.image}

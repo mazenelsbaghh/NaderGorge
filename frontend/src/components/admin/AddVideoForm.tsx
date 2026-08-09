@@ -95,7 +95,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="مثال: الدرس الأول - مراجعة"
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
             required
           />
         </div>
@@ -130,7 +130,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
                 setUrlOrEmbedCode(val);
               }}
               placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : provider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
               required={provider !== 'bunny' || bunnyMode === 'manual'}
             />
           </div>
@@ -163,7 +163,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
               />
               {saving && uploadProgress > 0 && (
                 <div className="h-2 overflow-hidden rounded-full bg-[var(--admin-border)]">
-                  <div className="h-full bg-[var(--admin-primary)] transition-all" style={{ width: `${uploadProgress}%` }} />
+                  <div className="h-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]" style={{ width: `${uploadProgress}%` }} />
                 </div>
               )}
             </div>
@@ -217,7 +217,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
           intent="primary"
           size="lg"
           pill
-          className="whitespace-nowrap ml-auto"
+          className="whitespace-nowrap ms-auto"
         >
           إضافة الفيديو
         </NeumorphButton>

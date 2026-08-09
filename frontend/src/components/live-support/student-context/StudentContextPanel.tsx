@@ -239,7 +239,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                     {sections.devices.devices.map((device) => (
                       <div key={device.id} className="border-b border-slate-100 pb-1 last:border-0 last:pb-0">
                         <p className="font-semibold text-slate-800">{device.name || 'جهاز'}</p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-sm text-slate-500">
                           نظام: {device.os || 'غير معروف'} · متصفح: {device.browser || 'غير معروف'} · آخر ظهور: {formatCairoDateTime(device.lastUsedAt, { dateStyle: 'short' })}
                         </p>
                       </div>
@@ -269,7 +269,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                           {note.isPinned ? '📌 ' : ''}
                           {note.content}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        <p className="text-sm text-slate-400 mt-1">
                           {formatCairoDateTime(note.createdAt)}
                         </p>
                       </div>
@@ -358,26 +358,26 @@ function StudentSupportHistory({ conversation }: { conversation: LiveSupportConv
         <History size={17} className="mt-0.5 shrink-0 text-cyan-700" />
         <div>
           <h3 className="text-sm font-bold text-slate-900">سجل دعم الطالب</h3>
-          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">كل المحادثات السابقة، بما فيها المغلقة، والإجراءات المسجلة فيها.</p>
+          <p className="mt-0.5 text-sm leading-4 text-slate-500">كل المحادثات السابقة، بما فيها المغلقة، والإجراءات المسجلة فيها.</p>
         </div>
       </div>
       <div className="max-h-52 divide-y divide-slate-100 overflow-y-auto">
         {loading && <div className="space-y-2 p-3"><div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" /><div className="h-4 w-1/2 animate-pulse rounded bg-slate-200" /></div>}
         {!loading && !error && items.length === 0 && <p className="p-3 text-center text-xs text-slate-500">لا توجد محادثات سابقة لهذا الطالب.</p>}
         {items.map((item) => <button key={item.conversationId} type="button" onClick={() => void openHistory(item)} aria-expanded={selectedHistory?.conversationId === item.conversationId} className={`w-full px-3 py-2.5 text-right transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/30 ${selectedHistory?.conversationId === item.conversationId ? 'bg-cyan-50/70' : ''}`}>
-          <span className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-bold text-slate-800">{item.subject || 'محادثة دعم'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${historyStatusClass(item.status)}`}>{historyStatusLabel(item.status)}</span></span>
-          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{formatCairoDateTime(item.lastActivityAt)}</span><span>{item.messageCount} رسالة{item.lastEventType ? ` · ${historyEventLabel(item.lastEventType)}` : ''}</span></span>
-          {item.lastMessagePreview && <span className="mt-1 block truncate text-[11px] text-slate-600">{item.lastMessagePreview}</span>}
+          <span className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-bold text-slate-800">{item.subject || 'محادثة دعم'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-sm font-semibold ${historyStatusClass(item.status)}`}>{historyStatusLabel(item.status)}</span></span>
+          <span className="mt-1 flex items-center justify-between gap-2 text-sm text-slate-500"><span>{formatCairoDateTime(item.lastActivityAt)}</span><span>{item.messageCount} رسالة{item.lastEventType ? ` · ${historyEventLabel(item.lastEventType)}` : ''}</span></span>
+          {item.lastMessagePreview && <span className="mt-1 block truncate text-sm text-slate-600">{item.lastMessagePreview}</span>}
         </button>)}
       </div>
       {error && <div role="alert" className="p-3 text-xs text-red-700">{error}</div>}
       {selectedHistory && <div className="border-t border-slate-100 bg-slate-50 p-3">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-800"><MessageSquareText size={14} />تفاصيل: {selectedHistory.subject || 'محادثة دعم'}</div>
-        {selectedHistory.activities.length > 0 && <ol className="mb-3 space-y-1 border-b border-slate-200 pb-3 text-[11px] text-slate-600">{selectedHistory.activities.map((activity, index) => <li key={`${activity.at}-${index}`} className="flex items-center justify-between gap-2"><span>{historyEventLabel(activity.type)}</span><time>{formatCairoDateTime(activity.at)}</time></li>)}</ol>}
+        {selectedHistory.activities.length > 0 && <ol className="mb-3 space-y-1 border-b border-slate-200 pb-3 text-sm text-slate-600">{selectedHistory.activities.map((activity, index) => <li key={`${activity.at}-${index}`} className="flex items-center justify-between gap-2"><span>{historyEventLabel(activity.type)}</span><time>{formatCairoDateTime(activity.at)}</time></li>)}</ol>}
         <div className="max-h-64 space-y-2 overflow-y-auto" aria-live="polite">
           {messagesLoading && <p className="text-xs text-slate-500">جارٍ تحميل الرسائل…</p>}
           {!messagesLoading && messages.length === 0 && <p className="text-xs text-slate-500">لا توجد رسائل في هذه المحادثة.</p>}
-          {messages.map((message) => <article key={message.id} dir="auto" className={`rounded-lg px-2.5 py-2 text-xs ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4 bg-slate-200 text-slate-800' : 'ml-4 bg-white text-slate-800'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-[10px] text-slate-500">{historySenderLabel(message.senderType)} · {formatCairoDateTime(message.sentAt)}</p></article>)}
+          {messages.map((message) => <article key={message.id} dir="auto" className={`rounded-lg px-2.5 py-2 text-xs ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4 bg-slate-200 text-slate-800' : 'ml-4 bg-white text-slate-800'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-sm text-slate-500">{historySenderLabel(message.senderType)} · {formatCairoDateTime(message.sentAt)}</p></article>)}
         </div>
       </div>}
     </section>

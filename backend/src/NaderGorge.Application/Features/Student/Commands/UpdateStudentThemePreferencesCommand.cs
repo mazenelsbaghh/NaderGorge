@@ -57,7 +57,7 @@ public class UpdateStudentThemePreferencesCommandHandler : IRequestHandler<Updat
             profile = new StudentProfile
             {
                 UserId = request.UserId,
-                DateOfBirth = DateTime.UtcNow.Date,
+                DateOfBirth = CairoTime.GetCurrentDate().ToDateTime(TimeOnly.MinValue),
                 Governorate = string.Empty,
                 Address = string.Empty,
                 Gender = 0,

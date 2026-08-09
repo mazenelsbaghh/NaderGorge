@@ -97,7 +97,7 @@ export default function NotFoundPage() {
           <PlatformLogo variant="mark" size="lg" tone={isDark ? 'light' : 'dark'} priority />
         </div>
 
-        <div className="space-y-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:p-10 backdrop-blur-md sm:rounded-[28px] shadow-[0_12px_40px_var(--admin-shadow)]">
+        <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:p-10 backdrop-blur-md sm:rounded-2xl shadow-sm">
           <div className="space-y-3">
             <span className="inline-block px-3 py-1 text-xs font-bold tracking-wider rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]">
               {portalTitle}

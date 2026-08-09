@@ -105,7 +105,7 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="مثال: مذكرة الفصل الأول"
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
               required
             />
           </div>
@@ -132,7 +132,7 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
                 value={fileUrl}
                 onChange={(e) => setFileUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                 required
               />
             </div>
@@ -162,7 +162,7 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
                     else setResourceType('Other');
                   }
                 }}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2.5 text-sm text-[var(--admin-text)] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[var(--admin-primary-15)] file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white file:transition-colors file:cursor-pointer transition-all"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2.5 text-sm text-[var(--admin-text)] file:me-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[var(--admin-primary-15)] file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white file:transition-colors file:cursor-pointer transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                 required
               />
             </div>

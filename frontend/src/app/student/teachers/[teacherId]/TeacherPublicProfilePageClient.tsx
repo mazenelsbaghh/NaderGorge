@@ -110,7 +110,10 @@ export default function TeacherPublicProfilePageClient({ teacherId, visitor = fa
   } as CSSProperties : undefined;
 
   return (
-    <div className="min-h-screen bg-[#F6F7F8] px-4 py-5 sm:px-6 sm:py-8" style={visitorTheme}>
+    <div
+      className={`min-h-screen bg-[#F6F7F8] px-4 py-5 sm:px-6 sm:py-8 ${visitor ? 'public-page-scroll' : ''}`}
+      style={visitorTheme}
+    >
     <div className="mx-auto max-w-6xl space-y-7 pb-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href={visitor ? '/' : '/student/teachers'} className="inline-flex h-11 items-center gap-2 rounded-lg border border-[var(--student-border)] bg-[var(--student-card)] px-4 text-sm font-black text-[var(--student-text)] transition hover:border-[var(--student-primary)] hover:text-[var(--student-primary)]">

@@ -262,7 +262,7 @@ export function UnifiedAssessmentBuilder({
                       <button
                         type="button"
                         onClick={() => setTargetType('Lesson')}
-                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                           targetType === 'Lesson'
                             ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
                             : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
@@ -278,7 +278,7 @@ export function UnifiedAssessmentBuilder({
                       <button
                         type="button"
                         onClick={() => setTargetType('Video')}
-                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                           targetType === 'Video'
                             ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
                             : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
@@ -303,7 +303,7 @@ export function UnifiedAssessmentBuilder({
                       </div>
                     ) : (
                       <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-3">
-                        <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                        <div className="max-h-48 space-y-2 overflow-y-auto pe-1">
                           {videos.map((video) => {
                             const isSelected = video.id === targetVideoId;
                             return (
@@ -311,7 +311,7 @@ export function UnifiedAssessmentBuilder({
                                 key={video.id}
                                 type="button"
                                 onClick={() => setTargetVideoId(video.id)}
-                                className={`w-full rounded-xl border px-4 py-3 text-right transition-all ${
+                                className={`w-full rounded-xl border px-4 py-3 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                                   isSelected
                                     ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-card)] shadow-md'
                                     : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:border-[var(--admin-primary)]/40'
@@ -337,7 +337,7 @@ export function UnifiedAssessmentBuilder({
                 disabled={saving}
                 className="admin-btn-primary w-full justify-center px-10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
-                <Save className="w-5 h-5 ml-2" />
+                <Save className="w-5 h-5 ms-2" />
                 {saving 
                   ? 'يتم الحفظ...' 
                   : isExam 

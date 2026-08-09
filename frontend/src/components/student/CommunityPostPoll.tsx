@@ -58,7 +58,7 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
             key={option.id}
             onClick={() => handleVote(option.id)}
             disabled={voting}
-            className={`relative flex w-full flex-col justify-center overflow-hidden rounded-lg border p-3 text-right transition-all
+            className={`relative flex w-full flex-col justify-center overflow-hidden rounded-lg border p-3 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow]
               ${
                 isSelected
                   ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)]'
@@ -67,7 +67,7 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
           >
             {/* Progress Bar Background */}
             <div
-              className={`absolute bottom-0 left-0 top-0 opacity-20 transition-all duration-500 ease-out ${
+              className={`absolute bottom-0 left-0 top-0 opacity-20 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ease-out ${
                 isSelected ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-muted)]'
               }`}
               style={{ width: `${percentage}%` }}
@@ -90,7 +90,7 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
             </div>
             
             {userVoteId !== null && (
-              <div className="relative z-10 mt-1 flex px-6 text-[12px] text-[var(--admin-muted)]">
+              <div className="relative z-10 mt-1 flex px-6 text-sm text-[var(--admin-muted)]">
                 {option.voteCount} صوت
               </div>
             )}
@@ -98,7 +98,7 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
         );
       })}
 
-      <div className="pt-2 text-right text-[13px] text-[var(--admin-muted)]">
+      <div className="pt-2 text-right text-sm text-[var(--admin-muted)]">
         إجمالي الأصوات: {displayTotal}
       </div>
     </div>

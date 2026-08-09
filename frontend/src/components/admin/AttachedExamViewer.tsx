@@ -70,7 +70,7 @@ export function AttachedExamViewer({
     <div className="space-y-6">
       {/* Exam Overview Summary */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-full w-2 bg-[var(--admin-primary)]" />
+        <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
           <div>
             <h3 className="mb-2 text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
@@ -83,7 +83,7 @@ export function AttachedExamViewer({
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
-              <Power className="w-4 h-4 ml-2" /> {data.isActive ? 'تعطيل الامتحان' : 'تفعيل الامتحان'}
+              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الامتحان' : 'تفعيل الامتحان'}
             </NeumorphButton>
             <NeumorphButton
               type="button"
@@ -92,7 +92,7 @@ export function AttachedExamViewer({
               size="md"
               pill
             >
-              <BarChart3 className="w-4 h-4 ml-2" /> عرض البروفايل
+              <BarChart3 className="w-4 h-4 ms-2" /> عرض البروفايل
             </NeumorphButton>
             <NeumorphButton
               type="button"
@@ -101,7 +101,7 @@ export function AttachedExamViewer({
               size="md"
               pill
             >
-              <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
+              <Plus className="w-4 h-4 ms-2" /> إدراج أو تعديل الأسئلة
             </NeumorphButton>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function AttachedExamViewer({
             data.questions.map((q, idx) => (
                 <div 
                   key={q.examQuestionId} 
-                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                 >
                   <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
                     <div className="flex gap-4 flex-1">
@@ -138,7 +138,7 @@ export function AttachedExamViewer({
                       <div className="flex-1">
                         <p className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words">{q.text}</p>
                         {q.baseText && (
-                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3">
+                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-e-2 border-[var(--admin-border)] pe-3">
                             {q.baseText}
                           </p>
                         )}
@@ -171,7 +171,7 @@ export function AttachedExamViewer({
                               style={{ width: `${q.correctPercentage}%` }}
                             />
                           </div>
-                          <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
+                          <div className="grid grid-cols-3 gap-1 text-sm font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
                             <div>
                               <div className="font-bold text-green-600 dark:text-green-400">{q.correctCount}</div>
                               <div>صح</div>
@@ -189,7 +189,7 @@ export function AttachedExamViewer({
                       ) : (
                         <div className="space-y-2">
                           <p className="text-xs font-bold text-[var(--admin-muted)]">لم يتم حل السؤال بعد</p>
-                          <p className="text-[10px] leading-relaxed text-[var(--admin-muted)] opacity-85">
+                          <p className="text-sm leading-relaxed text-[var(--admin-muted)] opacity-85">
                             بمجرد قيام الطلاب بحل هذا السؤال، ستظهر الإحصائيات هنا بالتفصيل.
                           </p>
                         </div>
@@ -209,7 +209,7 @@ export function AttachedExamViewer({
                 size="sm"
                 pill
               >
-                <Plus className="w-4 h-4 ml-1" /> إضافة أسئلة الآن
+                <Plus className="w-4 h-4 ms-1" /> إضافة أسئلة الآن
               </NeumorphButton>
             </div>
           )}

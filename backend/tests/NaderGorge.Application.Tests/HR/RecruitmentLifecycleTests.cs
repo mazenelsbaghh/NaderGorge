@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using NaderGorge.API.Controllers;
 using NaderGorge.Application.Features.HR.Lifecycle;
 using NaderGorge.Application.Features.HR.Recruitment;
 using NaderGorge.Domain.Entities;
@@ -21,6 +25,44 @@ public sealed class RecruitmentLifecycleTests
     }
 
     [Fact]
+    public async Task CandidateWithExistingUserPhoneIsNotHired()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var actor = await TestAppDbContextFactory.SeedUserAsync(db, "Recruiter", "01073333335");
+        await TestAppDbContextFactory.SeedUserAsync(db, "Existing", "01073333336");
+        var requisition = new Requisition { RequisitionNumber = "REQ-2", Title = "Support", RequestedByUserId = actor.Id, State = RequisitionState.Open };
+        var candidate = new Candidate { Requisition = requisition, FullName = "Duplicate Phone", PhoneNumber = "01073333336", Stage = CandidateStage.Offer };
+        var offer = new CandidateOffer { Candidate = candidate, OfferNumber = "OFF-2", BaseSalary = 7000, ProposedStartDate = new DateOnly(2026, 8, 1), State = OfferState.Accepted };
+        candidate.Offers.Add(offer); requisition.Candidates.Add(candidate); db.Requisitions.Add(requisition); await db.SaveChangesAsync();
+
+        var response = await new RecruitmentService(db).HireAcceptedCandidateAsync(candidate.Id, offer.Id, "hashed-password", actor.Id, default);
+
+        Assert.False(response.Success);
+        Assert.NotNull(response.Errors);
+        Assert.Contains("PHONE_ALREADY_EXISTS", response.Errors);
+        Assert.Empty(db.EmployeeProfiles);
+        Assert.Null(candidate.EmployeeProfileId);
+    }
+
+    [Fact]
+    public async Task ConvertedOfferCannotBeAcceptedAgain()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var actor = await TestAppDbContextFactory.SeedUserAsync(db, "Recruiter", "01073333337");
+        var requisition = new Requisition { RequisitionNumber = "REQ-3", Title = "Support", RequestedByUserId = actor.Id, State = RequisitionState.Open };
+        var candidate = new Candidate { Requisition = requisition, FullName = "Already Hired", PhoneNumber = "01073333338", Stage = CandidateStage.Hired };
+        var offer = new CandidateOffer { Candidate = candidate, OfferNumber = "OFF-3", BaseSalary = 7000, ProposedStartDate = new DateOnly(2026, 8, 1), State = OfferState.Converted };
+        candidate.Offers.Add(offer); requisition.Candidates.Add(candidate); db.Requisitions.Add(requisition); await db.SaveChangesAsync();
+        var controller = CreateController(db, actor.Id);
+
+        var response = await controller.AcceptOffer(offer.Id, new CandidateVersionRequest(offer.Version), default);
+
+        Assert.IsType<ConflictResult>(response);
+        Assert.Equal(OfferState.Converted, offer.State);
+        Assert.Null(offer.AcceptedAt);
+    }
+
+    [Fact]
     public async Task OpenAssetBlocksOffboardingThenCompletionDisablesAccessAndKeepsHistory()
     {
         await using var db = TestAppDbContextFactory.Create(); var actor = await TestAppDbContextFactory.SeedUserAsync(db, "HR", "01073333333"); var user = await TestAppDbContextFactory.SeedUserAsync(db, "Leaving", "01073333334");
@@ -30,5 +72,21 @@ public sealed class RecruitmentLifecycleTests
         Assert.False(process.Success); var custody = db.AssetCustodies.Single(); await documentAssets.ReturnAssetAsync(custody.Id, actor.Id, "good", default);
         process = await service.StartOffboardingAsync(employee.Id, new DateOnly(2026, 8, 31), "resigned", actor.Id, default); Assert.True(process.Success);
         Assert.True((await service.CompleteOffboardingAsync(process.Data, actor.Id, 1, default)).Success); Assert.False(user.IsActive); Assert.Equal(EmployeeEmploymentStatus.Terminated, employee.EmploymentStatus); Assert.Single(db.AssetCustodies);
+    }
+
+    private static HrRecruitmentLifecycleController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorUserId)
+    {
+        var controller = new HrRecruitmentLifecycleController(
+            db,
+            new RecruitmentService(db),
+            new LifecycleOrchestrationService(db, new DocumentAssetService(db)));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, actorUserId.ToString())], "Test"))
+            }
+        };
+        return controller;
     }
 }

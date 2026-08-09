@@ -177,7 +177,7 @@ export function GlobalNav() {
                 <Link
                   href="/login"
                   aria-label="تسجيل الدخول"
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#0E8F8F] px-3 text-sm font-black text-white transition-colors hover:bg-[#0A7474] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--landing-bg)]"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--landing-accent)] px-3 text-sm font-black text-[var(--landing-accent-foreground)] transition-colors hover:bg-[var(--landing-accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--landing-bg)]"
                 >
                   دخول
                 </Link>

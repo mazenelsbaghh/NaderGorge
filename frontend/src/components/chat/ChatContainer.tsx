@@ -175,7 +175,7 @@ export const ChatContainer: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[75vh] max-h-[800px] border border-[var(--admin-border)] rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[75vh] max-h-[800px] border border-[var(--admin-border)] rounded-3xl shadow-sm overflow-hidden">
       {/* Sidebar (Rooms List) */}
       <ChatSidebar
         rooms={rooms}

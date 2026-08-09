@@ -116,7 +116,7 @@ export function SectionList({ sections, packageId, isPackageEnrolled }: { sectio
                             <button
                               type="button"
                               onClick={() => handleLessonAction(lesson)}
-                              className="rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)] transition-all hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
+                              className="rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
                             >
                               {lesson.isLocked
                                 ? lesson.blockingHomeworkLessonId
@@ -131,7 +131,7 @@ export function SectionList({ sections, packageId, isPackageEnrolled }: { sectio
                             <button
                               type="button"
                               onClick={() => router.push(`/student/packages/${packageId}`)}
-                              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--admin-primary-20)] bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-20)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+                              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--admin-primary-20)] bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-20)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
                             >
                               شراء الباقة
                             </button>
@@ -184,7 +184,7 @@ export function SectionList({ sections, packageId, isPackageEnrolled }: { sectio
       ))}
       
       {sections.length === 0 && (
-        <div className="rounded-[28px] border-2 border-dashed border-[var(--admin-border)] p-12 text-center">
+        <div className="rounded-2xl border-2 border-dashed border-[var(--admin-border)] p-12 text-center">
           <p className="text-[var(--admin-muted)]">لا توجد أقسام متاحة.</p>
         </div>
       )}

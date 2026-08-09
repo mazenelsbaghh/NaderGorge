@@ -157,7 +157,6 @@ export function LandingFooter() {
                   width={64}
                   height={64}
                   className="relative h-16 w-16 object-contain"
-                  unoptimized
                   onError={(event) => { event.currentTarget.style.display = 'none'; }}
                 />
               </div>
@@ -218,7 +217,7 @@ function FooterLinks({
             {href ? (
               <Link
                 href={href}
-                className="text-sm font-semibold text-white/68 transition hover:text-[#9BE4E4]"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-white/68 transition hover:text-[#9BE4E4]"
               >
                 {label}
               </Link>

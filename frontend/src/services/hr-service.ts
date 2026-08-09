@@ -137,9 +137,9 @@ export interface AttendancePolicyConfigurationDto {
 }
 export type AttendanceBreakKind = 'Regular' | 'ShortPermission';
 export interface AttendanceBreakDto { id: string; startedAt: string; endedAt?: string | null; kind: AttendanceBreakKind; allowedMinutes: number; }
-export interface AttendanceSessionDto { id: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; breakAllowanceMinutes?: number; shortPermissionMaxMinutes?: number; dailyShortPermissionAllowanceMinutes?: number; breaks?: AttendanceBreakDto[]; }
-export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; }
-export interface AdminDailyAttendanceReportDto { employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; hasOpenSession: boolean; }
+export interface AttendanceSessionDto { id: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; serverNowUtc?: string; breakAllowanceMinutes?: number; shortPermissionMaxMinutes?: number; dailyShortPermissionAllowanceMinutes?: number; breaks?: AttendanceBreakDto[]; }
+export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; serverNowUtc: string; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; }
+export interface AdminDailyAttendanceReportDto { employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; openClockedInAt?: string | null; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; hasOpenSession: boolean; serverNowUtc: string; }
 export interface AttendanceCorrectionDto { id: string; employeeId: string; employee: string; attendanceSessionId: string; proposedClockedInAt?: string | null; proposedClockedOutAt?: string | null; reason: string; evidenceReference?: string | null; state: string; beforeJson: string; appliedJson?: string | null; version: number; }
 export interface LeaveTypeDto { id: string; code: string; name: string; isPaid: boolean; requiresAttachment: boolean; allowsHalfDay: boolean; }
 export interface LeaveBalanceDto { id: string; leaveTypeId: string; leaveType: string; year: number; granted: number; carried: number; reserved: number; used: number; available: number; }
@@ -198,6 +198,7 @@ export interface MyAttendanceStatusDto {
   hasProfile: boolean;
   logs: AttendanceLogDto[];
   targetDailyHours?: number;
+  serverNowUtc: string;
 }
 
 export const hrService = {

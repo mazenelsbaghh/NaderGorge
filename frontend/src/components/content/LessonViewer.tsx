@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck } from "lucide-react";
+import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
@@ -47,6 +47,8 @@ export function LessonViewer({
   const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDto[]>([]);
   const [loadingResources, setLoadingResources] = useState(true);
+  const [resourceError, setResourceError] = useState(false);
+  const [resourceRetryKey, setResourceRetryKey] = useState(0);
 
   useEffect(() => {
     if (lesson.id) {
@@ -57,18 +59,19 @@ export function LessonViewer({
       }
 
       setLoadingResources(true);
+      setResourceError(false);
       contentService.getLessonResources(lesson.id)
         .then((res) => {
           setResources(res.data?.data ?? []);
         })
-        .catch((err) => {
-          console.error("Error loading resources:", err);
+        .catch(() => {
+          setResourceError(true);
         })
         .finally(() => {
           setLoadingResources(false);
         });
     }
-  }, [lesson]);
+  }, [lesson, resourceRetryKey]);
 
   const handleResourceClick = async (e: React.MouseEvent, resourceId: string) => {
     e.preventDefault();
@@ -84,7 +87,7 @@ export function LessonViewer({
         const fullUrl = `${backendUrl}${response.data.downloadUrl}`;
         window.open(fullUrl, '_blank');
       } else {
-        toast.error('فشل في تحميل الملف');
+        toast.error('تعذر تجهيز الملف. تحقق من اتصالك ثم حاول مرة أخرى.');
       }
     } catch (err) {
       console.error("Error signing download URL:", err);
@@ -98,44 +101,42 @@ export function LessonViewer({
 
   if (lesson.isLocked) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-12 text-center shadow-sm sm:px-8 sm:py-20">
-        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] text-[var(--admin-danger)] shadow-inner">
-          <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
+      <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-8">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+            <LockKeyhole className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-[var(--admin-primary)]">هذه الحصة هي خطوتك التالية</p>
+            <h2 className="mt-1 text-xl font-black text-[var(--admin-text)] sm:text-2xl">أكمل المتطلب الظاهر أدناه لفتحها</h2>
+          </div>
         </div>
-        <h2 className="mb-5 text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-4xl">هذه الحصة مغلقة حالياً</h2>
-        <p className="max-w-2xl text-base font-medium leading-8 text-[var(--admin-muted)] sm:text-xl sm:leading-relaxed">
+        <p className="mt-5 rounded-xl bg-[var(--admin-card-soft)] p-4 text-base font-medium leading-8 text-[var(--admin-muted)]">
           {lesson.lockedReason || "يجب النّجاح في الحصة السابقة واجتياز الامتحانات والواجبات المرتبطة بها لتتمكن من استكمال المنصة."}
         </p>
-        <div className="mt-10 flex w-full max-w-2xl flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-          <button 
-            type="button"
-            onClick={() => router.back()} 
-            className="min-h-12 w-full rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-6 py-4 font-black text-[var(--admin-text)] opacity-80 shadow-sm transition-all hover:-translate-y-1 hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:w-auto sm:px-8"
-          >
-            العودة للمسار التسلسلي
-          </button>
-          
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {lesson.blockingExamId && (
             <button 
               type="button"
               onClick={() => router.push(`/student/exams/${lesson.blockingExamId}?packageId=${packageId}`)} 
-              className="min-h-12 w-full rounded-[20px] border border-[var(--admin-primary)] bg-[var(--admin-primary)] px-6 py-4 font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary)]/40 transition-all hover:-translate-y-1 hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:w-auto sm:px-8"
+              className="admin-btn-primary min-h-12 w-full px-6 sm:w-auto"
             >
-              اذهب للامتحان
+              ابدأ الامتحان المطلوب
             </button>
           )}
 
-          {lesson.blockingHomeworkLessonId && packageId && (
+          {!lesson.blockingExamId && lesson.blockingHomeworkLessonId && packageId && (
             <button 
               type="button"
               onClick={() => router.push(`/student/packages/${packageId}/lessons/${lesson.blockingHomeworkLessonId}`)} 
-              className="min-h-12 w-full rounded-[20px] border border-[var(--admin-primary)] bg-[var(--admin-primary)] px-6 py-4 font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary)]/40 transition-all hover:-translate-y-1 hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:w-auto sm:px-8"
+              className="admin-btn-primary min-h-12 w-full px-6 sm:w-auto"
             >
-              اذهب لحل الواجب
+              حل الواجب المطلوب
             </button>
           )}
+          <button type="button" onClick={() => router.back()} className="admin-btn-ghost min-h-12 w-full px-6 sm:w-auto">
+            العودة لمسار الدروس
+          </button>
         </div>
       </div>
     );
@@ -191,7 +192,7 @@ export function LessonViewer({
               lessonId={lesson.id}
             />
           ) : (
-            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-12 text-center text-[var(--admin-muted)] font-medium">
+            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] p-8 text-center font-medium text-[var(--admin-muted)] sm:p-12">
               لا توجد فيديوهات متاحة لهذا الدرس حاليًا.
             </div>
           )}
@@ -247,7 +248,7 @@ export function LessonViewer({
                   type="button"
                   disabled={lesson.isExamLocked && !lesson.examPassed}
                   onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}&lessonId=${lesson.id}`)}
-                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
                     lesson.examPassed
                       ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
                       : lesson.isExamLocked
@@ -319,7 +320,7 @@ export function LessonViewer({
                 <button
                   type="button"
                   onClick={() => router.push(`/student/homework/${lesson.homeworkId}?packageId=${packageId}&lessonId=${lesson.id}`)}
-                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
                     lesson.homeworkPassed
                       ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
                       : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
@@ -351,10 +352,18 @@ export function LessonViewer({
           </div>
           <ul className="space-y-4 text-sm">
             {loadingResources ? (
-              <div className="space-y-2 py-4 animate-pulse">
+              <li className="space-y-2 py-4 animate-pulse" aria-label="جارٍ تحميل الملفات">
                 <div className="h-12 w-full bg-[var(--admin-card-soft)] rounded-2xl"></div>
                 <div className="h-12 w-full bg-[var(--admin-card-soft)] rounded-2xl"></div>
-              </div>
+              </li>
+            ) : resourceError ? (
+              <li role="alert" className="rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-center">
+                <p className="font-bold text-[var(--admin-text)]">تعذر تحميل الملفات المرفقة. محتوى الدرس لم يتأثر.</p>
+                <button type="button" onClick={() => setResourceRetryKey((value) => value + 1)} className="admin-btn-ghost mt-3 min-h-11 px-4">
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  إعادة المحاولة
+                </button>
+              </li>
             ) : (
               <>
                 {resources.map((res) => (

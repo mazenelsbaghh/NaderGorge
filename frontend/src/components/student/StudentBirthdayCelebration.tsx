@@ -126,7 +126,7 @@ export function StudentBirthdayCelebration() {
 
   return (
     <div
-      className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/65 px-4 py-8"
+      className="fixed inset-0 z-[var(--z-critical)] grid place-items-center bg-slate-950/65 px-4 py-8"
       dir="rtl"
       role="dialog"
       aria-modal="true"
@@ -149,20 +149,20 @@ export function StudentBirthdayCelebration() {
         initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-amber-200 bg-[#fffaf0] px-6 pb-7 pt-9 text-center shadow-2xl shadow-slate-950/30 sm:px-9"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-amber-200 bg-[#fffaf0] px-6 pb-7 pt-9 text-center shadow-2xl shadow-slate-950/30 sm:px-9"
       >
         <button
           ref={closeButtonRef}
           type="button"
           onClick={close}
           disabled={closing}
-          className="absolute left-4 top-4 grid size-10 place-items-center rounded-full text-slate-600 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50"
+          className="absolute start-4 top-4 grid size-10 place-items-center rounded-full text-amber-950 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50"
           aria-label="إغلاق تهنئة عيد الميلاد"
         >
           <X className="size-5" />
         </button>
 
-        <div className="mx-auto grid size-20 place-items-center rounded-full bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/30">
+        <div className="mx-auto grid size-20 place-items-center rounded-full bg-amber-400 text-amber-950 shadow-lg shadow-amber-400/30">
           <CakeSlice className="size-10" aria-hidden="true" />
         </div>
         <p className="mt-5 text-sm font-black text-amber-700">النهارده يومك أنت 🎈</p>

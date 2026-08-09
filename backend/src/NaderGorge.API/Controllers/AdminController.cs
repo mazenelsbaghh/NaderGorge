@@ -12,6 +12,7 @@ using NaderGorge.Domain.Entities;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
+using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Features.Admin.Ocr;
 using SixLabors.ImageSharp;
 
@@ -256,6 +257,14 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackagesList()
         => Ok(await _mediator.Send(new GetAdminPackagesListQuery(GetUserId())));
+
+    [HttpGet("content/summary")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetContentSummary([FromQuery] DateTime? fromUtc, [FromQuery] DateTime? toUtc)
+    {
+        var result = await _mediator.Send(new GetContentSummaryQuery(null, fromUtc, toUtc));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 
     [HttpPost("packages")]
     [HasPermission("content.manage")]
@@ -639,17 +648,17 @@ public class AdminController : ControllerBase
 
     [HttpPost("videos/{videoId:guid}/generate-mindmaps")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> RequestMindmapGeneration(Guid videoId)
+    public async Task<IActionResult> RequestMindmapGeneration(Guid videoId, [FromBody] MindmapStyleRequest? request)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.GenerateChapterMindmapsCommand(videoId));
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.GenerateChapterMindmapsCommand(videoId, request?.VisualStyles, request?.TeacherStyles));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
     [HttpPost("chapters/{chapterId:guid}/regenerate-mindmap")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> RegenerateChapterMindmap(Guid chapterId)
+    public async Task<IActionResult> RegenerateChapterMindmap(Guid chapterId, [FromBody] MindmapStyleRequest? request)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.RegenerateChapterMindmapCommand(chapterId));
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.RegenerateChapterMindmapCommand(chapterId, request?.VisualStyles, request?.TeacherStyles));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
@@ -1437,6 +1446,7 @@ public record UpsertPackageCodeProfileRequest(
 );
 public record AddQuestionsToExamRequest(List<InlineExamQuestionDto> Questions);
 public record UploadTeacherPhotoRequest(Guid TeacherId, string Base64Image, string FileName);
+public record MindmapStyleRequest(IReadOnlyCollection<string>? VisualStyles, IReadOnlyCollection<string>? TeacherStyles);
 public record UploadTeacherProfileImageRequest(Guid TeacherId, string Base64Image, string FileName);
 public record UpdateSettingsRequest(Dictionary<string, string> Settings);
 public record UpdateStudentProfileRequest(

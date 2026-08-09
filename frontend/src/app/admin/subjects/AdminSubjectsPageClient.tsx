@@ -160,7 +160,7 @@ export default function AdminSubjectsPageClient() {
           placeholder="ابحث عن مادة..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/80 py-3.5 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none backdrop-blur-xl transition focus:border-[var(--admin-primary)]"
+          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/80 py-3.5 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none backdrop-blur-md transition focus:border-[var(--admin-primary)]"
         />
         <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--admin-muted)]" />
       </div>
@@ -171,7 +171,7 @@ export default function AdminSubjectsPageClient() {
           <p className="text-sm text-[var(--admin-muted)]">جاري تحميل المواد الدراسية...</p>
         </div>
       ) : filteredSubjects.length === 0 ? (
-        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/50 p-8 text-center backdrop-blur-xl">
+        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/50 p-8 text-center backdrop-blur-md">
           <BookOpen className="mb-4 h-12 w-12 text-[var(--admin-muted)]" />
           <h3 className="text-lg font-bold text-[var(--admin-text)]">لا توجد مواد دراسية</h3>
           <p className="mt-2 text-sm text-[var(--admin-muted)]">
@@ -191,7 +191,7 @@ export default function AdminSubjectsPageClient() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-md transition hover:shadow-xl"
+                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-md transition hover:shadow-xl"
               >
                 <div>
                   <div className="flex items-center gap-3">
@@ -246,7 +246,7 @@ export default function AdminSubjectsPageClient() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-2xl backdrop-blur-3xl"
+              className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-2xl backdrop-blur-md"
             >
               <button
                 onClick={handleCloseModal}

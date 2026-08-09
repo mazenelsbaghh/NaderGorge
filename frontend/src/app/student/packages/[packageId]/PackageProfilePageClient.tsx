@@ -116,7 +116,7 @@ export default function PackageProfilePageClient() {
     return (
       <div className="space-y-6 animate-pulse">
         {/* Hero skeleton */}
-        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)]" />
+        <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)]" />
         {/* Two-column skeleton */}
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
@@ -234,7 +234,7 @@ export default function PackageProfilePageClient() {
                 <p className="mt-1 text-sm text-[var(--admin-muted)]">الأقسام متاحة مباشرة داخل هذا الكورس.</p>
               </div>
               {directSections.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                <div className="rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
                   <p className="font-bold text-[var(--admin-muted)]">لا توجد أقسام في هذا الكورس بعد.</p>
                 </div>
               ) : (
@@ -244,7 +244,7 @@ export default function PackageProfilePageClient() {
                       key={section.id}
                       href={pkg?.rootTermId ? `/student/packages/${packageId}/terms/${pkg.rootTermId}/sections/${section.id}` : '#'}
                       prefetch={false}
-                      className="group flex items-center justify-between rounded-[1.75rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+                      className="group flex items-center justify-between rounded-[1.75rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-1 hover:shadow-md"
                     >
                       <div>
                         <span className="text-xs font-black text-[var(--admin-primary)]">قسم {idx + 1}</span>
@@ -264,7 +264,7 @@ export default function PackageProfilePageClient() {
                 <p className="mt-1 text-sm text-[var(--admin-muted)]">الحصص متاحة مباشرة داخل هذا الكورس.</p>
               </div>
               {directLessons.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                <div className="rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
                   <p className="font-bold text-[var(--admin-muted)]">لا توجد حصص في هذا الكورس بعد.</p>
                 </div>
               ) : (
@@ -274,7 +274,7 @@ export default function PackageProfilePageClient() {
                       key={lesson.id}
                       href={`/student/packages/${packageId}/lessons/${lesson.id}`}
                       prefetch={false}
-                      className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                      className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div>
                         <span className="text-xs font-black text-[var(--admin-primary)]">حصة {idx + 1}</span>
@@ -303,7 +303,7 @@ export default function PackageProfilePageClient() {
                 ))}
               </div>
             ) : terms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center bg-[var(--admin-card)]/30">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center bg-[var(--admin-card)]/30">
                 <p className="font-bold text-[var(--admin-muted)]">لا توجد أترام في هذه الباقة بعد.</p>
               </div>
             ) : (
@@ -321,7 +321,7 @@ export default function PackageProfilePageClient() {
                       key={term.id}
                       href={`/student/packages/${packageId}/terms/${term.id}`}
                       prefetch={false}
-                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-all hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
                     >
                       {/* Thumbnail area */}
                       <div
@@ -404,7 +404,7 @@ export default function PackageProfilePageClient() {
                           ) : (
                             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">مجانًا</span>
                           )}
-                          <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
+                          <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-[color,background-color,border-color,opacity,transform,box-shadow] group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
                         </div>
                       </div>
                     </Link>
@@ -434,7 +434,7 @@ export default function PackageProfilePageClient() {
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
                   شراء الباقة

@@ -161,7 +161,7 @@ export function PlatformPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#091a35]/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[color-mix(in_srgb,var(--admin-text)_70%,transparent)] p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) dismiss();
@@ -173,12 +173,12 @@ export function PlatformPopup() {
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={popup.body.trim() ? descriptionId : undefined}
-        className="relative w-full max-w-lg overflow-hidden rounded-[24px] border border-[#dce1e6] bg-[#f6f7f8] text-[#0a1d3d] shadow-[0_28px_80px_rgba(10,29,61,0.34)]"
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-text)] shadow-sm"
       >
         <button
           type="button"
           onClick={dismiss}
-          className="absolute left-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dce1e6] bg-[#f6f7f8]/95 text-[#0a1d3d] transition hover:bg-[#eef1f4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e8f8f]"
+          className="absolute start-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
           aria-label="إغلاق النافذة"
         >
           <X className="h-5 w-5" />
@@ -194,17 +194,17 @@ export function PlatformPopup() {
         )}
 
         <div className="px-6 pb-6 pt-7 sm:px-8 sm:pb-8">
-          <h2 id={titleId} className="max-w-[17ch] text-2xl font-black leading-tight text-[#0a1d3d] sm:text-3xl">
+          <h2 id={titleId} className="max-w-[17ch] text-2xl font-black leading-tight text-[var(--admin-text)] sm:text-3xl">
             {popup.title}
           </h2>
           {popup.body.trim() && (
-            <p id={descriptionId} className="mt-3 whitespace-pre-line text-base leading-7 text-[#2e3a47]">
+            <p id={descriptionId} className="mt-3 whitespace-pre-line text-base leading-7 text-[var(--admin-muted)]">
               {popup.body}
             </p>
           )}
 
           {formatRemaining(popup.expiresAt, now) && (
-            <div className="mt-4 inline-flex items-center rounded-full bg-[#0e8f8f]/10 px-3 py-1.5 text-sm font-black text-[#0e6f6f]">
+            <div className="mt-4 inline-flex items-center rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-sm font-black text-[var(--admin-primary)]">
               {formatRemaining(popup.expiresAt, now)}
             </div>
           )}
@@ -216,7 +216,7 @@ export function PlatformPopup() {
                 target={actionUrl.startsWith('/') ? undefined : '_blank'}
                 rel={actionUrl.startsWith('/') ? undefined : 'noreferrer'}
                 onClick={dismiss}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#0a1d3d] px-5 text-sm font-bold text-white transition hover:bg-[#12305f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e8f8f] focus-visible:ring-offset-2"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-bold text-[var(--admin-primary-contrast)] transition-colors hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
               >
                 {popup.actionLabel.trim() || 'فتح الرابط'}
                 <ExternalLink className="h-4 w-4" />
@@ -225,7 +225,7 @@ export function PlatformPopup() {
             <button
               type="button"
               onClick={dismiss}
-              className="min-h-11 rounded-xl px-4 text-sm font-bold text-[#0e6f6f] transition hover:bg-[#e5f4f3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e8f8f]"
+              className="min-h-11 rounded-xl px-4 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary-15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
               {hasAction ? 'لاحقاً' : 'فهمت'}
             </button>

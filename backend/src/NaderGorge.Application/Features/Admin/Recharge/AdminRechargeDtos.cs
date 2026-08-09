@@ -9,6 +9,11 @@ public record AdminRechargeRequestDto
     public Guid UserId { get; set; }
     public string StudentName { get; set; } = string.Empty;
     public string StudentPhoneNumber { get; set; } = string.Empty;
+    public decimal StudentBalance { get; set; }
+    public decimal TeacherBalance { get; set; }
+    public bool HasPreviousRequest { get; set; }
+    public RechargeRequestStatus? PreviousRequestStatus { get; set; }
+    public DateTime? PreviousRequestCreatedAt { get; set; }
     public Guid WalletId { get; set; }
     public string WalletLabel { get; set; } = string.Empty;
     public string WalletPhoneNumber { get; set; } = string.Empty;

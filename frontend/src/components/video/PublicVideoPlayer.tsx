@@ -203,7 +203,7 @@ export function PublicVideoPlayer({ url, title }: PublicVideoPlayerProps) {
       />
 
       <div
-        className="absolute inset-0 z-[85]"
+        className="absolute inset-0 z-[var(--z-overlay-content)]"
         onMouseMove={revealControls}
         onTouchStart={revealControls}
         onClick={togglePlay}
@@ -212,15 +212,15 @@ export function PublicVideoPlayer({ url, title }: PublicVideoPlayerProps) {
 
       <AnimatePresence>
         {isReady && showShadows && appearance.enabledProviders.includes(provider) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="pointer-events-none absolute inset-0 z-[80]" style={{ background: shadowGradient }} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="pointer-events-none absolute inset-0 z-[var(--z-overlay)]" style={{ background: shadowGradient }} />
         )}
       </AnimatePresence>
 
-      {isBuffering && <div className="pointer-events-none absolute inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm"><SpinnerLoader /></div>}
+      {isBuffering && <div className="pointer-events-none absolute inset-0 z-[var(--z-floating)] flex items-center justify-center bg-black/40 backdrop-blur-sm"><SpinnerLoader /></div>}
 
       {isReady && !isPlaying && !isBuffering && (
-        <button type="button" className="absolute inset-0 z-[91] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={togglePlay} aria-label="تشغيل الفيديو">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/50 bg-white/20 shadow-[0_0_30px_rgba(255,255,255,0.4)] backdrop-blur-md transition hover:scale-110"><Play className="ml-1 h-8 w-8 text-white" fill="currentColor" /></span>
+        <button type="button" className="absolute inset-0 z-[var(--z-floating-action)] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={togglePlay} aria-label="تشغيل الفيديو">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/50 bg-white/20 shadow-sm backdrop-blur-md transition hover:scale-110"><Play className="ml-1 h-8 w-8 text-white" fill="currentColor" /></span>
         </button>
       )}
 

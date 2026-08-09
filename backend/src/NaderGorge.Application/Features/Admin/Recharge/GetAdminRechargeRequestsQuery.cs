@@ -25,6 +25,7 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
     public async Task<ApiResponse<List<AdminRechargeRequestDto>>> Handle(GetAdminRechargeRequestsQuery request, CancellationToken ct)
     {
         await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
+        var now = DateTime.UtcNow;
 
         var query = _db.RechargeRequests
             .Include(r => r.User)
@@ -49,6 +50,30 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
                 UserId = r.UserId,
                 StudentName = r.User.FullName,
                 StudentPhoneNumber = r.User.PhoneNumber,
+                StudentBalance = _db.StudentBalances
+                    .Where(balance => balance.UserId == r.UserId)
+                    .Select(balance => balance.CurrentBalance)
+                    .FirstOrDefault(),
+                TeacherBalance = r.TeacherId.HasValue
+                    ? _db.PromotionalBalanceAllocations
+                        .Where(allocation => allocation.StudentId == r.UserId
+                            && allocation.TeacherId == r.TeacherId
+                            && allocation.Status == PromotionalBalanceStatus.Active
+                            && (!allocation.ExpiresAt.HasValue || allocation.ExpiresAt > now))
+                        .Sum(allocation => allocation.AvailableAmount)
+                    : 0m,
+                HasPreviousRequest = _db.RechargeRequests.Any(previous =>
+                    previous.UserId == r.UserId && previous.Id != r.Id && previous.CreatedAt < r.CreatedAt),
+                PreviousRequestStatus = _db.RechargeRequests
+                    .Where(previous => previous.UserId == r.UserId && previous.Id != r.Id && previous.CreatedAt < r.CreatedAt)
+                    .OrderByDescending(previous => previous.CreatedAt)
+                    .Select(previous => (RechargeRequestStatus?)previous.Status)
+                    .FirstOrDefault(),
+                PreviousRequestCreatedAt = _db.RechargeRequests
+                    .Where(previous => previous.UserId == r.UserId && previous.Id != r.Id && previous.CreatedAt < r.CreatedAt)
+                    .OrderByDescending(previous => previous.CreatedAt)
+                    .Select(previous => (DateTime?)previous.CreatedAt)
+                    .FirstOrDefault(),
                 WalletId = r.WalletId,
                 WalletLabel = r.Wallet.Label,
                 WalletPhoneNumber = r.Wallet.PhoneNumber,

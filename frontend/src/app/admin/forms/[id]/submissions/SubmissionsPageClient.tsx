@@ -114,10 +114,10 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
       render: (row) => (
         <div>
           <div className="font-bold text-[var(--admin-text-strong)]">
-            {new Date(row.submittedAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
+            {new Date(row.submittedAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
           </div>
           <div className="text-xs text-[var(--admin-muted)] mt-0.5">
-            {new Date(row.submittedAt).toLocaleTimeString('ar-EG', { timeStyle: 'short' })}
+            {new Date(row.submittedAt).toLocaleTimeString('ar-EG', { timeZone: 'Africa/Cairo', timeStyle: 'short' })}
           </div>
         </div>
       ),
@@ -240,7 +240,7 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
             {/* Header info */}
             <div className="grid gap-2 border-b border-[var(--admin-border)] pb-4 text-xs text-[var(--admin-muted)]">
               <div>معرف التقديم: <code className="bg-[var(--admin-card-strong)] px-1.5 py-0.5 rounded text-[var(--admin-primary)]">{selectedSubmission.id}</code></div>
-              <div>تاريخ ووقت التقديم: {new Date(selectedSubmission.submittedAt).toLocaleString('ar-EG')}</div>
+              <div>تاريخ ووقت التقديم: {new Date(selectedSubmission.submittedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</div>
             </div>
 
             {/* Submitted field values */}

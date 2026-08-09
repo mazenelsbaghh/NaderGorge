@@ -2,19 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText } from "lucide-react";
-import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer } from "@/components/admin";
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Users } from "lucide-react";
+import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, ContentSubscribersTab } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { adminService, type LessonCockpitDto } from "@/services/admin-service";
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
-type ActiveTab = "overview" | "videos" | "resources" | "homework" | "exam" | "comments";
+type ActiveTab = "overview" | "videos" | "resources" | "homework" | "exam" | "comments" | "subscribers";
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "videos", label: "الفيديوهات", icon: PlaySquare },
   { key: "comments", label: "التعليقات", icon: MessageSquareText },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
   { key: "resources", label: "المذكرات والملفات", icon: FileText },
   { key: "homework", label: "الواجبات", icon: ClipboardList },
   { key: "exam", label: "الامتحان المرفق", icon: BookCheck },
@@ -133,6 +134,10 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
           onRefresh={loadData}
           moderationApi={teacherService}
         />
+      )}
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="lesson" contentId={lesson.lessonId} contentName={lesson.title} surface="teacher" />
       )}
 
       {activeTab === "resources" && (

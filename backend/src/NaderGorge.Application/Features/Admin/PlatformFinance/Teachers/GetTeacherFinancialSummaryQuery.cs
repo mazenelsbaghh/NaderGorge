@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -10,8 +11,7 @@ public sealed class GetTeacherFinancialSummaryQuery(IAppDbContext db)
 {
     public async Task<TeacherFinancialSummaryDto?> GetAsync(Guid teacherId, DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var start = (from ?? DateTime.UtcNow.Date.AddMonths(-1)).Date;
-        var end = (to ?? DateTime.UtcNow.Date).Date.AddDays(1);
+        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
         var rows = await db.JournalLines.AsNoTracking()
             .Where(line => line.TeacherId == teacherId && line.JournalEntry.Status == JournalEntryStatus.Posted && line.JournalEntry.OccurredAt >= start && line.JournalEntry.OccurredAt < end)
             .Select(line => new { line.FinancialAccount.Role, line.Debit, line.Credit, line.JournalEntry.SourceType })

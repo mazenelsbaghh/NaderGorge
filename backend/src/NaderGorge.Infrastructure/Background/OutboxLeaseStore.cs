@@ -35,7 +35,7 @@ public sealed class OutboxLeaseStore
                       AND "RetryCount" < 5
                       AND ("NextAttemptAt" IS NULL OR "NextAttemptAt" <= NOW())
                       AND ("LeaseExpiresAt" IS NULL OR "LeaseExpiresAt" <= NOW())
-                    ORDER BY "CreatedAt"
+                    ORDER BY "CreatedAt", "Id"
                     LIMIT {batchSize}
                     FOR UPDATE SKIP LOCKED
                     """)

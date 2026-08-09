@@ -100,8 +100,7 @@ public sealed class RechargeAutoMatchingService(
             if (!await ReserveMatchAsync(request, sms, resolvedAt, ct))
                 return false;
 
-            request.Wallet.CurrentBalance = SmsParser.Parse(sms.Body).CurrentBalance
-                ?? request.Wallet.CurrentBalance + request.Amount;
+            await db.ApplyIfLatestAsync(request.Wallet, sms, request.Amount, ct);
             await db.SaveChangesAsync(ct);
 
             await balanceService.AddTeacherCredit(

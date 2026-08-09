@@ -34,6 +34,7 @@ export function redisConnectionOptions(overrides: RedisOptions = {}): RedisOptio
       enableReadyCheck: true,
       maxRetriesPerRequest: null,
       connectTimeout: 10_000,
+      sentinelRetryStrategy: attempt => Math.min(250 * 2 ** Math.min(attempt - 1, 5), 8_000),
       ...overrides,
     };
   }

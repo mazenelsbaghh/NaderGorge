@@ -72,7 +72,7 @@ export default function PrivacyPolicyPage() {
 
         <div className="space-y-5">
           {sections.map((section) => (
-            <article key={section.title} className="landing-panel rounded-[24px] p-6">
+            <article key={section.title} className="landing-panel rounded-2xl p-6">
               <h2 className="text-xl font-black text-[var(--landing-ink)]">
                 {section.title}
               </h2>

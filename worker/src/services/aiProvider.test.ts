@@ -46,3 +46,37 @@ test('persistent Gemini 503 failure stops after bounded retries', async () => {
   );
   assert.equal(requests, 4);
 });
+
+test('hung Gemini request fails at the configured provider deadline', async (testContext) => {
+  const originalDeadline = process.env.GEMINI_REQUEST_TIMEOUT_MS;
+  process.env.GEMINI_REQUEST_TIMEOUT_MS = '10';
+  testContext.after(() => {
+    if (originalDeadline === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
+    else process.env.GEMINI_REQUEST_TIMEOUT_MS = originalDeadline;
+  });
+
+  await assert.rejects(
+    executeGeminiRequest(() => new Promise(() => undefined)),
+    (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout',
+  );
+});
+
+test('provider deadlines use the bounded retry policy', async (testContext) => {
+  const originalDeadline = process.env.GEMINI_REQUEST_TIMEOUT_MS;
+  process.env.GEMINI_REQUEST_TIMEOUT_MS = '5';
+  setGeminiRetryWaitForTests(async () => undefined);
+  let requests = 0;
+  testContext.after(() => {
+    if (originalDeadline === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
+    else process.env.GEMINI_REQUEST_TIMEOUT_MS = originalDeadline;
+  });
+
+  await assert.rejects(
+    executeRetriableGeminiRequest(() => {
+      requests += 1;
+      return new Promise(() => undefined);
+    }),
+    (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout',
+  );
+  assert.equal(requests, 4);
+});

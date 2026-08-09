@@ -21,7 +21,7 @@ const filterLabel: Record<FilterStatus, string> = {
 
 const formatDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+    ? new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
     : '—';
 
 const statusClasses = (status: string) => {
@@ -178,11 +178,11 @@ export function CommunityPostsModerationTable() {
       render: (row) => (
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
-            <ThumbsUp className="ml-1 inline h-3.5 w-3.5" />
+            <ThumbsUp className="ms-1 inline h-3.5 w-3.5" />
             {row.likeCount}
           </span>
           <span className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
-            <MessageSquareText className="ml-1 inline h-3.5 w-3.5" />
+            <MessageSquareText className="ms-1 inline h-3.5 w-3.5" />
             {row.commentCount}
           </span>
         </div>
@@ -294,7 +294,7 @@ export function CommunityPostsModerationTable() {
             >
               {selectedIds.size === pendingPosts.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </button>
-            <div className="mr-auto flex flex-wrap gap-2">
+            <div className="me-auto flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={selectedIds.size === 0 || isMutating}

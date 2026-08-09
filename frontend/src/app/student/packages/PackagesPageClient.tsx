@@ -85,7 +85,7 @@ export default function PackagesPageClient() {
         <div className="h-72 rounded-2xl bg-[var(--admin-card-strong)]" />
         <div className="grid gap-6 xl:grid-cols-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-80 rounded-[30px] bg-[var(--admin-card-strong)]" />
+            <div key={i} className="h-80 rounded-2xl bg-[var(--admin-card-strong)]" />
           ))}
         </div>
       </div>
@@ -238,7 +238,7 @@ function QuickAccessGrid({
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--admin-card-soft)]">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={resolveMediaUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />
+                  <img src={resolveMediaUrl(item.imageUrl)} alt={`غلاف ${item.title}`} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-[var(--admin-primary)]">
                     <Clapperboard className="h-8 w-8" />
@@ -259,7 +259,7 @@ function QuickAccessGrid({
                   <div className="mt-3 flex items-center gap-2 text-xs font-bold text-[var(--admin-text)]">
                     {item.teacherProfileImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={resolveMediaUrl(item.teacherProfileImageUrl)} alt="" className="h-6 w-6 rounded-full object-cover" />
+                      <img src={resolveMediaUrl(item.teacherProfileImageUrl)} alt={`صورة ${item.teacherName}`} className="h-6 w-6 rounded-full object-cover" />
                     ) : null}
                     <span className="truncate">{item.teacherName}</span>
                   </div>

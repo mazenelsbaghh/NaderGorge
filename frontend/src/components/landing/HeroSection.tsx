@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpLeft, GraduationCap } from 'lucide-react';
+import { ArrowDown, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 import { heroHighlights } from './data';
@@ -24,7 +24,7 @@ export function HeroSection({
 
   return (
     <section
-      className="landing-hero relative min-h-[100svh] overflow-hidden px-4 pb-0 pt-24 text-[var(--landing-ink)] sm:px-5 md:px-12 md:pb-12 md:pt-32 lg:min-h-screen lg:px-16"
+      className="landing-hero relative overflow-hidden px-4 pb-10 pt-24 text-[var(--landing-ink)] sm:px-5 md:min-h-[78svh] md:px-12 md:pb-12 md:pt-28 lg:px-16"
     >
       <div
         aria-hidden="true"
@@ -37,7 +37,7 @@ export function HeroSection({
           backgroundImage: 'linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%)'
         }}
       />
-      <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1440px] items-start py-6 lg:min-h-[calc(100vh-9rem)] lg:items-center lg:py-0 lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
+      <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1440px] items-start py-6 md:min-h-[calc(78svh-8rem)] lg:items-center lg:py-0 lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
         <div className="mx-auto w-full max-w-xl text-center lg:mx-0 lg:text-right lg:[direction:rtl]">
           <span className="landing-journey-marker">
             مسارك واضح من أول درس إلى هدفك
@@ -50,8 +50,7 @@ export function HeroSection({
           </h1>
 
           <p className="mx-auto mt-5 max-w-[22rem] text-pretty text-base font-semibold leading-7 text-[var(--landing-muted)] sm:max-w-[38rem] md:text-lg md:leading-8 lg:mx-0">
-            منصة تعليمية متكاملة تساعدك على تعلم كل مهارة، في أي وقت ومن أي
-            مكان.
+            منصة تعليمية متكاملة تساعدك على إتقان موادك، في أي وقت ومن أي مكان.
           </p>
 
           <div className="mx-auto mt-7 flex w-full max-w-sm flex-col gap-3 sm:mt-8 sm:max-w-none sm:flex-row sm:items-center sm:justify-center lg:justify-end">
@@ -71,13 +70,16 @@ export function HeroSection({
             </span>
           </div>
 
-          <div className="mx-auto mt-8 grid max-w-sm grid-cols-2 gap-x-4 gap-y-5 sm:mt-10 sm:max-w-none sm:grid-cols-4 sm:gap-4">
+          <div
+            data-hero-highlights
+            className="mx-auto mt-7 grid max-w-sm grid-cols-2 gap-x-4 gap-y-4 sm:mt-8 sm:max-w-none sm:grid-cols-4 sm:gap-4"
+          >
             {heroHighlights.map(({ label, icon: Icon }) => (
               <div
                 key={label}
                 className="flex flex-col items-center gap-2 text-center"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--landing-teal-soft)] text-[var(--landing-accent)] hover:scale-105 transition-transform duration-200">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--landing-teal-soft)] text-[var(--landing-accent)]">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="text-xs font-extrabold text-[var(--landing-ink)] md:text-sm">
@@ -94,7 +96,7 @@ export function HeroSection({
           className="absolute bottom-8 left-1/2 hidden h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--landing-accent)] text-white transition hover:bg-[var(--landing-accent-strong)] lg:flex"
           aria-label="استعرض الدورات"
         >
-          <ArrowUpLeft className="h-5 w-5" />
+          <ArrowDown className="h-5 w-5" />
         </Link>
       </div>
     </section>

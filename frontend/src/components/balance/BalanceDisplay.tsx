@@ -17,7 +17,7 @@ function PromotionalAllocationCard({ allocation }: { allocation: PromotionalBala
   const title = allocation.teacherName ? `مخصص لمحتوى ${allocation.teacherName}` : 'صالح للمحتوى المدعوم';
   const displayName = allocation.teacherName ?? 'المحتوى المدعوم';
   const expiryLabel = allocation.expiresAt
-    ? `ينتهي ${new Date(allocation.expiresAt).toLocaleDateString('ar-EG')}`
+    ? `ينتهي ${new Date(allocation.expiresAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`
     : 'بدون تاريخ انتهاء';
   const usageLabel = allocation.maxPurchaseCount
     ? `${allocation.purchaseCount}/${allocation.maxPurchaseCount} مشتريات`
@@ -66,7 +66,7 @@ function PromotionalAllocationCard({ allocation }: { allocation: PromotionalBala
       </div>
 
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--admin-border)]">
-        <div className="h-full rounded-full bg-[var(--admin-primary)] transition-all" style={{ width: `${usedPercent}%` }} />
+        <div className="h-full rounded-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]" style={{ width: `${usedPercent}%` }} />
       </div>
     </article>
   );
@@ -125,7 +125,7 @@ export function BalanceDisplay() {
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-lg border border-[var(--admin-border)] bg-[var(--admin-primary)] p-6 text-[var(--admin-primary-contrast)] shadow-[0_20px_48px_var(--admin-shadow)] sm:p-8">
+      <div className="relative overflow-hidden rounded-lg border border-[var(--admin-border)] bg-[var(--admin-primary)] p-6 text-[var(--admin-primary-contrast)] shadow-sm sm:p-8">
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="mb-1 text-sm font-medium tracking-[0.18em] opacity-80">الرصيد العام للمنصة</p>
@@ -204,7 +204,7 @@ export function BalanceDisplay() {
                   <div className="min-w-0 flex-1">
                     <h4 className="break-words text-sm font-bold leading-7 text-[var(--admin-text)] sm:text-base">{tx.description}</h4>
                     <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                      {new Date(tx.createdAt).toLocaleDateString('en-GB', {
+                      {new Date(tx.createdAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo',
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: 'numeric', minute: 'numeric'
                       })}

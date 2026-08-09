@@ -373,7 +373,7 @@ export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between print:hidden bg-[var(--admin-card-soft)] p-4 rounded-xl border border-[var(--admin-border)]">
         <div>
-          <h3 className="font-bold text-[var(--admin-text)]">طباعة رموز QR</h3>
+          <h3 className="text-2xl font-bold text-[var(--admin-text)]">طباعة رموز QR</h3>
           <p className="text-sm text-[var(--admin-muted)]">
             عدد الأكواد للطباعة: {codes.length}
             {template ? ` - القالب: ${template.name}` : ''}

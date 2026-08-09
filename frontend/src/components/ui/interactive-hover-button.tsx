@@ -4,10 +4,11 @@ import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
-interface InteractiveHoverButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface InteractiveHoverButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   icon?: React.ReactNode;
   href?: string;
   hoverEffect?: boolean;
+  onClick?: React.MouseEventHandler<HTMLElement>;
 }
 
 export const InteractiveHoverButton = React.forwardRef<
@@ -22,12 +23,12 @@ export const InteractiveHoverButton = React.forwardRef<
   const innerContent = hoverEffect ? (
     <>
       <div className="flex items-center justify-center gap-2">
-        <div className="bg-[var(--btn-primary,var(--landing-accent))] h-3 w-3 rounded-full transition-all duration-300 group-hover/ihb:scale-[100.8]"></div>
-        <span className="inline-block transition-all duration-300 group-hover/ihb:-translate-x-12 group-hover/ihb:opacity-0">
+        <div className="h-3 w-3 rounded-full bg-[var(--btn-primary,var(--landing-accent))] transition-transform duration-200 group-hover/ihb:scale-[24]"></div>
+        <span className="inline-block transition-[transform,opacity] duration-200 group-hover/ihb:-translate-x-12 group-hover/ihb:opacity-0">
           {children}
         </span>
       </div>
-      <div className="text-[var(--btn-fg,var(--landing-accent-foreground))] absolute top-0 z-10 flex h-full w-full -translate-x-12 items-center justify-center gap-2 opacity-0 transition-all duration-300 group-hover/ihb:translate-x-3 group-hover/ihb:opacity-100 pr-5">
+      <div aria-hidden="true" className="absolute top-0 z-10 flex h-full w-full -translate-x-12 items-center justify-center gap-2 pe-5 text-[var(--btn-fg,var(--landing-accent-foreground))] opacity-0 transition-[transform,opacity] duration-200 group-hover/ihb:translate-x-3 group-hover/ihb:opacity-100">
         <span>{children}</span>
         {icon || <ArrowLeft className="h-4 w-4" />}
       </div>
@@ -42,7 +43,14 @@ export const InteractiveHoverButton = React.forwardRef<
 
   if (href) {
     return (
-      <Link href={href} className={commonClassName} tabIndex={props.tabIndex}>
+      <Link
+        href={href}
+        className={commonClassName}
+        tabIndex={props.tabIndex}
+        aria-label={props['aria-label'] ?? (typeof children === 'string' ? children : undefined)}
+        onClick={props.onClick}
+        title={props.title}
+      >
         {innerContent}
       </Link>
     );

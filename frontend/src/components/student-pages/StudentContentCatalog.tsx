@@ -292,7 +292,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
 
   return (
     <section className="space-y-6" aria-labelledby="student-content-catalog-title">
-      <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
         <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl text-right">
@@ -536,7 +536,7 @@ function PackageCatalogCard({ pkg, onExplore, onPurchase }: { pkg: PackageDto; o
         <div className="relative h-44 shrink-0 overflow-hidden rounded-2xl bg-[var(--admin-card-soft)] sm:h-auto sm:w-40">
           {pkg.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={resolveMediaUrl(pkg.imageUrl)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            <img src={resolveMediaUrl(pkg.imageUrl)} alt={`غلاف ${pkg.name}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
           ) : (
             <div className="flex h-full min-h-36 items-center justify-center bg-[var(--admin-primary-10)] text-[var(--admin-primary)]">
               <Layers3 className="h-10 w-10" />
@@ -642,7 +642,7 @@ function LessonCatalogCard({ lesson, index, packageId, onPurchase }: { lesson: L
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="truncate text-base font-black text-[var(--admin-text)]">{lesson.title}</h4>
-            {lesson.isCompleted ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-600 dark:text-emerald-400">مكتملة</span> : null}
+            {lesson.isCompleted ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-sm font-black text-emerald-600 dark:text-emerald-400">مكتملة</span> : null}
           </div>
           {lesson.summary ? <p className="mt-1 line-clamp-1 text-xs font-medium text-[var(--admin-muted)]">{lesson.summary}</p> : null}
           <span className={`mt-2 inline-flex items-center gap-1 text-xs font-black ${isOwned ? "text-emerald-600 dark:text-emerald-400" : "text-amber-700 dark:text-amber-300"}`}>

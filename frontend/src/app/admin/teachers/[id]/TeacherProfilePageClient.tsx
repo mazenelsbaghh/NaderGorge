@@ -99,7 +99,7 @@ const renderChangedValues = (oldVal?: string, newVal?: string) => {
 
 const formatDate = (d?: string | null) => {
   if (!d) return 'غير متوفر';
-  return new Date(d).toLocaleDateString('en-GB');
+  return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
 };
 
 /* ─── Tab type ─── */
@@ -378,7 +378,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     ['الحصة', item.lessonBuyers],
                   ].map(([label, value]) => (
                     <div key={String(label)} className="bg-[var(--admin-bg)] px-4 py-4 text-right">
-                      <dt className="text-[11px] font-bold text-[var(--admin-muted)]">{label}</dt>
+                      <dt className="text-sm font-bold text-[var(--admin-muted)]">{label}</dt>
                       <dd className="mt-1 text-2xl font-black tabular-nums text-[var(--admin-text)]">{value}</dd>
                     </div>
                   ))}
@@ -386,11 +386,11 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
                 <dl className="grid grid-cols-2 border-t border-[var(--admin-border)]">
                   <div className="px-5 py-3">
-                    <dt className="text-[11px] font-bold text-[var(--admin-muted)]">شراء</dt>
+                    <dt className="text-sm font-bold text-[var(--admin-muted)]">شراء</dt>
                     <dd className="mt-0.5 text-lg font-black tabular-nums text-emerald-700">{item.purchasedStudents}</dd>
                   </div>
                   <div className="border-r border-[var(--admin-border)] px-5 py-3">
-                    <dt className="text-[11px] font-bold text-[var(--admin-muted)]">هدية</dt>
+                    <dt className="text-sm font-bold text-[var(--admin-muted)]">هدية</dt>
                     <dd className="mt-0.5 text-lg font-black tabular-nums text-amber-700">{item.giftStudents}</dd>
                   </div>
                 </dl>
@@ -644,7 +644,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     URL.revokeObjectURL(url);
                     toast.success('تم تحميل الملف بنجاح');
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-[var(--admin-primary-15)] text-[var(--admin-text)] hover:bg-[var(--admin-primary-15)]/80 transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-[var(--admin-primary-15)] text-[var(--admin-text)] hover:bg-[var(--admin-primary-15)]/80 transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-95"
                 >
                   <Download size={16} />
                   تنزيل CSV
@@ -659,7 +659,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   <div className="flex flex-wrap gap-2 mb-5">
                     <button
                       onClick={() => setStudentPackageFilter('all')}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === 'all' ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === 'all' ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
                     >
                       الكل ({students.length})
                     </button>
@@ -669,7 +669,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                         <button
                           key={pkg}
                           onClick={() => setStudentPackageFilter(pkg)}
-                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === pkg ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                          className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === pkg ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
                         >
                           {pkg} ({count})
                         </button>
@@ -789,7 +789,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       {row.status || 'مكتمل'}
                     </span>
                   )},
-                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={payouts}
                 rowKey={(row) => row.id || `${row.amount}-${row.createdAt}`}
@@ -809,7 +809,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   { key: 'studentName', label: 'الطالب', render: (row) => <span className="font-bold text-[var(--admin-text)]">{row.studentName || '—'}</span> },
                   { key: 'packageName', label: 'الباقة', render: (row) => <span className="text-sm text-[var(--admin-text)]">{row.packageName || '—'}</span> },
                   { key: 'code', label: 'الكود', render: (row) => <span className="font-mono text-sm text-[var(--admin-text)]">{row.code || '—'}</span> },
-                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={activations}
                 rowKey={(row) => row.id || `${row.code}-${row.activatedAt}`}
@@ -871,7 +871,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       {/* Edit Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
               onClick={handleCloseModal}

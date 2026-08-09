@@ -284,7 +284,7 @@ export default function AdminOperationsPageClient() {
       }
     >
       {/* Search and Filters panel */}
-      <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex flex-wrap gap-4 items-center justify-between" dir="rtl">
+      <div className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex flex-wrap gap-4 items-center justify-between" dir="rtl">
         <div className="flex flex-1 min-w-[240px] items-center gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2">
           <Search className="h-4 w-4 text-[var(--admin-muted)]" />
           <input

@@ -64,9 +64,13 @@ public class AdminReportsController : ControllerBase
             await _reports.GetFilterOptionsAsync(User.RequireUserId(), false, ct)));
 
     [HttpGet("student-ledger/export")]
-    public async Task<IActionResult> ExportStudentLedger([FromQuery] Guid teacherId, CancellationToken ct)
+    public async Task<IActionResult> ExportStudentLedger(
+        [FromQuery] Guid teacherId,
+        [FromQuery] NaderGorge.Domain.Enums.EducationStage? stage,
+        [FromQuery] NaderGorge.Domain.Enums.StudyTrack? studyTrack,
+        CancellationToken ct)
     {
-        var export = await _studentLedger.ExportAsync(teacherId, User.RequireUserId(), ct);
+        var export = await _studentLedger.ExportAsync(teacherId, User.RequireUserId(), new StudentLedgerFilter(stage, studyTrack), ct);
         return File(export.Content, export.ContentType, export.FileName);
     }
 

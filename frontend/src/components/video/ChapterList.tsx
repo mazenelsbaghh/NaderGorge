@@ -56,7 +56,7 @@ export function ChapterList({ chapters, currentTime, onSeek }: ChapterListProps)
   if (!chapters || chapters.length === 0) return null;
 
   return (
-    <div className="flex flex-col w-full h-[400px] overflow-hidden bg-[var(--admin-card)] rounded-[24px] border border-[var(--admin-border)] shadow-xl relative">
+    <div className="flex flex-col w-full h-[400px] overflow-hidden bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] shadow-xl relative">
       <div className="px-6 py-4 border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] flex items-center justify-between z-10 relative">
         <h3 className="font-black text-lg text-[var(--admin-text)]">فصول الفيديو</h3>
         <span className="text-xs font-bold px-2 py-1 bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] rounded-md">
@@ -77,7 +77,7 @@ export function ChapterList({ chapters, currentTime, onSeek }: ChapterListProps)
               data-active={isActive}
               onClick={() => onSeek(chapter.startTime)}
               className={cn(
-                "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group text-right",
+                "w-full flex items-center justify-between p-3 rounded-xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 group text-right",
                 isActive 
                   ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md" 
                   : "hover:bg-[var(--admin-border)] text-[var(--admin-text)]"

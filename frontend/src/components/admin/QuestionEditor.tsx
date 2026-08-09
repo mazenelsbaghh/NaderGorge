@@ -100,8 +100,8 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm transition-all relative">
-      <div className="absolute top-4 left-4">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] relative">
+      <div className="absolute top-4 start-4">
         <button
           type="button"
           onClick={() => onRemove(index)}
@@ -112,7 +112,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
         </button>
       </div>
 
-      <div className="flex flex-col gap-6 w-full pl-0 pt-10 md:pt-0 md:pl-12">
+      <div className="flex flex-col gap-6 w-full ps-0 pt-10 md:pt-0 md:ps-12">
         {/* Controls Row */}
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--admin-border)] pb-4">
           <div className="flex items-center gap-4 text-xs font-bold text-[var(--admin-muted)]">
@@ -178,7 +178,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
         ) : (
           <div className="w-full flex-col flex space-y-2 relative">
             <div
-              className="rounded-xl overflow-hidden border border-[var(--admin-border)] focus-within:border-[var(--admin-primary)] focus-within:ring-1 focus-within:ring-[var(--admin-primary)] transition-all bg-[var(--admin-card)] text-[var(--admin-text)]"
+              className="rounded-xl overflow-hidden border border-[var(--admin-border)] focus-within:border-[var(--admin-primary)] focus-within:ring-1 focus-within:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] bg-[var(--admin-card)] text-[var(--admin-text)]"
               style={{
                 '--ql-toolbar-bg': 'var(--admin-background)',
                 '--ql-border': 'var(--admin-border)',
@@ -213,12 +213,12 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
             value={question.hintText || ''}
             onChange={(e) => handlePropChange('hintText', e.target.value)}
             placeholder="تلميح للمساعدة (يظهر للطالب بدون خصم درجات)"
-            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
+            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] resize-none"
           />
           <div className="space-y-2">
             <label className="block text-xs font-black text-[var(--admin-muted)]">
               {question.type === 'Essay' ? 'نموذج الإجابة ومعيار التصحيح للـ AI' : 'تصحيح نصي يظهر بعد الإجابة'}
-              {question.type === 'Essay' && <span className="mr-1 text-red-500">(مطلوب للمقالي)</span>}
+              {question.type === 'Essay' && <span className="me-1 text-red-500">(مطلوب للمقالي)</span>}
             </label>
             <textarea
               rows={2}
@@ -226,7 +226,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
               value={question.writtenCorrection || ''}
               onChange={(e) => handlePropChange('writtenCorrection', e.target.value)}
               placeholder={question.type === 'Essay' ? 'اكتب عناصر الإجابة الصحيحة، الكلمات الأساسية، وأي استثناءات في التصحيح...' : 'تصحيح نصي (يظهر بعد الإجابة)'}
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] resize-none"
             />
             {question.type === 'Essay' && <p className="text-xs font-bold text-[var(--admin-muted)]">يُرسل للذكاء الاصطناعي: نص السؤال + إجابة الطالب + هذا النموذج. لا تُرسل بيانات الطالب الأخرى.</p>}
           </div>
@@ -340,7 +340,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                     }
                   }
                 }}
-                className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+                className="text-sm font-bold text-[var(--admin-muted)] file:me-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer"
               />
               {uploading && <span className="text-xs text-[var(--admin-muted)]">جاري الرفع...</span>}
             </>
@@ -370,7 +370,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                     value={opt.text}
                     onChange={(e) => handleUpdateOption(optIndex, e.target.value)}
                     placeholder={`الخيار ${optIndex + 1}`}
-                    className={`flex-1 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all ${
+                    className={`flex-1 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                         opt.isCorrect ? 'border-green-500/50' : ''
                     }`}
                     required
@@ -388,7 +388,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
               <button
                 type="button"
                 onClick={handleAddOption}
-                className="self-start mt-2 flex items-center gap-2 text-xs font-bold text-[var(--admin-primary)] hover:text-white hover:bg-[var(--admin-primary)] px-4 py-2 rounded-lg transition-all border border-[var(--admin-primary)]"
+                className="self-start mt-2 flex items-center gap-2 text-xs font-bold text-[var(--admin-primary)] hover:text-white hover:bg-[var(--admin-primary)] px-4 py-2 rounded-lg transition-[color,background-color,border-color,opacity,transform,box-shadow] border border-[var(--admin-primary)]"
               >
                 <Plus className="w-4 h-4" />
                 إضافة خيار

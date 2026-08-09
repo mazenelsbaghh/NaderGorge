@@ -205,6 +205,39 @@ public class VideoWatchProgressTests
         Assert.NotEqual(fixture.SessionId, result.Data!.SessionId);
     }
 
+    [Fact]
+    public async Task AdminPreview_BypassesMandatoryExamAndWatchLimit_WithoutExposingWatchState()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 1);
+        db.Exams.Add(new Exam
+        {
+            Title = "Mandatory video exam",
+            LessonVideoId = fixture.Video.Id,
+            IsMandatory = true
+        });
+        db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = fixture.UserId,
+            LessonVideoId = fixture.Video.Id,
+            WatchCount = 1,
+            IsLocked = true
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new CreateVideoSessionCommandHandler(db, AllowAccess.Instance, FakeEncryption.Instance);
+        var preview = await handler.Handle(
+            new CreateVideoSessionCommand(fixture.Video.Id, fixture.UserId, Mode: VideoSessionMode.AdminPreview),
+            CancellationToken.None);
+
+        Assert.True(preview.Success, preview.Message);
+        Assert.True(preview.Data!.IsPreview);
+        Assert.Equal(0, preview.Data.WatchInfo.CurrentCount);
+        Assert.Equal(0, preview.Data.WatchInfo.MaxCount);
+        Assert.False(preview.Data.WatchInfo.IsLocked);
+        Assert.True((await db.VideoWatchEvents.SingleAsync()).IsLocked);
+    }
+
     private static TrackWatchProgressCommandHandler CreateHandler(AppDbContext db) =>
         new(db, FixedSettingsReader.Default);
 

@@ -34,6 +34,14 @@ public static class CairoTime
         return GetRangeUtc(start, start.AddMonths(1));
     }
 
+    public static (DateTime StartUtc, DateTime EndUtc) GetRollingMonthRangeUtc(DateTime? fromDate, DateTime? toDate)
+    {
+        var currentDate = ToLocal(DateTime.UtcNow).Date;
+        var startDate = (fromDate ?? currentDate.AddMonths(-1)).Date;
+        var endDate = (toDate ?? currentDate).Date;
+        return GetRangeUtc(startDate, endDate.AddDays(1));
+    }
+
     private static (DateTime StartUtc, DateTime EndUtc) GetRangeUtc(DateTime startLocal, DateTime endLocal) =>
         (TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), Zone),
          TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), Zone));

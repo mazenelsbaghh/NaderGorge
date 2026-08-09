@@ -90,33 +90,33 @@ export default function TeacherDashboardPageClient() {
         ) : null}
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4" aria-busy={loading} aria-label={loading ? "جارٍ تحميل إحصاءات المعلم" : "إحصاءات المعلم"}>
           <AdminStatCard
             variant="light"
             icon={Users}
             label="الطلاب المشتركون"
-            value={loading ? "..." : stats?.activeStudentsCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.activeStudentsCount.toString() ?? "0"}
             subtitle="عدد الطلاب النشطين"
           />
           <AdminStatCard
             variant="accent"
             icon={BookOpen}
             label="الباقات الدراسية"
-            value={loading ? "..." : stats?.packagesCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.packagesCount.toString() ?? "0"}
             subtitle="إجمالي الباقات النشطة"
           />
           <AdminStatCard
             variant="light"
             icon={Shield}
             label="الامتحانات"
-            value={loading ? "..." : stats?.examsCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.examsCount.toString() ?? "0"}
             subtitle="عدد الامتحانات المنشأة"
           />
           <AdminStatCard
             variant="muted"
             icon={GraduationCap}
             label="إجابات معلقة"
-            value={loading ? "..." : stats?.pendingEssaysCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.pendingEssaysCount.toString() ?? "0"}
             subtitle="بانتظار تصحيح المعلم"
           />
         </div>
@@ -127,7 +127,11 @@ export default function TeacherDashboardPageClient() {
             <p className="mt-1 text-sm text-[var(--admin-muted)]">عدد الطلاب المميزين حسب نوع المحتوى وطريقة الحصول عليه.</p>
           </div>
           {loading ? (
-            <div className="rounded-2xl bg-[var(--admin-card)] p-6 text-sm font-bold text-[var(--admin-muted)]">جارٍ تحميل تفاصيل الباقات...</div>
+            <div className="grid gap-4 lg:grid-cols-2" aria-label="جارٍ تحميل تفاصيل الباقات">
+              {[1, 2].map((placeholder) => (
+                <div key={placeholder} className="h-40 animate-pulse rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]" />
+              ))}
+            </div>
           ) : stats?.packageSales?.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
               {stats.packageSales.map((item) => (

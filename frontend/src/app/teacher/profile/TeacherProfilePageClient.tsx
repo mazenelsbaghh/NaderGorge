@@ -283,11 +283,11 @@ export default function TeacherProfilePageClient() {
           {member.notes ? <p className="mt-1 text-xs font-bold text-[var(--admin-primary)]">{member.notes}</p> : null}
           <div className="mt-3 flex max-w-xl flex-wrap gap-1.5">
             {member.permissionKeys.length > 0 ? member.permissionKeys.map((key) => (
-              <span key={key} className="rounded-full bg-[var(--admin-primary)]/10 px-2.5 py-1 text-[11px] font-black text-[var(--admin-primary)]">
+              <span key={key} className="rounded-full bg-[var(--admin-primary)]/10 px-2.5 py-1 text-sm font-black text-[var(--admin-primary)]">
                 {permissionLabel(key)}
               </span>
             )) : (
-              <span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-black text-rose-600">بدون صلاحيات</span>
+              <span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-sm font-black text-rose-600">بدون صلاحيات</span>
             )}
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function TeacherProfilePageClient() {
       label: "تاريخ الإضافة",
       render: (member) => (
         <span className="text-xs font-bold text-[var(--admin-muted)]">
-          {new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium" }).format(new Date(member.createdAt))}
+          {new Intl.DateTimeFormat("ar-EG", { timeZone: 'Africa/Cairo', dateStyle: "medium" }).format(new Date(member.createdAt))}
         </span>
       ),
     },

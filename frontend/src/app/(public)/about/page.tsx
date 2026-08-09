@@ -32,10 +32,10 @@ export default function AboutPage() {
           </div>
 
           {/* Bio Card */}
-          <div className="landing-panel mb-12 overflow-hidden rounded-[28px] p-8 md:p-12">
+          <div className="landing-panel mb-12 overflow-hidden rounded-2xl p-8 md:p-12">
             <div className="flex flex-col gap-8 md:flex-row md:items-start">
               <div className="shrink-0">
-                <div className="relative h-32 w-32 overflow-hidden rounded-[24px] shadow-[0_20px_60px_rgba(88,55,18,0.2)]">
+                <div className="relative h-32 w-32 overflow-hidden rounded-2xl shadow-sm">
                   <Image
                     src="/images/hero-pharaoh.png"
                     alt="منصة مسار"
@@ -63,7 +63,7 @@ export default function AboutPage() {
               return (
                 <div
                   key={i}
-                  className="landing-panel flex flex-col items-center rounded-[24px] p-6 text-center"
+                  className="landing-panel flex flex-col items-center rounded-2xl p-6 text-center"
                 >
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
                     <Icon className="h-6 w-6" />
@@ -79,7 +79,7 @@ export default function AboutPage() {
           <div className="text-center">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-10 py-4 text-lg font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_40px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-10 py-4 text-lg font-extrabold text-[var(--landing-accent-foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
             >
               ابدأ مع منصة مسار
               <ArrowUpLeft className="h-5 w-5" />

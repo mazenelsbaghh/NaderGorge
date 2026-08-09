@@ -12,7 +12,7 @@ export function SkipToContentLink({
   return (
     <a
       href={`#${targetId}`}
-      className="fixed start-3 top-3 z-[100] -translate-y-24 rounded-md bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-lg transition-transform focus:translate-y-0"
+      className="fixed start-3 top-3 z-[var(--z-modal)] -translate-y-24 rounded-md bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-lg transition-transform focus:translate-y-0"
     >
       تخطَّ إلى المحتوى الرئيسي
     </a>

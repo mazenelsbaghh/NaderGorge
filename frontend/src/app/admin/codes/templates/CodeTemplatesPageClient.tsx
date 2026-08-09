@@ -467,7 +467,7 @@ function TemplateDesigner({
         >
           {element.id === 'qr' ? (
             <span className="grid aspect-square w-full place-items-center bg-white">
-              <span className="grid h-[72%] w-[72%] place-items-center rounded-sm border-2 border-slate-900 font-mono text-[10px] font-black text-slate-900">QR</span>
+              <span className="grid h-[72%] w-[72%] place-items-center rounded-sm border-2 border-slate-900 font-mono text-sm font-black text-slate-900">QR</span>
             </span>
           ) : element.id === 'code' ? (
             <span className="font-mono font-black tracking-widest text-slate-950">1234567890</span>

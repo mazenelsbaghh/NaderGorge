@@ -7,7 +7,7 @@ namespace NaderGorge.Application.Features.HR.Queries;
 
 public record GetMyAttendanceQuery(Guid UserId) : IRequest<ApiResponse<MyAttendanceStatusDto>>;
 
-public record MyAttendanceStatusDto(bool HasProfile, List<AttendanceLogDto> Logs, int TargetDailyHours);
+public record MyAttendanceStatusDto(bool HasProfile, List<AttendanceLogDto> Logs, int TargetDailyHours, DateTime ServerNowUtc);
 
 public record AttendanceLogDto(
     Guid Id,
@@ -37,7 +37,7 @@ public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery,
 
         if (profile == null)
         {
-            return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(false, new List<AttendanceLogDto>(), 8));
+            return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(false, new List<AttendanceLogDto>(), 8, DateTime.UtcNow));
         }
 
         var logs = await _db.AttendanceLogs
@@ -58,6 +58,6 @@ public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery,
             al.ClockOut.HasValue ? (al.ClockOut.Value - al.ClockIn).TotalMinutes : null
         )).ToList();
 
-        return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(true, dtos, profile.TargetDailyHours));
+        return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(true, dtos, profile.TargetDailyHours, DateTime.UtcNow));
     }
 }

@@ -16,7 +16,7 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
-      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
+      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-3xl" />
       
       <div className="relative z-10 flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-xl">
@@ -32,7 +32,7 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-6 rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 shadow-inner backdrop-blur-xl sm:p-6 lg:min-w-[400px]">
+        <div className="flex shrink-0 items-center gap-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 shadow-inner sm:p-6 lg:min-w-[400px]">
           <Metric label="الإجمالي" value={packages.length} />
           <div className="h-10 w-px bg-[var(--admin-border)]" />
           <Metric label="مفعّلة" value={enrolled.length} active />
@@ -138,7 +138,7 @@ export function PackagesGrid({
                     key={t.id}
                     type="button"
                     onClick={() => setSelectedTeacher(isActive ? null : t.id)}
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-[0.97] ${
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-[0.97] ${
                       isActive
                         ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md shadow-[var(--admin-primary-20)]"
                         : "border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:border-[var(--admin-primary-30)] hover:bg-[var(--admin-primary-10)]"
@@ -177,7 +177,7 @@ export function PackagesGrid({
                       key={s.id}
                       type="button"
                       onClick={() => setSelectedSubject(isActive ? null : s.id)}
-                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-[0.97] ${
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-[0.97] ${
                         isActive
                           ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md shadow-[var(--admin-primary-20)]"
                           : "border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:border-[var(--admin-primary-30)] hover:bg-[var(--admin-primary-10)]"
@@ -209,11 +209,11 @@ export function PackagesGrid({
 
       {filteredPackages.length === 0 ? (
         <div className="mx-auto max-w-3xl">
-          <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[linear-gradient(to_bottom,var(--admin-card),var(--admin-card-soft))] p-10 text-center shadow-sm">
+          <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[linear-gradient(to_bottom,var(--admin-card),var(--admin-card-soft))] p-10 text-center shadow-sm">
             <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
-            <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-xl transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-3">
+            <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-xl transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-3">
               <PackageOpen className="h-10 w-10 text-[var(--admin-primary)] opacity-80" />
-              <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_0_20px_var(--admin-primary-15)]" />
+              <div className="absolute inset-0 rounded-2xl shadow-sm" />
             </div>
             <h3 className="relative text-xl font-bold text-[var(--admin-text)]">
               {(selectedTeacher || selectedSubject) ? "لا توجد باقات تطابق الفلتر" : emptyTitle}
@@ -230,7 +230,7 @@ export function PackagesGrid({
               prefetch={false}
               key={pkg.id}
               href={getHref(pkg.id)}
-              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--admin-primary-10)] hover:border-[var(--admin-primary-30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--admin-primary-10)] hover:border-[var(--admin-primary-30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
               {/* Image Frame */}
               <div className="relative aspect-video w-full overflow-hidden bg-[var(--admin-bg)]">
@@ -246,7 +246,7 @@ export function PackagesGrid({
                 {/* Badge */}
                 <div className="absolute left-4 top-4">
                   <span
-                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-wider shadow-md backdrop-blur-md ${
+                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-wider shadow-md ${
                       pkg.isEnrolled
                         ? "bg-[var(--admin-success-20)] text-[var(--admin-success)] border border-[var(--admin-success-30)]"
                         : "bg-[var(--admin-card-strong)] text-[var(--admin-text)] border border-[var(--admin-border)]"
@@ -301,7 +301,7 @@ export function PackagesGrid({
                     </span>
                   </div>
                   
-                  <div className={`flex h-10 items-center justify-center rounded-xl border px-5 text-xs font-bold transition-all ${
+                  <div className={`flex h-10 items-center justify-center rounded-xl border px-5 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                     pkg.isEnrolled 
                       ? "border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-20)] group-hover:bg-[var(--admin-primary-strong)]"
                       : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] group-hover:border-[var(--admin-text)] group-hover:bg-[var(--admin-text)] group-hover:text-[var(--admin-bg)]"

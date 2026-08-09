@@ -140,19 +140,19 @@ export function PackageCodeProfileForm({
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-24 animate-pulse rounded-[28px] bg-[var(--admin-card-soft)]" />
+        <div className="h-24 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="h-32 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
-          <div className="h-32 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
+          <div className="h-32 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
+          <div className="h-32 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
         </div>
-        <div className="h-48 animate-pulse rounded-[24px] bg-[var(--admin-card-soft)]" />
+        <div className="h-48 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
-      <div className="rounded-[28px] bg-[var(--admin-card-soft)] p-5">
+      <div className="rounded-2xl bg-[var(--admin-card-soft)] p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
@@ -173,7 +173,7 @@ export function PackageCodeProfileForm({
       </div>
 
       {error ? (
-        <div className="flex items-start gap-3 rounded-[24px] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-sm font-semibold text-[var(--admin-danger)]">
+        <div className="flex items-start gap-3 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-sm font-semibold text-[var(--admin-danger)]">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -181,7 +181,7 @@ export function PackageCodeProfileForm({
 
       <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
         <div className="space-y-6">
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
             <Dropdown
               label="حالة البروفايل"
               value={form.status}
@@ -196,7 +196,7 @@ export function PackageCodeProfileForm({
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
             <Dropdown
               label="لون التمييز"
               value={form.themeAccentKey ?? 'default-gold'}
@@ -205,7 +205,7 @@ export function PackageCodeProfileForm({
             />
           </div>
 
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
             <p className="text-sm font-bold text-[var(--admin-text)]">الوضع الافتراضي</p>
             <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">
               إذا أردت حذف التخصيصات الحالية والرجوع للنسخة الافتراضية العامة، استخدم زر الإعادة بالأسفل.
@@ -298,7 +298,7 @@ function FieldGroup({
   fields: ReactNode;
 }) {
   return (
-    <section className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
       <div className="mb-4 flex items-center gap-2 text-lg font-black text-[var(--admin-text)]">
         {icon}
         <span>{title}</span>

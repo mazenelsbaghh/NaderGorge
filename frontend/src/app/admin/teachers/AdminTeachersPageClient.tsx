@@ -162,18 +162,18 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
           {/* Backdrop */}
           <div
             onClick={onClose}
-            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-floating)] bg-black/60 backdrop-blur-sm"
           />
 
           {/* Modal */}
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="teacher-profile-title"
           >
-            <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
+            <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
 
               {/* Header */}
               <div className="flex shrink-0 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
@@ -907,7 +907,7 @@ export default function AdminTeachersPageClient() {
       {/* Onboarding / Edit Drawer Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
               onClick={handleCloseModal}

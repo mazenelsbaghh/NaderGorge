@@ -133,13 +133,13 @@ export function PurchaseContentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--admin-text)]/20 p-4 backdrop-blur-sm" role="presentation">
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--admin-text)]/20 p-4" role="presentation">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="purchase-modal-title"
         aria-describedby="purchase-modal-description"
-        className="max-h-[min(90dvh,42rem)] w-full max-w-md overflow-y-auto rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-2xl animate-in zoom-in-95 fade-in duration-200 sm:p-6"
+        className="max-h-[min(90dvh,42rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-2xl animate-in zoom-in-95 fade-in duration-200 sm:p-6"
         dir="rtl"
       >
         {success ? (

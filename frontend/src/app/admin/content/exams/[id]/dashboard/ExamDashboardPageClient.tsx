@@ -136,7 +136,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
         
         {/* Description */}
         {dashboard.description && (
-          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-8 shadow-sm backdrop-blur-xl">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-8 shadow-sm backdrop-blur-md">
             <h3 className="text-sm font-bold uppercase tracking-[0.25em] text-[var(--admin-muted)] mb-2">وصف الامتحان</h3>
             <p className="text-[var(--admin-text)] text-lg leading-relaxed">{dashboard.description}</p>
           </div>
@@ -331,11 +331,11 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                   <div className="space-y-1">
                     <div className="text-xs text-[var(--admin-muted)]">
                       <span className="font-bold inline-block w-12 text-[var(--admin-text)] opacity-70">البدء:</span> 
-                      {row.startedAt ? new Date(row.startedAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '---'}
+                      {row.startedAt ? new Date(row.startedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
                     </div>
                     <div className="text-xs text-[var(--admin-muted)]">
                       <span className="font-bold inline-block w-12 text-[var(--admin-text)] opacity-70">التسليم:</span> 
-                      {row.submittedAt ? new Date(row.submittedAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '---'}
+                      {row.submittedAt ? new Date(row.submittedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
                     </div>
                   </div>
                 )

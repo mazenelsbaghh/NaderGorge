@@ -280,7 +280,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
               {req.currentWatchCount} / {isUnlimited ? '∞' : req.maxWatchCount}
             </span>
             {req.reachedLimit && (
-              <span className="text-[10px] text-rose-500 font-bold">وصل للحد الأقصى</span>
+              <span className="text-sm text-rose-500 font-bold">وصل للحد الأقصى</span>
             )}
           </div>
         );
@@ -516,7 +516,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                     min={1}
                     value={addedViews}
                     onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm font-bold"
                   />
                 </div>
               )}
@@ -536,7 +536,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                   placeholder={editStatus === 2 ? "اكتب سبب الرفض بالتفصيل هنا..." : "اكتب ملاحظة أو سبب الموافقة..."}
                   className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
                     validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
-                  } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                  } outline-none focus:ring-2 resize-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm`}
                   required={editStatus === 2}
                 />
                 {validationError && (
@@ -565,7 +565,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                     min={1}
                     value={addedViews}
                     onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm font-bold"
                   />
                 </div>
               )}
@@ -586,7 +586,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                 placeholder={activeModal === 'reject' ? "اكتب سبب الرفض بالتفصيل هنا ليظهر للطالب..." : "اكتب ملاحظة أو سبب الموافقة..."}
                 className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
                   validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
-                } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                } outline-none focus:ring-2 resize-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm`}
                 required={activeModal === 'reject'}
               />
               {validationError && (
@@ -616,7 +616,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                 (activeModal === 'reject' && !reasonText.trim()) || 
                 (activeModal === 'edit' && editStatus === 2 && !reasonText.trim())
               }
-              className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-all duration-200 ${
+              className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${
                 activeModal === 'approve' || (activeModal === 'edit' && editStatus === 1)
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] disabled:opacity-50'
                   : 'bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_12px_rgba(244,63,94,0.15)] disabled:opacity-50 disabled:cursor-not-allowed'

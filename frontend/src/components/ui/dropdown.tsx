@@ -273,7 +273,7 @@ export function Dropdown({
         {multiple && (
           <span
             className={[
-              'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
+              'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-150',
               isSelected
                 ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
                 : 'border-[var(--admin-border)] bg-[var(--admin-bg)]',
@@ -347,11 +347,16 @@ export function Dropdown({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-controls={`${uid}-listbox`}
+        aria-activedescendant={
+          isOpen && highlightedIdx >= 0 ? `${uid}-opt-${highlightedIdx}` : undefined
+        }
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${uid}-error` : undefined}
         aria-label={label || placeholder}
         disabled={disabled}
         onClick={toggle}
         className={[
-          'group flex w-full items-center gap-2 border bg-[var(--admin-bg)] font-bold outline-none transition-all duration-200',
+          'group flex w-full items-center gap-2 border bg-[var(--admin-bg)] font-bold outline-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200',
           sizeMap[size],
           disabled
             ? 'cursor-not-allowed opacity-50'
@@ -388,7 +393,11 @@ export function Dropdown({
 
       {/* Error message */}
       {error && (
-        <p className="mt-1.5 text-xs font-bold text-[var(--admin-danger)]">
+        <p
+          id={`${uid}-error`}
+          role="alert"
+          className="mt-1.5 text-xs font-bold text-[var(--admin-danger)]"
+        >
           {error}
         </p>
       )}
@@ -419,7 +428,7 @@ export function Dropdown({
                     setHighlightedIdx(0);
                   }}
                   placeholder={searchPlaceholder}
-                  className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-2 pr-9 pl-3 text-sm font-medium text-[var(--admin-text)] outline-none transition-all placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:shadow-[0_0_0_2px_var(--admin-primary-15)]"
+                  className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-2 pr-9 pl-3 text-sm font-medium text-[var(--admin-text)] outline-none transition-[color,background-color,border-color,opacity,transform,box-shadow] placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:shadow-[0_0_0_2px_var(--admin-primary-15)]"
                   dir="rtl"
                 />
               </div>

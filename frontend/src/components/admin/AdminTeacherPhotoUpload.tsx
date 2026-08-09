@@ -172,7 +172,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
           <span className="mt-2 text-xs font-bold text-[var(--admin-text)]">
             {isUploading ? 'جاري ضغط ورفع الصور...' : 'اختر عدة صور للرفع'}
           </span>
-          <span className="mt-1 text-[11px] text-[var(--admin-muted)]">يمكن تحديد أكثر من صورة في المرة الواحدة</span>
+          <span className="mt-1 text-sm text-[var(--admin-muted)]">يمكن تحديد أكثر من صورة في المرة الواحدة</span>
         </label>
 
         {loadingPhotos ? (
@@ -186,7 +186,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                 <div className="relative aspect-square overflow-hidden rounded-lg">
                   <Image src={resolveMediaUrl(photo.url)} alt="صورة مرجعية للمعلم" fill unoptimized className="object-cover" />
                   {photo.isActive && (
-                    <span className="absolute right-1 top-1 rounded-md bg-[var(--admin-primary)] px-1.5 py-1 text-[10px] font-bold text-white">النشطة</span>
+                    <span className="absolute end-1 top-1 rounded-md bg-[var(--admin-primary)] px-1.5 py-1 text-sm font-bold text-white">النشطة</span>
                   )}
                 </div>
                 <div className="mt-2 flex justify-center gap-2">
@@ -280,7 +280,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
               {photos.map((photo) => (
                 <div 
                   key={photo.id} 
-                  className={`relative group rounded-2xl overflow-hidden border-2 bg-[var(--admin-bg)] shadow-sm transition-all ${
+                  className={`relative group rounded-2xl overflow-hidden border-2 bg-[var(--admin-bg)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                     photo.isActive 
                       ? 'border-[var(--admin-primary)] shadow-md shadow-[var(--admin-primary)]/10 scale-[1.02]' 
                       : 'border-[var(--admin-border)] hover:border-[var(--admin-border-strong)]'
@@ -297,7 +297,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                     
                     {/* Status Badge */}
                     {photo.isActive && (
-                      <div className="absolute top-2 right-2 bg-[var(--admin-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2 end-2 bg-[var(--admin-primary)] text-white text-sm font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="w-3 h-3" />
                         نشطة للـ AI
                       </div>

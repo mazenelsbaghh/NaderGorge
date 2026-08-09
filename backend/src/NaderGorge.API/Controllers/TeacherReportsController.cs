@@ -43,12 +43,15 @@ public sealed class TeacherReportsController : ControllerBase
     }
 
     [HttpGet("student-ledger/export")]
-    public async Task<IActionResult> ExportStudentLedger(CancellationToken ct)
+    public async Task<IActionResult> ExportStudentLedger(
+        [FromQuery] NaderGorge.Domain.Enums.EducationStage? stage,
+        [FromQuery] NaderGorge.Domain.Enums.StudyTrack? studyTrack,
+        CancellationToken ct)
     {
         if (!await CanAccessAsync(ct)) return Forbid();
         try
         {
-            var export = await _studentLedger.ExportForTeacherAsync(User.RequireUserId(), ct);
+            var export = await _studentLedger.ExportForTeacherAsync(User.RequireUserId(), new StudentLedgerFilter(stage, studyTrack), ct);
             return File(export.Content, export.ContentType, export.FileName);
         }
         catch (UnauthorizedAccessException) { return Forbid(); }

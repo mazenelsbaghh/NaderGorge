@@ -84,7 +84,7 @@ export default function FaqPageClient() {
                 event.preventDefault();
                 window.dispatchEvent(new Event('massar:open-support'));
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-8 py-3.5 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_40px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-8 py-3.5 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
               aria-label="فتح نافذة التواصل مع الدعم"
             >
               <MessageCircle className="h-4 w-4" />

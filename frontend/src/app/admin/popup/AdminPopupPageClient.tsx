@@ -285,7 +285,7 @@ export default function AdminPopupPageClient() {
         </section>
 
         <aside className="self-start xl:sticky xl:top-6">
-          <div className="overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[#f6f7f8] shadow-[0_18px_48px_var(--admin-shadow)]">
+          <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[#f6f7f8] shadow-sm">
             <div className="flex items-center gap-2 border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-4 text-sm font-black text-[var(--admin-text)]">
               <Sparkles className="h-4 w-4 text-[#0e8f8f]" /> معاينة للطالب
             </div>

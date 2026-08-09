@@ -154,7 +154,7 @@ export function PackageDetailsForm({ pkg, onSuccess }: PackageDetailsFormProps) 
         />
       </div>
 
-      <div className="flex items-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 transition-all hover:bg-[var(--admin-card-soft)] hover:shadow-sm">
+      <div className="flex items-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-card-soft)] hover:shadow-sm">
         <Checkbox id="isActive" isSelected={isActive} onChange={setIsActive}>
           <Checkbox.Control>
             <Checkbox.Indicator />

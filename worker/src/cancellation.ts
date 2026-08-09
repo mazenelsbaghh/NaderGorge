@@ -1,4 +1,4 @@
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { createRedisConnection } from './config/redis.js';
 
 const CANCELLATION_TTL_SECONDS = 24 * 60 * 60;
@@ -11,6 +11,10 @@ function cancellationKey(jobId: string | number) {
 export async function markJobCancellation(job: Job) {
   const state = await job.getState();
 
+  if (job.id) {
+    await cancellationRedis.set(cancellationKey(job.id), '1', 'EX', CANCELLATION_TTL_SECONDS);
+  }
+
   if (state === 'waiting' || state === 'delayed' || state === 'prioritized') {
     await job.remove();
     return { removed: true, state };
@@ -20,7 +24,6 @@ export async function markJobCancellation(job: Job) {
     return { removed: false, state };
   }
 
-  await cancellationRedis.set(cancellationKey(job.id), '1', 'EX', CANCELLATION_TTL_SECONDS);
   await job.updateData({ ...job.data, cancellationRequested: true });
   return { removed: false, state };
 }
@@ -30,7 +33,7 @@ export async function throwIfCancellationRequested(job: Job) {
 
   const isCancelled = await cancellationRedis.get(cancellationKey(job.id));
   if (isCancelled) {
-    throw new Error('Job cancellation requested');
+    throw new UnrecoverableError('Job cancellation requested');
   }
 }
 

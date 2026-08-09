@@ -148,7 +148,7 @@ export default function StudentTeachersPageClient() {
 
         {/* Grid of Teachers */}
         {teachers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
             <GraduationCap className="mb-4 h-16 w-16 text-[var(--admin-muted)] opacity-60" />
             <p className="font-bold text-[var(--admin-muted)]">لا يوجد معلمون متاحون حالياً.</p>
             <p className="mt-2 max-w-md text-sm font-medium leading-6 text-[var(--admin-muted)]">
@@ -198,7 +198,7 @@ export default function StudentTeachersPageClient() {
                             </h2>
                             <div className="mt-1 flex flex-wrap gap-1">
                               {(teacher.subjectNames || []).slice(0, 2).map((subject, idx) => (
-                                <span key={idx} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-primary)]">
+                                <span key={idx} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-sm font-bold text-[var(--admin-primary)]">
                                   {subject}
                                 </span>
                               ))}
@@ -226,7 +226,7 @@ export default function StudentTeachersPageClient() {
                             {(specList.length > 0 ? specList : ["جميع الصفوف"]).slice(0, 3).map((spec, sIdx) => (
                               <span
                                 key={sIdx}
-                                className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-muted)]"
+                                className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-2 py-0.5 text-sm font-bold text-[var(--admin-muted)]"
                               >
                                 {spec}
                               </span>
@@ -283,7 +283,7 @@ export default function StudentTeachersPageClient() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setActiveTeacher(null)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-all"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
               title="عودة للمعلمين"
             >
               <ArrowRight className="h-5 w-5" />
@@ -306,7 +306,7 @@ export default function StudentTeachersPageClient() {
         </div>
 
         {/* Teacher profile summary card */}
-        <div className="overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-6 items-start">
             {activeTeacher.profileImageUrl ? (
               <div className="relative h-20 w-20 overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-sm flex-shrink-0">
@@ -349,7 +349,7 @@ export default function StudentTeachersPageClient() {
           </h2>
 
           {uniqueGrades.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
               <BookOpen className="mb-4 h-12 w-12 text-[var(--admin-muted)] opacity-60" />
               <p className="font-bold text-[var(--admin-muted)]">لا توجد باقات دراسية معلنة لهذا المعلم حالياً.</p>
             </div>
@@ -363,7 +363,7 @@ export default function StudentTeachersPageClient() {
                     key={grade}
                     variants={fadeUp}
                     onClick={() => setActiveGrade(grade)}
-                    className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right transition-all hover:border-[var(--admin-primary-30)] hover:shadow-md hover:scale-[1.02]"
+                    className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary-30)] hover:shadow-md hover:scale-[1.02]"
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-10)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-white transition-colors">
@@ -405,7 +405,7 @@ export default function StudentTeachersPageClient() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveGrade(null)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-all"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
             title="عودة للصفوف الدراسية"
           >
             <ArrowRight className="h-5 w-5" />
@@ -429,7 +429,7 @@ export default function StudentTeachersPageClient() {
         </h2>
 
         {filteredPackages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
             <BookOpen className="mb-4 h-12 w-12 text-[var(--admin-muted)] opacity-60" />
             <p className="font-bold text-[var(--admin-muted)]">لا توجد باقات متوفرة لهذا الصف الدراسي حالياً.</p>
           </div>
@@ -440,7 +440,7 @@ export default function StudentTeachersPageClient() {
                 key={pkg.id}
                 href={`/student/packages/${pkg.id}`}
                 prefetch={false}
-                className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
+                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
               >
                 <div>
                   <div className="flex items-start justify-between gap-4">

@@ -449,9 +449,47 @@ export function RechargeVerificationWorkspace() {
         <div>
           <div className="font-mono font-bold text-sm text-[var(--admin-text)]">{r.amount} ج.م</div>
           <div className="text-xs text-[var(--admin-muted)] mt-0.5">الرصيد: <span className="font-semibold">{r.teacherName ? `للمدرس ${r.teacherName}` : 'عام'}</span></div>
-          <div className="mt-0.5 text-[10px] font-bold text-[var(--admin-muted)]">كود المراجعة: <bdi className="font-mono text-[var(--admin-primary)]">{r.id.slice(0, 8).toUpperCase()}</bdi></div>
+          <div className="mt-0.5 text-sm font-bold text-[var(--admin-muted)]">كود المراجعة: <bdi className="font-mono text-[var(--admin-primary)]">{r.id.slice(0, 8).toUpperCase()}</bdi></div>
         </div>
       )
+    },
+    {
+      key: 'balances',
+      label: 'الأرصدة الحالية',
+      render: (r) => (
+        <div className="min-w-36 space-y-1.5 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-bold text-[var(--admin-muted)]">رصيد الطالب</span>
+            <bdi className="font-mono font-black text-[var(--admin-text)]">{r.studentBalance.toLocaleString('en-US')} ج.م</bdi>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-bold text-[var(--admin-muted)]">رصيد المدرس</span>
+            <bdi className="font-mono font-black text-[var(--admin-primary)]">
+              {r.teacherId ? `${r.teacherBalance.toLocaleString('en-US')} ج.م` : 'غير مخصص'}
+            </bdi>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'previousRequest',
+      label: 'آخر طلب سابق',
+      render: (r) => {
+        if (!r.hasPreviousRequest || r.previousRequestStatus === undefined) {
+          return <span className="text-xs font-bold text-[var(--admin-muted)]">أول طلب</span>;
+        }
+
+        return (
+          <div className="min-w-32 space-y-1.5">
+            {getStatusBadge(r.previousRequestStatus)}
+            {r.previousRequestCreatedAt ? (
+              <div className="text-sm font-bold text-[var(--admin-muted)]">
+                {formatRelativeDate(r.previousRequestCreatedAt)}
+              </div>
+            ) : null}
+          </div>
+        );
+      }
     },
     {
       key: 'senderPhoneNumber',
@@ -462,10 +500,10 @@ export function RechargeVerificationWorkspace() {
             {r.senderPhoneNumber || 'غير مسجل'}
           </span>
           {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
-            <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
+            <span className="block text-sm font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
           ) : null}
           {r.requiresSenderPhoneConfirmation ? (
-            <span className="block max-w-44 rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
+            <span className="block max-w-44 rounded-lg bg-amber-500/10 px-2 py-1 text-sm font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
           ) : null}
         </div>
       )
@@ -479,7 +517,7 @@ export function RechargeVerificationWorkspace() {
         return (
           <div className="w-fit min-w-36 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-start">
             <bdi dir="ltr" className="block font-mono text-sm font-black text-[var(--admin-text)]">{suspectedPhone.phoneNumber}</bdi>
-            <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">{suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب</span>
+            <span className="block text-sm font-bold text-amber-700 dark:text-amber-400">{suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب</span>
           </div>
         );
       }
@@ -528,7 +566,7 @@ export function RechargeVerificationWorkspace() {
       render: (r) => (
         <div className="flex flex-col">
           <span className="text-xs text-[var(--admin-text)]">{formatRelativeDate(r.createdAt)}</span>
-          <span className="text-[10px] text-[var(--admin-muted)] font-mono mt-0.5">{formatDate(r.createdAt, { timeStyle: 'short', dateStyle: 'short' })}</span>
+          <span className="text-sm text-[var(--admin-muted)] font-mono mt-0.5">{formatDate(r.createdAt, { timeStyle: 'short', dateStyle: 'short' })}</span>
         </div>
       )
     },
@@ -554,7 +592,7 @@ export function RechargeVerificationWorkspace() {
           }
           if (r.resolvedAt) {
             return (
-              <div className="text-right text-[10px] text-[var(--admin-muted)]">
+              <div className="text-right text-sm text-[var(--admin-muted)]">
                 بواسطة: {r.resolvedByUserName || 'النظام'}
                 <div className="font-mono mt-0.5">{formatDate(r.resolvedAt, { timeStyle: 'short' })}</div>
               </div>
@@ -569,7 +607,7 @@ export function RechargeVerificationWorkspace() {
         }
         return (
           <div className="flex min-w-44 flex-col gap-2">
-            {isAwaitingEvidence ? <p className="text-right text-[10px] font-bold leading-5 text-amber-700">يمكن القبول بعد ربط رسالة تحويل، أو الرفض مع كتابة السبب.</p> : null}
+            {isAwaitingEvidence ? <p className="text-right text-sm font-bold leading-5 text-amber-700">يمكن القبول بعد ربط رسالة تحويل، أو الرفض مع كتابة السبب.</p> : null}
             <div className="flex items-center gap-2">
             <NeumorphButton
               type="button"
@@ -639,13 +677,13 @@ export function RechargeVerificationWorkspace() {
           <div className="flex flex-wrap gap-1 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] p-1 rounded-xl">
             <button
               onClick={() => setStatusFilter('awaiting-evidence')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'awaiting-evidence' ? 'bg-[var(--admin-primary)] text-white shadow' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${statusFilter === 'awaiting-evidence' ? 'bg-[var(--admin-primary)] text-white shadow' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
             >
               بانتظار رفع الإثبات ({awaitingEvidenceCount})
             </button>
             <button
               onClick={() => setStatusFilter(0)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 0
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -655,7 +693,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter(1)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 1
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -665,7 +703,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter(2)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 2
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -675,7 +713,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter(3)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 3
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -685,7 +723,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter(4)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 4
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -695,7 +733,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter(5)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 5
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -705,7 +743,7 @@ export function RechargeVerificationWorkspace() {
             </button>
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 statusFilter === 'all'
                   ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -733,7 +771,7 @@ export function RechargeVerificationWorkspace() {
         {/* Main Content Area - Split layout */}
         <div className="grid min-h-0 gap-6 lg:grid-cols-3 lg:items-start">
           {/* Requests Table */}
-          <div className="min-w-0 lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
+          <div className="min-w-0 lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[var(--admin-text)]">قائمة طلبات الشحن</h2>
               <NeumorphButton type="button" onClick={() => void fetchData()} intent="ghost" size="sm">
@@ -753,7 +791,7 @@ export function RechargeVerificationWorkspace() {
           </div>
 
           {/* Unmatched SMS Panel */}
-          <div className="admin-panel flex min-h-0 min-w-0 flex-col overflow-visible rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-[0_4px_20px_var(--admin-shadow)] sm:p-6 lg:h-[clamp(28rem,calc(100dvh-18rem),700px)] lg:overflow-hidden">
+          <div className="admin-panel flex h-[clamp(28rem,calc(100dvh-18rem),700px)] min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6">
             <h2 className="mb-2 flex shrink-0 items-center gap-2 text-lg font-black text-[var(--admin-text)]">
               <Smartphone className="h-5 w-5 text-[var(--admin-primary)]" />
               الرسائل غير المطابقة ({unmatchedSmsCount})
@@ -784,7 +822,7 @@ export function RechargeVerificationWorkspace() {
               )}
             </div>
             {unmatchedSmsSearchQuery.trim() && (
-              <div className="mb-3 shrink-0 text-[10px] font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
+              <div className="mb-3 shrink-0 text-sm font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
                 {filteredUnmatchedSms.length > 0
                   ? `تم العثور على ${filteredUnmatchedSms.length} رسالة من أصل ${unmatchedSmsCount}`
                   : 'لا توجد رسائل غير مطابقة بالرقم أو البحث المدخل'}
@@ -795,7 +833,7 @@ export function RechargeVerificationWorkspace() {
               role="region"
               aria-label="الرسائل غير المطابقة"
               tabIndex={0}
-              className="flex min-h-0 flex-none touch-pan-y flex-col gap-2 overflow-visible pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-color:var(--admin-border)_transparent] lg:[scrollbar-gutter:stable] lg:[scrollbar-width:thin] lg:[-webkit-overflow-scrolling:touch]"
+              className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2 overflow-y-auto overscroll-contain pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
             >
               {loading ? (
                 [1, 2, 3].map(i => (
@@ -805,13 +843,13 @@ export function RechargeVerificationWorkspace() {
                 <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-[var(--admin-border)] rounded-xl bg-[var(--admin-card-strong)]">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" />
                   <span className="text-xs font-bold text-[var(--admin-text)]">كل الرسائل مطابقة!</span>
-                  <span className="text-[10px] text-[var(--admin-muted)] mt-1">لا توجد رسائل معلقة في النظام.</span>
+                  <span className="text-sm text-[var(--admin-muted)] mt-1">لا توجد رسائل معلقة في النظام.</span>
                 </div>
               ) : filteredUnmatchedSms.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-[var(--admin-border)] rounded-xl bg-[var(--admin-card-strong)]">
                   <Search className="h-8 w-8 text-[var(--admin-muted)] mb-2" />
                   <span className="text-xs font-bold text-[var(--admin-text)]">لا توجد رسائل بهذا الرقم</span>
-                  <span className="mt-1 text-[10px] text-[var(--admin-muted)]">جرّب كتابة رقم الهاتف بصيغة أخرى أو امسح البحث.</span>
+                  <span className="mt-1 text-sm text-[var(--admin-muted)]">جرّب كتابة رقم الهاتف بصيغة أخرى أو امسح البحث.</span>
                   <button
                     type="button"
                     onClick={() => setUnmatchedSmsSearchQuery('')}
@@ -832,7 +870,7 @@ export function RechargeVerificationWorkspace() {
                     }}
                     className="flex min-h-12 w-full items-center justify-between gap-3 px-3.5 text-right hover:bg-[var(--admin-hover)] focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]"
                   >
-                    <span className="flex min-w-0 items-center gap-2"><WalletCards className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" /><span className="min-w-0"><span className="block truncate text-sm font-black text-[var(--admin-text)]">{wallet.label}</span><span className="block font-mono text-[10px] text-[var(--admin-muted)]" dir="ltr">{wallet.phoneNumber}</span></span></span>
+                    <span className="flex min-w-0 items-center gap-2"><WalletCards className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" /><span className="min-w-0"><span className="block truncate text-sm font-black text-[var(--admin-text)]">{wallet.label}</span><span className="block font-mono text-sm text-[var(--admin-muted)]" dir="ltr">{wallet.phoneNumber}</span></span></span>
                     <span className="flex shrink-0 items-center gap-2"><span className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-xs font-black text-[var(--admin-primary)]">{wallet.amountGroups.reduce((sum, group) => sum + group.items.length, 0)}</span><ChevronDown className={`h-4 w-4 text-[var(--admin-muted)] transition-transform ${isWalletOpen ? 'rotate-180' : ''}`} /></span>
                   </button>
                   {isWalletOpen && <div className="border-t border-[var(--admin-border)] p-2">
@@ -851,8 +889,8 @@ export function RechargeVerificationWorkspace() {
                         </button>
                         {isAmountOpen && <div className="space-y-2 border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2">
                           {group.items.map((sms) => <article key={sms.id} className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3">
-                            <div className="flex items-center justify-between gap-3"><span className="text-[11px] font-semibold text-[var(--admin-text)]">من: <span className="font-mono">{sms.parsedSenderPhone || sms.sender}</span></span><span className="shrink-0 font-mono text-[10px] text-[var(--admin-muted)]">{formatRelativeDate(sms.receivedAt)}</span></div>
-                            <p className="mt-2 whitespace-pre-wrap break-words rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 font-mono text-[11px] leading-relaxed text-[var(--admin-text)]">{sms.body}</p>
+                            <div className="flex items-center justify-between gap-3"><span className="text-sm font-semibold text-[var(--admin-text)]">من: <span className="font-mono">{sms.parsedSenderPhone || sms.sender}</span></span><span className="shrink-0 font-mono text-sm text-[var(--admin-muted)]">{formatRelativeDate(sms.receivedAt)}</span></div>
+                            <p className="mt-2 whitespace-pre-wrap break-words rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 font-mono text-sm leading-relaxed text-[var(--admin-text)]">{sms.body}</p>
                             <button type="button" onClick={() => { navigator.clipboard.writeText(sms.body); toast.success('تم نسخ الرسالة'); }} className="mt-2 inline-flex min-h-8 items-center gap-1 text-xs font-bold text-[var(--admin-primary)] hover:underline"><MessageSquareText className="h-3.5 w-3.5" />نسخ الرسالة</button>
                           </article>)}
                         </div>}
@@ -967,7 +1005,7 @@ export function RechargeVerificationWorkspace() {
                   </option>
                 ))}
               </select>
-              {selectedSmsId ? <span className="text-[10px] text-[var(--admin-muted)]">تم تحديد المحفظة تلقائياً من رسالة SMS المختارة.</span> : null}
+              {selectedSmsId ? <span className="text-sm text-[var(--admin-muted)]">تم تحديد المحفظة تلقائياً من رسالة SMS المختارة.</span> : null}
             </div>
 
             {/* Match with SMS selector */}
@@ -989,7 +1027,7 @@ export function RechargeVerificationWorkspace() {
               </div>
 
               {smsSearchQuery.trim() ? (
-                <span className="text-[10px] font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
+                <span className="text-sm font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
                   {filteredApprovalSms.length > 0
                     ? `تم العثور على ${filteredApprovalSms.length} رسالة بهذا البحث`
                     : 'لا توجد رسائل غير مطابقة بهذا الرقم'}
@@ -1023,7 +1061,7 @@ export function RechargeVerificationWorkspace() {
                   );
                 })}
               </select>
-              <span className="text-[10px] text-[var(--admin-muted)]">
+              <span className="text-sm text-[var(--admin-muted)]">
                 {isAwaitingEvidenceRequest(approveModalRequest) ? 'لأن الطالب لم يرفع الإثبات، لا يتم إضافة الرصيد إلا بعد ربط رسالة تحويل حقيقية.' : 'الرقم المحوّل منه يساعد في البحث فقط. يمكنك اختيار المحفظة والموافقة مباشرة إذا كان الإثبات مرفوعاً.'}
               </span>
             </div>}

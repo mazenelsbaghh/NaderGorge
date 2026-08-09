@@ -274,6 +274,34 @@ export const teacherService = {
     apiClient.get<ApiResponse<TeacherWorkspaceContextDto>>('/teacher/context').then((res) => res.data),
   getMySubjects: () =>
     apiClient.get<ApiResponse<SubjectDto[]>>('/teacher/subjects').then((res) => res.data),
+  getContentSubscribers: async (
+    contentType: 'package' | 'term' | 'section' | 'lesson',
+    id: string,
+    page = 1,
+    pageSize = 20,
+    search = ''
+  ) => {
+    const res = await apiClient.get<ApiResponse<import('./admin-service').ContentSubscribersPagedResult>>(
+      `/teacher/content/${contentType}/${id}/subscribers`,
+      { params: { page, pageSize, ...(search ? { search } : {}) } }
+    );
+    return res.data?.data;
+  },
+  exportContentSubscribersCsv: async (
+    contentType: 'package' | 'term' | 'section' | 'lesson',
+    id: string,
+    contentName: string
+  ) => {
+    const res = await apiClient.get(`/teacher/content/${contentType}/${id}/subscribers/export`, { responseType: 'blob' });
+    const blobUrl = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+    const downloadLink = document.createElement('a');
+    downloadLink.href = blobUrl;
+    downloadLink.download = `subscribers_${contentName}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(blobUrl);
+  },
   getMyStaff: () =>
     apiClient.get<ApiResponse<TeacherStaffMemberDto[]>>('/teacher/staff').then((res) => res.data),
   createMyStaff: (data: { fullName: string; phoneNumber: string; password: string; notes?: string; permissionKeys?: string[] }) =>

@@ -616,7 +616,7 @@ const GROUP_CONFIG = [
     id: 'academic',
     label: 'التعليم والمحتوى',
     icon: Library,
-    hrefs: ['/admin/subjects', '/admin/content', '/admin/content/video-types', '/admin/questions', '/admin/public-exams', '/admin/forms'],
+    hrefs: ['/admin/subjects', '/admin/content', '/admin/content/video-types', '/admin/shared-packages', '/admin/questions', '/admin/public-exams', '/admin/forms'],
   },
   {
     id: 'hr',
@@ -628,11 +628,11 @@ const GROUP_CONFIG = [
     id: 'operations',
     label: 'العمليات والتحكم',
     icon: Wrench,
-    hrefs: ['/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/gifts', '/admin/sales', '/admin/community', '/admin/comments', '/admin/media'],
+    hrefs: ['/admin/operations', '/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/gifts', '/admin/sales', '/admin/community', '/admin/comments', '/admin/media'],
   },
   {
     id: 'finance',
-    label: 'المالية والحسابات',
+    label: 'الحسابات والميزانيات',
     icon: CircleDollarSign,
     hrefs: [
       '/admin/platform-finance',
@@ -646,7 +646,13 @@ const GROUP_CONFIG = [
       '/admin/platform-finance/migration',
       '/admin/finance',
       '/admin/teacher-finance',
-      '/admin/sales',
+    ],
+  },
+  {
+    id: 'payments',
+    label: 'الشحن والمحافظ',
+    icon: Wallet,
+    hrefs: [
       '/admin/wallets',
       '/admin/recharge-verification',
       '/admin/wallet-messages',
@@ -662,9 +668,15 @@ const GROUP_CONFIG = [
   },
   {
     id: 'reports',
-    label: 'التقارير والمراقبة',
+    label: 'التقارير والمتابعة',
     icon: BarChart3,
-    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs', '/admin/settings', '/admin/popup'],
+    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs'],
+  },
+  {
+    id: 'admin_tools',
+    label: 'أدوات الإدارة',
+    icon: Settings,
+    hrefs: ['/admin/settings', '/admin/popup'],
   },
 ];
 
@@ -675,6 +687,35 @@ const MOBILE_QUICK_ROUTE_ORDER: AdminShellRoute[] = [
   '/admin/students',
   '/admin/live-support',
 ];
+
+const ADMIN_RECENT_ROUTES_KEY = 'massar-admin-recent-routes';
+const ADMIN_PINNED_ROUTES_KEY = 'massar-admin-pinned-routes';
+
+function readStoredAdminRoutes(storageKey: string): AdminShellRoute[] {
+  try {
+    const storedRoutes = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as unknown;
+    if (!Array.isArray(storedRoutes)) return [];
+    const allowedRoutes = new Set(navItems.map((navItem) => navItem.href));
+    return storedRoutes.filter((route): route is AdminShellRoute =>
+      typeof route === 'string' && allowedRoutes.has(route as AdminShellRoute)
+    );
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof DOMException) return [];
+    throw error;
+  }
+}
+
+function storeAdminRoutes(storageKey: string, routes: AdminShellRoute[]): void {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(routes));
+  } catch (error) {
+    if (error instanceof DOMException) {
+      console.warn('تعذر حفظ اختصارات تنقل الإدارة محليًا.', error.name);
+      return;
+    }
+    throw error;
+  }
+}
 
 const formatWalletAmount = (amount: number) => {
   const formatter = new Intl.NumberFormat('en-US', {
@@ -718,7 +759,7 @@ function AdminWalletBalanceBadge({ compact = false }: { compact?: boolean }) {
       href="/admin/wallets"
       onMouseEnter={() => void loadWallets()}
       onFocus={() => void loadWallets()}
-      className="flex min-h-14 w-full items-center justify-start gap-3 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-2 text-[var(--admin-text)] transition-all duration-300 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+      className="flex min-h-14 w-full items-center justify-start gap-3 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-2 text-[var(--admin-text)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
       aria-label="رصيد محافظ الشحن"
       title="رصيد محافظ الشحن"
     >
@@ -735,7 +776,7 @@ function AdminWalletBalanceBadge({ compact = false }: { compact?: boolean }) {
                 ? `${formatWalletAmount(totalBalance)} ج.م`
                 : 'محافظ الشحن'}
         </span>
-        <span className="block truncate text-[11px] font-bold text-[var(--admin-muted)]">
+        <span className="block truncate text-sm font-bold text-[var(--admin-muted)]">
           {hasError
             ? 'افتح المحافظ للمراجعة'
             : hasLoaded
@@ -912,10 +953,15 @@ function AdminShellFrame({
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const isHrSurface = activePath === '/admin/hr' || activePath.startsWith('/admin/hr/');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileExpandedGroup, setMobileExpandedGroup] = useState<string | null>(() =>
+    GROUP_CONFIG.find((group) => group.hrefs.includes(activePath))?.id ?? null
+  );
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [navQuery, setNavQuery] = useState('');
   const [mobileNavQuery, setMobileNavQuery] = useState('');
+  const [recentRoutes, setRecentRoutes] = useState<AdminShellRoute[]>([]);
+  const [pinnedRoutes, setPinnedRoutes] = useState<AdminShellRoute[]>([]);
   const navSearchRef = useRef<HTMLInputElement>(null);
   const mainScrollRef = useRef<HTMLElement>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
@@ -985,6 +1031,34 @@ function AdminShellFrame({
 
   const filteredNavItems = resolvedNavItems;
 
+  useEffect(() => {
+    const storedRecentRoutes = readStoredAdminRoutes(ADMIN_RECENT_ROUTES_KEY);
+    const nextRecentRoutes = navItems.some((navItem) => navItem.href === activePath)
+      ? [activePath, ...storedRecentRoutes.filter((route) => route !== activePath)].slice(0, 5)
+      : storedRecentRoutes;
+    setRecentRoutes(nextRecentRoutes);
+    setPinnedRoutes(readStoredAdminRoutes(ADMIN_PINNED_ROUTES_KEY));
+    storeAdminRoutes(ADMIN_RECENT_ROUTES_KEY, nextRecentRoutes);
+  }, [activePath]);
+
+  const togglePinnedRoute = (route: AdminShellRoute) => {
+    setPinnedRoutes((currentRoutes) => {
+      const nextRoutes = currentRoutes.includes(route)
+        ? currentRoutes.filter((currentRoute) => currentRoute !== route)
+        : [route, ...currentRoutes].slice(0, 5);
+      storeAdminRoutes(ADMIN_PINNED_ROUTES_KEY, nextRoutes);
+      return nextRoutes;
+    });
+  };
+
+  const quickAdminItems = [...pinnedRoutes, ...recentRoutes]
+    .filter((route, index, routes) => routes.indexOf(route) === index)
+    .map((route) => filteredNavItems.find((navItem) => navItem.href === route))
+    .filter((navItem): navItem is AdminNavItem => Boolean(navItem))
+    .slice(0, 5);
+  const canPinActivePath = filteredNavItems.some((navItem) => navItem.href === activePath);
+  const isActivePathPinned = pinnedRoutes.includes(activePath);
+
   const mobilePrimaryItems = [...filteredNavItems]
     .sort((left, right) => {
       const leftPriority = MOBILE_QUICK_ROUTE_ORDER.indexOf(left.href);
@@ -1049,14 +1123,13 @@ function AdminShellFrame({
   return (
     <AdminShellContext.Provider value={shellContext}>
       <div
-        dir="rtl"
         data-testid="admin-shell"
         data-shell-instance={shellInstanceId}
-        className={`h-dvh max-h-dvh overflow-x-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative ${isHrSurface ? 'hr-theme' : ''}`}
+        className={`relative h-dvh max-h-dvh overflow-x-clip bg-[var(--admin-bg)] text-[var(--admin-text)] ${isHrSurface ? 'hr-theme' : ''}`}
         style={themeVars}
       >
       <aside
-        className={`fixed right-0 top-0 z-50 hidden h-full flex-col justify-between border-l border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 lg:flex transition-[width] duration-200 ease-out ${
+        className={`fixed start-0 top-0 z-50 hidden h-full flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 lg:flex transition-[width] duration-200 ease-out ${
           isSidebarCollapsed ? 'w-20' : 'w-72'
         }`}
         role="navigation"
@@ -1089,7 +1162,7 @@ function AdminShellFrame({
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(false)}
-                className="absolute top-5 left-[-1.25rem] flex h-10 w-10 items-center justify-center rounded-l-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                className="absolute top-5 end-[-1.25rem] flex h-10 w-10 items-center justify-center rounded-e-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
                 aria-label="توسيع القائمة الجانبية"
                 title="توسيع القائمة الجانبية"
               >
@@ -1100,19 +1173,19 @@ function AdminShellFrame({
 
           {!isSidebarCollapsed && (
             <label className="relative mx-4 mb-4 block flex-shrink-0">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
               <input
                 ref={navSearchRef}
                 value={navQuery}
                 onChange={(event) => setNavQuery(event.target.value)}
-                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 pr-10 pl-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
+                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
                 placeholder="ابحث عن صفحة أو أداة (Ctrl K)"
                 aria-label="ابحث في صفحات الإدارة"
               />
             </label>
           )}
 
-          <nav className={`space-y-2 overflow-y-auto flex-1 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
+          <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
             <IntentLink
               href="/admin"
               aria-label="الرئيسية"
@@ -1126,6 +1199,26 @@ function AdminShellFrame({
               <Home className="h-5 w-5 flex-shrink-0" />
               {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">الرئيسية</span>}
             </IntentLink>
+
+            {!isSidebarCollapsed && quickAdminItems.length > 0 && !normalizedNavQuery && (
+              <div className="rounded-xl bg-[var(--admin-hover)] p-2">
+                <p className="px-2 pb-1 text-sm font-black text-[var(--admin-muted)]">اختصاراتي</p>
+                {quickAdminItems.slice(0, 3).map((navItem) => {
+                  const Icon = navItem.icon;
+                  return (
+                    <IntentLink
+                      key={navItem.href}
+                      href={navItem.href}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs font-bold text-[var(--admin-text)] hover:bg-[var(--admin-card)]"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+                      <span className="min-w-0 flex-1 truncate">{navItem.label}</span>
+                      {pinnedRoutes.includes(navItem.href) && <Star className="h-3.5 w-3.5 fill-current text-[var(--admin-accent)]" />}
+                    </IntentLink>
+                  );
+                })}
+              </div>
+            )}
 
             {(roles.includes('Assistant') || roles.includes('Staff') || user?.allowedDomains?.includes('assistant')) && (
               <IntentLink
@@ -1166,7 +1259,7 @@ function AdminShellFrame({
                   </button>
 
                   {isExpanded && !isSidebarCollapsed && (
-                    <div className="space-y-1 mt-1 pr-4">
+                    <div className="mt-1 space-y-1 ps-4">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.href === activePath;
@@ -1224,7 +1317,7 @@ function AdminShellFrame({
               }
               className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
             />
-            {!isSidebarCollapsed && <span className="mr-3 self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)]">
+            {!isSidebarCollapsed && <span className="ms-3 self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)]">
               {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
             </span>}
           </div>
@@ -1253,7 +1346,7 @@ function AdminShellFrame({
 
       <SkipToContentLink />
       <NavigationFocusManager />
-      <main ref={mainScrollRef} id="main-content" className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-7 lg:py-8 lg:pb-10 transition-[margin] duration-200 ${isSidebarCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+      <main ref={mainScrollRef} id="main-content" className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-7 lg:py-8 lg:pb-10 transition-[margin] duration-200 ${isSidebarCollapsed ? 'lg:ms-20' : 'lg:ms-72'}`}>
         <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
@@ -1300,7 +1393,7 @@ function AdminShellFrame({
 
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">
+                <p className="mb-1 text-xs font-black text-[var(--admin-primary)]">
                   {sectionLabel}
                 </p>
                 <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-4xl">
@@ -1312,6 +1405,18 @@ function AdminShellFrame({
                   </p>
                 ) : null}
               </div>
+              {canPinActivePath && (
+                <button
+                  type="button"
+                  onClick={() => togglePinnedRoute(activePath)}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-primary)]"
+                  aria-pressed={isActivePathPinned}
+                  aria-label={isActivePathPinned ? 'إزالة الصفحة من المثبتة' : 'تثبيت الصفحة في الاختصارات'}
+                >
+                  <Star className={`h-4 w-4 ${isActivePathPinned ? 'fill-current text-[var(--admin-accent)]' : ''}`} />
+                  <span className="hidden sm:inline">{isActivePathPinned ? 'مثبتة' : 'تثبيت الصفحة'}</span>
+                </button>
+              )}
               {headerAccessory}
             </div>
           </div>
@@ -1323,7 +1428,7 @@ function AdminShellFrame({
 
         {children}
 
-        <footer className="mt-14 flex flex-col items-center opacity-60 select-none">
+        <footer className="mt-10 flex flex-col items-center opacity-60 select-none">
           <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
           <p className="text-xs font-bold text-[var(--admin-muted)]">
             منصة مسار
@@ -1332,18 +1437,18 @@ function AdminShellFrame({
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-3 py-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-2 py-2 lg:hidden"
         role="navigation"
         aria-label="القائمة السفلية"
       >
-        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-0.5">
           <Link
             href="/admin"
             aria-current={activePath === '/admin' ? 'page' : undefined}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
+            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
               activePath === '/admin'
                 ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                : 'text-[var(--admin-muted)]'
             }`}
           >
             <Home className="h-5 w-5" />
@@ -1361,10 +1466,10 @@ function AdminShellFrame({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
+                className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
                   isActive
                     ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                    : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                    : 'text-[var(--admin-muted)]'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -1378,10 +1483,10 @@ function AdminShellFrame({
             ref={mobileMenuTriggerRef}
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-xs font-black transition-all ${
+            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
               isMoreActive || isMobileMenuOpen
                 ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
+                : 'text-[var(--admin-muted)]'
             }`}
             aria-label="المزيد من صفحات الإدارة"
             aria-current={isMoreActive ? 'page' : undefined}
@@ -1401,7 +1506,7 @@ function AdminShellFrame({
         label="قائمة الإدارة الإضافية"
         triggerRef={mobileMenuTriggerRef}
         layerClassName="lg:hidden"
-        className="bottom-0 right-0 max-h-[80vh] w-full overflow-y-auto rounded-t-2xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
+        className="bottom-0 start-0 max-h-[80vh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
         testId="admin-mobile-drawer"
       >
             <div className="mb-3 flex items-center justify-between">
@@ -1418,25 +1523,58 @@ function AdminShellFrame({
               </button>
             </div>
             <label className="relative mb-4 block">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
               <input
                 value={mobileNavQuery}
                 onChange={(event) => setMobileNavQuery(event.target.value)}
-                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 pr-10 pl-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
+                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
                 placeholder="ابحث عن صفحة أو أداة"
                 aria-label="ابحث في صفحات الإدارة"
               />
             </label>
+            {quickAdminItems.length > 0 && !normalizedMobileNavQuery && (
+              <section className="mb-4" aria-labelledby="admin-quick-routes-title">
+                <h2 id="admin-quick-routes-title" className="mb-2 text-sm font-black text-[var(--admin-text)]">
+                  المثبتة والمستخدمة حديثًا
+                </h2>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {quickAdminItems.map((navItem) => {
+                    const Icon = navItem.icon;
+                    return (
+                      <Link
+                        key={navItem.href}
+                        href={navItem.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex min-h-12 min-w-36 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-hover)] px-3 text-sm font-bold text-[var(--admin-text)]"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+                        <span className="min-w-0 flex-1 truncate">{navItem.label}</span>
+                        {pinnedRoutes.includes(navItem.href) && <Star className="h-3.5 w-3.5 fill-current text-[var(--admin-accent)]" />}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
             <div className="space-y-5">
               {mobileNavGroups.map((group) => {
                 const GroupIcon = group.icon;
+                const isExpanded = Boolean(normalizedMobileNavQuery) || mobileExpandedGroup === group.id;
                 return (
                   <section key={group.id} aria-label={group.label}>
-                    <div className="mb-2 flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
-                      <GroupIcon className="h-4 w-4 text-[var(--admin-primary)]" />
-                      <h2>{group.label}</h2>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobileExpandedGroup((current) => current === group.id ? null : group.id)}
+                      className="mb-1 flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-sm font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]"
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="flex items-center gap-2">
+                        <GroupIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                        {group.label}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExpanded && <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.href === activePath;
@@ -1444,7 +1582,10 @@ function AdminShellFrame({
                           <Link
                             key={item.href}
                             href={item.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
+                            onClick={() => {
+                              setMobileExpandedGroup(group.id);
+                              setIsMobileMenuOpen(false);
+                            }}
                             aria-current={isActive ? 'page' : undefined}
                             className={`flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2 text-sm font-bold transition-colors ${
                               isActive
@@ -1457,7 +1598,7 @@ function AdminShellFrame({
                           </Link>
                         );
                       })}
-                    </div>
+                    </div>}
                   </section>
                 );
               })}
