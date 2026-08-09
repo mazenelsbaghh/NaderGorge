@@ -95,6 +95,23 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         // 3. Parse SMS body
         var parserResult = SmsParser.Parse(request.Body);
 
+        // A transaction reference identifies one wallet movement. The sender and amount may
+        // legitimately repeat, so they must never be used as a deduplication identity.
+        if (!string.IsNullOrWhiteSpace(parserResult.TransferReference))
+        {
+            var existingTransfer = await _db.IncomingSmsLogs.AsNoTracking()
+                .FirstOrDefaultAsync(log => log.WalletId == wallet.Id
+                    && log.TransferReference == parserResult.TransferReference, ct);
+            if (existingTransfer is not null)
+            {
+                return ApiResponse<AndroidSmsUploadDto>.Ok(new AndroidSmsUploadDto
+                {
+                    IsMatched = existingTransfer.IsMatched,
+                    Message = "تم تسجيل رقم العملية هذا مسبقاً"
+                }, "تم تسجيل رقم العملية هذا مسبقاً");
+            }
+        }
+
         var smsLog = new IncomingSmsLog
         {
             WalletId = wallet.Id,
@@ -104,6 +121,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             DeduplicationHash = deduplicationHash,
             ParsedAmount = parserResult.Amount,
             ParsedSenderPhone = parserResult.SenderPhone,
+            TransferReference = parserResult.TransferReference,
             IsMatched = false
         };
 
@@ -132,6 +150,8 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
                     // Update request status
                     matchedRequest.Status = RechargeRequestStatus.Matched;
                     matchedRequest.ResolvedAt = DateTime.UtcNow;
+                    matchedRequest.WalletId = wallet.Id;
+                    matchedRequest.Wallet = wallet;
 
                     // Update SMS log
                     smsLog.IsMatched = true;

@@ -40,6 +40,7 @@ public record AdminIncomingSmsLogDto
     public DateTime ReceivedAt { get; set; }
     public decimal? ParsedAmount { get; set; }
     public string? ParsedSenderPhone { get; set; }
+    public string? TransferReference { get; set; }
     public bool IsMatched { get; set; }
     public Guid? MatchedRechargeRequestId { get; set; }
     public string? MatchedStudentName { get; set; }

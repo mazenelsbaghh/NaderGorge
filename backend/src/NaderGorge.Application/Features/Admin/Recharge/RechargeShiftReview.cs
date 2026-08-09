@@ -163,7 +163,11 @@ public sealed class GetRechargeShiftReviewQueryHandler(IAppDbContext db)
     private static string Digits(string value) => new(value.Where(char.IsDigit).ToArray());
 }
 
-public sealed record ReverseRechargeCreditCommand(Guid RechargeRequestId, Guid ActorUserId, string Reason)
+public sealed record ReverseRechargeCreditCommand(
+    Guid RechargeRequestId,
+    Guid ActorUserId,
+    string Reason,
+    bool PreserveWalletBalance = false)
     : IRequest<ApiResponse<bool>>;
 
 public sealed class ReverseRechargeCreditCommandHandler(
@@ -176,14 +180,20 @@ public sealed class ReverseRechargeCreditCommandHandler(
         if (string.IsNullOrWhiteSpace(request.Reason))
             return ApiResponse<bool>.Fail("سبب العكس المالي مطلوب.");
 
-        await using var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var hasActiveTransaction = db is DbContext efDb && efDb.Database.CurrentTransaction != null;
+        await using var transaction = hasActiveTransaction
+            ? null
+            : await db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         try
         {
-            var recharge = await db.RechargeRequests.Include(row => row.Wallet)
+            var recharge = await db.RechargeRequests
+                .Include(row => row.Wallet)
+                .Include(row => row.MatchedSmsLog).ThenInclude(log => log!.Wallet)
                 .SingleOrDefaultAsync(row => row.Id == request.RechargeRequestId, ct);
             if (recharge is null || recharge.Status is not (RechargeRequestStatus.Approved or RechargeRequestStatus.Matched))
                 return ApiResponse<bool>.Fail("طلب الشحن غير موجود أو غير مقبول.");
-            if (recharge.Wallet.CurrentBalance < recharge.Amount)
+            var receivingWallet = recharge.MatchedSmsLog?.Wallet ?? recharge.Wallet;
+            if (!request.PreserveWalletBalance && receivingWallet.CurrentBalance < recharge.Amount)
                 return ApiResponse<bool>.Fail("رصيد المحفظة المسجل لا يسمح بالعكس بدون عجز.");
 
             decimal balanceAfter;
@@ -216,7 +226,8 @@ public sealed class ReverseRechargeCreditCommandHandler(
             {
                 if (await db.BalanceTransactions.AnyAsync(tx => tx.ReferenceId == recharge.Id && tx.TransactionType == "RechargeReversal", ct))
                     return ApiResponse<bool>.Fail("تم عكس هذا الشحن مسبقاً.");
-                var creditExists = await db.BalanceTransactions.AnyAsync(tx => tx.ReferenceId == recharge.Id && tx.TransactionType == "RechargeCredit", ct);
+                var creditExists = await db.BalanceTransactions.AnyAsync(tx => tx.ReferenceId == recharge.Id
+                    && (tx.TransactionType == "RechargeCredit" || tx.TransactionType == "DigitalRecharge"), ct);
                 if (!creditExists)
                     return ApiResponse<bool>.Fail("لا يوجد قيد شحن مؤكد مرتبط بالطلب.");
                 generalBalance = await db.StudentBalances.SingleOrDefaultAsync(item => item.UserId == recharge.UserId, ct);
@@ -227,7 +238,8 @@ public sealed class ReverseRechargeCreditCommandHandler(
                 balanceAfter = generalBalance.CurrentBalance;
             }
 
-            recharge.Wallet.CurrentBalance -= recharge.Amount;
+            if (!request.PreserveWalletBalance)
+                receivingWallet.CurrentBalance -= recharge.Amount;
             if (generalBalance is not null)
             {
                 db.BalanceTransactions.Add(new BalanceTransaction
@@ -254,12 +266,14 @@ public sealed class ReverseRechargeCreditCommandHandler(
                 await financialPosting.ReverseAsync(journal.Id, request.ActorUserId, request.Reason.Trim(), ct);
 
             await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
+            if (transaction is not null)
+                await transaction.CommitAsync(ct);
             return ApiResponse<bool>.Ok(true, "تم عكس الشحن والقيد المالي بدون إنشاء عجز.");
         }
         catch
         {
-            await transaction.RollbackAsync(ct);
+            if (transaction is not null)
+                await transaction.RollbackAsync(ct);
             throw;
         }
     }

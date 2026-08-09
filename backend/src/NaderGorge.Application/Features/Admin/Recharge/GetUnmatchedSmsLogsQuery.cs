@@ -43,6 +43,7 @@ public class GetUnmatchedSmsLogsQueryHandler : IRequestHandler<GetUnmatchedSmsLo
                 ReceivedAt = l.ReceivedAt,
                 ParsedAmount = l.ParsedAmount,
                 ParsedSenderPhone = l.ParsedSenderPhone,
+                TransferReference = l.TransferReference,
                 IsMatched = l.IsMatched,
                 MatchedRechargeRequestId = l.MatchedRechargeRequestId,
                 DeduplicationHash = l.DeduplicationHash

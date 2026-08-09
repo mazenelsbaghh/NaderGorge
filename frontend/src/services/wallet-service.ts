@@ -68,6 +68,7 @@ export interface AdminIncomingSmsLogDto {
   receivedAt: string;
   parsedAmount?: number;
   parsedSenderPhone?: string;
+  transferReference?: string;
   isMatched: boolean;
   matchedRechargeRequestId?: string;
   matchedStudentName?: string;
@@ -111,6 +112,36 @@ export interface RechargeShiftReviewDto {
   totalAmount: number;
 }
 
+export interface RechargeSmsSuggestionDto {
+  smsLogId: string;
+  walletId: string;
+  walletLabel: string;
+  walletPhoneNumber: string;
+  amount?: number;
+  senderPhoneNumber: string;
+  transferReference?: string;
+  receivedAt: string;
+  isMatched: boolean;
+  matchedRechargeRequestId?: string;
+  matchedStudentName?: string;
+  matchedStudentPhoneNumber?: string;
+  matchScore: number;
+  matchReasons: string[];
+}
+
+export interface RechargeMessageConflictDto {
+  rechargeRequestId: string;
+  studentName: string;
+  studentPhoneNumber: string;
+  amount: number;
+  senderPhoneNumber: string;
+  walletLabel: string;
+  createdAt: string;
+  conflictType: 'ClaimedByAnotherStudent' | 'ReceivedOnDifferentWallet';
+  conflictDescription: string;
+  candidates: RechargeSmsSuggestionDto[];
+}
+
 export const walletService = {
   getWallets: async () => {
     const { data } = await apiClient.get<{ success: boolean; data: WalletDto[] }>('/admin/wallets');
@@ -152,6 +183,27 @@ export const walletService = {
 
   getSmsLogs: async (params: { search?: string; isMatched?: boolean; walletId?: string; page?: number; pageSize?: number }) => {
     const { data } = await apiClient.get<{ items: AdminIncomingSmsLogDto[]; totalCount: number; page: number; pageSize: number }>('/admin/wallets/sms-logs', { params });
+    return data;
+  },
+
+  getRechargeSmsSuggestions: async (id: string, search?: string) => {
+    const { data } = await apiClient.get<{ success: boolean; data: RechargeSmsSuggestionDto[] }>(
+      `/admin/wallets/recharge-requests/${id}/sms-suggestions`, { params: { search } }
+    );
+    return data.data;
+  },
+
+  getRechargeMessageConflicts: async () => {
+    const { data } = await apiClient.get<{ success: boolean; data: RechargeMessageConflictDto[] }>(
+      '/admin/wallets/recharge-message-conflicts'
+    );
+    return data.data;
+  },
+
+  reassignRechargeSms: async (id: string, smsLogId: string, reason: string) => {
+    const { data } = await apiClient.post<{ success: boolean; message: string }>(
+      `/admin/wallets/recharge-requests/${id}/reassign-sms`, { smsLogId, reason }
+    );
     return data;
   },
 

@@ -94,6 +94,34 @@ public class AdminWalletsController : ControllerBase
         CancellationToken ct = default)
         => Ok(await _mediator.Send(new GetWalletSmsLogsQuery(search, isMatched, walletId, page, pageSize), ct));
 
+    [HttpGet("recharge-requests/{id:guid}/sms-suggestions")]
+    public async Task<IActionResult> GetRechargeSmsSuggestions(
+        [FromRoute] Guid id,
+        [FromQuery] string? search,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetRechargeSmsSuggestionsQuery(id, search), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("recharge-message-conflicts")]
+    public async Task<IActionResult> GetRechargeMessageConflicts(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetRechargeMessageConflictsQuery(), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("recharge-requests/{id:guid}/reassign-sms")]
+    public async Task<IActionResult> ReassignRechargeSms(
+        [FromRoute] Guid id,
+        [FromBody] ReassignRechargeSmsRequestDto dto,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ReassignRechargeSmsCommand(id, dto.SmsLogId, User.RequireUserId(), dto.Reason), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("recharge-requests/{id:guid}/resolve")]
     public async Task<IActionResult> ResolveRechargeRequest([FromRoute] Guid id, [FromBody] ResolveRechargeRequestDto dto, CancellationToken ct)
     {
@@ -153,3 +181,5 @@ public record ResolveRechargeRequestDto(
     Guid? WalletId);
 
 public record ReverseRechargeCreditRequestDto(string Reason);
+
+public record ReassignRechargeSmsRequestDto(Guid SmsLogId, string Reason);

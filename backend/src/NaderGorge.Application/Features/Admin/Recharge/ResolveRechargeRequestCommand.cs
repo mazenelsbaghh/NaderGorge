@@ -131,8 +131,11 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                 if (!transition.Success)
                     return transition;
 
-                var linkedSmsBalance = smsLog == null ? null : SmsParser.Parse(smsLog.Body).CurrentBalance;
-                targetWallet.CurrentBalance = linkedSmsBalance ?? targetWallet.CurrentBalance + rechargeRequest.Amount;
+                // SMS ingestion already applied the physical wallet movement. Linking that SMS
+                // only assigns the student/accounting owner; direct approvals without an SMS are
+                // the only path that adds a wallet movement here.
+                if (smsLog is null)
+                    targetWallet.CurrentBalance += rechargeRequest.Amount;
 
                 await _db.SaveChangesAsync(ct);
 

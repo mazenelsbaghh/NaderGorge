@@ -499,6 +499,43 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Linking_an_ingested_sms_does_not_count_the_physical_wallet_transfer_twice()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "SMS Student", "01000000125");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "SMS Admin", "01000000126");
+        var wallet = Wallet("01010000126");
+        wallet.CurrentBalance = 1_350m;
+        var recharge = PendingRequest(student, wallet, 1_350m);
+        recharge.SenderPhoneNumber = "01002778552";
+        var sms = new IncomingSmsLog
+        {
+            Wallet = wallet,
+            WalletId = wallet.Id,
+            Sender = "VF-Cash",
+            Body = "تم استلام مبلغ 1350 جنيه من 01002778552 رقم العملية 022440000001",
+            ReceivedAt = DateTime.UtcNow,
+            DeduplicationHash = Guid.NewGuid().ToString("N"),
+            ParsedAmount = 1_350m,
+            ParsedSenderPhone = "01002778552",
+            TransferReference = "022440000001"
+        };
+        db.AddRange(wallet, recharge, sms);
+        await db.SaveChangesAsync();
+
+        var result = await new ResolveRechargeRequestCommandHandler(
+            db, new BalanceService(db, NullLogger<BalanceService>.Instance)).Handle(
+                new ResolveRechargeRequestCommand(recharge.Id, true, admin.Id, SmsLogId: sms.Id, WalletId: wallet.Id),
+                CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(1_350m, wallet.CurrentBalance);
+        Assert.True(sms.IsMatched);
+        Assert.Equal(recharge.Id, sms.MatchedRechargeRequestId);
+        Assert.Equal(1_350m, (await db.StudentBalances.SingleAsync()).CurrentBalance);
+    }
+
+    [Fact]
     public async Task Manual_approval_wallet_can_be_corrected_without_crediting_the_student_twice()
     {
         await using var db = TestAppDbContextFactory.Create();

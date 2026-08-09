@@ -147,9 +147,11 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/recharge-verification',
     '/admin/wallet-messages',
     '/admin/recharge-shift-review',
+    '/admin/recharge-conflicts',
     '/assistant/recharge-verification',
     '/assistant/wallet-messages',
-    '/assistant/recharge-shift-review'
+    '/assistant/recharge-shift-review',
+    '/assistant/recharge-conflicts'
   ],
   'finance.manage': [
     '/admin/finance',
@@ -334,6 +336,13 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     label: 'مراجعة شحن الشيفت',
     subItems: [
       { key: '/assistant/recharge-shift-review', label: 'مراجعة المقبول يدويًا وآليًا وعكس التكرار' }
+    ]
+  },
+  {
+    key: '/assistant/recharge-conflicts',
+    label: 'تعارضات الشحن',
+    subItems: [
+      { key: '/assistant/recharge-conflicts', label: 'مراجعة ونقل رسائل التحويل المرتبطة بطلب غير صحيح' }
     ]
   },
   {

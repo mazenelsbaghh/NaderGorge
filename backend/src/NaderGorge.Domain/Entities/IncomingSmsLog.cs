@@ -15,6 +15,7 @@ public class IncomingSmsLog : BaseEntity
 
     public decimal? ParsedAmount { get; set; }
     public string? ParsedSenderPhone { get; set; }
+    public string? TransferReference { get; set; }
 
     public bool IsMatched { get; set; } = false;
     

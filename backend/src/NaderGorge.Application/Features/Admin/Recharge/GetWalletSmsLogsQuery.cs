@@ -46,6 +46,7 @@ public sealed class GetWalletSmsLogsQueryHandler(IAppDbContext db)
                 ReceivedAt = log.ReceivedAt,
                 ParsedAmount = log.ParsedAmount,
                 ParsedSenderPhone = log.ParsedSenderPhone,
+                TransferReference = log.TransferReference,
                 IsMatched = log.IsMatched,
                 MatchedRechargeRequestId = log.MatchedRechargeRequestId,
                 MatchedStudentName = log.MatchedRechargeRequest != null ? log.MatchedRechargeRequest.User.FullName : null,
