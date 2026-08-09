@@ -69,15 +69,27 @@ export async function GET(request: NextRequest) {
       return iframeError('Embed proxy is not configured. API_CALLBACK_SECRET is missing from the frontend runtime.', 503);
     }
 
-    const materialResponse = await fetch(`${API_URL}/student/video-session/${encodeURIComponent(sessionId)}/embed-material`, {
-      headers: {
-        'X-Internal-Token': INTERNAL_TOKEN,
-      },
-      cache: 'no-store',
-    });
+    let materialResponse: Response;
+    try {
+      materialResponse = await fetch(`${API_URL}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material`, {
+        headers: {
+          'X-Internal-Token': INTERNAL_TOKEN,
+        },
+        cache: 'no-store',
+        redirect: 'error',
+      });
+    } catch (error) {
+      console.error('[video-embed] Embed material request failed:', error);
+      return iframeError('تعذر الاتصال بخدمة الفيديو. حاول مرة أخرى.', 502);
+    }
 
     if (!materialResponse.ok) {
-      return iframeError('Session expired or invalid', materialResponse.status);
+      if (materialResponse.status === 404 || materialResponse.status === 410) {
+        return iframeError('Session expired or invalid', materialResponse.status);
+      }
+
+      console.error(`[video-embed] Embed material request returned status ${materialResponse.status}`);
+      return iframeError('تعذر الاتصال بخدمة الفيديو. حاول مرة أخرى.', 502);
     }
 
     const material = (await materialResponse.json()) as VideoEmbedMaterialResponse;
@@ -132,8 +144,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[video-embed] Decryption failed:', error);
-    return iframeError('Session expired or invalid', 403);
+    console.error('[video-embed] Embed material preparation failed:', error);
+    return iframeError('تعذر تجهيز جلسة الفيديو. حاول مرة أخرى.', 502);
   }
 }
 

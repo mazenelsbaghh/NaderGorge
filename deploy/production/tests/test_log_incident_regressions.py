@@ -52,6 +52,28 @@ def test_backend_persists_data_protection_and_honors_forwarded_scheme_first() ->
     assert '!context.Request.Path.StartsWithSegments("/api/v1/internal")' in program
 
 
+def test_video_embed_material_uses_the_https_exempt_internal_route() -> None:
+    """Regression for the 2026-08-10 admin video-preview outage."""
+    controller = (
+        ROOT / "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs"
+    ).read_text()
+    embed_route = (ROOT / "frontend/src/app/api/video/embed/route.ts").read_text()
+    action_attributes = controller.split(
+        "public async Task<IActionResult> GetEmbedMaterial", 1
+    )[0].rsplit("\n\n", 1)[1]
+
+    assert (
+        '[HttpGet("~/api/v1/internal/video-sessions/{sessionId:guid}/embed-material")]'
+        in action_attributes
+    )
+    assert "[InternalTokenAuthorize" in action_attributes
+    assert "[DisableRateLimiting]" in action_attributes
+    assert (
+        "/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material"
+        in embed_route
+    )
+
+
 def test_financial_constraint_allows_an_intentional_platform_loss() -> None:
     model = (ROOT / "backend/src/NaderGorge.Infrastructure/Data/AppDbContext.cs").read_text()
     constraint = model.split('HasCheckConstraint("CK_sales_financial_effect_amounts"', 1)[1].split(");", 1)[0]

@@ -75,8 +75,6 @@ body:has(.public-page-scroll) {
 @media (max-width: 767px) {
   :is(.horizontal-scroll-region, .overflow-x-auto):not(.scroll-hint-provided):has(> table)::before {
     content: "اسحب أفقيًا لرؤية بقية الأعمدة";
-    position: sticky;
-    inset-inline-start: 0;
     display: block;
     width: max-content;
     padding: 0.5rem 0.75rem;
@@ -85,40 +83,6 @@ body:has(.public-page-scroll) {
     font-weight: 700;
   }
 
-  /* Keep the row identity and its primary action visible while wide data tables
-     are panned. Logical insets make this work in both Arabic and English. */
-  :is(.horizontal-scroll-region, .overflow-x-auto):has(> table)
-    > table
-    :is(th, td):first-child,
-  :is(.horizontal-scroll-region, .overflow-x-auto):has(> table)
-    > table
-    :is(th, td):last-child {
-    position: sticky;
-    z-index: 1;
-    background: var(--admin-card, Canvas);
-    outline: 1px solid var(--admin-border, ButtonBorder);
-    outline-offset: -1px;
-  }
-
-  :is(.horizontal-scroll-region, .overflow-x-auto):has(> table)
-    > table
-    :is(th, td):first-child {
-    inset-inline-start: 0;
-  }
-
-  :is(.horizontal-scroll-region, .overflow-x-auto):has(> table)
-    > table
-    :is(th, td):last-child {
-    inset-inline-end: 0;
-  }
-
-  :is(.horizontal-scroll-region, .overflow-x-auto):has(> table)
-    > table
-    thead
-    :is(th:first-child, th:last-child) {
-    z-index: 2;
-    background: var(--admin-card-soft, Canvas);
-  }
 }
 
 .horizontal-scroll-region:focus-visible {

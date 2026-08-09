@@ -305,23 +305,39 @@ export interface MindmapGenerationOptions {
   teacherStyles?: string[];
 }
 
+function teacherPhotoMimeType(photoPath: string) {
+  switch (path.extname(photoPath).toLowerCase()) {
+    case '.png':
+      return 'image/png';
+    case '.webp':
+      return 'image/webp';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    default:
+      throw new Error(`Unsupported teacher reference image format: ${path.extname(photoPath) || 'none'}.`);
+  }
+}
+
 function mindmapParts(
   chapter: { title: string; summaryText: string; order: number },
   teacherPhotoPaths: string[],
   options: MindmapGenerationOptions,
 ) {
   const parts: Array<Record<string, unknown>> = [];
-  let hasPhoto = false;
-  if (teacherPhotoPaths.length > 0) {
-    for (const photoPath of teacherPhotoPaths) {
-      if (photoPath && fs.existsSync(photoPath)) {
-        const mimeType = photoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-        parts.push({ inlineData: { mimeType, data: fs.readFileSync(photoPath).toString('base64') } });
-        hasPhoto = true;
-      }
+  for (const photoPath of teacherPhotoPaths) {
+    if (!fs.existsSync(photoPath)) {
+      throw new Error(`Teacher reference image is missing: ${photoPath}.`);
     }
+
+    parts.push({
+      inlineData: {
+        mimeType: teacherPhotoMimeType(photoPath),
+        data: fs.readFileSync(photoPath).toString('base64'),
+      },
+    });
   }
-  parts.push({ text: mindmapPrompt(chapter, hasPhoto, options) });
+  parts.push({ text: mindmapPrompt(chapter, teacherPhotoPaths.length > 0, options) });
   return parts;
 }
 
@@ -360,7 +376,7 @@ ART DIRECTION: Combine these selected visual treatments into one coherent compos
 INFORMATION DESIGN: Put the central idea prominently in the center or strongest focal point. Connect 3-5 distinct concepts with a readable hierarchy and generous spacing. Use relevant objects, diagrams, timelines, processes, maps, formulas, or historical/scientific symbols when the context calls for them. Keep all text large, minimal, high-contrast, and fully inside safe margins; no tiny paragraphs and no illegible pseudo-text.
 
 ${hasPhoto
-    ? `TEACHER IDENTITY LOCK (highest priority): ALL supplied photos show the same teacher and MUST be considered together as identity references. Show that exact teacher, not an approximation. Preserve facial geometry, face shape, eye shape and spacing, eyebrows, nose, lips, ears, skin tone, hairline, hairstyle, facial hair, glasses, age, body proportions, and every distinguishing mark. Never beautify, age, de-age, slim, widen, replace, merge, or reinterpret the face. Never create a generic person, celebrity, caricature, or different ethnicity. The ONLY allowed changes are clothing, pose, background, lighting, and the explicitly selected rendering treatment. Selected teacher rendering treatments: ${selectedTeacherStyles}. Even for cartoon, 3D, or illustration treatments, identity and recognizable facial features must remain exact. The teacher should support the explanation without blocking the map.`
+    ? `TEACHER IDENTITY LOCK (highest priority, overrides art direction): Every supplied image is a reference view of the SAME teacher. Inspect and use ALL reference images together before drawing the teacher. Reproduce that teacher's identity, not a lookalike or an approximation. Preserve the exact facial geometry and proportions: skull and face shape, forehead, hairline, eye shape/color/spacing, eyebrows, nose bridge/tip, cheeks, lips, jaw, chin, ears, skin tone and texture, hairstyle, facial hair pattern, glasses, apparent age, body proportions, and every distinguishing mark. Do not average, merge, beautify, idealize, age, de-age, slim, widen, replace, or reinterpret any feature. Do not create a generic person, celebrity, caricature, or different ethnicity. Clothing, pose, background, lighting, and the selected rendering treatment are the only allowed changes. Selected teacher rendering treatments: ${selectedTeacherStyles}. For cartoon, 3D, or illustration, stylize the rendering medium only; keep the same measurable facial structure and immediately recognizable likeness from the references. If the selected art style conflicts with identity accuracy, identity accuracy wins. The teacher should support the explanation without blocking the map.`
     : 'TEACHER: Do not add a generic teacher, portrait, or face when no teacher reference image is supplied. Focus entirely on lesson-specific visual concepts.'}
 
 TYPOGRAPHY: Match the detected language. For Arabic, preserve right-to-left direction, connected letters, and correct spelling. For Latin-script languages, use correct left-to-right spelling and punctuation. Never mix scripts unless the source title itself does.

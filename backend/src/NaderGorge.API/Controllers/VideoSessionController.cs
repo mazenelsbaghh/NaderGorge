@@ -80,7 +80,9 @@ public class VideoSessionController : ControllerBase
 
     [AllowAnonymous]
     [InternalTokenAuthorize("API_CALLBACK_SECRET", "AI_CALLBACK_SECRET")]
+    [DisableRateLimiting]
     [HttpGet("{sessionId:guid}/embed-material")]
+    [HttpGet("~/api/v1/internal/video-sessions/{sessionId:guid}/embed-material")]
     public async Task<IActionResult> GetEmbedMaterial(Guid sessionId, CancellationToken ct)
     {
         var session = await _db.VideoPlaybackSessions

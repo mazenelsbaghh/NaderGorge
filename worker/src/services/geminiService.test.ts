@@ -73,3 +73,56 @@ test('mindmap provider response without an image fails instead of returning part
     /returned no image/,
   );
 });
+
+test('mindmap sends every teacher reference with its real image type and identity-lock contract', async (testContext) => {
+  const referenceDirectory = path.join(process.cwd(), '.tmp', `teacher-references-${Date.now()}`);
+  const referencePaths = [
+    path.join(referenceDirectory, 'front.webp'),
+    path.join(referenceDirectory, 'profile.png'),
+    path.join(referenceDirectory, 'smile.jpg'),
+  ];
+  fs.mkdirSync(referenceDirectory, { recursive: true });
+  referencePaths.forEach((referencePath, index) => fs.writeFileSync(referencePath, Buffer.from(`reference-${index}`)));
+  testContext.after(() => fs.rmSync(referenceDirectory, { recursive: true, force: true }));
+
+  const requests: any[] = [];
+  const client = { models: { generateContent: async (request: any) => {
+    requests.push(request);
+    return { candidates: [{ content: { parts: [] } }] };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(
+    generateChapterMindmap(
+      { title: 'تنظيم الوقت', summaryText: 'تنظيم الوقت بين المذاكرة والترفيه', order: 1 },
+      'teacher-reference-test',
+      referencePaths,
+      { teacherStyles: ['cartoon'] },
+    ),
+    /returned no image/,
+  );
+
+  const requestParts = requests[0].contents[0].parts;
+  assert.deepEqual(
+    requestParts.slice(0, 3).map((part: any) => part.inlineData.mimeType),
+    ['image/webp', 'image/png', 'image/jpeg'],
+  );
+  assert.equal(requestParts.filter((part: any) => part.inlineData).length, referencePaths.length);
+  assert.match(requestParts.at(-1).text, /TEACHER IDENTITY LOCK/);
+});
+
+test('mindmap refuses to silently omit a missing teacher reference', async () => {
+  const client = { models: { generateContent: async () => {
+    throw new Error('provider must not be called');
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(
+    generateChapterMindmap(
+      { title: 'فصل', summaryText: 'ملخص', order: 1 },
+      'missing-reference-test',
+      ['/missing/teacher-reference.webp'],
+    ),
+    /Teacher reference image is missing/,
+  );
+});
