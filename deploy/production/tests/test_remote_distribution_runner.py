@@ -25,9 +25,19 @@ class Transport:
 class ReuseTransport(Transport):
     def run(self, target, command, **kwargs):
         self.calls.append((target.node_id, command[-1]))
+        if ".release-files.sha256" in command[-1]:
+            return SimpleNamespace(returncode=1)
         if "docker image inspect massar/" in command[-1]:
             return SimpleNamespace(returncode=0)
         return SimpleNamespace(returncode=0)
+
+
+class ResumeTransport(Transport):
+    def run(self, target, command, **kwargs):
+        self.calls.append((target.node_id, command[-1]))
+        if ".release-files.sha256" in command[-1] and target.node_id == "node-1":
+            return SimpleNamespace(returncode=0)
+        return SimpleNamespace(returncode=1)
 def runner(tmp,transport):
     bundle=tmp/"bundle"; manifest=tmp/"manifest"; bundle.write_bytes(b"x"); manifest.write_bytes(b"x")
     return runner_module.RemoteDistributionRunner(inventory=inventory(),transport=transport,plan=plan(),bundle=bundle,manifest=manifest)
@@ -59,6 +69,25 @@ def test_reuses_matching_images_on_non_builder_nodes(tmp_path):
             for seen, text in transport.calls
             if seen == node
         ) == 4
+
+
+def test_20260809_partial_distribution_resumes_matching_release_node(tmp_path):
+    transport = ResumeTransport()
+
+    final = runner(tmp_path, transport).run()
+
+    assert final["digestParity"] is True
+    node1_rows = [text for node, text in transport.calls if node == "node-1"]
+    assert len(node1_rows) == 1
+    assert ".release-files.sha256" in node1_rows[0]
+    assert not any(
+        node == "node-1" and text in {"copy", "stream"}
+        for node, text in transport.calls
+    )
+    assert not any(
+        node == "node-1" and "install-release" in text
+        for node, text in transport.calls
+    )
 def test_tamper_stops_partial_run_before_install(tmp_path):
     transport=Transport("worker.tar")
     with pytest.raises(RuntimeError,match="tampered"): runner(tmp_path,transport).run()

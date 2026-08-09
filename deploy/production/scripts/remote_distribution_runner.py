@@ -40,11 +40,48 @@ class RemoteDistributionRunner:
         )
         return getattr(result, "returncode", 1) == 0
 
+    def has_verified_release(
+        self, target: SshTarget, bundle_sha256: str
+    ) -> bool:
+        release_root = f"/opt/massar/releases/{self.plan.release_id}"
+        image_checks = "; ".join(
+            f'test "$(sudo /usr/bin/docker image inspect '
+            f'massar/{image}:{self.plan.release_id} --format \'{{{{.Id}}}}\')" '
+            f'= \'{digest}\''
+            for image, digest in self.plan.images.items()
+        )
+        result = self.transport.run(
+            target,
+            (
+                "bash",
+                "-lc",
+                "set -euo pipefail; "
+                f"test -d {release_root}; "
+                f"test ! -L {release_root}; "
+                f"test -f {release_root}/manifest.json; "
+                f"test \"$(cat {release_root}/.release-files.sha256)\" "
+                f"= '{bundle_sha256}'; "
+                f"{image_checks}",
+            ),
+            timeout_seconds=60,
+            check=False,
+        )
+        return getattr(result, "returncode", 1) == 0
+
     def run(self) -> dict[str, object]:
         verified = {}
         bundle_sha, manifest_sha = file_sha256(self.bundle), file_sha256(self.manifest)
         for node in self.nodes:
             target, stage = self.target(node), f"/tmp/massar-{self.plan.release_id}"
+            if self.has_verified_release(target, bundle_sha):
+                verified[node.id] = {
+                    transfer.image: {
+                        "archiveSha256": transfer.archive_sha256,
+                        "imageDigest": transfer.image_digest,
+                    }
+                    for transfer in self.plan.transfers_for_node(node.id)
+                }
+                continue
             self.transport.run(target, ("bash", "-lc", f"set -euo pipefail; rm -rf {stage}; install -d -m 0700 {stage}"), timeout_seconds=60)
             self.transport.copy(target, self.bundle, f"{stage}/release-files.tar.gz", timeout_seconds=600)
             self.transport.copy(target, self.manifest, f"{stage}/manifest.json", timeout_seconds=120)
