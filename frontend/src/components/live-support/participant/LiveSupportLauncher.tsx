@@ -23,7 +23,7 @@ function formatNext(value?: string | null) {
 
 function formatSupportTime(value: string) {
   const [hour = '0', minute = '0'] = value.split(':');
-  return new Intl.DateTimeFormat('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
     .format(new Date(Date.UTC(2000, 0, 1, Number(hour), Number(minute))));
 }
 

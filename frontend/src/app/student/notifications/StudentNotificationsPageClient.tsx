@@ -157,7 +157,7 @@ export default function StudentNotificationsPageClient() {
                   </p>
                   <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {new Date(notif.createdAt).toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo',
+                    {new Date(notif.createdAt).toLocaleDateString("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo',
                       year: "numeric",
                       month: "long",
                       day: "numeric",

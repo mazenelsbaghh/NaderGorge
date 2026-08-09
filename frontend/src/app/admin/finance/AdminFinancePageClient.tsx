@@ -437,11 +437,11 @@ export default function AdminFinancePageClient() {
 
   // Formatter helpers
   const formatEGP = (amount: number) => {
-    return `${amount.toLocaleString('ar-EG')} جنيها`;
+    return `${amount.toLocaleString('ar-EG-u-nu-latn')} جنيها`;
   };
 
   const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo',
+    return new Date(isoString).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'long',
       day: 'numeric',

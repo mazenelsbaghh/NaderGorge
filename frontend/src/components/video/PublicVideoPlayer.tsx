@@ -190,7 +190,7 @@ export function PublicVideoPlayer({ url, title }: PublicVideoPlayerProps) {
   const shadowGradient = `linear-gradient(to bottom, rgba(0,0,0,${appearance.topOpacity}) 0%, rgba(0,0,0,${appearance.topOpacity}) ${Math.min(appearance.topSolid, appearance.topCoverage)}%, transparent ${appearance.topCoverage}%, transparent ${100 - appearance.bottomCoverage}%, rgba(0,0,0,${appearance.bottomOpacity}) ${100 - Math.min(appearance.bottomSolid, appearance.bottomCoverage)}%, rgba(0,0,0,${appearance.bottomOpacity}) 100%)`;
 
   return (
-    <div ref={playerRef} className="group relative aspect-video w-full overflow-hidden rounded-xl border border-[var(--secondary)]/30 bg-black shadow-lg">
+    <div ref={playerRef} className="group relative isolate aspect-video w-full overflow-hidden rounded-xl border border-[var(--secondary)]/30 bg-black shadow-lg">
       <iframe
         ref={iframeRef}
         title={title}

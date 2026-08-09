@@ -17,7 +17,7 @@ function formatDate(value?: string | null) {
 }
 
 function formatDays(value?: number | null) {
-  return value === null || value === undefined ? 'غير متاح' : `${value.toLocaleString('ar-EG')} يوم عمل`;
+  return value === null || value === undefined ? 'غير متاح' : `${value.toLocaleString('ar-EG-u-nu-latn')} يوم عمل`;
 }
 
 function decisionConsequence(pending: PendingDecision | null) {

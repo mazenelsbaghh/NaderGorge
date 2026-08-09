@@ -158,7 +158,7 @@ export default function TeacherEssaysPageClient() {
         return (
           <div className="flex items-center gap-1.5 text-xs text-[var(--admin-muted)]">
             <Calendar className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
-            <span>{date.toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo', month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{date.toLocaleDateString("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo', month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
           </div>
         );
       },

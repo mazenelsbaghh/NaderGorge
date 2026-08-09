@@ -76,7 +76,7 @@ public class RedisRateLimitingMiddleware
         else
         {
             policyName = "global";
-            permitLimit = _isE2e ? 100000 : 1000;
+            permitLimit = _isE2e ? 100000 : 20000;
             window = TimeSpan.FromMinutes(1);
             limitByUser = false;
         }

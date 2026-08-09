@@ -110,7 +110,7 @@ export default function HrAdminPageClient() {
         <AdminStatCard icon={UsersRound} label="يعملون الآن" value={active.length} variant="accent" subtitle="جلسات مفتوحة" />
         <AdminStatCard icon={Coffee} label="في استراحة" value={onBreak.length} variant="light" subtitle="ضمن الحاضرين" />
         <AdminStatCard icon={TimerOff} label="متأخرون" value={late.length} variant="light" subtitle="داخل الفترة المحددة" />
-        <AdminStatCard icon={Clock3} label="إجمالي السجلات" value={sessions.length} variant="light" subtitle={lastUpdatedAt ? `آخر تحديث ${lastUpdatedAt.toLocaleTimeString('ar-EG', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}` : 'جارٍ التحديث'} />
+        <AdminStatCard icon={Clock3} label="إجمالي السجلات" value={sessions.length} variant="light" subtitle={lastUpdatedAt ? `آخر تحديث ${lastUpdatedAt.toLocaleTimeString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}` : 'جارٍ التحديث'} />
       </section>
       <section className="admin-panel flex flex-wrap items-end gap-3">
         <label className="min-w-56 flex-1 text-sm font-bold">بحث<div className="admin-input mt-1 flex items-center gap-2"><Search className="h-4 w-4 text-[var(--admin-muted)]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="اسم الموظف أو الهاتف" className="w-full bg-transparent outline-none" /></div></label>

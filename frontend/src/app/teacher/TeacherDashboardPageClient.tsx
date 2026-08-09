@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, KeyRound, Shield, Users, GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
-import { AdminStatCard } from "@/components/admin";
+import { AdminStatCard, ContentSummaryPanel } from "@/components/admin";
 import { teacherService, TeacherDashboardStatsDto } from "@/services/teacher-service";
 
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
@@ -121,48 +121,7 @@ export default function TeacherDashboardPageClient() {
           />
         </div>
 
-        <section aria-labelledby="package-sales-title" className="space-y-4">
-          <div>
-            <h2 id="package-sales-title" className="text-xl font-black text-[var(--admin-text)]">تفاصيل الباقات</h2>
-            <p className="mt-1 text-sm text-[var(--admin-muted)]">عدد الطلاب المميزين حسب نوع المحتوى وطريقة الحصول عليه.</p>
-          </div>
-          {loading ? (
-            <div className="grid gap-4 lg:grid-cols-2" aria-label="جارٍ تحميل تفاصيل الباقات">
-              {[1, 2].map((placeholder) => (
-                <div key={placeholder} className="h-40 animate-pulse rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]" />
-              ))}
-            </div>
-          ) : stats?.packageSales?.length ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {stats.packageSales.map((item) => (
-                <article key={item.packageId} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h3 className="text-lg font-black text-[var(--admin-text)]">{item.packageName}</h3>
-                    <div className="flex flex-wrap gap-2 text-xs font-black">
-                      <span className="rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-[var(--admin-primary)]">شراء/تفعيل {item.purchasedStudents}</span>
-                      <span className="rounded-full bg-[var(--admin-warning-10)] px-3 py-1.5 text-[var(--admin-warning)]">هدايا {item.giftStudents}</span>
-                    </div>
-                  </div>
-                  <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {[
-                      ["الباقة", item.packageBuyers],
-                      ["الترم", item.termBuyers],
-                      ["القسم / الشهر", item.sectionBuyers],
-                      ["الحصة", item.lessonBuyers],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-xl bg-[var(--admin-card-soft)] p-3 text-center">
-                        <dt className="text-xs font-bold text-[var(--admin-muted)]">{label}</dt>
-                        <dd className="mt-1 text-2xl font-black text-[var(--admin-text)]">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-[var(--admin-card)] p-6 text-sm font-bold text-[var(--admin-muted)]">لا توجد باقات لعرضها حالياً.</div>
-          )}
-        </section>
+        <ContentSummaryPanel scope="teacher" />
 
         <section aria-labelledby="teacher-actions-title" className="overflow-hidden rounded-2xl bg-[var(--admin-card)]">
           <div className="border-b border-[var(--admin-border)] px-5 py-4">

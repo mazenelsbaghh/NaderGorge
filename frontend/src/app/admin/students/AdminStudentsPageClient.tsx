@@ -242,7 +242,7 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
           u.governorate || '—',
           mapGender(u.gender),
           statusLabel(u.status),
-          new Date(u.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' }),
+          new Date(u.createdAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }),
         ];
 
         const escapedRow = rowData.map((val) => {
@@ -618,9 +618,9 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
             <div className="flex flex-wrap items-center justify-between gap-4 border-x border-b border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:px-6">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="text-sm font-bold text-[var(--admin-muted)]">
-                  عرض {firstVisibleItem.toLocaleString('ar-EG')}–
-                  {lastVisibleItem.toLocaleString('ar-EG')} من{' '}
-                  {totalCount.toLocaleString('ar-EG')} طالب
+                  عرض {firstVisibleItem.toLocaleString('ar-EG-u-nu-latn')}–
+                  {lastVisibleItem.toLocaleString('ar-EG-u-nu-latn')} من{' '}
+                  {totalCount.toLocaleString('ar-EG-u-nu-latn')} طالب
                 </span>
                 <label className="flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)]">
                   عدد الصفوف
@@ -637,7 +637,7 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
                   >
                     {STUDENT_PAGE_SIZES.map((size) => (
                       <option key={size} value={size}>
-                        {size.toLocaleString('ar-EG')}
+                        {size.toLocaleString('ar-EG-u-nu-latn')}
                       </option>
                     ))}
                   </select>
@@ -661,8 +661,8 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
                   className="min-w-24 text-center text-sm font-black text-[var(--admin-primary)]"
                   aria-current="page"
                 >
-                  {page.toLocaleString('ar-EG')} /{' '}
-                  {totalPages.toLocaleString('ar-EG')}
+                  {page.toLocaleString('ar-EG-u-nu-latn')} /{' '}
+                  {totalPages.toLocaleString('ar-EG-u-nu-latn')}
                 </span>
                 <button
                   type="button"

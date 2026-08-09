@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.API.BackgroundServices;
@@ -7,7 +9,7 @@ public sealed class RechargeRequestExpiryBackgroundService(
     IServiceScopeFactory scopes,
     ILogger<RechargeRequestExpiryBackgroundService> logger) : BackgroundService
 {
-    private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(10);
     private readonly Guid _ownerToken = Guid.NewGuid();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -28,8 +30,18 @@ public sealed class RechargeRequestExpiryBackgroundService(
                     {
                         var database = services.GetRequiredService<IAppDbContext>();
                         await RechargeRequestExpiryService.ResolveExpiredPendingRequests(database, token);
-                        var matcher = services.GetRequiredService<RechargeAutoMatchingService>();
-                        await matcher.ReconcilePendingAsync(token);
+                        var hasPendingEvidence = await database.RechargeRequests
+                            .AsNoTracking()
+                            .AnyAsync(request => request.Status == RechargeRequestStatus.Pending
+                                && request.ScreenshotUrl != null && request.ScreenshotUrl != ""
+                                && request.SenderPhoneNumber != ""
+                                && request.TeacherId != null,
+                                token);
+                        if (hasPendingEvidence)
+                        {
+                            var matcher = services.GetRequiredService<RechargeAutoMatchingService>();
+                            await matcher.ReconcilePendingAsync(token);
+                        }
                     },
                     stoppingToken);
             }

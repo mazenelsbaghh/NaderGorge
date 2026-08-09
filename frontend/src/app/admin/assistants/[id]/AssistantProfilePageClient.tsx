@@ -780,7 +780,7 @@ export default function AssistantProfilePageClient() {
                 columns={[
                   { key: 'date', label: 'التاريخ', render: (a) => (
                     <span className="font-bold text-[var(--admin-text)]">
-                      {new Date(a.date).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
+                      {new Date(a.date).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
                     </span>
                   )},
                   { key: 'clockIn', label: 'وقت الحضور', render: (a) => (

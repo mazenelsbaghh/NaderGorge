@@ -447,6 +447,31 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Admin_cannot_approve_a_legacy_general_recharge()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000113");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01000000114");
+        var wallet = Wallet("01010000114");
+        var recharge = PendingRequest(student, wallet, 200m);
+        recharge.SenderPhoneNumber = "01088888888";
+        recharge.ScreenshotUrl = "/proof.webp";
+        db.AddRange(wallet, recharge);
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveRechargeRequestCommandHandler(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var response = await handler.Handle(
+            new ResolveRechargeRequestCommand(recharge.Id, true, admin.Id),
+            CancellationToken.None);
+
+        Assert.False(response.Success);
+        Assert.Contains("لا يمكن قبول طلب شحن عام", response.Message);
+        Assert.Equal(RechargeRequestStatus.Pending, recharge.Status);
+    }
+
+    [Fact]
     public async Task Expired_request_without_evidence_can_be_rejected_by_admin()
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -504,9 +529,10 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         await using var db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "SMS Student", "01000000125");
         var admin = await TestAppDbContextFactory.SeedUserAsync(db, "SMS Admin", "01000000126");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000125");
         var wallet = Wallet("01010000126");
         wallet.CurrentBalance = 1_350m;
-        var recharge = PendingRequest(student, wallet, 1_350m);
+        var recharge = PendingRequest(student, wallet, 1_350m, teacher.Id);
         recharge.SenderPhoneNumber = "01002778552";
         var sms = new IncomingSmsLog
         {
@@ -532,7 +558,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         Assert.Equal(1_350m, wallet.CurrentBalance);
         Assert.True(sms.IsMatched);
         Assert.Equal(recharge.Id, sms.MatchedRechargeRequestId);
-        Assert.Equal(1_350m, (await db.StudentBalances.SingleAsync()).CurrentBalance);
+        Assert.Equal(1_350m, (await db.PromotionalBalanceAllocations.SingleAsync()).AvailableAmount);
     }
 
     [Fact]
@@ -657,7 +683,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     };
 
     [Fact]
-    public async Task Initiate_allows_a_general_recharge_without_a_teacher()
+    public async Task Initiate_rejects_a_general_recharge_without_a_teacher()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000014");
@@ -667,9 +693,9 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         var result = await new InitiateRechargeCommandHandler(db)
             .Handle(new InitiateRechargeCommand(user.Id, 100m), CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.NotNull(result.Data);
-        Assert.Null((await db.RechargeRequests.SingleAsync()).TeacherId);
+        Assert.False(result.Success);
+        Assert.Contains("الشحن العام للمنصة غير متاح", result.Message);
+        Assert.Empty(await db.RechargeRequests.ToListAsync());
     }
 
     private static async Task<TeacherProfile> SeedRechargeTeacherAsync(NaderGorge.Infrastructure.Data.AppDbContext db, string phoneNumber)

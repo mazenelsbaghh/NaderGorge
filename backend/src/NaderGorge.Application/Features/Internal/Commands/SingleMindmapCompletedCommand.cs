@@ -25,6 +25,7 @@ public class SingleMindmapCompletedCommandHandler : IRequestHandler<SingleMindma
             return ApiResponse.Fail("Chapter not found.");
 
         chapter.MindmapImageUrl = request.ImageUrl;
+        chapter.IsRegeneratingMindmap = false;
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse.Ok("Single mindmap image updated successfully.");

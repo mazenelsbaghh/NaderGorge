@@ -6,7 +6,7 @@ import { AdminPage } from '@/components/admin';
 import platformFinanceService, { FinanceBootstrap } from '@/services/platform-finance-service';
 
 const idempotency = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const money = (value: number) => `${new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 2 }).format(value)} ج.م`;
+const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 
 export default function PlatformFinancePlanning() {
   const today = new Date().toISOString().slice(0, 10);

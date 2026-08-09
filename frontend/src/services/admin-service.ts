@@ -725,6 +725,7 @@ export interface LessonCockpitVideoChapterDto {
   endTime: number;
   summaryText: string;
   mindmapImageUrl?: string | null;
+  isRegeneratingMindmap: boolean;
   order: number;
 }
 

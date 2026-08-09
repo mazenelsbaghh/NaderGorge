@@ -202,7 +202,7 @@ const domainFieldOptions: Record<string, Record<string, Array<{ value: string; l
 };
 
 const numberOptions = [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000]
-  .map((value) => ({ value: String(value), label: value.toLocaleString('ar-EG') }));
+  .map((value) => ({ value: String(value), label: value.toLocaleString('ar-EG-u-nu-latn') }));
 
 function dateOptions() {
   const today = cairoCurrentDate();
@@ -250,13 +250,13 @@ function formatCell(value: unknown, column: AdvancedReportColumn) {
   if (translated) return translated;
   if (column.type === 'date' || column.type === 'datetime') {
     const date = new Date(String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' });
   }
   if (column.type === 'currency' && typeof value === 'number') {
-    return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat('ar-EG-u-nu-latn', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 }).format(value);
   }
-  if (column.type === 'percentage' && typeof value === 'number') return `${value.toLocaleString('ar-EG')}٪`;
-  if (typeof value === 'number') return value.toLocaleString('ar-EG');
+  if (column.type === 'percentage' && typeof value === 'number') return `${value.toLocaleString('ar-EG-u-nu-latn')}٪`;
+  if (typeof value === 'number') return value.toLocaleString('ar-EG-u-nu-latn');
   if (typeof value === 'boolean') return value ? 'نعم' : 'لا';
   return String(value);
 }
@@ -365,7 +365,7 @@ function ResultsChart({ result }: { result: AdvancedReportResult }) {
         <div role="img" aria-label={`${result.chart.label || result.chart.title}: ${points.map((point) => `${point.label} ${point.value}`).join('، ')}`} className="flex h-64 items-end gap-2 overflow-x-auto border-b border-[var(--admin-border)] px-1 pt-4">
           {points.map((point) => (
             <div key={point.label} className="flex h-full min-w-14 flex-1 flex-col items-center justify-end gap-2">
-              <span className="text-sm font-black text-[var(--admin-text)]">{point.value.toLocaleString('ar-EG')}</span>
+              <span className="text-sm font-black text-[var(--admin-text)]">{point.value.toLocaleString('ar-EG-u-nu-latn')}</span>
               <div className="w-full max-w-16 rounded-t-xl bg-[var(--admin-primary)] transition-[height] duration-500 motion-reduce:transition-none" style={{ height: `${Math.max(4, (point.value / max) * 78)}%` }} />
               <span className="h-9 max-w-20 truncate text-sm font-bold text-[var(--admin-muted)]" title={point.label}>{point.label}</span>
             </div>
@@ -509,7 +509,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
   };
 
   const saveDefinition = async () => {
-    const automaticName = reportName.trim() || `${domain.label} - ${new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`;
+    const automaticName = reportName.trim() || `${domain.label} - ${new Date().toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}`;
     setIsSavingDefinition(true);
     try {
       const payload = { name: automaticName, configuration: query };
@@ -568,7 +568,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
 
         <div className="space-y-5 p-4 sm:p-5">
           <fieldset>
-            <legend className="mb-2 text-xs font-black text-[var(--admin-muted)]"><span className="ml-1 text-[var(--admin-primary)]">١</span> نوع البيانات <span className="font-bold">(يمكن اختيار أكثر من نوع)</span></legend>
+            <legend className="mb-2 text-xs font-black text-[var(--admin-muted)]"><span className="ml-1 text-[var(--admin-primary)]">1</span> نوع البيانات <span className="font-bold">(يمكن اختيار أكثر من نوع)</span></legend>
             <div className="flex flex-wrap gap-2">
               {quickReportTypes.map((type) => {
                 const checked = quickTypes.includes(type.id);
@@ -599,11 +599,11 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
           </div> : <p role="status" className="rounded-xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)]">اختار نوع بيانات واحدًا على الأقل.</p>}
 
           <fieldset className="rounded-xl border border-[var(--admin-border)] p-3">
-            <legend className="px-1 text-xs font-black text-[var(--admin-muted)]"><span className="ml-1 text-[var(--admin-primary)]">٢</span> الكورسات <span className="font-bold">(يمكن اختيار أكثر من كورس)</span></legend>
+            <legend className="px-1 text-xs font-black text-[var(--admin-muted)]"><span className="ml-1 text-[var(--admin-primary)]">2</span> الكورسات <span className="font-bold">(يمكن اختيار أكثر من كورس)</span></legend>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setQuickCourses(courseOptions.map((option) => option.value))} className="rounded-lg border border-[var(--admin-border)] px-3 py-2 text-xs font-black text-[var(--admin-primary)]">تحديد الكل</button>
               {quickCourses.length ? <button type="button" onClick={() => setQuickCourses([])} className="rounded-lg px-3 py-2 text-xs font-black text-[var(--admin-danger)]">مسح الاختيار</button> : null}
-              <span className="text-xs font-bold text-[var(--admin-muted)]">{quickCourses.length ? `${quickCourses.length.toLocaleString('ar-EG')} محدد` : 'لم يتم اختيار كورس'}</span>
+              <span className="text-xs font-bold text-[var(--admin-muted)]">{quickCourses.length ? `${quickCourses.length.toLocaleString('ar-EG-u-nu-latn')} محدد` : 'لم يتم اختيار كورس'}</span>
             </div>
             <div className="grid max-h-52 gap-2 overflow-y-auto pl-1 sm:grid-cols-2 xl:grid-cols-3">
               {courseOptions.map((option) => {
@@ -653,9 +653,9 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
           <h2 id="student-ledger-title" className="mt-1 text-base font-extrabold">تحميل سجل الطلاب في شيت واحد</h2>
           <p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">يشمل أرقام الأب والأم وولي الأمر الإضافي، والمرحلة والشعبة، ونوع الشراء الفعلي لكل طالب.</p>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {audience === 'admin' ? <Dropdown value={ledgerTeacherId} onChange={(value) => setLedgerTeacherId(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerTeachers.map((teacher) => ({ value: teacher.id, label: teacher.fullName }))} placeholder="١. اختر المدرس" searchable searchPlaceholder="ابحث باسم المدرس" /> : <p className="flex min-h-11 items-center rounded-xl bg-[var(--admin-primary-15)] px-3 text-xs font-bold text-[var(--admin-primary)]">طلاب المدرس الحالي</p>}
-            <Dropdown value={ledgerStage} onChange={(value) => { setLedgerStage(Array.isArray(value) ? value[0] ?? '' : value); setLedgerStudyTrack(''); }} options={ledgerStageOptions} placeholder={audience === 'admin' ? '٢. اختر المرحلة (اختياري)' : '١. اختر المرحلة (اختياري)'} />
-            <Dropdown value={ledgerStudyTrack} onChange={(value) => setLedgerStudyTrack(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerStage === 'Secondary' ? secondaryTrackOptions : ledgerStage === 'Baccalaureate' ? baccalaureateTrackOptions : []} placeholder={audience === 'admin' ? '٣. اختر الشعبة (إن وجدت)' : '٢. اختر الشعبة (إن وجدت)'} disabled={!['Secondary', 'Baccalaureate'].includes(ledgerStage)} />
+            {audience === 'admin' ? <Dropdown value={ledgerTeacherId} onChange={(value) => setLedgerTeacherId(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerTeachers.map((teacher) => ({ value: teacher.id, label: teacher.fullName }))} placeholder="1. اختر المدرس" searchable searchPlaceholder="ابحث باسم المدرس" /> : <p className="flex min-h-11 items-center rounded-xl bg-[var(--admin-primary-15)] px-3 text-xs font-bold text-[var(--admin-primary)]">طلاب المدرس الحالي</p>}
+            <Dropdown value={ledgerStage} onChange={(value) => { setLedgerStage(Array.isArray(value) ? value[0] ?? '' : value); setLedgerStudyTrack(''); }} options={ledgerStageOptions} placeholder={audience === 'admin' ? '2. اختر المرحلة (اختياري)' : '1. اختر المرحلة (اختياري)'} />
+            <Dropdown value={ledgerStudyTrack} onChange={(value) => setLedgerStudyTrack(Array.isArray(value) ? value[0] ?? '' : value)} options={ledgerStage === 'Secondary' ? secondaryTrackOptions : ledgerStage === 'Baccalaureate' ? baccalaureateTrackOptions : []} placeholder={audience === 'admin' ? '3. اختر الشعبة (إن وجدت)' : '2. اختر الشعبة (إن وجدت)'} disabled={!['Secondary', 'Baccalaureate'].includes(ledgerStage)} />
           </div>
         </div>
         <button type="button" onClick={() => void exportStudentLedger()} disabled={ledgerLoading} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] disabled:opacity-60 sm:mt-0">{ledgerLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />} تحميل سجل الطلاب</button>
@@ -704,11 +704,11 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
               <ResultsChart result={result} />
               <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
                 <div className="flex flex-col gap-3 border-b border-[var(--admin-border)] p-4 md:flex-row md:items-center md:justify-between">
-                  <div><h2 className="text-lg font-extrabold">الجدول التفصيلي</h2><p className="text-xs font-bold text-[var(--admin-muted)]">{result.totalCount.toLocaleString('ar-EG')} نتيجة</p></div>
+                  <div><h2 className="text-lg font-extrabold">الجدول التفصيلي</h2><p className="text-xs font-bold text-[var(--admin-muted)]">{result.totalCount.toLocaleString('ar-EG-u-nu-latn')} نتيجة</p></div>
                   <div className="flex flex-wrap items-start gap-2"><label className="relative min-w-52 flex-1"><Search className="absolute right-3 top-3 h-4 w-4 text-[var(--admin-muted)]" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث في النتائج الظاهرة" className="h-10 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] pr-9 pl-3 text-sm outline-none" /><span className="mt-1 block px-1 text-sm font-bold text-[var(--admin-muted)]">البحث داخل الصفحة الحالية فقط</span></label><button type="button" onClick={() => void exportReport('xlsx')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><FileSpreadsheet className="h-4 w-4" />Excel</button><button type="button" onClick={() => void exportReport('pdf')} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-3 text-xs font-black"><Download className="h-4 w-4" />PDF</button></div>
                 </div>
                 {searchedRows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-right text-sm"><thead><tr className="bg-[var(--admin-bg)]">{result.columns.map((column) => <th key={column.key} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-black text-[var(--admin-muted)]"><button type="button" onClick={() => { const direction = sort?.field === column.key && sort.direction === 'asc' ? 'desc' : 'asc'; setSort({ field: column.key, direction }); setPage(1); void runReport({ ...query, sort: { field: column.key, direction }, page: 1 }); }} className="hover:text-[var(--admin-primary)]">{column.label}{sort?.field === column.key ? sort.direction === 'asc' ? ' ↑' : ' ↓' : ''}</button></th>)}</tr></thead><tbody>{searchedRows.map((row, rowIndex) => <tr key={String(row.id ?? rowIndex)} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-hover)]">{result.columns.map((column) => <td key={column.key} className="max-w-72 whitespace-nowrap px-4 py-3 font-medium" title={formatCell(row[column.key], column)}>{formatCell(row[column.key], column)}</td>)}</tr>)}</tbody></table></div> : <EmptyState />}
-                <div className="flex items-center justify-between border-t border-[var(--admin-border)] px-4 py-3"><span className="text-xs font-bold text-[var(--admin-muted)]">صفحة {page.toLocaleString('ar-EG')} من {totalPages.toLocaleString('ar-EG')}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => { const next = page - 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة السابقة" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button><button type="button" disabled={page >= totalPages} onClick={() => { const next = page + 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة التالية" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button></div></div>
+                <div className="flex items-center justify-between border-t border-[var(--admin-border)] px-4 py-3"><span className="text-xs font-bold text-[var(--admin-muted)]">صفحة {page.toLocaleString('ar-EG-u-nu-latn')} من {totalPages.toLocaleString('ar-EG-u-nu-latn')}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => { const next = page - 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة السابقة" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button><button type="button" disabled={page >= totalPages} onClick={() => { const next = page + 1; setPage(next); void runReport({ ...query, page: next }); }} aria-label="الصفحة التالية" className="rounded-lg border border-[var(--admin-border)] p-2 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button></div></div>
               </section>
             </>
           ) : <StartState />}
@@ -741,7 +741,7 @@ export function AdvancedReportsCenter({ audience }: { audience: ReportAudience }
               autoFocus
               value={reportName}
               onChange={(event) => setReportName(event.target.value)}
-              placeholder={`${domain.label} - ${new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`}
+              placeholder={`${domain.label} - ${new Date().toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}`}
               className="mt-2 h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-medium text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary)]/20"
             />
           </label>

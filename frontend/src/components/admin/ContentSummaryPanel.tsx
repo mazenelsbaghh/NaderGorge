@@ -7,7 +7,7 @@ import { cairoCurrentDate, cairoCurrentMonthPeriod, cairoDateAfterDays, cairoDat
 
 type Period = 'all' | 'today' | 'month' | 'custom';
 
-const number = new Intl.NumberFormat('ar-EG');
+const number = new Intl.NumberFormat('ar-EG-u-nu-latn');
 
 function buildRange(period: Period, from: string, to: string) {
   if (period === 'all') return {};

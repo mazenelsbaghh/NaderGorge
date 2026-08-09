@@ -35,6 +35,7 @@ public static class HrPermissions
     public const string ReportExport = "hr.report.export";
     public const string MigrationRead = "hr.migration.read";
     public const string MigrationManage = "hr.migration.manage";
+    public const string PayrollSelf = "hr.payroll.self";
     public const string PayrollView = "payroll.view";
     public const string PayrollConfigure = "payroll.configure";
     public const string PayrollPrepare = "payroll.prepare";

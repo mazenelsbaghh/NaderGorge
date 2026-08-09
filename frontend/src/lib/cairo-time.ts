@@ -45,7 +45,7 @@ export function cairoDateAfterDays(days: number, date = new Date()) {
 }
 
 export function formatCairoDateTime(dateTime: string | Date, options: Intl.DateTimeFormatOptions = {}) {
-  return new Intl.DateTimeFormat('ar-EG', {
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
     ...options,
     timeZone: 'Africa/Cairo',
   }).format(parseUtcDateTime(dateTime));

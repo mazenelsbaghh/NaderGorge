@@ -193,7 +193,7 @@ function LogCard({ log }: { log: SystemLogEntry }) {
           <code className="rounded bg-black/5 px-2 py-1 dark:bg-white/5">{log.category}</code>
         </div>
         <div className="flex items-center gap-3 text-xs text-[var(--admin-text-muted)]">
-          <time>{new Date(log.timestamp).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</time>
+          <time>{new Date(log.timestamp).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}</time>
           <button className="admin-btn-icon" title="نسخ الخطأ كاملًا" onClick={async () => { await navigator.clipboard.writeText(fullText); toast.success('تم نسخ السجل'); }}><Clipboard className="h-4 w-4" /></button>
         </div>
       </div>

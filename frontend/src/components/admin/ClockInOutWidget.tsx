@@ -125,7 +125,7 @@ export function ClockInOutWidget() {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('ar-EG', {
+    return date.toLocaleTimeString('ar-EG-u-nu-latn', {
       timeZone: 'Africa/Cairo',
       hour: '2-digit',
       minute: '2-digit',
@@ -134,7 +134,7 @@ export function ClockInOutWidget() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ar-EG', {
+    return date.toLocaleDateString('ar-EG-u-nu-latn', {
       timeZone: 'Africa/Cairo',
       weekday: 'long',
       year: 'numeric',

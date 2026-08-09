@@ -23,7 +23,7 @@ const templates: AdjustmentTemplate[] = [
 ];
 
 function toArabicNumber(value: number) {
-  return new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat('ar-EG-u-nu-latn', { maximumFractionDigits: 2 }).format(value);
 }
 
 export function AttendanceAdjustmentRules() {

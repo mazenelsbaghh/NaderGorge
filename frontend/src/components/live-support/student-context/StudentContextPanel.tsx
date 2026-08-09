@@ -6,8 +6,9 @@ import { liveSupportService, type LiveSupportConversation, type LiveSupportMessa
 import { StudentActionsPanel } from './StudentActionsPanel';
 import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 import { formatCairoDateTime } from '@/lib/cairo-time';
+import { AdminModal } from '@/components/ui/admin-modal';
 
-export function StudentContextPanel({ conversation, onConversationChange }: { conversation: LiveSupportConversation; onConversationChange: (value: LiveSupportConversation) => void }) {
+export function StudentContextPanel({ conversation, onConversationChange, onActionCompleted }: { conversation: LiveSupportConversation; onConversationChange: (value: LiveSupportConversation) => void; onActionCompleted: () => void }) {
   const [sections, setSections] = useState<Partial<LiveSupportStudentContextSections>>({});
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LiveSupportStudentSearchResult[]>([]);
@@ -15,6 +16,9 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
   const [loadingSection, setLoadingSection] = useState<LiveSupportStudentContextSectionKey>();
   const [sectionErrors, setSectionErrors] = useState<Partial<Record<LiveSupportStudentContextSectionKey, string>>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [linkRequest, setLinkRequest] = useState<{ studentUserId: string | null; studentName: string } | null>(null);
+  const [linkReason, setLinkReason] = useState('');
+  const [linkPending, setLinkPending] = useState(false);
 
   useEffect(() => {
     setSections({});
@@ -70,16 +74,29 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
     }
   }
 
-  async function changeLink(studentUserId: string | null) {
-    const reason = window.prompt(studentUserId ? 'اكتب سبب ربط هذا الطالب بالمحادثة' : 'اكتب سبب إلغاء ربط الطالب');
-    if (!reason?.trim()) return;
+  function requestLinkChange(studentUserId: string | null, studentName: string) {
+    setLinkRequest({ studentUserId, studentName });
+    setLinkReason('');
+    setError('');
+  }
+
+  async function confirmLinkChange() {
+    if (!linkRequest || linkReason.trim().length < 5) {
+      setError('اكتب سببًا واضحًا من 5 أحرف على الأقل لتوثيق تغيير الربط.');
+      return;
+    }
+    setLinkPending(true);
     try {
-      const updated = await liveSupportService.changeStudentLink(conversation.id, studentUserId, reason, conversation.version);
+      const updated = await liveSupportService.changeStudentLink(conversation.id, linkRequest.studentUserId, linkReason.trim(), conversation.version);
       onConversationChange(updated);
       setResults([]);
-      if (!studentUserId) setSections({});
+      if (!linkRequest.studentUserId) setSections({});
+      setLinkRequest(null);
+      setLinkReason('');
     } catch (cause) {
-      alert((cause as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'تعذر تغيير الربط.');
+      setError((cause as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'تعذر تغيير الربط. راجع البيانات وحاول مرة أخرى.');
+    } finally {
+      setLinkPending(false);
     }
   }
 
@@ -96,7 +113,8 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
     return (
       <button
         onClick={() => toggleSection(key)}
-        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-right hover:bg-slate-50 transition-colors"
+        aria-expanded={expanded}
+        className="flex min-h-11 w-full items-center justify-between border-b border-slate-200 bg-transparent px-1 py-3 text-right transition-colors hover:text-cyan-800 focus-visible:outline-2 focus-visible:outline-cyan-700"
       >
         <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
           <Icon size={16} className="text-slate-500" />
@@ -138,20 +156,21 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
           <div className="mt-3 space-y-2">
             {results.map((student) => (
-              <button key={student.userId} onClick={() => void changeLink(student.userId)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-right hover:border-cyan-600">
+              <button key={student.userId} onClick={() => requestLinkChange(student.userId, student.fullName)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-right hover:border-cyan-600">
                 <p className="text-sm font-semibold text-slate-900">{student.fullName}</p>
                 <p className="mt-1 text-xs text-slate-500">{student.maskedPhone}{student.studentCode ? ` · ${student.studentCode}` : ''}</p>
               </button>
             ))}
           </div>
         </div>
-        <StudentActionsPanel conversationId={conversation.id} hasStudent={false} onCompleted={() => void refreshConversationAfterAction()} />
+        <StudentActionsPanel conversationId={conversation.id} hasStudent={false} onCompleted={() => { void refreshConversationAfterAction(); onActionCompleted(); }} />
+        <LinkChangeDialog request={linkRequest} reason={linkReason} error={error} pending={linkPending} onReasonChange={(reason) => { setLinkReason(reason); setError(''); }} onClose={() => !linkPending && setLinkRequest(null)} onConfirm={() => void confirmLinkChange()} />
       </aside>
     );
   }
 
   return (
-    <aside className="max-h-[620px] space-y-3 overflow-y-auto border-t border-slate-200 bg-slate-50 p-4 xl:border-r xl:border-t-0">
+    <aside className="h-full space-y-3 overflow-y-auto border-t border-slate-200 bg-slate-50 p-4 xl:border-r xl:border-t-0">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-bold text-slate-900">بيانات الطالب</h2>
         <div className="flex gap-2">
@@ -160,7 +179,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
               <RefreshCw size={15} className={loadingSection ? 'animate-spin' : ''} />
             </button>
           )}
-          <button onClick={() => void changeLink(null)} className="text-xs font-semibold text-red-600">إلغاء الربط</button>
+          <button onClick={() => requestLinkChange(null, sections.basic?.fullName || conversation.participantName || 'الطالب')} className="min-h-11 px-2 text-xs font-semibold text-red-700 hover:bg-red-50">إلغاء ربط الطالب</button>
         </div>
       </div>
 
@@ -171,7 +190,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('basic', 'الملف الشخصي', UserRound)}
           {expandedSections['basic'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
+            <div className="bg-white/60 px-2 py-3 text-sm leading-6 text-slate-700">
               {loadingSection === 'basic' && renderSkeleton()}
               {sectionErrors.basic && <SectionError message={sectionErrors.basic} onRetry={() => void loadSection('basic')} />}
               {sections.basic && (
@@ -193,7 +212,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('metrics', 'المؤشرات المالية والتعليمية', Wallet)}
           {expandedSections['metrics'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="bg-white/60 px-2 py-3">
               {loadingSection === 'metrics' && renderSkeleton()}
               {sectionErrors.metrics && <SectionError message={sectionErrors.metrics} onRetry={() => void loadSection('metrics')} />}
               {sections.metrics && (
@@ -212,7 +231,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('study', 'الدراسة والمتابعة', BookOpenCheck)}
           {expandedSections['study'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
+            <div className="bg-white/60 px-2 py-3 text-sm leading-6 text-slate-700">
               {loadingSection === 'study' && renderSkeleton()}
               {sectionErrors.study && <SectionError message={sectionErrors.study} onRetry={() => void loadSection('study')} />}
               {sections.study && (
@@ -230,7 +249,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('devices', 'الأجهزة المتصلة', MonitorSmartphone)}
           {expandedSections['devices'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
+            <div className="bg-white/60 px-2 py-3 text-sm leading-6 text-slate-700">
               {loadingSection === 'devices' && renderSkeleton()}
               {sectionErrors.devices && <SectionError message={sectionErrors.devices} onRetry={() => void loadSection('devices')} />}
               {sections.devices && (
@@ -246,7 +265,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-center py-2">لا توجد أجهزة نشطة حالياً</p>
+                  <p className="py-2 text-center text-slate-600">لا توجد أجهزة نشطة حاليًا</p>
                 )
               )}
             </div>
@@ -257,7 +276,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('notes', 'ملاحظات الموظفين', StickyNote)}
           {expandedSections['notes'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
+            <div className="bg-white/60 px-2 py-3 text-sm leading-6 text-slate-700">
               {loadingSection === 'notes' && renderSkeleton()}
               {sectionErrors.notes && <SectionError message={sectionErrors.notes} onRetry={() => void loadSection('notes')} />}
               {sections.notes && (
@@ -269,14 +288,14 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                           {note.isPinned ? '📌 ' : ''}
                           {note.content}
                         </p>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="mt-1 text-sm text-slate-600">
                           {formatCairoDateTime(note.createdAt)}
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-center py-2">لا توجد ملاحظات على هذا الطالب</p>
+                  <p className="py-2 text-center text-slate-600">لا توجد ملاحظات على هذا الطالب</p>
                 )
               )}
             </div>
@@ -287,7 +306,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <div className="space-y-1">
           {renderSectionHeader('crm', 'إدارة العلاقات CRM', UserRound)}
           {expandedSections['crm'] && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
+            <div className="bg-white/60 px-2 py-3 text-sm leading-6 text-slate-700">
               {loadingSection === 'crm' && renderSkeleton()}
               {sectionErrors.crm && <SectionError message={sectionErrors.crm} onRetry={() => void loadSection('crm')} />}
               {sections.crm && (
@@ -304,8 +323,9 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
       <StudentActionsPanel
         conversationId={conversation.id}
         hasStudent
-        onCompleted={refreshExpandedSections}
+        onCompleted={() => { refreshExpandedSections(); onActionCompleted(); }}
       />
+      <LinkChangeDialog request={linkRequest} reason={linkReason} error={error} pending={linkPending} onReasonChange={(reason) => { setLinkReason(reason); setError(''); }} onClose={() => !linkPending && setLinkRequest(null)} onConfirm={() => void confirmLinkChange()} />
     </aside>
   );
 }
@@ -353,31 +373,31 @@ function StudentSupportHistory({ conversation }: { conversation: LiveSupportConv
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white" aria-label="سجل دعم الطالب">
-      <div className="flex items-start gap-2 border-b border-slate-100 px-3 py-3">
+    <section className="border-b border-slate-200 pb-2" aria-label="سجل دعم الطالب">
+      <div className="flex items-start gap-2 px-1 py-3">
         <History size={17} className="mt-0.5 shrink-0 text-cyan-700" />
         <div>
           <h3 className="text-sm font-bold text-slate-900">سجل دعم الطالب</h3>
-          <p className="mt-0.5 text-sm leading-4 text-slate-500">كل المحادثات السابقة، بما فيها المغلقة، والإجراءات المسجلة فيها.</p>
+          <p className="mt-0.5 text-sm leading-5 text-slate-600">المحادثات السابقة والإجراءات المسجلة.</p>
         </div>
       </div>
-      <div className="max-h-52 divide-y divide-slate-100 overflow-y-auto">
+      <div className="max-h-52 divide-y divide-slate-200 overflow-y-auto">
         {loading && <div className="space-y-2 p-3"><div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" /><div className="h-4 w-1/2 animate-pulse rounded bg-slate-200" /></div>}
         {!loading && !error && items.length === 0 && <p className="p-3 text-center text-xs text-slate-500">لا توجد محادثات سابقة لهذا الطالب.</p>}
-        {items.map((item) => <button key={item.conversationId} type="button" onClick={() => void openHistory(item)} aria-expanded={selectedHistory?.conversationId === item.conversationId} className={`w-full px-3 py-2.5 text-right transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/30 ${selectedHistory?.conversationId === item.conversationId ? 'bg-cyan-50/70' : ''}`}>
+        {items.map((item) => <button key={item.conversationId} type="button" onClick={() => void openHistory(item)} aria-expanded={selectedHistory?.conversationId === item.conversationId} className={`w-full rounded-lg px-2 py-2.5 text-right transition hover:bg-white focus-visible:outline-2 focus-visible:outline-cyan-700 ${selectedHistory?.conversationId === item.conversationId ? 'bg-white' : ''}`}>
           <span className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-bold text-slate-800">{item.subject || 'محادثة دعم'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-sm font-semibold ${historyStatusClass(item.status)}`}>{historyStatusLabel(item.status)}</span></span>
           <span className="mt-1 flex items-center justify-between gap-2 text-sm text-slate-500"><span>{formatCairoDateTime(item.lastActivityAt)}</span><span>{item.messageCount} رسالة{item.lastEventType ? ` · ${historyEventLabel(item.lastEventType)}` : ''}</span></span>
           {item.lastMessagePreview && <span className="mt-1 block truncate text-sm text-slate-600">{item.lastMessagePreview}</span>}
         </button>)}
       </div>
       {error && <div role="alert" className="p-3 text-xs text-red-700">{error}</div>}
-      {selectedHistory && <div className="border-t border-slate-100 bg-slate-50 p-3">
+      {selectedHistory && <div className="mt-2 border-t border-slate-200 px-2 pt-3">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-800"><MessageSquareText size={14} />تفاصيل: {selectedHistory.subject || 'محادثة دعم'}</div>
         {selectedHistory.activities.length > 0 && <ol className="mb-3 space-y-1 border-b border-slate-200 pb-3 text-sm text-slate-600">{selectedHistory.activities.map((activity, index) => <li key={`${activity.at}-${index}`} className="flex items-center justify-between gap-2"><span>{historyEventLabel(activity.type)}</span><time>{formatCairoDateTime(activity.at)}</time></li>)}</ol>}
         <div className="max-h-64 space-y-2 overflow-y-auto" aria-live="polite">
           {messagesLoading && <p className="text-xs text-slate-500">جارٍ تحميل الرسائل…</p>}
           {!messagesLoading && messages.length === 0 && <p className="text-xs text-slate-500">لا توجد رسائل في هذه المحادثة.</p>}
-          {messages.map((message) => <article key={message.id} dir="auto" className={`rounded-lg px-2.5 py-2 text-xs ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4 bg-slate-200 text-slate-800' : 'ml-4 bg-white text-slate-800'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-sm text-slate-500">{historySenderLabel(message.senderType)} · {formatCairoDateTime(message.sentAt)}</p></article>)}
+          {messages.map((message) => <article key={message.id} dir="auto" className={`border-b border-slate-200 px-1 py-2 text-sm text-slate-800 last:border-0 ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4' : 'ml-4'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-xs text-slate-600">{historySenderLabel(message.senderType)} · {formatCairoDateTime(message.sentAt)}</p></article>)}
         </div>
       </div>}
     </section>
@@ -389,7 +409,13 @@ function historyStatusLabel(status: LiveSupportStudentSupportHistory['status']) 
 }
 
 function historyStatusClass(status: LiveSupportStudentSupportHistory['status']) {
-  return status === 'Closed' || status === 'Abandoned' ? 'bg-slate-100 text-slate-600' : status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+  if (status === 'Closed' || status === 'Abandoned') {
+    return 'bg-slate-100 text-slate-700';
+  }
+  if (status === 'Active') {
+    return 'bg-emerald-100 text-emerald-900';
+  }
+  return 'bg-amber-100 text-amber-900';
 }
 
 function historyEventLabel(eventType: string) {
@@ -419,11 +445,27 @@ function SectionError({ message, onRetry }: { message: string; onRetry: () => vo
 
 function Metric({ icon: Icon, label, value }: { icon: typeof UserRound; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
+    <div className="rounded-lg bg-slate-100 p-3">
       <Icon size={16} className="text-cyan-700" />
       <p className="mt-2 text-xs text-slate-500">{label}</p>
       <p className="font-bold text-slate-900">{value}</p>
     </div>
+  );
+}
+
+function LinkChangeDialog({ request, reason, error, pending, onReasonChange, onClose, onConfirm }: { request: { studentUserId: string | null; studentName: string } | null; reason: string; error: string; pending: boolean; onReasonChange: (reason: string) => void; onClose: () => void; onConfirm: () => void }) {
+  const linking = Boolean(request?.studentUserId);
+  return (
+    <AdminModal open={Boolean(request)} onClose={onClose} title={linking ? 'ربط الطالب بالمحادثة' : 'إلغاء ربط الطالب'} size="sm">
+      <p className="mb-4 text-sm leading-6 text-[var(--admin-muted)]">{linking ? `سيتم ربط المحادثة بملف ${request?.studentName} وإظهار بياناته لموظفي الدعم.` : `سيتم فصل المحادثة عن ملف ${request?.studentName} مع الاحتفاظ بسجل المحادثة.`}</p>
+      <label htmlFor="student-link-reason" className="text-sm font-bold text-[var(--admin-text)]">سبب التغيير</label>
+      <textarea id="student-link-reason" autoFocus rows={3} value={reason} onChange={(event) => onReasonChange(event.target.value)} className="mt-2 w-full resize-none rounded-xl border border-[var(--admin-border)] p-3 text-[var(--admin-text)] outline-none focus-visible:border-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary-15)]" placeholder={linking ? 'مثال: تم التحقق من رقم الهاتف وكود الطالب' : 'مثال: تم ربط المحادثة بملف غير صحيح'} />
+      {error ? <p role="alert" className="mt-2 text-sm font-medium text-[var(--admin-danger)]">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" disabled={pending} onClick={onClose} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-4 font-bold text-[var(--admin-text)]">إلغاء</button>
+        <button type="button" disabled={pending} onClick={onConfirm} className={`min-h-11 rounded-xl px-4 font-bold text-white disabled:opacity-50 ${linking ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-danger)]'}`}>{pending ? 'جارٍ الحفظ…' : linking ? 'ربط الطالب' : 'إلغاء الربط'}</button>
+      </div>
+    </AdminModal>
   );
 }
 

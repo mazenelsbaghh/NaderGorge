@@ -3,6 +3,8 @@ import { classifyAIError } from './aiErrors.js';
 const RETRY_DELAYS_MS = [2_000, 5_000, 10_000];
 let waitBeforeRetry = (delayMs: number) => new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 
+type GeminiRequest<T> = (abortSignal: AbortSignal) => Promise<T>;
+
 class GeminiRequestDeadlineError extends Error {
   constructor() {
     super('Gemini request exceeded its deadline.');
@@ -41,18 +43,25 @@ function providerStatus(error: unknown) {
 }
 
 function requestDeadlineMs() {
-  const configuredDeadline = Number.parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || '120000', 10);
-  return Number.isFinite(configuredDeadline) && configuredDeadline > 0 ? configuredDeadline : 120_000;
+  const configuredDeadline = Number.parseInt(
+    process.env.GEMINI_REQUEST_TIMEOUT_MS || process.env.AI_PROVIDER_TIMEOUT_MS || '600000',
+    10,
+  );
+  return Number.isFinite(configuredDeadline) && configuredDeadline > 0 ? configuredDeadline : 600_000;
 }
 
-async function requestBeforeDeadline<T>(request: () => Promise<T>): Promise<T> {
+async function requestBeforeDeadline<T>(request: GeminiRequest<T>): Promise<T> {
+  const abortController = new AbortController();
   let deadlineTimer: NodeJS.Timeout | undefined;
   const deadline = new Promise<never>((_resolve, reject) => {
-    deadlineTimer = setTimeout(() => reject(new GeminiRequestDeadlineError()), requestDeadlineMs());
+    deadlineTimer = setTimeout(() => {
+      reject(new GeminiRequestDeadlineError());
+      abortController.abort();
+    }, requestDeadlineMs());
   });
 
   try {
-    return await Promise.race([request(), deadline]);
+    return await Promise.race([request(abortController.signal), deadline]);
   } finally {
     if (deadlineTimer) clearTimeout(deadlineTimer);
   }
@@ -66,7 +75,7 @@ function geminiFailure(error: unknown) {
   return new GeminiDeveloperApiError(failure.category, providerErrorName(error), failure.status ?? providerStatus(error));
 }
 
-export async function executeGeminiRequest<T>(request: () => Promise<T>): Promise<T> {
+export async function executeGeminiRequest<T>(request: GeminiRequest<T>): Promise<T> {
   try {
     return await requestBeforeDeadline(request);
   } catch (error) {
@@ -74,7 +83,7 @@ export async function executeGeminiRequest<T>(request: () => Promise<T>): Promis
   }
 }
 
-export async function executeRetriableGeminiRequest<T>(request: () => Promise<T>): Promise<T> {
+export async function executeRetriableGeminiRequest<T>(request: GeminiRequest<T>): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await requestBeforeDeadline(request);

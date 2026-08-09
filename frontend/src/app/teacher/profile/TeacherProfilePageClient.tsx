@@ -325,7 +325,7 @@ export default function TeacherProfilePageClient() {
       label: "تاريخ الإضافة",
       render: (member) => (
         <span className="text-xs font-bold text-[var(--admin-muted)]">
-          {new Intl.DateTimeFormat("ar-EG", { timeZone: 'Africa/Cairo', dateStyle: "medium" }).format(new Date(member.createdAt))}
+          {new Intl.DateTimeFormat("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo', dateStyle: "medium" }).format(new Date(member.createdAt))}
         </span>
       ),
     },

@@ -406,13 +406,13 @@ html.theme-switching *::after {
   --admin-accent-soft: #dff3f2;
   --admin-shadow: rgba(10, 29, 61, 0.08);
   --admin-primary-15: rgba(10, 29, 61, 0.12);
-  --admin-success: #16a34a;
+  --admin-success: #14763a;
   --admin-success-10: rgba(22, 163, 74, 0.1);
   --admin-success-20: rgba(22, 163, 74, 0.18);
-  --admin-danger: #ef4444; 
+  --admin-danger: #b42318;
   --admin-danger-10: rgba(220, 38, 38, 0.1);
   --admin-danger-20: rgba(220, 38, 38, 0.18);
-  --admin-warning: #ea580c;
+  --admin-warning: #a33a05;
   --admin-warning-10: rgba(234, 88, 12, 0.1);
   --admin-warning-20: rgba(234, 88, 12, 0.18);
 

@@ -23,7 +23,7 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 type PublicPackagePageClientProps = { packageId: string };
 
 function priceLabel(price: number) {
-  return price > 0 ? `${price.toLocaleString('ar-EG')} ج.م` : 'مجانًا';
+  return price > 0 ? `${price.toLocaleString('ar-EG-u-nu-latn')} ج.م` : 'مجانًا';
 }
 
 export default function PublicPackagePageClient({

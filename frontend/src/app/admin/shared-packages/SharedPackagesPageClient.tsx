@@ -445,7 +445,7 @@ export default function SharedPackagesPageClient() {
             <textarea className="min-h-24 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3 text-sm font-bold text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف مختصر" />
             <div className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 py-3">
               <p className="text-xs font-black text-[var(--admin-muted)]">سعر الباكدج، يُحسب من أسعار المواد المختارة</p>
-              <p className="mt-1 text-xl font-black text-[var(--admin-text)]">{(Number.isFinite(basePrice) ? basePrice : 0).toLocaleString('ar-EG')} جنيه</p>
+              <p className="mt-1 text-xl font-black text-[var(--admin-text)]">{(Number.isFinite(basePrice) ? basePrice : 0).toLocaleString('ar-EG-u-nu-latn')} جنيه</p>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card-soft)]">
@@ -628,12 +628,12 @@ export default function SharedPackagesPageClient() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>إجمالي أسعار المواد / سعر الباكدج</span>
                   <span className={Math.abs(choicesTotal - basePrice) <= 0.01 ? 'text-emerald-700' : 'text-rose-700'}>
-                    {choicesTotal.toLocaleString('ar-EG')} / {(Number.isFinite(basePrice) ? basePrice : 0).toLocaleString('ar-EG')} جنيه
+                    {choicesTotal.toLocaleString('ar-EG-u-nu-latn')} / {(Number.isFinite(basePrice) ? basePrice : 0).toLocaleString('ar-EG-u-nu-latn')} جنيه
                   </span>
                 </div>
                 {Number.isFinite(basePrice) && Math.abs(choicesTotal - basePrice) > 0.01 && choicesTotal > 0 && (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                    <p>سعر الباكدج يُحدَّث تلقائيًا ليطابق أسعار المواد: {choicesTotal.toLocaleString('ar-EG')} جنيه.</p>
+                    <p>سعر الباكدج يُحدَّث تلقائيًا ليطابق أسعار المواد: {choicesTotal.toLocaleString('ar-EG-u-nu-latn')} جنيه.</p>
                   </div>
                 )}
                 {choicePriceGroups.some((group) => new Set(group.prices).size > 1) && (
@@ -681,7 +681,7 @@ export default function SharedPackagesPageClient() {
                       <BookOpen className="h-4 w-4" />
                       <span>{item.teacherCount ?? 0} اختيار مدرس</span>
                       <span>•</span>
-                      <span>{item.price.toLocaleString('ar-EG')} جنيه</span>
+                      <span>{item.price.toLocaleString('ar-EG-u-nu-latn')} جنيه</span>
                       <span>•</span>
                       <span>{getEducationStageLabel(item.educationStage)} - {getGradeLevelLabel(item.gradeLevel)}</span>
                     </p>

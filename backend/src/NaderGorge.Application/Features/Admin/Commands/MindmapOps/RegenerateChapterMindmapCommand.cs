@@ -50,21 +50,39 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         var visualStyles = MindmapStyleOptions.ValidVisualStyles(request.VisualStyles);
         var teacherStyles = MindmapStyleOptions.ValidTeacherStyles(request.TeacherStyles);
 
-        // Enqueue a single-chapter mindmap job (worker handles chapterId payload)
-        await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "regenerate-single-mindmap", new
+        var lockRows = await _db.VideoChapters
+            .Where(c => c.Id == request.ChapterId && !c.IsRegeneratingMindmap)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.IsRegeneratingMindmap, true), ct);
+
+        if (lockRows == 0)
+            return ApiResponse.Fail("Chapter mindmap regeneration is already running.");
+
+        try
         {
-            chapterId = chapter.Id,
-            lessonVideoId = chapter.LessonVideoId,
-            teacherPhotoUrls = teacherPhotoUrls,
-            visualStyles,
-            teacherStyles,
-            chapter = new
+            await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "regenerate-single-mindmap", new
             {
-                title = chapter.Title,
-                summaryText = chapter.SummaryText,
-                order = chapter.Order
-            }
-        });
+                chapterId = chapter.Id,
+                lessonVideoId = chapter.LessonVideoId,
+                teacherPhotoUrls,
+                visualStyles,
+                teacherStyles,
+                chapter = new
+                {
+                    title = chapter.Title,
+                    summaryText = chapter.SummaryText,
+                    order = chapter.Order
+                }
+            });
+        }
+        catch
+        {
+            await _db.VideoChapters
+                .Where(c => c.Id == request.ChapterId)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(c => c.IsRegeneratingMindmap, false),
+                    CancellationToken.None);
+            throw;
+        }
 
         return ApiResponse.Ok("Mindmap regeneration queued successfully.");
     }

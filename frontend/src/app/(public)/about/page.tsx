@@ -3,10 +3,10 @@ import Image from 'next/image';
 import { BadgeCheck, GraduationCap, Users, Award, ArrowUpLeft } from 'lucide-react';
 
 const stats = [
-  { num: '+١٠', label: 'سنوات خبرة', icon: Award },
-  { num: '+٥٠٠٠', label: 'طالب درّسهم', icon: Users },
-  { num: '٣', label: 'مراحل دراسية', icon: GraduationCap },
-  { num: '٩٥٪', label: 'نسبة النجاح', icon: BadgeCheck },
+  { num: '+10', label: 'سنوات خبرة', icon: Award },
+  { num: '+5000', label: 'طالب درّسهم', icon: Users },
+  { num: '3', label: 'مراحل دراسية', icon: GraduationCap },
+  { num: '95%', label: 'نسبة النجاح', icon: BadgeCheck },
 ];
 
 export default function AboutPage() {

@@ -29,7 +29,7 @@ public sealed class RecruitmentService(IAppDbContext db)
         if (role is null)
         {
             role = new Role { Name = "Employee", Type = RoleType.Staff, AllowedDomain = "assistant",
-                PermissionsJson = JsonSerializer.Serialize(new[] { "hr.attendance.self", "hr.leave.self", "hr.document.self", "hr.asset.self", "hr.performance.self", "payroll.view" }) };
+                PermissionsJson = JsonSerializer.Serialize(new[] { "hr.attendance.self", "hr.leave.self", "hr.document.self", "hr.asset.self", "hr.performance.self", "hr.payroll.self" }) };
             db.Roles.Add(role);
         }
         db.UserRoles.Add(new UserRole { UserId = user.Id, User = user, RoleId = role.Id, Role = role });

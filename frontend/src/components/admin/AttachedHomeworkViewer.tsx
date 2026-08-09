@@ -214,7 +214,7 @@ export function AttachedHomeworkViewer({
                     <td className="px-4 py-4 text-[var(--admin-muted)]">{submission.evaluation}</td>
                     <td className="px-4 py-4 text-[var(--admin-muted)]">
                       {submission.submittedAt
-                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })
+                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })
                         : 'لم يتم التسليم'}
                     </td>
                   </tr>

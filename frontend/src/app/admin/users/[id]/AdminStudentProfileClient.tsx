@@ -782,7 +782,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             return <span className="font-bold">{statuses[row.status] || row.status}</span>;
                           }},
                           {key: 'matched', label: 'ربط SMS', render: (row) => row.hasMatchedSms ? 'تم الربط' : 'بدون ربط'},
-                          {key: 'createdAt', label: 'تاريخ الطلب', render: (row) => new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}
+                          {key: 'createdAt', label: 'تاريخ الطلب', render: (row) => new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}
                         ]}
                         data={studentData?.rechargeRequests || []}
                         rowKey={(row) => row.id}
@@ -922,7 +922,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                           {key: 'adminName', label: 'بواسطة', render: (row) => (
                             <span className="text-sm font-semibold text-[var(--admin-text)]">{row.adminName}</span>
                           )},
-                          {key: 'createdAt', label: 'التاريخ والوقت', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                          {key: 'createdAt', label: 'التاريخ والوقت', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                         ]}
                         data={studentData?.balanceTransactions || []}
                         rowKey={(row) => row.id}
@@ -960,7 +960,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                         )},
                         {key: 'reason', label: 'السبب', render: (row: any) => row.reason || '—'},
                         {key: 'overrideBy', label: 'بواسطة', render: (row: any) => row.overrideBy || 'مدير النظام'},
-                        {key: 'createdAt', label: 'التاريخ والوقت', render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                        {key: 'createdAt', label: 'التاريخ والوقت', render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                     ]}
                     data={studentData?.overrides || []}
                     rowKey={(row: any) => row.id || `${row.videoId}-${row.addedViews}-${row.reason || 'override'}`}
@@ -1039,7 +1039,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                              </div>
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2 col-span-2">
                                <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">آخر نشاط</p>
-                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
                              </div>
                            </div>
 
@@ -1181,7 +1181,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                 </span>
                                 <span>بواسطة <strong className="text-[var(--admin-text)] font-semibold">{note.adminName}</strong></span>
                                 <span>•</span>
-                                <span>{new Date(note.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                <span>{new Date(note.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</span>
                               </div>
                               <button
                                 onClick={async () => {
@@ -1386,7 +1386,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  <span className="font-bold">المشاهدات:</span> {activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}
                                                                </div>
                                                                <div>
-                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }) : 'غير متوفر'}
+                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }) : 'غير متوفر'}
                                                                </div>
                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                  {activity.isLocked ? <Lock size={10} /> : <Unlock size={10} />}

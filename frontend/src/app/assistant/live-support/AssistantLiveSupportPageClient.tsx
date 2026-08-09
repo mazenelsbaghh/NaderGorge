@@ -18,6 +18,7 @@ import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 import { acquireMutationLock, releaseMutationLock } from '@/lib/conversation-mutation-lock';
 import { createClientId } from '@/lib/client-id';
+import { AdminModal } from '@/components/ui/admin-modal';
 
 export default function AssistantLiveSupportPageClient() {
   const [bootstrap, setBootstrap] = useState<LiveSupportStaffBootstrap>();
@@ -36,6 +37,10 @@ export default function AssistantLiveSupportPageClient() {
   const [repliesSaving, setRepliesSaving] = useState(false);
   const [repliesError, setRepliesError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [replyFocusRequest, setReplyFocusRequest] = useState(0);
+  const [conversationAction, setConversationAction] = useState<'close' | 'transfer' | null>(null);
+  const [transferReason, setTransferReason] = useState('');
+  const [actionValidationError, setActionValidationError] = useState('');
   const { preferences, updatePreferences } = useLiveSupportPreferences();
   const refreshGeneration = useRef(0);
   const selectionGeneration = useRef(0);
@@ -296,19 +301,32 @@ export default function AssistantLiveSupportPageClient() {
   async function close() {
     if (!selected || !acquireMutationLock(mutationInFlight)) return;
     setPendingAction('close');
-    try { await liveSupportService.closeConversation(selected.id); setSelected(undefined); setMessages([]); await refresh(); }
+    try { await liveSupportService.closeConversation(selected.id); setConversationAction(null); setSelected(undefined); setMessages([]); await refresh(); }
     catch (cause) { setError(getStaffMutationError(cause, 'تعذر إغلاق المحادثة. راجع الملكية وحاول مرة أخرى.')); }
     finally { releaseMutationLock(mutationInFlight); setPendingAction(null); }
   }
 
-  async function transfer() {
+  async function transfer(reason: string) {
     if (!selected || !acquireMutationLock(mutationInFlight)) return;
-    const reason = window.prompt('اكتب سبب تحويل المحادثة لموظف آخر');
-    if (!reason?.trim()) { releaseMutationLock(mutationInFlight); return; }
     setPendingAction('transfer');
-    try { await liveSupportService.transferConversation(selected.id, reason.trim()); setSelected(undefined); setMessages([]); await refresh(); }
+    try { await liveSupportService.transferConversation(selected.id, reason); setConversationAction(null); setTransferReason(''); setSelected(undefined); setMessages([]); await refresh(); }
     catch (cause) { setError(getStaffMutationError(cause, 'تعذر تحويل المحادثة. راجع الملكية وحاول مرة أخرى.')); }
     finally { releaseMutationLock(mutationInFlight); setPendingAction(null); }
+  }
+
+  function requestConversationAction(action: 'close' | 'transfer') {
+    setActionValidationError('');
+    setTransferReason('');
+    setConversationAction(action);
+  }
+
+  function confirmTransfer() {
+    const reason = transferReason.trim();
+    if (reason.length < 5) {
+      setActionValidationError('اكتب سببًا واضحًا من 5 أحرف على الأقل ليظهر للموظف التالي.');
+      return;
+    }
+    void transfer(reason);
   }
 
   function selectStaffConversation(item: LiveSupportConversation) {
@@ -322,17 +340,21 @@ export default function AssistantLiveSupportPageClient() {
   }
 
   return <NavRouteGuard routePath="/assistant/live-support"><AssistantPage activePath="/assistant/live-support" sectionLabel="خدمة العملاء" pageTitle="مركز الدعم المباشر" subtitle="التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.">
-    <div className="mb-4 flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setSettingsOpen((current) => !current)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 hover:bg-slate-50"><Settings2 size={18}/>إعدادات المحادثة</button><button type="button" onClick={() => void openRepliesDialog()} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-200 bg-white px-4 text-sm font-bold text-cyan-800 hover:bg-cyan-50"><MessageSquareText size={18}/>إدارة ردودي الجاهزة</button></div>
     <StaffChatSettings open={settingsOpen} preferences={preferences} onClose={() => setSettingsOpen(false)} onChange={updatePreferences}/>
     {!bootstrap && !error ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin"/></div> : null}
     {error ? <div role="alert" className={`rounded-2xl p-5 ${needsStaffActivation ? 'border border-amber-200 bg-amber-50 text-amber-950' : 'border border-red-200 bg-red-50 text-red-800'}`}>
       <p className="font-bold">{needsStaffActivation ? 'الحساب لديه صلاحية، لكنه غير مضاف لتوزيع المحادثات' : error}</p>
       {needsStaffActivation && <ol className="mt-3 list-decimal space-y-1 pr-5 text-sm"><li>افتح لوحة الأدمن ثم «إدارة الدعم المباشر».</li><li>ابحث عن الموظف وفعّل «يستقبل محادثات» وحدد السعة والجدول، ثم اضغط حفظ.</li><li>ارجع هنا بعد تسجيل حضور الموظف.</li></ol>}
     </div> : null}
-    {bootstrap && <div dir="rtl" className="space-y-4">
-      <StaffStatusHeader state={bootstrap} connected={connected}/>
+    {bootstrap && <div dir="rtl" className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--admin-card-soft)] pe-2">
+        <div className="min-w-0 flex-1"><StaffStatusHeader state={bootstrap} connected={connected}/></div>
+        <button type="button" onClick={() => setSettingsOpen((current) => !current)} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-[var(--admin-text)] hover:bg-[var(--admin-hover)]"><Settings2 size={17}/>تفضيلات العرض</button>
+        <button type="button" onClick={() => void openRepliesDialog()} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)]"><MessageSquareText size={17}/>الردود الجاهزة</button>
+      </div>
       {!bootstrap.isCheckedIn && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">سجّل الحضور أولًا حتى تستقبل محادثات جديدة.</div>}
       <StaffConversationLayout
+        workspaceFocusRequest={replyFocusRequest}
         queue={
           <ConversationQueueList
             conversations={bootstrap.conversations}
@@ -361,17 +383,35 @@ export default function AssistantLiveSupportPageClient() {
             onUpload={(file) => upload(file)}
             onEditMessage={editMessage}
             onDeleteMessage={deleteMessage}
-            onTransfer={() => void transfer()}
-            onClose={() => void close()}
+            onTransfer={() => requestConversationAction('transfer')}
+            onClose={() => requestConversationAction('close')}
             cannedReplies={bootstrap.cannedReplies ?? []}
             onCannedReply={useCannedReply}
             preferences={preferences}
+            replyFocusRequest={replyFocusRequest}
           />
         }
-        context={selected ? <StudentContextPanel conversation={selected} onConversationChange={(updated) => { setSelected(updated); setBootstrap((current) => current ? { ...current, conversations: current.conversations.map((item) => item.id === updated.id ? updated : item) } : current); }}/> : undefined}
+        context={selected ? <StudentContextPanel conversation={selected} onActionCompleted={() => setReplyFocusRequest((request) => request + 1)} onConversationChange={(updated) => { setSelected(updated); setBootstrap((current) => current ? { ...current, conversations: current.conversations.map((item) => item.id === updated.id ? updated : item) } : current); }}/> : undefined}
       />
     </div>}
     <StaffCannedRepliesDialog open={isRepliesDialogOpen} replies={personalReplies} saving={repliesSaving} error={repliesError} onClose={() => { if (!repliesSaving) setIsRepliesDialogOpen(false); }} onChange={setPersonalReplies} onSave={() => void savePersonalReplies()} />
+    <AdminModal open={conversationAction === 'transfer'} onClose={() => !pendingAction && setConversationAction(null)} title="تحويل المحادثة" size="sm">
+      <p className="mb-4 text-sm leading-6 text-[var(--admin-muted)]">ستعود المحادثة إلى التوزيع ليكملها موظف آخر. اكتب سببًا مختصرًا يساعده على المتابعة دون سؤال الطالب من البداية.</p>
+      <label className="block text-sm font-bold text-[var(--admin-text)]" htmlFor="transfer-reason">سبب التحويل</label>
+      <textarea id="transfer-reason" autoFocus value={transferReason} onChange={(event) => { setTransferReason(event.target.value); setActionValidationError(''); }} rows={4} className="mt-2 w-full resize-none rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-3 text-[var(--admin-text)] outline-none focus-visible:border-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary-15)]" placeholder="مثال: يحتاج مراجعة مسؤول المدفوعات" />
+      {actionValidationError ? <p role="alert" className="mt-2 text-sm font-medium text-[var(--admin-danger)]">{actionValidationError}</p> : null}
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" disabled={Boolean(pendingAction)} onClick={() => setConversationAction(null)} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-4 font-bold text-[var(--admin-text)]">إلغاء</button>
+        <button type="button" disabled={Boolean(pendingAction)} onClick={confirmTransfer} className="min-h-11 rounded-xl bg-[var(--admin-primary)] px-4 font-bold text-white disabled:opacity-50">{pendingAction === 'transfer' ? 'جارٍ التحويل…' : 'تحويل المحادثة'}</button>
+      </div>
+    </AdminModal>
+    <AdminModal open={conversationAction === 'close'} onClose={() => !pendingAction && setConversationAction(null)} title="إنهاء المحادثة" size="sm">
+      <p className="text-sm leading-6 text-[var(--admin-muted)]">سيتم إنهاء المحادثة وإزالتها من قائمة المحادثات النشطة. سيظل سجلها محفوظًا في ملف الطالب.</p>
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" disabled={Boolean(pendingAction)} onClick={() => setConversationAction(null)} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-4 font-bold text-[var(--admin-text)]">العودة للمحادثة</button>
+        <button type="button" disabled={Boolean(pendingAction)} onClick={() => void close()} className="min-h-11 rounded-xl bg-[var(--admin-danger)] px-4 font-bold text-white disabled:opacity-50">{pendingAction === 'close' ? 'جارٍ الإنهاء…' : 'إنهاء المحادثة'}</button>
+      </div>
+    </AdminModal>
   </AssistantPage></NavRouteGuard>;
 }
 

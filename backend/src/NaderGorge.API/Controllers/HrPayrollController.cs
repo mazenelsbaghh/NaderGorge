@@ -113,7 +113,7 @@ public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runS
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [HttpGet("self/payslips"), HasPermission(HrPermissions.PayrollView)]
+    [HttpGet("self/payslips"), HasPermission(HrPermissions.PayrollSelf)]
     public async Task<IActionResult> MyPayslips(CancellationToken ct)
     {
         var userId = User.RequireUserId();
@@ -124,7 +124,7 @@ public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runS
                 payslip = db.Payslips.Where(slip => slip.EmployeePayrollId == item.Id).OrderByDescending(slip => slip.Version).Select(slip => new { slip.Id, slip.Version, slip.AssetReference, slip.ContentHash }).FirstOrDefault() }).ToListAsync(ct));
     }
 
-    [HttpGet("self/financial-requests"), HasPermission(HrPermissions.PayrollView)]
+    [HttpGet("self/financial-requests"), HasPermission(HrPermissions.PayrollSelf)]
     public async Task<IActionResult> MyFinancialRequests(CancellationToken ct)
     {
         var userId = User.RequireUserId();
@@ -134,7 +134,7 @@ public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runS
                 installments = item.Installments.OrderBy(row => row.Sequence).Select(row => new { row.Id, row.Sequence, row.DueDate, row.Amount, state = row.State.ToString(), row.AppliedAt }) }).ToListAsync(ct));
     }
 
-    [HttpPost("self/financial-requests"), HasPermission(HrPermissions.PayrollView)]
+    [HttpPost("self/financial-requests"), HasPermission(HrPermissions.PayrollSelf)]
     public async Task<IActionResult> SubmitFinancialRequest(SubmitFinancialRequest request, CancellationToken ct)
     {
         var result = await financialRequestService.SubmitAsync(User.RequireUserId(), request.Type, request.Amount, request.Installments, request.Reason, request.AttachmentReference, ct);

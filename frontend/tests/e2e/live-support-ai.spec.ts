@@ -689,9 +689,9 @@ test.describe("AI live support staff and administration", () => {
 
     // Verify stats tab
     await page.getByRole("tab", { name: "الإحصائيات والأدلة" }).click();
-    await expect(page.getByText("١٢", { exact: true })).toBeVisible(); // active conversations
-    await expect(page.getByText("٤٥", { exact: true })).toBeVisible(); // resolved
-    await expect(page.getByText("١٩", { exact: true })).toBeVisible(); // successful actions
+    await expect(page.getByText("12", { exact: true })).toBeVisible(); // active conversations
+    await expect(page.getByText("45", { exact: true })).toBeVisible(); // resolved
+    await expect(page.getByText("19", { exact: true })).toBeVisible(); // successful actions
 
     // Return to settings
     await page.getByRole("tab", { name: "الإعدادات وقاعدة القرار" }).click();

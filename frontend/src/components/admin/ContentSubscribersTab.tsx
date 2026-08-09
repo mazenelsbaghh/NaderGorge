@@ -20,7 +20,7 @@ const PAGE_SIZE = 10;
 
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo',
+    return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'short',
       day: 'numeric',

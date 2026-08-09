@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
 
-public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
+public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, bool IsRegeneratingMindmap, int Order);
 public record LessonCockpitVideoExamDto(Guid ExamId, string Title);
 public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
 public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
@@ -98,7 +98,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
             lesson.Videos.OrderBy(v => v.Order).Select(v =>
             {
                 var chapters = v.VideoChapters?.OrderBy(c => c.Order)
-                    .Select(c => new LessonCockpitVideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
+                    .Select(c => new LessonCockpitVideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.IsRegeneratingMindmap, c.Order))
                     .ToList();
 
                 var examsForVideo = videoExams

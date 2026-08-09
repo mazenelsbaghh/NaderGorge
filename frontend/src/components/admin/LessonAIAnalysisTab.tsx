@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import NextImage from 'next/image';
 import {
   Sparkles,
@@ -15,6 +15,7 @@ import {
   FileArchive,
   FileText,
   Palette,
+  Shuffle,
   UserRound,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -39,7 +40,7 @@ interface LessonAIAnalysisTabProps {
 }
 
 const VISUAL_STYLES = [
-  { id: 'random', label: 'عشوائي' },
+  { id: 'random', label: 'عشوائي لكل صورة' },
   { id: 'editorial-infographic', label: 'إنفوجرافيك' },
   { id: 'cinematic-3d', label: 'سينمائي 3D' },
   { id: 'scientific-notebook', label: 'كراسة علمية' },
@@ -48,7 +49,7 @@ const VISUAL_STYLES = [
 ];
 
 const TEACHER_STYLES = [
-  { id: 'random', label: 'عشوائي' },
+  { id: 'random', label: 'عشوائي لكل صورة' },
   { id: 'photorealistic', label: 'واقعي' },
   { id: 'cartoon', label: 'كرتوني' },
   { id: '3d-character', label: 'شخصية 3D' },
@@ -82,9 +83,19 @@ export function LessonAIAnalysisTab({
     string | null
   >(null);
   const [styles, setStyles] = useState<MindmapStyleSelection>({
-    visualStyles: ['editorial-infographic'],
-    teacherStyles: ['photorealistic'],
+    visualStyles: ['random'],
+    teacherStyles: ['random'],
   });
+  const hasRegeneratingChapter = videos.some((video) =>
+    video.chapters?.some((chapter: any) => chapter.isRegeneratingMindmap)
+  );
+
+  useEffect(() => {
+    if (!hasRegeneratingChapter || !onRefresh) return;
+
+    const refreshTimer = window.setInterval(onRefresh, 3_000);
+    return () => window.clearInterval(refreshTimer);
+  }, [hasRegeneratingChapter, onRefresh]);
 
   if (!videos || videos.length === 0) {
     return (
@@ -126,12 +137,12 @@ export function LessonAIAnalysisTab({
     setRegeneratingChapterId(chapter.id);
     try {
       await adminService.regenerateChapterMindmap(chapter.id, styles);
+      onRefresh?.();
       toast.success(
         chapter.mindmapImageUrl
           ? 'جاري إعادة تصميم صورة الشابتر'
           : 'جاري توليد صورة الشابتر'
       );
-      onRefresh?.();
     } catch (err: any) {
       toast.error(
         err?.response?.data?.message || 'تعذر تشغيل توليد صورة الشابتر'
@@ -195,6 +206,13 @@ export function LessonAIAnalysisTab({
             اختار حتى 3 اختيارات من كل مجموعة. سيتم استخدام كل صور المدرس مع
             تثبيت ملامحه، ويسمح فقط بتغيير الملابس والوضعية والخلفية.
           </p>
+          {(styles.visualStyles.includes('random') ||
+            styles.teacherStyles.includes('random')) && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-teal-700">
+              <Shuffle className="h-3.5 w-3.5" />
+              العشوائي يختار شكلًا مختلفًا لكل صورة عند توليدها.
+            </p>
+          )}
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <StyleChoices
@@ -453,20 +471,27 @@ export function LessonAIAnalysisTab({
                       <button
                         type="button"
                         onClick={() => handleRegenerateChapterMindmap(ch)}
-                        disabled={regeneratingChapterId === ch.id}
-                        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--admin-primary)]/25 bg-[var(--admin-primary-15)] px-3 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={
+                          regeneratingChapterId === ch.id ||
+                          ch.isRegeneratingMindmap
+                        }
+                        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--admin-primary)]/25 bg-[var(--admin-primary-15)] px-3 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)]/20 disabled:cursor-wait disabled:opacity-70"
                         title={
                           ch.mindmapImageUrl
                             ? 'إعادة تصميم صورة هذا الشابتر فقط'
                             : 'توليد صورة لهذا الشابتر فقط'
                         }
                       >
-                        {regeneratingChapterId === ch.id ? (
+                        {regeneratingChapterId === ch.id ||
+                        ch.isRegeneratingMindmap ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <Sparkles className="h-3.5 w-3.5" />
                         )}
-                        {ch.mindmapImageUrl
+                        {regeneratingChapterId === ch.id ||
+                        ch.isRegeneratingMindmap
+                          ? 'جاري إعادة توليد الصورة...'
+                          : ch.mindmapImageUrl
                           ? 'إعادة تصميم صورة الشابتر'
                           : 'توليد صورة الشابتر'}
                       </button>

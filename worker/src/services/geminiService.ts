@@ -1,9 +1,10 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { FileState, GoogleGenAI, Type } from '@google/genai';
 import { Agent, setGlobalDispatcher } from 'undici';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'node:crypto';
-import { execFileSync, execSync } from 'child_process';
+import { execFile, execFileSync, execSync } from 'child_process';
+import { promisify } from 'node:util';
 import { readAIConfig, type AIConfig } from './aiConfig.js';
 import { executeGeminiRequest, executeRetriableGeminiRequest, GeminiDeveloperApiError } from './aiProvider.js';
 import { classifyAIError } from './aiErrors.js';
@@ -19,12 +20,14 @@ setGlobalDispatcher(new Agent({
   bodyTimeout: providerTimeoutMs,
 }));
 
-type GenAIClient = Pick<GoogleGenAI, 'models'>;
+type GenAIClient = Pick<GoogleGenAI, 'models' | 'files'>;
 type GeneratedContent = Awaited<ReturnType<GenAIClient['models']['generateContent']>>;
 type InlineAudioData = { mimeType: string; data: string };
+type AudioPart = { inlineData: InlineAudioData } | { fileData: { fileUri: string; mimeType: string } };
 // Gemini direct inline requests are capped at 20 MB. Reserve room for JSON/prompt overhead.
 const MAX_INLINE_AUDIO_BYTES = 14 * 1024 * 1024;
 const INLINE_AUDIO_BITRATE = '12k';
+const execFileAsync = promisify(execFile);
 
 interface AudioGenerationRequest {
   operation: 'transcription' | 'chapters';
@@ -143,15 +146,16 @@ function parseChapters(text: string): VideoAIResult['chapters'] {
 
 class InlineAudioFile {
   private compressedPath?: string;
-  private inlineData?: InlineAudioData;
+  private audioPart?: AudioPart;
+  private uploadedFileName?: string;
 
-  constructor(private readonly audioFilePath: string) {}
+  constructor(private readonly runtime: AIRuntime, private readonly audioFilePath: string) {}
 
-  reference(): InlineAudioData {
-    if (!this.inlineData) {
+  async reference(): Promise<AudioPart> {
+    if (!this.audioPart) {
       const target = path.join(path.dirname(this.audioFilePath), `.${path.basename(this.audioFilePath)}.${randomUUID()}.inline.mp3`);
       try {
-        execFileSync('ffmpeg', ['-y', '-i', this.audioFilePath, '-vn', '-ac', '1', '-ar', '16000', '-b:a', INLINE_AUDIO_BITRATE, target], { stdio: 'ignore', timeout: providerTimeoutMs });
+        await execFileAsync('ffmpeg', ['-y', '-i', this.audioFilePath, '-vn', '-ac', '1', '-ar', '16000', '-b:a', INLINE_AUDIO_BITRATE, target], { timeout: providerTimeoutMs });
       } catch {
         throw new Error('Could not compress audio for the direct Gemini request.');
       }
@@ -161,18 +165,38 @@ class InlineAudioFile {
         compressedBytes: size,
         bitrate: INLINE_AUDIO_BITRATE,
       });
-      if (size > MAX_INLINE_AUDIO_BYTES) {
-        fs.unlinkSync(target);
-        throw new Error('Lesson audio remains too large for Gemini inline input; split the lesson before analysis.');
-      }
       this.compressedPath = target;
-      this.inlineData = { mimeType: 'audio/mpeg', data: fs.readFileSync(target).toString('base64') };
+      if (size > MAX_INLINE_AUDIO_BYTES) {
+        this.audioPart = await this.upload(target);
+      } else {
+        this.audioPart = { inlineData: { mimeType: 'audio/mpeg', data: fs.readFileSync(target).toString('base64') } };
+      }
     }
-    return this.inlineData;
+    return this.audioPart;
   }
 
-  delete() {
-    if (this.compressedPath && fs.existsSync(this.compressedPath)) fs.unlinkSync(this.compressedPath);
+  private async upload(filePath: string): Promise<AudioPart> {
+    let uploaded = await this.runtime.developer.files.upload({ file: filePath, config: { mimeType: 'audio/mpeg' } });
+    if (!uploaded.name) throw new Error('Gemini Files API returned an unnamed audio file.');
+    const uploadedFileName = uploaded.name;
+    this.uploadedFileName = uploadedFileName;
+    const deadline = Date.now() + providerTimeoutMs;
+    while (uploaded.state === FileState.PROCESSING && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      uploaded = await this.runtime.developer.files.get({ name: uploadedFileName });
+    }
+    if (uploaded.state !== FileState.ACTIVE || !uploaded.uri) {
+      throw new Error(`Gemini could not prepare the uploaded lesson audio: ${uploaded.error?.message || uploaded.state || 'unknown state'}.`);
+    }
+    return { fileData: { fileUri: uploaded.uri, mimeType: uploaded.mimeType || 'audio/mpeg' } };
+  }
+
+  async delete() {
+    try {
+      if (this.uploadedFileName) await this.runtime.developer.files.delete({ name: this.uploadedFileName });
+    } finally {
+      if (this.compressedPath && fs.existsSync(this.compressedPath)) fs.unlinkSync(this.compressedPath);
+    }
   }
 }
 
@@ -181,18 +205,25 @@ async function generateAudioContent(
   inlineAudio: InlineAudioFile,
   generation: AudioGenerationRequest,
 ): Promise<GeneratedContent> {
-  const audio = inlineAudio.reference();
-  const requestFor = (audio: InlineAudioData) => ({
+  const audioPart = await inlineAudio.reference();
+  const requestFor = (part: AudioPart, abortSignal: AbortSignal) => ({
     model: runtime.config.textModel,
-    contents: [{ role: 'user', parts: [{ inlineData: audio }, { text: generation.prompt }] }],
-    config: { responseMimeType: generation.responseMimeType, ...(generation.responseSchema ? { responseSchema: generation.responseSchema } : {}) },
+    contents: [{ role: 'user', parts: [part, { text: generation.prompt }] }],
+    config: {
+      abortSignal,
+      responseMimeType: generation.responseMimeType,
+      ...(generation.responseSchema ? { responseSchema: generation.responseSchema } : {}),
+    },
   });
-  return executeRetriableGeminiRequest(() => runtime.developer.models.generateContent(requestFor(audio)));
+  console.log('[AI provider] Starting Gemini audio request.', {
+    operation: generation.operation,
+  });
+  return executeRetriableGeminiRequest((abortSignal) => runtime.developer.models.generateContent(requestFor(audioPart, abortSignal)));
 }
 
 export async function transcribeVideoAudio(audioFilePath: string): Promise<string> {
   const runtime = createRuntime();
-  const developerAudio = new InlineAudioFile(audioFilePath);
+  const developerAudio = new InlineAudioFile(runtime, audioFilePath);
   try {
     const srtResponse = await generateAudioContent(runtime, developerAudio, {
       operation: 'transcription',
@@ -203,13 +234,13 @@ export async function transcribeVideoAudio(audioFilePath: string): Promise<strin
     if (!srtContent) throw new Error('AI transcription returned empty SRT content.');
     return srtContent;
   } finally {
-    developerAudio.delete();
+    await developerAudio.delete();
   }
 }
 
 export async function generateVideoChapters(audioFilePath: string): Promise<VideoAIResult['chapters']> {
   const runtime = createRuntime();
-  const developerAudio = new InlineAudioFile(audioFilePath);
+  const developerAudio = new InlineAudioFile(runtime, audioFilePath);
   try {
     const chaptersResponse = await generateAudioContent(runtime, developerAudio, {
       operation: 'chapters',
@@ -221,7 +252,7 @@ export async function generateVideoChapters(audioFilePath: string): Promise<Vide
     if (!chaptersText) throw new Error('AI chapter analysis returned empty content.');
     return parseChapters(chaptersText);
   } finally {
-    developerAudio.delete();
+    await developerAudio.delete();
   }
 }
 
@@ -258,7 +289,10 @@ Do not return any markdown code blocks, just raw JSON.`;
 export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: string, questionText?: string): Promise<EssayAIResult> {
   const runtime = createRuntime();
   const request = { model: runtime.config.textModel, contents: essayEvaluationPrompt(answerText, expectedAnswer, questionText), config: { responseMimeType: 'application/json' } };
-  const response = await executeGeminiRequest(() => runtime.developer.models.generateContent(request));
+  const response = await executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
+    ...request,
+    config: { ...request.config, abortSignal },
+  }));
   const parsed = JSON.parse(response.text || '{}') as Partial<EssayAIResult>;
   if (typeof parsed.isCorrect !== 'boolean' || typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
     throw new Error('AI essay evaluation returned an invalid result.');
@@ -386,7 +420,10 @@ export async function generateChapterMindmap(
       contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths, options) }],
       config: { aspectRatio: '16:9' },
     } as any;
-    const response = await executeGeminiRequest(() => runtime.developer.models.generateContent(request));
+    const response = await executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
+      ...request,
+      config: { ...request.config, abortSignal },
+    }));
     const imagePart = response.candidates?.[0]?.content?.parts?.find((responsePart) => responsePart.inlineData?.data);
     if (!imagePart?.inlineData?.data) {
       throw new Error(`AI image provider returned no image for chapter ${chapter.order}.`);
@@ -473,7 +510,10 @@ export async function generateLiveSupportReply(prompt: LiveSupportAgentPrompt): 
   };
   const remainingMs = Date.parse(prompt.deadlineAt) - Date.now();
   if (remainingMs <= 0) throw new Error('AI_PROVIDER_DEADLINE_EXCEEDED');
-  const execute = () => executeGeminiRequest(() => runtime.developer.models.generateContent(request));
+  const execute = () => executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
+    ...request,
+    config: { ...request.config, abortSignal },
+  }));
   const withDeadline = async () => {
     const remainingMs = Date.parse(prompt.deadlineAt) - Date.now();
     if (remainingMs <= 0) throw new Error('AI_PROVIDER_DEADLINE_EXCEEDED');

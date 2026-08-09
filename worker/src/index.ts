@@ -20,6 +20,7 @@ import { generateLiveSupportReply } from './services/geminiService.js';
 import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
 import { fetchWithTimeout } from './services/workerFetch.js';
 import { createRedisConnection, redisConnectionOptions } from './config/redis.js';
+import { monitorRedisSentinelAvailability } from './config/redisAvailabilityMonitor.js';
 import { scheduleClusterCron } from './scheduling/clusterCron.js';
 import { databaseUrl } from './config/database.js';
 import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
@@ -45,6 +46,7 @@ const JOB_RETENTION_OPTIONS = {
 
 const redis = createRedisConnection();
 installSystemLogCapture(redis);
+monitorRedisSentinelAvailability(redis);
 const pool = new Pool({
   connectionString: databaseUrl()
 });
@@ -134,7 +136,13 @@ async function startAIWorker() {
     // Dynamic import to avoid loading heavy modules if not needed immediately
     const processor = await import('./jobs/analyzeVideoChapters.js');
     return await processor.default(job);
-  }, { connection });
+  }, {
+    connection,
+    lockDuration: 10 * 60_000,
+    lockRenewTime: 30_000,
+    stalledInterval: 60_000,
+    maxStalledCount: 2,
+  });
 
   worker.on('progress', (job, progress) => {
     reportProgressToBackend(job.id!, progress);

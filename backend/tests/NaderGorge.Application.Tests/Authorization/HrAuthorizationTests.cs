@@ -13,8 +13,10 @@ namespace NaderGorge.Application.Tests.Authorization;
 
 public sealed class HrAuthorizationTests
 {
-    [Fact]
-    public async Task HttpPermissionFilter_AllowsProvisionedEmployeeToAccessOwnAttendanceWithoutLegacyClaim()
+    [Theory]
+    [InlineData(HrPermissions.AttendanceSelf)]
+    [InlineData(HrPermissions.PayrollSelf)]
+    public async Task HttpPermissionFilter_AllowsProvisionedEmployeeToAccessSelfServiceWithoutLegacyClaim(string permission)
     {
         await using var db = TestAppDbContextFactory.Create();
         var userId = Guid.NewGuid();
@@ -27,9 +29,28 @@ public sealed class HrAuthorizationTests
         };
         var context = new AuthorizationFilterContext(new ActionContext(http, new RouteData(), new ActionDescriptor()), []);
 
-        await new PermissionFilter(HrPermissions.AttendanceSelf, db).OnAuthorizationAsync(context);
+        await new PermissionFilter(permission, db).OnAuthorizationAsync(context);
 
         Assert.Null(context.Result);
+    }
+
+    [Fact]
+    public async Task HttpPermissionFilter_DoesNotGrantAdministrativePayrollViewToProvisionedEmployee()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var userId = Guid.NewGuid();
+        db.EmployeeProfiles.Add(new EmployeeProfile { UserId = userId, EmployeeNumber = EmployeeProfile.GenerateEmployeeNumber(Guid.NewGuid()) });
+        await db.SaveChangesAsync();
+
+        var http = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "test"))
+        };
+        var context = new AuthorizationFilterContext(new ActionContext(http, new RouteData(), new ActionDescriptor()), []);
+
+        await new PermissionFilter(HrPermissions.PayrollView, db).OnAuthorizationAsync(context);
+
+        Assert.IsType<ForbidResult>(context.Result);
     }
 
     [Theory]

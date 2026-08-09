@@ -15,7 +15,7 @@ import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 
 const formatDateTime = (value: string | null) => {
   if (!value) return "غير معروف";
-  return new Intl.DateTimeFormat("ar-EG", { timeZone: 'Africa/Cairo',
+  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo',
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -23,12 +23,12 @@ const formatDateTime = (value: string | null) => {
 
 const formatMinutes = (seconds: number) => {
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes.toLocaleString("ar-EG")} دقيقة`;
+  if (minutes < 60) return `${minutes.toLocaleString("ar-EG-u-nu-latn")} دقيقة`;
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   return remainingMinutes === 0
-    ? `${hours.toLocaleString("ar-EG")} ساعة`
-    : `${hours.toLocaleString("ar-EG")} ساعة و${remainingMinutes.toLocaleString("ar-EG")} دقيقة`;
+    ? `${hours.toLocaleString("ar-EG-u-nu-latn")} ساعة`
+    : `${hours.toLocaleString("ar-EG-u-nu-latn")} ساعة و${remainingMinutes.toLocaleString("ar-EG-u-nu-latn")} دقيقة`;
 };
 
 export default function TeacherActivityPageClient() {
@@ -121,7 +121,7 @@ export default function TeacherActivityPageClient() {
       align: "center",
       render: (video) => (
         <span className="font-black text-[var(--admin-primary)]">
-          {video.totalWatchCount.toLocaleString("ar-EG")}
+          {video.totalWatchCount.toLocaleString("ar-EG-u-nu-latn")}
         </span>
       ),
     },
@@ -163,7 +163,7 @@ export default function TeacherActivityPageClient() {
       align: "center",
       render: (alert) => (
         <span className="inline-flex rounded-full bg-rose-500/10 px-3 py-1 text-xs font-black text-rose-600">
-          {alert.daysInactive.toLocaleString("ar-EG")} يوم
+          {alert.daysInactive.toLocaleString("ar-EG-u-nu-latn")} يوم
         </span>
       ),
     },
@@ -220,14 +220,14 @@ export default function TeacherActivityPageClient() {
             variant="light"
             icon={Users}
             label="طلاب ظهر لهم نشاط"
-            value={activeStudents.length.toLocaleString("ar-EG")}
+            value={activeStudents.length.toLocaleString("ar-EG-u-nu-latn")}
             subtitle="حسب آخر مشاهدات مسجلة"
           />
           <AdminStatCard
             variant="muted"
             icon={Play}
             label="إجمالي المشاهدات"
-            value={totalWatchCount.toLocaleString("ar-EG")}
+            value={totalWatchCount.toLocaleString("ar-EG-u-nu-latn")}
             subtitle="ضمن الفيديوهات الأكثر مشاهدة"
           />
           <AdminStatCard
@@ -241,7 +241,7 @@ export default function TeacherActivityPageClient() {
             variant={inactiveStudentAlerts.length > 0 ? "muted" : "light"}
             icon={AlertTriangle}
             label="تنبيهات خمول"
-            value={inactiveStudentAlerts.length.toLocaleString("ar-EG")}
+            value={inactiveStudentAlerts.length.toLocaleString("ar-EG-u-nu-latn")}
             subtitle={latestActivity ? `آخر نشاط: ${formatDateTime(latestActivity)}` : "لا توجد بيانات حديثة"}
           />
         </section>
@@ -259,7 +259,7 @@ export default function TeacherActivityPageClient() {
                 </div>
               </div>
               <span className="rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-black text-[var(--admin-text)]">
-                {activeStudents.length.toLocaleString("ar-EG")} نشاط
+                {activeStudents.length.toLocaleString("ar-EG-u-nu-latn")} نشاط
               </span>
             </div>
 
@@ -328,7 +328,7 @@ export default function TeacherActivityPageClient() {
                         <p className="mt-1 line-clamp-1 text-xs font-bold text-[var(--admin-muted)]">{alert.packageName}</p>
                       </div>
                       <span className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-black text-rose-600">
-                        {alert.daysInactive.toLocaleString("ar-EG")} يوم
+                        {alert.daysInactive.toLocaleString("ar-EG-u-nu-latn")} يوم
                       </span>
                     </div>
                     <p className="mt-3 flex items-center gap-2 text-xs font-bold text-rose-600">
@@ -367,10 +367,10 @@ export default function TeacherActivityPageClient() {
                 <article key={video.videoId} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-sm font-black text-[var(--admin-primary)]">
-                      {(index + 1).toLocaleString("ar-EG")}
+                      {(index + 1).toLocaleString("ar-EG-u-nu-latn")}
                     </span>
                     <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-700">
-                      {video.totalWatchCount.toLocaleString("ar-EG")} مشاهدة
+                      {video.totalWatchCount.toLocaleString("ar-EG-u-nu-latn")} مشاهدة
                     </span>
                   </div>
                   <h3 className="line-clamp-2 min-h-11 text-sm font-black leading-6 text-[var(--admin-text)]">{video.videoTitle}</h3>

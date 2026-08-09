@@ -34,7 +34,7 @@ const TABS: AdminTab<CommunityTab>[] = [
 
 const formatDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat("ar-EG", { timeZone: 'Africa/Cairo', dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
+    ? new Intl.DateTimeFormat("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo', dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
     : "—";
 
 const statusLabel = (status: string) =>

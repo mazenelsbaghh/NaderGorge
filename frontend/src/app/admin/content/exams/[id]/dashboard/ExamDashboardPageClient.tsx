@@ -331,11 +331,11 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                   <div className="space-y-1">
                     <div className="text-xs text-[var(--admin-muted)]">
                       <span className="font-bold inline-block w-12 text-[var(--admin-text)] opacity-70">البدء:</span> 
-                      {row.startedAt ? new Date(row.startedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
+                      {row.startedAt ? new Date(row.startedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
                     </div>
                     <div className="text-xs text-[var(--admin-muted)]">
                       <span className="font-bold inline-block w-12 text-[var(--admin-text)] opacity-70">التسليم:</span> 
-                      {row.submittedAt ? new Date(row.submittedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
+                      {row.submittedAt ? new Date(row.submittedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' }) : '---'}
                     </div>
                   </div>
                 )

@@ -15,7 +15,7 @@ type CommunityFeedProps = {
 };
 
 const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
 export function CommunityFeed({ posts, loading = false }: CommunityFeedProps) {
   return (

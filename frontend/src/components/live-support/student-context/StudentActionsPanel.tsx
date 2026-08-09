@@ -203,7 +203,7 @@ export function StudentActionsPanel({
               : value,
           ])
       );
-      const response = await liveSupportService.executeStudentAction<
+      await liveSupportService.executeStudentAction<
         Record<string, unknown>,
         { message: string }
       >(
@@ -213,8 +213,8 @@ export function StudentActionsPanel({
         selected.confirmationVersion,
         payload
       );
-      setResult(response.message);
       setConfirming(false);
+      setSelected(undefined);
       onCompleted();
     } catch (cause) {
       const errors = (cause as { response?: { data?: { errors?: string[] } } }).response?.data?.errors;

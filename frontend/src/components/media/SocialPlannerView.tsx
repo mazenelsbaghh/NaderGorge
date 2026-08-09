@@ -342,7 +342,7 @@ export default function SocialPlannerView() {
                   <div className="flex items-center justify-between">
                     {/* Date/Time Badge */}
                     <span className="text-xs font-extrabold text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full">
-                      {planDate.getDate()} {monthNamesArabic[planDate.getMonth()]} - {planDate.toLocaleTimeString('ar-EG', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}
+                      {planDate.getDate()} {monthNamesArabic[planDate.getMonth()]} - {planDate.toLocaleTimeString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {/* Platform */}
                     <span className={`flex items-center gap-1.5 text-xs font-bold ${platInfo.color}`}>

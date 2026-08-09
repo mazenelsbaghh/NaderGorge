@@ -79,7 +79,7 @@ export function ThanaweyaResultsClient() {
           <div aria-hidden="true" className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full border-[32px] border-white/10" />
           <div className="relative">
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15"><GraduationCap className="h-7 w-7" aria-hidden="true" /></span>
-            <p className="mt-8 text-sm font-extrabold tracking-[0.12em] text-white/75">الثانوية العامة · ٢٠٢٦</p>
+            <p className="mt-8 text-sm font-extrabold tracking-[0.12em] text-white/75">الثانوية العامة · 2026</p>
             <h1 className="mt-3 text-4xl font-black leading-[1.15] sm:text-5xl">نتيجتك<br />بين إيديك</h1>
             <p className="mt-5 max-w-sm text-base font-semibold leading-8 text-white/85">اكتب رقم جلوسك فقط، وستظهر بياناتك ودرجتك من قاعدة البيانات الموحدة للمنصة.</p>
           </div>

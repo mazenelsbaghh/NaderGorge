@@ -791,7 +791,7 @@ export function RechargeVerificationWorkspace() {
           </div>
 
           {/* Unmatched SMS Panel */}
-          <div className="admin-panel flex h-[clamp(28rem,calc(100dvh-18rem),700px)] min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6">
+          <div className="admin-panel flex min-h-0 min-w-0 flex-col overflow-visible rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:max-h-[52rem] lg:overflow-hidden">
             <h2 className="mb-2 flex shrink-0 items-center gap-2 text-lg font-black text-[var(--admin-text)]">
               <Smartphone className="h-5 w-5 text-[var(--admin-primary)]" />
               الرسائل غير المطابقة ({unmatchedSmsCount})
@@ -833,7 +833,7 @@ export function RechargeVerificationWorkspace() {
               role="region"
               aria-label="الرسائل غير المطابقة"
               tabIndex={0}
-              className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2 overflow-y-auto overscroll-contain pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+              className="flex min-h-0 flex-none touch-pan-y flex-col gap-2 overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pe-2 lg:[scrollbar-gutter:stable] lg:[-webkit-overflow-scrolling:touch]"
             >
               {loading ? (
                 [1, 2, 3].map(i => (

@@ -84,7 +84,7 @@ public class VideoSessionController : ControllerBase
     public async Task<IActionResult> GetEmbedMaterial(Guid sessionId, CancellationToken ct)
     {
         var session = await _db.VideoPlaybackSessions
-            .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsConsumed && s.ExpiresAt > DateTime.UtcNow, ct);
+            .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsSuperseded && s.ExpiresAt > DateTime.UtcNow, ct);
 
         if (session == null)
         {

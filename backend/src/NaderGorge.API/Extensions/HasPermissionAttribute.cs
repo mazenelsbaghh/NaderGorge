@@ -47,10 +47,12 @@ public class PermissionFilter : IAsyncAuthorizationFilter
             return;
         }
 
-        // Attendance is an employee entitlement, not an optional staff-role permission.
-        // Provisioned Staff accounts may not carry the legacy hr.attendance.self
-        // claim, but must still be able to view and record their own attendance.
-        if (_permission.Equals(HrPermissions.AttendanceSelf, StringComparison.OrdinalIgnoreCase)
+        // Self-service HR features are employee entitlements, not optional
+        // staff-role permissions. Older provisioned Staff accounts may not
+        // carry these explicit claims, so the employee profile is authoritative.
+        var isEmployeeSelfService = _permission.Equals(HrPermissions.AttendanceSelf, StringComparison.OrdinalIgnoreCase)
+            || _permission.Equals(HrPermissions.PayrollSelf, StringComparison.OrdinalIgnoreCase);
+        if (isEmployeeSelfService
             && Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var employeeUserId)
             && await _db.EmployeeProfiles.AnyAsync(item => item.UserId == employeeUserId, context.HttpContext.RequestAborted))
         {

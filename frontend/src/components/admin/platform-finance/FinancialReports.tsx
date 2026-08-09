@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import platformFinanceService, { PlatformFinancialReport } from '@/services/platform-finance-service';
 
-const money = (value: number) => `${new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 2 }).format(value)} ج.م`;
+const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 export default function FinancialReports() {
   const today = new Date().toISOString().slice(0, 10);
   const [from, setFrom] = useState(`${today.slice(0, 8)}01`);

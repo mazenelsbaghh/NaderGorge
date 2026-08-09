@@ -34,7 +34,7 @@ function contentName(item: { name?: string; title?: string }) {
 }
 
 function formatPrice(price?: number) {
-  return typeof price === 'number' ? `${price.toLocaleString('ar-EG')} ج` : 'متاح';
+  return typeof price === 'number' ? `${price.toLocaleString('ar-EG-u-nu-latn')} ج` : 'متاح';
 }
 
 function safeExternalUrl(url?: string) {

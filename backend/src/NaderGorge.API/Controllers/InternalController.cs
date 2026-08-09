@@ -70,6 +70,14 @@ public class InternalController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [InternalTokenAuthorize("API_CALLBACK_SECRET")]
+    [HttpPost("single-mindmap-failed")]
+    public async Task<IActionResult> SingleMindmapFailed([FromBody] SingleMindmapFailedWebhookRequest request)
+    {
+        var result = await _mediator.Send(new SingleMindmapFailedCommand(request.ChapterId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
     [HttpPost("essay-graded")]
     public async Task<IActionResult> EssayGraded([FromBody] EssayGradedWebhookRequest request)
@@ -155,6 +163,11 @@ public class SingleMindmapCompletedWebhookRequest
 {
     public Guid ChapterId { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
+}
+
+public class SingleMindmapFailedWebhookRequest
+{
+    public Guid ChapterId { get; set; }
 }
 
 public class EssayGradedWebhookRequest

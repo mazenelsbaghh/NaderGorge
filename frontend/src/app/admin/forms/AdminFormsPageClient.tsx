@@ -187,7 +187,7 @@ export default function AdminFormsPageClient() {
     {
       key: 'createdAt',
       label: 'تاريخ الإنشاء',
-      render: (row) => new Date(row.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }),
+      render: (row) => new Date(row.createdAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }),
     },
     {
       key: 'actions',

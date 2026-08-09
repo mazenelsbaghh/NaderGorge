@@ -174,7 +174,7 @@ export function AssistantProfileModal({ open, onClose, assistant }: AssistantPro
                     <div>
                       <p className="text-xs text-[var(--admin-muted)]">تاريخ الإنشاء</p>
                       <p className="text-sm font-bold text-[var(--admin-text)]">
-                        {new Date(assistant.createdAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
+                        {new Date(assistant.createdAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
                       </p>
                     </div>
                   </div>

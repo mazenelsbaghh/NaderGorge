@@ -724,7 +724,7 @@ export default function ExamProfilePageClient({
                             )}
                           </td>
                           <td className="p-4 text-xs text-[var(--admin-muted)] font-medium">
-                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) : '—'}
+                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }) : '—'}
                           </td>
                         </tr>
                       ))}

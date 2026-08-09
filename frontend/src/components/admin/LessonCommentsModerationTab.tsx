@@ -30,7 +30,7 @@ const filterLabel: Record<FilterStatus, string> = {
 
 const formatDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat('ar-EG', { timeZone: 'Africa/Cairo',
+    ? new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(value))

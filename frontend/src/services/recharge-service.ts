@@ -36,7 +36,7 @@ export interface StudentRechargeRequestDto {
 }
 
 export const rechargeService = {
-  initiate: async (amount: number, teacherId?: string) => {
+  initiate: async (amount: number, teacherId: string) => {
     const { data } = await apiClient.post<{ success: boolean; data: InitiateRechargeResponse; message: string }>('/student/recharge/initiate', { amount, teacherId });
     return data;
   },

@@ -87,6 +87,9 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (rechargeRequest.Status != RechargeRequestStatus.Pending)
             return ApiResponse<SubmitRechargeDto>.Fail("تم معالجة هذا الطلب بالفعل مسبقاً");
 
+        if (!rechargeRequest.TeacherId.HasValue)
+            return ApiResponse<SubmitRechargeDto>.Fail("لا يمكن استكمال طلب شحن عام. ألغِ الطلب وأنشئ طلباً جديداً لرصيد مدرس.");
+
         if (!hasNewScreenshot && string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl))
             return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة");
 
@@ -120,6 +123,10 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         else if (senderPhoneChanged)
             rechargeRequest.SenderPhoneConfirmedAt = null;
         rechargeRequest.ReservationExpiresAt = null; // Clear expiration since it is now submitted
+
+        // The uniqueness query runs against persisted rows, so the proof and
+        // normalized sender phone must be visible before selecting a match.
+        await _db.SaveChangesAsync(ct);
 
         // 5. Try to find a matching, unmatched SMS that was already received
         // A pending row may be reused for a later reservation. Match against the

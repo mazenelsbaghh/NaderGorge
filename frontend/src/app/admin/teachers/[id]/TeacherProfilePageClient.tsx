@@ -789,7 +789,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       {row.status || 'مكتمل'}
                     </span>
                   )},
-                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={payouts}
                 rowKey={(row) => row.id || `${row.amount}-${row.createdAt}`}
@@ -809,7 +809,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   { key: 'studentName', label: 'الطالب', render: (row) => <span className="font-bold text-[var(--admin-text)]">{row.studentName || '—'}</span> },
                   { key: 'packageName', label: 'الباقة', render: (row) => <span className="text-sm text-[var(--admin-text)]">{row.packageName || '—'}</span> },
                   { key: 'code', label: 'الكود', render: (row) => <span className="font-mono text-sm text-[var(--admin-text)]">{row.code || '—'}</span> },
-                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={activations}
                 rowKey={(row) => row.id || `${row.code}-${row.activatedAt}`}

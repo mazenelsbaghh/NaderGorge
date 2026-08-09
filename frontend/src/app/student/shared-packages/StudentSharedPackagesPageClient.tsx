@@ -298,7 +298,7 @@ export default function StudentSharedPackagesPageClient() {
                       </div>
                     </div>
                     <div className="shrink-0 rounded-2xl bg-[#0A1D3D] px-4 py-3 text-center text-white">
-                      <div className="text-xl font-black">{item.price.toLocaleString('ar-EG')}</div>
+                      <div className="text-xl font-black">{item.price.toLocaleString('ar-EG-u-nu-latn')}</div>
                       <div className="text-xs font-bold text-white/75">جنيه</div>
                     </div>
                   </div>
@@ -310,7 +310,7 @@ export default function StudentSharedPackagesPageClient() {
                   <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-[var(--student-card-soft)] p-2">
                     <PackageStat label="مواد" value={detail ? grouped.length : item.teacherCount ?? 0} />
                     <PackageStat label="اخترت" value={selectedCount} />
-                    <PackageStat label="السعر" value={item.price.toLocaleString('ar-EG')} />
+                    <PackageStat label="السعر" value={item.price.toLocaleString('ar-EG-u-nu-latn')} />
                   </div>
                 </div>
 
@@ -436,23 +436,23 @@ function SharedPackageSelectionExperience({
             <div className="mt-6 flex flex-wrap gap-2">
               <SelectionHeroPill icon={GraduationCap} label={getEducationStageLabel(item.educationStage)} />
               <SelectionHeroPill icon={BookOpen} label={getGradeLevelLabel(item.gradeLevel)} />
-              <SelectionHeroPill icon={Users} label={`${groups.length.toLocaleString('ar-EG')} مواد`} />
-              <SelectionHeroPill icon={CheckCircle2} label={`${selectedCount.toLocaleString('ar-EG')} تم اختيارها`} />
+              <SelectionHeroPill icon={Users} label={`${groups.length.toLocaleString('ar-EG-u-nu-latn')} مواد`} />
+              <SelectionHeroPill icon={CheckCircle2} label={`${selectedCount.toLocaleString('ar-EG-u-nu-latn')} تم اختيارها`} />
             </div>
           </div>
 
           <div className="relative rounded-2xl bg-[#0A1D3D] p-5 text-white">
             <div className="absolute inset-x-5 top-0 h-px bg-[#D4A017]" />
             <div className="text-sm font-bold text-white/70">إجمالي الباكدج</div>
-            <div className="mt-2 text-4xl font-black">{item.price.toLocaleString('ar-EG')}</div>
+            <div className="mt-2 text-4xl font-black">{item.price.toLocaleString('ar-EG-u-nu-latn')}</div>
             <div className="mt-1 text-sm font-bold text-white/70">جنيه</div>
             <div className="mt-6 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white/10 p-3">
-                <div className="text-xl font-black">{groups.length.toLocaleString('ar-EG')}</div>
+                <div className="text-xl font-black">{groups.length.toLocaleString('ar-EG-u-nu-latn')}</div>
                 <div className="text-xs font-bold text-white/70">مواد</div>
               </div>
               <div className="rounded-xl bg-white/10 p-3">
-                <div className="text-xl font-black">{selectedCount.toLocaleString('ar-EG')}</div>
+                <div className="text-xl font-black">{selectedCount.toLocaleString('ar-EG-u-nu-latn')}</div>
                 <div className="text-xs font-bold text-white/70">اختيارات</div>
               </div>
             </div>
@@ -589,7 +589,7 @@ function SubjectFocusPanel({ group, selectedTeacherId }: { group: SubjectChoiceG
       <div className="mt-6 grid gap-3">
         <div className="flex items-center justify-between rounded-xl bg-[var(--student-card-soft)] px-4 py-3">
           <span className="text-sm font-black text-[var(--student-muted)]">المدرسين</span>
-          <span className="text-sm font-black text-[var(--student-text)]">{group.teachers.length.toLocaleString('ar-EG')}</span>
+          <span className="text-sm font-black text-[var(--student-text)]">{group.teachers.length.toLocaleString('ar-EG-u-nu-latn')}</span>
         </div>
         <div className="rounded-xl border border-[#0E8F8F]/20 bg-[#0E8F8F]/10 px-4 py-3">
           <span className="text-xs font-black text-[#0E8F8F]">اختيارك الحالي</span>
@@ -634,7 +634,7 @@ function TeacherSelectionCard({
               <h3 className="truncate text-xl font-black text-[var(--student-text)]">{teacher.teacherName}</h3>
               <p className="mt-1 flex items-center gap-1 text-xs font-bold text-[var(--student-muted)]">
                 <Clock3 className="h-3.5 w-3.5" />
-                {teacher.contentCount.toLocaleString('ar-EG')} عنصر محتوى داخل الاختيار
+                {teacher.contentCount.toLocaleString('ar-EG-u-nu-latn')} عنصر محتوى داخل الاختيار
               </p>
             </div>
             <span className={cn(
@@ -710,7 +710,7 @@ function PurchasedSharedPackages({ items }: { items: PurchasedSharedPackage[] })
                 </p>
               </div>
               <div className="rounded-2xl bg-[#0A1D3D] px-4 py-3 text-center text-white">
-                <div className="text-lg font-black">{item.price.toLocaleString('ar-EG')}</div>
+                <div className="text-lg font-black">{item.price.toLocaleString('ar-EG-u-nu-latn')}</div>
                 <div className="text-xs font-bold text-white/75">جنيه</div>
               </div>
             </div>
@@ -750,7 +750,7 @@ function PurchasedSharedPackages({ items }: { items: PurchasedSharedPackage[] })
 function HeaderMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-[var(--student-border)] bg-white px-4 py-3 text-center">
-      <div className="text-xl font-black text-[var(--student-text)]">{value.toLocaleString('ar-EG')}</div>
+      <div className="text-xl font-black text-[var(--student-text)]">{value.toLocaleString('ar-EG-u-nu-latn')}</div>
       <div className="text-xs font-bold text-[var(--student-muted)]">{label}</div>
     </div>
   );
@@ -795,7 +795,7 @@ function ReviewStep({
           <h3 className="mt-2 text-xl font-black text-[var(--student-text)]">{packageName}</h3>
         </div>
         <div className="rounded-xl bg-[#0A1D3D] px-4 py-2 text-sm font-black text-white">
-          الإجمالي {packagePrice.toLocaleString('ar-EG')} جنيه
+          الإجمالي {packagePrice.toLocaleString('ar-EG-u-nu-latn')} جنيه
         </div>
       </div>
 

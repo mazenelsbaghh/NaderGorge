@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { isAxiosError } from "axios";
 import Link from "next/link";
 import { BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Eye, Folder, FolderOpen, FileText, Upload, Layers3 } from "lucide-react";
 import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard, AdminTabBar, ContentSummaryPanel } from "@/components/admin";
@@ -8,6 +9,7 @@ import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { contentService, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from "@/services/content-service";
 import { adminService } from "@/services/admin-service";
 import { teacherService, SubjectDto } from "@/services/teacher-service";
+import { financeService } from "@/services/finance-service";
 import NeumorphButton from "@/components/ui/neumorph-button";
 import toast from "react-hot-toast";
 import { Dropdown } from "@/components/ui/dropdown";
@@ -516,6 +518,7 @@ export default function TeacherContentPageClient() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [profile, setProfile] = useState<any>(null);
+  const [totalEarnings, setTotalEarnings] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<'summary' | 'content'>('summary');
@@ -523,13 +526,18 @@ export default function TeacherContentPageClient() {
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const [res, subjectsRes, profileRes] = await Promise.all([
+      const [res, subjectsRes, profileRes, financeAccount] = await Promise.all([
         contentService.getPackages(),
         teacherService.getMySubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
-        teacherService.getMyProfile().catch(() => ({ success: true, data: null }))
+        teacherService.getMyProfile().catch(() => ({ success: true, data: null })),
+        financeService.getTeacherAccountSummary().catch((error: unknown) => {
+          if (!isAxiosError(error)) throw error;
+          return null;
+        }),
       ]);
       setPackages(res.data?.data ?? []);
       setSubjects(subjectsRes.data ?? []);
+      setTotalEarnings(financeAccount?.totalEarnings ?? null);
       if (profileRes && profileRes.success) {
         setProfile(profileRes.data);
       }
@@ -573,7 +581,12 @@ export default function TeacherContentPageClient() {
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <AdminStatCard variant="accent" icon={BookOpenText} label="إجمالي الباقات" value={packages.length} />
-            <AdminStatCard variant="light" icon={Sparkles} label="إجمالي الإيرادات" value={`${packages.reduce((s, p) => s + p.price, 0)} ج`} />
+            <AdminStatCard
+              variant="light"
+              icon={Sparkles}
+              label="إجمالي الأرباح"
+              value={totalEarnings == null ? '—' : `${totalEarnings.toLocaleString('ar-EG-u-nu-latn')} ج`}
+            />
             <AdminStatCard variant="muted" icon={Video} label="نشطة" value={packages.length} />
           </div>
 

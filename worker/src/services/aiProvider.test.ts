@@ -47,18 +47,25 @@ test('persistent Gemini 503 failure stops after bounded retries', async () => {
   assert.equal(requests, 4);
 });
 
-test('hung Gemini request fails at the configured provider deadline', async (testContext) => {
+test('production timeout regression aborts the Gemini request at the configured deadline', async (testContext) => {
   const originalDeadline = process.env.GEMINI_REQUEST_TIMEOUT_MS;
   process.env.GEMINI_REQUEST_TIMEOUT_MS = '10';
+  let requestWasAborted = false;
   testContext.after(() => {
     if (originalDeadline === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
     else process.env.GEMINI_REQUEST_TIMEOUT_MS = originalDeadline;
   });
 
   await assert.rejects(
-    executeGeminiRequest(() => new Promise(() => undefined)),
+    executeGeminiRequest((abortSignal) => new Promise((_resolve, reject) => {
+      abortSignal.addEventListener('abort', () => {
+        requestWasAborted = true;
+        reject(abortSignal.reason);
+      }, { once: true });
+    })),
     (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout',
   );
+  assert.equal(requestWasAborted, true);
 });
 
 test('provider deadlines use the bounded retry policy', async (testContext) => {

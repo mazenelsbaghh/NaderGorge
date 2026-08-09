@@ -39,14 +39,14 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         if (request.Amount <= 0)
             return ApiResponse<InitiateRechargeDto>.Fail("قيمة الشحن يجب أن تكون أكبر من صفر");
 
-        if (request.TeacherId.HasValue)
-        {
-            var teacherExists = await _db.TeacherProfiles.AnyAsync(
-                teacher => teacher.Id == request.TeacherId.Value && teacher.User.IsActive && !teacher.User.IsDeleted && teacher.IsVisibleToStudents,
-                ct);
-            if (!teacherExists)
-                return ApiResponse<InitiateRechargeDto>.Fail("المدرس المختار غير متاح للشحن حالياً.");
-        }
+        if (!request.TeacherId.HasValue)
+            return ApiResponse<InitiateRechargeDto>.Fail("اختر المدرس الذي تريد شحن رصيده. الشحن العام للمنصة غير متاح.");
+
+        var teacherExists = await _db.TeacherProfiles.AnyAsync(
+            teacher => teacher.Id == request.TeacherId.Value && teacher.User.IsActive && !teacher.User.IsDeleted && teacher.IsVisibleToStudents,
+            ct);
+        if (!teacherExists)
+            return ApiResponse<InitiateRechargeDto>.Fail("المدرس المختار غير متاح للشحن حالياً.");
 
         // Fetch active wallets
         var activeWallets = await _db.DigitalWallets

@@ -75,7 +75,6 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
-            // General API: 1000 requests per minute per IP
             options.AddPolicy("public-whatsapp", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -143,12 +142,13 @@ public static class RateLimitingConfig
             AddLiveSupportPolicy(options, "live-support-ai-admin-preview", isE2e ? 100000 : 10, context => context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown");
             AddLiveSupportPolicy(options, "live-support-ai-callback", isE2e ? 100000 : 120, context => context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
+            // General API: 20000 requests per minute per IP
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = isE2e ? 100000 : 1000,
+                        PermitLimit = isE2e ? 100000 : 20000,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));

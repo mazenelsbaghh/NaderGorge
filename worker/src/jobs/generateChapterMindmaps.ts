@@ -72,6 +72,23 @@ async function postMindmapResults(lessonVideoId: string, results: Array<{ title:
     }
 }
 
+async function clearFailedChapterRegeneration(chapterId: string) {
+    const response = await fetchWithTimeout(
+        `${BACKEND_BASE_URL}/api/v1/internal/callbacks/single-mindmap-failed`,
+        {
+            method: 'POST',
+            timeoutMs: 10_000,
+            operation: 'single-mindmap-failed-callback',
+            headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
+            body: JSON.stringify({ chapterId })
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Single mindmap failure callback failed ${response.status}: ${await response.text()}`);
+    }
+}
+
 async function generateWithQuotaBackoff(
     chapter: ChapterMindmapInput,
     lessonVideoId: string,
@@ -257,6 +274,13 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
 
     } catch (error) {
         console.error(`[Job ${job.id}] Failed generating mindmaps:`, error);
+        if (isSingleChapter) {
+            try {
+                await clearFailedChapterRegeneration(chapterId!);
+            } catch (callbackError) {
+                logWarn('single-mindmap-failed', 'Failed to clear chapter regeneration state.', { chapterId, callbackError });
+            }
+        }
         throw error;
     }
 }

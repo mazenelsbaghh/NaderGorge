@@ -201,7 +201,7 @@ export function FinancialRequestsWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="font-black">
-                    {requestLabels[row.type]} · {row.amount.toLocaleString('ar-EG')} ج.م
+                    {requestLabels[row.type]} · {row.amount.toLocaleString('ar-EG-u-nu-latn')} ج.م
                   </p>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--admin-muted)]">
                     {row.reason}
@@ -210,7 +210,7 @@ export function FinancialRequestsWorkspace() {
                 <div className="text-start sm:text-end">
                   <HrStatusBadge status={row.state} />
                   <p className="mt-2 text-sm font-bold">
-                    المتبقي: {row.outstandingBalance.toLocaleString('ar-EG')} ج.م
+                    المتبقي: {row.outstandingBalance.toLocaleString('ar-EG-u-nu-latn')} ج.م
                   </p>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export function FinancialRequestsWorkspace() {
                     <div key={installment.id} className="hr-soft-panel p-3 text-sm">
                       <div className="flex items-start justify-between gap-3">
                         <b>قسط {installment.sequence}</b>
-                        <b>{installment.amount.toLocaleString('ar-EG')} ج.م</b>
+                        <b>{installment.amount.toLocaleString('ar-EG-u-nu-latn')} ج.م</b>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-3">
                         <span className="text-xs text-[var(--admin-muted)]">{installment.dueDate}</span>

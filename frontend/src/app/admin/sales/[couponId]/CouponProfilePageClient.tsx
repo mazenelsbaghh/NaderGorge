@@ -70,7 +70,7 @@ function toInputDate(value?: string | null) {
 
 function formatDate(value?: string | null) {
   if (!value) return 'غير محدد';
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
 }
 
 function toForm(coupon: SalesCouponDto): CouponForm {

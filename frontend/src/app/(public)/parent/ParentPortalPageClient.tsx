@@ -10,7 +10,7 @@ const TOKEN_KEY = 'parent-tracking-token';
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
 }
 
 export default function ParentPortalPageClient() {
@@ -103,7 +103,7 @@ export default function ParentPortalPageClient() {
 
         <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-2xl bg-[var(--landing-ink)] p-6 text-white sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold text-white/75">تقدم الدروس</p><p className="mt-2 text-4xl font-black">{Math.round(completion)}%</p><p className="mt-2 text-sm font-semibold text-white/75">{details.attendance.watchedLessons} من {details.attendance.totalLessons} درس تمت متابعته</p></div><TrendingUp className="h-8 w-8 text-[var(--accent)]" /></div><div className="mt-7 h-3 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-[var(--landing-accent)] transition-[width] duration-500" style={{ width: `${completion}%` }} /></div></div>
-          <div className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-bold text-[var(--landing-muted)]">الرصيد المتاح</p><p className="mt-3 text-3xl font-black text-[var(--landing-accent)]">{new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 2 }).format(details.balance.currentBalance)} ج.م</p><p className="mt-4 text-xs font-semibold leading-6 text-[var(--landing-muted)]">البيانات المعروضة للمتابعة فقط، ولا يمكن تنفيذ عمليات شراء من هذه الصفحة.</p></div>
+          <div className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-bold text-[var(--landing-muted)]">الرصيد المتاح</p><p className="mt-3 text-3xl font-black text-[var(--landing-accent)]">{new Intl.NumberFormat('ar-EG-u-nu-latn', { maximumFractionDigits: 2 }).format(details.balance.currentBalance)} ج.م</p><p className="mt-4 text-xs font-semibold leading-6 text-[var(--landing-muted)]">البيانات المعروضة للمتابعة فقط، ولا يمكن تنفيذ عمليات شراء من هذه الصفحة.</p></div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">

@@ -67,6 +67,9 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
         if (!request.Approve && string.IsNullOrWhiteSpace(request.RejectionReason))
             return ApiResponse<bool>.Fail("سبب رفض طلب الشحن مطلوب.");
 
+        if (request.Approve && !rechargeRequest.TeacherId.HasValue)
+            return ApiResponse<bool>.Fail("لا يمكن قبول طلب شحن عام للمنصة. ارفض الطلب ليُنشئ الطالب طلباً مخصصاً لمدرس.");
+
         var evidenceMissing = string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl)
             || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber);
         if (request.Approve && evidenceMissing && !request.SmsLogId.HasValue)

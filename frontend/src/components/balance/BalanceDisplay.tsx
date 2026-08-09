@@ -17,7 +17,7 @@ function PromotionalAllocationCard({ allocation }: { allocation: PromotionalBala
   const title = allocation.teacherName ? `مخصص لمحتوى ${allocation.teacherName}` : 'صالح للمحتوى المدعوم';
   const displayName = allocation.teacherName ?? 'المحتوى المدعوم';
   const expiryLabel = allocation.expiresAt
-    ? `ينتهي ${new Date(allocation.expiresAt).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' })}`
+    ? `ينتهي ${new Date(allocation.expiresAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}`
     : 'بدون تاريخ انتهاء';
   const usageLabel = allocation.maxPurchaseCount
     ? `${allocation.purchaseCount}/${allocation.maxPurchaseCount} مشتريات`

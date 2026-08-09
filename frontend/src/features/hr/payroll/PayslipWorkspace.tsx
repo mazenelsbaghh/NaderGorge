@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { hrPayrollService, PayslipDto } from '@/services/hr-payroll-service';
 
 function money(value: number, currency: string) {
-  return `${value.toLocaleString('ar-EG', { maximumFractionDigits: 2 })} ${currency}`;
+  return `${value.toLocaleString('ar-EG-u-nu-latn', { maximumFractionDigits: 2 })} ${currency}`;
 }
 
 export function PayslipWorkspace() {

@@ -37,7 +37,7 @@ export function CommunityPostComposer({
         return;
       }
       if (validOptions.length > 10) {
-        toast.error('لا يمكن أن يحتوي الاستطلاع على أكثر من ١٠ خيارات.');
+        toast.error('لا يمكن أن يحتوي الاستطلاع على أكثر من 10 خيارات.');
         return;
       }
     }
