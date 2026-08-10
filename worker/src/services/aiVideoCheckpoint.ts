@@ -4,7 +4,7 @@ import path from 'node:path';
 import { atomicWriteFileSync, resolveWithin, sharedAiVideoCheckpointsRoot } from '../config/storage.js';
 import type { VideoChapter } from './geminiService.js';
 
-const PIPELINE_VERSION = '3';
+const PIPELINE_VERSION = '4';
 
 function checkpointDirectory(lessonVideoId: string, sourceUrl: string) {
   const lessonKey = crypto.createHash('sha256').update(lessonVideoId).digest('hex');

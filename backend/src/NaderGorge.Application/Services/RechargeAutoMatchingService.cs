@@ -52,32 +52,43 @@ public sealed class RechargeAutoMatchingService(
             if (request is null || string.IsNullOrWhiteSpace(request.ScreenshotUrl) || string.IsNullOrWhiteSpace(request.SenderPhoneNumber))
                 return false;
 
-            var matchingAnchor = request.UpdatedAt ?? request.CreatedAt;
-            var startTime = matchingAnchor.AddHours(-2);
-            var endTime = matchingAnchor.AddHours(2);
-            var candidates = await db.IncomingSmsLogs
+            var matchingAnchor = RechargeMatchRules.Anchor(request);
+            var startTime = RechargeMatchRules.WindowStart(matchingAnchor);
+            var endTime = RechargeMatchRules.WindowEnd(matchingAnchor);
+            var exactRows = await db.IncomingSmsLogs
                 .Include(log => log.Wallet)
                 .Where(log => log.ParsedAmount == request.Amount
-                    && log.ParsedSenderPhone != null
+                    && log.ParsedSenderPhone == request.SenderPhoneNumber
                     && !log.IsMatched
                     && log.ReceivedAt >= startTime
                     && log.ReceivedAt <= endTime)
                 .OrderBy(log => log.ReceivedAt)
-                .Take(50)
                 .ToListAsync(ct);
 
-            var exactCandidates = candidates
-                .Where(log => log.ParsedSenderPhone == request.SenderPhoneNumber)
+            // Direction is still derived from the legacy SMS body. Filter it before
+            // limiting to two so outgoing transfers cannot hide or become evidence.
+            var exactCandidates = exactRows
+                .Where(log => !SmsParser.IsOutgoingTransfer(log.Body))
                 .Take(2)
                 .ToList();
 
             // Ambiguous evidence must remain for manual review.
             if (exactCandidates.Count != 1)
             {
+                var nearbyRows = await db.IncomingSmsLogs
+                    .AsNoTracking()
+                    .Where(log => log.ParsedAmount == request.Amount
+                        && log.ParsedSenderPhone != null
+                        && !log.IsMatched
+                        && log.ReceivedAt >= startTime
+                        && log.ReceivedAt <= endTime)
+                    .Select(log => new { log.Body, log.ParsedSenderPhone })
+                    .ToListAsync(ct);
                 var requiresConfirmation = !request.SenderPhoneConfirmedAt.HasValue
-                    && candidates.Any(log => RechargePhoneSimilarity.RequiresConfirmation(
-                        request.SenderPhoneNumber,
-                        log.ParsedSenderPhone));
+                    && nearbyRows.Any(log => !SmsParser.IsOutgoingTransfer(log.Body)
+                        && RechargePhoneSimilarity.RequiresConfirmation(
+                            request.SenderPhoneNumber,
+                            log.ParsedSenderPhone));
                 if (request.RequiresSenderPhoneConfirmation != requiresConfirmation)
                 {
                     request.RequiresSenderPhoneConfirmation = requiresConfirmation;

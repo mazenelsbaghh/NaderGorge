@@ -62,7 +62,8 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
     let failureCount = 0;
     for (const file of imageFiles) {
       try {
-        const base64 = await compressImage(file);
+        // Keep enough facial detail for identity-sensitive image generation.
+        const base64 = await compressImage(file, 1200, 1200, 0.9);
         const finalFileName = renameFileToMatchBase64(file.name, base64);
         const res = await adminService.uploadTeacherPhoto(resolvedTeacherId, base64, finalFileName);
         if (res.success) successCount++;

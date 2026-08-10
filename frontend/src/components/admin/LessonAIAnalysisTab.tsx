@@ -83,8 +83,11 @@ export function LessonAIAnalysisTab({
     string | null
   >(null);
   const [styles, setStyles] = useState<MindmapStyleSelection>({
-    visualStyles: ['random'],
-    teacherStyles: ['random'],
+    visualStyles: ['editorial-infographic'],
+    // Keep the teacher photorealistic by default so the supplied reference
+    // remains recognizable. Stylized modes are opt-in because they can
+    // reinterpret facial geometry even when the identity lock is present.
+    teacherStyles: ['photorealistic'],
   });
   const hasRegeneratingChapter = videos.some((video) =>
     video.chapters?.some((chapter: any) => chapter.isRegeneratingMindmap)
@@ -124,8 +127,10 @@ export function LessonAIAnalysisTab({
       await adminService.generateVideoMindmaps(videoId, styles);
       toast.success('تم تشغيل توليد الخرائط الذهنية بالذكاء الاصطناعي');
       if (onRefresh) onRefresh();
-    } catch {
-      toast.error('أخفق تشغيل توليد الخرائط الذهنية');
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || 'أخفق تشغيل توليد الخرائط الذهنية'
+      );
     } finally {
       setTriggeringId(null);
     }
@@ -203,8 +208,12 @@ export function LessonAIAnalysisTab({
             شكل صور تحليل AI
           </h3>
           <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
-            اختار حتى 3 اختيارات من كل مجموعة. سيتم استخدام كل صور المدرس مع
-            تثبيت ملامحه، ويسمح فقط بتغيير الملابس والوضعية والخلفية.
+            اختار حتى 3 اختيارات من كل مجموعة. سيتم استخدام صورة المدرس النشطة
+            مع تثبيت ملامحه، ويسمح فقط بتغيير الملابس والوضعية والخلفية.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-amber-700">
+            للحفاظ على شكل المدرس الحقيقي، اترك «واقعي» محددًا. الكرتوني و3D
+            يعيدان رسم الملامح وقد يقللان التشابه حتى مع استخدام الصور المرجعية.
           </p>
           {(styles.visualStyles.includes('random') ||
             styles.teacherStyles.includes('random')) && (

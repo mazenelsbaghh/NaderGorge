@@ -37,15 +37,6 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
         if (video.VideoChapters == null || !video.VideoChapters.Any())
             return ApiResponse.Fail("Video has no chapters to generate mind maps for. Please extract chapters first.");
 
-        var lockRows = await _db.LessonVideos
-            .Where(v => v.Id == request.VideoId && !v.IsProcessingMindmaps)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingMindmaps, true), ct);
-
-        if (lockRows == 0)
-            return ApiResponse.Fail("Video is already processing mind maps.");
-
-        await _cancellations.ClearMindmapCancellationAsync(video.Id);
-
         var teacherUserId = await _db.LessonVideos
             .Where(v => v.Id == video.Id)
             .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
@@ -55,12 +46,24 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
         if (teacherUserId != null)
         {
             teacherPhotoUrls = await _db.TeacherPhotos
-                .Where(tp => tp.TeacherId == teacherUserId.Value)
-                .OrderByDescending(tp => tp.IsActive)
-                .ThenByDescending(tp => tp.UploadedAt)
+                .Where(tp => tp.TeacherId == teacherUserId.Value && tp.IsActive)
+                .OrderByDescending(tp => tp.UploadedAt)
+                .Take(1)
                 .Select(tp => tp.FileUrl)
                 .ToListAsync(ct);
         }
+
+        if (teacherPhotoUrls.Count == 0)
+            return ApiResponse.Fail("لا توجد صورة نشطة للمدرس. ارفع صورة واضحة وفعّلها قبل توليد الصور.");
+
+        var lockRows = await _db.LessonVideos
+            .Where(v => v.Id == request.VideoId && !v.IsProcessingMindmaps)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingMindmaps, true), ct);
+
+        if (lockRows == 0)
+            return ApiResponse.Fail("Video is already processing mind maps.");
+
+        await _cancellations.ClearMindmapCancellationAsync(video.Id);
 
         var chaptersData = video.VideoChapters.Select(c => new
         {

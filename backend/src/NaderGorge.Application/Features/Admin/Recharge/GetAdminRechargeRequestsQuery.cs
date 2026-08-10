@@ -86,6 +86,7 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
                 ScreenshotUrl = r.ScreenshotUrl,
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,
+                MatchingAnchorAt = r.UpdatedAt ?? r.CreatedAt,
                 ResolvedAt = r.ResolvedAt,
                 ResolvedByUserId = r.ResolvedByUserId,
                 ResolvedByUserName = r.ResolvedByUser != null ? r.ResolvedByUser.FullName : null,
@@ -94,6 +95,8 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
                 ReservationExpiresAt = r.ReservationExpiresAt
             })
             .ToListAsync(ct);
+
+        await RechargeMatchDiagnosis.AttachAsync(_db, results, ct);
 
         return ApiResponse<List<AdminRechargeRequestDto>>.Ok(results);
     }

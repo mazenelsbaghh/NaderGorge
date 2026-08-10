@@ -13,8 +13,8 @@ public static class RechargeMatchCandidateSelector
         RechargeMatchKey matchKey,
         CancellationToken ct)
     {
-        var startTime = matchKey.SmsReceivedAt.AddHours(-2);
-        var endTime = matchKey.SmsReceivedAt.AddHours(2);
+        var startTime = RechargeMatchRules.WindowStart(matchKey.SmsReceivedAt);
+        var endTime = RechargeMatchRules.WindowEnd(matchKey.SmsReceivedAt);
         var candidates = await requests
             .Where(request => request.Amount == matchKey.Amount
                 && request.SenderPhoneNumber == matchKey.SenderPhoneNumber

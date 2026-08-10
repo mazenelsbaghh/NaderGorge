@@ -17,35 +17,60 @@ function runtime(client: any) {
 
 afterEach(() => setAIServiceRuntimeFactoryForTests(undefined));
 
-test('video analysis sends 12kbps audio inline without using the Files API', async (testContext) => {
+test('video analysis grounds chapter language in the verbatim transcript (2026-08-10 regression)', async (testContext) => {
   const audioPath = path.join(process.cwd(), '.tmp', 'inline-audio-test.wav');
   fs.mkdirSync(path.dirname(audioPath), { recursive: true });
   execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'anullsrc=r=16000:cl=mono', '-t', '5', audioPath], { stdio: 'ignore' });
   testContext.after(() => fs.rmSync(audioPath, { force: true }));
+  const transcribedSrt = '1\n00:00:00,000 --> 00:00:01,000\nToday we will study the past simple.';
   const requests: any[] = [];
   const client = { models: { generateContent: async (request: any) => {
     requests.push(request);
-    return requests.length === 1
-      ? { text: '1\\n00:00:00,000 --> 00:00:00,100\\nنص' }
-      : { text: '[{"title":"فصل","startTime":0,"endTime":1,"summaryText":"ملخص","order":1}]' };
+    return request.config.responseMimeType === 'text/plain'
+      ? { text: transcribedSrt }
+      : { text: '[{"title":"Past Simple","startTime":0,"endTime":1,"summaryText":"Today we will study the past simple.","order":1}]' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
 
   const result = await analyzeVideoChapters(audioPath);
   assert.equal(result.chapters.length, 1);
-  for (const request of requests) {
-    const audio = request.contents[0].parts[0].inlineData;
-    assert.equal(audio.mimeType, 'audio/mpeg');
-    assert.ok(audio.data.length > 0);
-    assert.equal(request.contents[0].parts.some((part: any) => part.fileData), false);
-  }
+  assert.equal(result.chapters.at(0)?.title, 'Past Simple');
+  const transcriptionRequest = requests.find((request) => request.config.responseMimeType === 'text/plain');
+  const chapterRequest = requests.find((request) => request.config.responseMimeType === 'application/json');
+  const audio = transcriptionRequest.contents[0].parts[0].inlineData;
+  assert.equal(audio.mimeType, 'audio/mpeg');
+  assert.ok(audio.data.length > 0);
+  assert.equal(transcriptionRequest.contents[0].parts.some((part: any) => part.fileData), false);
+  assert.equal(typeof chapterRequest.contents, 'string');
+  assert.ok(chapterRequest.contents.includes(transcribedSrt));
   const compressedPath = path.join(process.cwd(), '.tmp', 'inline-audio-test.mp3');
-  fs.writeFileSync(compressedPath, Buffer.from(requests[0].contents[0].parts[0].inlineData.data, 'base64'));
+  fs.writeFileSync(compressedPath, Buffer.from(audio.data, 'base64'));
   testContext.after(() => fs.rmSync(compressedPath, { force: true }));
   const bitrate = Number(execFileSync('ffprobe', [
     '-v', 'error', '-show_entries', 'format=bit_rate', '-of', 'default=noprint_wrappers=1:nokey=1', compressedPath,
   ], { encoding: 'utf8' }).trim());
   assert.ok(bitrate <= 14_000, `expected compressed bitrate near 12kbps, received ${bitrate}`);
+});
+
+test('English lesson mindmap keeps visible text in the source language (2026-08-10 regression)', async () => {
+  const requests: any[] = [];
+  const client = { models: { generateContent: async (request: any) => {
+    requests.push(request);
+    return { candidates: [{ content: { parts: [] } }] };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(
+    generateChapterMindmap(
+      { title: 'Past Simple', summaryText: 'In this part, we will learn regular and irregular verbs.', order: 1 },
+      'english-language-regression',
+    ),
+    /returned no image/,
+  );
+
+  const prompt = requests[0].contents[0].parts.at(-1).text;
+  assert.match(prompt, /<REQUIRED_VISIBLE_LANGUAGE>the same Latin-script language used in the source/);
+  assert.match(prompt, /Past Simple/);
 });
 
 test('essay evaluation validates and returns the existing structured result', async () => {
@@ -103,6 +128,8 @@ test('mindmap sends every teacher reference with its real image type and identit
   );
 
   const requestParts = requests[0].contents[0].parts;
+  assert.equal(requests[0].config.imageConfig.aspectRatio, '16:9');
+  assert.equal(requests[0].config.imageConfig.imageSize, '4K');
   assert.deepEqual(
     requestParts.slice(0, 3).map((part: any) => part.inlineData.mimeType),
     ['image/webp', 'image/png', 'image/jpeg'],

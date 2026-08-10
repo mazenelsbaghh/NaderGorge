@@ -351,14 +351,14 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
-    public async Task Reconciliation_requests_student_confirmation_for_a_near_phone_without_crediting_balance()
+    public async Task Reconciliation_requests_confirmation_for_one_middle_digit_mismatch_without_crediting_balance()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000031");
         var teacher = await SeedRechargeTeacherAsync(db, "01100000031");
         var wallet = Wallet("01010000031");
         var pending = PendingRequest(user, wallet, 200m, teacher.Id);
-        pending.SenderPhoneNumber = "01012345678";
+        pending.SenderPhoneNumber = "01091234567";
         pending.OriginalSenderPhoneNumber = pending.SenderPhoneNumber;
         pending.ScreenshotUrl = "/proof.webp";
         var sms = new IncomingSmsLog
@@ -369,7 +369,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
             Body = "تم استلام مبلغ 200 ج.م",
             ReceivedAt = DateTime.UtcNow,
             ParsedAmount = 200m,
-            ParsedSenderPhone = "01012345699",
+            ParsedSenderPhone = "01092234567",
             DeduplicationHash = Guid.NewGuid().ToString("N")
         };
         db.AddRange(wallet, pending, sms);

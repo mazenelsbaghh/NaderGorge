@@ -9,6 +9,7 @@ import { QueueStatus } from './QueueStatus';
 import { ParticipantConversation } from './ParticipantConversation';
 import { ConversationRating } from './ConversationRating';
 import { AIConversationStatus } from './AIConversationStatus';
+import { EmojiPicker, insertEmojiAtCursor } from '@/components/live-support/shared/EmojiPicker';
 import { useLiveSupportHub } from '@/hooks/useLiveSupportHub';
 import { useLiveSupportStore } from '@/stores/live-support-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -52,6 +53,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   const [messages, setMessages] = useState<LiveSupportMessage[]>([]);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -239,6 +241,20 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     finally { setPendingAction(null); }
   }
 
+  function insertEmoji(emoji: string) {
+    const input = messageInputRef.current;
+    const draftInsertion = insertEmojiAtCursor(input, draft, emoji);
+    setDraft(draftInsertion.draftText);
+    if (conversation?.id) {
+      setStoredDraft(conversation.id, draftInsertion.draftText);
+      sendTyping(draftInsertion.draftText);
+    }
+    requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(draftInsertion.cursorPosition, draftInsertion.cursorPosition);
+    });
+  }
+
   async function upload(file?: File) {
     if (!conversation || !file || pendingAction) return;
     const isImage = file.type.startsWith('image/');
@@ -372,7 +388,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
             onRegistrationSuccess={handleRegistrationSuccess}
             onEditMessage={editMessage}
             onDeleteMessage={deleteMessage}
-          />{conversation.canSend && !activeAction && !activeVerification ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق صورة أو PDF" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2 ${pendingAction ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploading || Boolean(pendingAction)} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} className="sr-only"/></label><input aria-label="رسالة الدعم" disabled={Boolean(pendingAction)} value={draft} onChange={(event) => { const nextDraft = event.target.value; setDraft(nextDraft); setStoredDraft(conversation.id, nextDraft); sendTyping(nextDraft); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus-visible:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700/20 disabled:bg-slate-100"/><button type="button" disabled={!draft.trim() || Boolean(pendingAction)} onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white disabled:opacity-50"><Send size={18}/></button></div> : conversation.canSend ? <p role="status" className="border-t border-slate-100 pt-3 text-center text-xs font-medium text-slate-600">أكمل خطوة التأكيد الظاهرة قبل إرسال رسالة جديدة.</p> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
+          />{conversation.canSend && !activeAction && !activeVerification ? <div className="flex gap-2 border-t border-slate-100 pt-3"><div className="flex shrink-0 gap-2"><label aria-label="إرفاق صورة أو PDF" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2 ${pendingAction ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploading || Boolean(pendingAction)} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} className="sr-only"/></label><EmojiPicker disabled={Boolean(pendingAction) || uploading} onSelect={insertEmoji}/></div><input ref={messageInputRef} aria-label="رسالة الدعم" disabled={Boolean(pendingAction)} value={draft} onChange={(event) => { const nextDraft = event.target.value; setDraft(nextDraft); setStoredDraft(conversation.id, nextDraft); sendTyping(nextDraft); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus-visible:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700/20 disabled:bg-slate-100"/><button type="button" disabled={!draft.trim() || Boolean(pendingAction)} onClick={() => void send()} aria-label="إرسال" className="grid size-11 shrink-0 place-items-center rounded-xl bg-cyan-700 text-white disabled:opacity-50"><Send size={18}/></button></div> : conversation.canSend ? <p role="status" className="border-t border-slate-100 pt-3 text-center text-xs font-medium text-slate-600">أكمل خطوة التأكيد الظاهرة قبل إرسال رسالة جديدة.</p> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
         {error && <div role="alert" className="mt-3 text-center text-sm text-red-600"><p>{error}</p><button type="button" disabled={retrying} onClick={() => { setRetrying(true); void refresh().finally(() => setRetrying(false)); }} className="mt-1 font-semibold underline">{retrying ? 'جارٍ التحديث…' : 'إعادة المحاولة'}</button></div>}
       </LiveSupportWidget></div>
     </section>}

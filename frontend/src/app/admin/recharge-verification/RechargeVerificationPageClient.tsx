@@ -29,22 +29,13 @@ import {
 import { formatRelativeDate, formatDate } from '@/components/admin/admin-utils';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDto, type WalletDto } from '@/services/wallet-service';
+import { RechargeMatchDiagnosisCell } from './RechargeMatchDiagnosisCell';
 import toast from 'react-hot-toast';
 
 type RechargeStatusValue = AdminRechargeRequestDto['status'];
 type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'awaiting-evidence' | 'all';
 type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
 type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
-type SuspectedSenderPhone = {
-  phoneNumber: string;
-  matchingDigits: number;
-  receivedAt: string;
-  sameWallet: boolean;
-  sameAmount: boolean;
-};
-
-const SUSPECTED_PHONE_MINIMUM_DIGITS = 8;
-
 const ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_ASSETS_URL ||
   process.env.NEXT_PUBLIC_ASSET_BASE_URL ||
@@ -128,37 +119,6 @@ const smsMatchesSearch = (sms: AdminIncomingSmsLogDto, rawQuery: string) => {
   ];
   return phoneFields.some((field) => phoneMatchesSearch(field, rawQuery));
 };
-
-const getLongestMatchingDigitSequence = (leftValue?: string | null, rightValue?: string | null) => {
-  const left = normalizePhoneDigits(leftValue);
-  const right = normalizePhoneDigits(rightValue);
-  const maximumLength = Math.min(left.length, right.length);
-
-  for (let length = maximumLength; length > 0; length -= 1) {
-    for (let start = 0; start + length <= left.length; start += 1) {
-      if (right.includes(left.slice(start, start + length))) return length;
-    }
-  }
-  return 0;
-};
-
-const findSuspectedSenderPhone = (
-  request: AdminRechargeRequestDto,
-  smsLogs: AdminIncomingSmsLogDto[]
-): SuspectedSenderPhone | undefined => smsLogs
-  .filter((sms) => sms.parsedSenderPhone)
-  .map((sms) => ({
-    phoneNumber: sms.parsedSenderPhone!,
-    matchingDigits: getLongestMatchingDigitSequence(request.senderPhoneNumber, sms.parsedSenderPhone),
-    receivedAt: sms.receivedAt,
-    sameWallet: sms.walletId === request.walletId,
-    sameAmount: sms.parsedAmount === request.amount,
-  }))
-  .filter((candidate) => candidate.matchingDigits >= SUSPECTED_PHONE_MINIMUM_DIGITS)
-  .sort((left, right) => right.matchingDigits - left.matchingDigits
-    || Number(right.sameWallet) - Number(left.sameWallet)
-    || Number(right.sameAmount) - Number(left.sameAmount)
-    || new Date(right.receivedAt).getTime() - new Date(left.receivedAt).getTime())[0];
 
 const resolveAssetUrl = (url?: string | null) => {
   if (!url) return null;
@@ -264,12 +224,13 @@ export function RechargeVerificationWorkspace() {
 
   const openApproveModal = (rechargeRequest: AdminRechargeRequestDto) => {
     setApproveModalRequest(rechargeRequest);
-    setSelectedWalletId(rechargeRequest.walletId);
     setSmsSearchQuery('');
-    const match = unmatchedSms.find(log =>
-      log.parsedAmount === rechargeRequest.amount
-      && log.walletId === rechargeRequest.walletId);
+    const diagnosedSmsId = rechargeRequest.matchDiagnosis?.code === 'EligibleWaiting'
+      ? rechargeRequest.matchDiagnosis.candidate?.smsLogId
+      : undefined;
+    const match = unmatchedSms.find(log => log.id === diagnosedSmsId);
     setSelectedSmsId(match?.id ?? '');
+    setSelectedWalletId(match?.walletId ?? rechargeRequest.walletId);
   };
 
   const handleReject = async (e: React.FormEvent) => {
@@ -390,21 +351,9 @@ export function RechargeVerificationWorkspace() {
       .sort((left, right) => left.label.localeCompare(right.label, 'ar'));
   }, [filteredUnmatchedSms]);
 
-  const suspectedSenderPhones = useMemo(() => {
-    const matches = new Map<string, SuspectedSenderPhone>();
-
-    for (const request of requests) {
-      if (!isRechargeStatus(request.status, 0) || !request.senderPhoneNumber) continue;
-      const suspectedPhone = findSuspectedSenderPhone(request, unmatchedSms);
-      if (suspectedPhone) matches.set(request.id, suspectedPhone);
-    }
-
-    return matches;
-  }, [requests, unmatchedSms]);
-
   // Filtered requests
   const filteredRequests = requests.filter(r => {
-    const suspectedPhone = suspectedSenderPhones.get(r.id)?.phoneNumber;
+    const diagnosedPhone = r.matchDiagnosis?.candidate?.senderPhoneNumber;
     const matchesStatus = statusFilter === 'all'
       || (statusFilter === 'awaiting-evidence'
         ? isAwaitingEvidenceRequest(r)
@@ -413,7 +362,7 @@ export function RechargeVerificationWorkspace() {
       r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.studentPhoneNumber.includes(searchQuery) ||
       r.senderPhoneNumber.includes(searchQuery) ||
-      suspectedPhone?.includes(searchQuery) ||
+      diagnosedPhone?.includes(searchQuery) ||
       r.walletLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.walletPhoneNumber.includes(searchQuery) ||
       r.id.slice(0, 8).toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
@@ -509,18 +458,9 @@ export function RechargeVerificationWorkspace() {
       )
     },
     {
-      key: 'suspectedSenderPhone',
-      label: 'رقم مشتبه فيه',
-      render: (r) => {
-        const suspectedPhone = suspectedSenderPhones.get(r.id);
-        if (!suspectedPhone) return <span className="block min-w-28 text-center text-lg font-bold text-[var(--admin-muted)]">—</span>;
-        return (
-          <div className="w-fit min-w-36 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-start">
-            <bdi dir="ltr" className="block font-mono text-sm font-black text-[var(--admin-text)]">{suspectedPhone.phoneNumber}</bdi>
-            <span className="block text-sm font-bold text-amber-700 dark:text-amber-400">{suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب</span>
-          </div>
-        );
-      }
+      key: 'matchDiagnosis',
+      label: 'تشخيص المطابقة',
+      render: (r) => <RechargeMatchDiagnosisCell request={r} />,
     },
     {
       key: 'wallet',

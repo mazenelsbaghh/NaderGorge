@@ -215,8 +215,8 @@ verify-backend: ## Restore, build, and test the backend solution
 		dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-build; \
 	fi
 
-verify-frontend: ## Lint and build the frontend
-	cd frontend && npm run lint && npm run build
+verify-frontend: ## Run focused checks, lint, and build the frontend
+	cd frontend && npm run check:recharge-match-diagnosis && npm run lint && npm run build
 
 verify-worker: ## Build the Node.js worker
 	cd worker && npm run build

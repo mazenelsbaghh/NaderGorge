@@ -3101,6 +3101,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(sms => sms.DeduplicationHash).HasMaxLength(64).IsRequired();
             e.Property(sms => sms.ParsedAmount).HasPrecision(18, 2);
             e.Property(sms => sms.ParsedSenderPhone).HasMaxLength(20);
+            e.HasIndex(sms => new { sms.ParsedSenderPhone, sms.ReceivedAt })
+                .HasFilter("\"ParsedAmount\" IS NOT NULL AND \"ParsedSenderPhone\" IS NOT NULL");
+            e.HasIndex(sms => new { sms.ParsedAmount, sms.ReceivedAt })
+                .HasFilter("\"ParsedAmount\" IS NOT NULL AND \"ParsedSenderPhone\" IS NOT NULL");
             e.Property(sms => sms.TransferReference).HasMaxLength(120);
             e.HasIndex(sms => new { sms.WalletId, sms.TransferReference })
                 .IsUnique()

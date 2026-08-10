@@ -131,11 +131,11 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         // 5. Try to find a matching, unmatched SMS that was already received
         // A pending row may be reused for a later reservation. Match against the
         // latest reservation time instead of the row's original creation time.
-        var matchingAnchor = rechargeRequest.UpdatedAt ?? rechargeRequest.CreatedAt;
-        var startTime = matchingAnchor.AddHours(-2);
-        var endTime = matchingAnchor.AddHours(2);
+        var matchingAnchor = RechargeMatchRules.Anchor(rechargeRequest);
+        var startTime = RechargeMatchRules.WindowStart(matchingAnchor);
+        var endTime = RechargeMatchRules.WindowEnd(matchingAnchor);
 
-        var exactMatches = await _db.IncomingSmsLogs
+        var exactRows = await _db.IncomingSmsLogs
             .Include(l => l.Wallet)
             .Where(l =>
                 l.ParsedAmount == rechargeRequest.Amount &&
@@ -144,8 +144,14 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
                 l.ReceivedAt >= startTime &&
                 l.ReceivedAt <= endTime)
             .OrderBy(l => l.ReceivedAt)
-            .Take(2)
             .ToListAsync(ct);
+
+        // Direction is still derived from the legacy SMS body. Filter it before
+        // limiting to two so outgoing transfers cannot hide or become evidence.
+        var exactMatches = exactRows
+            .Where(log => !SmsParser.IsOutgoingTransfer(log.Body))
+            .Take(2)
+            .ToList();
 
         var matchedSms = exactMatches.Count == 1 ? exactMatches[0] : null;
         if (matchedSms is not null)
@@ -208,7 +214,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         }
         else
         {
-            var nearbyPhones = await _db.IncomingSmsLogs
+            var nearbyRows = await _db.IncomingSmsLogs
                 .AsNoTracking()
                 .Where(l =>
                     l.ParsedAmount == rechargeRequest.Amount &&
@@ -216,14 +222,14 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
                     !l.IsMatched &&
                     l.ReceivedAt >= startTime &&
                     l.ReceivedAt <= endTime)
-                .Select(l => l.ParsedSenderPhone!)
-                .Take(50)
+                .Select(l => new { l.Body, SenderPhoneNumber = l.ParsedSenderPhone! })
                 .ToListAsync(ct);
 
             rechargeRequest.RequiresSenderPhoneConfirmation =
                 !request.ConfirmSenderPhone
                 && !rechargeRequest.SenderPhoneConfirmedAt.HasValue
-                && nearbyPhones.Any(phone => RechargePhoneSimilarity.RequiresConfirmation(senderPhoneNumber, phone));
+                && nearbyRows.Any(row => !SmsParser.IsOutgoingTransfer(row.Body)
+                    && RechargePhoneSimilarity.RequiresConfirmation(senderPhoneNumber, row.SenderPhoneNumber));
             await _db.SaveChangesAsync(ct);
             message = rechargeRequest.RequiresSenderPhoneConfirmation
                 ? $"وجدنا تحويلًا قريبًا من الرقم الذي كتبته ({rechargeRequest.OriginalSenderPhoneNumber}). راجع رقم المحفظة المحول منها واكتبه مرة أخرى، أو أكد أن الرقم المكتوب صحيح."

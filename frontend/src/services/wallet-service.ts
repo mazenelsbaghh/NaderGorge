@@ -55,12 +55,53 @@ export interface AdminRechargeRequestDto {
   screenshotUrl?: string;
   status: number | string; // RechargeRequestStatus
   createdAt: string;
+  matchDiagnosis?: AdminRechargeMatchDiagnosisDto | null;
   resolvedAt?: string;
   resolvedByUserId?: string;
   resolvedByUserName?: string;
   rejectionReason?: string;
   matchedSmsLogId?: string;
   reservationExpiresAt?: string;
+}
+
+export type RechargeMatchDiagnosisCode =
+  | 'AwaitingEvidence'
+  | 'MissingTeacherScope'
+  | 'EligibleWaiting'
+  | 'MultipleExactSms'
+  | 'CompetingPendingRequests'
+  | 'SmsClaimedByAnotherRequest'
+  | 'OutsideWindow'
+  | 'AmountMismatch'
+  | 'PhoneMismatch'
+  | 'NoCandidate';
+
+export interface AdminRechargeMatchDiagnosisDto {
+  code: RechargeMatchDiagnosisCode;
+  exactSmsCount: number;
+  competingRequestCount: number;
+  candidate?: AdminRechargeMatchCandidateDto | null;
+}
+
+export interface AdminRechargeMatchCandidateDto {
+  smsLogId: string;
+  walletId: string;
+  walletLabel: string;
+  amount?: number | null;
+  senderPhoneNumber: string;
+  receivedAt: string;
+  timeOffsetMinutes: number;
+  outsideWindowByMinutes: number;
+  matchingDigits: number;
+  hasSingleDigitMismatchPattern: boolean;
+  matchingDigitsBeforeMismatch: number;
+  matchingDigitsAfterMismatch: number;
+  amountMatches: boolean;
+  phoneMatches: boolean;
+  withinWindow: boolean;
+  sameWallet: boolean;
+  isMatched: boolean;
+  matchedRechargeRequestId?: string;
 }
 
 export interface AdminIncomingSmsLogDto {

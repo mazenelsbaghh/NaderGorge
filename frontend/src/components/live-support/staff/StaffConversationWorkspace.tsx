@@ -6,6 +6,7 @@ import type { LiveSupportCannedReply, LiveSupportConversation, LiveSupportMessag
 import { LiveSupportMessageContent, LiveSupportMessageMeta } from '@/components/live-support/LiveSupportMessageContent';
 import { LiveSupportMessageActions } from '@/components/live-support/LiveSupportMessageActions';
 import { StaffVoiceRecorder } from '@/components/live-support/staff/StaffVoiceRecorder';
+import { EmojiPicker, insertEmojiAtCursor } from '@/components/live-support/shared/EmojiPicker';
 import { accessibleColorPair } from '@/lib/accessible-color';
 
 interface StaffConversationWorkspaceProps {
@@ -91,6 +92,16 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
     onSend();
   };
 
+  const insertEmoji = (emoji: string) => {
+    const input = replyInputRef.current;
+    const draftInsertion = insertEmojiAtCursor(input, draft, emoji);
+    onDraftChange(draftInsertion.draftText);
+    requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(draftInsertion.cursorPosition, draftInsertion.cursorPosition);
+    });
+  };
+
   const confirmImageUpload = () => {
     if (!pendingImageForConversation || ownershipLost || pendingAction || uploading) return;
     const file = pendingImageForConversation;
@@ -128,7 +139,17 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
         </div>
       </div>}
       {repliesOpen && <div id="staff-canned-replies" className="mb-2 max-h-48 overflow-y-auto rounded-xl bg-[var(--admin-card-soft)] p-2" aria-label="الردود الجاهزة">{cannedReplies.length === 0 ? <p className="px-3 py-4 text-center text-sm font-medium text-[var(--admin-muted)]">لا توجد ردود جاهزة لهذا الحساب بعد.</p> : cannedReplies.map(reply => <button key={reply.id} type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={() => { if (reply.sendImmediately) shouldRestoreReplyFocus.current = true; onCannedReply(reply); setRepliesOpen(false); }} className="block w-full rounded-lg px-3 py-2.5 text-right text-sm font-semibold text-[var(--admin-text)] hover:bg-[var(--admin-hover)] disabled:opacity-50"><span className="block truncate">{reply.title}</span><span className="mt-0.5 block truncate text-xs font-normal text-[var(--admin-muted)]">{reply.sendImmediately ? 'إرسال مباشر' : 'إضافة إلى مربع الكتابة'}</span></button>)}</div>}
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]"><div className="col-span-3 sm:col-span-1"><button type="button" aria-expanded={repliesOpen} aria-controls="staff-canned-replies" disabled={ownershipLost || Boolean(pendingAction)} onClick={() => setRepliesOpen((open) => !open)} className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] disabled:opacity-50 sm:w-auto"><MessageSquareText size={17}/>ردود جاهزة<ChevronDown size={14} className={repliesOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/></button></div><label aria-label="اختيار صورة" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--admin-border)] text-[var(--admin-muted)] focus-within:outline-2 ${ownershipLost || pendingAction || uploading || pendingImageForConversation ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:bg-[var(--admin-hover)]'}`}>{uploading ? <LoaderCircle className="animate-spin" size={18}/> : <Paperclip size={18}/>}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={ownershipLost || Boolean(pendingAction) || uploading || Boolean(pendingImageForConversation)} onChange={(event) => { const file = event.target.files?.[0]; if (file && conversation) setPendingImage({ conversationId: conversation.id, file }); event.currentTarget.value = ''; }} className="sr-only"/></label><input ref={replyInputRef} aria-label="رد موظف الدعم" disabled={ownershipLost || Boolean(pendingAction) || uploading} value={draft} onChange={event => onDraftChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); sendAndRestoreFocus(); } }} className="h-11 min-w-0 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus-visible:border-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary-15)] disabled:bg-[var(--admin-card-soft)]" placeholder={ownershipLost ? 'المحادثة لم تعد مملوكة لك' : 'اكتب ردك للطالب'}/><button type="button" disabled={ownershipLost || Boolean(pendingAction) || uploading || !draft.trim()} onClick={sendAndRestoreFocus} aria-label="إرسال الرد" className="grid size-11 place-items-center rounded-xl bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] disabled:opacity-50"><Send size={18}/></button></div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+        <div className="col-span-3 sm:col-span-1">
+          <button type="button" aria-expanded={repliesOpen} aria-controls="staff-canned-replies" disabled={ownershipLost || Boolean(pendingAction)} onClick={() => setRepliesOpen((open) => !open)} className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] disabled:opacity-50 sm:w-auto"><MessageSquareText size={17}/>ردود جاهزة<ChevronDown size={14} className={repliesOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/></button>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <label aria-label="اختيار صورة" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--admin-border)] text-[var(--admin-muted)] focus-within:outline-2 ${ownershipLost || pendingAction || uploading || pendingImageForConversation ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:bg-[var(--admin-hover)]'}`}>{uploading ? <LoaderCircle className="animate-spin" size={18}/> : <Paperclip size={18}/>}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={ownershipLost || Boolean(pendingAction) || uploading || Boolean(pendingImageForConversation)} onChange={(event) => { const file = event.target.files?.[0]; if (file && conversation) setPendingImage({ conversationId: conversation.id, file }); event.currentTarget.value = ''; }} className="sr-only"/></label>
+          <EmojiPicker tone="staff" disabled={ownershipLost || Boolean(pendingAction) || uploading} onSelect={insertEmoji}/>
+        </div>
+        <input ref={replyInputRef} aria-label="رد موظف الدعم" disabled={ownershipLost || Boolean(pendingAction) || uploading} value={draft} onChange={event => onDraftChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); sendAndRestoreFocus(); } }} className="h-11 min-w-0 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus-visible:border-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary-15)] disabled:bg-[var(--admin-card-soft)]" placeholder={ownershipLost ? 'المحادثة لم تعد مملوكة لك' : 'اكتب ردك للطالب'}/>
+        <button type="button" disabled={ownershipLost || Boolean(pendingAction) || uploading || !draft.trim()} onClick={sendAndRestoreFocus} aria-label="إرسال الرد" className="grid size-11 place-items-center rounded-xl bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] disabled:opacity-50"><Send size={18}/></button>
+      </div>
       <StaffVoiceRecorder disabled={ownershipLost || Boolean(pendingAction)} uploading={uploading} onSend={onUpload} />
     </div>
   </main>;

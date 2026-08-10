@@ -40,12 +40,15 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         if (teacherUserId != null)
         {
             teacherPhotoUrls = await _db.TeacherPhotos
-                .Where(tp => tp.TeacherId == teacherUserId.Value)
-                .OrderByDescending(tp => tp.IsActive)
-                .ThenByDescending(tp => tp.UploadedAt)
+                .Where(tp => tp.TeacherId == teacherUserId.Value && tp.IsActive)
+                .OrderByDescending(tp => tp.UploadedAt)
+                .Take(1)
                 .Select(tp => tp.FileUrl)
                 .ToListAsync(ct);
         }
+
+        if (teacherPhotoUrls.Count == 0)
+            return ApiResponse.Fail("لا توجد صورة نشطة للمدرس. ارفع صورة واضحة وفعّلها قبل توليد الصور.");
 
         var visualStyles = MindmapStyleOptions.ValidVisualStyles(request.VisualStyles);
         var teacherStyles = MindmapStyleOptions.ValidTeacherStyles(request.TeacherStyles);

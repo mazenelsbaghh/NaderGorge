@@ -1,7 +1,23 @@
 using System;
+using System.Text.Json.Serialization;
 using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Admin.Recharge;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum RechargeMatchDiagnosisCode
+{
+    AwaitingEvidence,
+    MissingTeacherScope,
+    EligibleWaiting,
+    MultipleExactSms,
+    CompetingPendingRequests,
+    SmsClaimedByAnotherRequest,
+    OutsideWindow,
+    AmountMismatch,
+    PhoneMismatch,
+    NoCandidate
+}
 
 public record AdminRechargeRequestDto
 {
@@ -26,12 +42,45 @@ public record AdminRechargeRequestDto
     public string? ScreenshotUrl { get; set; }
     public RechargeRequestStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
+    [JsonIgnore]
+    public DateTime MatchingAnchorAt { get; set; }
+    public AdminRechargeMatchDiagnosisDto? MatchDiagnosis { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public Guid? ResolvedByUserId { get; set; }
     public string? ResolvedByUserName { get; set; }
     public string? RejectionReason { get; set; }
     public Guid? MatchedSmsLogId { get; set; }
     public DateTime? ReservationExpiresAt { get; set; }
+}
+
+public record AdminRechargeMatchDiagnosisDto
+{
+    public RechargeMatchDiagnosisCode Code { get; set; } = RechargeMatchDiagnosisCode.NoCandidate;
+    public int ExactSmsCount { get; set; }
+    public int CompetingRequestCount { get; set; }
+    public AdminRechargeMatchCandidateDto? Candidate { get; set; }
+}
+
+public record AdminRechargeMatchCandidateDto
+{
+    public Guid SmsLogId { get; set; }
+    public Guid WalletId { get; set; }
+    public string WalletLabel { get; set; } = string.Empty;
+    public decimal? Amount { get; set; }
+    public string SenderPhoneNumber { get; set; } = string.Empty;
+    public DateTime ReceivedAt { get; set; }
+    public int TimeOffsetMinutes { get; set; }
+    public int OutsideWindowByMinutes { get; set; }
+    public int MatchingDigits { get; set; }
+    public bool HasSingleDigitMismatchPattern { get; set; }
+    public int MatchingDigitsBeforeMismatch { get; set; }
+    public int MatchingDigitsAfterMismatch { get; set; }
+    public bool AmountMatches { get; set; }
+    public bool PhoneMatches { get; set; }
+    public bool WithinWindow { get; set; }
+    public bool SameWallet { get; set; }
+    public bool IsMatched { get; set; }
+    public Guid? MatchedRechargeRequestId { get; set; }
 }
 
 public record AdminIncomingSmsLogDto

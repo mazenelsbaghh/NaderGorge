@@ -18,7 +18,7 @@ Equivalent expanded commands:
 dotnet restore backend/NaderGorge.sln
 dotnet build backend/NaderGorge.sln --no-restore
 dotnet test backend/NaderGorge.sln --no-build
-cd frontend && npm run lint && npm run build
+cd frontend && npm run check:recharge-match-diagnosis && npm run lint && npm run build
 cd worker && npm run build
 docker compose config -q
 ```
@@ -30,6 +30,7 @@ If full backend solution tests require unavailable local services, run the focus
 - `npm run lint`: ESLint gate.
 - `npm run build`: Next.js production build and TypeScript compile gate.
 - `npm run typecheck`: standalone TypeScript compile check.
+- `npm run check:recharge-match-diagnosis`: focused Node test for recharge-match diagnosis copy and status presentation.
 - `npm test`: Playwright browser test suite.
 - `npm run test:e2e`: Playwright browser test suite alias.
 

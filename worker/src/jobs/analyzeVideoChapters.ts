@@ -93,7 +93,7 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
             await job.updateProgress({ percentage: 65, stage });
             await notifyProgress(lessonVideoId, 65, stage);
             await throwIfCancellationRequested(job);
-            chapters = await generateVideoChapters(audioPath);
+            chapters = await generateVideoChapters(srtContent);
             checkpoint.saveChapters(chapters);
         } else {
             console.log(`[Job ${job.id}] Reusing completed chapters checkpoint.`);
