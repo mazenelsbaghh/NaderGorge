@@ -43,7 +43,7 @@ export function HeroSection({
             مسارك واضح من أول درس إلى هدفك
           </span>
           <h1 className="text-balance text-[clamp(2.05rem,9vw,4.2rem)] font-black leading-[1.18] tracking-normal text-[var(--landing-ink)]">
-            <span className="mt-3 block py-1">ابدأ رحلتك التعليمية</span>
+            <span className="mt-3 block py-1">Massar Academy</span>
             <span className="block py-1 text-[var(--landing-accent)]">
               خطوتك الأولى نحو التفوق
             </span>
