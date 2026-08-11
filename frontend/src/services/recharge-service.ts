@@ -53,11 +53,7 @@ export const rechargeService = {
     formData.append('confirmSenderPhone', String(confirmSenderPhone));
     if (screenshot) formData.append('screenshot', screenshot);
 
-    const { data } = await apiClient.post<{ success: boolean; data: SubmitRechargeResponse; message: string }>('/student/recharge/submit', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const { data } = await apiClient.post<{ success: boolean; data: SubmitRechargeResponse; message: string }>('/student/recharge/submit', formData);
     return data;
   },
 

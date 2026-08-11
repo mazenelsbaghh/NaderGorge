@@ -406,7 +406,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 }
 
 public sealed record CreateConversationRequest(string? Subject, Guid? PreviousConversationId);
-public sealed record SendMessageRequest(string ClientMessageId, string? Content, LiveSupportMessageType Type = LiveSupportMessageType.Text, Guid? AttachmentId = null);
+public sealed record SendMessageRequest(string ClientMessageId, string? Content, LiveSupportMessageType Type = LiveSupportMessageType.Text, Guid? AttachmentId = null, Guid? ReplyToMessageId = null);
 public sealed record SubmitRatingRequest(int Stars, string? Comment);
 public sealed record ParticipantDecisionRequest(string IdempotencyKey);
 public sealed record LiveSupportAIVerificationAnswerRequest(string Answer, string IdempotencyKey);

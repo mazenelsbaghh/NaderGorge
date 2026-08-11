@@ -18,9 +18,6 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 20_000,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 const AUTH_BYPASS_PATHS = [

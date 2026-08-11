@@ -30,7 +30,7 @@ public sealed class LiveSupportSecurityTests
         var error = await Assert.ThrowsAsync<LiveSupportException>(() => service.GetStaffBootstrapAsync(outsider, false, CancellationToken.None));
         Assert.Equal(LiveSupportErrorCodes.Forbidden, error.Code);
         await service.CloseAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, "تم الحل", CancellationToken.None);
-        await Assert.ThrowsAsync<LiveSupportException>(() => service.SendStaffMessageAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, Guid.NewGuid().ToString(), "retry", CancellationToken.None));
+        await Assert.ThrowsAsync<LiveSupportException>(() => service.SendStaffMessageAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, Guid.NewGuid().ToString(), "retry", null, CancellationToken.None));
     }
 
     [Fact]

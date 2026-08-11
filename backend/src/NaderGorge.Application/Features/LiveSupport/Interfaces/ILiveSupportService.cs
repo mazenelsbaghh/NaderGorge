@@ -22,7 +22,7 @@ public interface ILiveSupportService
     Task<long> GetStaffLastEventSequenceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
     Task AcknowledgeParticipantMessagesAsync(Guid conversationId, CancellationToken ct);
     Task AcknowledgeStaffMessagesAsync(Guid conversationId, CancellationToken ct);
-    Task<LiveSupportSendResultDto> SendStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, string content, CancellationToken ct);
+    Task<LiveSupportSendResultDto> SendStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, string content, Guid? replyToMessageId, CancellationToken ct);
     Task<LiveSupportSendResultDto> SendStaffAttachmentMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, Guid attachmentId, string? caption, LiveSupportMessageType type, CancellationToken ct);
     Task<LiveSupportMessageDto> UpdateStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid messageId, string content, CancellationToken ct);
     Task<LiveSupportMessageDto> DeleteStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid messageId, CancellationToken ct);

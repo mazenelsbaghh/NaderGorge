@@ -77,6 +77,7 @@ export default function StudentRechargePageClient() {
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(3600); // one hour in seconds
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const proofSubmissionInFlightRef = useRef(false);
 
   // Step 3 state
   const [isMatched, setIsMatched] = useState(false);
@@ -282,7 +283,7 @@ export default function StudentRechargePageClient() {
 
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rechargeData) return;
+    if (!rechargeData || proofSubmissionInFlightRef.current) return;
 
     const normalizedSenderPhone = normalizePhoneInput(senderPhone);
 
@@ -302,6 +303,7 @@ export default function StudentRechargePageClient() {
     }
 
     try {
+      proofSubmissionInFlightRef.current = true;
       setLoading(true);
       const response = await rechargeService.submit(
         rechargeData.rechargeRequestId,
@@ -323,7 +325,7 @@ export default function StudentRechargePageClient() {
           setReviewState('approved');
           setOutcomeMessage(response.data.message || 'تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
           refreshStudentBalance();
-          toast.success('تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
+          toast.success(response.data.message || 'تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
         } else {
           setReviewState('checking');
           setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
@@ -334,13 +336,16 @@ export default function StudentRechargePageClient() {
         toast.error(response.message || 'تعذر تقديم طلب الشحن.');
       }
     } catch {
-      // The shared API client already displays server errors; avoid duplicate toasts.
+      // The shared API client displays the server response once for this request.
     } finally {
+      proofSubmissionInFlightRef.current = false;
       setLoading(false);
     }
   };
 
   const confirmSenderPhone = async (requestId: string, value: string) => {
+    if (proofSubmissionInFlightRef.current) return;
+
     const normalizedSenderPhone = normalizePhoneInput(value);
     if (!isValidEgyptianMobile(normalizedSenderPhone)) {
       toast.error('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.');
@@ -348,6 +353,7 @@ export default function StudentRechargePageClient() {
     }
 
     try {
+      proofSubmissionInFlightRef.current = true;
       setLoading(true);
       const response = await rechargeService.submit(requestId, normalizedSenderPhone, null, true);
       if (!response.success || !response.data) {
@@ -368,10 +374,10 @@ export default function StudentRechargePageClient() {
       } else {
         toast.success('تم تأكيد الرقم، والطلب مستمر في المراجعة.');
       }
-    } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      toast.error(message ?? 'تعذر تأكيد رقم المحول.');
+    } catch {
+      // The shared API client displays the server response once for this request.
     } finally {
+      proofSubmissionInFlightRef.current = false;
       setLoading(false);
     }
   };

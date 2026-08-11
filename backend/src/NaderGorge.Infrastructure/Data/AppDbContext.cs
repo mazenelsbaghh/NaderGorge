@@ -2772,7 +2772,9 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Content).HasMaxLength(4000);
             e.HasIndex(x => new { x.ConversationId, x.ClientMessageId }).IsUnique();
             e.HasIndex(x => new { x.ConversationId, x.SentAt, x.Id });
+            e.HasIndex(x => x.ReplyToMessageId);
             e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.ReplyToMessage).WithMany().HasForeignKey(x => x.ReplyToMessageId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.SenderUserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.SenderGuestSessionId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportAttachment>().WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);

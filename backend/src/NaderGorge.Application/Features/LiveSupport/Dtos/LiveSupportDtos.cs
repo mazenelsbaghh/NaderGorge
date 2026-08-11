@@ -29,7 +29,10 @@ public sealed record LiveSupportMessageDto(
     DateTime? ReadAt,
     DateTime? EditedAt,
     DateTime? DeletedAt,
-    string? SenderDisplayName = null);
+    string? SenderDisplayName = null,
+    LiveSupportReplyDto? ReplyTo = null);
+
+public sealed record LiveSupportReplyDto(Guid Id, LiveSupportSenderType SenderType, LiveSupportMessageType Type, string Content, bool IsDeleted);
 
 public sealed record UpdateLiveSupportMessageDto(string Content);
 

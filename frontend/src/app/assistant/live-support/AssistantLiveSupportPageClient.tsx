@@ -187,7 +187,7 @@ export default function AssistantLiveSupportPageClient() {
     return registerCacheStore('support:staff', () => {}, () => void refresh());
   }, [refresh]);
 
-  async function send(contentOverride?: string) {
+  async function send(contentOverride?: string, replyToMessageId?: string) {
     const conversationId = selected?.id;
     const generation = selectionGeneration.current;
     const value = (contentOverride ?? draft).trim();
@@ -196,7 +196,7 @@ export default function AssistantLiveSupportPageClient() {
     setDraft('');
     setStoredDraft(conversationId, '');
     try {
-      const message = await liveSupportService.sendStaffMessage(conversationId, { clientMessageId: createClientId(), content: value });
+      const message = await liveSupportService.sendStaffMessage(conversationId, { clientMessageId: createClientId(), content: value, replyToMessageId });
       if (generation === selectionGeneration.current && selected?.id === conversationId) {
         setMessages((items) => items.some((item) => item.id === message.id) ? items : [...items, message]);
         clearStoredDraft(conversationId);
@@ -378,7 +378,7 @@ export default function AssistantLiveSupportPageClient() {
               if (selectedId) setStoredDraft(selectedId, value);
               setDraft(value);
             }}
-            onSend={() => void send()}
+            onSend={(replyToMessageId) => void send(undefined, replyToMessageId)}
             uploading={uploading}
             onUpload={(file) => upload(file)}
             onEditMessage={editMessage}

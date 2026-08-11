@@ -71,6 +71,7 @@ export function ParticipantConversation({
           {['Staff', 'Admin'].includes(message.senderType) && message.senderDisplayName ? (
             <p className="mb-1 text-xs font-bold text-cyan-800">{message.senderDisplayName} · فريق الدعم</p>
           ) : null}
+          {message.replyTo ? <div className="mb-2 rounded-lg bg-black/10 px-2 py-1.5 text-xs opacity-90"><p className="font-bold">رد على رسالة</p><p className="truncate">{message.replyTo.isDeleted ? 'تم حذف هذه الرسالة' : message.replyTo.content || 'مرفق'}</p></div> : null}
           <LiveSupportMessageContent message={message} audience="participant"/>
           {['Student', 'Guest'].includes(message.senderType) ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}
           <LiveSupportMessageMeta message={message} audience="participant"/>

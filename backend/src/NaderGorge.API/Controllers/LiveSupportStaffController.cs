@@ -44,7 +44,7 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
                 return UnprocessableEntity(ApiResponse<object>.Fail("نوع الرسالة غير مدعوم بدون مرفق.", ["VALIDATION_ERROR"]));
             var result = request.AttachmentId.HasValue
                 ? await _service.SendStaffAttachmentMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.AttachmentId.Value, request.Content, request.Type, ct)
-                : await _service.SendStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.Content ?? string.Empty, ct);
+                : await _service.SendStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.Content ?? string.Empty, request.ReplyToMessageId, ct);
             return StatusCode(StatusCodes.Status201Created, ApiResponse<LiveSupportSendResultDto>.Ok(result));
         }
         catch (LiveSupportException ex) { return Error(ex); }

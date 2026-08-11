@@ -94,6 +94,57 @@ public class SubmitRechargeProofValidationTests
         Assert.Equal(RechargeRequestStatus.Pending, recharge.Status);
     }
 
+    // Regression for the 2026-08-11 Production incident where an accepted request
+    // was shown as an error when the browser repeated its proof submission.
+    [Theory]
+    [InlineData(RechargeRequestStatus.Matched, "تمت مطابقة التحويل وإضافة الرصيد بالفعل.")]
+    [InlineData(RechargeRequestStatus.Approved, "تمت الموافقة على طلب الشحن وإضافة الرصيد بالفعل.")]
+    public async Task RepeatedProofForAcceptedRequest_ReturnsCurrentSuccess(
+        RechargeRequestStatus acceptedStatus,
+        string expectedMessage)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000216");
+        var wallet = new DigitalWallet
+        {
+            Label = "محفظة اختبار",
+            PhoneNumber = "01010000216",
+            IsActive = true,
+            DailyLimit = 10_000m,
+            MonthlyLimit = 100_000m
+        };
+        var recharge = new RechargeRequest
+        {
+            UserId = student.Id,
+            User = student,
+            WalletId = wallet.Id,
+            Wallet = wallet,
+            Amount = 1_350m,
+            SenderPhoneNumber = "01012345678",
+            ScreenshotUrl = "/proof.webp",
+            Status = acceptedStatus,
+            ResolvedAt = DateTime.UtcNow
+        };
+        db.AddRange(wallet, recharge);
+        await db.SaveChangesAsync();
+
+        var response = await CreateHandler(db).Handle(
+            new SubmitRechargeCommand(
+                student.Id,
+                recharge.Id,
+                recharge.SenderPhoneNumber,
+                [],
+                string.Empty,
+                null),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.True(response.Data!.IsMatched);
+        Assert.Equal(expectedMessage, response.Message);
+        Assert.Equal(expectedMessage, response.Data.Message);
+        Assert.Equal(acceptedStatus, recharge.Status);
+    }
+
     // Regression for the 2026-08-09 Production incident where the uniqueness
     // query could not see a proof that had not yet been persisted.
     [Fact]

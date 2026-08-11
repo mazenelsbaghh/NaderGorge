@@ -85,7 +85,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
             return ApiResponse<SubmitRechargeDto>.Fail("طلب الشحن هذا غير موجود");
 
         if (rechargeRequest.Status != RechargeRequestStatus.Pending)
-            return ApiResponse<SubmitRechargeDto>.Fail("تم معالجة هذا الطلب بالفعل مسبقاً");
+            return ExistingRequestResponse(rechargeRequest);
 
         if (!rechargeRequest.TeacherId.HasValue)
             return ApiResponse<SubmitRechargeDto>.Fail("لا يمكن استكمال طلب شحن عام. ألغِ الطلب وأنشئ طلباً جديداً لرصيد مدرس.");
@@ -250,6 +250,35 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
     private static string NormalizePhone(string phone) =>
         new((phone ?? string.Empty).Where(char.IsDigit).ToArray());
+
+    private static ApiResponse<SubmitRechargeDto> ExistingRequestResponse(RechargeRequest rechargeRequest) =>
+        rechargeRequest.Status switch
+        {
+            RechargeRequestStatus.Matched or RechargeRequestStatus.Approved => AcceptedRequestResponse(rechargeRequest),
+            RechargeRequestStatus.Rejected => ApiResponse<SubmitRechargeDto>.Fail(
+                rechargeRequest.RejectionReason ?? "تم رفض طلب الشحن. راجع البيانات أو أنشئ طلباً جديداً."),
+            RechargeRequestStatus.Expired => ApiResponse<SubmitRechargeDto>.Fail(
+                "انتهت صلاحية طلب الشحن. ابدأ طلباً جديداً."),
+            RechargeRequestStatus.Cancelled => ApiResponse<SubmitRechargeDto>.Fail(
+                "تم إلغاء طلب الشحن. ابدأ طلباً جديداً."),
+            _ => ApiResponse<SubmitRechargeDto>.Fail("لا يمكن إرسال إثبات لهذا الطلب.")
+        };
+
+    private static ApiResponse<SubmitRechargeDto> AcceptedRequestResponse(RechargeRequest rechargeRequest)
+    {
+        var message = rechargeRequest.Status == RechargeRequestStatus.Matched
+            ? "تمت مطابقة التحويل وإضافة الرصيد بالفعل."
+            : "تمت الموافقة على طلب الشحن وإضافة الرصيد بالفعل.";
+
+        return ApiResponse<SubmitRechargeDto>.Ok(new SubmitRechargeDto
+        {
+            IsMatched = true,
+            RequiresSenderPhoneConfirmation = false,
+            OriginalSenderPhoneNumber = rechargeRequest.OriginalSenderPhoneNumber ?? rechargeRequest.SenderPhoneNumber,
+            Message = message,
+            ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant()
+        }, message);
+    }
 
     private Task CreditRechargeAsync(RechargeRequest rechargeRequest, Guid issuedByUserId, string source, CancellationToken ct) =>
         rechargeRequest.TeacherId.HasValue

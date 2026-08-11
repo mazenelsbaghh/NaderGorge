@@ -67,6 +67,7 @@ export interface LiveSupportMessage {
   editedAt?: string | null;
   deletedAt?: string | null;
   senderDisplayName?: string | null;
+  replyTo?: { id: string; senderType: LiveSupportMessage['senderType']; type: LiveSupportMessageType; content: string; isDeleted: boolean } | null;
 }
 
 export interface LiveSupportMessagePage {
@@ -314,7 +315,7 @@ export const liveSupportService = {
     return response.data.data;
   },
 
-  sendStaffMessage: async (conversationId: string, payload: { clientMessageId: string; content?: string; type?: LiveSupportMessageType; attachmentId?: string }) => {
+  sendStaffMessage: async (conversationId: string, payload: { clientMessageId: string; content?: string; type?: LiveSupportMessageType; attachmentId?: string; replyToMessageId?: string }) => {
     const response = await apiClient.post<ApiResponse<{ message: LiveSupportMessage; replayed: boolean }>>(`/live-support/staff/conversations/${conversationId}/messages`, payload);
     invalidateSupport(['support:staff', 'support:dashboard']);
     return response.data.data.message;

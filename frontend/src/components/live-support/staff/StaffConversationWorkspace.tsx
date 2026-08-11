@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Headphones, LoaderCircle, MessageSquareText, Paperclip, Send, XCircle } from 'lucide-react';
+import { ChevronDown, Headphones, LoaderCircle, MessageSquareReply, MessageSquareText, Paperclip, Send, X, XCircle } from 'lucide-react';
 import type { LiveSupportPreferences } from '@/hooks/useLiveSupportPreferences';
 import type { LiveSupportCannedReply, LiveSupportConversation, LiveSupportMessage } from '@/services/live-support-service';
 import { LiveSupportMessageContent, LiveSupportMessageMeta } from '@/components/live-support/LiveSupportMessageContent';
@@ -20,7 +20,7 @@ interface StaffConversationWorkspaceProps {
   messagesError?: string;
   onRetryMessages?: () => void;
   onDraftChange: (value: string) => void;
-  onSend: () => void;
+  onSend: (replyToMessageId?: string) => void;
   uploading?: boolean;
   onUpload: (file?: File) => Promise<boolean>;
   onEditMessage: (messageId: string, content: string) => Promise<void>;
@@ -37,6 +37,7 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
   const [repliesOpen, setRepliesOpen] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ conversationId: string; file: File }>();
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>();
+  const [replyTarget, setReplyTarget] = useState<LiveSupportMessage>();
   const replyInputRef = useRef<HTMLInputElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement>(null);
   const shouldStickToBottom = useRef(true);
@@ -89,7 +90,8 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
   const sendAndRestoreFocus = () => {
     if (!draft.trim()) return;
     shouldRestoreReplyFocus.current = true;
-    onSend();
+    onSend(replyTarget?.id);
+    setReplyTarget(undefined);
   };
 
   const insertEmoji = (emoji: string) => {
@@ -124,9 +126,10 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
     </header>
     {ownershipLost && <p role="alert" className="border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-medium text-[var(--admin-warning)]">تم نقل ملكية المحادثة. تم إيقاف الرد والإجراءات فورًا.</p>}
     <div ref={messagesViewportRef} onScroll={(event) => { const viewport = event.currentTarget; shouldStickToBottom.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
-    <div role="log" aria-live="polite" className="min-h-full space-y-2 p-4">{messagesLoading ? <p role="status" className="text-sm text-[var(--admin-muted)]">جارٍ تحميل الرسائل…</p> : messagesError ? <div role="alert" className="space-y-2 text-sm text-[var(--admin-danger)]"><p>{messagesError}</p><button type="button" onClick={onRetryMessages} className="font-semibold underline">إعادة المحاولة</button></div> : messages.map(message => { const isStaffMessage = ['Staff', 'Admin'].includes(message.senderType); const requestedBackground = isStaffMessage ? preferences.staffBubbleColor : preferences.studentBubbleColor; const colors = accessibleColorPair(requestedBackground); const senderLabel = isStaffMessage ? 'أنت' : participantName; return <article dir="auto" key={message.id} aria-label={`رسالة من ${senderLabel}`} style={{ backgroundColor: colors.backgroundColor, color: colors.color, fontSize: fontSize(preferences.fontScale) }} className={`max-w-[76%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 ${isStaffMessage ? 'mr-auto' : 'ml-auto'}`}><p className="mb-1 text-xs font-bold opacity-75">{senderLabel}</p><LiveSupportMessageContent message={message} audience="staff"/>{isStaffMessage ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}<LiveSupportMessageMeta message={message} audience="staff"/></article>; })}{participantDraft !== null && participantDraft !== undefined ? <article className="ml-auto max-w-[76%] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-primary-15)] px-3 py-2 text-sm text-[var(--admin-text)]"><p className="mb-1 text-xs font-bold text-[var(--admin-primary)]">{participantName} يكتب الآن…</p><p dir="auto" className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{participantDraft || '…'}</p></article> : null}</div>
+    <div role="log" aria-live="polite" className="min-h-full space-y-2 p-4">{messagesLoading ? <p role="status" className="text-sm text-[var(--admin-muted)]">جارٍ تحميل الرسائل…</p> : messagesError ? <div role="alert" className="space-y-2 text-sm text-[var(--admin-danger)]"><p>{messagesError}</p><button type="button" onClick={onRetryMessages} className="font-semibold underline">إعادة المحاولة</button></div> : messages.map(message => { const isStaffMessage = ['Staff', 'Admin'].includes(message.senderType); const requestedBackground = isStaffMessage ? preferences.staffBubbleColor : preferences.studentBubbleColor; const colors = accessibleColorPair(requestedBackground); const senderLabel = isStaffMessage ? 'أنت' : participantName; return <article dir="auto" key={message.id} aria-label={`رسالة من ${senderLabel}`} style={{ backgroundColor: colors.backgroundColor, color: colors.color, fontSize: fontSize(preferences.fontScale) }} className={`max-w-[76%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 ${isStaffMessage ? 'mr-auto' : 'ml-auto'}`}><p className="mb-1 text-xs font-bold opacity-75">{senderLabel}</p>{message.replyTo ? <ReplyPreview message={message.replyTo}/>: null}<LiveSupportMessageContent message={message} audience="staff"/><button type="button" onClick={() => { setReplyTarget(message); replyInputRef.current?.focus(); }} className="mt-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-bold opacity-75 hover:bg-black/10"><MessageSquareReply size={14}/>رد</button>{isStaffMessage ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}<LiveSupportMessageMeta message={message} audience="staff"/></article>; })}{participantDraft !== null && participantDraft !== undefined ? <article className="ml-auto max-w-[76%] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-primary-15)] px-3 py-2 text-sm text-[var(--admin-text)]"><p className="mb-1 text-xs font-bold text-[var(--admin-primary)]">{participantName} يكتب الآن…</p><p dir="auto" className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{participantDraft || '…'}</p></article> : null}</div>
     </div>
     <div className="shrink-0 border-t border-[var(--admin-border)] p-4">
+      {replyTarget ? <div className="mb-2 flex items-center gap-2 rounded-lg bg-[var(--admin-card-soft)] px-3 py-2 text-xs text-[var(--admin-text)]"><MessageSquareReply size={15} className="text-[var(--admin-primary)]"/><p className="min-w-0 flex-1 truncate">رد على: {replyTarget.content || 'مرفق'}</p><button type="button" onClick={() => setReplyTarget(undefined)} aria-label="إلغاء الرد"><X size={16}/></button></div> : null}
       {pendingImageForConversation && imagePreviewUrl && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3" role="status" aria-label="معاينة الصورة قبل الإرسال">
         <Image src={imagePreviewUrl} alt="معاينة الصورة قبل الإرسال" width={160} height={112} unoptimized className="h-28 w-40 rounded-lg bg-[var(--admin-card)] object-contain" />
         <div className="min-w-0 flex-1">
@@ -157,4 +160,9 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
 
 function fontSize(scale: LiveSupportPreferences['fontScale']) {
   return scale === 'small' ? '0.8125rem' : scale === 'large' ? '1rem' : '0.875rem';
+}
+
+function ReplyPreview({ message }: { message: NonNullable<LiveSupportMessage['replyTo']> }) {
+  const preview = message.isDeleted ? 'تم حذف هذه الرسالة' : message.content || 'مرفق';
+  return <div className="mb-2 rounded-lg bg-black/10 px-2 py-1.5 text-xs opacity-90"><p className="font-bold">رد على رسالة</p><p className="truncate">{preview}</p></div>;
 }
