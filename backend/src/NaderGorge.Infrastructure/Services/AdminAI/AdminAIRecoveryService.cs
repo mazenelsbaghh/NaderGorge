@@ -13,7 +13,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
         var now = DateTime.UtcNow;
         var changed = 0;
         var cancelledTurns = await db.AdminAITurns
-            .Where(x => x.CancellationRequestedAt != null && !x.Status.IsTerminal())
+            .Where(x => x.CancellationRequestedAt != null && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked)
             .OrderBy(x => x.CancellationRequestedAt).Take(batchSize).ToListAsync(cancellationToken);
         foreach (var turn in cancelledTurns)
         {
@@ -44,7 +44,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
 
         remaining = batchSize - changed;
         var revokedTurns = remaining == 0 ? [] : await db.AdminAITurns
-            .Where(turn => !turn.Status.IsTerminal() &&
+            .Where(turn => turn.Status != AdminAITurnStatus.Completed && turn.Status != AdminAITurnStatus.Cancelled && turn.Status != AdminAITurnStatus.Failed && turn.Status != AdminAITurnStatus.AccessRevoked &&
                 !db.AdminAITurnSteps.Any(step => step.TurnId == turn.Id && step.CallbackStatus == "Pending" && step.NextCallbackAttemptAt <= now && step.CallbackAttemptCount >= 5) &&
                 !db.Users.Any(user => user.Id == turn.ActorAdminUserId && user.IsActive && !user.IsDeleted && user.UserRoles.Any(link => link.Role.Type == RoleType.Admin)))
             .OrderBy(x => x.QueuedAt).Take(remaining).ToListAsync(cancellationToken);
@@ -60,7 +60,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             step.FailureCode = "admin_ai_worker_lease_expired";
             step.CompletedAt = now;
             step.Version++;
-            var turn = await db.AdminAITurns.SingleOrDefaultAsync(x => x.Id == step.TurnId && !x.Status.IsTerminal(), cancellationToken);
+            var turn = await db.AdminAITurns.SingleOrDefaultAsync(x => x.Id == step.TurnId && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked, cancellationToken);
             if (turn is not null) { turn.Status = AdminAITurnStatus.Failed; turn.FailureCode = "admin_ai_worker_lease_expired"; turn.CompletedAt = now; turn.Version++; }
             changed++;
         }
@@ -76,7 +76,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             step.FailureCode = "CALLBACK_UNAVAILABLE";
             step.CompletedAt = now;
             step.Version++;
-            var turn = await db.AdminAITurns.SingleOrDefaultAsync(x => x.Id == step.TurnId && !x.Status.IsTerminal(), cancellationToken);
+            var turn = await db.AdminAITurns.SingleOrDefaultAsync(x => x.Id == step.TurnId && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked, cancellationToken);
             if (turn is not null)
             {
                 turn.Status = AdminAITurnStatus.Failed;

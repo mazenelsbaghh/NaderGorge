@@ -30,8 +30,8 @@ public sealed class AdminAITurnOrchestrator(IAppDbContext db, IAdminAIAccessGate
         }
         var conversation = await db.AdminAIConversations.SingleOrDefaultAsync(x => x.Id == conversationId && x.OwnerAdminUserId == actorId, ct) ?? throw new KeyNotFoundException();
         if (conversation.Status != AdminAIConversationStatus.Active || conversation.Version != expectedVersion) throw new InvalidOperationException("Conversation is unavailable or stale.");
-        if (await db.AdminAITurns.AnyAsync(x => x.ConversationId == conversationId && !x.Status.IsTerminal(), ct)) throw new InvalidOperationException("Conversation already has an active turn.");
-        if (await db.AdminAITurns.CountAsync(x => x.ActorAdminUserId == actorId && !x.Status.IsTerminal(), ct) >= 2) throw new InvalidOperationException("Admin active turn limit reached.");
+        if (await db.AdminAITurns.AnyAsync(x => x.ConversationId == conversationId && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked, ct)) throw new InvalidOperationException("Conversation already has an active turn.");
+        if (await db.AdminAITurns.CountAsync(x => x.ActorAdminUserId == actorId && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked, ct) >= 2) throw new InvalidOperationException("Admin active turn limit reached.");
         var baseline = await db.AdminAICapabilityBaselines.AsNoTracking().SingleOrDefaultAsync(x => x.Status == AdminAICapabilityBaselineStatus.Active, ct) ?? throw new InvalidOperationException("Capability baseline is unavailable.");
         var policy = await db.AdminAISensitiveDataPolicyVersions.AsNoTracking().SingleOrDefaultAsync(x => x.Status == AdminAISensitiveDataPolicyStatus.Active, ct) ?? throw new InvalidOperationException("Sensitive policy is unavailable.");
         conversation.LastSequence++; conversation.Version++; conversation.LastActivityAt = DateTime.UtcNow;
