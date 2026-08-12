@@ -5,6 +5,7 @@ import {
   adminAiRequestConfig,
   adminAiAgentPaths,
   parseAdminAiApiError,
+  unwrapAdminAiPayload,
   type AdminAiRouteKey,
 } from './admin-ai-agent-contract.ts';
 
@@ -22,6 +23,15 @@ test('request config preserves AbortSignal and only sends explicit idempotency k
   });
 });
 
+test('Admin AI payload unwrap supports direct and enveloped API representations', () => {
+  const payload = { id: 'conversation-id', title: 'محادثة جديدة' };
+  assert.deepEqual(unwrapAdminAiPayload<typeof payload>(payload), payload);
+  assert.deepEqual(
+    unwrapAdminAiPayload<typeof payload>({ data: payload }),
+    payload
+  );
+});
+
 test('API errors accept the closed safe shape and reject additions or unknown codes', () => {
   const safe = {
     code: 'RATE_LIMITED',
@@ -32,7 +42,10 @@ test('API errors accept the closed safe shape and reject additions or unknown co
   };
   assert.deepEqual(parseAdminAiApiError(safe), safe);
   assert.equal(parseAdminAiApiError({ ...safe, detail: 'secret' }), undefined);
-  assert.equal(parseAdminAiApiError({ ...safe, code: 'MODEL_RAW_ERROR' }), undefined);
+  assert.equal(
+    parseAdminAiApiError({ ...safe, code: 'MODEL_RAW_ERROR' }),
+    undefined
+  );
 });
 
 test('resource identifiers are encoded in every Admin AI endpoint', () => {

@@ -147,6 +147,24 @@ export function adminAiRequestConfig(
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
   };
 }
+
+/**
+ * The Admin AI API previously returned closed DTOs directly, whereas the
+ * platform convention wraps them in `{ data }`. Supporting both shapes keeps
+ * a rolling release from creating a conversation that the browser cannot
+ * select or display.
+ */
+export function unwrapAdminAiPayload<T>(payload: unknown): T {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    Object.prototype.hasOwnProperty.call(payload, 'data')
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
 export interface AdminAiConversationSummary {
   id: string;
   title: string;
