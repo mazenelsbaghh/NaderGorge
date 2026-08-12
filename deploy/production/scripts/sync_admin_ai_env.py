@@ -4,28 +4,24 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
+import sys
 import uuid
 
-from production_inventory import load_inventory, operator_transport
-from ssh_transport import SshTarget
-
-
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "deploy" / "production" / "scripts"))
+
+from clusterctl import load_inventory, operator_transport, target  # noqa: E402
+
 DEFAULT_KNOWN_HOSTS = Path.home() / ".ssh" / "massar_prod_known_hosts"
 DEFAULT_IDENTITY_FILE = Path.home() / ".ssh" / "massar_prod_cluster_ed25519"
-
-
-def target(inventory: object, node: object) -> SshTarget:
-    return SshTarget(node.id, node.public_address, inventory.cluster["ssh_user"])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--yes", action="store_true")
     arguments = parser.parse_args()
-
-    import os
 
     os.environ.setdefault("MASSAR_KNOWN_HOSTS_FILE", str(DEFAULT_KNOWN_HOSTS))
     os.environ.setdefault("MASSAR_SSH_IDENTITY_FILE", str(DEFAULT_IDENTITY_FILE))
