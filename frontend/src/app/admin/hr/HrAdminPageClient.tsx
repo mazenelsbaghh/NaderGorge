@@ -75,8 +75,14 @@ export default function HrAdminPageClient() {
   const durationMinutes = (row: AdminBreakSessionDto) => row.clockedOutAt
     ? row.workedMinutes
     : elapsedTodayMinutes(row.clockedInAt);
+  const openBreakMinutes = (row: AdminDailyAttendanceReportDto) => row.openBreakStartedAt
+    ? elapsedTodayMinutes(row.openBreakStartedAt)
+    : 0;
+  const dailyBreakMinutes = (row: AdminDailyAttendanceReportDto) => row.closedBreakMinutes + openBreakMinutes(row);
   const dailyWorkedMinutes = (row: AdminDailyAttendanceReportDto) => row.workedMinutes
-    + (row.openClockedInAt ? elapsedTodayMinutes(row.openClockedInAt) : 0);
+    + (row.openClockedInAt
+      ? Math.max(0, elapsedTodayMinutes(row.openClockedInAt) - row.openSessionBreakMinutes - openBreakMinutes(row))
+      : 0);
   const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} س ${Math.max(0, minutes % 60)} د`;
   const formatTime = (value: string) => formatCairoDateTime(value, { hour: '2-digit', minute: '2-digit' });
 
@@ -99,6 +105,8 @@ export default function HrAdminPageClient() {
     { key: 'clockedInAt', label: 'الحضور', render: (row) => <span className="font-black">{formatTime(row.clockedInAt)}</span> },
     { key: 'clockedOutAt', label: 'الانصراف', render: (row) => row.hasOpenSession ? <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">ما زال يعمل</span> : row.clockedOutAt ? <span className="font-black">{formatTime(row.clockedOutAt)}</span> : '—' },
     { key: 'workedMinutes', label: 'صافي مدة العمل', render: (row) => <span className="font-black text-[var(--admin-primary)]">{formatDuration(dailyWorkedMinutes(row))}</span> },
+    { key: 'closedBreakMinutes', label: 'الاستراحة المستخدمة', render: (row) => <span className="font-black">{formatDuration(dailyBreakMinutes(row))}</span> },
+    { key: 'breakAllowanceMinutes', label: 'المتبقي من البريك', render: (row) => <span className="font-black text-emerald-700">{formatDuration(Math.max(0, row.breakAllowanceMinutes - dailyBreakMinutes(row)))}</span> },
     { key: 'lateMinutes', label: 'التأخير', render: (row) => row.lateMinutes > 0 ? <span className="font-black text-rose-700">{row.lateMinutes} د</span> : '—' },
     { key: 'earlyLeaveMinutes', label: 'خروج مبكر', render: (row) => row.earlyLeaveMinutes > 0 ? <span className="font-black text-amber-700">{row.earlyLeaveMinutes} د</span> : '—' },
     { key: 'overtimeMinutes', label: 'إضافي', render: (row) => row.overtimeMinutes > 0 ? <span className="font-black text-emerald-700">{row.overtimeMinutes} د</span> : '—' },

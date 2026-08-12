@@ -41,7 +41,7 @@ internal static class StaffRealtimeChangeDetector
             [typeof(FormSubmission)] = ["forms"],
             [typeof(CodeGroup)] = ["codes"],
             [typeof(AccessCode)] = ["codes"],
-            [typeof(StudentAccessGrant)] = ["codes", "users"],
+            [typeof(StudentAccessGrant)] = ["codes", "content", "users"],
             [typeof(CodeVideoTarget)] = ["codes"],
             [typeof(AccessCodeActivationLog)] = ["codes", "finance"],
             [typeof(ExtraWatchRequest)] = ["watch-requests"],

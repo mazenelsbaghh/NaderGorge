@@ -207,12 +207,14 @@ public sealed class IssueGiftCommandHandler
             issuance.Recipients.Add(recipient);
         }
 
-        var successCount = issuance.Recipients.Count(x => x.Status == GiftRecipientStatus.Active);
+        var successCount = issuance.Recipients.Count(x => GiftValueSemantics.IsSuccessful(x.Status));
         issuance.Status = successCount == 0
             ? GiftIssuanceStatus.Completed
-            : successCount == issuance.Recipients.Count
-                ? GiftIssuanceStatus.Active
-                : GiftIssuanceStatus.PartiallySuccessful;
+            : successCount < issuance.Recipients.Count
+                ? GiftIssuanceStatus.PartiallySuccessful
+                : issuance.Recipients.All(x => x.Status == GiftRecipientStatus.Completed)
+                    ? GiftIssuanceStatus.Completed
+                    : GiftIssuanceStatus.Active;
 
         _db.GiftIssuances.Add(issuance);
         _db.AuditLogs.Add(new AuditLog

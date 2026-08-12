@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { HelpCircle, ChevronDown, MessageCircle } from 'lucide-react';
 
 const faqs = [
@@ -51,8 +50,11 @@ export default function FaqPageClient() {
                 className="landing-panel overflow-hidden rounded-[20px]"
               >
                 <button
+                  type="button"
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
                   className="flex w-full items-center justify-between gap-4 p-5 text-right transition hover:bg-[var(--landing-card)]"
+                  aria-expanded={openIndex === i}
+                  aria-controls={`faq-answer-${i}`}
                 >
                   <span className="font-bold text-[var(--landing-ink)]">{faq.q}</span>
                   <ChevronDown className={`h-5 w-5 shrink-0 text-[var(--landing-accent)] transition-transform ${openIndex === i ? 'rotate-180' : ''}`} />
@@ -60,6 +62,7 @@ export default function FaqPageClient() {
                 <AnimatePresence>
                   {openIndex === i && (
                     <motion.div
+                      id={`faq-answer-${i}`}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -78,10 +81,9 @@ export default function FaqPageClient() {
           {/* CTA */}
           <div className="mt-12 text-center">
             <p className="mb-4 text-sm font-bold text-[var(--landing-muted)]">لسه عندك أسئلة؟</p>
-            <Link
-              href="#support"
-              onClick={(event) => {
-                event.preventDefault();
+            <button
+              type="button"
+              onClick={() => {
                 window.dispatchEvent(new Event('massar:open-support'));
               }}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-8 py-3.5 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
@@ -89,7 +91,7 @@ export default function FaqPageClient() {
             >
               <MessageCircle className="h-4 w-4" />
               تواصل مع الدعم
-            </Link>
+            </button>
           </div>
         </motion.div>
       </div>

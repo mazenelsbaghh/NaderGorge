@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Headphones, LoaderCircle, MessageCircle, Paperclip, Send, X } from 'lucide-react';
 import { liveSupportService, type LiveSupportAIPendingDecision, type LiveSupportAITurnState, type LiveSupportAIVerificationSession, type LiveSupportAvailability, type LiveSupportConversation, type LiveSupportMessage } from '@/services/live-support-service';
@@ -32,6 +32,8 @@ function formatBusinessHours(windows?: LiveSupportAvailability['businessHours'])
   if (!windows?.length) return 'لم تُحدد مواعيد العمل لهذا اليوم بعد';
   return windows.map((window) => `من ${formatSupportTime(window.startLocalTime)} إلى ${formatSupportTime(window.endLocalTime)}`).join('، ');
 }
+
+const SUPPORT_SETTINGS_CACHE_KEY = 'massar:support-settings';
 
 type LiveSupportLauncherProps = {
   avoidMobileBottomNav?: boolean;
@@ -66,6 +68,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   const authIsLoading = useAuthStore((state) => state.isLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [supportVisibility, setSupportVisibility] = useState<SupportVisibilitySettings | null>(null);
+  const [supportSettingsUnavailable, setSupportSettingsUnavailable] = useState(false);
   const drafts = useLiveSupportStore(state => state.drafts);
   const setStoredDraft = useLiveSupportStore(state => state.setDraft);
   const clearStoredDraft = useLiveSupportStore(state => state.clearDraft);
@@ -80,16 +83,22 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     return () => window.removeEventListener('massar:open-support', openSupport);
   }, []);
 
-  useEffect(() => {
-    void apiClient.get('/public/settings')
-      .then(({ data }) => setSupportVisibility({
-        liveSupportEnabled: data?.liveSupportEnabled === true,
-        showSupportOutsideAccount: data?.showSupportOutsideAccount === true,
-        guestSupportWhatsAppNumber: String(data?.guestSupportWhatsAppNumber ?? ''),
-        supportPhoneNumber: String(data?.supportPhoneNumber ?? ''),
-      }))
-      .catch(() => setSupportVisibility({ liveSupportEnabled: false, showSupportOutsideAccount: false, guestSupportWhatsAppNumber: '', supportPhoneNumber: '' }));
+  const loadSupportVisibility = useCallback(async () => {
+    setSupportSettingsUnavailable(false);
+    try {
+      const response = await apiClient.get('/public/settings', { suppressErrorToast: true });
+      const settings = mapSupportVisibilitySettings(response.data);
+      setSupportVisibility(settings);
+      window.localStorage.setItem(SUPPORT_SETTINGS_CACHE_KEY, JSON.stringify(settings));
+    } catch {
+      setSupportVisibility(readCachedSupportVisibility());
+      setSupportSettingsUnavailable(true);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadSupportVisibility();
+  }, [loadSupportVisibility]);
 
   const [activeAction, setActiveAction] = useState<LiveSupportAIPendingDecision | null>(null);
   const [activeVerification, setActiveVerification] = useState<LiveSupportAIVerificationSession | null>(null);
@@ -324,7 +333,11 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   const whatsappNumber = supportVisibility?.guestSupportWhatsAppNumber.replace(/\D/g, '') ?? '';
   const contactNumber = whatsappNumber || supportVisibility?.supportPhoneNumber.trim() || '';
 
-  if (authIsLoading || !supportVisibility) return null;
+  if (authIsLoading || (!supportVisibility && !supportSettingsUnavailable)) return null;
+
+  if (!supportVisibility) {
+    return <SupportSettingsRecovery launcherPositionClass={launcherPositionClass} retry={loadSupportVisibility}/>;
+  }
 
   if (!isAuthenticated) {
     const whatsappNumber = supportVisibility.guestSupportWhatsAppNumber.replace(/\D/g, '');
@@ -336,7 +349,10 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     </a>;
   }
 
-  if (!supportVisibility.liveSupportEnabled) return null;
+  if (!supportVisibility.liveSupportEnabled) {
+    if (!contactNumber) return null;
+    return <SupportContactLink launcherPositionClass={launcherPositionClass} whatsappNumber={whatsappNumber} contactNumber={contactNumber}/>;
+  }
 
   return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] sm:left-6`}>
     {open && <section role="dialog" aria-modal="true" aria-label="الدعم المباشر" className="mb-3 flex h-[min(680px,calc(100dvh-7rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
@@ -399,6 +415,58 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'إغلاق الدعم المباشر' : 'فتح الدعم المباشر'} className="grid size-14 place-items-center rounded-2xl bg-[#0A1D3D] text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D]"><MessageCircle size={24}/></button>
     </div>
   </div>;
+}
+
+function mapSupportVisibilitySettings(settings: unknown): SupportVisibilitySettings {
+  const settingsRecord = settings as Record<string, unknown> | null;
+  return {
+    liveSupportEnabled: settingsRecord?.liveSupportEnabled === true,
+    showSupportOutsideAccount: settingsRecord?.showSupportOutsideAccount === true,
+    guestSupportWhatsAppNumber: String(settingsRecord?.guestSupportWhatsAppNumber ?? ''),
+    supportPhoneNumber: String(settingsRecord?.supportPhoneNumber ?? ''),
+  };
+}
+
+function readCachedSupportVisibility(): SupportVisibilitySettings | null {
+  try {
+    const rawSettings = window.localStorage.getItem(SUPPORT_SETTINGS_CACHE_KEY);
+    if (!rawSettings) return null;
+    return mapSupportVisibilitySettings(JSON.parse(rawSettings));
+  } catch {
+    return null;
+  }
+}
+
+function SupportSettingsRecovery({ launcherPositionClass, retry }: { launcherPositionClass: string; retry: () => Promise<void> }) {
+  const [retrying, setRetrying] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  async function retrySupportSettings() {
+    setRetrying(true);
+    await retry();
+    setRetrying(false);
+  }
+
+  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] sm:left-6`}>
+    {open && <section role="dialog" aria-modal="true" aria-label="مساعدة الدعم" className="mb-3 w-[min(360px,calc(100vw-2rem))] rounded-3xl border border-amber-200 bg-white p-5 shadow-2xl">
+      <h2 className="text-lg font-black text-[#0A1D3D]">تعذر الوصول إلى الدعم الآن</h2>
+      <p className="mt-2 text-sm font-bold leading-6 text-slate-600">تحقق من اتصالك بالإنترنت، ثم أعد تحميل وسيلة التواصل. لا نريد أن نعرض لك قناة دعم غير مؤكدة.</p>
+      <div className="mt-5 flex items-center gap-3">
+        <button type="button" disabled={retrying} onClick={() => void retrySupportSettings()} className="min-h-11 rounded-xl bg-[#0A1D3D] px-4 text-sm font-black text-white disabled:opacity-60">{retrying ? 'جارٍ التحقق…' : 'إعادة المحاولة'}</button>
+        <button type="button" onClick={() => setOpen(false)} className="min-h-11 px-2 text-sm font-black text-slate-600">إغلاق</button>
+      </div>
+    </section>}
+    <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label="فتح مساعدة الدعم" className="grid size-14 place-items-center rounded-2xl bg-[#0A1D3D] text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D]"><Headphones size={24}/></button>
+  </div>;
+}
+
+function SupportContactLink({ launcherPositionClass, whatsappNumber, contactNumber }: { launcherPositionClass: string; whatsappNumber: string; contactNumber: string }) {
+  const href = whatsappNumber ? `https://wa.me/${whatsappNumber}` : `tel:${contactNumber.replace(/\s/g, '')}`;
+  const label = whatsappNumber ? 'التواصل مع الدعم عبر واتساب' : 'الاتصال بالدعم';
+
+  return <a href={href} target={whatsappNumber ? '_blank' : undefined} rel={whatsappNumber ? 'noopener noreferrer' : undefined} dir="rtl" aria-label={label} className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0A1D3D] px-4 py-3 text-sm font-black text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D] sm:left-6`}>
+    <Headphones size={22}/><span>{whatsappNumber ? 'واتساب الدعم' : 'اتصل بالدعم'}</span>
+  </a>;
 }
 
 function isForbiddenOrConflict(cause: unknown) {

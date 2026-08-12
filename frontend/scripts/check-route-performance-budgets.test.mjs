@@ -8,7 +8,33 @@ import { fileURLToPath } from 'node:url';
 
 import { evaluateRoutePerformanceBudgets } from './check-route-performance-budgets.mjs';
 
-const routePaths = ['/login', '/register', '/student'];
+const routePaths = ['/login', '/register', '/student', '/admin/ai-agent'];
+
+const adminAIPerformanceContract = {
+  route: {
+    maximumWarmNavigationP75Ms: 300,
+    maximumDuplicateEligibleReads: 0,
+  },
+  worker: {
+    concurrency: 4,
+    maximumQueueAgeMs: 300_000,
+    ordinaryProviderDeadlineMs: 30_000,
+  },
+  requestsPerMinute: {
+    turnAdmissionsPerAdmin: 10,
+    confirmationsPerAdmin: 20,
+    secureInputsPerAdmin: 10,
+    internalCallbacksPerSourceIp: 120,
+  },
+  query: {
+    maximumModelSteps: 3,
+    maximumReadCallsPerTurn: 6,
+    maximumReadCallsPerStep: 4,
+    maximumRedactedContextBytes: 65_536,
+    maximumRecordsPerInvocation: 200,
+    maximumQueryTimeoutMs: 5_000,
+  },
+};
 
 const budgets = {
   routes: Object.fromEntries(
@@ -60,7 +86,7 @@ function routeReport({
   };
 }
 
-test('login, register, and student pass within compressed route budgets', () => {
+test('required public, student, and AdminAI routes pass within compressed budgets', () => {
   const evaluation = evaluateRoutePerformanceBudgets({
     budgets,
     baseline: routeReport({ initialBrotliBytes: 1_000 }),
@@ -72,6 +98,17 @@ test('login, register, and student pass within compressed route budgets', () => 
     evaluation.routes.map((route) => route.pathname),
     routePaths,
   );
+});
+
+test('AdminAI route, worker, request, and query ceilings match the reviewed protocol', () => {
+  assert.deepEqual(adminAIPerformanceContract, {
+    route: { maximumWarmNavigationP75Ms: 300, maximumDuplicateEligibleReads: 0 },
+    worker: { concurrency: 4, maximumQueueAgeMs: 300_000, ordinaryProviderDeadlineMs: 30_000 },
+    requestsPerMinute: { turnAdmissionsPerAdmin: 10, confirmationsPerAdmin: 20, secureInputsPerAdmin: 10, internalCallbacksPerSourceIp: 120 },
+    query: { maximumModelSteps: 3, maximumReadCallsPerTurn: 6, maximumReadCallsPerStep: 4, maximumRedactedContextBytes: 65_536, maximumRecordsPerInvocation: 200, maximumQueryTimeoutMs: 5_000 },
+  });
+  assert.equal(budgets.routes['/admin/ai-agent'].maximumWarmNavigationP75Ms, adminAIPerformanceContract.route.maximumWarmNavigationP75Ms);
+  assert.equal(budgets.routes['/admin/ai-agent'].maximumDuplicateEligibleReads, adminAIPerformanceContract.route.maximumDuplicateEligibleReads);
 });
 
 test('compressed initial, shared, deferred, and request breaches fail the route gate', () => {

@@ -2,8 +2,9 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
-using NaderGorge.Infrastructure.Data;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Events;
+using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Application.Tests;
 
@@ -138,6 +139,54 @@ public class StaffRealtimeOutboxTests
         await db.SaveChangesAsync();
 
         Assert.Empty(await db.OutboxEvents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SavingAccessGrant_InvalidatesContentScope()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var student = new User
+        {
+            Id = Guid.NewGuid(),
+            FullName = "Realtime student",
+            PhoneNumber = "01088000001",
+            PasswordHash = "test-hash"
+        };
+        var teacherUser = new User
+        {
+            Id = Guid.NewGuid(),
+            FullName = "Realtime teacher",
+            PhoneNumber = "01088000002",
+            PasswordHash = "test-hash"
+        };
+        var teacher = new TeacherProfile { Id = Guid.NewGuid(), User = teacherUser };
+        var subject = new Subject { Id = Guid.NewGuid(), Name = "Realtime subject", NormalizedName = "REALTIME_SUBJECT" };
+        var package = new Package { Id = Guid.NewGuid(), Name = "Realtime package", Subject = subject, Teacher = teacher };
+        db.AddRange(student, teacher, subject, package);
+        await db.SaveChangesAsync();
+        await db.OutboxEvents.ExecuteDeleteAsync();
+
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            GrantType = CodeType.Package,
+            PackageId = package.Id,
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+
+        var staffEvent = await db.OutboxEvents.AsNoTracking().SingleAsync();
+        using var payload = JsonDocument.Parse(staffEvent.PayloadJson);
+        var scopes = payload.RootElement.GetProperty("scopes")
+            .EnumerateArray()
+            .Select(scope => scope.GetString()!)
+            .ToArray();
+
+        Assert.Equal("StudentAccessGrant", payload.RootElement.GetProperty("entityType").GetString());
+        Assert.Equal(["codes", "content", "users"], scopes);
     }
 
     private static AppDbContext CreateContext(SqliteConnection connection)

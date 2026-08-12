@@ -1,8 +1,6 @@
 using System.Text;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using NaderGorge.Application.Common;
-using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Content.Queries;
@@ -21,30 +19,22 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
 
     public async Task<byte[]> Handle(ExportContentSubscribersQuery request, CancellationToken ct)
     {
-        var grantType = MapContentType(request.ContentType);
         var contentName = await ResolveContentNameAsync(request.ContentType, request.ContentId, ct);
-
-        var query = _db.StudentAccessGrants.AsQueryable();
-
-        if (grantType is not null)
-            query = query.Where(sag => sag.GrantType == grantType.Value);
-
-        query = request.ContentType.ToLowerInvariant() switch
-        {
-            "package" => query.Where(sag => sag.PackageId == request.ContentId),
-            "term" => query.Where(sag => sag.TermId == request.ContentId),
-            "section" => query.Where(sag => sag.ContentSectionId == request.ContentId),
-            "lesson" => query.Where(sag => sag.LessonId == request.ContentId),
-            _ => query.Where(sag => false)
-        };
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var search = request.Search.Trim().ToLower();
-            query = query.Where(sag =>
-                sag.User.FullName.ToLower().Contains(search) ||
-                sag.User.PhoneNumber.Contains(search));
-        }
+        var matchingGrants = ContentSubscriberGrantQuery.Build(
+            _db,
+            request.ContentType,
+            request.ContentId,
+            request.Search);
+        var query = ContentSubscriberGrantQuery.RepresentativePerStudent(matchingGrants);
+        var balanceStudentIds = ContentSubscriberGrantQuery.BalanceStudentIds(
+            _db,
+            request.ContentType,
+            request.ContentId);
+        var now = DateTime.UtcNow;
+        var activeStudentIds = matchingGrants
+            .Where(grant => grant.IsActive && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
+            .Select(grant => grant.UserId)
+            .Distinct();
 
         var rows = await query
             .OrderByDescending(sag => sag.GrantedAt)
@@ -60,15 +50,15 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 ParentPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.ParentPhone : "",
                 MotherPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.MotherPhone : "",
                 sag.GrantedAt,
-                sag.IsActive,
-                PurchaseMethod = sag.AccessCodeId != null ? "كود" : sag.GiftRecipientId != null ? "هدية" : "رصيد"
+                IsActive = activeStudentIds.Contains(sag.UserId),
+                PurchaseMethod = sag.AccessCodeId != null ? "كود" : sag.GiftRecipientId != null ? "هدية" : balanceStudentIds.Contains(sag.UserId) ? "رصيد" : "مباشر / غير مصنف"
             })
             .ToListAsync(ct);
 
         var sb = new StringBuilder();
 
         // Header row
-        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,نوع المحتوى,المحتوى المشترى,طريقة الاشتراك,تاريخ الاشتراك,الحالة");
+        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,نوع المحتوى,المحتوى,طريقة الاقتناء,تاريخ الاقتناء,الحالة");
 
         foreach (var row in rows)
         {
@@ -86,7 +76,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 CsvEscape(contentName),
                 CsvEscape(row.PurchaseMethod),
                 CsvEscape(row.GrantedAt.ToString("yyyy-MM-dd")),
-                CsvEscape(row.IsActive ? "نشط" : "ملغى")
+                CsvEscape(row.IsActive ? "نشط" : "منتهي / غير نشط")
             ));
         }
 
@@ -106,18 +96,6 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
             return $"\"{value.Replace("\"", "\"\"")}\"";
         return value;
-    }
-
-    private static CodeType? MapContentType(string contentType)
-    {
-        return contentType.ToLowerInvariant() switch
-        {
-            "package" => CodeType.Package,
-            "term" => CodeType.Term,
-            "section" => CodeType.Month,
-            "lesson" => CodeType.Lesson,
-            _ => null
-        };
     }
 
     private async Task<string> ResolveContentNameAsync(string contentType, Guid contentId, CancellationToken ct)

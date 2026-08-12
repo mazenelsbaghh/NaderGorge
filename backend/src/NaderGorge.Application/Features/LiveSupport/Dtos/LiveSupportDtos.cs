@@ -123,6 +123,7 @@ public sealed record LiveSupportStudentSupportActivityDto(DateTime At, string Ty
 public sealed record LiveSupportAdminConversationDto(Guid Id, string ParticipantName, LiveSupportParticipantType ParticipantType, LiveSupportConversationStatus Status, string? OwnerName, DateTime CreatedAt, DateTime? AssignedAt, DateTime? FirstResponseAt, DateTime? ClosedAt, double? WaitSeconds, double? HandleSeconds, string? Subject, string? AiTurnStatus, string? AiTurnFailureCode);
 public sealed record LiveSupportStaffPerformanceDto(Guid StaffUserId, string StaffName, int ParticipatedConversations, int ClosedConversations, int RatingCount, double? AverageRating);
 public sealed record LiveSupportAdminDashboardDto(int WaitingCount, int ActiveCount, int ClosedToday, IReadOnlyList<LiveSupportAdminConversationDto> Conversations, IReadOnlyList<LiveSupportStaffPerformanceDto> StaffPerformance);
+public sealed record LiveSupportRatingDto(Guid Id, Guid ConversationId, int Stars, string? Comment, DateTime SubmittedAt, string SubmittedByName, bool IsStudent);
 public sealed record LiveSupportTimelineItemDto(DateTime At, string Type, string? ActorName, string Summary, string? SafeDetails);
 public sealed record LiveSupportConversationTimelineDto(LiveSupportAdminConversationDto Conversation, IReadOnlyList<LiveSupportTimelineItemDto> Items, int? RatingStars, string? RatingComment);
 

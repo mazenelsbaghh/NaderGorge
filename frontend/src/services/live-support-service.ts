@@ -166,6 +166,7 @@ export interface LiveSupportStudentActionContext {
 export interface LiveSupportAdminConversation { id: string; participantName: string; participantType: LiveSupportParticipantType; status: LiveSupportConversationStatus; ownerName?: string; createdAt: string; assignedAt?: string; firstResponseAt?: string; closedAt?: string; waitSeconds?: number; handleSeconds?: number; subject?: string; aiTurnStatus?: string; aiTurnFailureCode?: string; }
 export interface LiveSupportStaffPerformance { staffUserId: string; staffName: string; participatedConversations: number; closedConversations: number; ratingCount: number; averageRating?: number; }
 export interface LiveSupportAdminDashboard { waitingCount: number; activeCount: number; closedToday: number; conversations: LiveSupportAdminConversation[]; staffPerformance: LiveSupportStaffPerformance[]; }
+export interface LiveSupportRating { id: string; conversationId: string; stars: number; comment?: string | null; submittedAt: string; submittedByName: string; isStudent: boolean; }
 export interface LiveSupportConversationTimeline { conversation: LiveSupportAdminConversation; items: Array<{ at: string; type: string; actorName?: string; summary: string; safeDetails?: string }>; ratingStars?: number; ratingComment?: string; }
 
 export interface LiveSupportAIVerificationSession {
@@ -353,6 +354,9 @@ export const liveSupportService = {
 
   getAdminDashboard: () =>
     apiClient.get<ApiResponse<LiveSupportAdminDashboard>>('/live-support/admin/dashboard').then((response) => response.data.data),
+
+  getAdminRatings: (params: { from?: string; to?: string }) =>
+    apiClient.get<ApiResponse<LiveSupportRating[]>>('/live-support/admin/ratings', { params }).then((response) => response.data.data),
 
   getAdminTimeline: (conversationId: string) =>
     apiClient.get<ApiResponse<LiveSupportConversationTimeline>>(`/live-support/admin/conversations/${conversationId}/timeline`).then((response) => response.data.data),

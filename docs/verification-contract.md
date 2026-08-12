@@ -119,6 +119,25 @@ docker compose config -q
 
 Full `docker compose up` requires local secret values for required app secrets such as `API_CALLBACK_SECRET`, `AI_CALLBACK_SECRET`, `WORKER_ADMIN_TOKEN`, and `PARENT_REPORT_SIGNING_SECRET`.
 
+## Admin AI Agent verification and rollback
+
+The Admin AI workspace is disabled by default. Set `ADMIN_AI_ENABLED=true` only after the active capability baseline, sensitive-data policy, PostgreSQL migration, worker readiness, and Admin-only browser checks pass. `ADMIN_AI_HMAC_KEY` must be an independent base64-encoded random value of at least 32 bytes; never place it in transcripts, logs, test snapshots, or committed configuration.
+
+Focused verification:
+
+```bash
+dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --filter FullyQualifiedName~AdminAI
+dotnet test backend/tests/NaderGorge.Integration.Tests/NaderGorge.Integration.Tests.csproj --filter FullyQualifiedName~AdminAI
+npm --prefix worker run build
+npm --prefix worker test
+npm --prefix frontend run typecheck
+cd frontend && npx playwright test tests/e2e/admin-ai-agent.spec.ts tests/e2e/route-permission-parity.spec.ts --project=chromium --project=webkit
+```
+
+Mocked provider tests prove protocol behavior only. Production acceptance additionally requires the configured real Gemini provider with outbound secret-sentinel capture and zero destructive platform effect.
+
+Safe disable/rollback sets `ADMIN_AI_ENABLED=false`, restarts backend and worker, and verifies new turns/proposals are rejected while owner history and terminal redacted evidence remain readable. Do not reset PostgreSQL, Redis, Docker volumes, conversations, proposals, executions, or audit evidence during rollback. The Admin AI worker receives claim/tool data only through the authenticated backend callback protocol and has no Admin AI database credential or direct database query path.
+
 ## Production TLS and Protected Assets Contract
 
 The checked-in Nginx proxy may run behind an external TLS terminator. In that deployment shape, the external terminator must enforce HTTPS, pass `X-Forwarded-Proto`, preserve `Host`, and forward only trusted Massar origins. If Nginx is used as the direct public ingress, add a production-specific 443 server block with mounted certificate paths before enabling public traffic.

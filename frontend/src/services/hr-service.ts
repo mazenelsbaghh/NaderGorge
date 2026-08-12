@@ -138,8 +138,8 @@ export interface AttendancePolicyConfigurationDto {
 export type AttendanceBreakKind = 'Regular' | 'ShortPermission';
 export interface AttendanceBreakDto { id: string; startedAt: string; endedAt?: string | null; kind: AttendanceBreakKind; allowedMinutes: number; }
 export interface AttendanceSessionDto { id: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; serverNowUtc?: string; breakAllowanceMinutes?: number; shortPermissionMaxMinutes?: number; dailyShortPermissionAllowanceMinutes?: number; breaks?: AttendanceBreakDto[]; }
-export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; serverNowUtc: string; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; }
-export interface AdminDailyAttendanceReportDto { employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; openClockedInAt?: string | null; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; hasOpenSession: boolean; serverNowUtc: string; }
+export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; serverNowUtc: string; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; breaks?: AttendanceBreakDto[]; }
+export interface AdminDailyAttendanceReportDto { employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; openClockedInAt?: string | null; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; hasOpenSession: boolean; closedBreakMinutes: number; openSessionBreakMinutes: number; openBreakStartedAt?: string | null; breakAllowanceMinutes: number; serverNowUtc: string; }
 export interface AttendanceCorrectionDto { id: string; employeeId: string; employee: string; attendanceSessionId: string; proposedClockedInAt?: string | null; proposedClockedOutAt?: string | null; reason: string; evidenceReference?: string | null; state: string; beforeJson: string; appliedJson?: string | null; version: number; }
 export interface LeaveTypeDto { id: string; code: string; name: string; isPaid: boolean; requiresAttachment: boolean; allowsHalfDay: boolean; }
 export interface LeaveBalanceDto { id: string; leaveTypeId: string; leaveType: string; year: number; granted: number; carried: number; reserved: number; used: number; available: number; }
@@ -244,6 +244,11 @@ export const hrService = {
     return res.data;
   },
 
+  deleteEmployee: async (employeeId: string): Promise<ApiResponse<string>> => {
+    const res = await apiClient.delete<ApiResponse<string>>(`/hr/employees/${employeeId}`);
+    return res.data;
+  },
+
   listWorkCalendars: async (): Promise<WorkCalendarDto[]> => {
     const res = await apiClient.get<WorkCalendarDto[]>('/hr/admin/shifts/calendars');
     return res.data ?? [];
@@ -314,6 +319,9 @@ export const hrService = {
   },
   endAttendanceBreak: async (breakId: string): Promise<ApiResponse<string>> => {
     const res = await apiClient.post<ApiResponse<string>>(`/hr/self/attendance/breaks/${breakId}/end`, {}, { headers: { 'Idempotency-Key': createClientId() } }); return res.data;
+  },
+  updateAttendanceBreak: async (breakId: string, payload: { startedAt: string; endedAt?: string | null }): Promise<ApiResponse<boolean>> => {
+    const res = await apiClient.put<ApiResponse<boolean>>(`/hr/admin/attendance/breaks/${breakId}`, payload); return res.data;
   },
   clockOutSecure: async (): Promise<ApiResponse<{ sessionId: string }>> => {
     const res = await apiClient.post<ApiResponse<{ sessionId: string }>>('/hr/self/attendance/clock-out', {}, { headers: { 'Idempotency-Key': createClientId() } }); return res.data;

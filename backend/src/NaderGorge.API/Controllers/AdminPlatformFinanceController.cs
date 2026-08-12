@@ -25,7 +25,6 @@ public sealed class AdminPlatformFinanceController(
     IPlatformFinanceExportService export,
     IPlatformFinanceMigrationService migration,
     IAppDbContext db,
-    IFinancialPostingService posting,
     PlatformFinancialReportQueries reports,
     FinancialReconciliationService reconciliation,
     AccountingPeriodCommands periods,
@@ -115,27 +114,8 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.expenses.create")]
     public async Task<ActionResult<object>> BackfillWalletTransferReviews(CancellationToken ct)
     {
-        var alreadyReviewedSmsIds = await db.WalletTransferReviews.AsNoTracking().Select(x => x.IncomingSmsLogId).ToListAsync(ct);
-        var oldLogs = await db.IncomingSmsLogs.AsNoTracking()
-            .Where(x => !alreadyReviewedSmsIds.Contains(x.Id)).OrderBy(x => x.ReceivedAt).ToListAsync(ct);
-        var reviews = oldLogs.Select(log => new { Log = log, Parsed = SmsParser.Parse(log.Body) })
-            .Where(x => SmsParser.IsOutgoingTransfer(x.Log.Body) && x.Parsed.Amount.HasValue)
-            .Select(x => new NaderGorge.Domain.Entities.WalletTransferReview
-            {
-                IncomingSmsLogId = x.Log.Id,
-                SourceWalletId = x.Log.WalletId,
-                DestinationPhoneNumber = x.Parsed.RecipientPhone ?? x.Parsed.SenderPhone ?? "غير معروف",
-                Amount = x.Parsed.Amount!.Value,
-                ServiceFee = x.Parsed.ServiceFee,
-                TransferReference = x.Parsed.TransferReference,
-                OccurredAt = x.Log.ReceivedAt
-            }).ToList();
-        if (reviews.Count > 0)
-        {
-            db.WalletTransferReviews.AddRange(reviews);
-            await db.SaveChangesAsync(ct);
-        }
-        return Ok(new { added = reviews.Count });
+        var result = await mediator.Send(new BackfillWalletTransferReviewsCommand(), ct);
+        return Ok(new { added = result.Added });
     }
 
     [HttpGet("wallets/report")]
@@ -178,67 +158,26 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.expenses.create")]
     public async Task<ActionResult<object>> RecordWalletTransferExpense(Guid reviewId, [FromBody] WalletTransferExpenseBody body, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(body.BeneficiaryName) || string.IsNullOrWhiteSpace(body.Reason))
-            throw new InvalidOperationException("FINANCE_BENEFICIARY_AND_REASON_REQUIRED");
-        var review = await db.WalletTransferReviews.SingleOrDefaultAsync(x => x.Id == reviewId, ct)
-            ?? throw new InvalidOperationException("FINANCE_WALLET_TRANSFER_REVIEW_NOT_FOUND");
-        if (review.Status != NaderGorge.Domain.Entities.WalletTransferReviewStatus.PendingClassification)
-            throw new InvalidOperationException("FINANCE_WALLET_TRANSFER_ALREADY_CLASSIFIED");
-        var sourceTreasuryId = await db.TreasuryAccounts.Where(x => x.DigitalWalletId == review.SourceWalletId && x.IsActive).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct)
-            ?? throw new InvalidOperationException("FINANCE_WALLET_TREASURY_NOT_FOUND");
-        var beneficiaryName = body.BeneficiaryName.Trim();
-        var vendor = await db.FinanceVendors.SingleOrDefaultAsync(x => x.Name == beneficiaryName, ct);
-        if (vendor is null)
-        {
-            vendor = new NaderGorge.Domain.Entities.FinanceVendor { Name = beneficiaryName, Phone = review.DestinationPhoneNumber };
-            db.FinanceVendors.Add(vendor);
-            await db.SaveChangesAsync(ct);
-        }
-        var totalDebited = review.Amount + review.ServiceFee;
-        var description = $"تحويل محفظة إلى {beneficiaryName} ({review.DestinationPhoneNumber}) — {body.Reason.Trim()}";
-        if (review.ServiceFee > 0m) description += $" (يشمل رسوم تحويل {review.ServiceFee:0.##} ج.م)";
-        var expense = await operations.CreateExpenseAsync(new CreatePlatformExpenseRequest(totalDebited, review.OccurredAt, body.CategoryId, body.CostCenterId, vendor.Id, description, $"WLT-{review.Id:N}", CurrentUserId()), ct);
-        await operations.PostExpenseAsync(expense.Id, new PostPlatformExpenseRequest(sourceTreasuryId, CurrentUserId(), $"wallet-expense-{review.Id:N}", description), ct);
-        review.PlatformExpenseId = expense.Id;
-        review.Status = NaderGorge.Domain.Entities.WalletTransferReviewStatus.RecordedAsExpense;
-        review.ClassifiedByUserId = CurrentUserId();
-        review.ClassifiedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return Ok(new { reviewId = review.Id, review.Status, expenseId = expense.Id, totalDebited });
+        var result = await mediator.Send(new RecordWalletTransferExpenseCommand(reviewId, CurrentUserId(),
+            body.BeneficiaryName, body.Reason, body.CategoryId, body.CostCenterId), ct);
+        return Ok(new { reviewId = result.ReviewId, result.Status, expenseId = result.AuthorityRecordId, totalDebited = result.TotalDebited });
     }
 
     [HttpPost("wallet-transfers/reviews/{reviewId:guid}/internal-transfer")]
     [HasPermission("finance.treasury.manage")]
     public async Task<ActionResult<object>> RecordWalletInternalTransfer(Guid reviewId, [FromBody] WalletInternalTransferBody body, CancellationToken ct)
     {
-        var review = await db.WalletTransferReviews.SingleOrDefaultAsync(x => x.Id == reviewId, ct)
-            ?? throw new InvalidOperationException("FINANCE_WALLET_TRANSFER_REVIEW_NOT_FOUND");
-        if (review.Status != NaderGorge.Domain.Entities.WalletTransferReviewStatus.PendingClassification)
-            throw new InvalidOperationException("FINANCE_WALLET_TRANSFER_ALREADY_CLASSIFIED");
-        if (review.ServiceFee > 0m)
-            throw new InvalidOperationException("FINANCE_WALLET_TRANSFER_FEE_REQUIRES_EXPENSE");
-        var sourceTreasuryId = await db.TreasuryAccounts.Where(x => x.DigitalWalletId == review.SourceWalletId && x.IsActive).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct)
-            ?? throw new InvalidOperationException("FINANCE_WALLET_TREASURY_NOT_FOUND");
-        var transfer = await planning.TransferAsync(new TreasuryTransferRequest(sourceTreasuryId, body.DestinationTreasuryAccountId, review.Amount,
-            $"تحويل داخلي من رسالة محفظة {review.TransferReference ?? review.Id.ToString("N")}", CurrentUserId(), $"wallet-internal-{review.Id:N}"), ct);
-        review.TreasuryTransferId = transfer.Id;
-        review.Status = NaderGorge.Domain.Entities.WalletTransferReviewStatus.RecordedAsInternalTransfer;
-        review.ClassifiedByUserId = CurrentUserId();
-        review.ClassifiedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return Ok(new { reviewId = review.Id, review.Status, transferId = transfer.Id });
+        var result = await mediator.Send(new RecordWalletInternalTransferCommand(
+            reviewId, CurrentUserId(), body.DestinationTreasuryAccountId), ct);
+        return Ok(new { reviewId = result.ReviewId, result.Status, transferId = result.AuthorityRecordId });
     }
 
     [HttpPost("expenses/{expenseId:guid}/reverse")]
     [HasPermission("finance.expenses.post")]
     public async Task<ActionResult<object>> ReverseExpense(Guid expenseId, [FromBody] PeriodReasonBody body, CancellationToken ct)
     {
-        var expense = await db.PlatformExpenses.SingleOrDefaultAsync(x => x.Id == expenseId, ct) ?? throw new InvalidOperationException("FINANCE_EXPENSE_NOT_FOUND");
-        if (!expense.JournalEntryId.HasValue) throw new InvalidOperationException("FINANCE_EXPENSE_NOT_POSTED");
-        var reversal = await posting.ReverseAsync(expense.JournalEntryId.Value, CurrentUserId(), body.Reason, ct);
-        expense.Status = NaderGorge.Domain.Entities.PlatformExpenseStatus.Reversed;
-        await db.SaveChangesAsync(ct);
-        return Ok(new { expense.Id, expense.Status, reversalId = reversal.Id });
+        var result = await mediator.Send(new ReversePlatformExpenseCommand(expenseId, CurrentUserId(), body.Reason), ct);
+        return Ok(new { id = result.RecordId, status = NaderGorge.Domain.Entities.PlatformExpenseStatus.Reversed, reversalId = result.ReversalId });
     }
 
     [HttpPost("expenses/{expenseId:guid}/payments")]
@@ -379,12 +318,8 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.refunds.post")]
     public async Task<ActionResult<object>> ReverseRefund(Guid refundId, [FromBody] PeriodReasonBody body, CancellationToken ct)
     {
-        var refund = await db.PlatformRefunds.SingleOrDefaultAsync(x => x.Id == refundId, ct) ?? throw new InvalidOperationException("FINANCE_REFUND_NOT_FOUND");
-        if (!refund.JournalEntryId.HasValue) throw new InvalidOperationException("FINANCE_REFUND_NOT_POSTED");
-        var reversal = await posting.ReverseAsync(refund.JournalEntryId.Value, CurrentUserId(), body.Reason, ct);
-        refund.Status = NaderGorge.Domain.Entities.PlatformRefundStatus.Reversed;
-        await db.SaveChangesAsync(ct);
-        return Ok(new { refund.Id, refund.Status, reversalId = reversal.Id });
+        var result = await mediator.Send(new ReversePlatformRefundCommand(refundId, CurrentUserId(), body.Reason), ct);
+        return Ok(new { id = result.RecordId, status = NaderGorge.Domain.Entities.PlatformRefundStatus.Reversed, reversalId = result.ReversalId });
     }
 
     [HttpGet("bootstrap")]

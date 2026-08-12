@@ -41,6 +41,13 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
             .Select(x => x.PromotionalBalanceAllocation)
             .Where(x => x != null)
             .ToList();
+        var successfulCount = issuance.Recipients.Count(x => GiftValueSemantics.IsSuccessful(x.Status));
+        var values = GiftValueSemantics.Resolve(
+            issuance.TargetType,
+            issuance.Amount,
+            successfulCount,
+            allocations.Sum(x => x!.OriginalAmount),
+            allocations.Sum(x => x!.AvailableAmount));
 
         var expired = issuance.ExpiresAt.HasValue && issuance.ExpiresAt <= DateTime.UtcNow && issuance.Status != Domain.Enums.GiftIssuanceStatus.Revoked;
         var academicScopes = await ResolveScopeSummariesAsync(
@@ -58,7 +65,9 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
             issuance.IssuedByUser.FullName,
             issuance.Reason,
             issuance.Amount,
-            allocations.Sum(x => x!.AvailableAmount),
+            values.OriginalValue,
+            values.AvailableValue,
+            values.AvailableValue ?? 0m,
             allocations.Sum(x => x!.ConsumedAmount),
             allocations.Sum(x => x!.ExpiredAmount),
             allocations.Sum(x => x!.RevokedAmount),

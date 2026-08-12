@@ -288,12 +288,12 @@ export const studentService = {
   },
 
   getPublicTeachers: async (signal?: AbortSignal): Promise<PublicTeacherDto[]> => {
-    const res = await apiClient.get('/public/teachers', { signal });
+    const res = await apiClient.get('/public/teachers', { signal, suppressErrorToast: true });
     return res.data?.data || [];
   },
 
   getLandingTeachers: async (): Promise<PublicTeacherDto[]> => {
-    const res = await apiClient.get('/public/teachers/landing');
+    const res = await apiClient.get('/public/teachers/landing', { suppressErrorToast: true });
     return res.data?.data || [];
   },
 

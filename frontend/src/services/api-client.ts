@@ -12,6 +12,12 @@ import { getApiErrorSummary } from '@/lib/api-errors';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
 import { useAuthStore } from '@/stores/auth-store';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    suppressErrorToast?: boolean;
+  }
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
 
 const apiClient = axios.create({
@@ -179,7 +185,8 @@ apiClient.interceptors.response.use(
     if (
       status !== 401 &&
       status !== 403 &&
-      !requestUrl.includes('/auth/register')
+      !requestUrl.includes('/auth/register') &&
+      !originalRequest?.suppressErrorToast
     ) {
       toast.error(errorMsg, { id: errorMsg });
     }

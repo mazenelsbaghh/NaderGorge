@@ -1,9 +1,10 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common;
-using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Features.Admin.SharedPackages;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -18,12 +19,12 @@ namespace NaderGorge.API.Controllers;
 public class AdminSharedPackagesController : ControllerBase
 {
     private readonly IAppDbContext _db;
-    private readonly IContentImageStorage? _imageStorage;
+    private readonly ISender? _sender;
 
-    public AdminSharedPackagesController(IAppDbContext db, IContentImageStorage? imageStorage = null)
+    public AdminSharedPackagesController(IAppDbContext db, ISender? sender = null)
     {
         _db = db;
-        _imageStorage = imageStorage;
+        _sender = sender;
     }
 
     [HttpGet]
@@ -76,164 +77,66 @@ public class AdminSharedPackagesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveSharedPackageDto dto, CancellationToken ct)
     {
-        var validation = ValidateDistribution(dto);
-        if (validation != null)
-        {
-            return BadRequest(new { success = false, message = validation });
-        }
-
-        var relationValidation = await ValidateTeacherSubjectAndContentAsync(dto, ct);
-        if (relationValidation != null)
-        {
-            return BadRequest(new { success = false, message = relationValidation });
-        }
-
-        var scopeDtos = ResolveAcademicScopes(dto);
-        var scopeValidation = await new AcademicScopeService(_db).ValidateScopeDtosAsync(scopeDtos, ct);
-        if (!scopeValidation.IsValid)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = scopeValidation.Message ?? "نطاق الباكدج المشترك الأكاديمي غير صالح",
-                errors = new[] { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" }
-            });
-        }
-
-        var package = new SharedTeacherPackage
-        {
-            Id = Guid.NewGuid(),
-            Name = dto.Name.Trim(),
-            Slug = string.IsNullOrWhiteSpace(dto.Slug)
-                ? dto.Name.Trim().ToLowerInvariant().Replace(' ', '-')
-                : dto.Slug.Trim(),
-            Description = dto.Description ?? string.Empty,
-            ImageUrl = dto.ImageUrl,
-            Price = dto.Price,
-            DistributionMode = dto.DistributionMode,
-            IsPublished = dto.IsPublished,
-            EducationStage = dto.EducationStage,
-            GradeLevel = dto.GradeLevel,
-            AvailableFrom = dto.AvailableFrom,
-            AvailableUntil = dto.AvailableUntil,
-            CreatedByUserId = User.RequireUserId()
-        };
-
-        foreach (var teacher in dto.Teachers)
-        {
-            package.Teachers.Add(new SharedTeacherPackageTeacher
-            {
-                Id = Guid.NewGuid(),
-                TeacherId = teacher.TeacherId,
-                SubjectId = teacher.SubjectId,
-                AllocationMode = teacher.AllocationMode,
-                AllocationValue = teacher.AllocationValue,
-                DisplayOrder = teacher.DisplayOrder
-            });
-        }
-
-        foreach (var contentItem in dto.Items)
-        {
-            package.Items.Add(new SharedTeacherPackageItem
-            {
-                Id = Guid.NewGuid(),
-                TeacherId = contentItem.TeacherId,
-                SubjectId = contentItem.SubjectId,
-                ContentType = contentItem.ContentType,
-                ContentId = contentItem.ContentId,
-                Price = contentItem.Price,
-                IsIncluded = true
-            });
-        }
-
-        _db.SharedTeacherPackages.Add(package);
-        await _db.SaveChangesAsync(ct);
-        await new AcademicScopeService(_db).SyncOwnerScopesAsync(
-            StudentFacingScopeOwnerType.SharedTeacherPackage,
-            package.Id,
-            scopeDtos,
-            User.RequireUserId(),
-            ct);
-
-        return Ok(new { success = true, data = new { package.Id }, message = "تم حفظ الباكدج المشترك" });
+        // The one-argument constructor remains available to legacy validation tests; runtime DI always supplies ISender.
+        var actorUserId = _sender is null ? Guid.Empty : User.RequireUserId();
+        var command = new CreateSharedPackageCommand(actorUserId, dto.Name, dto.Slug,
+            dto.Description, dto.ImageUrl, dto.Price, dto.DistributionMode, dto.IsPublished, dto.EducationStage,
+            dto.GradeLevel, dto.AvailableFrom, dto.AvailableUntil,
+            dto.Teachers.Select(x => new SharedPackageTeacherInput(x.TeacherId, x.SubjectId, x.AllocationMode, x.AllocationValue, x.DisplayOrder)).ToList(),
+            dto.Items.Select(x => new SharedPackageItemInput(x.TeacherId, x.SubjectId, x.ContentType, x.ContentId, x.Price)).ToList(),
+            dto.AcademicScopes);
+        var result = _sender is null
+            ? await new CreateSharedPackageCommandHandler(_db).Handle(command, ct)
+            : await _sender.Send(command, ct);
+        return result.Status == SharedPackageCommandStatus.Success
+            ? Ok(new { success = true, data = new { id = result.Id }, message = result.Message })
+            : BadRequest(new { success = false, message = result.Message, errors = result.ErrorCode is null ? null : new[] { result.ErrorCode } });
     }
 
     [HttpPost("{id:guid}/image")]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> UploadImage([FromRoute] Guid id, IFormFile image, CancellationToken ct)
     {
-        var package = await _db.SharedTeacherPackages.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (package == null)
-        {
-            return NotFound(ApiResponse.Fail("الباكدج المشترك غير موجود"));
-        }
-
-        if (_imageStorage == null)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, ApiResponse.Fail("Image storage is not configured"));
-        }
-
         if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
         {
             return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
-        await using var imageStream = image.OpenReadStream();
-        using var memoryStream = new MemoryStream();
+        await using var imageStream = image.OpenReadStream(); using var memoryStream = new MemoryStream();
         await imageStream.CopyToAsync(memoryStream, ct);
 
         try
         {
-            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
-            memoryStream.Position = 0;
-            var imageUrl = await _imageStorage.SaveAsWebpAsync(memoryStream, "shared-packages", ct);
-            package.ImageUrl = imageUrl;
-            package.UpdatedByUserId = User.RequireUserId();
-            package.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-            return Ok(ApiResponse<string>.Ok(imageUrl, "Shared package image uploaded successfully"));
+            var result = await RequireSender().Send(new UploadSharedPackageImageCommand(User.RequireUserId(), id,
+                memoryStream.ToArray(), image.FileName, image.ContentType), ct);
+            return result.Status switch
+            {
+                SharedPackageCommandStatus.Success => Ok(ApiResponse<string>.Ok(result.Value!, result.Message)),
+                SharedPackageCommandStatus.NotFound => NotFound(ApiResponse.Fail(result.Message!)),
+                _ => BadRequest(ApiResponse.Fail(result.Message!))
+            };
         }
-        catch (UnknownImageFormatException)
-        {
-            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
-        }
-        catch (InvalidUploadContentException)
-        {
-            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
-        }
-        catch (InvalidImageContentException)
-        {
-            return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large"));
-        }
+        catch (InvalidUploadContentException) { return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image")); }
+        catch (UnknownImageFormatException) { return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image")); }
+        catch (InvalidImageContentException) { return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large")); }
     }
 
     [HttpPost("{id:guid}/publish")]
     public async Task<IActionResult> Publish([FromRoute] Guid id, CancellationToken ct)
     {
-        var package = await _db.SharedTeacherPackages.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (package == null)
+        var command = new PublishSharedPackageCommand(User.RequireUserId(), id);
+        var result = _sender is null
+            ? await new PublishSharedPackageCommandHandler(_db).Handle(command, ct)
+            : await _sender.Send(command, ct);
+        return result.Status switch
         {
-            return NotFound(new { success = false, message = "الباكدج المشترك غير موجود" });
-        }
-
-        var scopeValidation = await new AcademicScopeService(_db)
-            .ValidateTargetHasScopeAsync(StudentFacingScopeOwnerType.SharedTeacherPackage, package.Id, ct);
-        if (!scopeValidation.IsEligible)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = scopeValidation.Message ?? "الباكدج المشترك يجب أن يكون مربوطا بنطاق أكاديمي صالح قبل النشر",
-                errors = new[] { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_TARGET_UNSCOPED" }
-            });
-        }
-
-        package.IsPublished = true;
-        package.UpdatedByUserId = User.RequireUserId();
-        package.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true, message = "تم نشر الباكدج المشترك" });
+            SharedPackageCommandStatus.Success => Ok(new { success = true, message = result.Message }),
+            SharedPackageCommandStatus.NotFound => NotFound(new { success = false, message = result.Message }),
+            _ => BadRequest(new { success = false, message = result.Message, errors = result.ErrorCode is null ? null : new[] { result.ErrorCode } })
+        };
     }
+
+    private ISender RequireSender() => _sender ?? throw new InvalidOperationException("MediatR sender is required for shared-package image uploads.");
 
     private static string? ValidateDistribution(SaveSharedPackageDto dto)
     {

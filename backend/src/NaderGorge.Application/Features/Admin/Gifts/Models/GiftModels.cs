@@ -69,6 +69,8 @@ public sealed record GiftDetailsDto(
     string IssuerName,
     string Reason,
     decimal? Amount,
+    decimal? OriginalValue,
+    decimal? AvailableValue,
     decimal AvailableAmount,
     decimal ConsumedAmount,
     decimal ExpiredAmount,

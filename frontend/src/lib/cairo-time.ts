@@ -51,6 +51,10 @@ export function formatCairoDateTime(dateTime: string | Date, options: Intl.DateT
   }).format(parseUtcDateTime(dateTime));
 }
 
+export function formatCairoTimestamp(dateTime: string | Date) {
+  return formatCairoDateTime(dateTime, { dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23' });
+}
+
 export function cairoDateTimeLocalToUtcISOString(localDateTime: string) {
   const dateTimeMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(localDateTime);
   if (!dateTimeMatch) throw new Error('CAIRO_DATETIME_INVALID');

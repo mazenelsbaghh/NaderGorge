@@ -2,6 +2,66 @@
 
 ## Current Speckit-All Run / التشغيل الحالي
 
+**Feature**: `169-admin-ai-agent`
+**Scope**: إعداد المواصفات والتوضيح والبحث والخطة التقنية والمهام فقط لوكيل AI إداري شامل، ثم التوقف قبل أي تنفيذ حتى يراجع المستخدم الملفات ويعتمد بدء Phase 5.
+
+- [x] Phase 1: Feature Specification (`speckit-specify`)
+- [x] Phase 2: Arabic Clarification (`speckit-clarify`)
+- [x] Phase 3: Technical Planning (`speckit-plan`)
+- [x] Phase 4: Detailed Task Breakdown (`speckit-tasks`)
+- [ ] Phase 5: Implementation (`speckit-implement`) — **متوقف بطلب المستخدم حتى موافقة جديدة**
+- [ ] Phase 6: Deep Architectural, Code & UI/UX Critique
+- [ ] Phase 7: Clean Code Guard (`clean-code-guard`)
+- [ ] Phase 8: Test Guard (`test-guard`)
+- [ ] Phase 9: Feature Tests, Final Verification & Summary Report
+
+### Approved Feature Brief / ملخص الميزة المعتمد
+
+- **المشكلة:** لا يوجد شات AI عام وخاص بالإدارة يستطيع فهم بيانات المنصة كلها وتنفيذ وظائف الأدمن بعيدًا عن شات الطلاب والدعم المباشر.
+- **الهدف:** شات مستقل داخل `Admin Shell` يجيب من أحدث بيانات العمل، ويجهز وينفذ كل إجراءات الأدمن الحالية عبر قواعد المنصة المعتمدة.
+- **الأدوار:** كل حساب يحمل دور `Admin` يستطيع الدخول؛ كل الأدوار الأخرى ممنوعة في الواجهة والخادم.
+- **القراءة:** جميع بيانات الطلاب والمدرسين والمحتوى والمبيعات والمالية والموارد البشرية والدعم والسجلات والتقارير، إجماليًا أو تفصيليًا، مع أقل نطاق لازم للسؤال.
+- **الحظر الدائم:** كلمات المرور وتجزئاتها، التوكنات، مفاتيح التشفير، أسرار الخدمات، بيانات الجلسات وأكواد التحقق لا تدخل النموذج أو الرد أو المحادثة أو السجل.
+- **التنفيذ:** كل إجراءات الأدمن الموجودة عند اعتماد المواصفة من أول إصدار، دون SQL حر أو تجاوز لقواعد العمل؛ الإجراءات التي تحتاج سرًا تستخدم إدخالًا آمنًا منفصلًا عن المحادثة.
+- **التأكيد:** كل تغيير يحتاج معاينة وتأكيدًا صريحًا؛ الحذف والمال والصلاحيات والأمن وتعطيل الحسابات والتعديلات الجماعية تحتاج عبارة تأكيد مكتوبة.
+- **السلامة:** إعادة فحص الدور والحالة والقواعد قبل التنفيذ، انتهاء وإلغاء الاقتراح، منع التنفيذ المكرر، وسجل تدقيق كامل لكل نتيجة أو رفض أو فشل.
+- **النطاق الحالي:** مراحل Spec Kit من 1 إلى 4 فقط؛ لا Implementation ولا تعديل في كود المنتج قبل مراجعة المستخدم وموافقته اللاحقة.
+
+### Subagent Evidence / إثبات استخدام الوكلاء الفرعيين
+
+- [x] Phase 1 specify support: `/root/phase1_spec_support` و`/root/phase1_spec_fast` → حددا الممثلين والمتطلبات والكيانات وحالات الفشل ومعايير القياس ومخاطر الأسرار والعمليات الجماعية دون تعديل ملفات.
+- [x] Phase 2 clarify support: `/root/phase2_clarify_support` و`/root/phase2_clarify_fast` → راجعا المواصفة بالعربية وأكدا عدم وجود قرار منتج حرج جديد؛ أُجّلت مدد الصلاحية والـrate limits والمخطط وآليات المزود إلى البحث التقني لأنها لا تغيّر نية الميزة.
+- [x] Phase 3 plan support: `/root/phase3_plan_support` راجع معمارية Backend/Worker/PostgreSQL/Outbox/Redis والتأكيد والتعافي والاختبارات، و`/root/admin_capability_inventory` حصر مجالات الأدمن والكتابات المباشرة وفجوات التدقيق/idempotency وصمم coverage gate ثنائي الاتجاه، و`/root/admin_agent_frontend_plan` حدد route مستقلة ومكونات وحالات وRTL/accessibility/responsive واختبارات الواجهة؛ لم يعدّل أي وكيل ملفات.
+
+### Phase 2 Clarification Evidence / إثبات التوضيح
+
+- [x] تم تشغيل فحص المتطلبات مع `SPECIFY_FEATURE=169-admin-ai-agent` وتحديد `specs/169-admin-ai-agent/spec.md` كمواصفة فعالة.
+- [x] لا توجد أسئلة توضيح حرجة بعد القرارات المؤكدة والافتراضات المعتمدة؛ لم تُكرر أسئلة الصلاحيات أو نطاق البيانات أو التأكيد التي أجاب عنها المستخدم.
+- [x] Functional Scope وRoles وUX Flow وSecurity/Privacy وFailures وCompletion Signals واضحة؛ تفاصيل TTL والحدود والمخطط والتكاملات مؤجلة بصورة صحيحة إلى `speckit-plan`.
+
+### Phase 3 Speckit-Plan Evidence / إثبات التخطيط
+
+- [x] تم إنشاء `plan.md` بسياق تقني فعلي، Constitution gates قبل/بعد التصميم، حدود الثقة، دورة أدوات مقيدة، baseline تغطية ثنائية الاتجاه، سبع موجات تنفيذ لاحقة، وبوابات اختبار/Docker/manual QA مع تثبيت توقف التنفيذ.
+- [x] تم إنشاء `research.md` بعشرين قرارًا معماريًا وأمنيًا مع المبررات والبدائل، وحسم Worker-only Gemini وBackend-only tools/actions وPlatformHub الحالي وعدم استخدام SQL/Web/Vector DB.
+- [x] تم إنشاء `data-model.md` للمحادثات والرسائل والأدوار والخطوات والقراءات والمقترحات والتأكيد الآمن والتنفيذ والتدقيق، مع القيود والفهارس وحالات السباق والاحتفاظ وmigration additive.
+- [x] تم إنشاء `quickstart.md` لبوابات baseline والمخطط والاختبارات والـDocker والمزود الحقيقي والـmanual QA والتعطيل والـrollback دون حذف بيانات.
+- [x] تم إنشاء سبعة عقود داخل `contracts/`: Public API، Worker/tool protocol، capability baseline، action state machine، realtime events، sensitive-data policy، وUI contract.
+- [x] تم توثيق أن `tests/endpoint_inventory.json` الحالي stale ولا يثبت 100%، واعتماد runtime `EndpointDataSource` + reachable frontend AST/import graph + مراجعة semantic كشرط إصدار.
+- [x] تم تشغيل `update-agent-context.sh codex` وتحديث `AGENTS.md` إلى خطة 169 مع إبقاء خطة 168 وخطة العنقود 166.
+- [x] نجح `validate_spec_plan_quality.py --spec-dir specs/169-admin-ai-agent`، ونجح parsing عقد OpenAPI 3.1 وعدد مساراته 14، ونجح `git diff --check` للوثائق.
+
+### Phase 4 Speckit-Tasks Evidence / إثبات تفصيل المهام
+
+- [x] تم إنشاء `tasks.md` بعدد 212 مهمة ذرية متسلسلة T001–T212 بلا تكرار أو أرقام ناقصة، من تثبيت baseline الحقيقي حتى تقرير go/no-go النهائي.
+- [x] تغطي المهام القصص الخمس، كل مجالات القراءة وكل إجراءات الأدمن الحالية، التأكيد العادي والقوي، الإدخال الآمن، المالية والعمليات الخارجية والجماعية، استخراج الكتابات المباشرة، وسجل التدقيق والتعافي.
+- [x] أُدرجت اختبارات test-first، بوابة تغطية ثنائية الاتجاه، اختبارات منع أي أثر أثناء المعاينة، idempotency والتزامن، حجب الأسرار، Docker والمزود الحقيقي وmanual QA والمراجعات النهائية الإلزامية.
+- [x] لم يكن `setup-tasks.sh` موجودًا في نسخة Spec Kit الحالية؛ استُخدم القالب القانوني `.specify/templates/tasks-template.md` مباشرة دون تغيير النطاق أو تجاوز أداة الجودة.
+- [x] نجح `validate_tasks_quality.py --tasks specs/169-admin-ai-agent/tasks.md`، وبقيت Phase 5 وكل التنفيذ غير معتمدين ومتوقفين حتى موافقة جديدة من المستخدم.
+
+---
+
+## Current Speckit-All Run / التشغيل الحالي
+
 **Feature**: `167-platform-speed-completion`
 **Scope**: تنفيذ جميع نتائج مراجعة سرعة المنصة والتنقل والشاشات والـAPI والبنية الإنتاجية، ودمج كل تغييرات الـworking tree الحالية، ثم نشر الإصدار تدريجيًا على العقد الثلاث دون توقف بعد نجاح جميع البوابات.
 

@@ -34,7 +34,11 @@ public class RedisRateLimitingMiddleware
         { "live-support-ai-verification", (10, TimeSpan.FromMinutes(1), true) },
         { "live-support-ai-registration", (5, TimeSpan.FromMinutes(1), true) },
         { "live-support-ai-admin-preview", (10, TimeSpan.FromMinutes(1), true) },
-        { "live-support-ai-callback", (120, TimeSpan.FromMinutes(1), false) }
+        { "live-support-ai-callback", (120, TimeSpan.FromMinutes(1), false) },
+        { "admin-ai-turn", (10, TimeSpan.FromMinutes(1), true) },
+        { "admin-ai-confirmation", (20, TimeSpan.FromMinutes(1), true) },
+        { "admin-ai-secure-input", (5, TimeSpan.FromMinutes(1), true) },
+        { "admin-ai-internal", (120, TimeSpan.FromMinutes(1), false) }
     };
 
     public RedisRateLimitingMiddleware(RequestDelegate next, IConnectionMultiplexer redis)

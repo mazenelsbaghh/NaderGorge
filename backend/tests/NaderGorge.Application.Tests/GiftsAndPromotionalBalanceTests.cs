@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NaderGorge.Application.Common;
@@ -5,6 +6,7 @@ using NaderGorge.API.Controllers;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Admin.Gifts.Commands;
 using NaderGorge.Application.Features.Admin.Gifts.Models;
+using NaderGorge.Application.Features.Admin.Gifts.Queries;
 using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Services;
@@ -96,6 +98,119 @@ public sealed class GiftsAndPromotionalBalanceTests
         Assert.Equal("PlatformGift", transaction.TransactionType);
         Assert.Equal("هدية من المنصة: تعويض حضور", transaction.Description);
         Assert.Empty(db.PromotionalBalanceAllocations);
+    }
+
+    [Fact]
+    public async Task GeneralBalanceGift_MixedRecipients_ReportsPartialSuccessAndCorrectAuditCount()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, "Partial Gift Student", "15210");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Partial Gift Admin", "15211");
+        var request = new IssueGiftRequest(
+            Guid.NewGuid(),
+            GiftTargetType.GeneralBalance,
+            null,
+            null,
+            50m,
+            null,
+            null,
+            new[] { student.Id, Guid.NewGuid() },
+            "تعويض جزئي");
+        var handler = new IssueGiftCommandHandler(
+            db,
+            new AccessCheckService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+
+        var result = await handler.Handle(new IssueGiftCommand(request, admin.Id), CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(GiftIssuanceStatus.PartiallySuccessful, result.Data!.Status);
+        Assert.Contains(result.Data.Recipients, recipient => recipient.Status == GiftRecipientStatus.Completed);
+        Assert.Contains(result.Data.Recipients, recipient => recipient.Status == GiftRecipientStatus.Failed);
+        var audit = Assert.Single(db.AuditLogs, item => item.Action == "GiftIssued");
+        Assert.Contains("\"succeeded\":1", audit.NewValues);
+    }
+
+    [Fact]
+    public async Task GiftLedgerAndDetails_SumTeacherBalanceOriginalAndAvailableAmountsAcrossRecipients()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Gift Ledger Admin", "152091");
+        var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Gift Ledger Teacher", "152092");
+        var firstStudent = await TestAppDbContextFactory.SeedUserAsync(db, "First Recipient", "152093");
+        var secondStudent = await TestAppDbContextFactory.SeedUserAsync(db, "Second Recipient", "152094");
+        var teacher = new TeacherProfile { UserId = teacherUser.Id, User = teacherUser };
+        var issuance = new GiftIssuance
+        {
+            RequestId = Guid.NewGuid(),
+            TargetType = GiftTargetType.TeacherBalance,
+            Teacher = teacher,
+            TeacherId = teacher.Id,
+            Amount = 100m,
+            Reason = "تعويض جماعي",
+            IssuedByUser = admin,
+            IssuedByUserId = admin.Id
+        };
+        issuance.Recipients.Add(CreateBalanceRecipient(issuance, firstStudent, teacher.Id, 100m, 70m));
+        issuance.Recipients.Add(CreateBalanceRecipient(issuance, secondStudent, teacher.Id, 100m, 80m));
+        db.AddRange(teacher, issuance);
+        await db.SaveChangesAsync();
+
+        var response = await new GetGiftsQueryHandler(db)
+            .Handle(new GetGiftsQuery(TargetType: GiftTargetType.TeacherBalance), CancellationToken.None);
+
+        var gift = Assert.Single(response.Data!.Items);
+        Assert.Equal(2, gift.SuccessfulCount);
+        Assert.Equal(200m, gift.OriginalValue);
+        Assert.Equal(150m, gift.AvailableValue);
+
+        var detailsResponse = await new GetGiftDetailsQueryHandler(db)
+            .Handle(new GetGiftDetailsQuery(issuance.Id), CancellationToken.None);
+        Assert.Equal(200m, detailsResponse.Data!.OriginalValue);
+        Assert.Equal(150m, detailsResponse.Data.AvailableValue);
+        Assert.Equal(150m, detailsResponse.Data.AvailableAmount);
+    }
+
+    [Fact]
+    public async Task GiftLedgerAndDetails_ShowGeneralBalanceTotalWithoutInventingAvailableAmount()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "General Gift Ledger Admin", "152095");
+        var firstStudent = await TestAppDbContextFactory.SeedUserAsync(db, "General First Recipient", "152096");
+        var secondStudent = await TestAppDbContextFactory.SeedUserAsync(db, "General Second Recipient", "152097");
+        var issuance = new GiftIssuance
+        {
+            RequestId = Guid.NewGuid(),
+            TargetType = GiftTargetType.GeneralBalance,
+            Amount = 100m,
+            Reason = "رصيد عام جماعي",
+            IssuedByUser = admin,
+            IssuedByUserId = admin.Id,
+            Status = GiftIssuanceStatus.Completed
+        };
+        issuance.Recipients.Add(new GiftRecipient { Student = firstStudent, StudentId = firstStudent.Id, Status = GiftRecipientStatus.Completed, OutcomeCode = "GRANTED_TO_GENERAL_BALANCE" });
+        issuance.Recipients.Add(new GiftRecipient { Student = secondStudent, StudentId = secondStudent.Id, Status = GiftRecipientStatus.Completed, OutcomeCode = "GRANTED_TO_GENERAL_BALANCE" });
+        db.GiftIssuances.Add(issuance);
+        await db.SaveChangesAsync();
+
+        var response = await new GetGiftsQueryHandler(db)
+            .Handle(new GetGiftsQuery(TargetType: GiftTargetType.GeneralBalance), CancellationToken.None);
+
+        var gift = Assert.Single(response.Data!.Items);
+        Assert.Equal(200m, gift.OriginalValue);
+        Assert.Null(gift.AvailableValue);
+
+        var detailsResponse = await new GetGiftDetailsQueryHandler(db)
+            .Handle(new GetGiftDetailsQuery(issuance.Id), CancellationToken.None);
+        Assert.Equal(200m, detailsResponse.Data!.OriginalValue);
+        Assert.Null(detailsResponse.Data.AvailableValue);
+        Assert.Equal(0m, detailsResponse.Data.AvailableAmount);
     }
 
     [Fact]
@@ -247,6 +362,34 @@ public sealed class GiftsAndPromotionalBalanceTests
         db.GiftRecipients.Add(recipient);
         db.PromotionalBalanceAllocations.Add(allocation);
         return allocation;
+    }
+
+    private static GiftRecipient CreateBalanceRecipient(
+        GiftIssuance issuance,
+        User student,
+        Guid teacherId,
+        decimal originalAmount,
+        decimal availableAmount)
+    {
+        var recipient = new GiftRecipient
+        {
+            GiftIssuance = issuance,
+            Student = student,
+            StudentId = student.Id,
+            Status = GiftRecipientStatus.Active,
+            OutcomeCode = "GRANTED"
+        };
+        recipient.PromotionalBalanceAllocation = new PromotionalBalanceAllocation
+        {
+            GiftRecipient = recipient,
+            Student = student,
+            StudentId = student.Id,
+            TeacherId = teacherId,
+            OriginalAmount = originalAmount,
+            AvailableAmount = availableAmount,
+            ConsumedAmount = originalAmount - availableAmount
+        };
+        return recipient;
     }
 
     private static async Task<ContentFixture> SeedContentFixtureAsync(AppDbContext db)

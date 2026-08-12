@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MediatR;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common.HR;
 using NaderGorge.Application.Features.HR.Performance;
+using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -11,7 +13,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.API.Controllers;
 
 [ApiController, Route("api/hr"), Authorize]
-public sealed class HrPerformanceCasesController(IAppDbContext db, PerformanceCaseService service) : ControllerBase
+public sealed class HrPerformanceCasesController(IAppDbContext db, PerformanceCaseService service, IMediator mediator) : ControllerBase
 {
     [HttpGet("admin/performance/cycles"), HasPermission(HrPermissions.PerformanceTeam)]
     public async Task<IActionResult> Cycles(CancellationToken ct) => Ok(await db.PerformanceCycles.AsNoTracking().OrderByDescending(item => item.StartsOn)
@@ -20,13 +22,9 @@ public sealed class HrPerformanceCasesController(IAppDbContext db, PerformanceCa
     [HttpPost("admin/performance/cycles"), HasPermission(HrPermissions.PerformanceManage)]
     public async Task<IActionResult> CreateCycle(CreatePerformanceCycleRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.EndsOn < request.StartsOn || request.Goals.Count == 0 ||
-            request.Goals.Any(goal => string.IsNullOrWhiteSpace(goal.Name) || goal.Weight <= 0) ||
-            request.Goals.Sum(goal => goal.Weight) != 100)
-            return BadRequest(new { errors = new[] { "PERFORMANCE_CYCLE_INVALID" } });
-        var cycle = new PerformanceCycle { Name = request.Name.Trim(), StartsOn = request.StartsOn, EndsOn = request.EndsOn };
-        foreach (var goal in request.Goals) cycle.Goals.Add(new PerformanceGoal { PerformanceCycleId = cycle.Id, Name = goal.Name.Trim(), Weight = goal.Weight });
-        db.PerformanceCycles.Add(cycle); await db.SaveChangesAsync(ct); return Ok(new { cycle.Id });
+        var result = await mediator.Send(new CreatePerformanceCycleCommand(request.Name, request.StartsOn, request.EndsOn,
+            request.Goals.Select(goal => new PerformanceGoalInput(goal.Name, goal.Weight)).ToList()), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : BadRequest(result);
     }
 
     [HttpPost("admin/performance/cycles/{cycleId:guid}/activate"), HasPermission(HrPermissions.PerformanceManage)]
@@ -68,19 +66,16 @@ public sealed class HrPerformanceCasesController(IAppDbContext db, PerformanceCa
     [HttpPost("admin/cases/{caseId:guid}/evidence"), HasPermission(HrPermissions.CaseManage)]
     public async Task<IActionResult> AddEvidence(Guid caseId, AddCaseEvidenceRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.AssetReference) || string.IsNullOrWhiteSpace(request.ContentHash) ||
-            !await db.EmployeeCases.AnyAsync(employeeCase => employeeCase.Id == caseId, ct)) return BadRequest();
-        var evidence = new CaseEvidence { EmployeeCaseId = caseId, AssetReference = request.AssetReference, ContentHash = request.ContentHash, AddedByUserId = User.RequireUserId() };
-        db.CaseEvidence.Add(evidence); await db.SaveChangesAsync(ct); return Ok(new { evidence.Id });
+        var result = await mediator.Send(new AddCaseEvidenceCommand(caseId, request.AssetReference, request.ContentHash, User.RequireUserId()), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : BadRequest(result);
     }
 
     [HttpPost("self/cases/{caseId:guid}/response"), HasPermission(HrPermissions.PerformanceSelf)]
     public async Task<IActionResult> Respond(Guid caseId, CaseResponseRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Response)) return BadRequest();
-        var userId = User.RequireUserId(); if (!await db.EmployeeCases.AnyAsync(item => item.Id == caseId && item.Employee!.UserId == userId, ct)) return Forbid();
-        var response = new CaseResponse { EmployeeCaseId = caseId, SubmittedByUserId = userId, Response = request.Response.Trim(), AttachmentReference = request.AttachmentReference };
-        db.CaseResponses.Add(response); await db.SaveChangesAsync(ct); return Ok(new { response.Id });
+        var result = await mediator.Send(new SubmitCaseResponseCommand(caseId, request.Response, request.AttachmentReference, User.RequireUserId()), ct);
+        if (result.Errors?.Contains("CASE_RESPONSE_FORBIDDEN") == true) return Forbid();
+        return result.Success ? Ok(new { Id = result.Data }) : BadRequest(result);
     }
 
     [HttpPost("admin/cases/{caseId:guid}/decision"), HasPermission(HrPermissions.CaseManage)]

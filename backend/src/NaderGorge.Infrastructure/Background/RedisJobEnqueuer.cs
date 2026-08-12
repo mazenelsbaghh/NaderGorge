@@ -42,6 +42,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
         ("bullmq-bridge-ingest" or "ai-essay-queue", "evaluateEssay" or "evaluate-essay") => "essay",
         ("notifications", _) => "notification",
         ("ai-live-support-turns", "respond") => "live support turn",
+        ("ai-admin-agent-turns", "respond") => "admin ai turn",
         _ => throw new InvalidOperationException($"Unsupported queue/job mapping: {queueName}/{jobName}.")
     };
 
@@ -50,11 +51,13 @@ public class RedisJobEnqueuer : IJobEnqueuer
         using var document = JsonDocument.Parse(payloadJson);
         var root = document.RootElement;
 
-        if (queueName == "ai-live-support-turns")
+        if (queueName is "ai-live-support-turns" or "ai-admin-agent-turns")
         {
             if (!TryGetString(root, "turnId", "TurnId", out var turnId) || !Guid.TryParse(turnId, out var parsedTurnId))
-                throw new InvalidOperationException("Live-support queue payload requires a valid turnId.");
-            return $"turn-{parsedTurnId:D}";
+                throw new InvalidOperationException($"Queue '{queueName}' payload requires a valid turnId.");
+            return queueName == "ai-admin-agent-turns"
+                ? $"admin-ai-turn-{parsedTurnId:D}"
+                : $"turn-{parsedTurnId:D}";
         }
 
         foreach (var pair in new[]

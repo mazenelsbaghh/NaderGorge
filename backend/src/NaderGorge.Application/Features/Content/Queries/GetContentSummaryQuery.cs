@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
-using NaderGorge.Domain.Enums;
+using NaderGorge.Application.Features.Content;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
@@ -9,7 +9,8 @@ namespace NaderGorge.Application.Features.Content.Queries;
 public sealed record GetContentSummaryQuery(
     Guid? TeacherUserId,
     DateTime? FromUtc,
-    DateTime? ToUtc) : IRequest<ApiResponse<ContentSummaryDto>>;
+    DateTime? ToUtc,
+    Guid? TeacherId = null) : IRequest<ApiResponse<ContentSummaryDto>>;
 
 public sealed record ContentAcquisitionCountDto(int Purchased, int Gifts);
 
@@ -40,15 +41,23 @@ public sealed class GetContentSummaryQueryHandler
     : IRequestHandler<GetContentSummaryQuery, ApiResponse<ContentSummaryDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly ContentGrantFactSource _factSource;
 
-    public GetContentSummaryQueryHandler(IAppDbContext db) => _db = db;
+    public GetContentSummaryQueryHandler(IAppDbContext db)
+    {
+        _db = db;
+        _factSource = new ContentGrantFactSource(db);
+    }
 
     public async Task<ApiResponse<ContentSummaryDto>> Handle(GetContentSummaryQuery request, CancellationToken ct)
     {
-        if (request.FromUtc.HasValue && request.ToUtc.HasValue && request.FromUtc > request.ToUtc)
+        if (request.FromUtc.HasValue && request.ToUtc.HasValue && request.FromUtc >= request.ToUtc)
             return ApiResponse<ContentSummaryDto>.Fail("تاريخ البداية يجب أن يسبق تاريخ النهاية");
 
-        Guid? teacherId = null;
+        if (request.TeacherUserId.HasValue && request.TeacherId.HasValue)
+            return ApiResponse<ContentSummaryDto>.Fail("لا يمكن تحديد حساب المعلم ومعرف المعلم معاً");
+
+        var teacherId = request.TeacherId;
         if (request.TeacherUserId.HasValue)
         {
             teacherId = await _db.TeacherProfiles.AsNoTracking()
@@ -58,6 +67,11 @@ public sealed class GetContentSummaryQueryHandler
 
             if (!teacherId.HasValue)
                 return ApiResponse<ContentSummaryDto>.Fail("حساب المعلم غير موجود");
+        }
+        else if (teacherId.HasValue && !await _db.TeacherProfiles.AsNoTracking()
+                     .AnyAsync(teacher => teacher.Id == teacherId.Value, ct))
+        {
+            return ApiResponse<ContentSummaryDto>.Fail("حساب المعلم غير موجود");
         }
 
         var packagesQuery = _db.Packages.AsNoTracking().AsQueryable();
@@ -73,29 +87,26 @@ public sealed class GetContentSummaryQueryHandler
             .ToListAsync(ct);
 
         var packageIds = packages.Select(package => package.Id).ToArray();
-        var grants = await LoadGrantRowsAsync(packageIds, request.FromUtc, request.ToUtc, ct);
+        var grants = await _factSource.LoadAsync(
+            new ContentGrantFactScope(packageIds, request.FromUtc, request.ToUtc),
+            ct);
+        var acquisitionsByPackage = ContentAcquisitionCalculator.SummarizePackages(packageIds, grants);
 
         var summaries = packages.Select(package =>
         {
-            var packageGrants = grants.Where(grant => grant.PackageId == package.Id).ToArray();
-            var purchasedStudentIds = packageGrants.Where(grant => !grant.IsGift).Select(grant => grant.UserId).ToHashSet();
-            var giftStudents = packageGrants
-                .Where(grant => grant.IsGift && !purchasedStudentIds.Contains(grant.UserId))
-                .Select(grant => grant.UserId)
-                .Distinct()
-                .Count();
+            var acquisitions = acquisitionsByPackage[package.Id];
 
             return new ContentPackageSummaryDto(
                 package.Id,
                 package.Name,
                 package.TeacherName,
-                Count(packageGrants, CodeType.Package),
-                Count(packageGrants, CodeType.Term),
-                Count(packageGrants, CodeType.Month),
-                Count(packageGrants, CodeType.Lesson),
-                purchasedStudentIds.Count,
-                giftStudents,
-                packageGrants.Select(grant => grant.UserId).Distinct().Count());
+                ToDto(acquisitions.Package),
+                ToDto(acquisitions.Term),
+                ToDto(acquisitions.Section),
+                ToDto(acquisitions.Lesson),
+                acquisitions.Overall.Purchased,
+                acquisitions.Overall.GiftOnly,
+                acquisitions.Overall.Total);
         }).ToArray();
 
         var packageNames = packages.ToDictionary(package => package.Id, package => package.Name);
@@ -120,67 +131,8 @@ public sealed class GetContentSummaryQueryHandler
             combinations));
     }
 
-    private async Task<List<GrantRow>> LoadGrantRowsAsync(
-        Guid[] packageIds,
-        DateTime? fromUtc,
-        DateTime? toUtc,
-        CancellationToken ct)
-    {
-        if (packageIds.Length == 0) return [];
-
-        var rows = await Filter(PackageGrants(packageIds), fromUtc, toUtc).ToListAsync(ct);
-        rows.AddRange(await Filter(TermGrants(packageIds), fromUtc, toUtc).ToListAsync(ct));
-        rows.AddRange(await Filter(SectionGrants(packageIds), fromUtc, toUtc).ToListAsync(ct));
-        rows.AddRange(await Filter(LessonGrants(packageIds), fromUtc, toUtc).ToListAsync(ct));
-        return rows;
-    }
-
-    private IQueryable<GrantRow> PackageGrants(Guid[] packageIds) =>
-        _db.StudentAccessGrants.AsNoTracking()
-            .Where(grant => !grant.CancelledAt.HasValue && grant.PackageId.HasValue && packageIds.Contains(grant.PackageId.Value))
-            .Select(grant => new GrantRow(grant.PackageId!.Value, grant.PackageId.Value, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue, grant.GrantedAt));
-
-    private IQueryable<GrantRow> TermGrants(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join term in _db.Terms.AsNoTracking() on grant.TermId equals term.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(term.PackageId)
-        select new GrantRow(term.PackageId, term.Id, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue, grant.GrantedAt);
-
-    private IQueryable<GrantRow> SectionGrants(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join section in _db.ContentSections.AsNoTracking() on grant.ContentSectionId equals section.Id
-        join term in _db.Terms.AsNoTracking() on section.TermId equals term.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(term.PackageId)
-        select new GrantRow(term.PackageId, section.Id, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue, grant.GrantedAt);
-
-    private IQueryable<GrantRow> LessonGrants(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join lesson in _db.Lessons.AsNoTracking() on grant.LessonId equals lesson.Id
-        join section in _db.ContentSections.AsNoTracking() on lesson.ContentSectionId equals section.Id
-        join term in _db.Terms.AsNoTracking() on section.TermId equals term.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(term.PackageId)
-        select new GrantRow(term.PackageId, lesson.Id, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue, grant.GrantedAt);
-
-    private static IQueryable<GrantRow> Filter(IQueryable<GrantRow> query, DateTime? fromUtc, DateTime? toUtc)
-    {
-        if (fromUtc.HasValue) query = query.Where(grant => grant.GrantedAt >= fromUtc.Value);
-        if (toUtc.HasValue) query = query.Where(grant => grant.GrantedAt < toUtc.Value);
-        return query;
-    }
-
-    private static ContentAcquisitionCountDto Count(IEnumerable<GrantRow> grants, CodeType type)
-    {
-        var acquisitions = grants
-            .Where(grant => grant.GrantType == type)
-            .GroupBy(grant => new { grant.UserId, grant.TargetId })
-            .Select(group => new { group.Key.UserId, IsGiftOnly = group.All(grant => grant.IsGift) })
-            .ToArray();
-
-        return new ContentAcquisitionCountDto(
-            acquisitions.Where(acquisition => !acquisition.IsGiftOnly).Select(acquisition => acquisition.UserId).Distinct().Count(),
-            acquisitions.Where(acquisition => acquisition.IsGiftOnly).Select(acquisition => acquisition.UserId).Distinct().Count());
-    }
+    private static ContentAcquisitionCountDto ToDto(ContentAcquisitionStudentCounts counts) =>
+        new(counts.Purchased, counts.GiftOnly);
 
     private sealed record PackageRow(Guid Id, string Name, string TeacherName);
-    private sealed record GrantRow(Guid PackageId, Guid TargetId, Guid UserId, CodeType GrantType, bool IsGift, DateTime GrantedAt);
 }

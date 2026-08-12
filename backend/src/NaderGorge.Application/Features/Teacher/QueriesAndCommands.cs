@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Content;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -100,10 +101,12 @@ public record UpdateTeacherProfileCommand(
 public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDashboardStatsQuery, ApiResponse<TeacherDashboardStatsDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly ContentGrantFactSource _factSource;
 
     public GetTeacherDashboardStatsQueryHandler(IAppDbContext db)
     {
         _db = db;
+        _factSource = new ContentGrantFactSource(db);
     }
 
     public async Task<ApiResponse<TeacherDashboardStatsDto>> Handle(GetTeacherDashboardStatsQuery request, CancellationToken ct)
@@ -115,13 +118,6 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
         {
             return ApiResponse<TeacherDashboardStatsDto>.Fail("حساب المعلم غير موجود");
         }
-
-        var activeStudentsCount = await _db.StudentAccessGrants
-            .Where(s => s.GrantType == CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
-            .Where(s => _db.Packages.Any(p => p.Id == s.PackageId && p.TeacherId == teacherProfile.Id))
-            .Select(s => s.UserId)
-            .Distinct()
-            .CountAsync(ct);
 
         var teacherPackages = await _db.Packages.AsNoTracking()
             .Where(package => package.TeacherId == teacherProfile.Id)
@@ -137,70 +133,37 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
             .CountAsync(es => es.Status == EssaySubmissionStatus.WaitTeacher && es.Question.CreatedByTeacherId == teacherProfile.Id, ct);
 
         var packageIds = teacherPackages.Select(package => package.Id).ToArray();
-        var grantRows = await LoadGrantRowsAsync(packageIds, ct);
+        var grantFacts = await _factSource.LoadAsync(new ContentGrantFactScope(packageIds), ct);
+        var activeStudentsCount = ContentAcquisitionCalculator.CountActiveStudents(grantFacts, DateTime.UtcNow);
+        var acquisitionsByPackage = ContentAcquisitionCalculator.SummarizePackages(packageIds, grantFacts);
         var packageSales = teacherPackages.Select(package =>
         {
-            var rows = grantRows.Where(row => row.PackageId == package.Id).ToArray();
+            var acquisitions = acquisitionsByPackage[package.Id];
             return new TeacherPackageSalesBreakdownDto(
                 package.Id,
                 package.Name,
-                DistinctStudents(rows, CodeType.Package),
-                DistinctStudents(rows, CodeType.Term),
-                DistinctStudents(rows, CodeType.Month),
-                DistinctStudents(rows, CodeType.Lesson),
-                rows.Where(row => !row.IsGift).Select(row => row.UserId).Distinct().Count(),
-                rows.Where(row => row.IsGift).Select(row => row.UserId).Distinct().Count());
+                acquisitions.Package.Total,
+                acquisitions.Term.Total,
+                acquisitions.Section.Total,
+                acquisitions.Lesson.Total,
+                acquisitions.Overall.Purchased,
+                acquisitions.Overall.GiftOnly);
         }).ToArray();
 
         var dto = new TeacherDashboardStatsDto(activeStudentsCount, packagesCount, examsCount, pendingEssaysCount, packageSales);
         return ApiResponse<TeacherDashboardStatsDto>.Ok(dto);
     }
-
-    private async Task<List<TeacherPackageGrantRow>> LoadGrantRowsAsync(Guid[] packageIds, CancellationToken ct)
-    {
-        var grantRows = await PackageGrantRows(packageIds).ToListAsync(ct);
-        grantRows.AddRange(await TermGrantRows(packageIds).ToListAsync(ct));
-        grantRows.AddRange(await SectionGrantRows(packageIds).ToListAsync(ct));
-        grantRows.AddRange(await LessonGrantRows(packageIds).ToListAsync(ct));
-        return grantRows;
-    }
-
-    private IQueryable<TeacherPackageGrantRow> PackageGrantRows(Guid[] packageIds) =>
-        _db.StudentAccessGrants.AsNoTracking()
-            .Where(grant => !grant.CancelledAt.HasValue && grant.PackageId.HasValue && packageIds.Contains(grant.PackageId.Value))
-            .Select(grant => new TeacherPackageGrantRow(grant.PackageId!.Value, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue));
-
-    private IQueryable<TeacherPackageGrantRow> TermGrantRows(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join term in _db.Terms.AsNoTracking() on grant.TermId equals term.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(term.PackageId)
-        select new TeacherPackageGrantRow(term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
-
-    private IQueryable<TeacherPackageGrantRow> SectionGrantRows(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join section in _db.ContentSections.AsNoTracking() on grant.ContentSectionId equals section.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(section.Term.PackageId)
-        select new TeacherPackageGrantRow(section.Term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
-
-    private IQueryable<TeacherPackageGrantRow> LessonGrantRows(Guid[] packageIds) =>
-        from grant in _db.StudentAccessGrants.AsNoTracking()
-        join lesson in _db.Lessons.AsNoTracking() on grant.LessonId equals lesson.Id
-        where !grant.CancelledAt.HasValue && packageIds.Contains(lesson.ContentSection.Term.PackageId)
-        select new TeacherPackageGrantRow(lesson.ContentSection.Term.PackageId, grant.UserId, grant.GrantType, grant.GiftRecipientId.HasValue);
-
-    private static int DistinctStudents(IEnumerable<TeacherPackageGrantRow> rows, CodeType type) =>
-        rows.Where(row => row.GrantType == type).Select(row => row.UserId).Distinct().Count();
-
-    private sealed record TeacherPackageGrantRow(Guid PackageId, Guid UserId, CodeType GrantType, bool IsGift);
 }
 
 public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudentsQuery, ApiResponse<List<TeacherStudentDto>>>
 {
     private readonly IAppDbContext _db;
+    private readonly ContentGrantFactSource _factSource;
 
     public GetTeacherStudentsQueryHandler(IAppDbContext db)
     {
         _db = db;
+        _factSource = new ContentGrantFactSource(db);
     }
 
     public async Task<ApiResponse<List<TeacherStudentDto>>> Handle(GetTeacherStudentsQuery request, CancellationToken ct)
@@ -213,54 +176,82 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             return ApiResponse<List<TeacherStudentDto>>.Fail("حساب المعلم غير موجود");
         }
 
-        var teacherPackageIds = await _db.Packages
-            .Where(p => p.TeacherId == teacherProfile.Id)
-            .Select(p => p.Id)
+        var teacherPackages = await _db.Packages.AsNoTracking()
+            .Where(package => package.TeacherId == teacherProfile.Id)
+            .Select(package => new { package.Id, package.Name })
             .ToListAsync(ct);
-
-        var students = await _db.StudentAccessGrants
-            .AsNoTracking()
-            .Where(s => s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
-            .Where(s => teacherPackageIds.Contains(s.PackageId!.Value))
-            .GroupBy(s => s.UserId)
-            .Select(g => new
-            {
-                UserId = g.Key,
-                FirstActivationAt = g.Min(x => x.GrantedAt),
-                LastActivationAt = g.Max(x => x.GrantedAt),
-                ActiveGrantCount = g.Count(),
-                ActivePackageCount = g.Select(x => x.PackageId).Distinct().Count(),
-                PackageName = _db.Packages
-                    .Where(p => p.Id == g.OrderByDescending(x => x.GrantedAt).Select(x => x.PackageId).FirstOrDefault())
-                    .Select(p => p.Name)
-                    .FirstOrDefault() ?? string.Empty
-            })
-            .Join(_db.Users.Include(u => u.StudentProfile).AsNoTracking(), g => g.UserId, u => u.Id, (g, u) => new TeacherStudentDto(
-                u.Id,
-                u.FullName,
-                u.PhoneNumber,
-                g.PackageName,
-                g.FirstActivationAt,
-                u.StudentProfile != null ? u.StudentProfile.StudentCode : null,
-                u.StudentProfile != null ? u.StudentProfile.SecondaryPhone : null,
-                u.StudentProfile != null ? u.StudentProfile.ParentPhone : null,
-                u.StudentProfile != null ? u.StudentProfile.MotherPhone : null,
-                u.StudentProfile != null ? u.StudentProfile.Governorate : null,
-                u.StudentProfile != null ? u.StudentProfile.District : null,
-                u.StudentProfile != null ? u.StudentProfile.Address : null,
-                u.StudentProfile != null ? u.StudentProfile.EducationStage.ToString() : string.Empty,
-                u.StudentProfile != null ? u.StudentProfile.GradeLevel.ToString() : string.Empty,
-                u.StudentProfile != null && u.StudentProfile.StudyTrack.HasValue ? u.StudentProfile.StudyTrack.Value.ToString() : null,
-                u.StudentProfile != null ? u.StudentProfile.SchoolName : null,
-                u.StudentProfile != null && u.StudentProfile.SchoolType.HasValue ? u.StudentProfile.SchoolType.Value.ToString() : null,
-                g.ActivePackageCount,
-                g.ActiveGrantCount,
-                g.LastActivationAt
-            ))
-            .ToListAsync(ct);
+        var packageIds = teacherPackages.Select(package => package.Id).ToArray();
+        var packageNames = teacherPackages.ToDictionary(package => package.Id, package => package.Name);
+        var grantFacts = await _factSource.LoadAsync(new ContentGrantFactScope(packageIds), ct);
+        var studentGrantSummaries = ContentAcquisitionCalculator
+            .WhereEffectiveAt(grantFacts, DateTime.UtcNow)
+            .GroupBy(fact => fact.UserId)
+            .Select(SummarizeStudentGrants)
+            .ToArray();
+        var studentIds = studentGrantSummaries.Select(summary => summary.UserId).ToArray();
+        var usersById = await _db.Users.AsNoTracking()
+            .Include(user => user.StudentProfile)
+            .Where(user => studentIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, ct);
+        var students = studentGrantSummaries
+            .Select(summary => ToDto(summary, usersById[summary.UserId], packageNames[summary.LatestPackageId]))
+            .ToList();
 
         return ApiResponse<List<TeacherStudentDto>>.Ok(students);
     }
+
+    private static ActiveStudentGrantSummary SummarizeStudentGrants(IGrouping<Guid, ContentGrantFact> facts)
+    {
+        var factRows = facts.ToArray();
+        var latestFact = factRows
+            .OrderByDescending(fact => fact.GrantedAt)
+            .ThenBy(fact => fact.PackageId)
+            .First();
+        return new ActiveStudentGrantSummary(
+            facts.Key,
+            latestFact.PackageId,
+            factRows.Min(fact => fact.GrantedAt),
+            factRows.Max(fact => fact.GrantedAt),
+            factRows.Length,
+            factRows.Select(fact => fact.PackageId).Distinct().Count());
+    }
+
+    private static TeacherStudentDto ToDto(
+        ActiveStudentGrantSummary summary,
+        User user,
+        string latestPackageName)
+    {
+        var profile = user.StudentProfile;
+        return new TeacherStudentDto(
+            user.Id,
+            user.FullName,
+            user.PhoneNumber,
+            latestPackageName,
+            summary.FirstActivationAt,
+            profile?.StudentCode,
+            profile?.SecondaryPhone,
+            profile?.ParentPhone,
+            profile?.MotherPhone,
+            profile?.Governorate,
+            profile?.District,
+            profile?.Address,
+            profile?.EducationStage.ToString() ?? string.Empty,
+            profile?.GradeLevel.ToString() ?? string.Empty,
+            profile?.StudyTrack?.ToString(),
+            profile?.SchoolName,
+            profile?.SchoolType?.ToString(),
+            summary.ActivePackageCount,
+            summary.ActiveGrantCount,
+            summary.LastActivationAt);
+    }
+
+    private sealed record ActiveStudentGrantSummary(
+        Guid UserId,
+        Guid LatestPackageId,
+        DateTime FirstActivationAt,
+        DateTime LastActivationAt,
+        int ActiveGrantCount,
+        int ActivePackageCount);
 }
 
 public class GetPendingTeacherEssaysQueryHandler : IRequestHandler<GetPendingTeacherEssaysQuery, ApiResponse<List<PendingEssayDto>>>

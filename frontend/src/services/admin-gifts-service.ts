@@ -52,6 +52,8 @@ export interface GiftDetailsDto {
   issuerName: string;
   reason: string;
   amount?: number | null;
+  originalValue?: number | null;
+  availableValue?: number | null;
   availableAmount: number;
   consumedAmount: number;
   expiredAmount: number;

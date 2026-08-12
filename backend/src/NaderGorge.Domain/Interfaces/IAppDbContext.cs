@@ -8,6 +8,7 @@ using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
 using NaderGorge.Domain.Entities.LiveSupport;
+using NaderGorge.Domain.Entities.AdminAI;
 
 namespace NaderGorge.Domain.Interfaces;
 
@@ -213,6 +214,22 @@ public interface IAppDbContext
     DbSet<LiveSupportAIVerificationPolicyQuestion> LiveSupportAIVerificationPolicyQuestions { get; }
     DbSet<LiveSupportAIVerificationSession> LiveSupportAIVerificationSessions { get; }
     DbSet<LiveSupportAIVerificationAttempt> LiveSupportAIVerificationAttempts { get; }
+
+    // Standalone Admin AI Agent
+    DbSet<AdminAICapabilityBaseline> AdminAICapabilityBaselines { get; }
+    DbSet<AdminAISensitiveDataPolicyVersion> AdminAISensitiveDataPolicyVersions { get; }
+    DbSet<AdminAIConversation> AdminAIConversations { get; }
+    DbSet<AdminAIConversationCommandReceipt> AdminAIConversationCommandReceipts { get; }
+    DbSet<AdminAIMessage> AdminAIMessages { get; }
+    DbSet<AdminAITurn> AdminAITurns { get; }
+    DbSet<AdminAITurnStep> AdminAITurnSteps { get; }
+    DbSet<AdminAIReadInvocation> AdminAIReadInvocations { get; }
+    DbSet<AdminAIActionProposal> AdminAIActionProposals { get; }
+    DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges { get; }
+    DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants { get; }
+    DbSet<AdminAIActionExecution> AdminAIActionExecutions { get; }
+    DbSet<AdminAIActionExecutionItem> AdminAIActionExecutionItems { get; }
+    DbSet<AdminAIAuditEvent> AdminAIAuditEvents { get; }
 
     // Phase 6: Call Center CRM
     DbSet<CrmStudentStatus> CrmStudentStatuses { get; }

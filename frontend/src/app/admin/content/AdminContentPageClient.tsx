@@ -4,11 +4,11 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags, Layers3,
+  AlertTriangle, BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags, Layers3, RefreshCw,
 } from 'lucide-react';
 import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, ContentSummaryPanel } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
-import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from '@/services/content-service';
+import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type ContentSummaryTeacherDto, type PackageContentMode } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -27,6 +27,11 @@ import { registerCacheStore } from '@/lib/cache-invalidation';
 
 const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
+type ContentTeacher = Pick<
+  TeacherDto,
+  'id' | 'fullName' | 'phoneNumber' | 'profileImageUrl' | 'specialization' | 'subjectIds' | 'subjectNames'
+>;
+
 function getStageForGrade(grade: string): EducationStage | '' {
   for (const [stage, groups] of Object.entries(GRADES_BY_STAGE) as [EducationStage, typeof GRADES_BY_STAGE[EducationStage]][]) {
     if (groups.some((group) => group.grades.some((item) => item.value === grade))) {
@@ -37,7 +42,7 @@ function getStageForGrade(grade: string): EducationStage | '' {
   return '';
 }
 
-function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: GradeLevel; label: string }[] {
+function getTeacherPackageGrades(teacher: ContentTeacher | undefined): { value: GradeLevel; label: string }[] {
   if (!teacher || !teacher.specialization) return [];
   const specs = teacher.specialization.split(',');
   const list: { value: GradeLevel; label: string }[] = [];
@@ -76,7 +81,7 @@ function CreatePackageRow({
   activeTeacherId
 }: {
   onSuccess: () => void;
-  teachers: TeacherDto[];
+  teachers: ContentTeacher[];
   subjects: SubjectDto[];
   activeTeacherId?: string | null;
 }) {
@@ -588,22 +593,26 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
   const router = useRouter();
   const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
+  const canManageUsers = Boolean(user?.roles.includes('Admin') || user?.permissions.includes('users.manage'));
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
-  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
+  const [teachers, setTeachers] = useState<ContentTeacher[]>([]);
+  const [summaryTeachers, setSummaryTeachers] = useState<ContentSummaryTeacherDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const loadSequenceRef = useRef(0);
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
   const selectedTeacherId = 'All';
   const activeTab = searchParams.get('view') === 'content' ? 'content' : 'summary';
-  const activeTeacherId = activeTab === 'content' ? searchParams.get('teacher') : null;
+  const activeTeacherId = searchParams.get('teacher');
 
-  function navigateContentState(tab: 'summary' | 'content', teacherId?: string) {
+  function navigateContentState(tab: 'summary' | 'content', teacherId: string | null = activeTeacherId) {
     const nextParams = new URLSearchParams(searchParams.toString());
     if (tab === 'content') nextParams.set('view', 'content');
     else nextParams.delete('view');
 
-    if (tab === 'content' && teacherId) nextParams.set('teacher', teacherId);
+    if (teacherId) nextParams.set('teacher', teacherId);
     else nextParams.delete('teacher');
 
     const query = nextParams.toString();
@@ -613,27 +622,45 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
   }
 
   const loadPackages = useCallback(async () => {
+    const loadSequence = ++loadSequenceRef.current;
     try {
       setLoading(true);
-      const [packagesRes, subjectsRes, teachersRes] = await Promise.all([
+      setLoadError('');
+      const [packagesRes, subjectsRes, summaryTeachersRes, teachersRes] = await Promise.all([
         contentService.getPackages(),
-        teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
-        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
+        teacherService.getSubjects(),
+        contentService.getContentSummaryTeachers(),
+        canManageUsers ? teacherService.getTeachers().catch(() => null) : Promise.resolve(null),
       ]);
+      if (loadSequence !== loadSequenceRef.current) return;
       setPackages(packagesRes.data?.data ?? []);
       setSubjects(subjectsRes.data ?? []);
-      setTeachers(teachersRes.data ?? []);
+      const contentTeachers = summaryTeachersRes.data?.data ?? [];
+      setSummaryTeachers(contentTeachers);
+      setTeachers(teachersRes?.data ?? contentTeachers.map((teacher) => ({
+        id: teacher.id,
+        fullName: teacher.fullName,
+        phoneNumber: '',
+        profileImageUrl: teacher.profileImageUrl,
+        specialization: teacher.specialization,
+        subjectIds: teacher.subjectIds,
+        subjectNames: teacher.subjectNames,
+      })));
     } catch {
-      toast.error('تعذر تحميل الباقات.');
+      if (loadSequence !== loadSequenceRef.current) return;
+      setLoadError('تعذر تحميل بيانات المحتوى والمدرسين. حاول مرة أخرى.');
     } finally {
-      setLoading(false);
+      if (loadSequence === loadSequenceRef.current) setLoading(false);
     }
-  }, []);
+  }, [canManageUsers]);
 
   useEffect(() => {
     void loadPackages();
     const cleanupCacheStore = registerCacheStore(CONTENT_CACHE_KEYS.packages, () => {}, () => void loadPackages());
-    return cleanupCacheStore;
+    return () => {
+      cleanupCacheStore();
+      loadSequenceRef.current += 1;
+    };
   }, [loadPackages]);
 
   // Filter packages based on search, subject, and teacher
@@ -652,6 +679,8 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
   });
 
   const activeTeacher = teachers.find(t => t.id === activeTeacherId);
+  const activeSummaryTeacher = summaryTeachers.find(teacher => teacher.id === activeTeacherId);
+  const activeTeacherName = activeTeacher?.fullName ?? activeSummaryTeacher?.fullName;
 
   const Shell = mode === 'assistant' ? AssistantShellChrome : AdminPage;
   const shellActivePath = mode === 'assistant' ? '/assistant/content' : '/admin/content';
@@ -662,12 +691,30 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
       activePath={shellActivePath as any}
       sectionLabel="إدارة المحتوى"
       pageTitle={isAssistantWorkspace ? 'إدارة المحتوى التعليمي' : 'المناهج التعليمية'}
-      subtitle={activeTeacher
-        ? `إدارة باقات ومحتوى المعلم: ${activeTeacher.fullName}`
-        : 'اختر المعلم أولاً لتصفح المحتوى الدراسي الخاص به'}
+      subtitle={activeTeacherName
+        ? activeTab === 'summary'
+          ? `ملخص الشراء والهدايا للمعلم: ${activeTeacherName}`
+          : `إدارة باقات ومحتوى المعلم: ${activeTeacherName}`
+        : activeTab === 'summary'
+          ? 'اختر المعلم لعرض ملخص الشراء والهدايا الخاص به'
+          : 'اختر المعلم أولاً لتصفح المحتوى الدراسي الخاص به'}
     >
       {loading ? (
         <AdminPageSkeleton />
+      ) : loadError ? (
+        <section className="flex min-h-[40vh] items-center justify-center px-4 py-8" role="alert" aria-live="assertive">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 text-center sm:p-8">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--admin-danger-10)] text-[var(--admin-danger)]">
+              <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <h2 className="text-xl font-black text-[var(--admin-text)]">تعذر تحميل صفحة المحتوى</h2>
+            <p className="mt-2 text-sm font-medium leading-7 text-[var(--admin-muted)]">{loadError}</p>
+            <button type="button" onClick={() => void loadPackages()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary)] px-6 text-sm font-bold text-[var(--admin-primary-contrast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2">
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              إعادة المحاولة
+            </button>
+          </div>
+        </section>
       ) : (
         <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
           <AdminTabBar
@@ -680,7 +727,13 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
           />
 
           {activeTab === 'summary' ? (
-            <ContentSummaryPanel scope="admin" />
+            <ContentSummaryPanel
+              scope="admin"
+              teacherOptions={summaryTeachers}
+              selectedTeacherId={activeTeacherId}
+              onSelectTeacher={(teacherId) => navigateContentState('summary', teacherId)}
+              onClearTeacher={() => navigateContentState('summary', null)}
+            />
           ) : (
             <>
           {mode !== 'assistant' && user?.roles.includes('Admin') && (
@@ -704,7 +757,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                   size="md"
                   pill
                   onClick={() => {
-                    navigateContentState('content');
+                    navigateContentState('content', null);
                     setSearch('');
                   }}
                   className="flex items-center gap-1.5"

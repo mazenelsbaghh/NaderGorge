@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-08-05
+Auto-generated from all feature plans. Last updated: 2026-08-11
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -72,6 +72,8 @@ Auto-generated from all feature plans. Last updated: 2026-08-05
 - PostgreSQL 16 for authoritative application, security-version, (167-platform-speed-completion)
 - C# 13/.NET 9; TypeScript 5.9 strict; Next.js 16.2.7/React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9/Npgsql, Next.js App Router, Axios, Zustand, Tailwind, Lucide Reac (168-platform-financial-center)
 - PostgreSQL 16; existing private attachment storage; Redis only for existing coordination, not accounting authority (168-platform-financial-center)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Node.js `>=22.13`; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core Web API, MediatR 12.4.1, FluentValidation 11.11, EF Core 9.0.6/Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4; Next.js App Router, Axios, Zustand, Tailwind CSS 4, Lucide React, SignalR client 10; BullMQ 5.71.1, ioredis 5.10.1, `@google/genai` 1.47.0, undici 7.24.6 (169-admin-ai-agent)
+- PostgreSQL 16 is authoritative; Redis is delivery/coordination only; existing private attachment storage is used only through secure continuation flows; no vector database (169-admin-ai-agent)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -94,14 +96,15 @@ For Phase 1 browser smoke: start the backend in E2E mode per `docs/verification-
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
+- 169-admin-ai-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js `>=22.13`; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core Web API, MediatR 12.4.1, FluentValidation 11.11, EF Core 9.0.6/Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4; Next.js App Router, Axios, Zustand, Tailwind CSS 4, Lucide React, SignalR client 10; BullMQ 5.71.1, ioredis 5.10.1, `@google/genai` 1.47.0, undici 7.24.6
 - 168-platform-financial-center: Added C# 13/.NET 9; TypeScript 5.9 strict; Next.js 16.2.7/React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9/Npgsql, Next.js App Router, Axios, Zustand, Tailwind, Lucide Reac
 - 167-platform-speed-completion: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 22.13+ + ASP.NET Core, MediatR, FluentValidation, EF Core
-- 166-three-node-production-cluster: Added C# 13 على .NET 9؛ TypeScript 5.9 على Node.js 20؛ Next.js 16.2.7 وReact 19.2.4؛ Bash وPython 3 لأدوات التشغيل + ASP.NET Core، EF Core 9/Npgsql، SignalR Redis backplane، BullMQ 5.71/ioredis، Docker Compose، HAProxy، WireGuard، Patroni 4، etcd 3، PostgreSQL 16، Redis 7/Sentinel، GlusterFS 11.2، pgBackRest، cloudflared
 
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-Current implementation plan: `specs/168-platform-financial-center/plan.md` (Unified EGP general ledger, treasury and cashboxes, platform expenses, cash/balance refunds, teacher liabilities, flexible budgets, historical reconstruction, reconciliation, period close, permissions, and Excel/PDF reporting).
+Current implementation plan: `specs/169-admin-ai-agent/plan.md` (Standalone Admin-only AI workspace, bounded and redacted whole-platform reads, complete versioned Admin capability coverage, proposal-first execution, typed strong confirmation for high-risk actions, durable idempotency, private transcripts, and append-only evidence). Implementation was authorized by the owner through `/implement`; release remains fail-closed until every task and verification gate passes.
+Previous implementation plan: `specs/168-platform-financial-center/plan.md` (Unified EGP general ledger, treasury and cashboxes, platform expenses, cash/balance refunds, teacher liabilities, flexible budgets, historical reconstruction, reconciliation, period close, permissions, and Excel/PDF reporting).
 Completed production-cluster plan: `specs/166-three-node-production-cluster/plan.md` (Three-node application load distribution, one HA PostgreSQL database, shared Redis and files, immutable rolling releases, backup/restore evidence, Cloudflare Tunnel, and owner-accepted CPU-steal exception).
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

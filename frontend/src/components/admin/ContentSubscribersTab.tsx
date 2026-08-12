@@ -18,6 +18,13 @@ interface ContentSubscribersTabProps {
 
 const PAGE_SIZE = 10;
 
+const directAcquisitionLabel: Record<ContentSubscribersTabProps['contentType'], string> = {
+  package: 'الباقة كاملة',
+  term: 'الترم',
+  section: 'القسم',
+  lesson: 'الحصة',
+};
+
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
@@ -41,6 +48,7 @@ const purchaseMethodLabel: Record<ContentSubscriberDto['purchaseMethod'], string
   Code: 'كود',
   Gift: 'هدية',
   Balance: 'رصيد',
+  Direct: 'مباشر / غير مصنف',
 };
 
 export default function ContentSubscribersTab({
@@ -58,21 +66,27 @@ export default function ContentSubscribersTab({
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSequenceRef = useRef(0);
 
   const fetchSubscribers = useCallback(async (p: number, s: string) => {
+    const requestSequence = ++requestSequenceRef.current;
     try {
       setLoading(true);
       setError(null);
       const subscribersService = surface === 'teacher' ? teacherService : adminService;
       const result = await subscribersService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
-      if (result) {
+      if (requestSequence === requestSequenceRef.current && result) {
         setSubscribers(result.items ?? []);
         setTotalCount(result.totalCount ?? 0);
       }
     } catch {
-      setError('تعذر تحميل بيانات المشتركين');
+      if (requestSequence === requestSequenceRef.current) {
+        setError('تعذر تحميل بيانات المشتركين');
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === requestSequenceRef.current) {
+        setLoading(false);
+      }
     }
   }, [contentType, contentId, surface]);
 
@@ -84,6 +98,7 @@ export default function ContentSubscribersTab({
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      requestSequenceRef.current += 1;
     };
   }, []);
 
@@ -166,10 +181,10 @@ export default function ContentSubscribersTab({
           className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
             row.isActive
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
           }`}
         >
-          {row.isActive ? 'نشط' : 'ملغى'}
+          {row.isActive ? 'نشط' : 'منتهي / غير نشط'}
         </span>
       ),
     },
@@ -183,14 +198,19 @@ export default function ContentSubscribersTab({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-[var(--admin-primary)]" />
-          <h3 className="text-lg font-black text-[var(--admin-text)]">
-            الطلاب المشتركين
-            {!loading && (
-              <span className="me-2 text-sm font-bold text-[var(--admin-muted)]">
-                ({totalCount})
-              </span>
-            )}
-          </h3>
+          <div>
+            <h3 className="text-lg font-black text-[var(--admin-text)]">
+              الطلاب الذين حصلوا على {directAcquisitionLabel[contentType]} مباشرة
+              {!loading && (
+                <span className="me-2 text-sm font-bold text-[var(--admin-muted)]">
+                  ({totalCount})
+                </span>
+              )}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">
+              كل طالب يظهر مرة واحدة، وتشمل القائمة الشراء والهدايا المسجّلة مباشرة على هذا المستوى.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Search */}
@@ -211,7 +231,7 @@ export default function ContentSubscribersTab({
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 text-sm font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)] disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
-            {exporting ? 'جارٍ التنزيل...' : 'تنزيل بيانات المشترين'}
+            {exporting ? 'جارٍ التنزيل...' : 'تنزيل بيانات الطلاب'}
           </button>
         </div>
       </div>
@@ -222,7 +242,7 @@ export default function ContentSubscribersTab({
         columns={columns}
         loading={loading}
         rowKey={(item) => item.studentId}
-        emptyMessage="لا يوجد طلاب مشتركين حالياً"
+        emptyMessage="لا يوجد طلاب حصلوا على هذا المستوى مباشرة"
         errorMessage={error}
         onRetry={() => fetchSubscribers(page, search)}
         pagination={false}

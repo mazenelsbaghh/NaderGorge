@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Gift, Plus, RefreshCw, Search } from 'lucide-react';
 import { AdminPageSkeleton, AdminPage } from '@/components/admin';
@@ -13,12 +13,25 @@ export default function GiftsLedgerPageClient() {
   const [targetType, setTargetType] = useState<GiftTargetType | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const loadSequenceRef = useRef(0);
 
   const load = useCallback(async () => {
-    try { setLoading(true); setError(false); setData(await adminGiftsService.list({ search: search || undefined, targetType })); }
-    catch { setError(true); } finally { setLoading(false); }
+    const loadSequence = ++loadSequenceRef.current;
+    try {
+      setLoading(true);
+      setError(false);
+      const result = await adminGiftsService.list({ search: search || undefined, targetType });
+      if (loadSequence === loadSequenceRef.current) setData(result);
+    } catch {
+      if (loadSequence === loadSequenceRef.current) setError(true);
+    } finally {
+      if (loadSequence === loadSequenceRef.current) setLoading(false);
+    }
   }, [search, targetType]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => { loadSequenceRef.current += 1; };
+  }, [load]);
 
   return <AdminPage activePath="/admin/gifts" sectionLabel="البيع والمحتوى" pageTitle="الهدايا والوصول المجاني" subtitle="إصدار وصول مباشر أو رصيد ترويجي مع سجل استخدام وإلغاء للمتبقي." action={<Link href="/admin/gifts/new" className="inline-flex h-11 items-center gap-2 rounded-lg bg-[var(--admin-primary)] px-4 text-sm font-bold text-white"><Plus className="h-4 w-4" /> هدية جديدة</Link>}>
     <div className="space-y-5">

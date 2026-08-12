@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MediatR;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common.HR;
 using NaderGorge.Application.Features.HR.Lifecycle;
+using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -11,7 +13,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.API.Controllers;
 
 [ApiController, Route("api/hr"), Authorize]
-public sealed class HrDocumentsAssetsController(IAppDbContext db, DocumentAssetService service) : ControllerBase
+public sealed class HrDocumentsAssetsController(IAppDbContext db, DocumentAssetService service, IMediator mediator) : ControllerBase
 {
     [HttpGet("self/documents"), HasPermission(HrPermissions.DocumentSelf)]
     public async Task<IActionResult> MyDocuments(CancellationToken ct)
@@ -55,8 +57,8 @@ public sealed class HrDocumentsAssetsController(IAppDbContext db, DocumentAssetS
     [HttpPost("admin/assets"), HasPermission(HrPermissions.AssetManage)]
     public async Task<IActionResult> CreateAsset(CreateAssetRequest request, CancellationToken ct)
     {
-        var asset = new HrAsset { Code = request.Code.Trim().ToUpper(), Name = request.Name.Trim(), SerialNumber = request.SerialNumber, Value = request.Value };
-        db.HrAssets.Add(asset); await db.SaveChangesAsync(ct); return Ok(new { asset.Id });
+        var result = await mediator.Send(new CreateHrAssetCommand(request.Code, request.Name, request.SerialNumber, request.Value), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : BadRequest(result);
     }
 
     [HttpPost("admin/assets/{assetId:guid}/assign"), HasPermission(HrPermissions.AssetManage)]

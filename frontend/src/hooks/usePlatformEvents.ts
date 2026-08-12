@@ -192,6 +192,7 @@ export interface ExamGradedPayload {
 }
 
 export interface PlatformEventHandlers {
+  onAdminAiEvent?: (payload: unknown) => void;
   onNotificationCreated?: (payload: NotificationPayload) => void;
   onBalanceChanged?: (payload: BalancePayload) => void;
   onCodeActivated?: (payload: CodeActivatedPayload) => void;
@@ -265,6 +266,7 @@ const activeLessons = new Set<string>();
 
 // Centralized listener registry
 const listeners = {
+  AdminAiEvent: new Set<(payload: unknown) => void>(),
   NotificationCreated: new Set<(payload: NotificationPayload) => void>(),
   BalanceChanged: new Set<(payload: BalancePayload) => void>(),
   CodeActivated: new Set<(payload: CodeActivatedPayload) => void>(),
@@ -589,6 +591,9 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     const onStaffDataChanged = (payload: StaffDataChangedPayload) => {
       handlersRef.current?.onStaffDataChanged?.(payload);
     };
+    const onAdminAiEvent = (payload: unknown) => {
+      handlersRef.current?.onAdminAiEvent?.(payload);
+    };
 
     // Add wrappers to registry sets
     listeners.NotificationCreated.add(onNotificationCreated);
@@ -650,6 +655,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     listeners.NotificationsCleared.add(onNotificationsCleared);
     listeners.ExamGraded.add(onExamGraded);
     listeners.StaffDataChanged.add(onStaffDataChanged);
+    listeners.AdminAiEvent.add(onAdminAiEvent);
 
     const initConnection = async () => {
       if (!sharedConnection) {
@@ -719,6 +725,10 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           // authenticated mount creates a fresh transport, so this must not
           // surface as a production console error.
           connectionStatusListeners.forEach(listener => listener(false));
+        });
+
+        sharedConnection.on('AdminAIEvent', (payload: unknown) => {
+          listeners.AdminAiEvent.forEach(handler => handler(payload));
         });
 
         // Register universal connection event listeners exactly once
@@ -1458,6 +1468,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       listeners.NotificationsCleared.delete(onNotificationsCleared);
       listeners.ExamGraded.delete(onExamGraded);
       listeners.StaffDataChanged.delete(onStaffDataChanged);
+      listeners.AdminAiEvent.delete(onAdminAiEvent);
 
       if (activeHooksCount <= 0 && sharedConnection) {
         const conn = sharedConnection;

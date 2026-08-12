@@ -42,6 +42,7 @@ public interface ILiveSupportService
     Task<IReadOnlyList<LiveSupportStudentSupportHistoryDto>> GetStudentSupportHistoryAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
     Task<IReadOnlyList<LiveSupportMessageDto>> GetStudentHistoryMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid historyConversationId, int pageSize, CancellationToken ct);
     Task<LiveSupportAdminDashboardDto> GetAdminDashboardAsync(CancellationToken ct);
+    Task<IReadOnlyList<LiveSupportRatingDto>> GetAdminRatingsAsync(DateTime? from, DateTime? to, CancellationToken ct);
     Task<LiveSupportConversationTimelineDto> GetAdminTimelineAsync(Guid conversationId, CancellationToken ct);
     Task<LiveSupportMessagePageDto> GetParticipantMessagePageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int pageSize, string? cursor, long? afterSequence, CancellationToken ct);
     Task<LiveSupportAttachmentDto> SaveParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct);

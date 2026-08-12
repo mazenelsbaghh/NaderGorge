@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Content;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Content.Queries;
@@ -31,12 +32,12 @@ public class GetPackageStatsQueryHandler : IRequestHandler<GetPackageStatsQuery,
         if (!packageExists)
             return ApiResponse<PackageStatsDto>.Fail("Package not found");
 
-        // Enrolled students: distinct users with active Package-level access grants
-        var enrolledStudentsCount = await _db.StudentAccessGrants
-            .Where(sag => sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId == request.PackageId && sag.IsActive)
-            .Select(sag => sag.UserId)
-            .Distinct()
-            .CountAsync(ct);
+        var acquisitionFacts = await new ContentGrantFactSource(_db).LoadAsync(
+            new ContentGrantFactScope([request.PackageId]),
+            ct);
+        var enrolledStudentsCount = ContentAcquisitionCalculator
+            .SummarizePackages([request.PackageId], acquisitionFacts)[request.PackageId]
+            .Overall.Total;
 
         var termsCount = await _db.Terms
             .CountAsync(t => t.PackageId == request.PackageId && !t.IsSystemContainer, ct);

@@ -14,6 +14,7 @@ import {
 
 type EffectiveConnectionType = 'slow-2g' | '2g' | '3g' | '4g' | string;
 const EXPENSIVE_ROUTE_PREFIXES = [
+  '/admin/ai-agent',
   '/admin/ai-monitor',
   '/admin/finance',
   '/admin/platform-finance',

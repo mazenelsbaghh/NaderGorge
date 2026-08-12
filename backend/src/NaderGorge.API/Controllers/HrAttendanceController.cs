@@ -98,6 +98,14 @@ public sealed class HrAttendanceController : ControllerBase
         return result.Success ? Ok(result) : Conflict(result);
     }
 
+    [HttpPut("admin/attendance/breaks/{breakId:guid}")]
+    [HasPermission(HrPermissions.AttendanceManage)]
+    public async Task<IActionResult> UpdateBreak(Guid breakId, UpdateAttendanceBreakRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new UpdateAttendanceBreakCommand(breakId, request.StartedAt, request.EndedAt, User.RequireUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("self/attendance/clock-out")]
     [HasPermission(HrPermissions.AttendanceSelf)]
     public async Task<IActionResult> ClockOut([FromHeader(Name = "Idempotency-Key")] string? key, CancellationToken ct)
@@ -118,7 +126,8 @@ public sealed class HrAttendanceController : ControllerBase
         .OrderByDescending(item => item.WorkDate).Select(item => new { item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(), item.WorkedMinutes,
             employeePhone = item.Employee!.User!.PhoneNumber, item.LateMinutes, item.EarlyLeaveMinutes, item.OvertimeMinutes,
             breakAllowanceMinutes = item.Employee!.DailyBreakAllowanceMinutes, shortPermissionMaxMinutes = item.Employee.ShortPermissionMaxMinutes,
-            serverNowUtc, openBreak = item.Breaks.Where(b => !b.EndedAt.HasValue).Select(b => new { b.Id, b.StartedAt, kind = b.Kind.ToString(), b.AllowedMinutes }).FirstOrDefault() }).Take(100).ToListAsync(ct));
+            serverNowUtc, openBreak = item.Breaks.Where(b => !b.EndedAt.HasValue).Select(b => new { b.Id, b.StartedAt, kind = b.Kind.ToString(), b.AllowedMinutes }).FirstOrDefault(),
+            breaks = item.Breaks.OrderBy(b => b.StartedAt).Select(b => new { b.Id, b.StartedAt, b.EndedAt, kind = b.Kind.ToString(), b.AllowedMinutes }) }).Take(100).ToListAsync(ct));
     }
 
     [HttpGet("admin/attendance/daily-report")]
@@ -126,22 +135,41 @@ public sealed class HrAttendanceController : ControllerBase
     public async Task<IActionResult> DailyReport(DateOnly? from, DateOnly? to, CancellationToken ct)
     {
         var serverNowUtc = DateTime.UtcNow;
-        return Ok(await _db.AttendanceSessions.AsNoTracking()
-        .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
-        .GroupBy(item => new
-        {
-            item.EmployeeId,
-            item.WorkDate,
-            Employee = item.Employee!.User!.FullName,
-            EmployeePhone = item.Employee.User!.PhoneNumber,
-        })
+        var sessions = await _db.AttendanceSessions.AsNoTracking()
+            .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
+            .Select(item => new
+            {
+                item.EmployeeId,
+                employee = item.Employee!.User!.FullName,
+                employeePhone = item.Employee.User!.PhoneNumber,
+                item.WorkDate,
+                item.ClockedInAt,
+                item.ClockedOutAt,
+                item.WorkedMinutes,
+                item.LateMinutes,
+                item.EarlyLeaveMinutes,
+                item.OvertimeMinutes,
+                breakAllowanceMinutes = item.Employee.DailyBreakAllowanceMinutes,
+                breaks = item.Breaks.Select(breakItem => new { breakItem.StartedAt, breakItem.EndedAt }),
+            })
+            .ToListAsync(ct);
+
+        return Ok(sessions.GroupBy(item => new { item.EmployeeId, item.WorkDate, item.employee, item.employeePhone })
         .OrderByDescending(group => group.Key.WorkDate)
-        .ThenBy(group => group.Key.Employee)
-        .Select(group => new
+        .ThenBy(group => group.Key.employee)
+        .Select(group =>
         {
+            var sessionBreaks = group.SelectMany(item => item.breaks).ToList();
+            var openSessions = group.Where(item => !item.ClockedOutAt.HasValue).ToList();
+            var openSessionBreaks = openSessions.SelectMany(item => item.breaks).ToList();
+            var openBreak = openSessionBreaks.Where(item => !item.EndedAt.HasValue)
+                .OrderByDescending(item => item.StartedAt).FirstOrDefault();
+
+            return new
+            {
             employeeId = group.Key.EmployeeId,
-            employee = group.Key.Employee,
-            employeePhone = group.Key.EmployeePhone,
+            employee = group.Key.employee,
+            employeePhone = group.Key.employeePhone,
             workDate = group.Key.WorkDate,
             clockedInAt = group.Min(item => item.ClockedInAt),
             clockedOutAt = group.Max(item => item.ClockedOutAt),
@@ -151,10 +179,17 @@ public sealed class HrAttendanceController : ControllerBase
             earlyLeaveMinutes = group.Sum(item => item.EarlyLeaveMinutes),
             overtimeMinutes = group.Sum(item => item.OvertimeMinutes),
             hasOpenSession = group.Any(item => !item.ClockedOutAt.HasValue),
+            closedBreakMinutes = sessionBreaks.Where(item => item.EndedAt.HasValue).Sum(item =>
+                Math.Max(0, (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes)),
+            openSessionBreakMinutes = openSessionBreaks.Where(item => item.EndedAt.HasValue).Sum(item =>
+                Math.Max(0, (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes)),
+            openBreakStartedAt = openBreak?.StartedAt,
+            breakAllowanceMinutes = group.Max(item => item.breakAllowanceMinutes),
             serverNowUtc,
+            };
         })
         .Take(1000)
-        .ToListAsync(ct));
+        .ToList());
     }
 
     [HttpGet("admin/attendance/attempts")]
@@ -206,6 +241,7 @@ public sealed class HrAttendanceController : ControllerBase
 
 public sealed record AttendanceEvidenceRequest(double? Latitude, double? Longitude, double? Accuracy, string? DeviceToken);
 public sealed record StartAttendanceBreakRequest(AttendanceBreakKind Kind = AttendanceBreakKind.Regular);
+public sealed record UpdateAttendanceBreakRequest(DateTime StartedAt, DateTime? EndedAt);
 public sealed record RegisterTrustedDeviceRequest(Guid EmployeeId, string DeviceToken, string Name, DateTime? ExpiresAt);
 public sealed record SubmitAttendanceCorrectionRequest(Guid AttendanceSessionId, DateTime? ProposedClockedInAt, DateTime? ProposedClockedOutAt, string Reason, string? EvidenceReference);
 public sealed record DecideAttendanceCorrectionRequest(bool Approve, bool IsHrDecision, string Reason, int ExpectedVersion);

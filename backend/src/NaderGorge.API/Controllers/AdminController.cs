@@ -260,11 +260,19 @@ public class AdminController : ControllerBase
 
     [HttpGet("content/summary")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> GetContentSummary([FromQuery] DateTime? fromUtc, [FromQuery] DateTime? toUtc)
+    public async Task<IActionResult> GetContentSummary(
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        [FromQuery] Guid? teacherId)
     {
-        var result = await _mediator.Send(new GetContentSummaryQuery(null, fromUtc, toUtc));
+        var result = await _mediator.Send(new GetContentSummaryQuery(null, fromUtc, toUtc, teacherId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("content/summary/teachers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetContentSummaryTeachers(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetContentSummaryTeachersQuery(), ct));
 
     [HttpPost("packages")]
     [HasPermission("content.manage")]
@@ -968,51 +976,11 @@ public class AdminController : ControllerBase
 
     [HttpGet("essays/pending")]
     [HasPermission("exams.manage")]
-    public async Task<IActionResult> GetPendingEssays([FromServices] NaderGorge.Domain.Interfaces.IAppDbContext db)
+    public async Task<IActionResult> GetPendingEssays(CancellationToken ct)
     {
-        Guid? teacherId = null;
-        var userId = GetUserId();
-        var user = db.Users
-            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
-            .Include(u => u.TeacherProfile)
-            .FirstOrDefault(u => u.Id == userId);
-
-        if (user != null && user.UserRoles.Any(ur => ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Teacher))
-        {
-            teacherId = user.TeacherProfile?.Id;
-        }
-
-        var aiQuery = db.EssaySubmissions.AsQueryable();
-        if (teacherId.HasValue)
-        {
-            aiQuery = aiQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
-        }
-
-        var aiScored = aiQuery
-            .Where(e => e.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.AIScored)
-            .ToList();
-
-        if (aiScored.Count > 0)
-        {
-            foreach (var essay in aiScored)
-            {
-                essay.Status = NaderGorge.Domain.Entities.EssaySubmissionStatus.WaitTeacher;
-            }
-
-            await db.SaveChangesAsync();
-        }
-
-        var listQuery = db.EssaySubmissions.AsQueryable();
-        if (teacherId.HasValue)
-        {
-            listQuery = listQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
-        }
-
-        var list = listQuery
-            .Where(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded)
-            .OrderBy(e => e.CreatedAt)
-            .Select(e => new { e.Id, e.StudentId, e.QuestionId, e.AnswerText, e.AudioUrl, e.AiInitialScore, e.AiFeedback, e.Status })
-            .ToList();
+        var list = await _mediator.Send(
+            new NaderGorge.Application.Features.Admin.Essays.GetPendingEssaysCommand(GetUserId()),
+            ct);
         return Ok(NaderGorge.Application.Common.ApiResponse<object>.Ok(list));
     }
 

@@ -10,6 +10,7 @@ using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
 using NaderGorge.Domain.Entities.LiveSupport;
+using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Interfaces;
 
@@ -228,6 +229,22 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportAIVerificationSession> LiveSupportAIVerificationSessions => Set<LiveSupportAIVerificationSession>();
     public DbSet<LiveSupportAIVerificationAttempt> LiveSupportAIVerificationAttempts => Set<LiveSupportAIVerificationAttempt>();
 
+    // Standalone Admin AI Agent
+    public DbSet<AdminAICapabilityBaseline> AdminAICapabilityBaselines => Set<AdminAICapabilityBaseline>();
+    public DbSet<AdminAISensitiveDataPolicyVersion> AdminAISensitiveDataPolicyVersions => Set<AdminAISensitiveDataPolicyVersion>();
+    public DbSet<AdminAIConversation> AdminAIConversations => Set<AdminAIConversation>();
+    public DbSet<AdminAIConversationCommandReceipt> AdminAIConversationCommandReceipts => Set<AdminAIConversationCommandReceipt>();
+    public DbSet<AdminAIMessage> AdminAIMessages => Set<AdminAIMessage>();
+    public DbSet<AdminAITurn> AdminAITurns => Set<AdminAITurn>();
+    public DbSet<AdminAITurnStep> AdminAITurnSteps => Set<AdminAITurnStep>();
+    public DbSet<AdminAIReadInvocation> AdminAIReadInvocations => Set<AdminAIReadInvocation>();
+    public DbSet<AdminAIActionProposal> AdminAIActionProposals => Set<AdminAIActionProposal>();
+    public DbSet<AdminAIConfirmationChallenge> AdminAIConfirmationChallenges => Set<AdminAIConfirmationChallenge>();
+    public DbSet<AdminAISecureInputGrant> AdminAISecureInputGrants => Set<AdminAISecureInputGrant>();
+    public DbSet<AdminAIActionExecution> AdminAIActionExecutions => Set<AdminAIActionExecution>();
+    public DbSet<AdminAIActionExecutionItem> AdminAIActionExecutionItems => Set<AdminAIActionExecutionItem>();
+    public DbSet<AdminAIAuditEvent> AdminAIAuditEvents => Set<AdminAIAuditEvent>();
+
     // Phase 6: Call Center CRM
     public DbSet<CrmStudentStatus> CrmStudentStatuses => Set<CrmStudentStatus>();
     public DbSet<CrmCallLog> CrmCallLogs => Set<CrmCallLog>();
@@ -306,6 +323,7 @@ public class AppDbContext : DbContext, IAppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        AdminAIEntityConfigurations.Configure(modelBuilder);
         ConfigurePlatformFinance(modelBuilder);
 
         // User
@@ -3131,6 +3149,8 @@ public class AppDbContext : DbContext, IAppDbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        if (ChangeTracker.Entries<AdminAIAuditEvent>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Admin AI audit evidence is append-only.");
         ApplyContentIdentityRules();
         ApplyFinancialPrincipalSoftDelete();
         ApplyFinancialConcurrencyVersions();

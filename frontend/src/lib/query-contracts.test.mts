@@ -3,10 +3,37 @@ import test from 'node:test';
 
 import { PlatformQueryClient } from './query-client.ts';
 import {
+  ADMIN_AI_REFRESH_SCOPE_KEYS,
+  adminAiRefreshKeys,
+} from './query-contracts.ts';
+import {
   normalizeQueryParameters,
   queryKeyStartsWith,
   stableSerializeQueryKey,
 } from './query-keys.ts';
+
+test('AdminAI refresh scopes map to closed canonical keys and reject unknown scopes', () => {
+  assert.deepEqual(Object.keys(ADMIN_AI_REFRESH_SCOPE_KEYS).sort(), [
+    'commercial',
+    'content',
+    'finance',
+    'hr',
+    'identity',
+    'other',
+    'reporting',
+    'support',
+  ]);
+  assert.deepEqual(adminAiRefreshKeys('finance'), [
+    'finance:payroll',
+    'finance:teacher',
+    'student:balance',
+    'reports',
+  ]);
+  assert.throws(
+    () => adminAiRefreshKeys('model-supplied:arbitrary'),
+    /Unknown AdminAI refresh scope/
+  );
+});
 
 test('query keys normalize parameters and preserve resource boundaries', () => {
   const normalized = normalizeQueryParameters({
@@ -18,18 +45,18 @@ test('query keys normalize parameters and preserve resource boundaries', () => {
   assert.deepEqual(normalized, { pageSize: 25, search: 'طالب' });
   assert.equal(
     stableSerializeQueryKey(['students', { search: 'x', page: 1 }]),
-    stableSerializeQueryKey(['students', { page: 1, search: 'x' }]),
+    stableSerializeQueryKey(['students', { page: 1, search: 'x' }])
   );
   assert.equal(
     queryKeyStartsWith(
       ['student', 'packages', 'user-a'],
-      ['student', 'packages'],
+      ['student', 'packages']
     ),
-    true,
+    true
   );
   assert.equal(
     queryKeyStartsWith(['student', 'teachers'], ['student', 'packages']),
-    false,
+    false
   );
 });
 
@@ -45,11 +72,15 @@ test('identical in-flight and fresh reads reuse the authoritative result', async
       signal.addEventListener(
         'abort',
         () => reject(new DOMException('cancelled', 'AbortError')),
-        { once: true },
+        { once: true }
       );
     });
 
-  const first = client.fetchQuery({ queryKey: key, queryFn, staleTime: 60_000 });
+  const first = client.fetchQuery({
+    queryKey: key,
+    queryFn,
+    staleTime: 60_000,
+  });
   const duplicate = client.fetchQuery({
     queryKey: key,
     queryFn,
@@ -97,7 +128,7 @@ test('cancelled reads expose AbortError without caching an error', async () => {
         signal.addEventListener(
           'abort',
           () => reject(new DOMException('cancelled', 'AbortError')),
-          { once: true },
+          { once: true }
         );
       }),
   });
@@ -107,7 +138,7 @@ test('cancelled reads expose AbortError without caching an error', async () => {
   await assert.rejects(
     cancelled,
     (error: unknown) =>
-      error instanceof DOMException && error.name === 'AbortError',
+      error instanceof DOMException && error.name === 'AbortError'
   );
   assert.equal(client.getSnapshot(key).status, 'idle');
 });
@@ -142,6 +173,6 @@ test('an invalidated pre-event response cannot overwrite post-event state', asyn
   assert.equal(postEventRead.version, 'after');
   assert.equal(
     client.getSnapshot<{ version: string }>(key).data?.version,
-    'after',
+    'after'
   );
 });

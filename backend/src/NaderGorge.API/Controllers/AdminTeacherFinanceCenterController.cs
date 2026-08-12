@@ -8,6 +8,7 @@ using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.TeacherFinanceCenter.SharedPackages;
+using NaderGorge.Application.Features.Admin.TeacherFinanceCenter;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -22,11 +23,13 @@ public class AdminTeacherFinanceCenterController : ControllerBase
 {
     private readonly IAppDbContext _db;
     private readonly IMediator _mediator;
+    private readonly TeacherSettlementAuthorityService _settlements;
 
     public AdminTeacherFinanceCenterController(IAppDbContext db, IMediator mediator)
     {
         _db = db;
         _mediator = mediator;
+        _settlements = new TeacherSettlementAuthorityService(db);
     }
 
     private Guid ActorId() => User.RequireUserId();
@@ -91,45 +94,17 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     [HttpPost("teachers/{teacherId:guid}/agreements")]
     public async Task<IActionResult> CreateAgreement(Guid teacherId, [FromBody] UpsertTeacherAgreementDto dto, CancellationToken ct)
     {
-        var validation = await ValidateAgreement(teacherId, dto, null, ct);
-        if (validation != null) return validation;
-
-        var agreement = new TeacherFinancialAgreement
-        {
-            Id = Guid.NewGuid(), TeacherId = teacherId, ScopeType = dto.ScopeType, ScopeId = dto.ScopeId,
-            Trigger = dto.Trigger, AllocationMode = dto.AllocationMode, AllocationValue = dto.AllocationValue,
-            PriceBasis = dto.PriceBasis, EffectiveFrom = dto.EffectiveFrom, EffectiveTo = dto.EffectiveTo,
-            Reason = dto.Reason.Trim(), CreatedByUserId = ActorId()
-        };
-        _db.TeacherFinancialAgreements.Add(agreement);
-        await _db.SaveChangesAsync(ct);
-        return CreatedAtAction(nameof(ListAgreements), new { teacherId }, new { success = true, data = agreement.Id });
+        var response = await _mediator.Send(new CreateTeacherAgreementCommand(ActorId(), teacherId, ToTerms(dto)), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success
+            ? CreatedAtAction(nameof(ListAgreements), new { teacherId }, new { success = true, data = response.Id })
+            : AgreementError(response);
     }
 
     [HttpPut("agreements/{agreementId:guid}")]
     public async Task<IActionResult> ReplaceAgreement(Guid agreementId, [FromBody] UpsertTeacherAgreementDto dto, CancellationToken ct)
     {
-        var current = await _db.TeacherFinancialAgreements.FirstOrDefaultAsync(x => x.Id == agreementId, ct);
-        if (current == null) return NotFound(new { success = false, message = "الاتفاق غير موجود" });
-        var validation = await ValidateAgreement(current.TeacherId, dto, agreementId, ct);
-        if (validation != null) return validation;
-
-        // Historic ledger rows reference the old terms; replacing creates a new effective version.
-        current.IsActive = false;
-        current.EffectiveTo = current.EffectiveTo is null || current.EffectiveTo > DateTime.UtcNow
-            ? DateTime.UtcNow
-            : current.EffectiveTo;
-        current.UpdatedAt = DateTime.UtcNow;
-        current.UpdatedByUserId = ActorId();
-        _db.TeacherFinancialAgreements.Add(new TeacherFinancialAgreement
-        {
-            Id = Guid.NewGuid(), TeacherId = current.TeacherId, ScopeType = dto.ScopeType, ScopeId = dto.ScopeId,
-            Trigger = dto.Trigger, AllocationMode = dto.AllocationMode, AllocationValue = dto.AllocationValue,
-            PriceBasis = dto.PriceBasis, EffectiveFrom = dto.EffectiveFrom, EffectiveTo = dto.EffectiveTo,
-            Reason = dto.Reason.Trim(), CreatedByUserId = ActorId()
-        });
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true });
+        var response = await _mediator.Send(new ReplaceTeacherAgreementCommand(ActorId(), agreementId, ToTerms(dto)), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : AgreementError(response);
     }
 
     [HttpGet("teachers/{teacherId:guid}/summary")]
@@ -182,61 +157,10 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     [HttpPost("settlements")]
     public async Task<IActionResult> CreateSettlement([FromBody] CreateSettlementDto dto, CancellationToken ct)
     {
-        if (dto.TeacherId == Guid.Empty || dto.PeriodTo < dto.PeriodFrom)
-            return BadRequest(new { success = false, message = "بيانات فترة التسوية غير صالحة" });
-
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var preview = await BuildSettlementPreview(dto, ct);
-        if (preview.Error is not null)
-            return BadRequest(new { success = false, message = preview.Error });
-        if (preview.Allocations.Count == 0)
-            return BadRequest(new { success = false, message = "لا توجد مستحقات مؤهلة لإنشاء تسوية" });
-
-        var account = await _db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == dto.TeacherId, ct);
-        if (account == null || account.CurrentBalance - account.ReservedBalance < preview.GrossDueAmount)
-            return Conflict(new { success = false, message = "رصيد المعلم المتاح تغير؛ أعد معاينة التسوية" });
-
-        var settlement = new TeacherSettlement
-        {
-            Id = Guid.NewGuid(), TeacherId = dto.TeacherId, PeriodFrom = dto.PeriodFrom, PeriodTo = dto.PeriodTo,
-            Currency = "EGP", Status = TeacherSettlementStatus.Draft, GrossDueAmount = preview.GrossDueAmount,
-            DebtDeductionAmount = preview.DebtDeductionAmount, NetPayableAmount = preview.NetPayableAmount,
-            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(), CreatedByUserId = ActorId()
-        };
-        foreach (var allocation in preview.Allocations)
-        {
-            var line = new TeacherSettlementLine
-            {
-                Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AllocationId = allocation.Id,
-                Amount = allocation.TeacherShareAmount - allocation.ReversedAmount,
-                DescriptionSnapshot = allocation.ContentNameSnapshot
-            };
-            settlement.Lines.Add(line);
-            allocation.SettlementLineId = line.Id;
-            allocation.PayoutStatus = TeacherFinancialPayoutStatus.Reserved;
-        }
-        foreach (var adjustment in preview.Adjustments)
-        {
-            settlement.Lines.Add(new TeacherSettlementLine
-            {
-                Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AdjustmentId = adjustment.Id,
-                Amount = adjustment.Amount, DescriptionSnapshot = $"خصم مديونية: {adjustment.Reason}"
-            });
-        }
-        account.ReservedBalance += preview.GrossDueAmount;
-        account.UpdatedAt = DateTime.UtcNow;
-        _db.TeacherSettlements.Add(settlement);
-        _db.FinancialInvoices.Add(new FinancialInvoice
-        {
-            Id = Guid.NewGuid(), Type = FinancialInvoiceType.TeacherSettlement, Status = FinancialInvoiceStatus.Draft,
-            DocumentNumber = $"TS-{DateTime.UtcNow:yyyyMMdd}-{settlement.Id.ToString("N")[..8].ToUpperInvariant()}",
-            Currency = settlement.Currency, Amount = settlement.NetPayableAmount, TeacherId = settlement.TeacherId,
-            TeacherSettlementId = settlement.Id, Description = $"تسوية مستحقات مدرس للفترة {dto.PeriodFrom:yyyy-MM-dd} إلى {dto.PeriodTo:yyyy-MM-dd}",
-            CreatedByUserId = ActorId()
-        });
-        await _db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
-        return CreatedAtAction(nameof(GetSettlement), new { id = settlement.Id }, new { success = true, data = new { settlement.Id } });
+        var response = await _settlements.CreateAsync(ActorId(), new(dto.TeacherId, dto.PeriodFrom, dto.PeriodTo, dto.Note, dto.AllocationIds), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success
+            ? CreatedAtAction(nameof(GetSettlement), new { id = response.Id }, new { success = true, data = new { id = response.Id } })
+            : FinanceError(response);
     }
 
     [HttpGet("settlements/{id:guid}")]
@@ -256,143 +180,32 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     [HttpPost("settlements/{id:guid}/pay")]
     public async Task<IActionResult> PaySettlement(Guid id, [FromBody] PaySettlementDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.PaymentMethod) || string.IsNullOrWhiteSpace(dto.TransferReference))
-            return BadRequest(new { success = false, message = "طريقة الدفع والمرجع مطلوبان" });
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var settlement = await _db.TeacherSettlements.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (settlement is null) return NotFound(new { success = false, message = "التسوية غير موجودة" });
-        if (settlement.Status != TeacherSettlementStatus.Approved)
-            return Conflict(new { success = false, message = "يجب اعتماد التسوية قبل تسجيل الدفع" });
-        if (dto.Amount is not null && dto.Amount.Value != settlement.NetPayableAmount)
-            return BadRequest(new { success = false, message = "يجب أن يطابق مبلغ الدفع صافي التسوية" });
-        var account = await _db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == settlement.TeacherId, ct);
-        if (account is null || account.ReservedBalance < settlement.GrossDueAmount || account.CurrentBalance < settlement.GrossDueAmount)
-            return Conflict(new { success = false, message = "رصيد التسوية المحجوز غير متاح" });
-        var allocationIds = settlement.Lines.Where(x => x.AllocationId.HasValue).Select(x => x.AllocationId!.Value).ToList();
-        var allocations = await _db.TeacherFinancialAllocations.Where(x => allocationIds.Contains(x.Id)).ToListAsync(ct);
-        if (allocations.Count != allocationIds.Count || allocations.Any(x => x.PayoutStatus != TeacherFinancialPayoutStatus.Reserved || x.SettlementLineId == null))
-            return Conflict(new { success = false, message = "تغيرت حالة بنود التسوية؛ لا يمكن الدفع" });
-        foreach (var allocation in allocations) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Paid;
-        var adjustmentIds = settlement.Lines.Where(x => x.AdjustmentId.HasValue).Select(x => x.AdjustmentId!.Value).ToList();
-        if (adjustmentIds.Count > 0)
-        {
-            var adjustments = await _db.TeacherPayoutAdjustments.Where(x => adjustmentIds.Contains(x.Id)).ToListAsync(ct);
-            if (adjustments.Count != adjustmentIds.Count || adjustments.Any(x => x.Status != TeacherPayoutAdjustmentStatus.Open))
-                return Conflict(new { success = false, message = "تغيرت حالة مديونية التسوية؛ لا يمكن الدفع" });
-            foreach (var adjustment in adjustments) adjustment.Status = TeacherPayoutAdjustmentStatus.Applied;
-        }
-        account.CurrentBalance -= settlement.GrossDueAmount;
-        account.ReservedBalance -= settlement.GrossDueAmount;
-        account.UpdatedAt = DateTime.UtcNow;
-        settlement.Status = TeacherSettlementStatus.Paid; settlement.PaidByUserId = ActorId(); settlement.PaidAt = DateTime.UtcNow;
-        _db.TeacherSettlementPayments.Add(new TeacherSettlementPayment
-        {
-            Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, Amount = settlement.NetPayableAmount,
-            PaymentMethod = dto.PaymentMethod.Trim(), TransferReference = dto.TransferReference.Trim(), AttachmentUrl = dto.AttachmentUrl,
-            PaidByUserId = ActorId()
-        });
-        var invoice = await _db.FinancialInvoices.FirstOrDefaultAsync(x => x.TeacherSettlementId == settlement.Id, ct);
-        if (invoice != null) { invoice.Status = FinancialInvoiceStatus.Paid; invoice.PaymentReference = dto.TransferReference.Trim(); invoice.AttachmentUrl = dto.AttachmentUrl; }
-        await _db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        return Ok(new { success = true });
+        var response = await _settlements.PayAsync(ActorId(), id, new(dto.PaymentMethod, dto.TransferReference, dto.AttachmentUrl, dto.Amount), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : FinanceError(response);
     }
 
     [HttpPost("settlements/{id:guid}/cancel")]
     public async Task<IActionResult> CancelSettlement(Guid id, CancellationToken ct)
     {
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var settlement = await _db.TeacherSettlements.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (settlement is null) return NotFound(new { success = false, message = "التسوية غير موجودة" });
-        if (settlement.Status == TeacherSettlementStatus.Paid) return Conflict(new { success = false, message = "لا يمكن إلغاء تسوية مدفوعة" });
-        if (settlement.Status == TeacherSettlementStatus.Cancelled) return Ok(new { success = true });
-        var account = await _db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == settlement.TeacherId, ct);
-        if (account is null || account.ReservedBalance < settlement.GrossDueAmount) return Conflict(new { success = false, message = "الرصيد المحجوز غير متاح" });
-        var allocationIds = settlement.Lines.Where(x => x.AllocationId.HasValue).Select(x => x.AllocationId!.Value).ToList();
-        var allocations = await _db.TeacherFinancialAllocations.Where(x => allocationIds.Contains(x.Id)).ToListAsync(ct);
-        if (allocations.Any(x => x.PayoutStatus != TeacherFinancialPayoutStatus.Reserved)) return Conflict(new { success = false, message = "بعض البنود لم تعد قابلة للتحرير" });
-        foreach (var allocation in allocations) { allocation.PayoutStatus = TeacherFinancialPayoutStatus.Unpaid; allocation.SettlementLineId = null; }
-        account.ReservedBalance -= settlement.GrossDueAmount; account.UpdatedAt = DateTime.UtcNow;
-        settlement.Status = TeacherSettlementStatus.Cancelled;
-        var invoice = await _db.FinancialInvoices.FirstOrDefaultAsync(x => x.TeacherSettlementId == settlement.Id, ct);
-        if (invoice != null) invoice.Status = FinancialInvoiceStatus.Cancelled;
-        await _db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        return Ok(new { success = true });
+        var response = await _settlements.CancelAsync(id, ct);
+        return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : FinanceError(response);
     }
 
     [HttpPost("reversals")]
     public async Task<IActionResult> ReverseSelectedLines([FromBody] CreateReversalDto dto, CancellationToken ct)
     {
-        if (dto.Lines is null || dto.Lines.Count == 0 || string.IsNullOrWhiteSpace(dto.Reason) || string.IsNullOrWhiteSpace(dto.IdempotencyKey) ||
-            dto.Lines.Any(x => x.AllocationId == Guid.Empty || x.Amount <= 0m))
-            return BadRequest(new { success = false, message = "بيانات المرتجع غير صالحة" });
-        if (dto.Disposition == TeacherReversalDisposition.ReverseAvailableBalance)
-            return BadRequest(new { success = false, message = "اختر مديونية المدرس أو خصم التسوية القادمة" });
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var duplicate = await _db.TeacherFinancialEvents.FirstOrDefaultAsync(x => x.IdempotencyKey == dto.IdempotencyKey, ct);
-        if (duplicate != null) return Ok(new { success = true, data = new { duplicate.Id, duplicate = true } });
-        var ids = dto.Lines.Select(x => x.AllocationId).Distinct().ToList();
-        if (ids.Count != dto.Lines.Count) return BadRequest(new { success = false, message = "لا يمكن تكرار بند في نفس المرتجع" });
-        var allocations = await _db.TeacherFinancialAllocations.Include(x => x.TeacherFinancialEvent).Where(x => ids.Contains(x.Id)).ToListAsync(ct);
-        if (allocations.Count != ids.Count || allocations.Any(x => x.TeacherShareAmount <= 0m || x.PayoutStatus is TeacherFinancialPayoutStatus.Reversed or TeacherFinancialPayoutStatus.Debt or TeacherFinancialPayoutStatus.Reserved))
-            return Conflict(new { success = false, message = "أحد بنود المرتجع غير متاح" });
-        if (allocations.Select(x => x.TeacherId).Distinct().Count() != 1)
-            return BadRequest(new { success = false, message = "يجب أن تخص البنود مدرساً واحداً" });
-        var amounts = dto.Lines.ToDictionary(x => x.AllocationId, x => x.Amount);
-        if (allocations.Any(x => amounts[x.Id] > x.TeacherShareAmount - x.ReversedAmount))
-            return Conflict(new { success = false, message = "قيمة المرتجع تتجاوز الرصيد القابل للعكس" });
-        var teacherId = allocations[0].TeacherId;
-        var eventId = Guid.NewGuid();
-        var reversal = new TeacherFinancialEvent
-        {
-            Id = eventId, SourceType = TeacherFinancialSourceType.Refund, SourceId = eventId, TargetType = allocations[0].TeacherFinancialEvent.TargetType,
-            TargetId = allocations[0].TeacherFinancialEvent.TargetId, GrossAmount = -amounts.Values.Sum(), PlatformShareAmount = 0m,
-            IdempotencyKey = dto.IdempotencyKey.Trim(), DetailsJson = JsonSerializer.Serialize(new { dto.Reason, dto.Disposition, allocationIds = ids }),
-            OccurredAt = DateTime.UtcNow, ReviewStatus = TeacherFinancialReviewStatus.Reversed, PayoutStatus = TeacherFinancialPayoutStatus.Reversed
-        };
-        var availableReversal = allocations.Where(x => x.PayoutStatus != TeacherFinancialPayoutStatus.Paid).Sum(x => amounts[x.Id]);
-        var account = availableReversal == 0m ? null : await _db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == teacherId, ct);
-        if (availableReversal > 0m && (account is null || account.CurrentBalance - account.ReservedBalance < availableReversal))
-            return Conflict(new { success = false, message = "الرصيد المتاح تغير؛ أعد العملية" });
-        foreach (var allocation in allocations)
-        {
-            var amount = amounts[allocation.Id];
-            allocation.ReversedAmount += amount;
-            var wasPaid = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid;
-            if (!wasPaid)
-            {
-                account!.CurrentBalance -= amount; account.TotalEarnings = Math.Max(0m, account.TotalEarnings - amount); account.UpdatedAt = DateTime.UtcNow;
-                if (allocation.ReversedAmount == allocation.TeacherShareAmount) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Reversed;
-            }
-            else
-            {
-                _db.TeacherPayoutAdjustments.Add(new TeacherPayoutAdjustment { Id = Guid.NewGuid(), TeacherId = teacherId,
-                    RelatedFinancialEventId = allocation.TeacherFinancialEventId, RelatedPayoutId = allocation.PayoutId,
-                    Amount = -amount, Reason = $"[{dto.Disposition}] {dto.Reason.Trim()}", Status = TeacherPayoutAdjustmentStatus.Open });
-                if (allocation.ReversedAmount == allocation.TeacherShareAmount) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Debt;
-            }
-            reversal.Allocations.Add(new TeacherFinancialAllocation { Id = Guid.NewGuid(), TeacherId = teacherId, AllocationMode = TeacherAllocationMode.Reversal,
-                AllocationValue = amount, GrossBasisAmount = -amount, TeacherShareAmount = -amount, PlatformShareAmount = 0m,
-                StudentNameSnapshot = allocation.StudentNameSnapshot, StudentPhoneSnapshot = allocation.StudentPhoneSnapshot,
-                ContentNameSnapshot = allocation.ContentNameSnapshot, ReviewStatus = TeacherFinancialReviewStatus.Reversed,
-                PayoutStatus = wasPaid ? TeacherFinancialPayoutStatus.Debt : TeacherFinancialPayoutStatus.Reversed });
-        }
-        _db.TeacherFinancialEvents.Add(reversal);
-        await _db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        return Ok(new { success = true, data = new { reversal.Id } });
+        var response = await _settlements.ReverseAsync(new(dto.Lines.Select(x => new ReversalLineInput(x.AllocationId, x.Amount)).ToList(),
+            dto.Reason, dto.Disposition, dto.IdempotencyKey), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success
+            ? Ok(new { success = true, data = new { id = response.Id, duplicate = response.AlreadyApplied } })
+            : FinanceError(response);
     }
 
     [HttpPost("invoices/{id:guid}/attachments")]
     public async Task<IActionResult> AttachInvoiceDocument(Guid id, [FromBody] AttachInvoiceDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.AttachmentUrl))
-            return BadRequest(new { success = false, message = "رابط المرفق مطلوب" });
-        var invoice = await _db.FinancialInvoices.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (invoice is null) return NotFound(new { success = false, message = "الفاتورة غير موجودة" });
-        if (invoice.Status == FinancialInvoiceStatus.Cancelled)
-            return Conflict(new { success = false, message = "لا يمكن تعديل فاتورة ملغاة" });
-        invoice.AttachmentUrl = dto.AttachmentUrl.Trim();
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true });
+        var response = await _settlements.AttachInvoiceAsync(id, dto.AttachmentUrl, ct);
+        return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : FinanceError(response);
     }
 
     [HttpGet("bunny/cost-report")]
@@ -418,21 +231,15 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
-    private async Task<IActionResult?> ValidateAgreement(Guid teacherId, UpsertTeacherAgreementDto dto, Guid? ignoredId, CancellationToken ct)
+    private static TeacherAgreementTerms ToTerms(UpsertTeacherAgreementDto dto) => new(dto.ScopeType, dto.ScopeId,
+        dto.Trigger, dto.AllocationMode, dto.AllocationValue, dto.PriceBasis, dto.EffectiveFrom, dto.EffectiveTo, dto.Reason);
+
+    private IActionResult AgreementError(TeacherFinanceCommandResult response) => response.Status switch
     {
-        if (teacherId == Guid.Empty || !await _db.TeacherProfiles.AnyAsync(x => x.Id == teacherId, ct))
-            return NotFound(new { success = false, message = "المدرس غير موجود" });
-        if (string.IsNullOrWhiteSpace(dto.Reason) || dto.AllocationValue < 0m ||
-            (dto.AllocationMode == TeacherAgreementAllocationMode.Percentage && dto.AllocationValue > 100m) ||
-            (dto.EffectiveTo.HasValue && dto.EffectiveTo < dto.EffectiveFrom) ||
-            (dto.ScopeType == TeacherAgreementScopeType.Default && dto.ScopeId != null))
-            return BadRequest(new { success = false, message = "بيانات الاتفاق غير صالحة" });
-        var overlaps = await _db.TeacherFinancialAgreements.AnyAsync(x => x.Id != ignoredId && x.TeacherId == teacherId && x.IsActive
-            && x.ScopeType == dto.ScopeType && x.ScopeId == dto.ScopeId && x.Trigger == dto.Trigger
-            && x.EffectiveFrom <= (dto.EffectiveTo ?? DateTime.MaxValue)
-            && (x.EffectiveTo == null || x.EffectiveTo >= dto.EffectiveFrom), ct);
-        return overlaps ? Conflict(new { success = false, message = "يوجد اتفاق نشط متداخل لنفس النطاق والتوقيت" }) : null;
-    }
+        TeacherFinanceCommandStatus.NotFound => NotFound(new { success = false, message = response.Message }),
+        TeacherFinanceCommandStatus.Conflict => Conflict(new { success = false, message = response.Message }),
+        _ => BadRequest(new { success = false, message = response.Message })
+    };
 
     private async Task<SettlementPreview> BuildSettlementPreview(CreateSettlementDto dto, CancellationToken ct)
     {
@@ -474,19 +281,16 @@ public class AdminTeacherFinanceCenterController : ControllerBase
 
     private async Task<IActionResult> TransitionSettlement(Guid id, TeacherSettlementStatus expected, TeacherSettlementStatus next, CancellationToken ct)
     {
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var settlement = await _db.TeacherSettlements.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (settlement is null) return NotFound(new { success = false, message = "التسوية غير موجودة" });
-        if (settlement.Status != expected)
-            return Conflict(new { success = false, message = "انتقال حالة التسوية غير صالح" });
-        settlement.Status = next;
-        if (next == TeacherSettlementStatus.Reviewed) { settlement.ReviewedByUserId = ActorId(); settlement.ReviewedAt = DateTime.UtcNow; }
-        if (next == TeacherSettlementStatus.Approved) { settlement.ApprovedByUserId = ActorId(); settlement.ApprovedAt = DateTime.UtcNow; }
-        var invoice = await _db.FinancialInvoices.FirstOrDefaultAsync(x => x.TeacherSettlementId == id, ct);
-        if (invoice != null) invoice.Status = next == TeacherSettlementStatus.Reviewed ? FinancialInvoiceStatus.Reviewed : FinancialInvoiceStatus.Approved;
-        await _db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        return Ok(new { success = true });
+        var response = await _settlements.TransitionAsync(ActorId(), id, expected, next, ct);
+        return response.Status == TeacherFinanceCommandStatus.Success ? Ok(new { success = true }) : FinanceError(response);
     }
+
+    private IActionResult FinanceError(TeacherFinanceCommandResult response) => response.Status switch
+    {
+        TeacherFinanceCommandStatus.NotFound => NotFound(new { success = false, message = response.Message }),
+        TeacherFinanceCommandStatus.Conflict => Conflict(new { success = false, message = response.Message }),
+        _ => BadRequest(new { success = false, message = response.Message })
+    };
 }
 
 public record UpsertTeacherAgreementDto(TeacherAgreementScopeType ScopeType, Guid? ScopeId, TeacherAgreementTrigger Trigger,

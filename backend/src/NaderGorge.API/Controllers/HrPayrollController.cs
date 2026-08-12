@@ -1,4 +1,4 @@
-using System.Data;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +7,7 @@ using NaderGorge.Application.Common.HR;
 using NaderGorge.Application.Features.HR.Payroll;
 using NaderGorge.Application.Features.HR.Payroll.Commands;
 using NaderGorge.Application.Features.HR.Payroll.FinancialRequests;
+using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -14,7 +15,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.API.Controllers;
 
 [ApiController, Route("api/hr/payroll"), Authorize]
-public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runService, FinancialRequestService financialRequestService) : ControllerBase
+public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runService, FinancialRequestService financialRequestService, IMediator mediator) : ControllerBase
 {
     [HttpGet("config"), HasPermission(HrPermissions.PayrollConfigure)]
     public async Task<IActionResult> Config(CancellationToken ct) => Ok(new
@@ -27,48 +28,26 @@ public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runS
     [HttpPost("components"), HasPermission(HrPermissions.PayrollConfigure)]
     public async Task<IActionResult> CreateComponent(CreatePayComponentRequest request, CancellationToken ct)
     {
-        var code = request.Code.Trim().ToUpperInvariant();
-        var name = request.Name.Trim();
-        if (code.Length is < 2 or > 50 || name.Length is < 2 or > 200) return BadRequest();
-        if (await db.PayComponents.AnyAsync(item => item.Code == code, ct)) return Conflict();
-        var component = new PayComponent { Code = code, Name = name, Classification = request.Classification,
-            IsTaxable = request.IsTaxable, IsInsurable = request.IsInsurable };
-        db.PayComponents.Add(component); await db.SaveChangesAsync(ct); return Ok(new { component.Id });
+        var result = await mediator.Send(new CreatePayComponentCommand(request.Code, request.Name, request.Classification, request.IsTaxable, request.IsInsurable), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : result.Errors?.Contains("PAY_COMPONENT_CODE_EXISTS") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpPost("rules"), HasPermission(HrPermissions.PayrollConfigure)]
     public async Task<IActionResult> CreateRule(CreatePayrollRuleRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Rate < 0 || request.Priority < 0 ||
-            !PayrollCalculationEngine.IsValidExpression(request.Expression) || request.EffectiveTo < request.EffectiveFrom)
-            return BadRequest(new { errors = new[] { "PAYROLL_RULE_INVALID" } });
-        if (!await db.PayComponents.AnyAsync(component => component.Id == request.PayComponentId, ct))
-            return BadRequest(new { errors = new[] { "PAY_COMPONENT_NOT_FOUND" } });
-        var version = (await db.PayrollRules.Where(item => item.PayComponentId == request.PayComponentId).Select(item => (int?)item.Version).MaxAsync(ct) ?? 0) + 1;
-        var rule = new PayrollRule { PayComponentId = request.PayComponentId, Name = request.Name.Trim(), Expression = request.Expression.Trim(), Rate = request.Rate,
-            EffectiveFrom = request.EffectiveFrom, EffectiveTo = request.EffectiveTo, Priority = request.Priority, Version = version };
-        db.PayrollRules.Add(rule); await db.SaveChangesAsync(ct); return Ok(new { rule.Id, rule.Version });
+        var result = await mediator.Send(new CreatePayrollRuleCommand(request.PayComponentId, request.Name, request.Expression,
+            request.Rate, request.EffectiveFrom, request.EffectiveTo, request.Priority), ct);
+        return result.Success ? Ok(new { Id = result.Data, Version = int.Parse(result.Message!) }) : BadRequest(result);
     }
 
     [HttpPost("compensations"), HasPermission(HrPermissions.PayrollConfigure)]
     public async Task<IActionResult> CreateCompensation(CreateCompensationRequest request, CancellationToken ct)
     {
-        var currency = request.Currency.Trim().ToUpperInvariant();
-        if (request.BaseSalary < 0 || request.EffectiveTo < request.EffectiveFrom || currency.Length != 3 ||
-            string.IsNullOrWhiteSpace(request.Reason)) return BadRequest();
-        if (!await db.EmployeeProfiles.AnyAsync(employee => employee.Id == request.EmployeeId, ct)) return NotFound();
-        var overlaps = await db.EmployeeCompensations.AnyAsync(compensation => compensation.EmployeeId == request.EmployeeId &&
-            compensation.EffectiveFrom <= (request.EffectiveTo ?? DateOnly.MaxValue) &&
-            (!compensation.EffectiveTo.HasValue || compensation.EffectiveTo >= request.EffectiveFrom) &&
-            (compensation.EffectiveTo.HasValue || compensation.EffectiveFrom >= request.EffectiveFrom), ct);
-        if (overlaps) return Conflict(new { errors = new[] { "COMPENSATION_PERIOD_OVERLAP" } });
-        var previous = await db.EmployeeCompensations.Where(item => item.EmployeeId == request.EmployeeId && !item.EffectiveTo.HasValue)
-            .OrderByDescending(item => item.EffectiveFrom).FirstOrDefaultAsync(ct);
-        if (previous is not null && previous.EffectiveFrom < request.EffectiveFrom) previous.EffectiveTo = request.EffectiveFrom.AddDays(-1);
-        var version = (await db.EmployeeCompensations.Where(item => item.EmployeeId == request.EmployeeId).Select(item => (int?)item.Version).MaxAsync(ct) ?? 0) + 1;
-        var compensation = new EmployeeCompensation { EmployeeId = request.EmployeeId, BaseSalary = request.BaseSalary, Currency = currency,
-            EffectiveFrom = request.EffectiveFrom, EffectiveTo = request.EffectiveTo, Reason = request.Reason.Trim(), Version = version };
-        db.EmployeeCompensations.Add(compensation); await db.SaveChangesAsync(ct); return Ok(new { compensation.Id, compensation.Version });
+        var result = await mediator.Send(new CreateEmployeeCompensationCommand(request.EmployeeId, request.BaseSalary,
+            request.Currency, request.EffectiveFrom, request.EffectiveTo, request.Reason), ct);
+        if (result.Success) return Ok(new { Id = result.Data, Version = int.Parse(result.Message!) });
+        if (result.Errors?.Contains("EMPLOYEE_NOT_FOUND") == true) return NotFound(result);
+        return result.Errors?.Contains("COMPENSATION_PERIOD_OVERLAP") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpGet("runs"), HasPermission(HrPermissions.PayrollView)]
@@ -85,11 +64,9 @@ public sealed class HrPayrollController(IAppDbContext db, PayrollRunService runS
     [HttpPost("runs/prepare"), HasPermission(HrPermissions.PayrollPrepare)]
     public async Task<IActionResult> Prepare(PreparePayrollRunRequest request, CancellationToken ct)
     {
-        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var result = await runService.PrepareAsync(request.PeriodStart, request.PeriodEnd, request.CutoffAt, User.RequireUserId(), ct);
+        var result = await mediator.Send(new PreparePayrollCommand(request.PeriodStart, request.PeriodEnd,
+            request.CutoffAt, User.RequireUserId()), ct);
         if (!result.Success) return BadRequest(result);
-        await financialRequestService.ApplyDueInputsAsync(result.Data, ct);
-        await transaction.CommitAsync(ct);
         return Ok(result);
     }
 

@@ -30,6 +30,8 @@ dotenv.config();
 validateWorkerSecurityConfig();
 let aiStartupReady = false;
 let liveSupportWorkerReady = false;
+let adminAIWorkerReady = false;
+const adminAIEnabled = process.env.ADMIN_AI_ENABLED?.trim().toLowerCase() === 'true';
 
 async function validateAIStartup() {
   const config = readAIConfig();
@@ -233,6 +235,25 @@ async function startLiveSupportWorker() {
   console.log('[Worker] Live Support BullMQ worker started on queue: ai-live-support-turns');
 }
 
+async function startAdminAIWorker() {
+  const worker = new Worker('ai-admin-agent-turns', async (job) => {
+    const processor = await import('./jobs/processAdminAITurn.js');
+    return processor.default(job);
+  }, {
+    connection,
+    concurrency: Math.max(1, Number.parseInt(process.env.AI_ADMIN_AGENT_CONCURRENCY || '2', 10) || 2),
+    lockDuration: 60_000,
+    stalledInterval: 30_000,
+    maxStalledCount: 1,
+  });
+  worker.on('completed', job => console.log(`[Admin AI Worker] Job ${job.id} completed.`));
+  worker.on('failed', (job, error) => console.error(`[Admin AI Worker] Job ${job?.id} failed.`, { name: error.name }));
+  adminAIWorkerReady = true;
+  const heartbeat = () => redis.set('admin-ai-worker:ready', new Date().toISOString(), 'EX', 60).catch(() => undefined);
+  await heartbeat(); setInterval(() => void heartbeat(), 30_000);
+  console.log('[Worker] Admin AI BullMQ worker started on queue: ai-admin-agent-turns');
+}
+
 async function startCronJobs() {
     const runAtNextCairoDay = () => {
       const now = new Date();
@@ -280,6 +301,7 @@ async function startWorker() {
   startMindmapsWorker();
   startEssayWorker();
   startLiveSupportWorker();
+  if (adminAIEnabled) startAdminAIWorker();
   startCronJobs();
   
   const aiQueue = new Queue('ai-video-chapters', { connection });
@@ -287,6 +309,7 @@ async function startWorker() {
   const notifQueue = new Queue('notifications', { connection });
   const essayQueue = new Queue('ai-essay-grading', { connection });
   const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
+  const adminAIQueue = new Queue('ai-admin-agent-turns', { connection });
   const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue };
   const workerAdminGuard = createWorkerAdminGuard();
 
@@ -356,14 +379,25 @@ async function startWorker() {
       callbackOk = false;
     }
 
-    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || !callbackOk) {
+    let adminAICallbackOk = !adminAIEnabled;
+    if (adminAIEnabled) {
+      try {
+        const base = (process.env.BACKEND_API_URL || 'http://localhost:5245').replace(/\/$/, '').replace(/\/api\/v1$/, '');
+        const response = await fetchWithTimeout(`${base}/api/v1/internal/admin-ai/readiness`, { headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! }, timeoutMs: 2_000, maxResponseBytes: 16_384 });
+        adminAICallbackOk = response.ok;
+      } catch { adminAICallbackOk = false; }
+    }
+
+    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || (adminAIEnabled && (!adminAIWorkerReady || !adminAICallbackOk)) || !callbackOk) {
       return res.status(503).json({
         status: 'unhealthy',
         database: dbOk ? 'healthy' : 'unhealthy',
         redis: redisOk ? 'healthy' : 'unhealthy',
         ai: aiStartupReady ? 'healthy' : 'unhealthy',
         liveSupport: liveSupportWorkerReady ? 'healthy' : 'unhealthy',
+        adminAI: !adminAIEnabled ? 'disabled' : adminAIWorkerReady ? 'healthy' : 'unhealthy',
         callback: callbackOk ? 'healthy' : 'unhealthy',
+        adminAICallback: !adminAIEnabled ? 'disabled' : adminAICallbackOk ? 'healthy' : 'unhealthy',
       });
     }
 
@@ -373,7 +407,9 @@ async function startWorker() {
       redis: 'healthy',
       ai: 'healthy',
       liveSupport: 'healthy',
+      adminAI: adminAIEnabled ? 'healthy' : 'disabled',
       callback: 'healthy',
+      adminAICallback: adminAIEnabled ? 'healthy' : 'disabled',
       timestamp: new Date().toISOString()
     });
   });
@@ -452,7 +488,8 @@ async function startWorker() {
         new BullMQAdapter(mindmapsQueue),
         new BullMQAdapter(notifQueue),
         new BullMQAdapter(essayQueue),
-        new BullMQAdapter(liveSupportQueue)
+        new BullMQAdapter(liveSupportQueue),
+        new BullMQAdapter(adminAIQueue)
       ],
       serverAdapter: serverAdapter,
     });

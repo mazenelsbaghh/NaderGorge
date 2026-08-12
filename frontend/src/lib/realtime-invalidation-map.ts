@@ -5,6 +5,24 @@ import type { StaffDataChangedPayload } from '@/lib/staff-realtime-scopes';
 import { recordRealtimeMetric } from '@/lib/realtime-observability';
 
 export const REALTIME_SCOPE_KEYS: Record<string, string[]> = {
+  'admin-ai:identity': ['employees', 'users', 'student:shell'],
+  'admin-ai:content': ['content:packages', 'content:lessons', 'assessments'],
+  'admin-ai:commercial': ['codes:groups', 'forms', 'reports'],
+  'admin-ai:finance': [
+    'finance:payroll',
+    'finance:teacher',
+    'student:balance',
+    'reports',
+  ],
+  'admin-ai:hr': [
+    'hr:employees',
+    'hr:organization',
+    'hr:payroll',
+    'hr:reports',
+  ],
+  'admin-ai:support': ['support:staff', 'support:dashboard', 'support:ai'],
+  'admin-ai:reporting': ['reports', 'media'],
+  'admin-ai:other': ['admin'],
   users: ['employees', 'users', 'student:shell'],
   subjects: ['subjects', 'content:packages'],
   hr: [
@@ -79,7 +97,9 @@ export function invalidateStudentQueryKeys(keys: readonly string[]): void {
   }
 }
 
-export function invalidateForStaffDataChanged(payload: StaffDataChangedPayload): boolean {
+export function invalidateForStaffDataChanged(
+  payload: StaffDataChangedPayload
+): boolean {
   const eventId = payload.eventId;
   if (eventId) {
     const seenAt = seenEvents.get(eventId);

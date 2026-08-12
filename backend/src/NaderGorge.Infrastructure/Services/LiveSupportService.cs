@@ -897,6 +897,23 @@ public sealed class LiveSupportService(
             await _db.LiveSupportConversations.CountAsync(x => x.Status == LiveSupportConversationStatus.Closed && x.ClosedAt >= todayStartUtc, ct), rows, performance);
     }
 
+    public async Task<IReadOnlyList<LiveSupportRatingDto>> GetAdminRatingsAsync(DateTime? from, DateTime? to, CancellationToken ct)
+    {
+        var ratingsQuery = _db.LiveSupportRatings.AsNoTracking();
+        if (from.HasValue) ratingsQuery = ratingsQuery.Where(rating => rating.SubmittedAt >= from.Value);
+        if (to.HasValue) ratingsQuery = ratingsQuery.Where(rating => rating.SubmittedAt <= to.Value);
+        var ratings = await ratingsQuery.OrderByDescending(rating => rating.SubmittedAt).Take(500)
+            .Select(rating => new { rating.Id, rating.ConversationId, rating.Stars, rating.Comment, rating.SubmittedAt, rating.SubmittedByUserId, rating.SubmittedByGuestSessionId })
+            .ToListAsync(ct);
+        var userIds = ratings.Where(rating => rating.SubmittedByUserId.HasValue).Select(rating => rating.SubmittedByUserId!.Value).Distinct().ToArray();
+        var guestIds = ratings.Where(rating => rating.SubmittedByGuestSessionId.HasValue).Select(rating => rating.SubmittedByGuestSessionId!.Value).Distinct().ToArray();
+        var studentNames = await _db.Users.AsNoTracking().Where(user => userIds.Contains(user.Id)).ToDictionaryAsync(user => user.Id, user => user.FullName, ct);
+        var guestNames = await _db.LiveSupportGuestSessions.AsNoTracking().Where(guest => guestIds.Contains(guest.Id)).ToDictionaryAsync(guest => guest.Id, guest => guest.DisplayName, ct);
+        return ratings.Select(rating => new LiveSupportRatingDto(rating.Id, rating.ConversationId, rating.Stars, rating.Comment, rating.SubmittedAt,
+            rating.SubmittedByUserId.HasValue ? studentNames.GetValueOrDefault(rating.SubmittedByUserId.Value) ?? "طالب" : guestNames.GetValueOrDefault(rating.SubmittedByGuestSessionId ?? Guid.Empty) ?? "زائر",
+            rating.SubmittedByUserId.HasValue)).ToList();
+    }
+
     public async Task<LiveSupportConversationTimelineDto> GetAdminTimelineAsync(Guid conversationId, CancellationToken ct)
     {
         var conversation = await _db.LiveSupportConversations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == conversationId, ct) ?? throw new LiveSupportException("NOT_FOUND", "المحادثة غير موجودة.");

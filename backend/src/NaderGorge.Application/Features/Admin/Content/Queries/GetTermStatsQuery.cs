@@ -31,9 +31,11 @@ public class GetTermStatsQueryHandler : IRequestHandler<GetTermStatsQuery, ApiRe
         if (term is null)
             return ApiResponse<TermStatsDto>.Fail("Term not found");
 
-        // Enrolled students: Term-level grants for this term OR Package-level grants for parent
+        var now = DateTime.UtcNow;
         var enrolledStudentsCount = await _db.StudentAccessGrants
             .Where(sag => sag.IsActive &&
+                !sag.CancelledAt.HasValue &&
+                (!sag.ExpiresAt.HasValue || sag.ExpiresAt > now) &&
                 ((sag.GrantType == Domain.Enums.CodeType.Term && sag.TermId == request.TermId) ||
                  (sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId == term.PackageId)))
             .Select(sag => sag.UserId)

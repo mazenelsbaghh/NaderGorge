@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Reporting;
@@ -18,6 +19,7 @@ public interface IReportQueryService
 public sealed class ReportQueryService : IReportQueryService
 {
     private const int SourceRowLimit = 10_000;
+    private static readonly TimeSpan LegacyBalanceMatchWindow = TimeSpan.FromHours(1);
     private static readonly TimeZoneInfo CairoTimeZone = ResolveCairoTimeZone();
     private readonly IAppDbContext _db;
 
@@ -255,46 +257,156 @@ public sealed class ReportQueryService : IReportQueryService
     private async Task<List<Dictionary<string, object?>>> LoadPurchasesAsync(Guid? teacherId, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var query = _db.StudentAccessGrants.AsNoTracking().AsQueryable();
-        if (teacherId.HasValue) query = TeacherGrants(teacherId.Value);
-        var data = await query.OrderByDescending(grant => grant.GrantedAt).Take(SourceRowLimit / 2)
-            .Select(grant => new
+        var query = teacherId.HasValue
+            ? TeacherGrants(teacherId.Value)
+            : _db.StudentAccessGrants.AsNoTracking();
+        query = query.Where(grant => !grant.CancelledAt.HasValue);
+
+        var representativeGrantIds = query
+            .GroupBy(grant => new
             {
                 grant.UserId,
-                grant.User.FullName,
-                Type = grant.GrantType.ToString(),
-                grant.PackageId,
-                PackageName = grant.PackageId.HasValue ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Name).FirstOrDefault() : null,
-                TeacherName = grant.PackageId.HasValue ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Teacher.User.FullName).FirstOrDefault() : null,
-                ContentName = grant.PackageId.HasValue ? _db.Packages.Where(p => p.Id == grant.PackageId).Select(p => p.Name).FirstOrDefault() : grant.TermId.HasValue ? _db.Terms.Where(t => t.Id == grant.TermId).Select(t => t.Title).FirstOrDefault() : grant.ContentSectionId.HasValue ? _db.ContentSections.Where(s => s.Id == grant.ContentSectionId).Select(s => s.Title).FirstOrDefault() : grant.LessonId.HasValue ? _db.Lessons.Where(l => l.Id == grant.LessonId).Select(l => l.Title).FirstOrDefault() : grant.LessonVideoId.HasValue ? _db.LessonVideos.Where(v => v.Id == grant.LessonVideoId).Select(v => v.Title).FirstOrDefault() : grant.ExamId.HasValue ? _db.Exams.Where(e => e.Id == grant.ExamId).Select(e => e.Title).FirstOrDefault() : "محتوى",
-                IsGift = grant.GiftRecipientId.HasValue,
-                IsCode = grant.AccessCodeId.HasValue,
-                IsBalance = _db.BalanceTransactions.Any(transaction => transaction.ReferenceId == grant.Id && transaction.TransactionType == "ContentPurchase"),
-                grant.IsActive,
-                IsExpired = !grant.IsActive || grant.CancelledAt.HasValue || (grant.ExpiresAt.HasValue && grant.ExpiresAt <= now),
-                grant.GrantedAt,
-                grant.ExpiresAt
+                grant.GrantType,
+                TargetId = grant.GrantType == CodeType.Package ? grant.PackageId
+                    : grant.GrantType == CodeType.Term ? grant.TermId
+                    : grant.GrantType == CodeType.Month ? grant.ContentSectionId
+                    : grant.GrantType == CodeType.Lesson ? grant.LessonId
+                    : grant.GrantType == CodeType.Video ? grant.LessonVideoId ?? grant.VideoTypeId
+                    : grant.GrantType == CodeType.Exam ? grant.PublicExamProductId ?? grant.ExamId
+                    : null
             })
+            .Select(group => group
+                .OrderBy(grant => grant.GiftRecipientId.HasValue)
+                .ThenByDescending(grant => grant.GrantedAt)
+                .ThenByDescending(grant => grant.CreatedAt)
+                .ThenByDescending(grant => grant.Id)
+                .Select(grant => grant.Id)
+                .First());
+
+        var acquisitions = await query
+            .Where(grant => representativeGrantIds.Contains(grant.Id))
+            .OrderByDescending(grant => grant.GrantedAt)
+            .Take(SourceRowLimit / 2)
+            .Select(grant => new PurchaseGrantRow(
+                grant.Id,
+                grant.UserId,
+                grant.User.FullName,
+                grant.GrantType,
+                grant.PackageId,
+                grant.TermId,
+                grant.ContentSectionId,
+                grant.LessonId,
+                grant.LessonVideoId,
+                grant.VideoTypeId,
+                grant.ExamId,
+                grant.PublicExamProductId,
+                grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? grant.PackageId
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => (Guid?)term.PackageId).FirstOrDefault()
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => (Guid?)section.Term.PackageId).FirstOrDefault()
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => (Guid?)lesson.ContentSection.Term.PackageId).FirstOrDefault()
+                                : grant.GrantType == CodeType.Video && grant.LessonVideoId.HasValue
+                                    ? _db.LessonVideos.Where(video => video.Id == grant.LessonVideoId).Select(video => (Guid?)video.Lesson.ContentSection.Term.PackageId).FirstOrDefault()
+                                    : grant.PackageId,
+                grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Name).FirstOrDefault()
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => term.Package.Name).FirstOrDefault()
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => section.Term.Package.Name).FirstOrDefault()
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+                                : grant.GrantType == CodeType.Video && grant.LessonVideoId.HasValue
+                                    ? _db.LessonVideos.Where(video => video.Id == grant.LessonVideoId).Select(video => video.Lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+                                    : grant.PackageId.HasValue
+                                        ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Name).FirstOrDefault()
+                                        : null,
+                grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Teacher.User.FullName).FirstOrDefault()
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => term.Package.Teacher.User.FullName).FirstOrDefault()
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => section.Term.Package.Teacher.User.FullName).FirstOrDefault()
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => lesson.ContentSection.Term.Package.Teacher.User.FullName).FirstOrDefault()
+                                : grant.GrantType == CodeType.Video && grant.LessonVideoId.HasValue
+                                    ? _db.LessonVideos.Where(video => video.Id == grant.LessonVideoId).Select(video => video.Lesson.ContentSection.Term.Package.Teacher.User.FullName).FirstOrDefault()
+                                    : grant.PackageId.HasValue
+                                        ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Teacher.User.FullName).FirstOrDefault()
+                                        : null,
+                grant.GrantType == CodeType.Package && grant.PackageId.HasValue ? _db.Packages.Where(p => p.Id == grant.PackageId).Select(p => p.Name).FirstOrDefault() : grant.GrantType == CodeType.Term && grant.TermId.HasValue ? _db.Terms.Where(t => t.Id == grant.TermId).Select(t => t.Title).FirstOrDefault() : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue ? _db.ContentSections.Where(s => s.Id == grant.ContentSectionId).Select(s => s.Title).FirstOrDefault() : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue ? _db.Lessons.Where(l => l.Id == grant.LessonId).Select(l => l.Title).FirstOrDefault() : grant.GrantType == CodeType.Video && grant.LessonVideoId.HasValue ? _db.LessonVideos.Where(v => v.Id == grant.LessonVideoId).Select(v => v.Title).FirstOrDefault() : grant.GrantType == CodeType.Video && grant.VideoTypeId.HasValue ? _db.VideoTypes.Where(v => v.Id == grant.VideoTypeId).Select(v => v.Name).FirstOrDefault() : grant.GrantType == CodeType.Exam && grant.ExamId.HasValue ? _db.Exams.Where(e => e.Id == grant.ExamId).Select(e => e.Title).FirstOrDefault() : "محتوى",
+                grant.GiftRecipientId.HasValue,
+                grant.AccessCodeId.HasValue,
+                grant.IsActive,
+                grant.CancelledAt,
+                grant.GrantedAt,
+                grant.CreatedAt,
+                grant.ExpiresAt))
             .ToListAsync(ct);
-        var rows = data.Select(grant => Row(
+
+        var studentIds = acquisitions.Select(grant => grant.UserId).Distinct().ToArray();
+        var targetIds = acquisitions.Select(grant => grant.AcquisitionTargetId).Distinct().ToArray();
+        var financialEffects = studentIds.Length == 0
+            ? []
+            : await _db.SalesFinancialEffects.AsNoTracking()
+                .Where(effect =>
+                    (effect.PaidAmount > 0m || effect.PromotionalAmount > 0m) &&
+                    studentIds.Contains(effect.StudentId) &&
+                    targetIds.Contains(effect.TargetId))
+                .Select(effect => new PurchaseEffectKey(effect.StudentId, effect.TargetType, effect.TargetId))
+                .ToListAsync(ct);
+        var balancePurchases = financialEffects.ToHashSet();
+        var legacyBalanceTransactions = studentIds.Length == 0
+            ? []
+            : await _db.BalanceTransactions.AsNoTracking()
+                .Where(transaction =>
+                    transaction.TransactionType == "ContentPurchase" &&
+                    transaction.ReferenceId.HasValue &&
+                    studentIds.Contains(transaction.StudentBalance.UserId) &&
+                    targetIds.Contains(transaction.ReferenceId.Value))
+                .Select(transaction => new PurchaseLegacyBalanceRow(
+                    transaction.StudentBalance.UserId,
+                    transaction.ReferenceId!.Value,
+                    transaction.CreatedAt))
+                .ToListAsync(ct);
+
+        var rows = acquisitions.Select(grant =>
+        {
+            var isExpired = !grant.IsActive || grant.CancelledAt.HasValue || (grant.ExpiresAt.HasValue && grant.ExpiresAt <= now);
+            var salesTarget = grant.SalesTarget;
+            var hasFinancialEffect = salesTarget.HasValue && balancePurchases.Contains(
+                new PurchaseEffectKey(grant.UserId, salesTarget.Value, grant.AcquisitionTargetId));
+            var closestLegacyTransaction = legacyBalanceTransactions
+                .Where(transaction => transaction.StudentId == grant.UserId && transaction.TargetId == grant.AcquisitionTargetId)
+                .OrderBy(transaction => Math.Abs((transaction.CreatedAt - grant.GrantedAt).Ticks))
+                .FirstOrDefault();
+            var hasLegacyBalance = closestLegacyTransaction != null &&
+                (closestLegacyTransaction.CreatedAt - grant.GrantedAt).Duration() <= LegacyBalanceMatchWindow;
+            var isBalance = hasFinancialEffect || hasLegacyBalance;
+
+            return Row(
             ("_studentId", grant.UserId.ToString()),
             ("studentName", grant.FullName),
             ("packageId", grant.PackageId?.ToString()),
             ("packageName", grant.PackageName),
             ("teacherName", grant.TeacherName),
-            ("grantType", grant.Type),
+            ("grantType", grant.GrantType.ToString()),
             ("contentName", grant.ContentName),
-            ("purchaseStatus", PurchaseStatus(grant.IsExpired, grant.IsGift, grant.IsCode, grant.IsBalance)),
-            ("source", PurchaseSource(grant.IsGift, grant.IsCode, grant.IsBalance)),
-            ("isActive", grant.IsActive && !grant.IsExpired),
+            ("purchaseStatus", PurchaseStatus(isExpired, grant.IsGift, grant.IsCode, isBalance)),
+            ("source", PurchaseSource(grant.IsGift, grant.IsCode, isBalance)),
+            ("isActive", grant.IsActive && !isExpired),
             ("grantedAt", grant.GrantedAt),
-            ("expiresAt", grant.ExpiresAt))).ToList();
+            ("expiresAt", grant.ExpiresAt));
+        }).ToList();
 
-        rows.AddRange(await LoadNotPurchasedRowsAsync(teacherId, SourceRowLimit / 2, now, ct));
+        rows.AddRange(await LoadNotPurchasedRowsAsync(teacherId, SourceRowLimit / 2, ct));
         return rows;
     }
 
-    private async Task<List<Dictionary<string, object?>>> LoadNotPurchasedRowsAsync(Guid? teacherId, int limit, DateTime now, CancellationToken ct)
+    private async Task<List<Dictionary<string, object?>>> LoadNotPurchasedRowsAsync(Guid? teacherId, int limit, CancellationToken ct)
     {
         var packages = _db.Packages.AsNoTracking().Where(package => package.IsActive);
         if (teacherId.HasValue) packages = packages.Where(package => package.TeacherId == teacherId.Value);
@@ -311,7 +423,16 @@ public sealed class ReportQueryService : IReportQueryService
                  (scope.ScopeLevel == Domain.Enums.AcademicScopeLevel.GradeAllSubjects && scope.EducationStage == student.EducationStage && scope.GradeLevel == student.GradeLevel) ||
                  (scope.ScopeLevel == Domain.Enums.AcademicScopeLevel.Exact && scope.EducationStage == student.EducationStage && scope.GradeLevel == student.GradeLevel && scope.SubjectId == package.SubjectId &&
                   _db.AcademicSubjectEligibilities.Any(eligibility => eligibility.IsActive && eligibility.EducationStage == student.EducationStage && eligibility.GradeLevel == student.GradeLevel && eligibility.SubjectId == scope.SubjectId))))
-            where !_db.StudentAccessGrants.Any(grant => grant.UserId == student.UserId && grant.PackageId == package.Id && grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
+            where !_db.StudentAccessGrants.Any(grant =>
+                grant.UserId == student.UserId &&
+                !grant.CancelledAt.HasValue &&
+                ((grant.GrantType == CodeType.Package && grant.PackageId == package.Id) ||
+                 (grant.GrantType == CodeType.Term && grant.TermId.HasValue &&
+                  _db.Terms.Any(term => term.Id == grant.TermId.Value && term.PackageId == package.Id)) ||
+                 (grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue &&
+                  _db.ContentSections.Any(section => section.Id == grant.ContentSectionId.Value && section.Term.PackageId == package.Id)) ||
+                 (grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue &&
+                  _db.Lessons.Any(lesson => lesson.Id == grant.LessonId.Value && lesson.ContentSection.Term.PackageId == package.Id))))
             orderby student.User.FullName, package.Name
             select new { StudentId = student.UserId, StudentName = student.User.FullName, PackageId = package.Id, PackageName = package.Name, TeacherName = package.Teacher.User.FullName };
         var missing = await candidates.Take(limit).ToListAsync(ct);
@@ -436,6 +557,58 @@ public sealed class ReportQueryService : IReportQueryService
 
     private static string PurchaseSource(bool gift, bool code, bool balance) =>
         gift ? "gift" : code ? "code" : balance ? "balance" : "direct";
+
+    private sealed record PurchaseEffectKey(Guid StudentId, SalesTargetType TargetType, Guid TargetId);
+    private sealed record PurchaseLegacyBalanceRow(Guid StudentId, Guid TargetId, DateTime CreatedAt);
+
+    private sealed record PurchaseGrantRow(
+        Guid Id,
+        Guid UserId,
+        string FullName,
+        CodeType GrantType,
+        Guid? GrantPackageId,
+        Guid? TermId,
+        Guid? ContentSectionId,
+        Guid? LessonId,
+        Guid? LessonVideoId,
+        Guid? VideoTypeId,
+        Guid? ExamId,
+        Guid? PublicExamProductId,
+        Guid? PackageId,
+        string? PackageName,
+        string? TeacherName,
+        string? ContentName,
+        bool IsGift,
+        bool IsCode,
+        bool IsActive,
+        DateTime? CancelledAt,
+        DateTime GrantedAt,
+        DateTime CreatedAt,
+        DateTime? ExpiresAt)
+    {
+        public Guid AcquisitionTargetId => GrantType switch
+        {
+            CodeType.Package => GrantPackageId,
+            CodeType.Term => TermId,
+            CodeType.Month => ContentSectionId,
+            CodeType.Lesson => LessonId,
+            CodeType.Video => LessonVideoId ?? VideoTypeId,
+            CodeType.Exam => PublicExamProductId ?? ExamId,
+            _ => null
+        } ?? Id;
+
+        public SalesTargetType? SalesTarget => GrantType switch
+        {
+            CodeType.Package => SalesTargetType.Package,
+            CodeType.Term => SalesTargetType.Term,
+            CodeType.Month => SalesTargetType.ContentSection,
+            CodeType.Lesson => SalesTargetType.Lesson,
+            CodeType.Video when LessonVideoId.HasValue => SalesTargetType.SpecificVideo,
+            CodeType.Video when VideoTypeId.HasValue => SalesTargetType.VideoType,
+            CodeType.Exam => SalesTargetType.PublicExam,
+            _ => null
+        };
+    }
 
     private async Task<List<Dictionary<string, object?>>> LoadCodesAsync(Guid? teacherId, CancellationToken ct)
     {

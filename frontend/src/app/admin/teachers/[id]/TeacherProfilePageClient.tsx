@@ -102,6 +102,11 @@ const formatDate = (d?: string | null) => {
   return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
 };
 
+const csvEscape = (value: unknown): string => {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
 /* ─── Tab type ─── */
 type TabKey = 'overview' | 'content' | 'students' | 'essays' | 'financials' | 'audit';
 
@@ -112,6 +117,36 @@ const toArray = (v: unknown): any[] => {
   if (v && typeof v === 'object' && 'data' in (v as any) && Array.isArray((v as any).data)) return (v as any).data;
   return [];
 };
+
+type TeacherStudentPackageMembership = {
+  packageId?: string;
+  packageName: string;
+  price?: number;
+  enrolledAt?: string;
+};
+
+const getStudentPackageMemberships = (student: any): TeacherStudentPackageMembership[] => {
+  if (Array.isArray(student.packages) && student.packages.length > 0) {
+    return student.packages.filter((item: any) => typeof item?.packageName === 'string' && item.packageName.length > 0);
+  }
+  const packageName = student.packageName || student.activatedPackageName;
+  return packageName
+    ? [{ packageName, price: student.price, enrolledAt: student.enrolledAt || student.activatedAt || student.grantedAt }]
+    : [];
+};
+
+const getPackageMembershipKey = (membership: TeacherStudentPackageMembership): string =>
+  membership.packageId ? `id:${membership.packageId}` : `legacy-name:${membership.packageName}`;
+
+const filterStudentPackageMemberships = (student: any, packageKey: string) => {
+  const memberships = getStudentPackageMemberships(student);
+  return packageKey === 'all'
+    ? memberships
+    : memberships.filter((membership) => getPackageMembershipKey(membership) === packageKey);
+};
+
+const studentBelongsToPackage = (student: any, packageKey: string) =>
+  filterStudentPackageMemberships(student, packageKey).length > 0;
 
 type PackageSalesBreakdown = {
   packageId: string;
@@ -352,7 +387,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           <h3 id="package-sales-title" className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
             تفاصيل الطلاب لكل باقة
           </h3>
-          <p className="mt-1 text-sm text-[var(--admin-muted)]">كل رقم يمثل عدد طلاب مختلفين حصلوا على هذا النوع من المحتوى.</p>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">كل طالب يُحسب مرة واحدة داخل الباقة؛ وأي شراء يجعله «مشتريًا» بدل «هدية فقط».</p>
         </div>
 
         {packageSales.length === 0 ? (
@@ -390,7 +425,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     <dd className="mt-0.5 text-lg font-black tabular-nums text-emerald-700">{item.purchasedStudents}</dd>
                   </div>
                   <div className="border-r border-[var(--admin-border)] px-5 py-3">
-                    <dt className="text-sm font-bold text-[var(--admin-muted)]">هدية</dt>
+                    <dt className="text-sm font-bold text-[var(--admin-muted)]">هدية فقط</dt>
                     <dd className="mt-0.5 text-lg font-black tabular-nums text-amber-700">{item.giftStudents}</dd>
                   </div>
                 </dl>
@@ -470,7 +505,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             <div>
               <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">ملخص الإحصاءات</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                <AdminStatCard variant="accent" icon={Users} label="عدد الطلاب" value={stats?.studentsCount ?? 0} />
+                <AdminStatCard variant="accent" icon={Users} label="طلاب اقتنوا محتوى (تاريخي)" value={stats?.studentsCount ?? 0} />
                 <AdminStatCard variant="light" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? 0} />
                 <AdminStatCard variant="muted" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? 0} />
                 <AdminStatCard variant="accent" icon={PenLine} label="مقالات قيد التصحيح" value={stats?.pendingEssaysCount ?? essays.length ?? 0} />
@@ -608,7 +643,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         {activeTab === 'students' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب المسجلين" value={stats?.studentsCount ?? 0} />
+              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب تاريخيًا" value={stats?.studentsCount ?? 0} />
               <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={stats?.activeStudentsCount ?? 0} />
             </div>
 
@@ -623,17 +658,20 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                 </div>
                 <button
                   onClick={() => {
-                    const filtered = studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter);
+                    const filtered = studentPackageFilter === 'all' ? students : students.filter((student: any) => studentBelongsToPackage(student, studentPackageFilter));
                     const csv = [
-                      ['اسم الطالب', 'رقم الهاتف', 'الباقة', 'السعر', 'تاريخ التفعيل', 'الحالة'].join(','),
-                      ...filtered.map((s: any) => [
-                        s.fullName || s.studentName || '',
-                        s.phone || s.phoneNumber || '',
-                        s.packageName || s.activatedPackageName || '',
-                        s.price ?? '',
-                        s.enrolledAt || s.activatedAt || s.grantedAt || '',
-                        s.isActive !== false ? 'نشط' : 'غير نشط',
-                      ].join(','))
+                      ['اسم الطالب', 'رقم الهاتف', 'الباقة', 'السعر الحالي للمحتوى', 'تاريخ التفعيل', 'الحالة'].map(csvEscape).join(','),
+                      ...filtered.map((student: any) => {
+                        const memberships = filterStudentPackageMemberships(student, studentPackageFilter);
+                        return [
+                          student.fullName || student.studentName || '',
+                          student.phone || student.phoneNumber || '',
+                          memberships.map((membership) => membership.packageName).join(' | '),
+                          memberships.map((membership) => membership.price ?? '').join(' | '),
+                          memberships.map((membership) => membership.enrolledAt ?? '').join(' | '),
+                          student.isActive !== false ? 'نشط' : 'غير نشط',
+                        ].map(csvEscape).join(',');
+                      })
                     ].join('\n');
                     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
                     const url = URL.createObjectURL(blob);
@@ -653,7 +691,14 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
               {/* Package filter pills */}
               {(() => {
-                const packages = [...new Set(students.map((s: any) => s.packageName || s.activatedPackageName).filter(Boolean))];
+                const packagesByKey = new Map<string, { key: string; name: string }>();
+                students.forEach((student: any) => {
+                  getStudentPackageMemberships(student).forEach((membership) => {
+                    const key = getPackageMembershipKey(membership);
+                    if (!packagesByKey.has(key)) packagesByKey.set(key, { key, name: membership.packageName });
+                  });
+                });
+                const packages = [...packagesByKey.values()];
                 if (packages.length <= 1) return null;
                 return (
                   <div className="flex flex-wrap gap-2 mb-5">
@@ -663,15 +708,15 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     >
                       الكل ({students.length})
                     </button>
-                    {packages.map((pkg: string) => {
-                      const count = students.filter((s: any) => (s.packageName || s.activatedPackageName) === pkg).length;
+                    {packages.map((pkg) => {
+                      const count = students.filter((student: any) => studentBelongsToPackage(student, pkg.key)).length;
                       return (
                         <button
-                          key={pkg}
-                          onClick={() => setStudentPackageFilter(pkg)}
-                          className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === pkg ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                          key={pkg.key}
+                          onClick={() => setStudentPackageFilter(pkg.key)}
+                          className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === pkg.key ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
                         >
-                          {pkg} ({count})
+                          {pkg.name} ({count})
                         </button>
                       );
                     })}
@@ -688,12 +733,14 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     <span className="font-mono text-sm text-[var(--admin-text)] tracking-wide" dir="ltr">{row.phone || row.phoneNumber || '—'}</span>
                   )},
                   { key: 'packageName', label: 'الباقة', render: (row) => (
-                    <span className="text-sm text-[var(--admin-text)]">{row.packageName || row.activatedPackageName || '—'}</span>
+                    <span className="text-sm text-[var(--admin-text)]">{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => membership.packageName).join('، ') || '—'}</span>
                   )},
-                  { key: 'price', label: 'السعر', render: (row) => (
-                    <span className="font-mono font-bold text-sm text-[var(--admin-text)]">{row.price != null ? `${row.price} ج.م` : '—'}</span>
+                  { key: 'price', label: 'السعر الحالي للمحتوى', render: (row) => (
+                    <span className="font-mono font-bold text-sm text-[var(--admin-text)]">{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => membership.price != null ? `${membership.price} ج.م` : '—').join('، ') || '—'}</span>
                   )},
-                  { key: 'enrolledAt', label: 'تاريخ التفعيل', render: (row) => formatDate(row.enrolledAt || row.activatedAt || row.grantedAt) },
+                  { key: 'enrolledAt', label: 'تاريخ التفعيل', render: (row) => (
+                    <span>{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => formatDate(membership.enrolledAt)).join('، ') || '—'}</span>
+                  )},
                   { key: 'status', label: 'الحالة', render: (row) => {
                     const active = row.isActive !== false;
                     return (
@@ -704,7 +751,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     );
                   }},
                 ]}
-                data={studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter)}
+                data={studentPackageFilter === 'all' ? students : students.filter((student: any) => studentBelongsToPackage(student, studentPackageFilter))}
                 rowKey={(row) => row.id || row.studentId || row.fullName}
                 emptyMessage="لا يوجد طلاب مسجلين حالياً"
               />

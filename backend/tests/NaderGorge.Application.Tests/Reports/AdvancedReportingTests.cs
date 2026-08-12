@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ClosedXML.Excel;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Controllers;
@@ -7,6 +8,7 @@ using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Reporting;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.Application.Tests.Reports;
@@ -90,6 +92,272 @@ public sealed class AdvancedReportingTests
         Assert.Equal(student.FullName, row["studentName"]);
         Assert.Equal(package.Name, row["packageName"]);
         Assert.Equal("notPurchased", row["purchaseStatus"]);
+    }
+
+    [Fact]
+    public async Task Purchases_ReturnsOneAcquisitionForRepeatedHistoricalGrantsOfTheSameTarget()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Distinct Purchase Teacher", "01140500001");
+        var student = await SeedStudentAsync(db, "Distinct Purchase Student", "01240500001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Distinct Purchase Package");
+        var older = DateTime.UtcNow.AddDays(-2);
+        db.StudentAccessGrants.AddRange(
+            new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, GrantedAt = older, IsActive = false },
+            new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, GrantedAt = older.AddDays(1), IsActive = true });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases, Columns: ["studentName", "purchaseStatus", "grantedAt"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal(student.FullName, row["studentName"]);
+        Assert.Equal("purchased", row["purchaseStatus"]);
+        Assert.Equal(older.AddDays(1), row["grantedAt"]);
+    }
+
+    [Fact]
+    public async Task Purchases_ExpiredHistoricalGrantAppearsOnceWithoutNotPurchasedDuplicate()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Expired Purchase Teacher", "01140510001");
+        var student = await SeedStudentAsync(db, "Expired Purchase Student", "01240510001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Expired Purchase Package");
+        var grantedAt = DateTime.UtcNow.AddDays(-5);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            PackageId = package.Id,
+            GrantType = CodeType.Package,
+            GrantedAt = grantedAt,
+            ExpiresAt = DateTime.UtcNow.AddDays(-1),
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases, Columns: ["studentName", "packageName", "purchaseStatus", "grantedAt"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal(student.FullName, row["studentName"]);
+        Assert.Equal(package.Name, row["packageName"]);
+        Assert.Equal("expired", row["purchaseStatus"]);
+        Assert.Equal(grantedAt, row["grantedAt"]);
+    }
+
+    [Fact]
+    public async Task Purchases_UsesFinancialEffectTargetToClassifyBalancePurchase()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacher = await SeedTeacherAsync(db, "Balance Purchase Teacher", "01140600001");
+        var student = await SeedStudentAsync(db, "Balance Purchase Student", "01240600001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Balance Purchase Package");
+        var grant = new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, IsActive = true };
+        var balance = new StudentBalance { UserId = student.Id, CurrentBalance = 0m };
+        db.StudentAccessGrants.Add(grant);
+        db.StudentBalances.Add(balance);
+        db.BalanceTransactions.Add(new BalanceTransaction
+        {
+            StudentBalance = balance,
+            Amount = -100m,
+            BalanceAfter = 0m,
+            TransactionType = "ContentPurchase",
+            ReferenceId = package.Id,
+            Description = "شراء باقة"
+        });
+        db.SalesFinancialEffects.Add(new SalesFinancialEffect
+        {
+            PurchaseOperationId = Guid.NewGuid(),
+            StudentId = student.Id,
+            TargetType = SalesTargetType.Package,
+            TargetId = package.Id,
+            GrossAmount = 100m,
+            PromotionalAmount = 100m,
+            TeacherId = teacher.Profile.Id
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases, Columns: ["studentName", "purchaseStatus", "source", "grantedAt"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.NotEqual(grant.Id, package.Id);
+        Assert.Equal("balance", row["purchaseStatus"]);
+        Assert.Equal("balance", row["source"]);
+    }
+
+    [Fact]
+    public async Task Purchases_PrefersNonCancelledPurchaseOverNewerGiftAndCancelledGrant()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacher = await SeedTeacherAsync(db, "Mixed Acquisition Teacher", "01140700001");
+        var student = await SeedStudentAsync(db, "Mixed Acquisition Student", "01240700001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Mixed Acquisition Package");
+        var purchaseDate = DateTime.UtcNow.AddDays(-3);
+        db.StudentAccessGrants.AddRange(
+            new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, GrantedAt = purchaseDate, IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, GiftRecipientId = Guid.NewGuid(), GrantedAt = purchaseDate.AddDays(1), IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, PackageId = package.Id, GrantType = CodeType.Package, GrantedAt = purchaseDate.AddDays(2), IsActive = false, CancelledAt = purchaseDate.AddDays(2).AddMinutes(1) });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases, Columns: ["studentName", "purchaseStatus", "source", "grantedAt"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal(purchaseDate, row["grantedAt"]);
+        Assert.Equal("purchased", row["purchaseStatus"]);
+        Assert.Equal("direct", row["source"]);
+    }
+
+    [Fact]
+    public async Task Purchases_CancelledOnlyGrantAppearsOnceAsNotPurchased()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Cancelled Purchase Teacher", "01140710001");
+        var student = await SeedStudentAsync(db, "Cancelled Purchase Student", "01240710001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Cancelled Purchase Package");
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            PackageId = package.Id,
+            GrantType = CodeType.Package,
+            IsActive = false,
+            CancelledAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases, Columns: ["studentName", "packageName", "purchaseStatus"]),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal(student.FullName, row["studentName"]);
+        Assert.Equal(package.Name, row["packageName"]);
+        Assert.Equal("notPurchased", row["purchaseStatus"]);
+    }
+
+    [Fact]
+    public async Task Purchases_ResolvesTeacherAndPackageThroughGranularCodeTarget()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Granular Code Teacher", "01140800001");
+        var student = await SeedStudentAsync(db, "Granular Code Student", "01240800001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Granular Code Package");
+        var term = new Term { Title = "Granular Code Term", PackageId = package.Id, Package = package, Price = 55m };
+        var codeGroup = new CodeGroup
+        {
+            Name = "Granular term codes",
+            TotalCodes = 1,
+            CodeType = CodeType.Term,
+            TermId = term.Id,
+            CreatedByUserId = teacher.User.Id,
+            CreatedByUser = teacher.User,
+            TeacherId = teacher.Profile.Id,
+            Teacher = teacher.Profile
+        };
+        var accessCode = new AccessCode
+        {
+            CodeHash = Guid.NewGuid().ToString("N"),
+            CodePlaintext = "TERM-CODE",
+            CodeGroup = codeGroup,
+            CodeGroupId = codeGroup.Id,
+            IsConsumed = true,
+            ConsumedByUserId = student.Id,
+            ConsumedByUser = student
+        };
+        db.AddRange(term, codeGroup, accessCode);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            GrantType = CodeType.Term,
+            TermId = term.Id,
+            AccessCodeId = accessCode.Id,
+            AccessCode = accessCode,
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(
+                ReportDomains.Purchases,
+                Columns: ["studentName", "packageId", "packageName", "teacherName", "contentName", "purchaseStatus"]),
+            teacher.User.Id,
+            true,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal(package.Id.ToString(), row["packageId"]);
+        Assert.Equal(package.Name, row["packageName"]);
+        Assert.Equal(teacher.User.FullName, row["teacherName"]);
+        Assert.Equal(term.Title, row["contentName"]);
+    }
+
+    [Fact]
+    public async Task Purchases_UsesLegacyContentTransactionReferenceWhenFinancialEffectIsMissing()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacher = await SeedTeacherAsync(db, "Legacy Balance Teacher", "01140900001");
+        var student = await SeedStudentAsync(db, "Legacy Balance Student", "01240900001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedScopedPackageAsync(db, teacher.Profile.Id, "Legacy Balance Package");
+        var purchasedAt = DateTime.UtcNow.AddDays(-10);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            PackageId = package.Id,
+            GrantType = CodeType.Package,
+            GrantedAt = purchasedAt,
+            CreatedAt = purchasedAt,
+            IsActive = true
+        });
+        var balance = new StudentBalance { UserId = student.Id, CurrentBalance = 0m };
+        db.StudentBalances.Add(balance);
+        db.BalanceTransactions.Add(new BalanceTransaction
+        {
+            StudentBalance = balance,
+            Amount = -100m,
+            BalanceAfter = 0m,
+            TransactionType = "ContentPurchase",
+            ReferenceId = package.Id,
+            Description = "شراء قديم",
+            CreatedAt = purchasedAt.AddSeconds(2)
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new ReportQueryService(db).ExecuteAsync(
+            new ExecuteReportRequest(ReportDomains.Purchases),
+            Guid.NewGuid(),
+            false,
+            default);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal("balance", row["purchaseStatus"]);
+        Assert.Equal("balance", row["source"]);
     }
 
     [Fact]
@@ -326,7 +594,6 @@ public sealed class AdvancedReportingTests
         var student = await SeedStudentAsync(db, "Video Ledger Student", "01290000001", true, GradeLevel.SecondaryGrade3);
         var package = await SeedPackageWithVideoAsync(db, teacher.Profile.Id, student.Id);
         var termGrant = await db.StudentAccessGrants.SingleAsync(grant => grant.UserId == student.Id);
-        termGrant.PackageId = null;
         termGrant.TermId = package.Terms.Single().Id;
         termGrant.GrantType = CodeType.Term;
         await db.SaveChangesAsync();
@@ -346,6 +613,88 @@ public sealed class AdvancedReportingTests
         Assert.Equal(package.Name, speedPackageHeader.GetString());
         Assert.Equal(XLColor.FromHtml("#BBF7D0"), sheet.Cell(6, headers["الحصة الأولى - الحضور"]).Style.Fill.BackgroundColor);
         Assert.Equal(XLColor.FromHtml("#99F6E4"), sheet.Cell(6, headers["الفيديو الأول - سرعات المشاهدة"]).Style.Fill.BackgroundColor);
+    }
+
+    [Fact]
+    public async Task StudentLedger_LessonGrantWithAncestorIdsDoesNotUnlockSiblingLesson()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacher = await SeedTeacherAsync(db, "Scoped Lesson Ledger Teacher", "01190100001");
+        var student = await SeedStudentAsync(db, "Scoped Lesson Ledger Student", "01290100001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedPackageWithVideoAsync(db, teacher.Profile.Id, student.Id);
+        var term = package.Terms.Single();
+        var section = term.Sections.Single();
+        var firstLesson = section.Lessons.Single();
+        var siblingLesson = new Lesson { Title = "الحصة الثانية", Summary = "Summary", ContentSectionId = section.Id, ContentSection = section };
+        db.Lessons.Add(siblingLesson);
+        var lessonGrant = await db.StudentAccessGrants.SingleAsync(grant => grant.UserId == student.Id);
+        lessonGrant.GrantType = CodeType.Lesson;
+        lessonGrant.PackageId = package.Id;
+        lessonGrant.TermId = term.Id;
+        lessonGrant.ContentSectionId = section.Id;
+        lessonGrant.LessonId = firstLesson.Id;
+        await db.SaveChangesAsync();
+
+        var export = await new StudentLedgerExportService(db).ExportAsync(teacher.Profile.Id, teacher.User.Id, default);
+
+        using var workbook = new XLWorkbook(new MemoryStream(export.Content));
+        var sheet = workbook.Worksheet("سجل الطلاب");
+        var headers = sheet.Row(6).CellsUsed().ToDictionary(cell => cell.GetString(), cell => cell.Address.ColumnNumber);
+        Assert.Equal("حصة: الحصة الأولى", sheet.Cell(7, 10).GetString());
+        Assert.NotEqual("لم يشترِ", sheet.Cell(7, headers["الحصة الأولى - الحضور"]).GetString());
+        Assert.Equal("لم يشترِ", sheet.Cell(7, headers["الحصة الثانية - الحضور"]).GetString());
+    }
+
+    [Fact]
+    public async Task StudentLedger_GlobalVideoTypeGrantCoversMatchingVideosWithoutParentScope()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Global Video Type Teacher", "01190200001");
+        var student = await SeedStudentAsync(db, "Global Video Type Student", "01290200001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedPackageWithVideoAsync(db, teacher.Profile.Id, student.Id);
+        var videoTypeId = package.Terms.Single().Sections.Single().Lessons.Single().Videos.Single().VideoTypeId;
+        var grant = await db.StudentAccessGrants.SingleAsync(item => item.UserId == student.Id);
+        grant.GrantType = CodeType.Video;
+        grant.PackageId = null;
+        grant.TermId = null;
+        grant.ContentSectionId = null;
+        grant.LessonId = null;
+        grant.LessonVideoId = null;
+        grant.VideoTypeId = videoTypeId;
+        await db.SaveChangesAsync();
+
+        var export = await new StudentLedgerExportService(db).ExportAsync(teacher.Profile.Id, teacher.User.Id, default);
+
+        using var workbook = new XLWorkbook(new MemoryStream(export.Content));
+        var sheet = workbook.Worksheet("سجل الطلاب");
+        var headers = sheet.Row(6).CellsUsed().ToDictionary(cell => cell.GetString(), cell => cell.Address.ColumnNumber);
+        Assert.Equal("نوع فيديو", sheet.Cell(7, 10).GetString());
+        Assert.NotEqual("لم يشترِ", sheet.Cell(7, headers["الفيديو الأول - المشاهدة"]).GetString());
+    }
+
+    [Fact]
+    public async Task StudentLedger_ExcludesStudentWhoseOnlyGrantWasCancelled()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherAsync(db, "Cancelled Ledger Teacher", "01190300001");
+        var student = await SeedStudentAsync(db, "Cancelled Ledger Student", "01290300001", true, GradeLevel.SecondaryGrade3);
+        var package = await SeedPackageWithVideoAsync(db, teacher.Profile.Id, student.Id);
+        var grant = await db.StudentAccessGrants.SingleAsync(item => item.UserId == student.Id);
+        grant.IsActive = false;
+        grant.CancelledAt = DateTime.UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+
+        var export = await new StudentLedgerExportService(db).ExportAsync(teacher.Profile.Id, teacher.User.Id, default);
+
+        using var workbook = new XLWorkbook(new MemoryStream(export.Content));
+        var sheet = workbook.Worksheet("سجل الطلاب");
+        Assert.DoesNotContain(sheet.CellsUsed(), cell => cell.GetString() == student.FullName);
     }
 
     private static ReportFilter Filter(string field, string operation, params object[] values) =>

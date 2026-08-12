@@ -6,6 +6,7 @@ using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common.HR;
 using NaderGorge.Application.Features.HR.Scheduling;
 using NaderGorge.Application.Features.HR.Scheduling.Commands;
+using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -64,54 +65,13 @@ public sealed class HrShiftsController : ControllerBase
     [HasPermission(HrPermissions.ShiftManage)]
     public async Task<IActionResult> UpdatePublishedAssignment(Guid assignmentId, UpdatePublishedShiftAssignmentRequest request, CancellationToken ct)
     {
-        if (request.EffectiveTo.HasValue && request.EffectiveTo <= request.EffectiveFrom ||
-            request.Segments.Count == 0 || string.IsNullOrWhiteSpace(request.Reason))
-            return BadRequest(new { errors = new[] { "SHIFT_ASSIGNMENT_INVALID" } });
-
-        var assignment = await _db.ShiftAssignments
-            .Include(item => item.ShiftTemplate)
-            .Include(item => item.Employee).ThenInclude(item => item!.User)
-            .SingleOrDefaultAsync(item => item.Id == assignmentId && item.Status == ShiftAssignmentStatus.Published, ct);
-        if (assignment?.ShiftTemplate is null) return NotFound(new { errors = new[] { "SHIFT_ASSIGNMENT_NOT_FOUND" } });
-
-        var conflict = await _db.ShiftAssignments.AsNoTracking().AnyAsync(item =>
-            item.Id != assignmentId && item.EmployeeId == assignment.EmployeeId && item.Status == ShiftAssignmentStatus.Published &&
-            item.EffectiveFrom < (request.EffectiveTo ?? DateOnly.MaxValue) && request.EffectiveFrom < (item.EffectiveTo ?? DateOnly.MaxValue), ct);
-        if (conflict) return Conflict(new { errors = new[] { "SHIFT_ASSIGNMENT_OVERLAP" } });
-
-        var segments = request.Segments.Select(item => new ShiftSegment
-        {
-            Sequence = item.Sequence,
-            DayOfWeek = item.DayOfWeek,
-            StartsAt = item.StartsAt,
-            EndsAt = item.EndsAt,
-            UnpaidBreakMinutes = item.UnpaidBreakMinutes,
-            WorkDateRule = item.WorkDateRule
-        }).ToList();
-        var segmentErrors = ShiftScheduleRules.ValidateSegments(segments);
-        if (segmentErrors.Count > 0) return BadRequest(new { errors = segmentErrors });
-
-        var source = assignment.ShiftTemplate;
-        var replacement = new ShiftTemplate
-        {
-            Code = $"EDIT-{Guid.NewGuid():N}",
-            Name = $"جدول أسبوعي: {assignment.Employee?.User?.FullName ?? source.Name}",
-            Mode = source.Mode,
-            WorkCalendarId = source.WorkCalendarId,
-            GraceMinutes = source.GraceMinutes,
-            MinimumBreakMinutes = source.MinimumBreakMinutes,
-            OvertimeAfterMinutes = source.OvertimeAfterMinutes,
-            Segments = segments
-        };
-        _db.ShiftTemplates.Add(replacement);
-        assignment.ShiftTemplateId = replacement.Id;
-        assignment.EffectiveFrom = request.EffectiveFrom;
-        assignment.EffectiveTo = request.EffectiveTo;
-        assignment.Reason = request.Reason.Trim();
-        assignment.PublishedByUserId = User.RequireUserId();
-        assignment.PublishedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true, data = assignment.Id });
+        var result = await _mediator.Send(new UpdatePublishedShiftCommand(assignmentId, request.EffectiveFrom,
+            request.EffectiveTo, request.Reason, request.Segments.Select(item => new ShiftSegmentInput(item.Sequence,
+                item.DayOfWeek, item.StartsAt, item.EndsAt, item.UnpaidBreakMinutes, item.WorkDateRule)).ToList(),
+            User.RequireUserId()), ct);
+        if (result.Success) return Ok(new { success = true, data = result.Data });
+        if (result.Errors?.Contains("SHIFT_ASSIGNMENT_NOT_FOUND") == true) return NotFound(result);
+        return result.Errors?.Contains("SHIFT_ASSIGNMENT_OVERLAP") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpPost("admin/shifts/templates")]
@@ -173,69 +133,20 @@ public sealed class HrShiftsController : ControllerBase
     [HasPermission(HrPermissions.AttendanceManage)]
     public async Task<IActionResult> CreateAttendancePolicy(CreateAttendancePolicyRequest request, CancellationToken ct)
     {
-        var code = request.Code.Trim();
-        var name = request.Name.Trim();
-        if (code.Length is < 2 or > 40 || name.Length is < 2 or > 200)
-            return BadRequest(new { errors = new[] { "POLICY_NAME_OR_CODE_INVALID" } });
-        if (await _db.AttendancePolicies.AnyAsync(item => item.Code == code, ct))
-            return Conflict(new { errors = new[] { "POLICY_CODE_EXISTS" } });
-        if (request.Kind == AttendancePolicyKind.Geofence &&
-            (!request.Latitude.HasValue || !request.Longitude.HasValue || request.RadiusMeters <= 0 || request.MaximumAccuracyMeters <= 0))
-            return BadRequest(new { errors = new[] { "GEOFENCE_CONFIGURATION_REQUIRED" } });
-
-        var policy = new AttendancePolicy
-        {
-            Code = code,
-            Name = name,
-            Kind = request.Kind,
-            Latitude = request.Kind == AttendancePolicyKind.Geofence ? request.Latitude : null,
-            Longitude = request.Kind == AttendancePolicyKind.Geofence ? request.Longitude : null,
-            RadiusMeters = request.RadiusMeters,
-            MaximumAccuracyMeters = request.MaximumAccuracyMeters
-        };
-        _db.AttendancePolicies.Add(policy);
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true, data = policy.Id });
+        var result = await _mediator.Send(new CreateAttendancePolicyCommand(request.Code, request.Name, request.Kind,
+            request.Latitude, request.Longitude, request.RadiusMeters, request.MaximumAccuracyMeters), ct);
+        return result.Success ? Ok(new { success = true, data = result.Data }) :
+            result.Errors?.Contains("POLICY_CODE_EXISTS") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpPost("admin/attendance/policy-assignments")]
     [HasPermission(HrPermissions.AttendanceManage)]
     public async Task<IActionResult> AssignAttendancePolicy(AssignAttendancePolicyRequest request, CancellationToken ct)
     {
-        if (request.EmployeeId.HasValue == request.ShiftTemplateId.HasValue ||
-            request.EffectiveTo.HasValue && request.EffectiveTo <= request.EffectiveFrom)
-            return BadRequest(new { errors = new[] { "POLICY_ASSIGNMENT_INVALID" } });
-        if (!await _db.AttendancePolicies.AnyAsync(item => item.Id == request.AttendancePolicyId && item.IsActive, ct))
-            return NotFound(new { errors = new[] { "ATTENDANCE_POLICY_NOT_FOUND" } });
-        if (request.EmployeeId.HasValue && !await _db.EmployeeProfiles.AnyAsync(item => item.Id == request.EmployeeId, ct) ||
-            request.ShiftTemplateId.HasValue && !await _db.ShiftTemplates.AnyAsync(item => item.Id == request.ShiftTemplateId && item.IsActive, ct))
-            return NotFound(new { errors = new[] { "POLICY_ASSIGNMENT_TARGET_NOT_FOUND" } });
-
-        var existing = await _db.AttendancePolicyAssignments
-            .Where(item => item.EmployeeId == request.EmployeeId && item.ShiftTemplateId == request.ShiftTemplateId &&
-                item.EffectiveFrom <= request.EffectiveFrom &&
-                (!item.EffectiveTo.HasValue || item.EffectiveTo > request.EffectiveFrom))
-            .OrderByDescending(item => item.EffectiveFrom)
-            .FirstOrDefaultAsync(ct);
-        if (existing?.EffectiveFrom == request.EffectiveFrom)
-        {
-            existing.AttendancePolicyId = request.AttendancePolicyId;
-            existing.EffectiveTo = request.EffectiveTo;
-        }
-        else
-        {
-            if (existing is not null) existing.EffectiveTo = request.EffectiveFrom;
-            _db.AttendancePolicyAssignments.Add(new AttendancePolicyAssignment
-            {
-                AttendancePolicyId = request.AttendancePolicyId,
-                EmployeeId = request.EmployeeId,
-                ShiftTemplateId = request.ShiftTemplateId,
-                EffectiveFrom = request.EffectiveFrom,
-                EffectiveTo = request.EffectiveTo
-            });
-        }
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true });
+        var result = await _mediator.Send(new AssignAttendancePolicyCommand(request.AttendancePolicyId,
+            request.EmployeeId, request.ShiftTemplateId, request.EffectiveFrom, request.EffectiveTo), ct);
+        if (result.Success) return Ok(new { success = true });
+        return result.Errors?.Any(error => error.EndsWith("NOT_FOUND", StringComparison.Ordinal)) == true ? NotFound(result) : BadRequest(result);
     }
 
     [HttpPost("self/shift-swaps")]

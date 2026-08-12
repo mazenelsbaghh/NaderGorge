@@ -186,6 +186,7 @@ export function canAccessAdminRoute(
   user: AdminPolicyUser
 ) {
   if (!hasAdminSurface(user)) return false;
+  if (pathname === '/admin/unauthorized') return true;
   if (isFullAdmin(user)) return true;
   if (!isNavbarAllowed(pathname, user)) return false;
 

@@ -63,10 +63,12 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.ConfigurationOptions = redisConfiguration;
 });
 
-// Singleton ConnectionMultiplexer for raw queue pushing (BulkGenerateCodesCommand)
-builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
-    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConfiguration)
-);
+// All Redis consumers share the lazy factory connection. This avoids opening a
+// process-wide socket while the host is still being assembled and allows the
+// integration route inventory to replace the transport before startup.
+builder.Services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(serviceProvider =>
+    serviceProvider.GetRequiredService<IRedisConnectionFactory>().GetConnection());
 builder.Services.AddSingleton<ILoggerProvider, RedisSystemLogProvider>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -102,7 +104,6 @@ builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportExpo
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IStudentLedgerExportService, NaderGorge.Infrastructure.Services.StudentLedgerExportService>();
 
 // ---------- Redis ----------
-builder.Services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
 builder.Services.AddSingleton<IUserSecurityStateCache, RedisUserSecurityStateCache>();
 builder.Services.AddScoped<IUserSecurityStateSource, EfUserSecurityStateSource>();
 builder.Services.AddScoped<IUserSecurityStateResolver, UserSecurityStateResolver>();
@@ -230,6 +231,25 @@ builder.Services.AddSignalR()
         options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("MassarSignalR");
     });
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
+builder.Services.AddHostedService<AdminAIRecoveryBackgroundService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIAccessGate, NaderGorge.Infrastructure.Services.AdminAI.AdminAIAccessGate>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIRecoveryService, NaderGorge.Infrastructure.Services.AdminAI.AdminAIRecoveryService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalOperationReconciler, NaderGorge.Infrastructure.Services.AdminAI.AdminAIExternalOperationReconciler>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIConversationService, NaderGorge.Application.Features.AdminAI.Commands.AdminAIConversationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAITurnOrchestrator, NaderGorge.Infrastructure.Services.AdminAI.AdminAITurnOrchestrator>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAITurnCompletionService, NaderGorge.Infrastructure.Services.AdminAI.AdminAITurnCompletionService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadExecutor, NaderGorge.Infrastructure.Services.AdminAI.AdminAIReadCapabilityExecutor>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIProposalBuilder, NaderGorge.Infrastructure.Services.AdminAI.AdminAIProposalBuilder>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIActionExecutor, NaderGorge.Infrastructure.Services.AdminAI.AdminAIActionExecutor>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIConfirmationChallengeService, NaderGorge.Infrastructure.Services.AdminAI.AdminAIConfirmationChallengeService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAISecureInputService, NaderGorge.Infrastructure.Services.AdminAI.AdminAISecureInputService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Commands.AdminAIProposalCommands>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Queries.AdminAIAuditQueries>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIAuditWriter, NaderGorge.Infrastructure.Services.AdminAI.AdminAIAuditWriter>();
+builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAISensitiveDataPolicy, NaderGorge.Application.Features.AdminAI.Security.AdminAISensitiveDataPolicy>();
+builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIDataProtector, NaderGorge.Infrastructure.Services.AdminAI.AdminAIDataProtector>();
+builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAICapabilityRegistry>(_ =>
+    new NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry([]));
 builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
 builder.Services.AddHostedService<LiveSupportAIRecoveryBackgroundService>();
 builder.Services.AddHostedService<RechargeRequestExpiryBackgroundService>();
@@ -354,6 +374,19 @@ builder.Services.AddCors(options =>
     });
 });
 
+if (builder.Configuration.GetValue("AdminAI:Enabled", false))
+{
+    var callbackSecret = builder.Configuration["AdminAI:CallbackSecret"];
+    if (string.IsNullOrWhiteSpace(callbackSecret) || callbackSecret.Length < 32)
+        throw new InvalidOperationException("AdminAI:CallbackSecret must contain at least 32 characters when AdminAI is enabled.");
+    var hmacValue = builder.Configuration["AdminAI:HmacKey"];
+    byte[] hmacKey;
+    try { hmacKey = Convert.FromBase64String(hmacValue ?? string.Empty); }
+    catch (FormatException exception) { throw new InvalidOperationException("AdminAI:HmacKey must be valid base64 when AdminAI is enabled.", exception); }
+    if (hmacKey.Length < 32)
+        throw new InvalidOperationException("AdminAI:HmacKey must contain at least 256 bits when AdminAI is enabled.");
+}
+
 var app = builder.Build();
 
 // ---------- Middleware Pipeline ----------
@@ -411,3 +444,5 @@ if (app.Environment.EnvironmentName != "E2e")
 }
 
 app.Run();
+
+public partial class Program;

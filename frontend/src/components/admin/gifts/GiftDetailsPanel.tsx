@@ -10,6 +10,11 @@ export function GiftDetailsPanel({ gift, onChanged }: { gift: GiftDetailsDto; on
   const [showRevoke, setShowRevoke] = useState(false);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const valueLabel = gift.originalValue == null
+    ? `${gift.recipients.reduce((sum, item) => sum + item.usesConsumed, 0)} استخدام`
+    : gift.availableValue == null
+      ? `إجمالي ${gift.originalValue} ج.م`
+      : `${gift.availableValue} / ${gift.originalValue} ج.م متاح`;
 
   const revoke = async () => {
     if (!reason.trim()) return toast.error('سبب الإلغاء مطلوب.');
@@ -27,7 +32,7 @@ export function GiftDetailsPanel({ gift, onChanged }: { gift: GiftDetailsDto; on
       <div><small className="text-[var(--admin-muted)]">الهدف</small><strong className="mt-1 block text-[var(--admin-text)]">{gift.targetName}</strong><span className="text-xs text-[var(--admin-muted)]">{giftTargetLabels[gift.targetType]}</span></div>
       <div><small className="text-[var(--admin-muted)]">الحالة</small><div className="mt-2"><GiftStatusBadge status={gift.status} /></div></div>
       <div><small className="text-[var(--admin-muted)]">المُصدر</small><strong className="mt-1 block text-[var(--admin-text)]">{gift.issuerName}</strong></div>
-      <div><small className="text-[var(--admin-muted)]">الاستخدام/القيمة</small><strong className="mt-1 block text-[var(--admin-text)]">{gift.amount == null ? `${gift.recipients.reduce((sum, item) => sum + item.usesConsumed, 0)} استخدام` : `${gift.availableAmount} ج.م متاح`}</strong></div>
+      <div><small className="text-[var(--admin-muted)]">الاستخدام/القيمة</small><strong className="mt-1 block text-[var(--admin-text)]">{valueLabel}</strong></div>
       <div className="md:col-span-2 lg:col-span-4"><small className="text-[var(--admin-muted)]">سبب الإصدار</small><p className="mt-1 text-sm font-medium text-[var(--admin-text)]">{gift.reason}</p></div>
     </section>
 

@@ -1,12 +1,9 @@
-using System.Data;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Extensions;
-using NaderGorge.Application.Services;
-using NaderGorge.Domain.Entities;
+using NaderGorge.Application.Features.Admin.TeacherFinanceCenter;
 using NaderGorge.Domain.Enums;
-using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
@@ -16,83 +13,35 @@ namespace NaderGorge.API.Controllers;
 [Authorize(Roles = "Admin")]
 public sealed class AdminTeacherCodeFinanceController : ControllerBase
 {
-    private readonly IAppDbContext _db;
-    private readonly CodeGroupFinancialAccountingService _deliveryAccounting;
+    private readonly ISender _sender;
 
-    public AdminTeacherCodeFinanceController(IAppDbContext db, CodeGroupFinancialAccountingService deliveryAccounting)
-        => (_db, _deliveryAccounting) = (db, deliveryAccounting);
+    public AdminTeacherCodeFinanceController(ISender sender) => _sender = sender;
 
     [HttpPut("{codeGroupId:guid}/financial-terms")]
     public async Task<IActionResult> SetFinancialTerms(Guid codeGroupId, [FromBody] UpsertCodeGroupFinancialTermsDto dto, CancellationToken ct)
     {
-        if (dto.Trigger is not (TeacherAgreementTrigger.CodeDelivery or TeacherAgreementTrigger.CodeActivation))
-            return BadRequest(new { success = false, message = "توقيت الحساب غير صالح" });
-        var group = await _db.CodeGroups.FirstOrDefaultAsync(x => x.Id == codeGroupId, ct);
-        if (group == null) return NotFound(new { success = false, message = "دفعة الأكواد غير موجودة" });
-        if (group.CodeType == CodeType.Balance) return BadRequest(new { success = false, message = "أكواد الرصيد لا تنشئ استحقاق مدرس" });
-        if (group.AccountingRecordedAt != null)
-            return Conflict(new { success = false, message = "لا يمكن تغيير شروط دفعة تم احتسابها بالفعل" });
-
-        if (dto.AgreementId.HasValue)
-        {
-            var validAgreement = group.TeacherId.HasValue && await _db.TeacherFinancialAgreements.AnyAsync(x =>
-                x.Id == dto.AgreementId.Value && x.TeacherId == group.TeacherId.Value && x.IsActive && x.Trigger == dto.Trigger, ct);
-            if (!validAgreement) return BadRequest(new { success = false, message = "الاتفاق المحدد لا يخص مدرس الدفعة أو توقيتها" });
-        }
-
-        var terms = await _db.CodeGroupFinancialTerms.FirstOrDefaultAsync(x => x.CodeGroupId == codeGroupId, ct);
-        if (terms == null)
-        {
-            terms = new CodeGroupFinancialTerms { Id = Guid.NewGuid(), CodeGroupId = codeGroupId };
-            _db.CodeGroupFinancialTerms.Add(terms);
-        }
-        terms.Trigger = dto.Trigger;
-        terms.AgreementId = dto.AgreementId;
-        terms.Recipient = dto.Recipient?.Trim();
-        terms.UpdatedByUserId = User.RequireUserId();
-        terms.UpdatedAt = DateTime.UtcNow;
-        // Preserve legacy consumers while preventing the legacy immediate generation path.
-        group.AccountingTiming = dto.Trigger == TeacherAgreementTrigger.CodeDelivery
-            ? CodeAccountingTiming.Immediate : CodeAccountingTiming.OnActivation;
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { success = true });
+        var response = await _sender.Send(new SetCodeGroupFinancialTermsCommand(User.RequireUserId(), codeGroupId,
+            dto.Trigger, dto.AgreementId, dto.Recipient), ct);
+        return ToActionResult(response);
     }
 
     [HttpPost("{codeGroupId:guid}/confirm-delivery")]
     public async Task<IActionResult> ConfirmDelivery(Guid codeGroupId, [FromBody] ConfirmCodeGroupDeliveryDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.Recipient))
-            return BadRequest(new { success = false, message = "يجب إدخال مستلم دفعة الأكواد" });
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var group = await _db.CodeGroups.FirstOrDefaultAsync(x => x.Id == codeGroupId, ct);
-        if (group == null) return NotFound(new { success = false, message = "دفعة الأكواد غير موجودة" });
-        if (group.CodeType == CodeType.Balance || !group.TeacherId.HasValue)
-            return BadRequest(new { success = false, message = "هذه الدفعة لا تحتوي على استحقاق مدرس للتأكيد" });
-        var terms = await _db.CodeGroupFinancialTerms.FirstOrDefaultAsync(x => x.CodeGroupId == codeGroupId, ct);
-        if (terms?.Trigger != TeacherAgreementTrigger.CodeDelivery)
-            return Conflict(new { success = false, message = "هذه الدفعة مضبوطة للحساب عند تفعيل كل كود" });
-
-        var existing = await _db.CodeGroupDeliveryConfirmations.FirstOrDefaultAsync(x => x.CodeGroupId == codeGroupId, ct);
-        if (existing != null)
-        {
-            await transaction.CommitAsync(ct);
-            return Ok(new { success = true, data = new { existing.Id, existing.ConfirmedAt }, alreadyConfirmed = true });
-        }
-
-        var occurredAt = dto.DeliveredAt?.ToUniversalTime() ?? DateTime.UtcNow;
-        var confirmation = new CodeGroupDeliveryConfirmation
-        {
-            Id = Guid.NewGuid(), CodeGroupId = codeGroupId, Recipient = dto.Recipient.Trim(),
-            AttachmentUrl = string.IsNullOrWhiteSpace(dto.AttachmentUrl) ? null : dto.AttachmentUrl.Trim(),
-            ConfirmedByUserId = User.RequireUserId(), ConfirmedAt = occurredAt,
-            IdempotencyKey = $"code-delivery:{codeGroupId}"
-        };
-        _db.CodeGroupDeliveryConfirmations.Add(confirmation);
-        await _deliveryAccounting.RecordDeliveryAsync(group, terms, occurredAt, ct);
-        await _db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
-        return Ok(new { success = true, data = new { confirmation.Id, confirmation.ConfirmedAt }, alreadyConfirmed = false });
+        var response = await _sender.Send(new ConfirmCodeGroupDeliveryCommand(User.RequireUserId(), codeGroupId,
+            dto.Recipient, dto.AttachmentUrl, dto.DeliveredAt), ct);
+        return response.Status == TeacherFinanceCommandStatus.Success
+            ? Ok(new { success = true, data = new { id = response.Id, confirmedAt = response.OccurredAt }, alreadyConfirmed = response.AlreadyApplied })
+            : ToActionResult(response);
     }
+
+    private IActionResult ToActionResult(TeacherFinanceCommandResult response) => response.Status switch
+    {
+        TeacherFinanceCommandStatus.Success => Ok(new { success = true }),
+        TeacherFinanceCommandStatus.NotFound => NotFound(new { success = false, message = response.Message }),
+        TeacherFinanceCommandStatus.Conflict => Conflict(new { success = false, message = response.Message }),
+        _ => BadRequest(new { success = false, message = response.Message })
+    };
 }
 
 public record UpsertCodeGroupFinancialTermsDto(TeacherAgreementTrigger Trigger, Guid? AgreementId, string? Recipient);

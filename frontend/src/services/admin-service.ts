@@ -2044,10 +2044,21 @@ export const adminService = {
 
   getTeacherStudents: async (teacherId: string) => {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>(
-        `/admin/teachers/${teacherId}/students`
-      );
-      return res.data?.data ?? [];
+      const pageSize = 100;
+      const students: any[] = [];
+      for (let page = 1; ; page += 1) {
+        const res = await apiClient.get<ApiResponse<any>>(
+          `/admin/teachers/${teacherId}/students`,
+          { params: { page, pageSize } }
+        );
+        const payload = res.data?.data;
+        if (Array.isArray(payload)) return payload;
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        students.push(...items);
+        const totalCount = typeof payload?.totalCount === 'number' ? payload.totalCount : students.length;
+        if (items.length < pageSize || students.length >= totalCount) break;
+      }
+      return students;
     } catch {
       return [];
     }
@@ -2223,7 +2234,7 @@ export interface ContentSubscriberDto {
   isActive: boolean;
   avatarSlug?: string;
   purchaseType: string;
-  purchaseMethod: 'Code' | 'Gift' | 'Balance';
+  purchaseMethod: 'Code' | 'Gift' | 'Balance' | 'Direct';
 }
 
 export interface ContentSubscribersPagedResult {

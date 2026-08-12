@@ -76,6 +76,14 @@ public sealed class HrEmployeesController : ControllerBase
         var result = await _mediator.Send(new CompleteEmployeeExitCommand(employeeId, request.TerminationDate, User.RequireUserId()), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpDelete("{employeeId:guid}")]
+    [HasPermission(HrPermissions.EmployeeManage)]
+    public async Task<IActionResult> DeleteEmployee(Guid employeeId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new DeleteEmployeeProfileCommand(employeeId, User.RequireUserId()), ct);
+        return result.Success ? Ok(result) : Conflict(result);
+    }
 }
 
 public sealed record CreateContractRequest(string ContractNumber, EmploymentContractType Type, DateOnly StartDate,

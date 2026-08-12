@@ -149,7 +149,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   const overviewStats: OverviewStat[] = [];
   if (stats) {
     overviewStats.push(
-      { label: 'الطلاب المشتركين', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
+      { label: 'طلاب اقتنوا محتوى داخل الباقة (تاريخي)', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
       { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' },
       { label: 'الأقسام', value: stats.sectionsCount ?? 0, icon: Layers, tone: 'muted' },
       { label: 'الحصص', value: stats.lessonsCount ?? 0, icon: BookOpenText, tone: 'muted' },

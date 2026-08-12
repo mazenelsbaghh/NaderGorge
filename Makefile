@@ -4,7 +4,7 @@
         logs logs-frontend logs-landing logs-student logs-admin logs-backend logs-worker logs-db logs-redis \
         shell-frontend shell-landing shell-student shell-admin shell-backend shell-worker shell-db \
         verify verify-backend verify-frontend verify-worker verify-docker verify-e2e verify-surfaces verify-surfaces-static \
-        verify-performance-budgets verify-performance-budget-contracts \
+        verify-performance-budgets verify-performance-budget-contracts verify-admin-ai-capabilities \
         migrate migrate-add \
         ops-plan ops-check ops-build ops-fast ops-db-guard ops-db-migration \
         prod-status prod-audit prod-logs prod-plan prod-db-inventory \
@@ -190,7 +190,12 @@ verify-audit-remediation: ## Run audit remediation verification commands
 	node scripts/generate-endpoint-inventory.mjs --check
 	docker compose config -q
 
-verify: verify-backend verify-frontend verify-worker verify-docker verify-performance-budgets ## Run the repository verification contract
+verify: verify-backend verify-frontend verify-worker verify-docker verify-performance-budgets verify-admin-ai-capabilities ## Run the repository verification contract
+
+verify-admin-ai-capabilities: ## Fail when the sealed Admin AI endpoint, route, or capability baseline drifts
+	node frontend/scripts/generate-admin-ai-capability-baseline.mjs --check
+	node scripts/generate-admin-ai-capability-baseline.mjs --check
+	python3 -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py
 
 verify-performance-budget-contracts: ## Run local performance budget and production cache/matrix contracts
 	cd frontend && node --test scripts/check-route-performance-budgets.test.mjs

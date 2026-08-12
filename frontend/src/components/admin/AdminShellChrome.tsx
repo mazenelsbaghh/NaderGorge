@@ -33,6 +33,7 @@ import {
   PhoneCall,
   Video,
   BarChart3,
+  Bot,
   Library,
   GraduationCap,
   Coins,
@@ -91,6 +92,7 @@ import { canAccessAdminRoute } from '@/packages/admin/route-permissions';
 
 export type AdminShellRoute =
   | '/admin'
+  | '/admin/ai-agent'
   | '/admin/users'
   | '/admin/students'
   | '/admin/assistants'
@@ -160,6 +162,7 @@ export type AdminShellRoute =
   | '/admin/reports'
   | '/admin/media'
   | '/admin/live-support'
+  | '/admin/live-support/ratings'
   | '/admin/live-support/ai'
   | '/admin/settings'
   | '/admin/system-logs'
@@ -306,6 +309,12 @@ const HR_NAV_ITEMS = [
 ] satisfies AdminNavItem[];
 
 const navItems: AdminNavItem[] = [
+  {
+    href: '/admin/ai-agent',
+    label: 'وكيل الإدارة AI',
+    icon: Bot,
+    adminOnly: true,
+  },
   {
     href: '/admin/comments',
     label: 'تعليقات الطلاب',
@@ -530,6 +539,12 @@ const navItems: AdminNavItem[] = [
     permission: 'live_support.manage',
   },
   {
+    href: '/admin/live-support/ratings',
+    label: 'تقييمات الدعم',
+    icon: Star,
+    permission: 'live_support.manage',
+  },
+  {
     href: '/admin/live-support/ai',
     label: 'الدعم الذكي AI',
     icon: Sparkles,
@@ -607,6 +622,12 @@ export function getAdminShellDefaults(
 
 const GROUP_CONFIG = [
   {
+    id: 'admin_ai_agent',
+    label: 'وكيل الإدارة AI',
+    icon: Bot,
+    hrefs: ['/admin/ai-agent'],
+  },
+  {
     id: 'users',
     label: 'شؤون الأعضاء',
     icon: Users,
@@ -664,7 +685,7 @@ const GROUP_CONFIG = [
     id: 'crm_chat',
     label: 'الاتصال والتواصل',
     icon: PhoneCall,
-    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat', '/admin/live-support', '/admin/live-support/ai'],
+    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat', '/admin/live-support', '/admin/live-support/ratings', '/admin/live-support/ai'],
   },
   {
     id: 'reports',
@@ -681,6 +702,7 @@ const GROUP_CONFIG = [
 ];
 
 const MOBILE_QUICK_ROUTE_ORDER: AdminShellRoute[] = [
+  '/admin/ai-agent',
   '/admin/hr',
   '/admin/platform-finance',
   '/admin/content',

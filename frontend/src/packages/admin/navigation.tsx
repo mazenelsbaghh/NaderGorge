@@ -7,6 +7,7 @@ import {
   MessageSquareText,
   Shield,
   Sparkles,
+  Star,
   UserCog,
   Users,
   Wrench,
@@ -19,6 +20,7 @@ import {
   Gift,
   BadgePercent,
   BarChart3,
+  Bot,
   Tags,
   Settings,
   MessageSquarePlus,
@@ -31,9 +33,11 @@ export interface AdminRootLink {
   title: string;
   body: string;
   icon: LucideIcon;
+  adminOnly?: boolean;
 }
 
 export const adminMenuItems = [
+  { label: 'وكيل الإدارة AI', href: '/admin/ai-agent', icon: <Bot className="h-4 w-4" />, adminOnly: true },
   { label: 'المستندات والمواد', href: '/admin/subjects', icon: <Library className="h-4 w-4" />, permission: 'content.manage' },
   { label: 'المعلمين', href: '/admin/teachers', icon: <GraduationCap className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'الطلاب', href: '/admin/students', icon: <Users className="h-4 w-4" />, permission: 'users.manage' },
@@ -54,6 +58,7 @@ export const adminMenuItems = [
   { label: 'مطابقة الشحن', href: '/admin/recharge-verification', icon: <Shield className="h-4 w-4" />, permission: 'payments.manage' },
   { label: 'التواصل الداخلي', href: '/admin/chat', icon: <MessageSquareText className="h-4 w-4" /> },
   { label: 'الدعم المباشر', href: '/admin/live-support', icon: <Headphones className="h-4 w-4" />, permission: 'live_support.manage' },
+  { label: 'تقييمات الدعم', href: '/admin/live-support/ratings', icon: <Star className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مركز التقارير', href: '/admin/reports', icon: <BarChart3 className="h-4 w-4" />, permission: 'reports.manage' },
   { label: 'سجل النظام', href: '/admin/system-logs', icon: <ScrollText className="h-4 w-4" />, adminOnly: true },
@@ -89,6 +94,13 @@ export const adminAllNavigationRoutePermissions = [
 ];
 
 export const adminRootLinks: AdminRootLink[] = [
+  {
+    href: '/admin/ai-agent',
+    title: 'وكيل الإدارة AI',
+    body: 'اسأل عن بيانات المنصة، وراجع أي إجراء مقترح قبل تأكيده وتنفيذه.',
+    icon: Bot,
+    adminOnly: true,
+  },
   {
     href: '/admin/subjects',
     title: 'المواد الدراسية',

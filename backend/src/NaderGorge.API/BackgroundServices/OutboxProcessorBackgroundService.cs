@@ -179,7 +179,19 @@ public class OutboxProcessorBackgroundService : BackgroundService
         IServiceProvider services,
         CancellationToken ct)
     {
-        if (LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
+        if (AdminAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
+        {
+            var jobEnqueuer = services.GetService<IJobEnqueuer>()
+                ?? throw new InvalidOperationException("Admin AI queue dispatcher is unavailable.");
+            await AdminAIOutboxQueueDispatcher.DispatchAsync(@event, jobEnqueuer);
+        }
+        else if (AdminAIOutboxQueueDispatcher.IsRealtimeEvent(@event))
+        {
+            var envelope = AdminAIOutboxQueueDispatcher.ValidateRealtimeEnvelope(@event);
+            await _hubContext.Clients.Group($"User_{@event.TargetUserId}")
+                .SendAsync("AdminAIEvent", envelope, ct);
+        }
+        else if (LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
         {
             var jobEnqueuer = services.GetService<IJobEnqueuer>()
                 ?? throw new InvalidOperationException("Live-support AI queue dispatcher is unavailable.");
@@ -507,4 +519,44 @@ public static class LiveSupportAIOutboxQueueDispatcher
         Guid TurnId,
         Guid ConversationId,
         DateTime QueuedAt);
+}
+
+public static class AdminAIOutboxQueueDispatcher
+{
+    public const string QueueEventType = "AdminAITurnQueued";
+    public const string RealtimeEventType = "AdminAIRealtime";
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    public static bool IsTurnQueueEvent(OutboxEvent value) => string.Equals(value.Type, QueueEventType, StringComparison.Ordinal);
+    public static bool IsRealtimeEvent(OutboxEvent value) => string.Equals(value.Type, RealtimeEventType, StringComparison.Ordinal);
+
+    public static async Task DispatchAsync(OutboxEvent value, IJobEnqueuer jobs)
+    {
+        var payload = JsonSerializer.Deserialize<TurnQueuePayload>(value.PayloadJson, JsonOptions)
+            ?? throw new InvalidOperationException("Admin AI queue payload is empty.");
+        if (payload.SchemaVersion != "1" || payload.TurnId == Guid.Empty || payload.ConversationId == Guid.Empty)
+            throw new InvalidOperationException("Admin AI queue payload is invalid.");
+        await jobs.EnqueueJobAsync("ai-admin-agent-turns", "respond", new
+        {
+            schemaVersion = payload.SchemaVersion,
+            turnId = payload.TurnId,
+            conversationId = payload.ConversationId,
+            queuedAt = payload.QueuedAt
+        });
+    }
+
+    public static object ValidateRealtimeEnvelope(OutboxEvent value)
+    {
+        if (string.IsNullOrWhiteSpace(value.TargetUserId) || value.TargetGroup is not null)
+            throw new InvalidOperationException("Admin AI realtime events must target exactly one owner.");
+        var payload = JsonSerializer.Deserialize<RealtimePayload>(value.PayloadJson, JsonOptions)
+            ?? throw new InvalidOperationException("Admin AI realtime payload is empty.");
+        if (payload.SchemaVersion != "1" || payload.EventId == Guid.Empty || payload.ConversationId == Guid.Empty ||
+            payload.Sequence < 1 || payload.Type is not ("snapshot_changed" or "access_revoked"))
+            throw new InvalidOperationException("Admin AI realtime envelope is invalid.");
+        return payload;
+    }
+
+    public sealed record TurnQueuePayload(string SchemaVersion, Guid TurnId, Guid ConversationId, DateTime QueuedAt);
+    public sealed record RealtimePayload(string SchemaVersion, Guid EventId, Guid ConversationId, Guid? TurnId, Guid? ProposalId, long Sequence, string Type, DateTime OccurredAt);
 }

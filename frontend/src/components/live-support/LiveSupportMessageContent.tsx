@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { AudioLines, Check, CheckCheck, ImageIcon, LoaderCircle } from 'lucide-react';
 import { liveSupportService, type LiveSupportMessage } from '@/services/live-support-service';
-import { formatCairoDateTime } from '@/lib/cairo-time';
+import { formatCairoTimestamp } from '@/lib/cairo-time';
 
 interface LiveSupportMessageContentProps {
   message: LiveSupportMessage;
@@ -18,7 +18,7 @@ export function LiveSupportMessageMeta({ message, audience }: LiveSupportMessage
   const label = message.readAt ? 'تمت القراءة' : message.deliveredAt ? 'تم الوصول' : 'تم الإرسال';
   return <span className="mt-1 flex items-center justify-end gap-1 text-sm opacity-75" dir="rtl">
     {message.editedAt && !message.deletedAt ? <span>معدّلة</span> : null}
-    <time dateTime={message.sentAt}>{formatCairoDateTime(message.sentAt, { hour: '2-digit', minute: '2-digit' })}</time>
+    <time dateTime={message.sentAt}>{formatCairoTimestamp(message.sentAt)}</time>
     {outgoing && (message.readAt ? <CheckCheck size={14} className="text-sky-400" aria-label={label}/> : message.deliveredAt ? <CheckCheck size={14} aria-label={label}/> : <Check size={14} aria-label={label}/>)}
   </span>;
 }

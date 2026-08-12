@@ -1,0 +1,6830 @@
+{
+  "schemaVersion": 1,
+  "root": "frontend/src/app/admin",
+  "reachableFileCount": 417,
+  "reachableFiles": [
+    {
+      "file": "frontend/src/app/admin/AdminRootPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/admins/AdminAdminsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/admins/page.tsx",
+      "route": "/admin/admins"
+    },
+    {
+      "file": "frontend/src/app/admin/ai-agent/AdminAiAgentPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/ai-agent/page.tsx",
+      "route": "/admin/ai-agent"
+    },
+    {
+      "file": "frontend/src/app/admin/ai-monitor/AIMonitorPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/ai-monitor/page.tsx",
+      "route": "/admin/ai-monitor"
+    },
+    {
+      "file": "frontend/src/app/admin/assistants/[id]/AssistantProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/assistants/[id]/page.tsx",
+      "route": "/admin/assistants/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/assistants/AdminAssistantsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/assistants/page.tsx",
+      "route": "/admin/assistants"
+    },
+    {
+      "file": "frontend/src/app/admin/chat/AdminChatPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/chat/page.tsx",
+      "route": "/admin/chat"
+    },
+    {
+      "file": "frontend/src/app/admin/codes/[groupId]/CodeGroupDetailsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/codes/[groupId]/page.tsx",
+      "route": "/admin/codes/:groupId"
+    },
+    {
+      "file": "frontend/src/app/admin/codes/AdminCodesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/codes/page.tsx",
+      "route": "/admin/codes"
+    },
+    {
+      "file": "frontend/src/app/admin/codes/templates/CodeTemplatesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/codes/templates/page.tsx",
+      "route": "/admin/codes/templates"
+    },
+    {
+      "file": "frontend/src/app/admin/comments/AdminCommentsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/comments/page.tsx",
+      "route": "/admin/comments"
+    },
+    {
+      "file": "frontend/src/app/admin/community/AdminCommunityPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/community/page.tsx",
+      "route": "/admin/community"
+    },
+    {
+      "file": "frontend/src/app/admin/content/AdminContentPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/add-question/AddExamQuestionPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/add-question/page.tsx",
+      "route": "/admin/content/exams/:id/add-question"
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/dashboard/ExamDashboardPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/dashboard/page.tsx",
+      "route": "/admin/content/exams/:id/dashboard"
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/ExamProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/exams/[id]/page.tsx",
+      "route": "/admin/content/exams/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/homework/[id]/add-question/AddHomeworkQuestionPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/homework/[id]/add-question/page.tsx",
+      "route": "/admin/content/homework/:id/add-question"
+    },
+    {
+      "file": "frontend/src/app/admin/content/homework/[id]/HomeworkProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/homework/[id]/page.tsx",
+      "route": "/admin/content/homework/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/lessons/[id]/LessonProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/lessons/[id]/page.tsx",
+      "route": "/admin/content/lessons/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/packages/[id]/PackageProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/packages/[id]/page.tsx",
+      "route": "/admin/content/packages/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/page.tsx",
+      "route": "/admin/content"
+    },
+    {
+      "file": "frontend/src/app/admin/content/sections/[id]/page.tsx",
+      "route": "/admin/content/sections/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/sections/[id]/SectionProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/terms/[id]/page.tsx",
+      "route": "/admin/content/terms/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/content/terms/[id]/TermProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/content/video-types/page.tsx",
+      "route": "/admin/content/video-types"
+    },
+    {
+      "file": "frontend/src/app/admin/content/video-types/VideoTypesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/crm/AdminCrmPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/crm/page.tsx",
+      "route": "/admin/crm"
+    },
+    {
+      "file": "frontend/src/app/admin/finance/AdminFinancePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/finance/page.tsx",
+      "route": "/admin/finance"
+    },
+    {
+      "file": "frontend/src/app/admin/forms/[id]/edit/EditFormPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/forms/[id]/edit/page.tsx",
+      "route": "/admin/forms/:id/edit"
+    },
+    {
+      "file": "frontend/src/app/admin/forms/[id]/submissions/page.tsx",
+      "route": "/admin/forms/:id/submissions"
+    },
+    {
+      "file": "frontend/src/app/admin/forms/[id]/submissions/SubmissionsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/forms/AdminFormsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/forms/new/NewFormPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/forms/new/page.tsx",
+      "route": "/admin/forms/new"
+    },
+    {
+      "file": "frontend/src/app/admin/forms/page.tsx",
+      "route": "/admin/forms"
+    },
+    {
+      "file": "frontend/src/app/admin/gifts/[id]/GiftDetailsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/gifts/[id]/page.tsx",
+      "route": "/admin/gifts/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/gifts/GiftsLedgerPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/gifts/new/page.tsx",
+      "route": "/admin/gifts/new"
+    },
+    {
+      "file": "frontend/src/app/admin/gifts/page.tsx",
+      "route": "/admin/gifts"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/approvals/HrApprovalsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/approvals/page.tsx",
+      "route": "/admin/hr/approvals"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-adjustments/AttendanceAdjustmentsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-adjustments/page.tsx",
+      "route": "/admin/hr/attendance-adjustments"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-corrections/HrAttendanceCorrectionsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-corrections/page.tsx",
+      "route": "/admin/hr/attendance-corrections"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-policies/HrAttendancePoliciesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/attendance-policies/page.tsx",
+      "route": "/admin/hr/attendance-policies"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/breaks/HrBreaksPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/breaks/page.tsx",
+      "route": "/admin/hr/breaks"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/cases/HrCasesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/cases/page.tsx",
+      "route": "/admin/hr/cases"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/employees/[id]/HrEmployeeProfileClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/employees/[id]/page.tsx",
+      "route": "/admin/hr/employees/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/HrAdminPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/leave/HrLeavePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/leave/page.tsx",
+      "route": "/admin/hr/leave"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/lifecycle/HrLifecyclePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/lifecycle/page.tsx",
+      "route": "/admin/hr/lifecycle"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/migration/HrMigrationPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/migration/page.tsx",
+      "route": "/admin/hr/migration"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/my-attendance/MyAttendancePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/my-attendance/page.tsx",
+      "route": "/admin/hr/my-attendance"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/organization/HrOrganizationPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/organization/page.tsx",
+      "route": "/admin/hr/organization"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/page.tsx",
+      "route": "/admin/hr"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/payroll/HrPayrollPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/payroll/page.tsx",
+      "route": "/admin/hr/payroll"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/performance/HrPerformancePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/performance/page.tsx",
+      "route": "/admin/hr/performance"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/recruitment/HrRecruitmentPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/recruitment/page.tsx",
+      "route": "/admin/hr/recruitment"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/reports/HrReportsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/reports/page.tsx",
+      "route": "/admin/hr/reports"
+    },
+    {
+      "file": "frontend/src/app/admin/hr/shifts/HrShiftsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/hr/shifts/page.tsx",
+      "route": "/admin/hr/shifts"
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/ai/AdminAISupportPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/ai/page.tsx",
+      "route": "/admin/live-support/ai"
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/page.tsx",
+      "route": "/admin/live-support"
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/ratings/AdminLiveSupportRatingsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/live-support/ratings/page.tsx",
+      "route": "/admin/live-support/ratings"
+    },
+    {
+      "file": "frontend/src/app/admin/media/AdminMediaPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/media/page.tsx",
+      "route": "/admin/media"
+    },
+    {
+      "file": "frontend/src/app/admin/operations/AdminOperationsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/operations/page.tsx",
+      "route": "/admin/operations"
+    },
+    {
+      "file": "frontend/src/app/admin/overrides/AdminOverridesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/overrides/page.tsx",
+      "route": "/admin/overrides"
+    },
+    {
+      "file": "frontend/src/app/admin/page.tsx",
+      "route": "/admin"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/expenses/page.tsx",
+      "route": "/admin/platform-finance/expenses"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/migration/page.tsx",
+      "route": "/admin/platform-finance/migration"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/operations/page.tsx",
+      "route": "/admin/platform-finance/operations"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/page.tsx",
+      "route": "/admin/platform-finance"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/planning/page.tsx",
+      "route": "/admin/platform-finance/planning"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/refunds/page.tsx",
+      "route": "/admin/platform-finance/refunds"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/reports/page.tsx",
+      "route": "/admin/platform-finance/reports"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/teachers/[teacherId]/page.tsx",
+      "route": "/admin/platform-finance/teachers/:teacherId"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/treasury/page.tsx",
+      "route": "/admin/platform-finance/treasury"
+    },
+    {
+      "file": "frontend/src/app/admin/platform-finance/wallets/page.tsx",
+      "route": "/admin/platform-finance/wallets"
+    },
+    {
+      "file": "frontend/src/app/admin/popup/AdminPopupPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/popup/page.tsx",
+      "route": "/admin/popup"
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/[id]/page.tsx",
+      "route": "/admin/public-exams/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/[id]/PublicExamProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/[id]/results/page.tsx",
+      "route": "/admin/public-exams/:id/results"
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/[id]/results/PublicExamResultsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/AdminPublicExamsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/public-exams/page.tsx",
+      "route": "/admin/public-exams"
+    },
+    {
+      "file": "frontend/src/app/admin/questions/AdminQuestionsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/questions/page.tsx",
+      "route": "/admin/questions"
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-conflicts/page.tsx",
+      "route": "/admin/recharge-conflicts"
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-conflicts/RechargeConflictsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-shift-review/page.tsx",
+      "route": "/admin/recharge-shift-review"
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-shift-review/RechargeShiftReviewPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-verification/page.tsx",
+      "route": "/admin/recharge-verification"
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-verification/RechargeMatchDiagnosisCell.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/recharge-verification/RechargeVerificationPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/reports/AdminReportsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/reports/page.tsx",
+      "route": "/admin/reports"
+    },
+    {
+      "file": "frontend/src/app/admin/sales/[couponId]/CouponProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/sales/[couponId]/page.tsx",
+      "route": "/admin/sales/:couponId"
+    },
+    {
+      "file": "frontend/src/app/admin/sales/AdminSalesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/sales/page.tsx",
+      "route": "/admin/sales"
+    },
+    {
+      "file": "frontend/src/app/admin/settings/AdminSettingsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/settings/page.tsx",
+      "route": "/admin/settings"
+    },
+    {
+      "file": "frontend/src/app/admin/shared-packages/page.tsx",
+      "route": "/admin/shared-packages"
+    },
+    {
+      "file": "frontend/src/app/admin/shared-packages/SharedPackagesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/students/AdminStudentsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/students/page.tsx",
+      "route": "/admin/students"
+    },
+    {
+      "file": "frontend/src/app/admin/subjects/AdminSubjectsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/subjects/page.tsx",
+      "route": "/admin/subjects"
+    },
+    {
+      "file": "frontend/src/app/admin/system-logs/AdminSystemLogsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/system-logs/page.tsx",
+      "route": "/admin/system-logs"
+    },
+    {
+      "file": "frontend/src/app/admin/teacher-finance/page.tsx",
+      "route": "/admin/teacher-finance"
+    },
+    {
+      "file": "frontend/src/app/admin/teacher-finance/TeacherFinanceCenterPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/teachers/[id]/page.tsx",
+      "route": "/admin/teachers/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/teachers/[id]/TeacherProfilePageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/teachers/AdminTeachersPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/teachers/page.tsx",
+      "route": "/admin/teachers"
+    },
+    {
+      "file": "frontend/src/app/admin/unauthorized/page.tsx",
+      "route": "/admin/unauthorized"
+    },
+    {
+      "file": "frontend/src/app/admin/unauthorized/UnauthorizedPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/users/[id]/AdminStudentProfileClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/users/[id]/page.tsx",
+      "route": "/admin/users/:id"
+    },
+    {
+      "file": "frontend/src/app/admin/users/AdminUsersPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/users/components/AddUserDrawer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/users/components/AssistantProfileModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/users/page.tsx",
+      "route": "/admin/users"
+    },
+    {
+      "file": "frontend/src/app/admin/wallet-messages/page.tsx",
+      "route": "/admin/wallet-messages"
+    },
+    {
+      "file": "frontend/src/app/admin/wallet-messages/WalletMessagesPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/wallets/AdminWalletsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/app/admin/wallets/page.tsx",
+      "route": "/admin/wallets"
+    },
+    {
+      "file": "frontend/src/app/admin/watch-requests/page.tsx",
+      "route": "/admin/watch-requests"
+    },
+    {
+      "file": "frontend/src/app/admin/watch-requests/WatchRequestsPageClient.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AcademicScopeSelector.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AddLessonForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AddResourceForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AddSectionForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AddTermForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AddVideoForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/admin-utils.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminBackButton.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminBreadcrumbs.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminConfirmationDialog.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminDataTable.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminPageSkeleton.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminSearchToolbar.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminShellChrome.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminStatCard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminTabBar.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AdminTeacherPhotoUpload.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AttachedExamViewer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AttachedHomeworkViewer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/AttendanceLogTable.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/BunnyCostReports.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ClockInOutWidget.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/CommunityCommentsModerationTable.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/CommunityPostsModerationTable.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentBasicDetailsForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentHierarchyPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentImageUpload.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentInternalCode.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentSubscribersTab.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ContentSummaryPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/EmployeeProfileDrawer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/EntityOverviewDashboard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/FindTheMistakeBuilder.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/gifts/GiftDetailsPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/gifts/GiftIssueForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/gifts/GiftLedgerTable.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/gifts/GiftStatusBadge.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/ImageZoomModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonAIAnalysisTab.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonCommentsModerationTab.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonHomeworkList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonListManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonResourceList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LessonVideoList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/LinkExamForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/OcrQuestionImport.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PackageCodeProfileForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PackageDetailsForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PackageDirectContentPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/ExpenseManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/FinancialReports.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/HistoricalMigrationManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/RefundManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/TeacherFinancialSummary.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/TreasuryManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/platform-finance/WalletFinanceReports.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PlatformFinanceCockpit.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PlatformFinanceMigration.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PlatformFinanceOperations.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/PlatformFinancePlanning.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/QuestionEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/SectionListManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/TermListManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/UnifiedAssessmentBuilder.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/useAdminTheme.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/admin/VideoTypeSelect.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/assistant/AssistantShellChrome.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/assistant/TaskCreateModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/assistant/TaskDetailsModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/chat/ChatContainer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/chat/ChatSidebar.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/chat/ChatWindow.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/codes/CodeTypeSelector.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/codes/QrDisplay.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/crm/CrmCallLogModal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/crm/CrmReportsPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/crm/CrmStudentQueue.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/ConversationInvestigation.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/LiveOperationsBoard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/LiveSupportRatingsPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/StaffConfigurationPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/StaffPerformancePanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIActivityEvidence.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIDataActionSelector.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIDisableControl.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIKnowledgeManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIOverview.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIPolicyEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIPreview.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/ai-admin/AIVerificationPolicyEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/shared/LiveSupportEmptyState.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/shared/LiveSupportSkeleton.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/media/MediaKpiDashboard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/media/MediaPipelineBoard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/media/SocialPlannerView.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/navigation/IntentLink.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/navigation/NavigationFocusManager.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/reports/AdvancedReportsCenter.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/reports/report-catalog.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/teacher/TeacherShellChrome.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/AccessibleOverlay.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/admin-modal.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/animated-theme-toggler.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/button.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/checkbox.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/confirm-dialog.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/dropdown.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/loading-indicator.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/neumorph-button.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/number-field.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/ui/UserAvatar.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/video/PlayerControls.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/data/avatars.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/admin-ai-agent-store.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiActionProposalCard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiAgentWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiAuditEvidence.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiComposer.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiConversationHeader.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiConversationList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiEmptyState.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiErrorState.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiEvidenceDisclosure.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiExecutionResult.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiMessage.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiSecureInputOverlay.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiSkeleton.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiStrongConfirmation.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiTranscript.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/AdminAiTurnStatus.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/admin-ai-agent/useAdminAiAgentController.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/employee/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/employee/useEmployeeQueries.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/attendance/AttendanceCorrectionForm.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/attendance/AttendanceCorrectionReview.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/attendance/AttendanceWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/attendance/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/components/HrStatusBadge.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/governance/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/governance/MigrationConsole.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/governance/WorkforceReports.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/leave/ApprovalDefinitionEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/leave/ApprovalInbox.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/leave/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/leave/LeaveAdministration.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/leave/LeaveWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/payroll/AttendanceAdjustmentRules.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/payroll/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/payroll/PayrollRuleEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/payroll/PayrollRunWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/payroll/PayslipWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/performance/CaseWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/performance/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/performance/PerformanceWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/recruitment/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/recruitment/LifecycleWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/hr/recruitment/RecruitmentBoard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherFinanceCenterWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherFinanceOperationsWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/types.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useAdminAiAgentEvents.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useHasPermission.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useLiveSupportHub.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/usePlatformEvents.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useRootOverscrollBackground.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useShellNavigationState.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useSignalR.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/hooks/useVideoTypes.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/academic-labels.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/admin-ai-agent-client-contract.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/admin-theme-mode.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/api-errors.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/auth-memory.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/auth-storage.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/backend-url.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/cache-invalidation.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/cairo-time.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/client-id.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/conversation-drafts.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/data-changed-event.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/hr-permissions.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/live-support-client-contract.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/navigation-state.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/query-client.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/query-contracts.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/query-keys.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/question-text.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/realtime-invalidation-map.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/realtime-observability.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/recharge-match-diagnosis.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/safe-return-url.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/sanitize-html.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/staff-realtime-scopes.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/utils.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/admin/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/admin/navigation.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/admin/route-permissions.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/brand/index.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/brand/platform-identity.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/packages/surface-runtime/config.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/admin-ai-agent-contract.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/admin-ai-agent-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/admin-gifts-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/admin-sales-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/admin-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/advanced-report-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/api-client.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/assistant-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/chat-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/code-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/content-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/crm-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/finance-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/forms-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/hr-governance-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/hr-payroll-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/hr-performance-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/hr-recruitment-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/hr-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/live-support-ai-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/live-support-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/media-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/platform-finance-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/shared-package-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/student-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/system-logs-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/teacher-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/video-session-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/wallet-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/services/worker-service.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/stores/auth-store.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/stores/live-support-store.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/dev-console.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/dom-shield.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/image-compressor.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/mindmap-downloads.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/phone-utils.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/resolve-media-url.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/utils/url-utils.ts",
+      "route": null
+    }
+  ],
+  "callCount": 523,
+  "calls": [
+    {
+      "method": "DELETE",
+      "path": "/{endpointaudience}/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 180
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/codes/groups/{id}/unused",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1161
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/devices/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1076
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/exams/{examId}/attempts/{attemptId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1832
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/exams/{examId}/questions/{examQuestionId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1826
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/finance/payroll/{payrollId}/adjustments/{adjustmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 279
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/forms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 121
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/packages/{id}/code-profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1313
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/roles/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2029
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/subjects/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 175
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/system-logs/all",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/system-logs-service.ts",
+        "line": 32
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/teachers/{teacherId}/photos/{photoId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1008
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/terms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1338
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/students/{studentId}/notes/{noteId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1939
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/students/{userId}/devices",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1069
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/students/{userId}/devices/{deviceId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1062
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/video-types/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1420
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/videos/{videoId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1515
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/videos/{videoId}/exams/{examId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1723
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/hr/employees/{employeeId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 248
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 288
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 332
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{endpointaudience}/catalog",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{endpointaudience}/definitions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 162
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{endpointaudience}/filter-options",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 152
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{endpointaudience}/student-ledger/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 189
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{scope}/content/summary",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 323
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/{contentType}s/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2190
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/{contentType}s/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2202
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/assistants/{assistantId}/homework-reviews",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2128
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/assistants/{assistantId}/stats",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/assistants/{assistantId}/tasks",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2117
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/assistants/{assistantId}/warnings",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2139
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/bunny/reports/costs",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1590
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/codes/academic-subject-eligibilities",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 69
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/comments",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1471
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/community/comments/pending",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1444
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/community/posts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1423
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/content/summary/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 321
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/essays/pending",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1221
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/exams/{examId}/dashboard",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1801
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance/code-accounting",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 321
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance/payouts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2091
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance/payouts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 294
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance/payroll",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 249
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance/teacher-events",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 334
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/forms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 67
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/forms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 75
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/forms/{id}/submissions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 129
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gifts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 114
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gifts/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 117
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gifts/lookups/students",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 128
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gifts/lookups/targets",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 134
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/gifts/lookups/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 131
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/homework/{homeworkId}/dashboard",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1807
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/hr/attendance",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 391
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/hr/employees",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 207
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{id}/cockpit",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1384
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lessons/{lessonId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1462
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/media/pipelines?{querytoString}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 99
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/media/reports/kpis",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 133
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/media/social-plans?{querytoString}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 121
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/operations/tasks{query}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 103
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1286
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/code-profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1297
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/{id}/stats",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2151
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/packages/list",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 944
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/bootstrap",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 96
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/budgets/actuals",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 145
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/dashboard",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 80
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/expenses",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/ledger",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 84
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/migration/preview",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 160
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/periods",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
+        "line": 10
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/reconciliation",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 157
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/refunds",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 136
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/reports/{kind}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 154
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/teachers/{teacherId}/summary",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 92
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/teachers/summary",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 88
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/wallet-transfers/reviews",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 109
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/wallets/report",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 115
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/public-exams",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 201
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/public-exams/{productId}/results",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 210
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/questions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1172
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/roles",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1998
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sales/coupons",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 162
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sales/coupons/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 165
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sales/printable-batches",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 195
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sales/stacking-policies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 174
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sales/templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 180
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sections/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1346
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/sections/{id}/stats",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2173
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/settings",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1986
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/shared-packages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 114
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/subjects",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 161
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/subjects/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 163
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/system-logs",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/system-logs-service.ts",
+        "line": 22
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/system-logs/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/system-logs-service.ts",
+        "line": 44
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/settlements/{settlementId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 225
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 179
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/ledger",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 207
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/summary",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 200
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 985
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 182
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 184
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/activations",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2080
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/active-photo",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 977
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/essays",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2069
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/photos",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 992
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/stats",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2036
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teachers/{teacherId}/students",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2050
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1342
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/terms/{id}/stats",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2162
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 873
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users/{id}/audit-logs",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1055
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users/{id}/devices",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1048
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users/students/{id}/profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1043
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/video-types",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1390
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 193
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets/recharge-message-conflicts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 243
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets/recharge-requests/{id}/sms-suggestions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 236
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets/recharge-shift-review",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 271
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets/sms-logs",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 231
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/wallets/unmatched-sms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 226
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/watch-requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1946
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/chat/rooms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 48
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/chat/rooms/{roomId}/messages?page={page}&pageSize={pageSize}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 51
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/lessons/{lessonId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 314
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/lessons/{lessonId}/comments?offset={offset}&limit={limit}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 315
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/lessons/{lessonId}/comments/mine",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 317
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/lessons/{lessonId}/resources",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 316
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/packages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 305
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/packages/{packageId}/code-page",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 311
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/packages/{packageId}/terms",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 308
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/sections/{sectionId}/lessons",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 313
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/content/terms/{termId}/sections",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 312
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/crm/reports/performance",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 111
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/crm/students?{querytoString}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 90
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/crm/students/{studentId}/history",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 107
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/health/ready/ai-live-support",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 65
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/attendance/corrections",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 333
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/attendance/daily-report",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 339
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/attendance/policies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 291
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/attendance/sessions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 336
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/cases",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 9
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/leave/config",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 355
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/lifecycle/tasks",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 12
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/performance/cycles",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 5
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/recruitment/board",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 6
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/shifts/assignments",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 272
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/shifts/calendars",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 253
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/admin/shifts/templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 257
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/approvals/inbox",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 351
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/attendance/my",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 382
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/employees/{employeeId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 243
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/governance/migration",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 7
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/governance/reports/workforce",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 12
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/governance/reports/workforce/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 13
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/organization/units",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 238
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/payroll/config",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 14
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/payroll/runs",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 17
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/payroll/runs/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 18
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/payroll/self/financial-requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 22
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/payroll/self/payslips",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 21
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/attendance",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 312
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/attendance/today",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 309
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/leave/balances",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 345
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/leave/catalog",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 344
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/leave/requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 346
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 268
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ai/active-conversations",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 59
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ai/config",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 53
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ai/evidence",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 64
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ai/knowledge",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 60
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ai/stats",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 58
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/config",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 353
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/conversations/{conversationId}/timeline",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 362
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/dashboard",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 356
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/admin/ratings",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 359
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/availability",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 233
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 236
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 245
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/pending-action",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 480
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/snapshot",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 254
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/session",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 483
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 248
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/bootstrap",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 306
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/canned-replies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 388
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/actions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 417
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}/draft",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 423
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/actions/context",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 420
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 338
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/student-context",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 405
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/student-context/{section}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 408
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/student-history",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 411
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/student-history/{historyConversationId}/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 414
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/students/search",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 396
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/forms/{slug}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 153
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/packages/{packageId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 306
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/settings",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
+        "line": 170
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 291
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers/{teacherId}/community-posts",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 311
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers/{teacherIdOrSlug}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 301
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers/landing",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 296
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/dashboard",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 281
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/dashboard/quick-access",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 321
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/mistakes",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 331
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/notifications",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 361
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/profile",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 351
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/progress",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 326
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/shared-packages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 146
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/shared-packages/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 156
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/shared-packages/purchased",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 151
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/shell-bootstrap",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 286
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/theme-preferences",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 336
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/video-session/{lessonVideoId}/request-status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 66
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/activity",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 272
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/comments",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 381
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/community/comments/pending",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 341
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/community/posts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 335
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/content/{contentType}/{id}/subscribers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 284
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/content/{contentType}/{id}/subscribers/export",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 295
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/context",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 274
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/dashboard/stats",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 233
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/essays",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 237
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/finance/account",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 369
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/finance/calendar",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 391
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/finance/calendar/export",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 399
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/finance/payouts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 407
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/finance/transactions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 380
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/lessons/{lessonId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 365
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/profile",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 244
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/profile/active-photo",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 270
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/public-exams",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 323
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/staff",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 306
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/students",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 235
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/teacher/subjects",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 276
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assistant/tasks/my",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 70
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assistant/tasks/my/{taskId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 74
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assistant/tasks/pending{queryParams}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 59
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 119
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 173
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 35
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 51
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1136
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1145
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 83
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 90
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 221
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/users/students/{userId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1085
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/video-types/{id}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1413
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/videos/{videoId}/toggle-active",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1509
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/hr/admin/shifts/assignments/{assignmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 287
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/hr/admin/shifts/calendars/{calendarId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 261
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 282
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 326
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/teacher/staff/{staffMemberId}/permissions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 318
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/teacher/staff/{staffMemberId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 313
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 67
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{API_BASE_URL}/auth/refresh",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/api-client.ts",
+        "line": 64
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{endpointaudience}/definitions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 168
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{endpointaudience}/execute",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 156
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{endpointaudience}/export/{format}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 183
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/assessments/ocr/questions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1815
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/bunny/uploads/{assetId}/complete",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1554
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/bunny/uploads/fetch",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1560
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/bunny/uploads/tus",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1547
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/bunny/usage/sync",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1579
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/bunny/videos/{assetId}/refresh-status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1567
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/chapters/{chapterId}/regenerate-mindmap",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1600
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/comments/{commentId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1483
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/comments/{commentId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1489
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/community/comments/{commentId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1450
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/community/comments/{commentId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1456
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/community/posts/{postId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1432
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/community/posts/{postId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1438
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/{contentType}/{id}/image",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1268
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/lessons/{lessonId}/homework",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1657
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/essays/{essaySubmissionId}/grade",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1232
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/exams/{examId}/questions",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1793
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/exams/inline",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1768
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/payouts/{payoutId}/resolve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 305
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/payroll/{payrollId}/adjustments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 268
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/payroll/{payrollId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 286
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/payroll/generate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 257
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/teacher-events/{allocationId}/review",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 348
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/finance/teacher-events/manual-compensation",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 360
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/forms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 92
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/forms/cover/upload",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1031
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/gifts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 120
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/gifts/{id}/revoke",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-gifts-service.ts",
+        "line": 124
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/hr/employees",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 219
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/hr/employees/provision",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 229
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/lessons",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1367
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/media/pipelines",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 104
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/media/social-plans",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 126
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/operations/tasks",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 113
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/operations/tasks/{taskId}/resolve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 119
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/overrides/reset-watch",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1859
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/packages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1254
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/budgets",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 142
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/expenses",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 100
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/expenses/{expenseId}/post",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 103
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/expenses/{expenseId}/reverse",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 124
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/migration/post",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 163
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/periods/{periodid}/{periodstatus2reopenclose}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
+        "line": 12
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/refunds",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 127
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/refunds/{refundId}/post",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 133
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/refunds/{refundId}/reverse",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 139
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/refunds/external-package",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 130
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/treasury/reconciliations",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 151
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/treasury/transfers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/wallet-transfers/reviews/{reviewId}/expense",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 118
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/wallet-transfers/reviews/{reviewId}/internal-transfer",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 121
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/platform-finance/wallet-transfers/reviews/backfill",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 112
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/popup/image",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1692
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/public-exams",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 204
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/public-exams/new",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 207
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/questions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1195
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/questions/{questionId}/audio",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1208
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/questions/image",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1669
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/resources",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1612
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/resources/upload",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1621
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/roles",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2008
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sales/coupons",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 168
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sales/printable-batches",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 198
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sales/stacking-policies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 177
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sales/templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 183
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sales/templates/background-image",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 188
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sections",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1350
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/shared-packages",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 119
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/shared-packages/{id}/image",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 133
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/shared-packages/{id}/publish",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 125
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/subjects",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 165
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/system-logs/delete",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/system-logs-service.ts",
+        "line": 27
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/code-groups/{codeGroupId}/confirm-delivery",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 244
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/reversals",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 235
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 220
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements/{settlementId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 230
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements/{settlementId}/cancel",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 231
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements/{settlementId}/pay",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 232
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements/{settlementId}/review",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 229
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/settlements/preview",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 214
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 186
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-photos/upload",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 965
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teachers",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 200
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teachers/{teacherId}/photos/{photoId}/active",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1001
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teachers/upload-profile-image",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1019
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/terms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1324
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 933
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{studentId}/balance/adjust",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1889
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{studentId}/notes",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1931
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{studentId}/reset-password",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1919
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{userId}/gamification/adjust",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1110
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{userId}/overrides",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1098
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/students/{userId}/packages/{accessGrantId}/cancel",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1978
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/video-types",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1399
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/videos",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1495
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/videos/{videoId}/analyze-ai",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1519
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/videos/{videoId}/cancel-ai",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1535
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/videos/{videoId}/cancel-mindmap",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1541
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/videos/{videoId}/generate-mindmaps",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1528
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 198
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets/{id}/regenerate-token",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 208
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets/{id}/toggle",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 203
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets/recharge-requests/{id}/reassign-sms",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 250
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets/recharge-requests/{id}/resolve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 263
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/wallets/recharge-requests/{id}/reverse-credit",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 276
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/watch-requests/{id}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1957
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/watch-requests/{id}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1965
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/messages/{messageId}/pin",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 60
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/rooms",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/rooms/{roomId}/archive",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 57
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/chat/rooms/{roomId}/read",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 63
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/codes/activate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 95
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/content/lessons/{lessonId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 319
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/crm/students/{studentId}/assign",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 95
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/crm/students/{studentId}/calls",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 101
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/exams/admin/lessons/{lessonId}/students/{studentId}/unlock",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1852
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/attendance/corrections/{id}/decision",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 342
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/attendance/policies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 298
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/attendance/policy-assignments",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 305
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/cases",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 10
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/cases/{id}/decision",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 11
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/leave/policies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 359
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/leave/types",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 357
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/lifecycle/offboarding",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 13
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/performance/cycles",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 6
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/performance/cycles/{id}/activate",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 7
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/performance/reviews",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-performance-service.ts",
+        "line": 8
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/recruitment/candidates/{candidateId}/hire",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 11
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/recruitment/candidates/{candidateId}/offers",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 9
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/recruitment/offers/{id}/accept",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 10
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/recruitment/requisitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 7
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/recruitment/requisitions/{id}/candidates",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-recruitment-service.ts",
+        "line": 8
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/shifts/assignments/publish",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 280
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/shifts/assignments/validate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 276
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/admin/shifts/templates",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 268
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/approvals/{instanceId}/decision",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 353
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/approvals/definitions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 363
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/approvals/delegations",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 361
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/attendance/clock-in",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 367
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/attendance/clock-out",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 374
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/governance/migration/{batchId}/activate",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 10
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/governance/migration/{batchId}/reconcile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 9
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/governance/migration/dry-run",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 8
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/governance/migration/rollback",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-governance-service.ts",
+        "line": 11
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/components",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 15
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/rules",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 16
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/{id}/{action}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 20
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/runs/prepare",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 19
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/payroll/self/financial-requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-payroll-service.ts",
+        "line": 23
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/attendance/breaks/{breakId}/end",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 321
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/attendance/breaks/start",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 318
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/attendance/clock-in",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 315
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/attendance/clock-out",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 327
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/attendance/corrections",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 330
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/leave/requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 348
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/hr/self/leave/requests/{id}/withdraw",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 350
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/ai/disable",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 56
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/ai/enable",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 57
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/ai/knowledge/revisions",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 61
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/ai/preview",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 63
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/ai/publish",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 55
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/admin/conversations/{conversationId}/intervene",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 365
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 239
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/abandon",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 294
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{payloaddecisionId}/register",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 474
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/cancel",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 438
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/confirm",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 432
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/cancel",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 456
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/confirm",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 444
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/request",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 450
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/{payloadsessionId}/answer",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 468
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/lookup",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 462
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/attachments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 258
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 276
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/participant/conversations/{conversationId}/rating",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 300
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 426
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/staff/conversations/{conversationId}/attachments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 311
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/staff/conversations/{conversationId}/close",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 341
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/staff/conversations/{conversationId}/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 320
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/staff/conversations/{conversationId}/transfer",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 347
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/public/forms/{slug}/submit",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 161
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/public/teachers/{teacherId}/community-posts",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 316
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/acknowledge-tracking-popup",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 383
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/notifications/{id}/read",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 366
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/shared-packages/{id}/purchase",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/shared-package-service.ts",
+        "line": 161
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/upload-audio",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 374
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/video-session",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 52
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/video-session/{lessonVideoId}/request-extra",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 62
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/video-session/{requestlessonVideoId}/track-progress",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 70
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/video-session/{sessionId}/consume",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 58
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/comments/{commentId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 371
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/comments/{commentId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 376
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/comments/{commentId}/reply",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 385
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/community/comments/{commentId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 355
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/community/comments/{commentId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 360
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/community/posts/{postId}/approve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 345
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/community/posts/{postId}/reject",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 350
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/essays/{id}/grade",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 239
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/finance/payouts",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 414
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/profile/upload-ai-photo",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 265
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/profile/upload-image",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 260
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/public-exams/new",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 327
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/teacher/staff",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 308
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assistant/tasks/{taskId}/resolve",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 63
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assistant/tasks/my/{taskId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 84
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assistant/tasks/my/{taskId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 78
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/admin/exam-result-message",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 852
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/admin/test-message",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 843
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 101
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 113
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 131
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 142
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 154
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 167
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 41
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 78
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-ai-agent-service.ts",
+        "line": 89
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1128
+      }
+    },
+    {
+      "method": "POST",
+      "path": "<dynamic>",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 76
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/{endpointaudience}/definitions/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/advanced-report-service.ts",
+        "line": 174
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/codes/groups/{id}/settings",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1153
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/exams/{examId}/questions/{examQuestionId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1843
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/exams/{examId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1729
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/forms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 113
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/forms/submissions/{submissionId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 141
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/homework/{homeworkId}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1736
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/lessons/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1377
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/lessons/{lessonId}/exam",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1709
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/media/pipelines/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 111
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/overrides/set-watch-count",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1871
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/packages/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1290
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/packages/{id}/code-profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1306
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/roles/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2021
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/sales/coupons/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-sales-service.ts",
+        "line": 171
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/sections/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1360
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/settings",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1991
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/subjects/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 170
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/teacher-finance-center/agreements/{agreementId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 193
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/teacher-finance-center/code-groups/{codeGroupId}/financial-terms",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 240
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/teachers/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 226
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/terms/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1334
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/{id}/roles",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 956
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/{id}/status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 951
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/staff/{staffId}/profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1911
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/students/{studentId}/profile",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1900
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/video-types/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1406
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/videos/{videoId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1502
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/videos/{videoId}/exam",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1716
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/wallets/{id}/limits",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/wallet-service.ts",
+        "line": 213
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/hr/admin/attendance/breaks/{breakId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 324
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/admin/ai/config",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/admin/ai/knowledge/links",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-ai-service.ts",
+        "line": 62
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/admin/canned-replies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 383
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/admin/feature",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 371
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/admin/staff/{staffUserId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 377
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/staff/canned-replies",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 391
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/staff/conversations/{conversationId}/student-link",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 399
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/student/profile",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 356
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/student/theme-preferences",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 346
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/teacher/profile",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 255
+      }
+    }
+  ],
+  "unreachableCallCount": 49,
+  "unreachableCalls": [
+    {
+      "method": "GET",
+      "path": "/{API_BASE_URL}/parent/student-details",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/parent-service.ts",
+        "line": 32
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/audit",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/kpi",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 119
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/auth/session",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 84
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/codes/validate/{code}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 88
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/community/posts/{postId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 89
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/exams/{examId}/attempts/{attemptId}/questions/{questionId}/fifty-fifty",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 89
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/exams/{examId}/latest-passed-result",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 98
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/exams/{examId}/latest-result",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 100
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/exams/attempts/{attemptId}/grading-status",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 102
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/exams/attempts/{attemptId}/result",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 104
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/homework/{homeworkId}/result",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/homework/{homeworkId}/start",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 103
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/homework/pending",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 93
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/assets",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-lifecycle-service.ts",
+        "line": 6
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/documents",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/hr-lifecycle-service.ts",
+        "line": 5
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/hr/self/documents/{id}/download",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/hr-lifecycle-service.ts",
+        "line": 7
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/notifications",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/notifications-service.ts",
+        "line": 13
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/parent/reports/{studentId}/summary",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 134
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public-exams",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/public-exams-service.ts",
+        "line": 12
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers/{teacherId}/community-posts",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 80
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/public/teachers/{teacherId}/community-posts/mine",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 82
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/balance",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/balance-service.ts",
+        "line": 58
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/balance/purchase-preview",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/balance-service.ts",
+        "line": 87
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/recharge/requests",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/recharge-service.ts",
+        "line": 61
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/{API_BASE_URL}/parent/verify-code",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/parent-service.ts",
+        "line": 23
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/complete-profile",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 86
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 82
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 85
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 83
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 81
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 90
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/auth/verify-reset-fields",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 89
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/codes/activate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 87
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/community/posts/{postId}/comments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 91
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/community/posts/{postId}/likes/toggle",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 96
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/community/posts/{postId}/polls/{optionId}/vote",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 101
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/exams/{examId}/attempts/{attemptId}/questions/{questionId}/swap",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 91
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/exams/{examId}/start",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 93
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/exams/{examId}/submit/{attemptId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/homework/{homeworkId}/submit",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 97
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/{id}/read",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/notifications-service.ts",
+        "line": 15
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/parent/reports/{studentId}/links",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 140
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/public/teachers/{teacherId}/community-posts",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 84
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/balance/purchase",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/balance-service.ts",
+        "line": 67
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/recharge/initiate",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/recharge-service.ts",
+        "line": 40
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/recharge/requests/{rechargeRequestId}/cancel",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/recharge-service.ts",
+        "line": 66
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/student/recharge/submit",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/recharge-service.ts",
+        "line": 56
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/check",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/whatsapp-service.ts",
+        "line": 15
+      }
+    }
+  ],
+  "digest": "3ddcde37f791dcda902ec6e3fd7e18b2627baf29218d8ae1d153bcb1fba77c4d"
+}

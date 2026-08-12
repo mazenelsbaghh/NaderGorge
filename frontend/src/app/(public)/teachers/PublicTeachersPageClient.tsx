@@ -6,11 +6,13 @@ import {
   ArrowLeft,
   GraduationCap,
   ListFilter,
+  RefreshCw,
   Search,
   Star,
+  WifiOff,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   studentService,
   type PublicTeacherDto,
@@ -62,13 +64,25 @@ export default function PublicTeachersPageClient() {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<TeacherFilters>(EMPTY_FILTERS);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadTeachers = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      setTeachers(await studentService.getPublicTeachers(signal));
+    } catch {
+      if (!signal?.aborted) setLoadError(true);
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    studentService
-      .getPublicTeachers()
-      .then(setTeachers)
-      .finally(() => setLoading(false));
-  }, []);
+    const controller = new AbortController();
+    void loadTeachers(controller.signal);
+    return () => controller.abort();
+  }, [loadTeachers]);
 
   const availableSubjects = useMemo(
     () =>
@@ -225,6 +239,8 @@ export default function PublicTeachersPageClient() {
           <p className="text-sm font-black text-[var(--public-text-muted)]">
             {loading
               ? 'جارٍ تحميل المعلمين...'
+              : loadError
+                ? 'تعذر تحميل المعلمين'
               : `${visibleTeachers.length} ${visibleTeachers.length === 1 ? 'معلم متاح' : 'معلمين متاحين'}`}
           </p>
           <span className="inline-flex items-center gap-2 text-xs font-black text-[var(--public-accent)]">
@@ -243,7 +259,7 @@ export default function PublicTeachersPageClient() {
                   className="h-80 animate-pulse rounded-2xl bg-[var(--public-surface-muted)]"
                 />
               ))
-            : visibleTeachers.map((teacher) => {
+            : !loadError && visibleTeachers.map((teacher) => {
                 const href = `/teachers/${teacher.slug || teacher.teacherId || teacher.id}`;
                 const image = teacher.profileImageUrl
                   ? resolveMediaUrl(teacher.profileImageUrl)
@@ -291,7 +307,17 @@ export default function PublicTeachersPageClient() {
                 );
               })}
         </section>
-        {!loading && visibleTeachers.length === 0 ? (
+        {!loading && loadError ? (
+          <div role="alert" className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center text-amber-950 sm:p-10">
+            <WifiOff className="mx-auto h-9 w-9 text-[var(--public-accent)]" />
+            <h2 className="mt-3 text-lg font-black">تعذر تحميل المعلمين الآن</h2>
+            <p className="mx-auto mt-2 max-w-lg text-sm font-bold leading-7 text-amber-900">تحقق من اتصالك بالإنترنت ثم أعد المحاولة. لن نعرض نتائج غير دقيقة بدلًا من بيانات المعلمين.</p>
+            <button type="button" onClick={() => void loadTeachers()} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--public-primary)] px-4 text-sm font-black text-white transition hover:bg-[var(--public-accent)]">
+              <RefreshCw className="h-4 w-4" /> إعادة تحميل المعلمين
+            </button>
+          </div>
+        ) : null}
+        {!loading && !loadError && visibleTeachers.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-[var(--public-border)] bg-[var(--public-surface)] p-10 text-center">
             <GraduationCap className="mx-auto h-9 w-9 text-[var(--public-accent)]" />
             <p className="mt-3 font-black">لا يوجد معلم مطابق للبحث.</p>

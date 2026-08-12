@@ -10,6 +10,7 @@ import {
 import { adminRootLinks } from '@/packages/admin';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import { useAuthStore } from '@/stores/auth-store';
+import { isFullAdmin } from '@/packages/admin/route-permissions';
 
 export default function AdminRootPageClient() {
   const { hasPermission } = useHasPermission();
@@ -35,6 +36,7 @@ export default function AdminRootPageClient() {
   };
 
   let filteredLinks = adminRootLinks.filter((item) => {
+    if (item.adminOnly && !isFullAdmin(user)) return false;
     const perm = getPermissionForHref(item.href);
     if (typeof perm === 'boolean') return perm;
     return !perm || hasPermission(perm);

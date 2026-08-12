@@ -19,6 +19,12 @@ export const queryKeys = {
       sort?: string;
     }) => ['admin', 'students', normalizeQueryParameters(parameters)] as const,
   },
+  adminAi: {
+    all: (ownerBoundary: string) => ['admin-ai', ownerBoundary] as const,
+    conversations: (ownerBoundary: string, status: 'Active' | 'Archived' = 'Active') => ['admin-ai', ownerBoundary, 'conversations', status] as const,
+    snapshot: (ownerBoundary: string, conversationId: string) => ['admin-ai', ownerBoundary, 'snapshot', conversationId] as const,
+    proposal: (ownerBoundary: string, proposalId: string) => ['admin-ai', ownerBoundary, 'proposal', proposalId] as const,
+  },
   support: {
     all: ['support'] as const,
     dashboard: ['support', 'dashboard'] as const,

@@ -1,10 +1,11 @@
-using System.Data;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common.HR;
 using NaderGorge.Application.Features.HR.Approvals;
+using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Application.Features.HR.Leave;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -13,7 +14,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.API.Controllers;
 
 [ApiController, Route("api/hr"), Authorize]
-public sealed class HrLeaveController(IAppDbContext db, LeaveRequestService leaveService, ApprovalEngine approvalEngine) : ControllerBase
+public sealed class HrLeaveController(IAppDbContext db, LeaveRequestService leaveService, IMediator mediator) : ControllerBase
 {
     [HttpGet("self/leave/catalog"), HasPermission(HrPermissions.LeaveSelf)]
     public async Task<IActionResult> Catalog(CancellationToken ct) => Ok(await db.LeaveTypes.AsNoTracking().Where(item => item.IsActive)
@@ -41,17 +42,9 @@ public sealed class HrLeaveController(IAppDbContext db, LeaveRequestService leav
     [HttpPost("self/leave/requests"), HasPermission(HrPermissions.LeaveSelf)]
     public async Task<IActionResult> Submit(SubmitLeaveRequest request, CancellationToken ct)
     {
-        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var result = await leaveService.SubmitAsync(User.RequireUserId(), request.LeaveTypeId, request.StartDate, request.EndDate,
-            request.DayFraction, request.Reason, request.AttachmentReference, ct);
-        if (!result.Success) return BadRequest(result);
-        var leave = await db.HrLeaveRequests.SingleAsync(item => item.Id == result.Data, ct);
-        var approval = await approvalEngine.StartAsync("leave", leave.Id, leave.EmployeeId, ct);
-        if (!approval.Success) return Conflict(approval);
-        leave.ApprovalInstanceId = approval.Data;
-        await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
-        return Ok(result);
+        var result = await mediator.Send(new SubmitLeaveWithApprovalCommand(User.RequireUserId(), request.LeaveTypeId,
+            request.StartDate, request.EndDate, request.DayFraction, request.Reason, request.AttachmentReference), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("self/leave/requests/{requestId:guid}/withdraw"), HasPermission(HrPermissions.LeaveSelf)]
@@ -78,48 +71,26 @@ public sealed class HrLeaveController(IAppDbContext db, LeaveRequestService leav
     [HttpPost("admin/leave/types"), HasPermission(HrPermissions.LeaveManage)]
     public async Task<IActionResult> CreateType(CreateLeaveTypeRequest request, CancellationToken ct)
     {
-        var code = request.Code.Trim().ToUpperInvariant();
-        var name = request.Name.Trim();
-        if (code.Length is < 2 or > 50 || name.Length is < 2 or > 200) return BadRequest(new { errors = new[] { "LEAVE_TYPE_INVALID" } });
-        if (await db.LeaveTypes.AnyAsync(item => item.Code == code, ct)) return Conflict(new { errors = new[] { "LEAVE_TYPE_CODE_EXISTS" } });
-        var type = new LeaveType { Code = code, Name = name, IsPaid = request.IsPaid,
-            RequiresAttachment = request.RequiresAttachment, AllowsHalfDay = request.AllowsHalfDay };
-        db.LeaveTypes.Add(type); await db.SaveChangesAsync(ct); return Ok(new { type.Id });
+        var result = await mediator.Send(new CreateLeaveTypeCommand(request.Code, request.Name, request.IsPaid,
+            request.RequiresAttachment, request.AllowsHalfDay), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : result.Errors?.Contains("LEAVE_TYPE_CODE_EXISTS") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpPost("admin/leave/policies"), HasPermission(HrPermissions.LeaveManage)]
     public async Task<IActionResult> CreatePolicy(CreateLeavePolicyRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.AnnualEntitlement < 0 || request.MaximumCarryover < 0 ||
-            request.EffectiveTo < request.EffectiveFrom) return BadRequest(new { errors = new[] { "LEAVE_POLICY_INVALID" } });
-        if (!await db.LeaveTypes.AnyAsync(item => item.Id == request.LeaveTypeId && item.IsActive, ct) ||
-            !await db.WorkCalendars.AnyAsync(item => item.Id == request.WorkCalendarId, ct))
-            return BadRequest(new { errors = new[] { "LEAVE_POLICY_REFERENCE_INVALID" } });
-        var overlaps = await db.LeavePolicies.AnyAsync(item => item.LeaveTypeId == request.LeaveTypeId &&
-            item.EffectiveFrom <= (request.EffectiveTo ?? DateOnly.MaxValue) &&
-            (!item.EffectiveTo.HasValue || item.EffectiveTo >= request.EffectiveFrom), ct);
-        if (overlaps) return Conflict(new { errors = new[] { "LEAVE_POLICY_OVERLAP" } });
-        var policy = new LeavePolicy { Name = request.Name.Trim(), LeaveTypeId = request.LeaveTypeId,
-            AnnualEntitlement = request.AnnualEntitlement, MaximumCarryover = request.MaximumCarryover,
-            AllowNegativeBalance = request.AllowNegativeBalance, EffectiveFrom = request.EffectiveFrom,
-            EffectiveTo = request.EffectiveTo, WorkCalendarId = request.WorkCalendarId };
-        db.LeavePolicies.Add(policy); await db.SaveChangesAsync(ct); return Ok(new { policy.Id });
+        var result = await mediator.Send(new CreateLeavePolicyCommand(request.Name, request.LeaveTypeId,
+            request.AnnualEntitlement, request.MaximumCarryover, request.AllowNegativeBalance, request.EffectiveFrom,
+            request.EffectiveTo, request.WorkCalendarId), ct);
+        return result.Success ? Ok(new { Id = result.Data }) : result.Errors?.Contains("LEAVE_POLICY_OVERLAP") == true ? Conflict(result) : BadRequest(result);
     }
 
     [HttpPost("admin/leave/balances/grant"), HasPermission(HrPermissions.LeaveManage)]
     public async Task<IActionResult> GrantBalance(GrantLeaveBalanceRequest request, CancellationToken ct)
     {
-        if (request.Amount <= 0 || string.IsNullOrWhiteSpace(request.Reason) || request.Year is < 2000 or > 2200)
-            return BadRequest(new { errors = new[] { "LEAVE_GRANT_INVALID" } });
-        if (!await db.EmployeeProfiles.AnyAsync(item => item.Id == request.EmployeeId, ct) ||
-            !await db.LeaveTypes.AnyAsync(item => item.Id == request.LeaveTypeId && item.IsActive, ct))
-            return BadRequest(new { errors = new[] { "LEAVE_GRANT_REFERENCE_INVALID" } });
-        var balance = await db.LeaveBalances.SingleOrDefaultAsync(item => item.EmployeeId == request.EmployeeId && item.LeaveTypeId == request.LeaveTypeId && item.Year == request.Year, ct);
-        if (balance is null) { balance = new LeaveBalance { EmployeeId = request.EmployeeId, LeaveTypeId = request.LeaveTypeId, Year = request.Year }; db.LeaveBalances.Add(balance); }
-        balance.Granted += request.Amount; balance.Version++;
-        db.LeaveLedgerEntries.Add(new LeaveLedgerEntry { LeaveBalanceId = balance.Id, EntryType = LeaveLedgerEntryType.Grant,
-            Amount = request.Amount, SourceType = "AdminGrant", SourceId = Guid.NewGuid(), Reason = request.Reason.Trim(), ActorUserId = User.RequireUserId() });
-        await db.SaveChangesAsync(ct); return Ok(new { balance.Id, balance.Available });
+        var result = await mediator.Send(new GrantLeaveBalanceCommand(User.RequireUserId(), request.EmployeeId,
+            request.LeaveTypeId, request.Year, request.Amount, request.Reason), ct);
+        return result.Success ? Ok(new { Id = result.Data, Available = decimal.Parse(result.Message!) }) : BadRequest(result);
     }
 }
 

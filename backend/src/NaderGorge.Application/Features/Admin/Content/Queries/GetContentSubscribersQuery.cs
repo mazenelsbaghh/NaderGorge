@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
-using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Content.Queries;
@@ -47,31 +46,25 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
 
     public async Task<ApiResponse<ContentSubscribersPagedResult>> Handle(GetContentSubscribersQuery request, CancellationToken ct)
     {
-        var grantType = MapContentType(request.ContentType);
-        if (grantType is null)
+        if (ContentSubscriberGrantQuery.MapContentType(request.ContentType) is null)
             return ApiResponse<ContentSubscribersPagedResult>.Fail("Invalid content type");
 
-        var query = _db.StudentAccessGrants
-            .Where(sag => sag.GrantType == grantType.Value);
-
-        query = request.ContentType.ToLowerInvariant() switch
-        {
-            "package" => query.Where(sag => sag.PackageId == request.ContentId),
-            "term" => query.Where(sag => sag.TermId == request.ContentId),
-            "section" => query.Where(sag => sag.ContentSectionId == request.ContentId),
-            "lesson" => query.Where(sag => sag.LessonId == request.ContentId),
-            _ => query.Where(sag => false)
-        };
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var search = request.Search.Trim().ToLower();
-            query = query.Where(sag =>
-                sag.User.FullName.ToLower().Contains(search) ||
-                sag.User.PhoneNumber.Contains(search));
-        }
-
+        var matchingGrants = ContentSubscriberGrantQuery.Build(
+            _db,
+            request.ContentType,
+            request.ContentId,
+            request.Search);
+        var query = ContentSubscriberGrantQuery.RepresentativePerStudent(matchingGrants);
+        var balanceStudentIds = ContentSubscriberGrantQuery.BalanceStudentIds(
+            _db,
+            request.ContentType,
+            request.ContentId);
         var totalCount = await query.CountAsync(ct);
+        var now = DateTime.UtcNow;
+        var activeStudentIds = matchingGrants
+            .Where(grant => grant.IsActive && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
+            .Select(grant => grant.UserId)
+            .Distinct();
 
         var items = await query
             .OrderByDescending(sag => sag.GrantedAt)
@@ -89,26 +82,14 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
                 sag.User.StudentProfile != null ? sag.User.StudentProfile.ParentPhone : null,
                 sag.User.StudentProfile != null ? sag.User.StudentProfile.MotherPhone : null,
                 sag.GrantedAt,
-                sag.IsActive,
+                activeStudentIds.Contains(sag.UserId),
                 sag.User.StudentProfile != null ? sag.User.StudentProfile.AvatarSlug : null,
                 sag.GrantType.ToString(),
-                sag.AccessCodeId != null ? "Code" : sag.GiftRecipientId != null ? "Gift" : "Balance"
+                sag.AccessCodeId != null ? "Code" : sag.GiftRecipientId != null ? "Gift" : balanceStudentIds.Contains(sag.UserId) ? "Balance" : "Direct"
             ))
             .ToListAsync(ct);
 
         return ApiResponse<ContentSubscribersPagedResult>.Ok(
             new ContentSubscribersPagedResult(items, totalCount, request.Page, request.PageSize));
-    }
-
-    private static CodeType? MapContentType(string contentType)
-    {
-        return contentType.ToLowerInvariant() switch
-        {
-            "package" => CodeType.Package,
-            "term" => CodeType.Term,
-            "section" => CodeType.Month,
-            "lesson" => CodeType.Lesson,
-            _ => null
-        };
     }
 }

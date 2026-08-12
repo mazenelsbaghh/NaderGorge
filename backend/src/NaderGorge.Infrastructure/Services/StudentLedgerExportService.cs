@@ -75,14 +75,17 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
 
     private async Task<List<GrantRow>> LoadGrantsAsync(Guid teacherId, CancellationToken ct) =>
         await _db.StudentAccessGrants.AsNoTracking().Where(grant =>
-            (grant.PackageId.HasValue && _db.Packages.Any(package => package.Id == grant.PackageId && package.TeacherId == teacherId)) ||
-            (grant.TermId.HasValue && _db.Terms.Any(term => term.Id == grant.TermId && term.Package.TeacherId == teacherId)) ||
-            (grant.ContentSectionId.HasValue && _db.ContentSections.Any(section => section.Id == grant.ContentSectionId && section.Term.Package.TeacherId == teacherId)) ||
-            (grant.LessonId.HasValue && _db.Lessons.Any(lesson => lesson.Id == grant.LessonId && lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
-            (grant.LessonVideoId.HasValue && _db.LessonVideos.Any(video => video.Id == grant.LessonVideoId && video.Lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
-            (grant.ExamId.HasValue && _db.Exams.Any(exam => exam.Id == grant.ExamId && exam.CreatedByTeacherId == teacherId)))
-            .Select(grant => new GrantRow(grant.UserId, grant.PackageId, grant.TermId, grant.ContentSectionId, grant.LessonId, grant.LessonVideoId,
-                grant.ExamId, grant.IsActive, grant.CancelledAt, grant.ExpiresAt)).ToListAsync(ct);
+            !grant.CancelledAt.HasValue &&
+            ((grant.PackageId.HasValue && _db.Packages.Any(package => package.Id == grant.PackageId && package.TeacherId == teacherId)) ||
+             (grant.TermId.HasValue && _db.Terms.Any(term => term.Id == grant.TermId && term.Package.TeacherId == teacherId)) ||
+             (grant.ContentSectionId.HasValue && _db.ContentSections.Any(section => section.Id == grant.ContentSectionId && section.Term.Package.TeacherId == teacherId)) ||
+             (grant.LessonId.HasValue && _db.Lessons.Any(lesson => lesson.Id == grant.LessonId && lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
+             (grant.LessonVideoId.HasValue && _db.LessonVideos.Any(video => video.Id == grant.LessonVideoId && video.Lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
+             (grant.GrantType == CodeType.Video && grant.VideoTypeId.HasValue &&
+              _db.LessonVideos.Any(video => video.VideoTypeId == grant.VideoTypeId && video.Lesson.ContentSection.Term.Package.TeacherId == teacherId)) ||
+             (grant.ExamId.HasValue && _db.Exams.Any(exam => exam.Id == grant.ExamId && exam.CreatedByTeacherId == teacherId))))
+            .Select(grant => new GrantRow(grant.UserId, grant.GrantType, grant.PackageId, grant.TermId, grant.ContentSectionId, grant.LessonId,
+                grant.LessonVideoId, grant.VideoTypeId, grant.ExamId, grant.IsActive, grant.CancelledAt, grant.ExpiresAt)).ToListAsync(ct);
 
     private async Task<List<StudentRow>> LoadStudentsAsync(Guid[] studentIds, StudentLedgerFilter filter, CancellationToken ct) =>
         await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id)
@@ -300,20 +303,70 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         IReadOnlyDictionary<Guid, Guid> packageMap,
         IReadOnlyList<Package> packages)
     {
-        var samePackage = grants.Where(grant => grant.TargetIds().Any(id => packageMap.GetValueOrDefault(id) == column.PackageId)).ToList();
+        var samePackage = grants.Where(grant => BelongsToPackage(grant, column.PackageId, packageMap, packages)).ToList();
         var matching = column.Kind == LedgerColumnKind.PackageStatus
             ? samePackage
-            : samePackage.Where(grant => grant.PackageId == column.PackageId || grant.TermId == column.TermId || grant.SectionId == column.SectionId || grant.LessonId == column.LessonId || grant.VideoId == column.VideoId || grant.ExamId == column.ExamId).ToList();
+            : samePackage.Where(grant => CoversColumn(grant, column)).ToList();
         var now = DateTime.UtcNow;
         var active = matching.Any(grant => grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now));
-        var direct = matching.Any(grant => grant.PackageId == column.PackageId && grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now));
+        var direct = matching.Any(grant => grant.GrantType == CodeType.Package && grant.PackageId == column.PackageId && grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now));
         var activeLabels = samePackage
             .Where(grant => grant.IsActive && !grant.CancelledAt.HasValue && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
-            .Select(grant => AccessLabel(grant, packages, packageMap))
+            .Select(grant => AccessLabel(grant, packages))
             .Distinct()
             .ToArray();
         return new AccessState(samePackage.Count > 0, active, direct, activeLabels);
     }
+
+    private static bool BelongsToPackage(
+        GrantRow grant,
+        Guid packageId,
+        IReadOnlyDictionary<Guid, Guid> packageMap,
+        IReadOnlyList<Package> packages)
+    {
+        if (grant.GrantType == CodeType.Video && grant.VideoTypeId.HasValue &&
+            !grant.VideoId.HasValue && !grant.LessonId.HasValue && !grant.SectionId.HasValue &&
+            !grant.TermId.HasValue && !grant.PackageId.HasValue)
+        {
+            return packages
+                .Where(package => package.Id == packageId)
+                .SelectMany(package => package.Terms)
+                .SelectMany(term => term.Sections)
+                .SelectMany(section => section.Lessons)
+                .SelectMany(lesson => lesson.Videos)
+                .Any(video => video.VideoTypeId == grant.VideoTypeId.Value);
+        }
+
+        var scopeTargetId = grant.GrantType switch
+        {
+            CodeType.Package => grant.PackageId,
+            CodeType.Term => grant.TermId,
+            CodeType.Month => grant.SectionId,
+            CodeType.Lesson => grant.LessonId,
+            CodeType.Video => grant.VideoId ?? grant.LessonId ?? grant.SectionId ?? grant.TermId ?? grant.PackageId,
+            CodeType.Exam => grant.ExamId,
+            _ => null
+        };
+
+        return scopeTargetId.HasValue && packageMap.GetValueOrDefault(scopeTargetId.Value) == packageId;
+    }
+
+    private static bool CoversColumn(GrantRow grant, LedgerColumn column) => grant.GrantType switch
+    {
+        CodeType.Package => grant.PackageId == column.PackageId,
+        CodeType.Term => grant.TermId.HasValue && grant.TermId == column.TermId,
+        CodeType.Month => grant.SectionId.HasValue && grant.SectionId == column.SectionId,
+        CodeType.Lesson => grant.LessonId.HasValue && grant.LessonId == column.LessonId,
+        CodeType.Video when grant.VideoId.HasValue => grant.VideoId == column.VideoId,
+        CodeType.Video when grant.VideoTypeId.HasValue =>
+            grant.VideoTypeId == column.VideoTypeId &&
+            (!grant.LessonId.HasValue || grant.LessonId == column.LessonId) &&
+            (!grant.SectionId.HasValue || grant.SectionId == column.SectionId) &&
+            (!grant.TermId.HasValue || grant.TermId == column.TermId) &&
+            (!grant.PackageId.HasValue || grant.PackageId == column.PackageId),
+        CodeType.Exam => grant.ExamId.HasValue && grant.ExamId == column.ExamId,
+        _ => false
+    };
 
     private static void WritePurchaseCell(IXLCell cell, AccessState access)
     {
@@ -323,16 +376,19 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         else SetStatus(cell, "لم يشترِ", "#FEE2E2", "#991B1B");
     }
 
-    private static string AccessLabel(GrantRow grant, IReadOnlyList<Package> packages, IReadOnlyDictionary<Guid, Guid> packageMap)
+    private static string AccessLabel(GrantRow grant, IReadOnlyList<Package> packages)
     {
-        var packageId = grant.TargetIds().Select(packageMap.GetValueOrDefault).First(id => id != Guid.Empty);
-        var package = packages.First(package => package.Id == packageId);
-        if (grant.PackageId.HasValue) return $"باقة / كورس: {package.Name}";
-        if (grant.TermId.HasValue) return $"ترم: {package.Terms.First(term => term.Id == grant.TermId).Title}";
-        if (grant.SectionId.HasValue) return $"كورس / قسم: {package.Terms.SelectMany(term => term.Sections).First(section => section.Id == grant.SectionId).Title}";
-        if (grant.LessonId.HasValue) return $"حصة: {package.Terms.SelectMany(term => term.Sections).SelectMany(section => section.Lessons).First(lesson => lesson.Id == grant.LessonId).Title}";
-        if (grant.VideoId.HasValue) return $"فيديو: {package.Terms.SelectMany(term => term.Sections).SelectMany(section => section.Lessons).SelectMany(lesson => lesson.Videos).First(video => video.Id == grant.VideoId).Title}";
-        return "اختبار";
+        return grant.GrantType switch
+        {
+            CodeType.Package => $"باقة / كورس: {packages.FirstOrDefault(package => package.Id == grant.PackageId)?.Name ?? "غير متاح"}",
+            CodeType.Term => $"ترم: {packages.SelectMany(package => package.Terms).FirstOrDefault(term => term.Id == grant.TermId)?.Title ?? "غير متاح"}",
+            CodeType.Month => $"كورس / قسم: {packages.SelectMany(package => package.Terms).SelectMany(term => term.Sections).FirstOrDefault(section => section.Id == grant.SectionId)?.Title ?? "غير متاح"}",
+            CodeType.Lesson => $"حصة: {packages.SelectMany(package => package.Terms).SelectMany(term => term.Sections).SelectMany(section => section.Lessons).FirstOrDefault(lesson => lesson.Id == grant.LessonId)?.Title ?? "غير متاح"}",
+            CodeType.Video when grant.VideoId.HasValue => $"فيديو: {packages.SelectMany(package => package.Terms).SelectMany(term => term.Sections).SelectMany(section => section.Lessons).SelectMany(lesson => lesson.Videos).FirstOrDefault(video => video.Id == grant.VideoId)?.Title ?? "غير متاح"}",
+            CodeType.Video => "نوع فيديو",
+            CodeType.Exam => "اختبار",
+            _ => "وصول غير معروف"
+        };
     }
 
     private static string EducationStageLabel(EducationStage stage) => stage switch
@@ -593,10 +649,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         GradeLevel Grade,
         StudyTrack? StudyTrack,
         string? StudentCode);
-    private sealed record GrantRow(Guid UserId, Guid? PackageId, Guid? TermId, Guid? SectionId, Guid? LessonId, Guid? VideoId, Guid? ExamId, bool IsActive, DateTime? CancelledAt, DateTime? ExpiresAt)
-    {
-        public IEnumerable<Guid> TargetIds() => new Guid?[] { PackageId, TermId, SectionId, LessonId, VideoId, ExamId }.OfType<Guid>();
-    }
+    private sealed record GrantRow(Guid UserId, CodeType GrantType, Guid? PackageId, Guid? TermId, Guid? SectionId, Guid? LessonId, Guid? VideoId, Guid? VideoTypeId, Guid? ExamId, bool IsActive, DateTime? CancelledAt, DateTime? ExpiresAt);
     private sealed record WatchRow(Guid UserId, Guid VideoId, Guid LessonId, decimal Seconds, int WatchCount, DateTime LastWatchedAt, decimal LastPlaybackRate, string PlaybackRateBreakdownJson);
     private sealed record AttemptRow(Guid UserId, Guid ExamId, decimal Score, bool Passed, DateTime CreatedAt);
     private sealed record HomeworkRow(Guid Id, Guid LessonId, string Title);
@@ -619,7 +672,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
         LastWatchedAt,
         PlaybackRates
     }
-    private sealed record LedgerColumn(Guid PackageId, string PackageName, string TermTitle, string SectionTitle, string ItemTitle, LedgerColumnKind Kind, Guid? TermId = null, Guid? SectionId = null, Guid? LessonId = null, Guid? VideoId = null, Guid? ExamId = null, Guid? HomeworkId = null)
+    private sealed record LedgerColumn(Guid PackageId, string PackageName, string TermTitle, string SectionTitle, string ItemTitle, LedgerColumnKind Kind, Guid? TermId = null, Guid? SectionId = null, Guid? LessonId = null, Guid? VideoId = null, Guid? ExamId = null, Guid? HomeworkId = null, Guid? VideoTypeId = null)
     {
         public static LedgerColumn PackageStatus(Package package) => new(package.Id, package.Name, "حالة الشراء", "حالة الشراء", "حالة الباقة", LedgerColumnKind.PackageStatus);
         public static IEnumerable<LedgerColumn> Lesson(Package package, Term term, ContentSection section, NaderGorge.Domain.Entities.Lesson lesson, HomeworkRow? homework)
@@ -641,15 +694,15 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
 
         public static IEnumerable<LedgerColumn> Video(Package package, Term term, ContentSection section, NaderGorge.Domain.Entities.Lesson lesson, LessonVideo video)
         {
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - المشاهدة", LedgerColumnKind.VideoWatchStatus, term.Id, section.Id, lesson.Id, video.Id);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - دقائق المشاهدة", LedgerColumnKind.WatchedMinutes, term.Id, section.Id, lesson.Id, video.Id);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - عدد المشاهدات", LedgerColumnKind.WatchCount, term.Id, section.Id, lesson.Id, video.Id);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - آخر مشاهدة", LedgerColumnKind.LastWatchedAt, term.Id, section.Id, lesson.Id, video.Id);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - سرعات المشاهدة", LedgerColumnKind.PlaybackRates, term.Id, section.Id, lesson.Id, video.Id);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - المشاهدة", LedgerColumnKind.VideoWatchStatus, term.Id, section.Id, lesson.Id, video.Id, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - دقائق المشاهدة", LedgerColumnKind.WatchedMinutes, term.Id, section.Id, lesson.Id, video.Id, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - عدد المشاهدات", LedgerColumnKind.WatchCount, term.Id, section.Id, lesson.Id, video.Id, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - آخر مشاهدة", LedgerColumnKind.LastWatchedAt, term.Id, section.Id, lesson.Id, video.Id, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - سرعات المشاهدة", LedgerColumnKind.PlaybackRates, term.Id, section.Id, lesson.Id, video.Id, VideoTypeId: video.VideoTypeId);
             if (!video.ExamId.HasValue) yield break;
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - دخول الامتحان", LedgerColumnKind.ExamAttemptStatus, term.Id, section.Id, lesson.Id, video.Id, video.ExamId);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - درجة الامتحان", LedgerColumnKind.ExamScore, term.Id, section.Id, lesson.Id, video.Id, video.ExamId);
-            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - نتيجة الامتحان", LedgerColumnKind.ExamResult, term.Id, section.Id, lesson.Id, video.Id, video.ExamId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - دخول الامتحان", LedgerColumnKind.ExamAttemptStatus, term.Id, section.Id, lesson.Id, video.Id, video.ExamId, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - درجة الامتحان", LedgerColumnKind.ExamScore, term.Id, section.Id, lesson.Id, video.Id, video.ExamId, VideoTypeId: video.VideoTypeId);
+            yield return new(package.Id, package.Name, term.Title, section.Title, $"{video.Title} - نتيجة الامتحان", LedgerColumnKind.ExamResult, term.Id, section.Id, lesson.Id, video.Id, video.ExamId, VideoTypeId: video.VideoTypeId);
         }
     }
 }

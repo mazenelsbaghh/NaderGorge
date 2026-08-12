@@ -38,6 +38,10 @@ function normalizeRoute(route, controllerName) {
 }
 
 function combineRoutes(classRoute, methodRoute, controllerName) {
+  if (methodRoute.startsWith('~/') || methodRoute.startsWith('/')) {
+    const absoluteRoute = methodRoute.replace(/^~?\//, '');
+    return `/${normalizeRoute(absoluteRoute, controllerName)}`;
+  }
   const normalizedClassRoute = normalizeRoute(classRoute || '', controllerName);
   const normalizedMethodRoute = normalizeRoute(methodRoute || '', controllerName);
   const combined = normalizeSlashes(`/${normalizedClassRoute}/${normalizedMethodRoute}`).replace(/\/$/g, '');
@@ -49,12 +53,12 @@ function lineNumberAt(source, index) {
 }
 
 function extractAttributeValue(attributeText, attributeName) {
-  const pattern = new RegExp(`\\[${attributeName}(?:Attribute)?\\s*\\(\\s*"([^"]*)"`, 'i');
+  const pattern = new RegExp(`(?:\\[|,)\\s*${attributeName}(?:Attribute)?\\s*\\(\\s*"([^"]*)"`, 'i');
   return attributeText.match(pattern)?.[1] ?? '';
 }
 
 function extractControllerClass(parseSource) {
-  const classMatch = parseSource.match(/\bpublic\s+class\s+(\w+Controller)\b/);
+  const classMatch = parseSource.match(/\bpublic\s+(?:(?:sealed|abstract|partial)\s+)*class\s+(\w+Controller)\b/);
   if (!classMatch) {
     return {
       controllerName: '',
@@ -90,27 +94,27 @@ function extractControllerClass(parseSource) {
 
 function classifyAuthorization(classAttributes, methodAttributes) {
   const customAttributes = `${classAttributes}\n${methodAttributes}`;
-  if (/\[InternalTokenAuthorize(?:Attribute)?\b/i.test(customAttributes)) {
+  if (/(?:\[|,)\s*InternalTokenAuthorize(?:Attribute)?\b/i.test(customAttributes)) {
     return 'internal-token';
   }
 
-  if (/\[E2eOnly(?:Attribute)?\b/i.test(customAttributes)) {
+  if (/(?:\[|,)\s*E2eOnly(?:Attribute)?\b/i.test(customAttributes)) {
     return 'e2e-token';
   }
 
-  const methodAllowsAnonymous = /\[AllowAnonymous(?:Attribute)?\b/i.test(methodAttributes);
+  const methodAllowsAnonymous = /(?:\[|,)\s*AllowAnonymous(?:Attribute)?\b/i.test(methodAttributes);
   if (methodAllowsAnonymous) {
     return 'anonymous';
   }
 
-  const methodRequiresAuthorization = /\[Authorize(?:Attribute)?\b/i.test(methodAttributes);
-  const classRequiresAuthorization = /\[Authorize(?:Attribute)?\b/i.test(classAttributes);
+  const methodRequiresAuthorization = /(?:\[|,)\s*Authorize(?:Attribute)?\b/i.test(methodAttributes);
+  const classRequiresAuthorization = /(?:\[|,)\s*Authorize(?:Attribute)?\b/i.test(classAttributes);
 
   if (methodRequiresAuthorization || classRequiresAuthorization) {
     return 'authorized';
   }
 
-  const classAllowsAnonymous = /\[AllowAnonymous(?:Attribute)?\b/i.test(classAttributes);
+  const classAllowsAnonymous = /(?:\[|,)\s*AllowAnonymous(?:Attribute)?\b/i.test(classAttributes);
   if (classAllowsAnonymous) {
     return 'anonymous';
   }
@@ -118,8 +122,7 @@ function classifyAuthorization(classAttributes, methodAttributes) {
   return 'anonymous';
 }
 
-function parseController(filePath) {
-  const source = readFileSync(filePath, 'utf8');
+function parseControllerSegment(filePath, source, lineOffset = 0) {
   const parseSource = source.replace(/\/\/[^\n]*/g, (comment) => ' '.repeat(comment.length));
   const controllerClass = extractControllerClass(parseSource);
   const controllerName = controllerClass.controllerName || filePath.split('/').pop().replace(/\.cs$/, '');
@@ -132,34 +135,61 @@ function parseController(filePath) {
   while ((match = methodPattern.exec(parseSource)) !== null) {
     const attributes = match[1];
     const actionName = match[2];
-    const httpMatch = attributes.match(/\[(HttpGet|HttpPost|HttpPut|HttpDelete|HttpPatch)(?:Attribute)?(?:\s*\(\s*"([^"]*)")?/i);
+    const httpMatches = [...attributes.matchAll(/(?:\[|,)\s*(HttpGet|HttpPost|HttpPut|HttpDelete|HttpPatch)(?:Attribute)?(?:\s*\(\s*"([^"]*)")?/gi)];
 
-    if (!httpMatch) {
+    if (httpMatches.length === 0) {
       continue;
     }
 
-    const method = httpMatch[1].replace(/^Http/i, '').toUpperCase();
-    const methodRoute = httpMatch[2] ?? '';
-    const httpAttributeIndex = match.index + match[1].search(/\[Http/i);
-    const relativeFile = normalizeSlashes(relative(rootDir, filePath));
-    const routeTemplate = combineRoutes(route, methodRoute, controllerName);
-    const path = routeTemplate.toLowerCase();
+    for (const httpMatch of httpMatches) {
+      const method = httpMatch[1].replace(/^Http/i, '').toUpperCase();
+      const methodRoute = httpMatch[2] ?? '';
+      const httpAttributeIndex = match.index + httpMatch.index;
+      const relativeFile = normalizeSlashes(relative(rootDir, filePath));
+      const routeTemplate = combineRoutes(route, methodRoute, controllerName);
+      const path = routeTemplate.toLowerCase();
 
-    endpoints.push({
-      controller: controllerName,
-      action: actionName,
-      method,
-      path,
-      routeTemplate,
-      authorization: classifyAuthorization(classAttributes, attributes),
-      source: {
-        file: relativeFile,
-        line: lineNumberAt(source, httpAttributeIndex),
-      },
-    });
+      endpoints.push({
+        controller: controllerName,
+        action: actionName,
+        method,
+        path,
+        routeTemplate,
+        authorization: classifyAuthorization(classAttributes, attributes),
+        source: {
+          file: relativeFile,
+          line: lineOffset + lineNumberAt(source, httpAttributeIndex),
+        },
+      });
+    }
   }
 
   return endpoints;
+}
+
+function controllerAttributeStart(source, classIndex) {
+  const prefix = source.slice(0, classIndex);
+  const lines = prefix.split('\n');
+  let firstLine = lines.length - 1;
+  while (firstLine >= 0 && !lines[firstLine].trim()) firstLine -= 1;
+  while (firstLine >= 0 && lines[firstLine].trim().startsWith('[')) firstLine -= 1;
+  return lines.slice(0, firstLine + 1).join('\n').length + (firstLine >= 0 ? 1 : 0);
+}
+
+function parseController(filePath) {
+  const source = readFileSync(filePath, 'utf8');
+  const parseSource = source.replace(/\/\/[^\n]*/g, (comment) => ' '.repeat(comment.length));
+  const classPattern = /\bpublic\s+(?:(?:sealed|abstract|partial)\s+)*class\s+\w+Controller\b/g;
+  const classes = [...parseSource.matchAll(classPattern)];
+  if (classes.length <= 1) return parseControllerSegment(filePath, source);
+
+  return classes.flatMap((match, index) => {
+    const start = controllerAttributeStart(source, match.index);
+    const end = index + 1 < classes.length
+      ? controllerAttributeStart(source, classes[index + 1].index)
+      : source.length;
+    return parseControllerSegment(filePath, source.slice(start, end), lineNumberAt(source, start) - 1);
+  });
 }
 
 function collectFrontendFiles(directory) {
@@ -463,7 +493,8 @@ function normalizeFrontendPath(argument, callerKind) {
     };
   }
 
-  const originalContent = literal.content;
+  const originalContent = literal.content
+    .replace(/^\$\{endpoint\(audience\)\}/, '/${audience}/reports');
   const apiBase = removeKnownApiBase(originalContent);
   const queryAwareContent = splitDynamicQuerySuffix(apiBase.content);
   const origin = callerKind === 'apiClient' || callerKind === 'axios'
@@ -473,7 +504,10 @@ function normalizeFrontendPath(argument, callerKind) {
     ...extractQueryParametersFromContent(queryAwareContent.content),
     ...queryAwareContent.queryParameters,
   ];
-  const pathWithoutQuery = queryAwareContent.content.split('?')[0] || '/';
+  const queryIndex = queryAwareContent.content.indexOf('?');
+  const templateIndex = queryAwareContent.content.indexOf('${');
+  const hasUrlQuery = queryIndex !== -1 && (templateIndex === -1 || queryIndex < templateIndex);
+  const pathWithoutQuery = (hasUrlQuery ? queryAwareContent.content.slice(0, queryIndex) : queryAwareContent.content) || '/';
   const templatedPath = replaceTemplateExpressions(pathWithoutQuery);
   const normalizedPath = normalizeSlashes(templatedPath.startsWith('/') ? templatedPath : `/${templatedPath}`);
   const backendPath = normalizedPath.startsWith('/api/')
@@ -687,7 +721,7 @@ function routePathsMatch(frontendPath, backendPath) {
   return frontendSegments.every((segment, index) => {
     const backendSegment = backendSegments[index];
     if (segment === backendSegment) return true;
-    if (isRouteParameter(segment) && isRouteParameter(backendSegment)) return true;
+    if (isRouteParameter(segment)) return true;
     if (segment === '{contenttype}s' && ['packages', 'terms', 'sections'].includes(backendSegment)) return true;
     return false;
   });

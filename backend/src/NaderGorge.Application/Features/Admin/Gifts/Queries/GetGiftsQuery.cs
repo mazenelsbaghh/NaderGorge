@@ -60,6 +60,7 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
                 IssuerName = x.IssuedByUser.FullName,
                 RecipientCount = x.Recipients.Count,
                 SuccessfulCount = x.Recipients.Count(r => r.Status != GiftRecipientStatus.Failed && r.Status != GiftRecipientStatus.AlreadyEntitled),
+                Original = x.Recipients.Select(r => r.PromotionalBalanceAllocation == null ? 0m : r.PromotionalBalanceAllocation.OriginalAmount).Sum(),
                 Available = x.Recipients.Select(r => r.PromotionalBalanceAllocation == null ? 0m : r.PromotionalBalanceAllocation.AvailableAmount).Sum(),
                 x.ExpiresAt,
                 x.CreatedAt
@@ -69,6 +70,13 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
         var items = new List<GiftListItemDto>(rows.Count);
         foreach (var row in rows)
         {
+            var values = GiftValueSemantics.Resolve(
+                row.TargetType,
+                row.Amount,
+                row.SuccessfulCount,
+                row.Original,
+                row.Available);
+
             items.Add(new GiftListItemDto(
                 row.Id,
                 row.TargetType,
@@ -77,8 +85,8 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
                 row.IssuerName,
                 row.RecipientCount,
                 row.SuccessfulCount,
-                row.Amount,
-                row.Amount.HasValue ? row.Available : null,
+                values.OriginalValue,
+                values.AvailableValue,
                 row.ExpiresAt,
                 row.CreatedAt));
         }

@@ -16,6 +16,32 @@ verification = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = verification
 SPEC.loader.exec_module(verification)
 
+ADMIN_AI_PERFORMANCE_CONTRACT = {
+    "route": {
+        "maximumWarmNavigationP75Ms": 300,
+        "maximumDuplicateEligibleReads": 0,
+    },
+    "worker": {
+        "concurrency": 4,
+        "maximumQueueAgeMs": 300_000,
+        "ordinaryProviderDeadlineMs": 30_000,
+    },
+    "requestsPerMinute": {
+        "turnAdmissionsPerAdmin": 10,
+        "confirmationsPerAdmin": 20,
+        "secureInputsPerAdmin": 10,
+        "internalCallbacksPerSourceIp": 120,
+    },
+    "query": {
+        "maximumModelSteps": 3,
+        "maximumReadCallsPerTurn": 6,
+        "maximumReadCallsPerStep": 4,
+        "maximumRedactedContextBytes": 65_536,
+        "maximumRecordsPerInvocation": 200,
+        "maximumQueryTimeoutMs": 5_000,
+    },
+}
+
 
 def write(path: Path, value: object) -> Path:
     path.write_text(json.dumps(value), encoding="utf-8")
@@ -24,7 +50,7 @@ def write(path: Path, value: object) -> Path:
 
 def evidence(initial: int, *, navigation: int = 250, commands: int = 12) -> dict:
     routes = {}
-    for name in ("login", "register", "student"):
+    for name in ("login", "register", "student", "admin/ai-agent"):
         routes[name] = {
             "pathname": f"/{name}",
             "initial": {"brotliBytes": initial},
@@ -53,7 +79,7 @@ def budgets() -> dict:
                 "maximumDuplicateEligibleReads": 0,
                 "maximumWarmNavigationP75Ms": 300,
             }
-            for path in ("/login", "/register", "/student")
+            for path in ("/login", "/register", "/student", "/admin/ai-agent")
         },
         "workflows": {
             "live-support-admin": {
@@ -71,6 +97,41 @@ def test_production_gate_accepts_complete_bounded_evidence(tmp_path: Path) -> No
     )
     assert result["passed"] is True
     assert result["workflows"]["passed"] is True
+
+
+def test_admin_ai_release_budget_contract_matches_reviewed_protocol() -> None:
+    assert ADMIN_AI_PERFORMANCE_CONTRACT == {
+        "route": {
+            "maximumWarmNavigationP75Ms": 300,
+            "maximumDuplicateEligibleReads": 0,
+        },
+        "worker": {
+            "concurrency": 4,
+            "maximumQueueAgeMs": 300_000,
+            "ordinaryProviderDeadlineMs": 30_000,
+        },
+        "requestsPerMinute": {
+            "turnAdmissionsPerAdmin": 10,
+            "confirmationsPerAdmin": 20,
+            "secureInputsPerAdmin": 10,
+            "internalCallbacksPerSourceIp": 120,
+        },
+        "query": {
+            "maximumModelSteps": 3,
+            "maximumReadCallsPerTurn": 6,
+            "maximumReadCallsPerStep": 4,
+            "maximumRedactedContextBytes": 65_536,
+            "maximumRecordsPerInvocation": 200,
+            "maximumQueryTimeoutMs": 5_000,
+        },
+    }
+    assert budgets()["routes"]["/admin/ai-agent"] == {
+        "minimumInitialReductionFromBaseline": 0.25,
+        "maximumSharedIncreaseFromBaseline": 0,
+        "maximumDeferredBrotliBytes": 100,
+        "maximumDuplicateEligibleReads": 0,
+        "maximumWarmNavigationP75Ms": 300,
+    }
 
 
 @pytest.mark.parametrize(

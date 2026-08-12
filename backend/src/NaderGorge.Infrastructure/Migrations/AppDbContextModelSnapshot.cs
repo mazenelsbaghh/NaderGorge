@@ -207,6 +207,1134 @@ namespace NaderGorge.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AffectedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AuthoritativeOperation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CapabilityKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CapabilityVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ExternalOperationId")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("FailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdempotencyDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("OriginalAuditLogId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("ProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RefreshScopesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeResultJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int?>("SkippedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SucceededCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OriginalAuditLogId");
+
+                    b.HasIndex("ProposalId")
+                        .IsUnique();
+
+                    b.HasIndex("ActorAdminUserId", "IdempotencyDigest")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_action_executions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecutionItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ItemReferenceHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("ItemSequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SafeItemReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SafeResultJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutionId", "ItemReferenceHash")
+                        .IsUnique();
+
+                    b.HasIndex("ExecutionId", "ItemSequence")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_action_execution_items", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BulkSemanticsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CapabilityBaselineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CapabilityKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("CapabilityVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ConfirmationType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InvalidatedReasonCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("PrimaryRisk")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ProtectedNormalizedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("RiskFlagsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeCurrentStateJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeEffectJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeRequestedStateJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeTargetReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SafeTargetType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("SecureInputGrantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SensitiveDataPolicyVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StateFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ValidationSummaryJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapabilityBaselineId");
+
+                    b.HasIndex("SensitiveDataPolicyVersionId");
+
+                    b.HasIndex("TurnId");
+
+                    b.HasIndex("ConversationId", "CreatedAt");
+
+                    b.HasIndex("ActorAdminUserId", "Status", "ExpiresAt");
+
+                    b.ToTable("admin_ai_action_proposals", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CapabilityKey")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EvidenceHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("ExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IpAddressHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReadInvocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SafeEvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeTargetReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReadInvocationId");
+
+                    b.HasIndex("TurnId");
+
+                    b.HasIndex("ActorAdminUserId", "OccurredAt");
+
+                    b.HasIndex("ExecutionId", "OccurredAt");
+
+                    b.HasIndex("ProposalId", "OccurredAt");
+
+                    b.HasIndex("ConversationId", "OccurredAt", "Id");
+
+                    b.ToTable("admin_ai_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAICapabilityBaseline", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ApprovedByAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ExcludedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FrontendInventoryHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("ManifestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("RuntimeInventoryHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("SafeManifestJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SourceRevision")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SupportedActionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SupportedReadCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByAdminUserId");
+
+                    b.HasIndex("ManifestHash")
+                        .IsUnique();
+
+                    b.HasIndex("Status")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 1");
+
+                    b.HasIndex("Version")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_capability_baselines", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_baseline_counts", "\"SupportedReadCount\" >= 0 AND \"SupportedActionCount\" >= 0 AND \"ExcludedCount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConfirmationChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ChallengeVersion")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("FailedAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PhraseDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("ProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProposalId")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_confirmation_challenges", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreateIdempotencyDigest")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("CreatePayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("OwnerAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerAdminUserId", "CreateIdempotencyDigest")
+                        .IsUnique()
+                        .HasFilter("\"CreateIdempotencyDigest\" IS NOT NULL");
+
+                    b.HasIndex("OwnerAdminUserId", "Status", "LastActivityAt", "Id");
+
+                    b.ToTable("admin_ai_conversations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_conversation_version", "\"LastSequence\" >= 0 AND \"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConversationCommandReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("IdempotencyDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("OwnerAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("ResponseLastActivityAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ResponseStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResponseTitle")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<long>("ResponseVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("OwnerAdminUserId", "IdempotencyDigest")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_conversation_command_receipts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_conversation_receipt_version", "\"ResponseVersion\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("character varying(16000)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StructuredContentJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TurnId")
+                        .IsUnique()
+                        .HasFilter("\"TurnId\" IS NOT NULL");
+
+                    b.HasIndex("ConversationId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_messages", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadInvocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CapabilityKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("CapabilityVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DataAsOf")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("InvocationSequence")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsComplete")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTruncated")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ProtectedResult")
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("ProtectedResultExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ProtectedResultHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("ResultCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SafeEvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeInputJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SafeScopeJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TurnStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TurnStepId");
+
+                    b.HasIndex("CapabilityKey", "CreatedAt");
+
+                    b.HasIndex("TurnId", "InvocationSequence")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_read_invocations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_read_bounds", "\"InvocationSequence\" BETWEEN 1 AND 6 AND \"ResultCount\" >= 0 AND \"LatencyMs\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAISecureInputGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("InputKind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("ProposalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("ProtectedPayload")
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("PurgedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SafeMetadataJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("TokenDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorAdminUserId");
+
+                    b.HasIndex("ProposalId")
+                        .IsUnique();
+
+                    b.HasIndex("TokenDigest")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_secure_input_grants", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAISensitiveDataPolicyVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ApprovedByAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PolicyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("SafeRulesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByAdminUserId");
+
+                    b.HasIndex("PolicyHash")
+                        .IsUnique();
+
+                    b.HasIndex("Status")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 1");
+
+                    b.HasIndex("Version")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_sensitive_policy_versions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorAdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdmissionPayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("CallbackIdempotencyDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime?>("CancellationRequestedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CapabilityBaselineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("CurrentStepNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ExpectedConversationVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ExpectedSecurityVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("InputTokenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid?>("OutputMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("OutputTokenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ProviderResponseId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("QueuedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ReadInvocationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RedactedContextBytes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SafeFailureDetail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SensitiveDataPolicyVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CallbackIdempotencyDigest")
+                        .IsUnique();
+
+                    b.HasIndex("CapabilityBaselineId");
+
+                    b.HasIndex("SensitiveDataPolicyVersionId");
+
+                    b.HasIndex("SourceMessageId")
+                        .IsUnique();
+
+                    b.HasIndex("ActorAdminUserId", "Status");
+
+                    b.HasIndex("ConversationId", "QueuedAt");
+
+                    b.HasIndex("Status", "QueuedAt");
+
+                    b.ToTable("admin_ai_turns", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_turn_budgets", "\"CurrentStepNumber\" BETWEEN 0 AND 3 AND \"ReadInvocationCount\" BETWEEN 0 AND 6 AND \"RedactedContextBytes\" BETWEEN 0 AND 65536 AND \"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAITurnStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CallbackAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CallbackStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CanonicalDecisionHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DecisionType")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ExpectedTurnVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("InputTokenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LatencyMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("NextCallbackAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("OutputTokenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderResponseId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StepNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ToolCallsRequested")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TurnId", "StepNumber")
+                        .IsUnique();
+
+                    b.ToTable("admin_ai_turn_steps", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_admin_ai_step_bounds", "\"StepNumber\" BETWEEN 1 AND 3 AND \"ToolCallsRequested\" BETWEEN 0 AND 4");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -11743,6 +12871,240 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AuditLog", null)
+                        .WithMany()
+                        .HasForeignKey("OriginalAuditLogId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", "ProposalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecutionItem", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", "Execution")
+                        .WithMany("Items")
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Execution");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAICapabilityBaseline", null)
+                        .WithMany()
+                        .HasForeignKey("CapabilityBaselineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAISensitiveDataPolicyVersion", null)
+                        .WithMany()
+                        .HasForeignKey("SensitiveDataPolicyVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", null)
+                        .WithMany()
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIAuditEvent", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", null)
+                        .WithMany()
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", null)
+                        .WithMany()
+                        .HasForeignKey("ProposalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIReadInvocation", null)
+                        .WithMany()
+                        .HasForeignKey("ReadInvocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", null)
+                        .WithMany()
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAICapabilityBaseline", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConfirmationChallenge", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.AdminAI.AdminAIConfirmationChallenge", "ProposalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConversationCommandReceipt", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIMessage", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.AdminAI.AdminAIMessage", "TurnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIReadInvocation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", "Turn")
+                        .WithMany("ReadInvocations")
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurnStep", null)
+                        .WithMany()
+                        .HasForeignKey("TurnStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Turn");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAISecureInputGrant", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIActionProposal", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.AdminAI.AdminAISecureInputGrant", "ProposalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAISensitiveDataPolicyVersion", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAICapabilityBaseline", null)
+                        .WithMany()
+                        .HasForeignKey("CapabilityBaselineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", "Conversation")
+                        .WithMany("Turns")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAISensitiveDataPolicyVersion", null)
+                        .WithMany()
+                        .HasForeignKey("SensitiveDataPolicyVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAITurnStep", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", "Turn")
+                        .WithMany("Steps")
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Turn");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinitionStep", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.ApprovalDefinition", "ApprovalDefinition")
@@ -15041,6 +16403,25 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIActionExecution", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAIConversation", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Turns");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AdminAI.AdminAITurn", b =>
+                {
+                    b.Navigation("ReadInvocations");
+
+                    b.Navigation("Steps");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinition", b =>
