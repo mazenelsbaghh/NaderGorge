@@ -46,8 +46,9 @@ def main() -> int:
         "secret=values.get('AI_CALLBACK_SECRET',''); "
         "assert len(secret)>=32; "
         "hmac=base64.b64encode(hashlib.sha256(b'massar-admin-ai-hmac-v1\\0'+secret.encode()).digest()).decode(); "
-        "rows=[line for line in rows if not line.startswith(('ADMIN_AI_ENABLED=','ADMIN_AI_HMAC_KEY='))]; "
-        "rows.extend(['ADMIN_AI_ENABLED=true','ADMIN_AI_HMAC_KEY='+hmac]); "
+        "prefixes=('ADMIN_AI_ENABLED=','ADMIN_AI_HMAC_KEY=','AdminAI__Enabled=','AdminAI__HmacKey=','AdminAI__CallbackSecret='); "
+        "rows=[line for line in rows if not line.startswith(prefixes)]; "
+        "rows.extend(['ADMIN_AI_ENABLED=true','ADMIN_AI_HMAC_KEY='+hmac,'AdminAI__Enabled=true','AdminAI__HmacKey='+hmac,'AdminAI__CallbackSecret='+secret]); "
         "dst=Path(os.environ['MASSAR_STAGED_ENV']); dst.write_text('\\n'.join(rows)+'\\n',encoding='utf-8'); os.chmod(dst,0o640)"
     )
     for node in inventory.nodes:

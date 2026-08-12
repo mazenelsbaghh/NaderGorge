@@ -106,3 +106,6 @@ def test_production_environment_enables_admin_ai_with_domain_separated_hmac() ->
     assert '"ADMIN_AI_ENABLED": "true"' in app_env
     assert 'b"massar-admin-ai-hmac-v1\\0"' in app_env
     assert '"ADMIN_AI_HMAC_KEY": admin_ai_hmac' in app_env
+    assert '"AdminAI__Enabled": "true"' in app_env
+    assert '"AdminAI__HmacKey": admin_ai_hmac' in app_env
+    assert '"AdminAI__CallbackSecret": ai_callback_secret' in app_env
