@@ -26,6 +26,12 @@ const TABS: AdminTab<ActiveTab>[] = [
   { key: "codeProfile", label: "صفحة الأكواد", icon: KeyRound },
 ];
 
+function getPackageTabs(contentMode: string): AdminTab<ActiveTab>[] {
+  return contentMode === "TermWithSections"
+    ? TABS
+    : TABS.filter((tab) => tab.key !== "terms");
+}
+
 export default function TeacherPackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
@@ -38,6 +44,8 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
   const [terms, setTerms] = useState<TermDto[]>([]);
   const [termsLoading, setTermsLoading] = useState(true);
   const [termsError, setTermsError] = useState(false);
+  const [togglingActive, setTogglingActive] = useState(false);
+  const packageContentMode = pkg?.contentMode;
 
   const loadPkg = useCallback(async () => {
     try {
@@ -65,7 +73,41 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
   }, [params.id]);
 
   useEffect(() => { void loadPkg(); }, [loadPkg]);
-  useEffect(() => { void loadTerms(); }, [loadTerms]);
+  useEffect(() => {
+    if (pkgLoading) return;
+    if (packageContentMode === "TermWithSections" || packageContentMode == null) {
+      void loadTerms();
+    }
+  }, [loadTerms, packageContentMode, pkgLoading]);
+
+  const archivePackage = async () => {
+    if (!pkg || togglingActive) return;
+    if (!window.confirm(`ستُؤرشف الباقة "${pkg.name}". لن تظهر للطلاب الجدد، مع الاحتفاظ بكل المحتوى والاشتراكات الحالية.`)) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, { name: pkg.name, description: pkg.description, price: pkg.price, isActive: false });
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: false }));
+      toast.success("تمت أرشفة الباقة.");
+    } catch {
+      toast.error("تعذر أرشفة الباقة");
+    } finally {
+      setTogglingActive(false);
+    }
+  };
+
+  const restorePackage = async () => {
+    if (!pkg || togglingActive) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, { name: pkg.name, description: pkg.description, price: pkg.price, isActive: true });
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: true }));
+      toast.success("تمت استعادة الباقة وظهرت للطلاب.");
+    } catch {
+      toast.error("تعذر استعادة الباقة");
+    } finally {
+      setTogglingActive(false);
+    }
+  };
 
   if (pkgLoading) {
     return (
@@ -96,6 +138,9 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
     imageUrl: t.imageUrl,
     href: `/teacher/packages/terms/${t.id}`,
   }));
+  const contentMode = packageContentMode ?? "TermWithSections";
+  const packageTabs = getPackageTabs(contentMode);
+  const directLessons = pkg.directLessons ?? [];
 
   return (
     <TeacherPage
@@ -123,8 +168,25 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
 
       {/* Stats */}
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <AdminStatCard variant="accent" icon={BookOpenText}  label="حالة الباقة" value={pkg.isActive !== false ? "نشطة" : "مسودة"} />
-        <AdminStatCard variant="light"  icon={Calendar}      label="عدد الأترام"  value={terms.length} />
+        <button
+          type="button"
+          onClick={pkg.isActive === false ? restorePackage : archivePackage}
+          disabled={togglingActive}
+          className={`rounded-2xl border p-4 text-center transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-95 active:scale-[0.98] cursor-pointer ${pkg.isActive !== false ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30" : "border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30"} ${togglingActive ? "opacity-50" : ""}`}
+        >
+          <p className={`text-lg font-black ${pkg.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"}`}>
+            {pkg.isActive !== false ? "نشطة" : "مؤرشفة"}
+          </p>
+          <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
+            {pkg.isActive !== false ? "ظاهرة للطلاب — اضغط للأرشفة" : "مخفية عن الطلاب — اضغط للاستعادة"}
+          </p>
+        </button>
+        <AdminStatCard
+          variant="light"
+          icon={contentMode === "TermWithSections" ? Calendar : BookOpenText}
+          label={contentMode === "TermWithSections" ? "عدد الأترام" : "عدد الحصص"}
+          value={contentMode === "TermWithSections" ? terms.length : directLessons.length}
+        />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard
           variant="light"
@@ -141,7 +203,7 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
 
       {/* Tabs */}
       <div className="mb-8">
-        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+        <AdminTabBar tabs={packageTabs} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {/* Terms tab — uses shared ContentHierarchyPanel */}

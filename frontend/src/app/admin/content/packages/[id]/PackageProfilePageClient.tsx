@@ -27,6 +27,12 @@ const TABS: AdminTab<ActiveTab>[] = [
   { key: 'codeProfile', label: 'صفحة الأكواد', icon: KeyRound },
 ];
 
+function getPackageTabs(contentMode: string): AdminTab<ActiveTab>[] {
+  return contentMode === 'TermWithSections'
+    ? TABS
+    : TABS.filter((tab) => tab.key !== 'terms');
+}
+
 function formatWatchTime(seconds?: number): string {
   if (!seconds || seconds <= 0) return '0 دقيقة';
   const hours = Math.floor(seconds / 3600);
@@ -53,6 +59,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   const [stats, setStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [togglingActive, setTogglingActive] = useState(false);
+  const packageContentMode = pkg?.contentMode;
 
   const loadPkg = useCallback(async () => {
     try {
@@ -92,23 +99,43 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   }, [params.id]);
 
   useEffect(() => { void loadPkg(); }, [loadPkg]);
-  useEffect(() => { void loadTerms(); }, [loadTerms]);
+  useEffect(() => {
+    if (pkgLoading) return;
+    if (packageContentMode === 'TermWithSections' || packageContentMode == null) {
+      void loadTerms();
+    }
+  }, [loadTerms, packageContentMode, pkgLoading]);
   useEffect(() => { void loadStats(); }, [loadStats]);
 
-  const handleToggleActive = async () => {
+  const archivePackage = async () => {
     if (!pkg || togglingActive) return;
+    if (!window.confirm(`ستُؤرشف الباقة "${pkg.name}". لن تظهر للطلاب الجدد، مع الاحتفاظ بكل المحتوى والاشتراكات الحالية.`)) return;
     setTogglingActive(true);
     try {
       await adminService.updatePackage(pkg.id, {
         name: pkg.name,
         description: pkg.description,
         price: pkg.price,
-        isActive: !pkg.isActive,
+        isActive: false,
       });
-      setPkg((prev: any) => ({ ...prev, isActive: !prev.isActive }));
-      toast.success(pkg.isActive ? 'تم إخفاء الباقة عن الطلاب' : 'تم إظهار الباقة للطلاب');
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: false }));
+      toast.success('تمت أرشفة الباقة.');
     } catch {
-      toast.error('تعذر تغيير حالة الباقة');
+      toast.error('تعذر أرشفة الباقة');
+    } finally {
+      setTogglingActive(false);
+    }
+  };
+
+  const restorePackage = async () => {
+    if (!pkg || togglingActive) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, { name: pkg.name, description: pkg.description, price: pkg.price, isActive: true });
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: true }));
+      toast.success('تمت استعادة الباقة وظهرت للطلاب.');
+    } catch {
+      toast.error('تعذر استعادة الباقة');
     } finally {
       setTogglingActive(false);
     }
@@ -143,14 +170,18 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     imageUrl: t.imageUrl,
     href: `/admin/content/terms/${t.id}`,
   }));
-  const contentMode = pkg.contentMode ?? 'TermWithSections';
+  const contentMode = packageContentMode ?? 'TermWithSections';
+  const packageTabs = getPackageTabs(contentMode);
+  const directLessons = pkg.directLessons ?? [];
 
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
   if (stats) {
     overviewStats.push(
       { label: 'طلاب اقتنوا محتوى داخل الباقة (تاريخي)', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
-      { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' },
+      contentMode === 'TermWithSections'
+        ? { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' }
+        : { label: 'الحصص', value: directLessons.length, icon: BookOpenText, tone: 'muted' },
       { label: 'الأقسام', value: stats.sectionsCount ?? 0, icon: Layers, tone: 'muted' },
       { label: 'الحصص', value: stats.lessonsCount ?? 0, icon: BookOpenText, tone: 'muted' },
       { label: 'الفيديوهات', value: stats.videosCount ?? 0, icon: Video, tone: 'success' },
@@ -187,28 +218,33 @@ export default function PackageProfilePageClient(props: { params: { id: string }
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
         <button
           type="button"
-          onClick={handleToggleActive}
+          onClick={pkg.isActive === false ? restorePackage : archivePackage}
           disabled={togglingActive}
           className={`rounded-2xl border p-4 text-center transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-95 active:scale-[0.98] cursor-pointer ${
             pkg.isActive !== false
               ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30'
-              : 'border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30'
+              : 'border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30'
           } ${togglingActive ? 'opacity-50' : ''}`}
         >
           <div className="flex items-center justify-center gap-2">
             {pkg.isActive !== false
               ? <Eye className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              : <EyeOff className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              : <EyeOff className="h-5 w-5 text-slate-600 dark:text-slate-400" />
             }
-            <span className={`text-lg font-black ${pkg.isActive !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-              {pkg.isActive !== false ? 'نشطة' : 'مخفية'}
+            <span className={`text-lg font-black ${pkg.isActive !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>
+              {pkg.isActive !== false ? 'نشطة' : 'مؤرشفة'}
             </span>
           </div>
           <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
-            {pkg.isActive !== false ? 'ظاهرة للطلاب — اضغط للإخفاء' : 'مخفية عن الطلاب — اضغط للإظهار'}
+            {pkg.isActive !== false ? 'ظاهرة للطلاب — اضغط للأرشفة' : 'مخفية عن الطلاب — اضغط للاستعادة'}
           </p>
         </button>
-        <AdminStatCard variant="light"  icon={Calendar}      label="عدد الأترام"  value={terms.length} />
+        <AdminStatCard
+          variant="light"
+          icon={contentMode === 'TermWithSections' ? Calendar : BookOpenText}
+          label={contentMode === 'TermWithSections' ? 'عدد الأترام' : 'عدد الحصص'}
+          value={contentMode === 'TermWithSections' ? terms.length : directLessons.length}
+        />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard
           variant="light"
@@ -225,7 +261,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
 
       {/* Tabs */}
       <div className="mb-8">
-        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+        <AdminTabBar tabs={packageTabs} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {/* Terms tab — uses shared ContentHierarchyPanel */}
@@ -302,10 +338,12 @@ export default function PackageProfilePageClient(props: { params: { id: string }
               <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
                 <h3 className="mb-5 text-lg font-black text-[var(--admin-text)]">ملخص هيكل المحتوى</h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
-                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.termsCount ?? terms.length}</p>
-                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">ترم</p>
-                  </div>
+                  {contentMode === 'TermWithSections' && (
+                    <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                      <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.termsCount ?? terms.length}</p>
+                      <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">ترم</p>
+                    </div>
+                  )}
                   <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
                     <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.sectionsCount ?? 0}</p>
                     <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">قسم</p>
@@ -320,13 +358,15 @@ export default function PackageProfilePageClient(props: { params: { id: string }
                   </div>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setActiveTab('terms')}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    إدارة الأترام
-                  </button>
+                  {contentMode === 'TermWithSections' && (
+                    <button
+                      onClick={() => setActiveTab('terms')}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      إدارة الأترام
+                    </button>
+                  )}
                   <button
                     onClick={() => setActiveTab('codeProfile')}
                     className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
