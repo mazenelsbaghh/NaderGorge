@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Data;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
@@ -47,11 +48,28 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
         if (_audit is not null)
             await _audit.WriteAsync("ExecutionStarted", actorId, proposal.ConversationId, proposal.TurnId, proposal.Id, new { ExecutionId = execution.Id, execution.CapabilityKey, AffectedCount = 0 }, ct);
         await _db.SaveChangesAsync(ct);
-        if (proposal.SecureInputGrantId is not null) await _secureInputs.ConsumeAsync(actorId, proposalId, ct);
+        byte[]? securePlaintext = null;
+        if (proposal.SecureInputGrantId is not null)
+        {
+            if (adapter is not IAdminAISecureActionCapability secureAdapter)
+                throw new InvalidOperationException("The proposal has secure input but its authoritative adapter does not accept it.");
+            var grant = await _db.AdminAISecureInputGrants.AsNoTracking()
+                .SingleAsync(x => x.Id == proposal.SecureInputGrantId.Value && x.ProposalId == proposalId && x.ActorAdminUserId == actorId, ct);
+            if (!StringComparer.Ordinal.Equals(grant.InputKind, secureAdapter.SecureInputKind))
+                throw new InvalidOperationException("Secure input kind does not match the authoritative adapter.");
+            var protectedInput = await _secureInputs.ConsumeAsync(actorId, proposalId, ct);
+            securePlaintext = _protector.Unprotect($"secure-input:{grant.InputKind}", protectedInput);
+        }
+        else if (adapter is IAdminAISecureActionCapability)
+        {
+            throw new InvalidOperationException("The authoritative adapter requires secure input.");
+        }
         AdminAIActionOutcome outcome;
         try
         {
-            outcome = await adapter.ExecuteAsync(actorId, input, execution.ExternalOperationId, ct);
+            outcome = adapter is IAdminAISecureActionCapability secureAdapter
+                ? await secureAdapter.ExecuteSecureAsync(actorId, input, securePlaintext!, execution.ExternalOperationId, ct)
+                : await adapter.ExecuteAsync(actorId, input, execution.ExternalOperationId, ct);
         }
         catch (TimeoutException)
         {
@@ -64,6 +82,10 @@ public sealed class AdminAIActionExecutor : IAdminAIActionExecutor
             await MarkRecoveryRequiredAsync(execution, proposal, ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
             return Dto(execution);
+        }
+        finally
+        {
+            if (securePlaintext is not null) CryptographicOperations.ZeroMemory(securePlaintext);
         }
         execution.Status = outcome.Status; execution.SafeResultJson = JsonSerializer.Serialize(outcome.SafeResult); execution.AffectedCount = outcome.AffectedCount; execution.SucceededCount = outcome.SucceededCount; execution.SkippedCount = outcome.SkippedCount; execution.FailedCount = outcome.FailedCount; execution.RefreshScopesJson = JsonSerializer.Serialize(outcome.RefreshScopes); execution.OriginalAuditLogId = outcome.OriginalAuditLogId; execution.CompletedAt = DateTime.UtcNow; execution.Version++;
         if (outcome.Items is not null)

@@ -31,10 +31,15 @@ public static class AdminAIActionCapabilityRegistration
         IEnumerable<IAdminAIActionCapability> adapters)
     {
         var materialized = adapters.ToArray();
+        var ordinary = catalog.All.Where(x => x.Kind == "action" && x.Risk == "ordinary").ToDictionary(x => x.Key, StringComparer.Ordinal);
+        if (ordinary.Count == 0)
+            throw new InvalidOperationException("Ordinary Admin AI coverage cannot be validated against an empty catalog.");
+        if (materialized.Length == 0)
+            throw new InvalidOperationException("Ordinary Admin AI coverage requires at least one authoritative adapter.");
+
         var duplicates = materialized.GroupBy(x => x.Key, StringComparer.Ordinal).Where(x => x.Count() != 1).Select(x => x.Key).Order(StringComparer.Ordinal).ToArray();
         if (duplicates.Length > 0) throw new InvalidOperationException($"Duplicate ordinary Admin AI adapters: {string.Join(", ", duplicates)}");
 
-        var ordinary = catalog.All.Where(x => x.Kind == "action" && x.Risk == "ordinary").ToDictionary(x => x.Key, StringComparer.Ordinal);
         var unknown = materialized.Select(x => x.Key).Where(x => !ordinary.ContainsKey(x)).Order(StringComparer.Ordinal).ToArray();
         if (unknown.Length > 0) throw new InvalidOperationException($"Unlisted or non-ordinary Admin AI adapters: {string.Join(", ", unknown)}");
 

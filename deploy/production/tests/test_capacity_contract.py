@@ -97,3 +97,12 @@ def test_connection_budgets_leave_database_and_redis_headroom() -> None:
     assert '"GOOGLE_CLOUD_VISION_API_KEY"' in app_env
     assert "maxmemory 4gb" in redis
     assert "maxmemory-policy noeviction" in redis
+
+
+def test_production_environment_enables_admin_ai_with_domain_separated_hmac() -> None:
+    app_env = (ROOT / "deploy/production/scripts/build_app_env.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"ADMIN_AI_ENABLED": "true"' in app_env
+    assert 'b"massar-admin-ai-hmac-v1\\0"' in app_env
+    assert '"ADMIN_AI_HMAC_KEY": admin_ai_hmac' in app_env

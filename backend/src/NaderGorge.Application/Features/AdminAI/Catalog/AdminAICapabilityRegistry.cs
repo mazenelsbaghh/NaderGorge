@@ -8,6 +8,8 @@ namespace NaderGorge.Application.Features.AdminAI.Catalog;
 
 public sealed class AdminAICapabilityRegistry : IAdminAICapabilityRegistry
 {
+    private const string EmptyObjectInputSchema = "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}";
+    private const string ObjectOutputSchema = "{\"type\":\"object\"}";
     private static readonly HashSet<string> Kinds = new(StringComparer.Ordinal) { "read", "action" };
     private static readonly HashSet<string> Risks = new(StringComparer.Ordinal) { "read", "ordinary", "strong" };
     private static readonly HashSet<string> Confirmations = new(StringComparer.Ordinal) { "none", "ordinary", "strong" };
@@ -29,6 +31,33 @@ public sealed class AdminAICapabilityRegistry : IAdminAICapabilityRegistry
     public IReadOnlyCollection<AdminAICapabilityDefinition> All { get; }
     public bool TryGet(string key, out AdminAICapabilityDefinition definition) =>
         _definitions.TryGetValue(key, out definition!);
+
+    public static AdminAICapabilityRegistry CreateProductionReadRegistry()
+    {
+        string[] keys =
+        [
+            "assessment.summary", "codes.summary", "community.summary", "content.summary",
+            "forms-settings.summary", "hr-lifecycle.summary", "hr-operations.summary",
+            "hr-people.summary", "identity.users.summary", "legacy-finance.summary",
+            "live-support.summary", "operations.summary", "platform-finance.summary",
+            "reporting.summary", "sales.summary", "teacher-finance.summary",
+            "teacher.summary", "wallet-recharge.summary"
+        ];
+
+        return new AdminAICapabilityRegistry(keys.Select(key => new AdminAICapabilityDefinition(
+            key,
+            "1.0.0",
+            "read",
+            "read",
+            "none",
+            EmptyObjectInputSchema,
+            ObjectOutputSchema,
+            1,
+            131_072,
+            5_000,
+            $"AdminAI.Reads.{key}",
+            [])));
+    }
 
     private static JsonSerializerOptions CanonicalOptions { get; } = new()
     {

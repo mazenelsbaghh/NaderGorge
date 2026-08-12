@@ -37,6 +37,22 @@ public sealed class AdminAICatalogTests
     }
 
     [Fact]
+    public void ProductionReadRegistry_ExposesOnlyTheReviewedReadCapabilities()
+    {
+        var registry = AdminAICapabilityRegistry.CreateProductionReadRegistry();
+
+        Assert.Equal(18, registry.All.Count);
+        Assert.All(registry.All, capability =>
+        {
+            Assert.Equal("read", capability.Kind);
+            Assert.Equal("none", capability.Confirmation);
+            Assert.Contains("\"additionalProperties\":false", capability.InputSchema, StringComparison.Ordinal);
+        });
+        Assert.True(registry.TryGet("identity.users.summary", out _));
+        Assert.True(registry.TryGet("platform-finance.summary", out _));
+    }
+
+    [Fact]
     public void SensitivePolicy_RejectsProhibitedNamesAndBinaryOrSecureTypes()
     {
         var policy = new AdminAISensitiveDataPolicy();

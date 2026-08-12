@@ -4,6 +4,7 @@ using NaderGorge.Infrastructure.Services.AdminAI.Actions;
 using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Wallets;
+using NaderGorge.Application.Features.Admin.Commands;
 
 namespace NaderGorge.Application.Tests.AdminAI;
 
@@ -78,6 +79,30 @@ public sealed class AdminAIHighRiskActionContractTests
         var serialized = System.Text.Json.JsonSerializer.Serialize(new[] { rotated.SafeResult, created.SafeResult });
         Assert.DoesNotContain(secret, serialized, StringComparison.Ordinal);
         Assert.DoesNotContain("pairingToken", serialized, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PasswordReset_RequiresSecureContinuation_AndKeepsPasswordOutOfSafeResult()
+    {
+        const string password = "Strong-Pass-123!";
+        AdminResetPasswordCommand? captured = null;
+        var mediator = new BoundaryMediator(request =>
+        {
+            captured = Assert.IsType<AdminResetPasswordCommand>(request);
+            return ApiResponse.Ok("updated");
+        });
+        var action = new AdminAIResetPasswordAction(mediator, new SafePreviewSource());
+        var input = new AdminAIResetPasswordInput(Guid.NewGuid());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            action.ExecuteAsync(Guid.NewGuid(), input, "reset-1", default));
+
+        var result = await action.ExecuteSecureAsync(
+            Guid.NewGuid(), input, System.Text.Encoding.UTF8.GetBytes(password), "reset-1", default);
+
+        Assert.Equal(password, captured!.NewPassword);
+        Assert.DoesNotContain(password, System.Text.Json.JsonSerializer.Serialize(result.SafeResult), StringComparison.Ordinal);
+        Assert.Equal("Password", action.SecureInputKind);
     }
 
     [Theory]

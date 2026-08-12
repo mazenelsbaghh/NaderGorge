@@ -2,6 +2,7 @@ using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
+using System.Text;
 
 namespace NaderGorge.Infrastructure.Services.AdminAI.Actions;
 
@@ -20,6 +21,17 @@ public sealed record AdminAIToggleSystemAccessInput(Guid UserId, bool IsActive, 
 public sealed record AdminAICreateRoleInput(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 public sealed record AdminAIUpdateRoleInput(Guid RoleId, string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 public sealed record AdminAIDeleteRoleInput(Guid RoleId);
+public sealed record AdminAIResetPasswordInput(Guid UserId);
+
+public sealed class AdminAIResetPasswordAction(IMediator mediator, IAdminAIActionPreviewSource preview)
+    : AdminAISecureMediatRActionCapability<AdminAIResetPasswordInput, ApiResponse>(mediator, preview)
+{
+    public override string Key => "admin.identity.user.password-reset";
+    public override string SecureInputKind => "Password";
+    protected override IRequest<ApiResponse> CreateCommand(AdminAIResetPasswordInput input, ReadOnlyMemory<byte> secureInput, Guid actorId, string operationId) =>
+        new AdminResetPasswordCommand(input.UserId, Encoding.UTF8.GetString(secureInput.Span), actorId);
+    protected override AdminAIActionOutcome ToOutcome(ApiResponse response) => IdentityOutcome.From(response, ["users", "credentials", "sessions"]);
+}
 
 public sealed class AdminAIUpdateUserRolesAction(IMediator mediator, IAdminAIActionPreviewSource preview)
     : AdminAIMediatRActionCapability<AdminAIUpdateUserRolesInput, ApiResponse>(mediator, preview)

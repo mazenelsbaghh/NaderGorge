@@ -249,7 +249,26 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAISensitiveDataPolicy, NaderGorge.Application.Features.AdminAI.Security.AdminAISensitiveDataPolicy>();
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIDataProtector, NaderGorge.Infrastructure.Services.AdminAI.AdminAIDataProtector>();
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAICapabilityRegistry>(_ =>
-    new NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry([]));
+    NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry.CreateProductionReadRegistry());
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIIdentitySummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIOperationsSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAITeacherSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIPlatformFinanceSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIHrOperationsSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAICommunitySummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIContentSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIWalletRechargeSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAICodeSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAILegacyFinanceSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAITeacherFinanceSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIHrPeopleSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIFormsSettingsSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIHrLifecycleSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAISalesSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIAssessmentSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIReportingSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAILiveSupportSummaryRead>();
+builder.Services.AddHostedService<AdminAIGovernanceBootstrapBackgroundService>();
 builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
 builder.Services.AddHostedService<LiveSupportAIRecoveryBackgroundService>();
 builder.Services.AddHostedService<RechargeRequestExpiryBackgroundService>();

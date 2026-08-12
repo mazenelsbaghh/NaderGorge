@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -61,6 +63,10 @@ def safe_line(key: str, value: str) -> str:
 def render(source: dict[str, str], secrets: Path) -> list[str]:
     postgres_password = read_secret(secrets, "postgres-app")
     redis_password = read_secret(secrets, "redis")
+    ai_callback_secret = read_secret(secrets, "ai-callback")
+    admin_ai_hmac = base64.b64encode(
+        hashlib.sha256(b"massar-admin-ai-hmac-v1\0" + ai_callback_secret.encode("utf-8")).digest()
+    ).decode("ascii")
     values = {
         "ASPNETCORE_ENVIRONMENT": "Production",
         "ASPNETCORE_URLS": "http://+:5245",
@@ -87,7 +93,9 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "JwtSettings__ExpirationMinutes": "60",
         "JwtSettings__RefreshExpirationDays": "30",
         "API_CALLBACK_SECRET": read_secret(secrets, "api-callback"),
-        "AI_CALLBACK_SECRET": read_secret(secrets, "ai-callback"),
+        "AI_CALLBACK_SECRET": ai_callback_secret,
+        "ADMIN_AI_ENABLED": "true",
+        "ADMIN_AI_HMAC_KEY": admin_ai_hmac,
         "WORKER_ADMIN_TOKEN": read_secret(secrets, "worker-admin"),
         "WORKER_ADMIN_ENABLED": "true",
         "ParentReports__SigningSecret": read_secret(secrets, "parent-signing"),

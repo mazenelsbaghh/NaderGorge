@@ -49,6 +49,11 @@ public interface IAdminAIActionCapability
     Task<AdminAIActionPreview> PreviewAsync(Guid actorId, object input, CancellationToken cancellationToken);
     Task<AdminAIActionOutcome> ExecuteAsync(Guid actorId, object input, string operationId, CancellationToken cancellationToken);
 }
+public interface IAdminAISecureActionCapability : IAdminAIActionCapability
+{
+    string SecureInputKind { get; }
+    Task<AdminAIActionOutcome> ExecuteSecureAsync(Guid actorId, object input, ReadOnlyMemory<byte> secureInput, string operationId, CancellationToken cancellationToken);
+}
 public interface IAdminAIConfirmationChallengeService
 {
     Task<string> IssueAsync(Guid actorId, Guid proposalId, string safeActionLabel, CancellationToken cancellationToken);

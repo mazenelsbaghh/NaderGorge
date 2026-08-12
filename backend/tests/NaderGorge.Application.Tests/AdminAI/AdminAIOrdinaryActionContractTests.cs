@@ -59,6 +59,45 @@ public sealed class AdminAIOrdinaryActionContractTests
 
         var strong = new AdminAICapabilityDefinition(adapter.Key, "1", "action", "strong", "strong", "{}", "{}", 0, 4096, 5000, "AddStudentNoteCommand", ["students"]);
         Assert.Throws<InvalidOperationException>(() => AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(new AdminAICapabilityRegistry([strong]), [adapter]));
+        Assert.Throws<InvalidOperationException>(() => AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(new AdminAICapabilityRegistry([]), []));
+    }
+
+    [Fact]
+    public void EveryImplementedOrdinaryAdapter_HasExactCatalogRiskConfirmationAndRefreshContract()
+    {
+        var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(new CapturingMediator(), new PreviewSource());
+        var definitions = adapters.Select(adapter => new AdminAICapabilityDefinition(
+            adapter.Key, "1", "action", "ordinary", "ordinary", "input:v1", "output:v1", 0, 65_536, 5_000,
+            $"mediatr:{adapter.GetType().Name}", ExpectedRefreshScopes(adapter.Key))).ToArray();
+
+        var validated = AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(
+            new AdminAICapabilityRegistry(definitions), adapters);
+
+        Assert.Equal(definitions.Length, validated.Count);
+        Assert.All(definitions, definition =>
+        {
+            Assert.Equal("action", definition.Kind);
+            Assert.Equal("ordinary", definition.Risk);
+            Assert.Equal("ordinary", definition.Confirmation);
+            Assert.NotEmpty(definition.RefreshScopes);
+            Assert.DoesNotContain(definition.RefreshScopes, scope => string.IsNullOrWhiteSpace(scope));
+        });
+    }
+
+    [Fact]
+    public void OrdinaryAdapters_AreTypedAuthoritativeBridges_WithoutControllerOrDbContextDependencies()
+    {
+        var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(new CapturingMediator(), new PreviewSource());
+
+        Assert.All(adapters, adapter =>
+        {
+            var type = adapter.GetType();
+            Assert.NotNull(type.BaseType);
+            Assert.Equal(typeof(AdminAIMediatRActionCapability<,>), type.BaseType!.GetGenericTypeDefinition());
+            Assert.DoesNotContain(type.GetConstructors().SelectMany(ctor => ctor.GetParameters()), parameter =>
+                parameter.ParameterType.Name.Contains("Controller", StringComparison.Ordinal) ||
+                parameter.ParameterType.Name.Contains("DbContext", StringComparison.Ordinal));
+        });
     }
 
     [Fact]
@@ -200,5 +239,21 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.tools.media-pipeline.create" => new AdminAICreateMediaPipelineInput("pipeline", null, null, null),
         "admin.tools.social-plan.create" => new AdminAICreateSocialPlanInput("plan", null, null, SocialPlatform.Facebook, SocialPlanStatus.Draft, DateTime.UtcNow, null),
         _ => throw new InvalidOperationException($"No contract fixture for {key}.")
+    };
+
+    private static string[] ExpectedRefreshScopes(string key) => key switch
+    {
+        "admin.identity.student-note.create" => ["students", "student-notes"],
+        "admin.content.subject.create" or "admin.content.subject.update" => ["subjects", "content"],
+        "admin.content.video-type.create" or "admin.content.video-type.update" => ["video-types", "content"],
+        "admin.assessment.lesson-comment.approve" => ["lesson-comments", "moderation"],
+        "admin.assessment.community-post.approve" => ["community-posts", "moderation"],
+        "admin.commercial.form.create" or "admin.commercial.form.update" => ["forms"],
+        "admin.operations.task.create" => ["operations-tasks", "internal-chat"],
+        "admin.operations.task.status.update" => ["operations-tasks"],
+        "admin.operations.task-comment.create" => ["operations-tasks", "task-comments"],
+        "admin.tools.media-pipeline.create" => ["media-pipelines"],
+        "admin.tools.social-plan.create" => ["social-plans"],
+        _ => throw new InvalidOperationException($"No refresh contract for {key}.")
     };
 }
