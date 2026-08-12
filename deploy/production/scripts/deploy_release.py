@@ -876,6 +876,7 @@ def main() -> int:
     parser.add_argument("--rollback-evidence", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    parser.add_argument("--force-reconfigure", action="store_true")
     args = parser.parse_args()
     if not RELEASE.fullmatch(args.release):
         raise DeployError("invalid immutable release ID")
@@ -970,7 +971,7 @@ def main() -> int:
     rollout_complete = False
     unadvanced_drained_node: str | None = None
     try:
-        completed_retry = all_nodes_running_release(
+        completed_retry = not args.force_reconfigure and all_nodes_running_release(
             inventory, transport, args.release
         )
         if completed_retry:
