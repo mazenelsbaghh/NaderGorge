@@ -543,7 +543,7 @@ compose() {{
 }}
 stage="restore-previous-compose"
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true
-compose up -d --no-build --remove-orphans $services
+compose up -d --no-build --force-recreate --remove-orphans $services
 stage="wait-previous-health"
 for attempt in $(seq 1 60); do
   healthy=1
@@ -787,7 +787,7 @@ stage="validate-compose"
 compose config -q
 stage="start-compose"
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true
-compose up -d --no-build --remove-orphans {services}
+compose up -d --no-build --force-recreate --remove-orphans {services}
 stage="wait-container-health"
 for attempt in $(seq 1 60); do
   healthy=1

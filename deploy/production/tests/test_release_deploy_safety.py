@@ -200,9 +200,10 @@ def test_deploy_node_requires_every_service_shared_write_and_atomic_pointer() ->
     assert '--env-file "$runtime_env"' in script
     assert 'runtime_env="/tmp/massar-runtime-' in script
     assert 'rm -f "$runtime_env"' in script
+    assert "compose up -d --no-build --force-recreate --remove-orphans" in script
     assert "compose_state=\"$(compose ps --format json)\"" in script
     assert "compose rm --stop --force release-evidence" in script
-    assert "compose up -d --no-build --remove-orphans backend worker" in script
+    assert "compose up -d --no-build --force-recreate --remove-orphans backend worker" in script
     assert "/shared/public/.massar-worker-write-" in script
     assert "docker exec --user 10001:10001" in script
     assert "id -G" in script
