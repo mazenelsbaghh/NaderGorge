@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { createClientId } from '@/lib/client-id';
 import {
   adminAiAgentPaths,
   adminAiRequestConfig,
@@ -200,5 +201,5 @@ export const adminAiAgentService = {
 };
 
 export function createAdminAiIntentKey(): string {
-  return crypto.randomUUID();
+  return createClientId();
 }

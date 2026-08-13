@@ -66,6 +66,31 @@ public sealed class GiftsAndPromotionalBalanceTests
     }
 
     [Fact]
+    public async Task StudentLookup_MarksRecipientsPreviouslyGiftedForTheSelectedTarget()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, "Previous Gift Student", "152019");
+        var other = await SeedStudentAsync(db, "New Gift Student", "152020");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Gift Lookup Admin", "152021");
+        var package = await SeedPackageAsync(db, 120m);
+        var issuer = new IssueGiftCommandHandler(
+            db,
+            new AccessCheckService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+
+        await issuer.Handle(new IssueGiftCommand(new IssueGiftRequest(
+            Guid.NewGuid(), GiftTargetType.Package, package.Id, null, null, null, null,
+            [student.Id], "هدية أولى"), admin.Id), CancellationToken.None);
+
+        var lookup = await new GetGiftStudentsLookupQueryHandler(db).Handle(
+            new GetGiftStudentsLookupQuery("Gift", GiftTargetType.Package, package.Id),
+            CancellationToken.None);
+
+        Assert.NotNull(Assert.Single(lookup.Data!, x => x.Id == student.Id).PreviouslyGiftedAt);
+        Assert.Null(Assert.Single(lookup.Data!, x => x.Id == other.Id).PreviouslyGiftedAt);
+    }
+
+    [Fact]
     public async Task GeneralBalanceGift_CreditsPaidBalance_WithPlatformGiftTransaction()
     {
         await using var db = TestAppDbContextFactory.Create();

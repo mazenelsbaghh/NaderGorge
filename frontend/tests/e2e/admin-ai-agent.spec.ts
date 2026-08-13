@@ -91,6 +91,47 @@ async function openConversation(page: Page, proposals?: unknown[]) {
   ).toBeVisible();
 }
 
+// Regression: production mobile "محادثة جديدة" did not open when the API returned a direct DTO.
+test('new conversation opens its workspace on a phone with a direct API response', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const created = { ...conversation, title: 'محادثة جديدة' };
+  await page.route('**/api/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const method = route.request().method();
+    let data: unknown = null;
+    if (pathname.endsWith('/auth/session'))
+      data = { user: admin, authorizationVersion: 1 };
+    else if (pathname.endsWith('/admin/ai-agent/conversations') && method === 'POST')
+      data = created;
+    else if (pathname.endsWith('/admin/ai-agent/conversations'))
+      data = { items: [], nextCursor: null };
+    else if (pathname.endsWith(`/admin/ai-agent/conversations/${created.id}/snapshot`))
+      data = {
+        conversation: created,
+        messages: [],
+        activeTurns: [],
+        proposals: [],
+        nextBeforeSequence: null,
+        latestSequence: 0,
+        baselineVersion: 'v1',
+        sensitivePolicyVersion: 'v1',
+        serverTime: new Date().toISOString(),
+      };
+    else if (pathname.endsWith('/admin/ai-agent/action-evidence'))
+      data = { items: [], nextCursor: null };
+    await route.fulfill({
+      status: method === 'POST' ? 201 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(data),
+    });
+  });
+  await installAuthAndGoto(page, 'admin-ai-mobile-create', admin, `${adminUrl}/admin/ai-agent`);
+  await page.getByRole('button', { name: 'محادثة جديدة', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'محادثة جديدة' })).toBeVisible();
+});
+
 const ordinaryProposal = {
   id: '60000000-0000-4000-8000-000000000170',
   conversationId: conversation.id,

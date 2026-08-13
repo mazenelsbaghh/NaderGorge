@@ -38,7 +38,12 @@ public sealed record IssueGiftResultDto(
     IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes,
     IReadOnlyList<GiftRecipientResultDto> Recipients);
 
-public sealed record GiftLookupDto(Guid Id, string Name, string? Context = null, IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes = null);
+public sealed record GiftLookupDto(
+    Guid Id,
+    string Name,
+    string? Context = null,
+    IReadOnlyList<AcademicScopeSummaryDto>? AcademicScopes = null,
+    DateTime? PreviouslyGiftedAt = null);
 
 public sealed record GiftListItemDto(
     Guid Id,

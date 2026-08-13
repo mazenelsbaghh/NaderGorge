@@ -39,7 +39,14 @@ export function GiftIssueForm() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    Promise.all([adminGiftsService.students(studentSearch), adminGiftsService.teachers()])
+    Promise.all([
+      adminGiftsService.students(
+        studentSearch,
+        isBalance(targetType) ? undefined : targetType,
+        isBalance(targetType) ? undefined : targetId || undefined,
+      ),
+      adminGiftsService.teachers(),
+    ])
       .then(([studentRows, teacherRows]) => {
         if (!active) return;
         setStudents(studentRows);
@@ -48,7 +55,7 @@ export function GiftIssueForm() {
       .catch(() => toast.error('تعذر تحميل قوائم الاختيار.'))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [studentSearch]);
+  }, [studentSearch, targetId, targetType]);
 
   useEffect(() => {
     setTargetId('');
@@ -73,7 +80,14 @@ export function GiftIssueForm() {
   );
 
   const toggleStudent = (id: string) => {
-    setSelectedStudents((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id].slice(0, 100));
+    const student = students.find((candidate) => candidate.id === id);
+    setSelectedStudents((current) => {
+      const isSelected = current.includes(id);
+      if (!isSelected && student?.previouslyGiftedAt) {
+        toast('هذا الطالب حصل على هدية لهذا المحتوى من قبل. يمكنك إضافته مجددًا إذا كان ذلك مقصودًا.', { icon: 'ℹ️' });
+      }
+      return isSelected ? current.filter((value) => value !== id) : [...current, id].slice(0, 100);
+    });
   };
 
   const submit = async (event: FormEvent) => {
@@ -170,7 +184,7 @@ export function GiftIssueForm() {
         <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-[var(--admin-border)]">
           {loading ? <div className="flex min-h-32 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-[var(--admin-primary)]" /></div> : students.length === 0 ? <p className="p-8 text-center text-sm text-[var(--admin-muted)]">لا توجد نتائج.</p> : students.map((student) => {
             const selected = selectedStudents.includes(student.id);
-            return <button type="button" key={student.id} onClick={() => toggleStudent(student.id)} className="flex w-full items-center justify-between border-b border-[var(--admin-border)] px-4 py-3 text-right last:border-0 hover:bg-[var(--admin-hover)]"><span><strong className="block text-sm text-[var(--admin-text)]">{student.name}</strong><small className="text-[var(--admin-muted)]">{student.context}</small></span><span className={`flex h-6 w-6 items-center justify-center rounded border ${selected ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)]'}`}>{selected ? <Check className="h-4 w-4" /> : null}</span></button>;
+            return <button type="button" key={student.id} onClick={() => toggleStudent(student.id)} className="flex w-full items-center justify-between border-b border-[var(--admin-border)] px-4 py-3 text-right last:border-0 hover:bg-[var(--admin-hover)]"><span><strong className="block text-sm text-[var(--admin-text)]">{student.name}</strong><small className="text-[var(--admin-muted)]">{student.context}</small>{student.previouslyGiftedAt ? <small className="mt-1 block font-bold text-amber-700 dark:text-amber-300">أُضيفت له هدية لهذا المحتوى سابقًا</small> : null}</span><span className={`flex h-6 w-6 items-center justify-center rounded border ${selected ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)]'}`}>{selected ? <Check className="h-4 w-4" /> : null}</span></button>;
           })}
         </div>
       </section>

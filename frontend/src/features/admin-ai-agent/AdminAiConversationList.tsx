@@ -26,7 +26,7 @@ export function AdminAiConversationList({
   return (
     <aside
       aria-label="سجل المحادثات"
-      className="flex min-h-0 flex-col border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] lg:border-b-0 lg:border-l"
+      className="flex min-h-0 w-full flex-1 flex-col border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] lg:w-auto lg:flex-none lg:border-b-0 lg:border-l"
     >
       <div className="p-3">
         <button

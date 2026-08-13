@@ -8,7 +8,10 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Gifts.Queries;
 
-public sealed record GetGiftStudentsLookupQuery(string? Search = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
+public sealed record GetGiftStudentsLookupQuery(
+    string? Search = null,
+    GiftTargetType? TargetType = null,
+    Guid? TargetId = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
 public sealed record GetGiftTeachersLookupQuery(string? Search = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
 public sealed record GetGiftTargetsLookupQuery(GiftTargetType TargetType, Guid? TeacherId = null, string? Search = null) : IRequest<ApiResponse<IReadOnlyList<GiftLookupDto>>>;
 
@@ -26,7 +29,29 @@ public sealed class GetGiftStudentsLookupQueryHandler : IRequestHandler<GetGiftS
             query = query.Where(x => x.FullName.ToLower().Contains(search) || x.PhoneNumber.Contains(search));
         }
         var rows = await query.OrderBy(x => x.FullName).Take(50)
-            .Select(x => new GiftLookupDto(x.Id, x.FullName, x.PhoneNumber, null)).ToListAsync(ct);
+            .Select(x => new GiftLookupDto(x.Id, x.FullName, x.PhoneNumber, null, null)).ToListAsync(ct);
+
+        if (!request.TargetType.HasValue || !request.TargetId.HasValue ||
+            request.TargetType is GiftTargetType.GeneralBalance or GiftTargetType.TeacherBalance)
+            return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
+
+        var studentIds = rows.Select(x => x.Id).ToList();
+        var previouslyGifted = await _db.GiftRecipients
+            .AsNoTracking()
+            .Where(x => studentIds.Contains(x.StudentId) &&
+                        x.Status != GiftRecipientStatus.Failed &&
+                        x.GiftIssuance.TargetType == request.TargetType &&
+                        (request.TargetType == GiftTargetType.Package && x.GiftIssuance.PackageId == request.TargetId ||
+                         request.TargetType == GiftTargetType.Lesson && x.GiftIssuance.LessonId == request.TargetId ||
+                         request.TargetType == GiftTargetType.Video && x.GiftIssuance.LessonVideoId == request.TargetId ||
+                         request.TargetType == GiftTargetType.Exam && x.GiftIssuance.ExamId == request.TargetId))
+            .GroupBy(x => x.StudentId)
+            .Select(x => new { StudentId = x.Key, LastGiftedAt = x.Max(recipient => recipient.GiftIssuance.CreatedAt) })
+            .ToDictionaryAsync(x => x.StudentId, x => x.LastGiftedAt, ct);
+
+        rows = rows.Select(row => previouslyGifted.TryGetValue(row.Id, out var giftedAt)
+            ? row with { PreviouslyGiftedAt = giftedAt }
+            : row).ToList();
         return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
     }
 }
@@ -45,7 +70,7 @@ public sealed class GetGiftTeachersLookupQueryHandler : IRequestHandler<GetGiftT
             query = query.Where(x => x.User.FullName.ToLower().Contains(search));
         }
         var rows = await query.OrderBy(x => x.User.FullName).Take(50)
-            .Select(x => new GiftLookupDto(x.Id, x.User.FullName, x.Specialization, null)).ToListAsync(ct);
+            .Select(x => new GiftLookupDto(x.Id, x.User.FullName, x.Specialization, null, null)).ToListAsync(ct);
         return ApiResponse<IReadOnlyList<GiftLookupDto>>.Ok(rows);
     }
 }
@@ -62,16 +87,16 @@ public sealed class GetGiftTargetsLookupQueryHandler : IRequestHandler<GetGiftTa
         {
             GiftTargetType.Package => await _db.Packages.AsNoTracking()
                 .Where(x => x.IsActive && (!request.TeacherId.HasValue || x.TeacherId == request.TeacherId) && (search == null || x.Name.ToLower().Contains(search)))
-                .OrderBy(x => x.Name).Take(50).Select(x => new GiftLookupDto(x.Id, x.Name, x.Teacher.User.FullName, null)).ToListAsync(ct),
+                .OrderBy(x => x.Name).Take(50).Select(x => new GiftLookupDto(x.Id, x.Name, x.Teacher.User.FullName, null, null)).ToListAsync(ct),
             GiftTargetType.Lesson => await _db.Lessons.AsNoTracking()
                 .Where(x => (!request.TeacherId.HasValue || x.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.ContentSection.Term.Package.Name, null)).ToListAsync(ct),
+                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.ContentSection.Term.Package.Name, null, null)).ToListAsync(ct),
             GiftTargetType.Video => await _db.LessonVideos.AsNoTracking()
                 .Where(x => x.IsActive && (!request.TeacherId.HasValue || x.Lesson.ContentSection.Term.Package.TeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.Lesson.Title, null)).ToListAsync(ct),
+                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.Lesson.Title, null, null)).ToListAsync(ct),
             GiftTargetType.Exam => await _db.Exams.AsNoTracking()
                 .Where(x => (!request.TeacherId.HasValue || x.CreatedByTeacherId == request.TeacherId) && (search == null || x.Title.ToLower().Contains(search) || x.InternalCode.ToLower().Contains(search)))
-                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.CreatedByTeacher.User.FullName, null)).ToListAsync(ct),
+                .OrderBy(x => x.Title).Take(50).Select(x => new GiftLookupDto(x.Id, x.Title, x.CreatedByTeacher.User.FullName, null, null)).ToListAsync(ct),
             _ => new List<GiftLookupDto>()
         };
 

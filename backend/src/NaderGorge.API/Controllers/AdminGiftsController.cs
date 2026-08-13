@@ -58,8 +58,12 @@ public sealed class AdminGiftsController : ControllerBase
     }
 
     [HttpGet("lookups/students")]
-    public async Task<IActionResult> Students([FromQuery] string? search, CancellationToken ct)
-        => Ok(await _mediator.Send(new GetGiftStudentsLookupQuery(search), ct));
+    public async Task<IActionResult> Students(
+        [FromQuery] string? search,
+        [FromQuery] GiftTargetType? targetType,
+        [FromQuery] Guid? targetId,
+        CancellationToken ct)
+        => Ok(await _mediator.Send(new GetGiftStudentsLookupQuery(search, targetType, targetId), ct));
 
     [HttpGet("lookups/teachers")]
     public async Task<IActionResult> Teachers([FromQuery] string? search, CancellationToken ct)

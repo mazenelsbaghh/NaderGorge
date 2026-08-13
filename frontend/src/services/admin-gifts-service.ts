@@ -9,6 +9,7 @@ export interface GiftLookupDto {
   name: string;
   context?: string | null;
   academicScopes?: AcademicScopeSummary[] | null;
+  previouslyGiftedAt?: string | null;
 }
 
 export interface GiftRecipientResultDto {
@@ -124,8 +125,10 @@ export const adminGiftsService = {
       await apiClient.post(`/admin/gifts/${id}/revoke`, { reason }),
     );
   },
-  async students(search = '') {
-    return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/students', { params: { search } }));
+  async students(search = '', targetType?: GiftTargetType, targetId?: string) {
+    return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/students', {
+      params: { search, targetType, targetId },
+    }));
   },
   async teachers(search = '') {
     return unwrap<GiftLookupDto[]>(await apiClient.get('/admin/gifts/lookups/teachers', { params: { search } }));
