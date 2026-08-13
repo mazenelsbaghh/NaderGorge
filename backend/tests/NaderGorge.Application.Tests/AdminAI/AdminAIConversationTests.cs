@@ -1,6 +1,8 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.AdminAI.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -41,6 +43,26 @@ public sealed class AdminAIConversationTests
         Assert.Equal([2L, 3L], snapshot.Messages.Select(x => x.Sequence)); Assert.True(snapshot.HasOlderMessages);
         Assert.Single(page.Items); Assert.NotNull(page.NextCursor);
         Assert.Single((await service.ListAsync(actor, null, page.NextCursor, 1, default)).Items);
+    }
+
+    [Fact]
+    public async Task Snapshot_OfNewConversation_ExecutesAgainstRelationalDatabase()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var actor = Guid.NewGuid();
+        db.Users.Add(new User { Id = actor, FullName = "Admin", PhoneNumber = "01000000000", PasswordHash = "test" });
+        await db.SaveChangesAsync();
+        var service = Service(db, actor);
+        var conversation = await service.CreateAsync(actor, null, "create-relational", default);
+
+        var snapshot = await service.SnapshotAsync(actor, conversation.Id, null, 50, default);
+
+        Assert.Equal(conversation.Id, snapshot.Conversation.Id);
+        Assert.Null(snapshot.ActiveTurn);
     }
 
     [Fact]

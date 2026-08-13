@@ -74,7 +74,11 @@ public sealed partial class AdminAIConversationService(IAppDbContext db, IAdminA
         conversation.Status = archived ? AdminAIConversationStatus.Archived : AdminAIConversationStatus.Active;
         conversation.ArchivedAt = archived ? DateTime.UtcNow : null; conversation.Version++; conversation.LastActivityAt = DateTime.UtcNow;
         if (archived)
-            foreach (var turn in await db.AdminAITurns.Where(x => x.ConversationId == conversationId && !x.Status.IsTerminal()).ToListAsync(ct))
+            foreach (var turn in await db.AdminAITurns.Where(x => x.ConversationId == conversationId &&
+                                                                   x.Status != AdminAITurnStatus.Completed &&
+                                                                   x.Status != AdminAITurnStatus.Cancelled &&
+                                                                   x.Status != AdminAITurnStatus.Failed &&
+                                                                   x.Status != AdminAITurnStatus.AccessRevoked).ToListAsync(ct))
             { turn.Status = AdminAITurnStatus.CancelRequested; turn.CancellationRequestedAt = DateTime.UtcNow; turn.Version++; }
         AddReceipt(actorId, conversation, operation, expectedVersion, operation, idempotencyKey);
         await db.SaveChangesAsync(ct);
