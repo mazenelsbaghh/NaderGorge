@@ -37,7 +37,8 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
     {
         if (request.ContentMode is not (PackageContentMode.TermWithSections
             or PackageContentMode.SectionWithLessons
-            or PackageContentMode.LessonsOnly))
+            or PackageContentMode.LessonsOnly
+            or PackageContentMode.SingleLesson))
             return ApiResponse<Guid>.Fail("نوع هيكل الكورس غير صالح.");
 
         if (request.AcademicScopes is { Count: 0 })
@@ -148,28 +149,42 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
         // while making direct sections/lessons appear at package level. These
         // containers are never returned as visible course content.
         if (request.ContentMode is PackageContentMode.SectionWithLessons
-            or PackageContentMode.LessonsOnly)
+            or PackageContentMode.LessonsOnly
+            or PackageContentMode.SingleLesson)
         {
             var rootTerm = new Term
             {
                 PackageId = pkg.Id,
                 Title = "المحتوى المباشر",
                 Order = -1,
-                Price = 0,
+                Price = request.ContentMode == PackageContentMode.SectionWithLessons ? request.Price : 0,
                 IsSystemContainer = true
             };
             pkg.Terms.Add(rootTerm);
 
-            if (request.ContentMode == PackageContentMode.LessonsOnly)
+            if (request.ContentMode is PackageContentMode.LessonsOnly
+                or PackageContentMode.SingleLesson)
             {
-                rootTerm.Sections.Add(new ContentSection
+                var rootSection = new ContentSection
                 {
                     TermId = rootTerm.Id,
                     Title = "الحصص المباشرة",
                     Order = -1,
-                    Price = 0,
+                    Price = request.ContentMode == PackageContentMode.LessonsOnly ? request.Price : 0,
                     IsSystemContainer = true
-                });
+                };
+                rootTerm.Sections.Add(rootSection);
+
+                if (request.ContentMode == PackageContentMode.SingleLesson)
+                {
+                    rootSection.Lessons.Add(new Lesson
+                    {
+                        Title = request.Name,
+                        Summary = request.Description,
+                        Order = 1,
+                        Price = request.Price
+                    });
+                }
             }
         }
 

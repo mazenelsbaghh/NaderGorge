@@ -13,6 +13,17 @@ import type {
 
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
 
+export type ContentArchiveMode = 'None' | 'ActiveSubscribersOnly' | 'HiddenFromEveryone';
+export type ContentArchiveTargetType =
+  | 'Package'
+  | 'Term'
+  | 'Section'
+  | 'Lesson'
+  | 'Video'
+  | 'Resource'
+  | 'Exam'
+  | 'Homework';
+
 export interface VideoTypeDto {
   id: string;
   name: string;
@@ -578,6 +589,8 @@ export interface ExamDashboardDto {
   timePerQuestionSeconds?: number;
   attempts: StudentExamResultSummaryDto[];
   questions: ExamQuestionSummaryDto[];
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface StudentHomeworkResultSummaryDto {
@@ -620,6 +633,8 @@ export interface HomeworkDashboardDto {
   isRandomized: boolean;
   submissions: StudentHomeworkResultSummaryDto[];
   questions: HomeworkQuestionSummaryDto[];
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface AssessmentOcrQuestionDto {
@@ -747,8 +762,10 @@ export interface LessonCockpitVideoDto {
   isActive: boolean;
   videoType: LessonCockpitVideoTypeDto;
   examId?: string | null;
-  exams?: { examId: string; title: string }[] | null;
+  exams?: { examId: string; title: string; archiveMode: ContentArchiveMode; archivedAt?: string | null }[] | null;
   chapters?: LessonCockpitVideoChapterDto[] | null;
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonCockpitResourceDto {
@@ -756,6 +773,8 @@ export interface LessonCockpitResourceDto {
   title: string;
   fileUrl: string;
   resourceType: string;
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonCockpitHomeworkDto {
@@ -763,6 +782,8 @@ export interface LessonCockpitHomeworkDto {
   title: string;
   isMandatory: boolean;
   passingScoreThreshold?: number | null;
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonCockpitDto {
@@ -773,6 +794,10 @@ export interface LessonCockpitDto {
   examId?: string | null;
   price: number;
   order: number;
+  archiveMode: ContentArchiveMode;
+  archivedAt?: string | null;
+  examArchiveMode: ContentArchiveMode;
+  examArchivedAt?: string | null;
   videos: LessonCockpitVideoDto[];
   resources: LessonCockpitResourceDto[];
   homework: LessonCockpitHomeworkDto[];
@@ -839,6 +864,19 @@ export interface AdminPackageListItemDto {
 }
 
 export const adminService = {
+  setContentArchiveState: async (
+    targetType: ContentArchiveTargetType,
+    id: string,
+    archiveMode: ContentArchiveMode
+  ) => {
+    const res = await apiClient.put<ApiResponse<{
+      targetType: ContentArchiveTargetType;
+      targetId: string;
+      archiveMode: ContentArchiveMode;
+      archivedAt?: string | null;
+    }>>(`/admin/content/${targetType}/${id}/archive`, { archiveMode });
+    return res.data?.data;
+  },
   sendWhatsAppTestMessage: async (payload: WhatsAppTestMessagePayload) => {
     const res = await apiClient.post<WhatsAppTestMessageResult>(
       '/whatsapp/admin/test-message',
@@ -1249,7 +1287,7 @@ export const adminService = {
     targetGrade: string;
     teacherId?: string;
     academicScopes?: AcademicScopePayload[];
-    contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly';
+    contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly' | 'SingleLesson';
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(
       '/admin/packages',

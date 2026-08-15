@@ -12,11 +12,13 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
 {
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetTermsQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    public GetTermsQueryHandler(IAppDbContext db, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<List<TermDto>>> Handle(GetTermsQuery request, CancellationToken ct)
@@ -24,7 +26,7 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
         var terms = await _db.Terms
             .Where(t => t.PackageId == request.PackageId && (request.IncludeSystemContainers || !t.IsSystemContainer))
             .OrderBy(t => t.Order)
-            .Select(t => new { t.Id, t.Title, t.Order, t.Price, t.ImageUrl })
+            .Select(t => new { t.Id, t.Title, t.Order, t.Price, t.ImageUrl, t.ArchiveMode, t.ArchivedAt })
             .ToListAsync(ct);
 
         if (request.UserId.HasValue && !await IsPrivilegedUserAsync(request.UserId.Value, ct))
@@ -36,7 +38,8 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
                         StudentFacingScopeOwnerType.Term,
                         term.Id,
                         request.UserId.Value,
-                        ct))
+                        ct) && await _archiveAccess.CanViewAsync(
+                        request.UserId.Value, ContentArchiveTargetType.Term, term.Id, ct))
                 {
                     eligibleTerms.Add(term.Id);
                 }
@@ -80,7 +83,7 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
 
         var result = terms.Select(t => new TermDto(
             t.Id, t.Title, t.Order, t.Price, t.ImageUrl,
-            hasPackageAccess || purchasedTermIds.Contains(t.Id)
+            hasPackageAccess || purchasedTermIds.Contains(t.Id), t.ArchiveMode, t.ArchivedAt
         )).ToList();
 
         return ApiResponse<List<TermDto>>.Ok(result);

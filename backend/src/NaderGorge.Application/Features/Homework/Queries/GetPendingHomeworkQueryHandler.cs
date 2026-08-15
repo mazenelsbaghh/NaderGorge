@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Homework.Queries;
@@ -8,10 +10,12 @@ namespace NaderGorge.Application.Features.Homework.Queries;
 public class GetPendingHomeworkQueryHandler : IRequestHandler<GetPendingHomeworkQuery, ApiResponse<List<PendingHomeworkDto>>>
 {
     private readonly IAppDbContext _dbContext;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetPendingHomeworkQueryHandler(IAppDbContext dbContext)
+    public GetPendingHomeworkQueryHandler(IAppDbContext dbContext, IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<List<PendingHomeworkDto>>> Handle(GetPendingHomeworkQuery request, CancellationToken cancellationToken)
@@ -28,13 +32,18 @@ public class GetPendingHomeworkQueryHandler : IRequestHandler<GetPendingHomework
             .Where(s => s.StudentId == request.StudentId && s.Status == Domain.Entities.Homework.SubmissionStatus.InProgress)
             .ToListAsync(cancellationToken);
 
-        var dtos = pendingSubmissions.Select(s => new PendingHomeworkDto(
-            s.HomeworkId,
-            s.Homework.Title,
-            s.Homework.Description,
-            null, // DueDate not added to entity yet
-            s.Homework.Questions.Count
-        )).ToList();
+        var dtos = new List<PendingHomeworkDto>();
+        foreach (var submission in pendingSubmissions)
+        {
+            if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, submission.HomeworkId, cancellationToken))
+                continue;
+            dtos.Add(new PendingHomeworkDto(
+                submission.HomeworkId,
+                submission.Homework.Title,
+                submission.Homework.Description,
+                null,
+                submission.Homework.Questions.Count));
+        }
 
         // Also fetch missing submissions (Homeworks that exist for their accessible content but no submission row exists)
         // Leaving it simple for now, as MVP logic will rely on students creating a submission when they start.

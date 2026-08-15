@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Folder, ChevronRight, BookOpenText, Video, Clock3, Layers, Users } from 'lucide-react';
-import { AdminPage, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton, AdminTabBar, AdminTab, ContentArchiveControl, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
@@ -111,6 +111,9 @@ export default function TermProfilePageClient(props: { params: { id: string } })
     price: s.price,
     imageUrl: s.imageUrl,
     href: `/admin/content/sections/${s.id}`,
+    archiveMode: s.archiveMode,
+    archivedAt: s.archivedAt,
+    archiveTargetType: 'Section',
   }));
 
   // Build overview stats from API response
@@ -131,10 +134,13 @@ export default function TermProfilePageClient(props: { params: { id: string } })
       pageTitle={term.title}
       subtitle={`ترتيب: ${term.order} — ${sections.length} قسم`}
       action={
-        <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
-          <ChevronRight className="h-4 w-4" />
-          الرجوع خطوة
-        </NeumorphButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <ContentArchiveControl targetType="Term" targetId={term.id} title={term.title} archiveMode={term.archiveMode} onChanged={loadTerm} />
+          <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
+            <ChevronRight className="h-4 w-4" />
+            الرجوع خطوة
+          </NeumorphButton>
+        </div>
       }
     >
       {/* Always visible term image upload at the top */}
@@ -207,6 +213,7 @@ export default function TermProfilePageClient(props: { params: { id: string } })
               await loadSections();
             }}
             onRetry={loadSections}
+            onArchiveChanged={loadSections}
           />
         </div>
       )}

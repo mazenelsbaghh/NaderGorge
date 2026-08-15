@@ -91,11 +91,13 @@ public sealed class GetPublicExamProductsQueryHandler : IRequestHandler<GetPubli
 {
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IContentArchiveAccessService? _archiveAccess;
 
-    public GetPublicExamProductsQueryHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
+    public GetPublicExamProductsQueryHandler(IAppDbContext db, IAcademicScopeService? academicScope = null, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess;
     }
 
     public async Task<ApiResponse<IReadOnlyList<PublicExamProductDto>>> Handle(GetPublicExamProductsQuery request, CancellationToken ct)
@@ -111,8 +113,23 @@ public sealed class GetPublicExamProductsQueryHandler : IRequestHandler<GetPubli
         }
 
         var rows = await query.OrderByDescending(x => x.CreatedAt)
-            .Select(x => new PublicExamProductDto(x.Id, x.ExamId, x.Exam.Title, x.Slug, x.IsPublished, x.IsPaid, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, x.IsPlatformWide, x.AvailableFrom, x.AvailableUntil, x.DisabledAt, null))
+            .Select(x => new PublicExamProductDto(x.Id, x.ExamId, x.Exam.Title, x.Slug, x.IsPublished, x.IsPaid, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, x.IsPlatformWide, x.AvailableFrom, x.AvailableUntil, x.DisabledAt, null, x.Exam.ArchiveMode, x.Exam.ArchivedAt))
             .ToListAsync(ct);
+
+        if (request.PublishedOnly && _archiveAccess != null)
+        {
+            var visibleRows = new List<PublicExamProductDto>(rows.Count);
+            foreach (var row in rows)
+            {
+                if (request.StudentId.HasValue
+                    ? await _archiveAccess.CanViewAsync(request.StudentId.Value, ContentArchiveTargetType.Exam, row.ExamId, ct)
+                    : row.ArchiveMode == ContentArchiveMode.None)
+                {
+                    visibleRows.Add(row);
+                }
+            }
+            rows = visibleRows;
+        }
 
         if (request.StudentId.HasValue && _academicScope != null)
         {

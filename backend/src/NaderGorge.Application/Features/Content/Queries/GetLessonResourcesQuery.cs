@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Content.Queries;
 
@@ -12,11 +13,13 @@ public class GetLessonResourcesQueryHandler : IRequestHandler<GetLessonResources
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetLessonResourcesQueryHandler(IAppDbContext db, IAccessCheckService access)
+    public GetLessonResourcesQueryHandler(IAppDbContext db, IAccessCheckService access, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _access = access;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<List<ResourceDto>>> Handle(GetLessonResourcesQuery request, CancellationToken ct)
@@ -32,9 +35,16 @@ public class GetLessonResourcesQueryHandler : IRequestHandler<GetLessonResources
         var resources = await _db.LessonResources
             .AsNoTracking()
             .Where(r => r.LessonId == request.LessonId)
-            .Select(r => new ResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType))
+            .Select(r => new { r.Id, r.Title, r.FileUrl, r.ResourceType })
             .ToListAsync(ct);
 
-        return ApiResponse<List<ResourceDto>>.Ok(resources);
+        var visibleResources = new List<ResourceDto>();
+        foreach (var resource in resources)
+        {
+            if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Resource, resource.Id, ct))
+                visibleResources.Add(new ResourceDto(resource.Id, resource.Title, resource.FileUrl, resource.ResourceType));
+        }
+
+        return ApiResponse<List<ResourceDto>>.Ok(visibleResources);
     }
 }

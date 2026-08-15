@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -56,7 +57,9 @@ public record ExamDashboardDto(
     int? DurationMinutes,
     bool IsActive,
     List<StudentExamResultSummaryDto> Attempts,
-    List<ExamQuestionSummaryDto> Questions
+    List<ExamQuestionSummaryDto> Questions,
+    ContentArchiveMode ArchiveMode,
+    DateTime? ArchivedAt
 );
 
 public record GetExamDashboardQuery(Guid ExamId) : IRequest<ApiResponse<ExamDashboardDto>>;
@@ -165,7 +168,9 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             exam.DurationMinutes,
             exam.IsActive,
             attemptsDto,
-            questionsDto
+            questionsDto,
+            exam.ArchiveMode,
+            exam.ArchivedAt
         );
 
         return ApiResponse<ExamDashboardDto>.Ok(dto);

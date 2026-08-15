@@ -24,10 +24,12 @@ public record PackageDetailDto(
     Guid? RootTermId,
     Guid? RootSectionId,
     List<PackageDirectSectionDto> DirectSections,
-    List<PackageDirectLessonDto> DirectLessons);
-public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false);
-public record PackageDirectSectionDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false);
-public record PackageDirectLessonDto(Guid Id, string Title, string Summary, int Order, decimal Price, bool HasAccess = false);
+    List<PackageDirectLessonDto> DirectLessons,
+    ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
+    DateTime? ArchivedAt = null);
+public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
+public record PackageDirectSectionDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
+public record PackageDirectLessonDto(Guid Id, string Title, string Summary, int Order, decimal Price, bool HasAccess = false, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
 
 public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, ApiResponse<PackageDetailDto>>
 {
@@ -93,7 +95,7 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             : await _db.ContentSections
                 .Where(section => section.TermId == rootTerm.Id && !section.IsSystemContainer)
                 .OrderBy(section => section.Order)
-                .Select(section => new PackageDirectSectionDto(section.Id, section.Title, section.Order, section.Price, section.ImageUrl, false))
+                .Select(section => new PackageDirectSectionDto(section.Id, section.Title, section.Order, section.Price, section.ImageUrl, false, section.ArchiveMode, section.ArchivedAt))
                 .ToListAsync(ct);
 
         var rootSection = rootTerm == null
@@ -108,11 +110,11 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             : await _db.Lessons
                 .Where(lesson => lesson.ContentSectionId == rootSection.Id)
                 .OrderBy(lesson => lesson.Order)
-                .Select(lesson => new PackageDirectLessonDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, lesson.Price, false))
+                .Select(lesson => new PackageDirectLessonDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, lesson.Price, false, lesson.ArchiveMode, lesson.ArchivedAt))
                 .ToListAsync(ct);
 
         var dtos = visibleTerms
-            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl))
+            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl, false, t.ArchiveMode, t.ArchivedAt))
             .ToList();
         var scopes = await _db.StudentFacingAcademicScopes
             .AsNoTracking()
@@ -134,7 +136,9 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             rootTerm?.Id,
             rootSection?.Id,
             directSections,
-            directLessons);
+            directLessons,
+            package.ArchiveMode,
+            package.ArchivedAt);
 
         return ApiResponse<PackageDetailDto>.Ok(packageDto);
     }

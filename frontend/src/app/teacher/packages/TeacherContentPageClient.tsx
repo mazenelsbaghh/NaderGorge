@@ -6,7 +6,7 @@ import Link from "next/link";
 import { BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Eye, Folder, FolderOpen, FileText, Upload, Layers3 } from "lucide-react";
 import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard, AdminTabBar, ContentSummaryPanel } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
-import { contentService, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from "@/services/content-service";
+import { contentService, PACKAGE_CONTENT_MODE_OPTIONS, getContentRootLabel, getContentRootOption, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from "@/services/content-service";
 import { adminService } from "@/services/admin-service";
 import { teacherService, SubjectDto } from "@/services/teacher-service";
 import { financeService } from "@/services/finance-service";
@@ -61,6 +61,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [contentMode, setContentMode] = useState<PackageContentMode>("TermWithSections");
   const [saving, setSaving] = useState(false);
+  const selectedContentType = getContentRootOption(contentMode);
 
   // Image Upload States
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -110,11 +111,11 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
         try {
           await adminService.uploadContentImage('package', newPkg.id, imageFile);
         } catch {
-          toast.error('تم حفظ الباقة، لكن فشل رفع الصورة.');
+          toast.error(`تم حفظ ${selectedContentType.entityLabel}، لكن فشل رفع الصورة.`);
         }
       }
 
-      toast.success("تمت إضافة الباقة بنجاح.");
+      toast.success(`تمت إضافة ${selectedContentType.entityLabel} بنجاح.`);
       setName(""); setDescription(""); setPrice(""); setSelectedSubjectId(""); setSelectedGrades([]); setContentMode("TermWithSections");
       setImageFile(null); setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -135,20 +136,20 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
         className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--admin-border)] bg-transparent py-5 text-sm font-bold text-[var(--admin-muted)] transition hover:border-[var(--admin-primary)] hover:text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)]/20"
       >
         <Plus className="h-4 w-4" />
-        إضافة باقة جديدة
+        إضافة محتوى جديد
       </button>
     );
   }
 
   return (
     <div className="rounded-2xl border-2 border-dashed border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/30 p-5 space-y-3">
-      <p className="text-sm font-black text-[var(--admin-primary)]">باقة جديدة</p>
+      <p className="text-sm font-black text-[var(--admin-primary)]">إضافة محتوى جديد</p>
       <input
         autoFocus
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="اسم الباقة، مثال: الباقة التأسيسية للأول الثانوي"
+        placeholder={`اكتب اسم ${selectedContentType.entityLabel}`}
         className="admin-input"
         onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
       />
@@ -169,12 +170,12 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
       />
 
       <div className="space-y-2 text-right">
-        <span className="text-xs font-bold text-[var(--admin-muted)]">هيكل الباقة</span>
+        <span className="text-xs font-bold text-[var(--admin-muted)]">نوع المحتوى</span>
         <Dropdown
           value={contentMode}
           onChange={(value) => setContentMode((Array.isArray(value) ? value[0] : value) as PackageContentMode)}
           options={PACKAGE_CONTENT_MODE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-          placeholder="اختر هيكل الباقة..."
+          placeholder="اختر نوع المحتوى..."
           className="w-full"
         />
         <p className="text-xs text-[var(--admin-muted)]">
@@ -266,7 +267,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
           size="md"
           pill
         >
-          حفظ الباقة
+          حفظ {selectedContentType.entityLabel}
         </NeumorphButton>
       </div>
     </div>
@@ -429,6 +430,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
   const [terms, setTerms] = useState<TermDto[] | null>(null);
   const [loading, setLoading] = useState(false);
   const contentMode = pkg.contentMode ?? "TermWithSections";
+  const contentRootLabel = getContentRootLabel(contentMode);
   const directSections = pkg.directSections ?? [];
   const directLessons = pkg.directLessons ?? [];
 
@@ -464,6 +466,9 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 
           <div className="flex-1 min-w-0">
             <p className="font-black text-[var(--admin-text)] leading-tight truncate">{pkg.name}</p>
+            <span className="mt-1 inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-primary)]">
+              {contentRootLabel}
+            </span>
             {pkg.description && (
               <p className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-1">{pkg.description}</p>
             )}
@@ -494,16 +499,16 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
             <div className="text-sm text-[var(--admin-muted)] py-4 text-center">جاري تحميل أترم الباقة...</div>
           ) : contentMode === "SectionWithLessons" && directSections.length > 0 ? (
             directSections.map((section) => <SectionRow key={section.id} section={section} />)
-          ) : contentMode === "LessonsOnly" && directLessons.length > 0 ? (
+          ) : (contentMode === "LessonsOnly" || contentMode === "SingleLesson") && directLessons.length > 0 ? (
             directLessons.map((lesson) => <LessonRow key={lesson.id} lesson={lesson} />)
           ) : contentMode === "TermWithSections" && terms && terms.length > 0 ? (
             terms.map((term) => <TermRow key={term.id} term={term} />)
           ) : (
             <div className="text-sm text-[var(--admin-muted)] py-4 text-center">
               {contentMode === "SectionWithLessons"
-                ? "لا توجد أقسام في هذه الباقة."
-                : contentMode === "LessonsOnly"
-                  ? "لا توجد حصص في هذه الباقة."
+                ? "لا توجد أقسام داخل هذا الترم."
+                : contentMode === "LessonsOnly" || contentMode === "SingleLesson"
+                  ? `لا توجد حصص داخل ${contentRootLabel}.`
                   : "لا توجد أترم في هذه الباقة."}
             </div>
           )}

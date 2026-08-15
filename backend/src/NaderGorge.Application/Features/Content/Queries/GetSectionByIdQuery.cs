@@ -8,7 +8,7 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetSectionByIdQuery(Guid Id) : IRequest<ApiResponse<SectionDetailDto>>;
 
-public record SectionDetailDto(Guid Id, string Title, int Order, Guid TermId, Guid PackageId, decimal Price, string? ImageUrl, bool IsDirect, PackageContentMode ContentMode);
+public record SectionDetailDto(Guid Id, string Title, int Order, Guid TermId, Guid PackageId, decimal Price, string? ImageUrl, bool IsDirect, PackageContentMode ContentMode, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 
 public class GetSectionByIdQueryHandler : IRequestHandler<GetSectionByIdQuery, ApiResponse<SectionDetailDto>>
 {
@@ -38,7 +38,9 @@ public class GetSectionByIdQueryHandler : IRequestHandler<GetSectionByIdQuery, A
             section.Price,
             section.ImageUrl,
             section.Term.IsSystemContainer,
-            section.Term.Package.ContentMode);
+            section.Term.Package.ContentMode,
+            section.ArchiveMode,
+            section.ArchivedAt);
 
         return ApiResponse<SectionDetailDto>.Ok(dto);
     }

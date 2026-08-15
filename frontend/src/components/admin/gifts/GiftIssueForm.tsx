@@ -124,7 +124,7 @@ export function GiftIssueForm() {
     <form onSubmit={submit} className="space-y-6">
       <section className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
         <h2 className="text-base font-black text-[var(--admin-text)]">نوع الهدية</h2>
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
           {targetTypes.map((type) => (
             <button key={type} type="button" onClick={() => { setTargetType(type); setTeacherId(''); setMaxUses(''); }} className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition ${targetType === type ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}>
               {giftTargetLabels[type]}

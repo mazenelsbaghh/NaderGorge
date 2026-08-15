@@ -28,10 +28,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
-import { CodeType } from "@/services/balance-service";
 import {
   CONTENT_CACHE_KEYS,
   contentService,
+  getContentRootLabel,
+  getContentRootPurchaseReference,
   type TermDto,
   type PackageDto,
 } from "@/services/content-service";
@@ -142,8 +143,11 @@ export default function PackageProfilePageClient() {
   const isEnrolled = pkg?.isEnrolled ?? false;
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
   const contentMode = pkg?.contentMode ?? "TermWithSections";
+  const contentRootLabel = getContentRootLabel(contentMode);
   const directSections = pkg?.directSections ?? [];
   const directLessons = pkg?.directLessons ?? [];
+  const hasRootContentAccess = pkg?.hasRootContentAccess ?? hasDirectPackageAccess;
+  const rootPurchaseTarget = pkg ? getContentRootPurchaseReference(pkg) : null;
 
   return (
     <motion.div
@@ -196,10 +200,10 @@ export default function PackageProfilePageClient() {
                 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
           }`}>
-            {hasDirectPackageAccess ? "باقة مفعّلة" : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
+            {hasRootContentAccess ? `تم تفعيل ${contentRootLabel}` : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
           </span>
           <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
-            {contentMode === "LessonsOnly"
+            {contentMode === "LessonsOnly" || contentMode === "SingleLesson"
               ? `${directLessons.length} حصة`
               : contentMode === "SectionWithLessons"
                 ? `${directSections.length} قسم`
@@ -221,9 +225,9 @@ export default function PackageProfilePageClient() {
         <div className="lg:col-span-2 space-y-8">
           {/* Description */}
           <div className="space-y-2 text-right">
-            <h3 className="text-lg font-black text-[var(--admin-text)]">تفاصيل الباقة</h3>
+            <h3 className="text-lg font-black text-[var(--admin-text)]">تفاصيل {contentRootLabel}</h3>
             <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base whitespace-pre-line">
-              {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
+              {pkg?.description || `تفاصيل ${contentRootLabel} غير متوفرة حالياً.`}
             </p>
           </div>
 
@@ -257,11 +261,15 @@ export default function PackageProfilePageClient() {
                 </div>
               )}
             </div>
-          ) : contentMode === "LessonsOnly" ? (
+          ) : contentMode === "LessonsOnly" || contentMode === "SingleLesson" ? (
             <div className="space-y-4">
               <div className="text-right">
-                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الحصة</h2>
-                <p className="mt-1 text-sm text-[var(--admin-muted)]">الحصص متاحة مباشرة داخل هذا الكورس.</p>
+                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">
+                  {contentMode === "SingleLesson" ? "الحصة" : "اختر الحصة"}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">
+                  {contentMode === "SingleLesson" ? "افتح الحصة لإضافة أو مشاهدة الفيديوهات والملفات." : "الحصص متاحة مباشرة داخل هذا القسم."}
+                </p>
               </div>
               {directLessons.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
@@ -421,15 +429,15 @@ export default function PackageProfilePageClient() {
           {/* Purchase / Enrollment Action Card */}
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm space-y-4 text-right">
             <div>
-              <span className="text-xs font-bold text-[var(--admin-muted)]">سعر الباقة</span>
+              <span className="text-xs font-bold text-[var(--admin-muted)]">سعر {contentRootLabel}</span>
               <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{pkg?.price || 0} ج.م</p>
             </div>
 
-            {hasDirectPackageAccess ? (
+            {hasRootContentAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> تم تفعيل {contentRootLabel} في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
               </div>
-            ) : (
+            ) : rootPurchaseTarget ? (
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
@@ -437,9 +445,13 @@ export default function PackageProfilePageClient() {
                   className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  شراء الباقة
+                  شراء {contentRootLabel}
                 </button>
               </div>
+            ) : (
+              <p className="rounded-2xl bg-red-500/10 p-4 text-center text-sm font-bold text-red-600 dark:text-red-400">
+                تعذر تجهيز شراء هذا المحتوى حاليًا. حاول مرة أخرى لاحقًا.
+              </p>
             )}
           </div>
 
@@ -487,9 +499,9 @@ export default function PackageProfilePageClient() {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchaseSuccess={() => loadPackageData()}
-        contentType={"Package" as CodeType}
-        contentId={packageId}
-        contentName={pkg?.name || "الباقة الكاملة"}
+        contentType={rootPurchaseTarget?.contentType ?? "Package"}
+        contentId={rootPurchaseTarget?.contentId ?? ""}
+        contentName={pkg?.name || contentRootLabel}
         price={pkg?.price || 0}
       />
     </motion.div>

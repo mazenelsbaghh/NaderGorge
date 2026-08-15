@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
+import { ContentArchiveControl } from './ContentArchiveControl';
 import toast from 'react-hot-toast';
 import { adminService, type LessonCockpitVideoDto, type VideoProvider } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
@@ -623,6 +624,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
 
                 {!readOnly && (
                   <>
+                    <ContentArchiveControl targetType="Video" targetId={video.id} title={video.title} archiveMode={video.archiveMode} onChanged={onRefresh} compact />
                     <div className="relative group/toggle-active">
                       <button
                         type="button"

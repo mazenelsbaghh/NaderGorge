@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -45,7 +46,9 @@ public record HomeworkDashboardDto(
     bool IsActive,
     bool IsRandomized,
     List<StudentHomeworkSubmissionSummaryDto> Submissions,
-    List<HomeworkQuestionSummaryDto> Questions
+    List<HomeworkQuestionSummaryDto> Questions,
+    ContentArchiveMode ArchiveMode,
+    DateTime? ArchivedAt
 );
 
 public record GetHomeworkDashboardQuery(Guid HomeworkId) : IRequest<ApiResponse<HomeworkDashboardDto>>;
@@ -113,7 +116,9 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
             homework.IsActive,
             homework.IsRandomized,
             submissionsDto,
-            questionsDto
+            questionsDto,
+            homework.ArchiveMode,
+            homework.ArchivedAt
         );
 
         return ApiResponse<HomeworkDashboardDto>.Ok(dto);

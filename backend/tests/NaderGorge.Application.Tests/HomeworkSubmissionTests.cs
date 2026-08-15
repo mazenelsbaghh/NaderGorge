@@ -61,7 +61,8 @@ public sealed class HomeworkSubmissionTests
             db,
             new HomeworkNoOpPublisher(),
             new HomeworkAllowAccessService(),
-            new HomeworkNoOpJobEnqueuer());
+            new HomeworkNoOpJobEnqueuer(),
+            new HomeworkAllowArchiveAccessService());
 
         var response = await handler.Handle(
             new SubmitHomeworkCommand(
@@ -103,6 +104,12 @@ public sealed class HomeworkSubmissionTests
         public Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default) => Task.FromResult(true);
+    }
+
+    private sealed class HomeworkAllowArchiveAccessService : IContentArchiveAccessService
+    {
+        public Task<bool> CanViewAsync(Guid userId, NaderGorge.Domain.Enums.ContentArchiveTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<bool> CanAcquireAsync(NaderGorge.Domain.Enums.ContentArchiveTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 
     private sealed class HomeworkNoOpJobEnqueuer : IJobEnqueuer

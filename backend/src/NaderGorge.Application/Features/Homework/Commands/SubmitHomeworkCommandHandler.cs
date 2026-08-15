@@ -4,6 +4,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Homework.Commands;
 
@@ -13,17 +14,20 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
     private readonly IPublisher _publisher;
     private readonly IAccessCheckService _access;
     private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     public SubmitHomeworkCommandHandler(
         IAppDbContext dbContext,
         IPublisher publisher,
         IAccessCheckService access,
-        NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
+        NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
         _publisher = publisher;
         _access = access;
         _jobEnqueuer = jobEnqueuer;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
@@ -34,6 +38,8 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
         if (homework == null)
             return ApiResponse<bool>.Fail("Homework not found");
+        if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, cancellationToken))
+            return ApiResponse<bool>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, cancellationToken);
         if (!hasAccess)

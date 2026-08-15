@@ -141,6 +141,7 @@ builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
 builder.Services.AddHttpClient<IBunnyStreamClient, BunnyStreamClient>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
+builder.Services.AddScoped<IContentArchiveAccessService, ContentArchiveAccessService>();
 builder.Services.AddScoped<IAcademicScopeService, AcademicScopeService>();
 builder.Services.AddScoped<IGiftUsageService, GiftUsageService>();
 builder.Services.AddScoped<IPromotionalBalanceService, PromotionalBalanceService>();
@@ -245,6 +246,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAISecureInputService, NaderGorge.Infrastructure.Services.AdminAI.AdminAISecureInputService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Commands.AdminAIProposalCommands>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Queries.AdminAIAuditQueries>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Queries.AdminAICapabilityBaselineQueries>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIAuditWriter, NaderGorge.Infrastructure.Services.AdminAI.AdminAIAuditWriter>();
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAISensitiveDataPolicy, NaderGorge.Application.Features.AdminAI.Security.AdminAISensitiveDataPolicy>();
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIDataProtector, NaderGorge.Infrastructure.Services.AdminAI.AdminAIDataProtector>();

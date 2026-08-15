@@ -8,11 +8,16 @@ public class AccessCheckService : IAccessCheckService
 {
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public AccessCheckService(IAppDbContext db, IAcademicScopeService? academicScope = null)
+    public AccessCheckService(
+        IAppDbContext db,
+        IAcademicScopeService? academicScope = null,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default)
@@ -25,6 +30,9 @@ public class AccessCheckService : IAccessCheckService
 
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
+
+        if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Package, packageId, ct))
+            return false;
 
         var packageVisible = await _db.Packages
             .Where(package => package.Id == packageId)
@@ -55,6 +63,9 @@ public class AccessCheckService : IAccessCheckService
 
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
+
+        if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Lesson, lessonId, ct))
+            return false;
 
         var lesson = await _db.Lessons
             .Include(l => l.ContentSection)
@@ -94,6 +105,9 @@ public class AccessCheckService : IAccessCheckService
 
     public async Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default)
     {
+        if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Video, lessonVideoId, ct))
+            return false;
+
         var video = await _db.LessonVideos
             .AsNoTracking()
             .Where(v => v.Id == lessonVideoId && v.IsActive)
@@ -159,6 +173,9 @@ public class AccessCheckService : IAccessCheckService
 
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
+
+        if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Exam, examId, ct))
+            return false;
 
         var now = DateTime.UtcNow;
         var examVisible = await _db.Exams

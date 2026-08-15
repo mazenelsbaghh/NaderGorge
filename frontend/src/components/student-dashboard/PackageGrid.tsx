@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { ArrowUpLeft, BookCopy } from "lucide-react";
-import Image from "next/image";
+import { ArrowUpLeft, BookCopy } from 'lucide-react';
+import Image from 'next/image';
 
-import type { ActivePackageDto } from "@/services/student-service";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
+import type { ActivePackageDto } from '@/services/student-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 type PackageGridProps = {
   packages: ActivePackageDto[];
@@ -19,18 +19,20 @@ export function PackageGrid({
 }: PackageGridProps) {
   const packagesBySubject = packages.reduce<Record<string, ActivePackageDto[]>>(
     (groups, pkg) => {
-      const subjectName = pkg.subjectName || "عام";
+      const subjectName = pkg.subjectName || 'عام';
       groups[subjectName] = [...(groups[subjectName] ?? []), pkg];
       return groups;
     },
-    {},
+    {}
   );
 
   return (
     <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-[var(--admin-text)]">باقاتك الدراسية</h2>
+          <h2 className="text-xl font-black text-[var(--admin-text)]">
+            باقاتك الكاملة
+          </h2>
           <p className="mt-1 text-sm text-[var(--admin-muted)]">
             افتح باقة لمتابعة دروسها وتقدمك داخلها.
           </p>
@@ -49,9 +51,12 @@ export function PackageGrid({
               <BookCopy className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-black text-[var(--admin-text)]">لا توجد باقات مفعلة متاحة لحسابك</h3>
+              <h3 className="font-black text-[var(--admin-text)]">
+                لا توجد باقات كاملة مفعّلة
+              </h3>
               <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
-                اشترِ باقة مطابقة لمرحلتك وصفك لتظهر هنا.
+                اشتراكات الترمات والأقسام والحصص تظهر في أقسامها المستقلة
+                بالأسفل.
               </p>
             </div>
           </div>
@@ -65,71 +70,84 @@ export function PackageGrid({
         </div>
       ) : (
         <div className="mt-6 space-y-6">
-          {Object.entries(packagesBySubject).map(([subject, subjectPackages]) => (
-            <div key={subject}>
-              <h3 className="mb-3 text-sm font-black text-[var(--admin-text)]">{subject}</h3>
-              <div className="divide-y divide-[var(--admin-border)] overflow-hidden rounded-xl border border-[var(--admin-border)]">
-                {subjectPackages.map((pkg) => {
-                  const progress = Math.max(0, Math.min(pkg.progressPercent, 100));
+          {Object.entries(packagesBySubject).map(
+            ([subject, subjectPackages]) => (
+              <div key={subject}>
+                <h3 className="mb-3 text-sm font-black text-[var(--admin-text)]">
+                  {subject}
+                </h3>
+                <div className="divide-y divide-[var(--admin-border)] overflow-hidden rounded-xl border border-[var(--admin-border)]">
+                  {subjectPackages.map((pkg) => {
+                    const progress = Math.max(
+                      0,
+                      Math.min(pkg.progressPercent, 100)
+                    );
 
-                  return (
-                    <button
-                      type="button"
-                      key={pkg.id}
-                      onClick={() => onOpenPackage(pkg.id)}
-                      className="group flex min-h-[104px] w-full items-center gap-3 bg-[var(--admin-card)] p-3 text-right transition-colors hover:bg-[var(--admin-card-soft)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] sm:gap-4"
-                    >
-                      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-[var(--admin-card-strong)] sm:w-32">
-                        <Image
-                          src={pkg.imageUrl ? resolveMediaUrl(pkg.imageUrl) : "/images/default-package.webp"}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 96px, 128px"
-                        />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h4 className="truncate text-base font-black text-[var(--admin-text)]">
-                              {pkg.name}
-                            </h4>
-                            <p className="mt-1 truncate text-xs text-[var(--admin-muted)]">
-                              {pkg.teacherName}
-                            </p>
-                          </div>
-                          <ArrowUpLeft className="mt-1 h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+                    return (
+                      <button
+                        type="button"
+                        key={pkg.id}
+                        onClick={() => onOpenPackage(pkg.id)}
+                        className="group flex min-h-[104px] w-full items-center gap-3 bg-[var(--admin-card)] p-3 text-right transition-colors hover:bg-[var(--admin-card-soft)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] sm:gap-4"
+                      >
+                        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-[var(--admin-card-strong)] sm:w-32">
+                          <Image
+                            src={
+                              pkg.imageUrl
+                                ? resolveMediaUrl(pkg.imageUrl)
+                                : '/images/default-package.webp'
+                            }
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 96px, 128px"
+                          />
                         </div>
 
-                        <div className="mt-3">
-                          <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
-                            <span className="font-bold text-[var(--admin-muted)]">
-                              {pkg.lessonsCompleted} من {pkg.totalLessons} درس
-                            </span>
-                            <span className="font-black text-[var(--admin-primary)]">{progress}%</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h4 className="truncate text-base font-black text-[var(--admin-text)]">
+                                {pkg.name}
+                              </h4>
+                              <p className="mt-1 truncate text-xs text-[var(--admin-muted)]">
+                                {pkg.teacherName}
+                              </p>
+                            </div>
+                            <ArrowUpLeft className="mt-1 h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
                           </div>
-                          <div
-                            className="h-1.5 overflow-hidden rounded-full bg-[var(--admin-card-strong)]"
-                            role="progressbar"
-                            aria-label={`التقدم في ${pkg.name}`}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={progress}
-                          >
+
+                          <div className="mt-3">
+                            <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                              <span className="font-bold text-[var(--admin-muted)]">
+                                {pkg.lessonsCompleted} من {pkg.totalLessons} درس
+                              </span>
+                              <span className="font-black text-[var(--admin-primary)]">
+                                {progress}%
+                              </span>
+                            </div>
                             <div
-                              className="h-full rounded-full bg-[var(--admin-primary)]"
-                              style={{ width: `${progress}%` }}
-                            />
+                              className="h-1.5 overflow-hidden rounded-full bg-[var(--admin-card-strong)]"
+                              role="progressbar"
+                              aria-label={`التقدم في ${pkg.name}`}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={progress}
+                            >
+                              <div
+                                className="h-full rounded-full bg-[var(--admin-primary)]"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </section>

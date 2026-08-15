@@ -7,13 +7,16 @@ namespace NaderGorge.Domain.Entities;
 /// Package represents the academic year.
 /// Contains Terms directly (no separate Year entity).
 /// </summary>
-public class Package : BaseEntity
+public class Package : BaseEntity, IArchivableContent
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public decimal Price { get; set; }
     public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
     public PackageContentMode ContentMode { get; set; } = PackageContentMode.TermWithSections;
 
     public Guid SubjectId { get; set; }
@@ -27,13 +30,16 @@ public class Package : BaseEntity
     public ICollection<Term> Terms { get; set; } = new List<Term>();
 }
 
-public class ContentSection : BaseEntity
+public class ContentSection : BaseEntity, IArchivableContent
 {
     public string Title { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public int Order { get; set; }
     public decimal Price { get; set; }
     public bool IsSystemContainer { get; set; }
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
 
     public Guid TermId { get; set; }
     public Term Term { get; set; } = null!;
@@ -41,13 +47,16 @@ public class ContentSection : BaseEntity
     public ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 }
 
-public class Lesson : BaseEntity
+public class Lesson : BaseEntity, IArchivableContent
 {
     public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public int Order { get; set; }
     public decimal Price { get; set; }
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
 
     public Guid ContentSectionId { get; set; }
     public ContentSection ContentSection { get; set; } = null!;
@@ -60,7 +69,7 @@ public class Lesson : BaseEntity
     public ICollection<LessonComment> Comments { get; set; } = new List<LessonComment>();
 }
 
-public class LessonVideo : BaseEntity
+public class LessonVideo : BaseEntity, IArchivableContent
 {
     public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
@@ -83,6 +92,9 @@ public class LessonVideo : BaseEntity
     public bool IsProcessingAI { get; set; } = false;
     public bool IsProcessingMindmaps { get; set; } = false;
     public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
 
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
@@ -169,7 +181,7 @@ public class BunnyUsageSnapshot : BaseEntity
     public string? Notes { get; set; }
 }
 
-public class LessonResource : BaseEntity
+public class LessonResource : BaseEntity, IArchivableContent
 {
     public string Title { get; set; } = string.Empty;
 
@@ -178,6 +190,9 @@ public class LessonResource : BaseEntity
 
     // e.g., PDF, Image
     public string ResourceType { get; set; } = string.Empty;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
 
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;

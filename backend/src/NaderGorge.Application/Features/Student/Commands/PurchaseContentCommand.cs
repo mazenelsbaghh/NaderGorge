@@ -106,6 +106,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 : await _targetResolver.ResolveFromCodeTypeAsync(request.ContentType, request.ContentId, ct);
             if (target == null)
                 return ApiResponse<bool>.Fail("تعذر تحديد هدف البيع.");
+            if (!target.IsSaleEligible)
+                return ApiResponse<bool>.Fail("المحتوى مؤرشف وغير متاح لعمليات شراء جديدة.");
 
             if (target.TeacherId.HasValue)
             {

@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities.Homework;
 
-public class Homework
+public class Homework : NaderGorge.Domain.Entities.IArchivableContent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid LessonId { get; set; }
@@ -11,6 +12,9 @@ public class Homework
     public string? Description { get; set; }
     public bool IsMandatory { get; set; } = true;
     public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
     public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }

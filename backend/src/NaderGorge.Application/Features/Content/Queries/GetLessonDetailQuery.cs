@@ -87,17 +87,20 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
     private readonly IAccessCheckService _access;
     private readonly TeacherAuthorizationService _auth;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     public GetLessonDetailQueryHandler(
         IAppDbContext db,
         IAccessCheckService access,
         TeacherAuthorizationService auth,
-        IAcademicScopeService? academicScope = null)
+        IAcademicScopeService? academicScope = null,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _access = access;
         _auth = auth;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<LessonDetailDto>> Handle(GetLessonDetailQuery request, CancellationToken ct)
@@ -117,6 +120,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             return ApiResponse<LessonDetailDto>.Fail("Lesson not found");
 
         var isPrivilegedUser = await IsPrivilegedUserAsync(request.UserId, ct);
+        if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Lesson, request.LessonId, ct))
+            return ApiResponse<LessonDetailDto>.Fail("هذا المحتوى مؤرشف وغير متاح لحسابك.", ["CONTENT_ARCHIVED"]);
+        if (lesson.ExamId.HasValue && !await _archiveAccess.CanViewAsync(
+                request.UserId, ContentArchiveTargetType.Exam, lesson.ExamId.Value, ct))
+            lesson.ExamId = null;
         if (_academicScope != null &&
             !isPrivilegedUser &&
             !await _academicScope.IsOwnerEligibleForStudentAsync(
@@ -141,7 +149,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                         StudentFacingScopeOwnerType.LessonVideo,
                         video.Id,
                         request.UserId,
-                        ct))
+                        ct) && await _archiveAccess.CanViewAsync(
+                        request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
                 {
                     eligibleVideos.Add(video);
                 }
@@ -281,7 +290,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         if (previousLesson != null)
         {
             // 1. Check if previous lesson has an exam and if it is mandatory and passed
-            if (!isLocked && previousLesson.ExamId.HasValue)
+            if (!isLocked && previousLesson.ExamId.HasValue && await _archiveAccess.CanViewAsync(
+                    request.UserId, ContentArchiveTargetType.Exam, previousLesson.ExamId.Value, ct))
             {
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
 
@@ -418,6 +428,17 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .Select(e => new { e.Id, e.Title, e.LessonVideoId, e.IsMandatory })
             .ToListAsync(ct);
 
+        if (!isPrivilegedUser)
+        {
+            var visibleVideoExamIds = new List<Guid>();
+            foreach (var videoExam in allVideoExams)
+            {
+                if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, videoExam.Id, ct))
+                    visibleVideoExamIds.Add(videoExam.Id);
+            }
+            allVideoExams = allVideoExams.Where(exam => visibleVideoExamIds.Contains(exam.Id)).ToList();
+        }
+
         var allVideoExamIds = allVideoExams.Select(e => e.Id).Distinct().ToList();
 
         var passedExamIds = await _db.StudentExamAttempts
@@ -476,6 +497,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId && h.IsActive, ct);
 
         LessonHomeworkDto? homeworkDto = null;
+        if (hw != null)
+        {
+            if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Homework, hw.Id, ct))
+                hw = null;
+        }
         if (hw != null)
         {
             var baseQuery = hw.Questions.AsEnumerable();
@@ -557,7 +583,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 }
             }
 
-            if (!lessonExamLocked && previousLesson.ExamId.HasValue)
+            if (!lessonExamLocked && previousLesson.ExamId.HasValue && await _archiveAccess.CanViewAsync(
+                    request.UserId, ContentArchiveTargetType.Exam, previousLesson.ExamId.Value, ct))
             {
                 var prevExam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
                 if (prevExam != null && prevExam.IsMandatory)

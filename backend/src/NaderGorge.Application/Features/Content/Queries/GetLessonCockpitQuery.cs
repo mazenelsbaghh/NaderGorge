@@ -2,16 +2,17 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
 
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, bool IsRegeneratingMindmap, int Order);
-public record LessonCockpitVideoExamDto(Guid ExamId, string Title);
+public record LessonCockpitVideoExamDto(Guid ExamId, string Title, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
-public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
-public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType);
-public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold);
+public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
+public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
+public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
 
 public record LessonCockpitDto(
@@ -22,6 +23,10 @@ public record LessonCockpitDto(
     Guid? ExamId,
     decimal Price,
     int Order,
+    ContentArchiveMode ArchiveMode,
+    DateTime? ArchivedAt,
+    ContentArchiveMode ExamArchiveMode,
+    DateTime? ExamArchivedAt,
     List<LessonCockpitVideoDto> Videos,
     List<LessonCockpitResourceDto> Resources,
     List<LessonCockpitHomeworkDto> Homework,
@@ -67,7 +72,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
         // Wait, Homework has LessonId. We can query it.
         var homeworks = await _db.Homeworks
             .Where(h => h.LessonId == request.LessonId)
-            .Select(h => new LessonCockpitHomeworkDto(h.Id, h.Title, h.IsMandatory, h.PassingScoreThreshold))
+            .Select(h => new LessonCockpitHomeworkDto(h.Id, h.Title, h.IsMandatory, h.PassingScoreThreshold, h.ArchiveMode, h.ArchivedAt))
             .ToListAsync(ct);
 
         var commentsSummary = await _db.LessonComments
@@ -84,8 +89,15 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
         var videoIds = lesson.Videos.Select(v => v.Id).ToList();
         var videoExams = await _db.Exams
             .Where(e => videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id)))
-            .Select(e => new { e.Id, e.Title, e.LessonVideoId })
+            .Select(e => new { e.Id, e.Title, e.LessonVideoId, e.ArchiveMode, e.ArchivedAt })
             .ToListAsync(ct);
+
+        var lessonExamArchive = lesson.ExamId.HasValue
+            ? await _db.Exams.AsNoTracking()
+                .Where(e => e.Id == lesson.ExamId.Value)
+                .Select(e => new { e.ArchiveMode, e.ArchivedAt })
+                .FirstOrDefaultAsync(ct)
+            : null;
 
         var dto = new LessonCockpitDto(
             lesson.Id,
@@ -95,6 +107,10 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
             lesson.ExamId,
             lesson.Price,
             lesson.Order,
+            lesson.ArchiveMode,
+            lesson.ArchivedAt,
+            lessonExamArchive?.ArchiveMode ?? ContentArchiveMode.None,
+            lessonExamArchive?.ArchivedAt,
             lesson.Videos.OrderBy(v => v.Order).Select(v =>
             {
                 var chapters = v.VideoChapters?.OrderBy(c => c.Order)
@@ -103,7 +119,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
 
                 var examsForVideo = videoExams
                     .Where(e => e.LessonVideoId == v.Id || (e.LessonVideoId == null && v.ExamId == e.Id))
-                    .Select(e => new LessonCockpitVideoExamDto(e.Id, e.Title))
+                    .Select(e => new LessonCockpitVideoExamDto(e.Id, e.Title, e.ArchiveMode, e.ArchivedAt))
                     .ToList();
 
                 return new LessonCockpitVideoDto(
@@ -120,10 +136,12 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     new LessonCockpitVideoTypeDto(v.VideoType.Id, v.VideoType.Name, v.VideoType.IsActive),
                     v.ExamId,
                     examsForVideo,
-                    chapters
+                    chapters,
+                    v.ArchiveMode,
+                    v.ArchivedAt
                 );
             }).ToList(),
-            lesson.Resources.Select(r => new LessonCockpitResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType)).ToList(),
+            lesson.Resources.Select(r => new LessonCockpitResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType, r.ArchiveMode, r.ArchivedAt)).ToList(),
             homeworks,
             commentsSummary
         );

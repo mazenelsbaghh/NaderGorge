@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text.Json;
+using NaderGorge.API.Controllers;
 using NaderGorge.API.Extensions;
 
 namespace NaderGorge.Integration.Tests.AdminAI;
@@ -103,12 +104,23 @@ public sealed class AdminAIEndpointInventoryTests : IClassFixture<AdminAIEndpoin
         Assert.NotEmpty(snapshot);
     }
 
+    [Fact]
+    public void ProductionRegression_2026_08_13_AdminAIAgentController_CanBeActivatedFromRegisteredServices()
+    {
+        using var scope = _factory.Services.CreateScope();
+
+        var controller = ActivatorUtilities.CreateInstance<AdminAIAgentController>(scope.ServiceProvider);
+
+        Assert.NotNull(controller);
+    }
+
     public sealed class ApiFactory : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("E2e");
             builder.UseSetting("Security:RequireHttps", "false");
+            builder.UseSetting("AdminAI:HmacKey", Convert.ToBase64String(new byte[32]));
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IHostedService>();

@@ -29,6 +29,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { NumberField } from '@/components/ui/number-field';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import toast from 'react-hot-toast';
+import { ContentArchiveControl } from './ContentArchiveControl';
+import type { ContentArchiveMode, ContentArchiveTargetType } from '@/services/admin-service';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,9 @@ export interface HierarchyItem {
   subtitle?: string;
   /** URL to navigate when clicking the item row */
   href?: string;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+  archiveTargetType?: ContentArchiveTargetType;
 }
 
 export interface ContentHierarchyPanelProps {
@@ -63,6 +68,8 @@ export interface ContentHierarchyPanelProps {
   hasSummary?: boolean;
   /** Whether the panel supports uploading/displaying images */
   hasImage?: boolean;
+  /** Whether new child items can be added from this panel */
+  canCreate?: boolean;
   /** Called with { title, order, price, summary, imageFile } to create a new child */
   onCreate: (data: { title: string; order: number; price: number; summary?: string; imageFile?: File | null }) => Promise<void>;
   /** Optional inline update for existing rows */
@@ -75,6 +82,8 @@ export interface ContentHierarchyPanelProps {
   deleteConfirmText?: (item: HierarchyItem) => string;
   /** Retry loading */
   onRetry: () => void;
+  /** Reload after an item is archived or restored. */
+  onArchiveChanged?: () => void | Promise<void>;
 }
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
@@ -106,12 +115,14 @@ export function ContentHierarchyPanel({
   addPlaceholder,
   hasSummary = false,
   hasImage = false,
+  canCreate = true,
   onCreate,
   onUpdate,
   onImageUpload,
   onDelete,
   deleteConfirmText,
   onRetry,
+  onArchiveChanged,
 }: ContentHierarchyPanelProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -130,8 +141,12 @@ export function ContentHierarchyPanel({
   const [updating, setUpdating] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<HierarchyItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [contentView, setContentView] = useState<'current' | 'archived'>('current');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentItems = items.filter((item) => (item.archiveMode ?? 'None') === 'None');
+  const archivedItems = items.filter((item) => (item.archiveMode ?? 'None') !== 'None');
+  const visibleItems = contentView === 'current' ? currentItems : archivedItems;
 
   // Auto-set order to next available
   useEffect(() => {
@@ -278,7 +293,7 @@ export function ContentHierarchyPanel({
             )}
           </div>
 
-          {!isAdding && (
+          {canCreate && !isAdding && (
             <NeumorphButton
               onClick={() => setIsAdding(true)}
               intent="primary"
@@ -291,23 +306,46 @@ export function ContentHierarchyPanel({
           )}
         </div>
 
+        <div className="mb-4 grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1" role="tablist" aria-label="حالة المحتوى">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contentView === 'current'}
+            onClick={() => setContentView('current')}
+            className={`min-h-11 rounded-lg px-3 text-sm font-black transition ${contentView === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+          >
+            المحتوى الحالي ({currentItems.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contentView === 'archived'}
+            onClick={() => setContentView('archived')}
+            className={`min-h-11 rounded-lg px-3 text-sm font-black transition ${contentView === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+          >
+            المؤرشف ({archivedItems.length})
+          </button>
+        </div>
+
         {/* Empty state */}
-        {items.length === 0 && !isAdding && (
+        {visibleItems.length === 0 && !isAdding && (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-strong)]/40 py-14 text-center">
             <div className="mb-4 rounded-full bg-[var(--admin-primary-15)] p-4 text-[var(--admin-primary)]">
               {icon}
             </div>
-            <p className="mb-1 font-bold text-[var(--admin-text)]">لا يوجد {label} بعد</p>
-            <p className="mb-6 max-w-xs text-sm text-[var(--admin-muted)]">{emptyDescription}</p>
-            <NeumorphButton onClick={() => setIsAdding(true)} intent="primary" size="md" pill>
-              <Plus className="h-4 w-4" />
-              إضافة أول {label.replace('ال', '')}
-            </NeumorphButton>
+            <p className="mb-1 font-bold text-[var(--admin-text)]">{contentView === 'archived' ? `لا يوجد ${label} مؤرشف` : `لا يوجد ${label} بعد`}</p>
+            <p className="mb-6 max-w-xs text-sm text-[var(--admin-muted)]">{contentView === 'archived' ? 'عند أرشفة أي عنصر سيظهر هنا مع إمكانية إعادته للمحتوى الحالي.' : emptyDescription}</p>
+            {canCreate && contentView === 'current' && (
+              <NeumorphButton onClick={() => setIsAdding(true)} intent="primary" size="md" pill>
+                <Plus className="h-4 w-4" />
+                إضافة أول {label.replace('ال', '')}
+              </NeumorphButton>
+            )}
           </div>
         )}
 
         {/* Item list */}
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const isDeleting = deletingId === item.id;
           const isEditing = editingItem?.id === item.id;
 
@@ -477,6 +515,17 @@ export function ContentHierarchyPanel({
               )}
 
               {/* Actions */}
+              {item.archiveTargetType && (
+                <ContentArchiveControl
+                  targetType={item.archiveTargetType}
+                  targetId={item.id}
+                  title={item.title}
+                  archiveMode={item.archiveMode}
+                  onChanged={onArchiveChanged}
+                  compact
+                />
+              )}
+
               {item.href && (
                 <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               )}
@@ -522,7 +571,7 @@ export function ContentHierarchyPanel({
         })}
 
         {/* Inline add row */}
-        {isAdding && (
+        {isAdding && contentView === 'current' && (
           <div className="rounded-2xl border-2 border-dashed border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/30 p-4 space-y-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 space-y-2">

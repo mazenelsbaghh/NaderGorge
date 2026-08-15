@@ -1,15 +1,16 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { ArrowUpLeft, BookOpenText, ChevronDown, X } from "lucide-react";
+import { useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpLeft, BookOpenText, ChevronDown, X } from 'lucide-react';
 
-import type { DashboardDto } from "@/services/student-service";
+import type { DashboardDto } from '@/services/student-service';
 
-const ONBOARDING_DISMISS_KEY = "student-dashboard-onboarding-dismissed-v1";
+const ONBOARDING_DISMISS_KEY = 'student-dashboard-onboarding-dismissed-v1';
 
 type StudentGettingStartedPanelProps = {
   data: DashboardDto;
+  hasDirectContentAccess: boolean;
 };
 
 type OnboardingVariant = {
@@ -31,33 +32,36 @@ type OnboardingVariant = {
   }>;
 };
 
-function getVariant(data: DashboardDto): OnboardingVariant | null {
-  if (data.activePackages.length === 0) {
+function getVariant(
+  data: DashboardDto,
+  hasDirectContentAccess: boolean
+): OnboardingVariant | null {
+  if (data.activePackages.length === 0 && !hasDirectContentAccess) {
     return {
-      title: "تحتاج مساعدة في البداية؟",
-      description: "ثلاث خطوات قصيرة من اختيار الباقة حتى أول درس.",
+      title: 'تحتاج مساعدة في البداية؟',
+      description: 'ثلاث خطوات قصيرة من اختيار الباقة حتى أول درس.',
       primaryCta: {
-        href: "/student/packages",
-        label: "تصفح الباقات",
+        href: '/student/packages',
+        label: 'تصفح الباقات',
         icon: BookOpenText,
       },
       secondaryCta: {
-        href: "/student/mistakes",
-        label: "راجع ملف الأخطاء",
+        href: '/student/mistakes',
+        label: 'راجع ملف الأخطاء',
         icon: BookOpenText,
       },
       steps: [
         {
-          title: "اختر الباقة",
-          detail: "راجع الباقات المتاحة واختر الأنسب لخطتك.",
+          title: 'اختر الباقة',
+          detail: 'راجع الباقات المتاحة واختر الأنسب لخطتك.',
         },
         {
-          title: "ابدأ أول درس",
-          detail: "بعد التفعيل ستجد الباقة والدرس المتاح في لوحة الطالب.",
+          title: 'ابدأ أول درس',
+          detail: 'بعد التفعيل ستجد الباقة والدرس المتاح في لوحة الطالب.',
         },
         {
-          title: "تابع تقدمك",
-          detail: "إكمال الدروس والامتحانات يحدّث تقدمك تلقائيًا.",
+          title: 'تابع تقدمك',
+          detail: 'إكمال الدروس والامتحانات يحدّث تقدمك تلقائيًا.',
         },
       ],
     };
@@ -65,30 +69,30 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
 
   if (!data.resumePoint && data.totalLessonsCompleted === 0) {
     return {
-      title: "باقاتك جاهزة، ابدأ أول درس",
-      description: "افتح إحدى باقاتك واختر أول درس متاح.",
+      title: 'محتواك جاهز، ابدأ أول درس',
+      description: 'افتح الباقة أو الترم أو القسم أو الحصة المفعّلة لحسابك.',
       primaryCta: {
-        href: "/student/packages",
-        label: "افتح الباقات",
+        href: '/student/packages',
+        label: 'افتح محتواك الدراسي',
         icon: BookOpenText,
       },
       secondaryCta: {
-        href: "/student/mistakes",
-        label: "راجع ملف الأخطاء",
+        href: '/student/mistakes',
+        label: 'راجع ملف الأخطاء',
         icon: BookOpenText,
       },
       steps: [
         {
-          title: "اختر الباقة",
-          detail: "افتح الباقة المناسبة لرؤية الدروس المتاحة.",
+          title: 'اختر الباقة',
+          detail: 'افتح الباقة المناسبة لرؤية الدروس المتاحة.',
         },
         {
-          title: "ابدأ الدرس",
-          detail: "ستجد الواجب أو الامتحان المرتبط داخل المسار نفسه.",
+          title: 'ابدأ الدرس',
+          detail: 'ستجد الواجب أو الامتحان المرتبط داخل المسار نفسه.',
         },
         {
-          title: "ارجع إلى اللوحة",
-          detail: "بعد الإكمال ستظهر لك نقطة الاستكمال التالية مباشرة.",
+          title: 'ارجع إلى اللوحة',
+          detail: 'بعد الإكمال ستظهر لك نقطة الاستكمال التالية مباشرة.',
         },
       ],
     };
@@ -97,13 +101,16 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
   return null;
 }
 
-export function StudentGettingStartedPanel({ data }: StudentGettingStartedPanelProps) {
+export function StudentGettingStartedPanel({
+  data,
+  hasDirectContentAccess,
+}: StudentGettingStartedPanelProps) {
   const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem(ONBOARDING_DISMISS_KEY) === "true";
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem(ONBOARDING_DISMISS_KEY) === 'true';
   });
 
-  const variant = getVariant(data);
+  const variant = getVariant(data, hasDirectContentAccess);
 
   if (!variant || dismissed) return null;
 
@@ -114,14 +121,18 @@ export function StudentGettingStartedPanel({ data }: StudentGettingStartedPanelP
     <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
       <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
         <div>
-          <h2 className="text-base font-black text-[var(--admin-text)]">{variant.title}</h2>
-          <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{variant.description}</p>
+          <h2 className="text-base font-black text-[var(--admin-text)]">
+            {variant.title}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
+            {variant.description}
+          </p>
         </div>
         <button
           type="button"
           aria-label="إخفاء خطوات البداية"
           onClick={() => {
-            window.localStorage.setItem(ONBOARDING_DISMISS_KEY, "true");
+            window.localStorage.setItem(ONBOARDING_DISMISS_KEY, 'true');
             setDismissed(true);
           }}
           className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-card-soft)] hover:text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
@@ -144,8 +155,12 @@ export function StudentGettingStartedPanel({ data }: StudentGettingStartedPanelP
                   {index + 1}
                 </span>
                 <div>
-                  <h3 className="text-sm font-black text-[var(--admin-text)]">{step.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{step.detail}</p>
+                  <h3 className="text-sm font-black text-[var(--admin-text)]">
+                    {step.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
+                    {step.detail}
+                  </p>
                 </div>
               </li>
             ))}

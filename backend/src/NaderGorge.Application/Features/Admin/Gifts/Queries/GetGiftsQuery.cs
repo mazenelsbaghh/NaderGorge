@@ -48,10 +48,7 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
             {
                 x.Id,
                 x.TargetType,
-                x.PackageId,
-                x.LessonId,
-                x.LessonVideoId,
-                x.ExamId,
+                TargetId = x.PackageId ?? x.TermId ?? x.ContentSectionId ?? x.LessonId ?? x.LessonVideoId ?? x.ExamId,
                 x.TeacherId,
                 x.Amount,
                 Status = x.ExpiresAt != null && x.ExpiresAt <= now && x.Status != GiftIssuanceStatus.Revoked
@@ -80,7 +77,7 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
             items.Add(new GiftListItemDto(
                 row.Id,
                 row.TargetType,
-                await ResolveTargetNameAsync(_db, row.TargetType, row.PackageId ?? row.LessonId ?? row.LessonVideoId ?? row.ExamId, row.TeacherId, ct),
+                await ResolveTargetNameAsync(_db, row.TargetType, row.TargetId, row.TeacherId, ct),
                 row.Status,
                 row.IssuerName,
                 row.RecipientCount,
@@ -115,6 +112,8 @@ public sealed class GetGiftsQueryHandler : IRequestHandler<GetGiftsQuery, ApiRes
         return type switch
         {
             GiftTargetType.Package => await db.Packages.Where(x => x.Id == targetId).Select(x => x.Name).FirstOrDefaultAsync(ct),
+            GiftTargetType.Term => await db.Terms.Where(x => x.Id == targetId).Select(x => x.IsSystemContainer ? x.Package.Name : x.Title).FirstOrDefaultAsync(ct),
+            GiftTargetType.ContentSection => await db.ContentSections.Where(x => x.Id == targetId).Select(x => x.IsSystemContainer ? x.Term.Package.Name : x.Title).FirstOrDefaultAsync(ct),
             GiftTargetType.Lesson => await db.Lessons.Where(x => x.Id == targetId).Select(x => x.Title).FirstOrDefaultAsync(ct),
             GiftTargetType.Video => await db.LessonVideos.Where(x => x.Id == targetId).Select(x => x.Title).FirstOrDefaultAsync(ct),
             GiftTargetType.Exam => await db.Exams.Where(x => x.Id == targetId).Select(x => x.Title).FirstOrDefaultAsync(ct),

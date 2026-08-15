@@ -49,6 +49,37 @@ public sealed class FlexiblePackageContentTests
         Assert.True(await db.Lessons.AnyAsync(item => item.Id == lessonCreation.Data && item.ContentSectionId == sectionCreation.Data));
     }
 
+    [Fact]
+    public async Task ProductionRegression_StandaloneLesson_CreatesReadyLessonWithoutVisiblePackageLevels()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var packageHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+
+        var packageCreation = await packageHandler.Handle(
+            CreatePackage(subject, teacher, PackageContentMode.SingleLesson),
+            CancellationToken.None);
+
+        Assert.True(packageCreation.Success);
+        var package = await db.Packages.SingleAsync(item => item.Id == packageCreation.Data);
+        var rootTerm = await db.Terms.SingleAsync(item => item.PackageId == package.Id && item.IsSystemContainer);
+        var rootSection = await db.ContentSections.SingleAsync(item => item.TermId == rootTerm.Id && item.IsSystemContainer);
+        var lesson = await db.Lessons.SingleAsync(item => item.ContentSectionId == rootSection.Id);
+
+        Assert.Equal(PackageContentMode.SingleLesson, package.ContentMode);
+        Assert.Equal(package.Name, lesson.Title);
+        Assert.Equal(package.Description, lesson.Summary);
+        Assert.Equal(package.Price, lesson.Price);
+
+        var lessonHandler = new CreateLessonCommandHandler(db, new TeacherAuthorizationService(db));
+        var extraLessonCreation = await lessonHandler.Handle(
+            new CreateLessonCommand("حصة ثانية", "", 2, rootSection.Id, null, 0),
+            CancellationToken.None);
+
+        Assert.False(extraLessonCreation.Success);
+        Assert.Single(await db.Lessons.Where(item => item.ContentSectionId == rootSection.Id).ToListAsync());
+    }
+
     private static CreatePackageCommand CreatePackage(Subject subject, TeacherProfile teacher, PackageContentMode mode)
     {
         return new CreatePackageCommand(

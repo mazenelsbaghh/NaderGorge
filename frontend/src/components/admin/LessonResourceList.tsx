@@ -1,12 +1,15 @@
 'use client';
 
 import { FileText, Trash2, Edit2, GripVertical, Download } from 'lucide-react';
+import { ContentArchiveControl } from './ContentArchiveControl';
+import type { LessonCockpitResourceDto } from '@/services/admin-service';
 
 interface LessonResourceListProps {
-  resources: any[];
+  resources: LessonCockpitResourceDto[];
+  onRefresh?: () => void | Promise<void>;
 }
 
-export function LessonResourceList({ resources }: LessonResourceListProps) {
+export function LessonResourceList({ resources, onRefresh }: LessonResourceListProps) {
   if (!resources || resources.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] p-12 text-center">
@@ -57,6 +60,7 @@ export function LessonResourceList({ resources }: LessonResourceListProps) {
           </div>
           
           <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+            <ContentArchiveControl targetType="Resource" targetId={resource.id} title={resource.title} archiveMode={resource.archiveMode} onChanged={onRefresh} compact />
             <a 
               href={resource.fileUrl} 
               target="_blank" 

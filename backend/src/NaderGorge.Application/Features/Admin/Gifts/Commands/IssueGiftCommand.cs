@@ -57,13 +57,15 @@ public sealed class IssueGiftCommandHandler
     private readonly IAccessCheckService _access;
     private readonly BalanceService _balanceService;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public IssueGiftCommandHandler(IAppDbContext db, IAccessCheckService access, BalanceService balanceService, IAcademicScopeService? academicScope = null)
+    public IssueGiftCommandHandler(IAppDbContext db, IAccessCheckService access, BalanceService balanceService, IAcademicScopeService? academicScope = null, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _access = access;
         _balanceService = balanceService;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<IssueGiftResultDto>> Handle(IssueGiftCommand command, CancellationToken ct)
@@ -81,6 +83,19 @@ public sealed class IssueGiftCommandHandler
         var target = await ResolveTargetAsync(request, ct);
         if (target == null)
             return ApiResponse<IssueGiftResultDto>.Fail("هدف الهدية غير موجود أو غير نشط.", ["TARGET_NOT_FOUND"]);
+
+        var archiveTargetType = request.TargetType switch
+        {
+            GiftTargetType.Package => ContentArchiveTargetType.Package,
+            GiftTargetType.Term => ContentArchiveTargetType.Term,
+            GiftTargetType.ContentSection => ContentArchiveTargetType.Section,
+            GiftTargetType.Lesson => ContentArchiveTargetType.Lesson,
+            GiftTargetType.Video => ContentArchiveTargetType.Video,
+            GiftTargetType.Exam => ContentArchiveTargetType.Exam,
+            _ => (ContentArchiveTargetType?)null
+        };
+        if (archiveTargetType.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTargetType.Value, request.TargetId!.Value, ct))
+            return ApiResponse<IssueGiftResultDto>.Fail("لا يمكن منح محتوى مؤرشف كهدية جديدة.", ["CONTENT_ARCHIVED"]);
 
         var targetScopeResult = await ValidateGiftTargetHasScopeAsync(request, ct);
         if (!targetScopeResult.IsEligible)
@@ -258,6 +273,10 @@ public sealed class IssueGiftCommandHandler
         return request.TargetType switch
         {
             GiftTargetType.Package => await _db.Packages.Where(x => x.Id == id && x.IsActive).Select(x => new TargetDescriptor(x.Name, x.TeacherId)).FirstOrDefaultAsync(ct),
+            GiftTargetType.Term => await _db.Terms.Where(x => x.Id == id && x.Package.IsActive)
+                .Select(x => new TargetDescriptor(x.IsSystemContainer ? x.Package.Name : x.Title, x.Package.TeacherId)).FirstOrDefaultAsync(ct),
+            GiftTargetType.ContentSection => await _db.ContentSections.Where(x => x.Id == id && x.Term.Package.IsActive)
+                .Select(x => new TargetDescriptor(x.IsSystemContainer ? x.Term.Package.Name : x.Title, x.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
             GiftTargetType.Lesson => await _db.Lessons.Where(x => x.Id == id).Select(x => new TargetDescriptor(x.Title, x.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
             GiftTargetType.Video => await _db.LessonVideos.Where(x => x.Id == id && x.IsActive).Select(x => new TargetDescriptor(x.Title, x.Lesson.ContentSection.Term.Package.TeacherId)).FirstOrDefaultAsync(ct),
             GiftTargetType.Exam => await _db.Exams.Where(x => x.Id == id).Select(x => new TargetDescriptor(x.Title, x.CreatedByTeacherId)).FirstOrDefaultAsync(ct),
@@ -268,11 +287,50 @@ public sealed class IssueGiftCommandHandler
     private Task<bool> HasEquivalentAccessAsync(Guid studentId, GiftTargetType type, Guid targetId, CancellationToken ct) => type switch
     {
         GiftTargetType.Package => _access.HasAccessToPackageAsync(studentId, targetId, ct),
+        GiftTargetType.Term => HasEquivalentTermAccessAsync(studentId, targetId, ct),
+        GiftTargetType.ContentSection => HasEquivalentSectionAccessAsync(studentId, targetId, ct),
         GiftTargetType.Lesson => _access.HasAccessToLessonAsync(studentId, targetId, ct),
         GiftTargetType.Video => _access.HasAccessToVideoAsync(studentId, targetId, ct),
         GiftTargetType.Exam => _access.HasAccessToExamAsync(studentId, targetId, ct),
         _ => Task.FromResult(false)
     };
+
+    private async Task<bool> HasEquivalentTermAccessAsync(Guid studentId, Guid termId, CancellationToken ct)
+    {
+        var packageId = await _db.Terms
+            .Where(term => term.Id == termId)
+            .Select(term => (Guid?)term.PackageId)
+            .FirstOrDefaultAsync(ct);
+        if (!packageId.HasValue)
+            return false;
+
+        var now = DateTime.UtcNow;
+        return await _db.StudentAccessGrants.AnyAsync(grant =>
+            grant.UserId == studentId &&
+            grant.IsActive &&
+            (grant.ExpiresAt == null || grant.ExpiresAt > now) &&
+            ((grant.GrantType == CodeType.Term && grant.TermId == termId) ||
+             (grant.GrantType == CodeType.Package && grant.PackageId == packageId)), ct);
+    }
+
+    private async Task<bool> HasEquivalentSectionAccessAsync(Guid studentId, Guid sectionId, CancellationToken ct)
+    {
+        var parent = await _db.ContentSections
+            .Where(section => section.Id == sectionId)
+            .Select(section => new { section.TermId, section.Term.PackageId })
+            .FirstOrDefaultAsync(ct);
+        if (parent == null)
+            return false;
+
+        var now = DateTime.UtcNow;
+        return await _db.StudentAccessGrants.AnyAsync(grant =>
+            grant.UserId == studentId &&
+            grant.IsActive &&
+            (grant.ExpiresAt == null || grant.ExpiresAt > now) &&
+            ((grant.GrantType == CodeType.Month && grant.ContentSectionId == sectionId) ||
+             (grant.GrantType == CodeType.Term && grant.TermId == parent.TermId) ||
+             (grant.GrantType == CodeType.Package && grant.PackageId == parent.PackageId)), ct);
+    }
 
     private static bool IsBalance(GiftTargetType type) => type is GiftTargetType.GeneralBalance or GiftTargetType.TeacherBalance;
 
@@ -305,6 +363,8 @@ public sealed class IssueGiftCommandHandler
         return request.TargetType switch
         {
             GiftTargetType.Package when request.TargetId.HasValue => (StudentFacingScopeOwnerType.Package, request.TargetId.Value),
+            GiftTargetType.Term when request.TargetId.HasValue => (StudentFacingScopeOwnerType.Term, request.TargetId.Value),
+            GiftTargetType.ContentSection when request.TargetId.HasValue => (StudentFacingScopeOwnerType.ContentSection, request.TargetId.Value),
             GiftTargetType.Lesson when request.TargetId.HasValue => (StudentFacingScopeOwnerType.Lesson, request.TargetId.Value),
             GiftTargetType.Video when request.TargetId.HasValue => (StudentFacingScopeOwnerType.LessonVideo, request.TargetId.Value),
             GiftTargetType.Exam when request.TargetId.HasValue => (StudentFacingScopeOwnerType.Exam, request.TargetId.Value),
@@ -318,6 +378,8 @@ public sealed class IssueGiftCommandHandler
         switch (issuance.TargetType)
         {
             case GiftTargetType.Package: issuance.PackageId = targetId; break;
+            case GiftTargetType.Term: issuance.TermId = targetId; break;
+            case GiftTargetType.ContentSection: issuance.ContentSectionId = targetId; break;
             case GiftTargetType.Lesson: issuance.LessonId = targetId; break;
             case GiftTargetType.Video: issuance.LessonVideoId = targetId; break;
             case GiftTargetType.Exam: issuance.ExamId = targetId; break;
@@ -342,6 +404,14 @@ public sealed class IssueGiftCommandHandler
                 grant.GrantType = CodeType.Package;
                 grant.PackageId = issuance.PackageId;
                 break;
+            case GiftTargetType.Term:
+                grant.GrantType = CodeType.Term;
+                grant.TermId = issuance.TermId;
+                break;
+            case GiftTargetType.ContentSection:
+                grant.GrantType = CodeType.Month;
+                grant.ContentSectionId = issuance.ContentSectionId;
+                break;
             case GiftTargetType.Lesson:
                 grant.GrantType = CodeType.Lesson;
                 grant.LessonId = issuance.LessonId;
@@ -364,7 +434,7 @@ public sealed class IssueGiftCommandHandler
         var target = await ResolveTargetAsync(new IssueGiftRequest(
             issuance.RequestId,
             issuance.TargetType,
-            issuance.PackageId ?? issuance.LessonId ?? issuance.LessonVideoId ?? issuance.ExamId,
+            issuance.GetTargetId(),
             issuance.TeacherId,
             issuance.Amount,
             issuance.ExpiresAt,
@@ -376,7 +446,7 @@ public sealed class IssueGiftCommandHandler
             new IssueGiftRequest(
                 issuance.RequestId,
                 issuance.TargetType,
-                issuance.PackageId ?? issuance.LessonId ?? issuance.LessonVideoId ?? issuance.ExamId,
+                issuance.GetTargetId(),
                 issuance.TeacherId,
                 issuance.Amount,
                 issuance.ExpiresAt,

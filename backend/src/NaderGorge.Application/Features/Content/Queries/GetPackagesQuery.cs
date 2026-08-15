@@ -17,6 +17,7 @@ public record PackageDto(
     Guid ProgramId, 
     bool IsEnrolled, 
     bool HasDirectPackageAccess,
+    bool HasRootContentAccess,
     Guid TeacherId, 
     Guid SubjectId,
     string TeacherName,
@@ -30,7 +31,9 @@ public record PackageDto(
     Guid? RootTermId,
     Guid? RootSectionId,
     IReadOnlyList<PackageDirectSectionDto> DirectSections,
-    IReadOnlyList<PackageDirectLessonDto> DirectLessons
+    IReadOnlyList<PackageDirectLessonDto> DirectLessons,
+    ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
+    DateTime? ArchivedAt = null
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -155,7 +158,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 section.Price,
                 section.ImageUrl,
                 section.TermId,
-                PackageId = section.Term.PackageId
+                PackageId = section.Term.PackageId,
+                section.ArchiveMode,
+                section.ArchivedAt
             })
             .ToListAsync(ct);
 
@@ -171,7 +176,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 lesson.Order,
                 lesson.Price,
                 lesson.ContentSectionId,
-                PackageId = lesson.ContentSection.Term.PackageId
+                PackageId = lesson.ContentSection.Term.PackageId,
+                lesson.ArchiveMode,
+                lesson.ArchivedAt
             })
             .ToListAsync(ct);
 
@@ -208,6 +215,10 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
             bool hasDirectPackageAccess = hasGlobalAccess || activeGrants.Any(g => g.GrantType == CodeType.Package && g.PackageId == pk.Id);
 
+            if (!hasGlobalAccess && (pk.ArchiveMode == ContentArchiveMode.HiddenFromEveryone ||
+                (pk.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && !isEnrolled)))
+                continue;
+
             var packageRootTerm = rootTerms.FirstOrDefault(term => term.PackageId == pk.Id);
             var packageRootSection = packageRootTerm == null
                 ? null
@@ -215,29 +226,48 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
             var directSectionDtos = directSections
                 .Where(section => section.PackageId == pk.Id)
-                .Select(section => new PackageDirectSectionDto(
-                    section.Id,
-                    section.Title,
-                    section.Order,
-                    section.Price,
-                    section.ImageUrl,
-                    hasDirectPackageAccess || activeGrants.Any(grant =>
-                        grant.GrantType == CodeType.Month && grant.ContentSectionId == section.Id)))
+                .Select(section => new
+                {
+                    Section = section,
+                    HasAccess = hasDirectPackageAccess || activeGrants.Any(grant =>
+                        (grant.GrantType == CodeType.Month && grant.ContentSectionId == section.Id) ||
+                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))
+                })
+                .Where(row => hasGlobalAccess || row.Section.ArchiveMode == ContentArchiveMode.None ||
+                    (row.Section.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && row.HasAccess))
+                .Where(row => hasGlobalAccess || row.Section.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
+                .Select(row => new PackageDirectSectionDto(
+                    row.Section.Id, row.Section.Title, row.Section.Order, row.Section.Price, row.Section.ImageUrl,
+                    row.HasAccess, row.Section.ArchiveMode, row.Section.ArchivedAt))
                 .ToList();
 
             var directLessonDtos = directLessons
                 .Where(lesson => lesson.PackageId == pk.Id)
-                .Select(lesson => new PackageDirectLessonDto(
-                    lesson.Id,
-                    lesson.Title,
-                    lesson.Summary,
-                    lesson.Order,
-                    lesson.Price,
-                    hasDirectPackageAccess || activeGrants.Any(grant =>
+                .Select(lesson => new
+                {
+                    Lesson = lesson,
+                    HasAccess = hasDirectPackageAccess || activeGrants.Any(grant =>
                         (grant.GrantType == CodeType.Lesson && grant.LessonId == lesson.Id) ||
                         (grant.GrantType == CodeType.Month && grant.ContentSectionId == lesson.ContentSectionId) ||
-                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))))
+                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))
+                })
+                .Where(row => hasGlobalAccess || row.Lesson.ArchiveMode == ContentArchiveMode.None ||
+                    (row.Lesson.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && row.HasAccess))
+                .Where(row => hasGlobalAccess || row.Lesson.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
+                .Select(row => new PackageDirectLessonDto(
+                    row.Lesson.Id, row.Lesson.Title, row.Lesson.Summary, row.Lesson.Order, row.Lesson.Price,
+                    row.HasAccess, row.Lesson.ArchiveMode, row.Lesson.ArchivedAt))
                 .ToList();
+
+            var hasRootContentAccess = pk.ContentMode switch
+            {
+                PackageContentMode.SectionWithLessons => hasGlobalAccess || activeGrants.Any(grant =>
+                    grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id),
+                PackageContentMode.LessonsOnly => hasGlobalAccess || activeGrants.Any(grant =>
+                    grant.GrantType == CodeType.Month && grant.ContentSectionId == packageRootSection?.Id),
+                PackageContentMode.SingleLesson => hasGlobalAccess || directLessonDtos.Any(lesson => lesson.HasAccess),
+                _ => hasDirectPackageAccess
+            };
 
             dtos.Add(new PackageDto(
                 pk.Id, 
@@ -247,6 +277,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.SubjectId, 
                 isEnrolled, 
                 hasDirectPackageAccess,
+                hasRootContentAccess,
                 pk.TeacherId, 
                 pk.SubjectId,
                 pk.Teacher?.User?.FullName ?? "Unknown",
@@ -260,7 +291,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 packageRootTerm?.Id,
                 packageRootSection?.Id,
                 directSectionDtos,
-                directLessonDtos
+                directLessonDtos,
+                pk.ArchiveMode,
+                pk.ArchivedAt
             ));
         }
 

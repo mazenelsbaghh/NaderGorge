@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BarChart3, BookOpen, FileQuestion, GraduationCap, RefreshCcw, Save, Shuffle, Timer } from 'lucide-react';
-import { AdminPage } from '@/components/admin';
+import { AdminPage, ContentArchiveControl } from '@/components/admin';
 import { AcademicScopeSelector } from '@/components/admin/AcademicScopeSelector';
 import { getAcademicScopeLabel, type AcademicScopePayload } from '@/lib/academic-labels';
 import { cairoDateTimeLocalToIso } from '@/components/admin/admin-utils';
@@ -17,6 +17,7 @@ export default function AdminPublicExamsPageClient() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [exams, setExams] = useState<PublicExamProductDto[]>([]);
+  const [contentView, setContentView] = useState<'current' | 'archived'>('current');
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [academicScopes, setAcademicScopes] = useState<AcademicScopePayload[]>([
@@ -102,6 +103,9 @@ export default function AdminPublicExamsPageClient() {
 
   const teacherNames = useMemo(() => Object.fromEntries(teachers.map((teacher) => [teacher.id, teacher.fullName])), [teachers]);
   const subjectNames = useMemo(() => Object.fromEntries(subjects.map((subject) => [subject.id, subject.name])), [subjects]);
+  const visibleExams = exams.filter((exam) => contentView === 'archived'
+    ? (exam.archiveMode ?? 'None') !== 'None'
+    : (exam.archiveMode ?? 'None') === 'None');
   const availableSubjects = subjects;
 
   const updateTitle = (title: string) => {
@@ -206,11 +210,15 @@ export default function AdminPublicExamsPageClient() {
 
         <section className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
           <h2 className="mb-3 text-lg font-black text-[var(--admin-text)]">الامتحانات العامة</h2>
-          {exams.length === 0 ? (
+          <div className="mb-4 grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-1" role="tablist" aria-label="حالة الامتحانات">
+            <button type="button" role="tab" aria-selected={contentView === 'current'} onClick={() => setContentView('current')} className={`min-h-11 rounded-lg text-sm font-black ${contentView === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)]'}`}>المحتوى الحالي ({exams.filter((item) => (item.archiveMode ?? 'None') === 'None').length})</button>
+            <button type="button" role="tab" aria-selected={contentView === 'archived'} onClick={() => setContentView('archived')} className={`min-h-11 rounded-lg text-sm font-black ${contentView === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)]'}`}>المؤرشف ({exams.filter((item) => (item.archiveMode ?? 'None') !== 'None').length})</button>
+          </div>
+          {visibleExams.length === 0 ? (
             <p className="text-sm font-bold text-[var(--admin-muted)]">لا توجد امتحانات عامة بعد.</p>
           ) : (
             <div className="grid gap-3">
-              {exams.map((exam) => (
+              {visibleExams.map((exam) => (
                 <div key={exam.id} className="flex flex-col gap-3 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h3 className="font-black text-[var(--admin-text)]">{exam.examTitle}</h3>
@@ -228,6 +236,7 @@ export default function AdminPublicExamsPageClient() {
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <ContentArchiveControl targetType="Exam" targetId={exam.examId} title={exam.examTitle} archiveMode={exam.archiveMode} onChanged={load} compact />
                     <Link href={`/admin/public-exams/${exam.id}`} className="inline-flex items-center gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]">
                       <FileQuestion className="h-4 w-4" />
                       فتح وإضافة أسئلة

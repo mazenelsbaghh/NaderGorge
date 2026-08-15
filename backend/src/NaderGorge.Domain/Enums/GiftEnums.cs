@@ -7,7 +7,9 @@ public enum GiftTargetType
     Video = 2,
     Exam = 3,
     GeneralBalance = 4,
-    TeacherBalance = 5
+    TeacherBalance = 5,
+    Term = 6,
+    ContentSection = 7
 }
 
 public enum GiftIssuanceStatus

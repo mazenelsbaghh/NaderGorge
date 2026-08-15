@@ -9,13 +9,36 @@ export const CONTENT_CACHE_KEYS = {
 export type PackageContentMode =
   | 'TermWithSections'
   | 'SectionWithLessons'
-  | 'LessonsOnly';
+  | 'LessonsOnly'
+  | 'SingleLesson';
 
-export const PACKAGE_CONTENT_MODE_OPTIONS: Array<{ value: PackageContentMode; label: string; description: string }> = [
-  { value: 'TermWithSections', label: 'باقة ← ترم ← قسم ← حصة', description: 'الباقة تحتوي على ترمات، وكل ترم يحتوي على أقسام، وكل قسم يحتوي على حصص.' },
-  { value: 'SectionWithLessons', label: 'باقة ← قسم ← حصة', description: 'الأقسام تظهر مباشرة داخل الباقة، وكل قسم يحتوي على حصص.' },
-  { value: 'LessonsOnly', label: 'باقة ← حصة ← فيديو', description: 'الحصص تظهر مباشرة داخل الباقة، وكل حصة تحتوي على فيديوهات.' },
-];
+export type ContentArchiveMode = 'None' | 'ActiveSubscribersOnly' | 'HiddenFromEveryone';
+
+export type ContentRootLabel = 'باقة' | 'ترم' | 'قسم' | 'حصة';
+
+export type PackageContentModeOption = {
+  value: PackageContentMode;
+  entityLabel: ContentRootLabel;
+  label: string;
+  description: string;
+};
+
+const PACKAGE_CONTENT_MODE_OPTION_MAP: Record<PackageContentMode, PackageContentModeOption> = {
+  TermWithSections: { value: 'TermWithSections', entityLabel: 'باقة', label: 'باقة كاملة: باقة ← ترم ← قسم ← حصص', description: 'أنشئ باقة كاملة، ثم أضف داخلها ترمات وأقسامًا وحصصًا.' },
+  SectionWithLessons: { value: 'SectionWithLessons', entityLabel: 'ترم', label: 'ترم مستقل: ترم ← قسم ← حصص', description: 'أنشئ ترمًا للبيع مباشرة، ثم أضف داخله الأقسام والحصص.' },
+  LessonsOnly: { value: 'LessonsOnly', entityLabel: 'قسم', label: 'قسم مستقل: قسم ← حصص', description: 'أنشئ قسمًا للبيع مباشرة، ثم أضف داخله الحصص.' },
+  SingleLesson: { value: 'SingleLesson', entityLabel: 'حصة', label: 'حصة مستقلة', description: 'أنشئ حصة مستقلة جاهزة لإضافة الفيديوهات والملفات.' },
+};
+
+export const PACKAGE_CONTENT_MODE_OPTIONS = Object.values(PACKAGE_CONTENT_MODE_OPTION_MAP);
+
+export function getContentRootOption(contentMode: PackageContentMode): PackageContentModeOption {
+  return PACKAGE_CONTENT_MODE_OPTION_MAP[contentMode];
+}
+
+export function getContentRootLabel(contentMode: PackageContentMode): ContentRootLabel {
+  return getContentRootOption(contentMode).entityLabel;
+}
 
 export interface PackageDto {
   id: string;
@@ -25,6 +48,7 @@ export interface PackageDto {
   programId: string;
   isEnrolled: boolean;
   hasDirectPackageAccess?: boolean;
+  hasRootContentAccess?: boolean;
   imageUrl?: string;
   teacherId?: string;
   subjectId?: string;
@@ -39,6 +63,28 @@ export interface PackageDto {
   rootSectionId?: string;
   directSections?: PackageDirectSectionDto[];
   directLessons?: PackageDirectLessonDto[];
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+}
+
+export type ContentRootPurchaseReference = {
+  contentType: 'Package' | 'Term' | 'Month' | 'Lesson';
+  contentId: string;
+};
+
+export function getContentRootPurchaseReference(pkg: PackageDto): ContentRootPurchaseReference | null {
+  switch (pkg.contentMode ?? 'TermWithSections') {
+    case 'SectionWithLessons':
+      return pkg.rootTermId ? { contentType: 'Term', contentId: pkg.rootTermId } : null;
+    case 'LessonsOnly':
+      return pkg.rootSectionId ? { contentType: 'Month', contentId: pkg.rootSectionId } : null;
+    case 'SingleLesson':
+      return pkg.directLessons?.[0]
+        ? { contentType: 'Lesson', contentId: pkg.directLessons[0].id }
+        : null;
+    default:
+      return { contentType: 'Package', contentId: pkg.id };
+  }
 }
 
 export interface TermDto {
@@ -48,6 +94,8 @@ export interface TermDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface ContentSectionDto {
@@ -57,6 +105,8 @@ export interface ContentSectionDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface PackageDirectSectionDto {
@@ -66,6 +116,8 @@ export interface PackageDirectSectionDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface PackageDirectLessonDto {
@@ -75,6 +127,8 @@ export interface PackageDirectLessonDto {
   order: number;
   price?: number;
   hasAccess?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonSummaryDto {
@@ -90,6 +144,8 @@ export interface LessonSummaryDto {
   blockingExamId?: string;
   blockingHomeworkLessonId?: string;
   videos?: LessonVideoSummaryDto[];
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonVideoSummaryDto {
@@ -100,6 +156,8 @@ export interface LessonVideoSummaryDto {
   isUnlockedByCode?: boolean;
   videoTypeId?: string;
   videoTypeName?: string;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface VideoChapterDto {

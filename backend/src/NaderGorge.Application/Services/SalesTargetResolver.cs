@@ -7,8 +7,13 @@ namespace NaderGorge.Application.Services;
 public sealed class SalesTargetResolver : ISalesTargetResolver
 {
     private readonly IAppDbContext _db;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public SalesTargetResolver(IAppDbContext db) => _db = db;
+    public SalesTargetResolver(IAppDbContext db, IContentArchiveAccessService? archiveAccess = null)
+    {
+        _db = db;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
+    }
 
     public Task<SalesTargetContext?> ResolveFromCodeTypeAsync(CodeType contentType, Guid contentId, CancellationToken cancellationToken = default)
     {
@@ -32,7 +37,7 @@ public sealed class SalesTargetResolver : ISalesTargetResolver
         if (targetId is null)
             return null;
 
-        return targetType switch
+        var target = targetType switch
         {
             SalesTargetType.Package => await _db.Packages
                 .Where(x => x.Id == targetId.Value)
@@ -76,5 +81,30 @@ public sealed class SalesTargetResolver : ISalesTargetResolver
 
             _ => null
         };
+
+        if (target is null) return null;
+        var archiveTargetType = targetType switch
+        {
+            SalesTargetType.Package => ContentArchiveTargetType.Package,
+            SalesTargetType.Term => ContentArchiveTargetType.Term,
+            SalesTargetType.ContentSection => ContentArchiveTargetType.Section,
+            SalesTargetType.Lesson => ContentArchiveTargetType.Lesson,
+            SalesTargetType.SpecificVideo => ContentArchiveTargetType.Video,
+            SalesTargetType.PublicExam => ContentArchiveTargetType.Exam,
+            _ => (ContentArchiveTargetType?)null
+        };
+        var archiveTargetId = targetId.Value;
+        if (targetType == SalesTargetType.PublicExam)
+        {
+            archiveTargetId = await _db.PublicExamProducts
+                .Where(product => product.Id == targetId.Value || product.ExamId == targetId.Value)
+                .Select(product => product.ExamId)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (archiveTargetId == Guid.Empty) return target with { IsSaleEligible = false };
+        }
+
+        return archiveTargetType.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTargetType.Value, archiveTargetId, cancellationToken)
+            ? target with { IsSaleEligible = false }
+            : target;
     }
 }

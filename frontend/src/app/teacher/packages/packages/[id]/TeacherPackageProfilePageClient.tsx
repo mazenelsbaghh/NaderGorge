@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users } from "lucide-react";
+import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Layers } from "lucide-react";
 import {
   AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
@@ -12,7 +12,7 @@ import {
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
-import { contentService, TermDto } from "@/services/content-service";
+import { contentService, getContentRootLabel, TermDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
@@ -139,15 +139,22 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
     href: `/teacher/packages/terms/${t.id}`,
   }));
   const contentMode = packageContentMode ?? "TermWithSections";
+  const contentRootLabel = getContentRootLabel(contentMode);
   const packageTabs = getPackageTabs(contentMode);
+  const directSections = pkg.directSections ?? [];
   const directLessons = pkg.directLessons ?? [];
+  const hierarchyStat = contentMode === "TermWithSections"
+    ? { icon: Calendar, label: "عدد الأترام", value: terms.length }
+    : contentMode === "SectionWithLessons"
+      ? { icon: Layers, label: "عدد الأقسام", value: directSections.length }
+      : { icon: BookOpenText, label: "عدد الحصص", value: directLessons.length };
 
   return (
     <TeacherPage
       activePath="/teacher/packages"
-      sectionLabel="إدارة المحتوى ▸ الباقات"
+      sectionLabel={`إدارة المحتوى ▸ ${contentRootLabel}`}
       pageTitle={pkg.name}
-      subtitle={pkg.description || "إدارة محتويات وإعدادات الباقة"}
+      subtitle={pkg.description || `إدارة محتوى وإعدادات ${contentRootLabel}`}
       action={
         <NeumorphButton onClick={() => router.push("/teacher/packages")} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
@@ -161,7 +168,7 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
           entityId={pkg.id}
           contentType="package"
           imageUrl={pkg.imageUrl}
-          label="صورة الباقة"
+          label={`صورة ${contentRootLabel}`}
           onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
         />
       </div>
@@ -183,9 +190,9 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
         </button>
         <AdminStatCard
           variant="light"
-          icon={contentMode === "TermWithSections" ? Calendar : BookOpenText}
-          label={contentMode === "TermWithSections" ? "عدد الأترام" : "عدد الحصص"}
-          value={contentMode === "TermWithSections" ? terms.length : directLessons.length}
+          icon={hierarchyStat.icon}
+          label={hierarchyStat.label}
+          value={hierarchyStat.value}
         />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard
@@ -244,7 +251,7 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
       {activeTab === "direct" && (
         <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
           <div className="mb-6">
-            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى الكورس المباشر</h3>
+            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى {contentRootLabel}</h3>
             <p className="mt-2 text-sm text-[var(--admin-muted)]">
               أضف الأقسام أو الحصص مباشرة حسب شكل الكورس.
             </p>
@@ -265,11 +272,11 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
       {activeTab === "overview" && (
         <div className="space-y-6">
           <EntityOverviewDashboard 
-            entityType="باقة" 
+            entityType={contentRootLabel}
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 
           />
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
-            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
+            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات {contentRootLabel} الأساسية</h3>
             <PackageDetailsForm pkg={pkg} />
           </div>
         </div>

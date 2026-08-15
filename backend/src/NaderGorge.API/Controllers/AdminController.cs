@@ -9,6 +9,7 @@ using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
@@ -350,6 +351,20 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
     {
         var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive, dto.AcademicScopes, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("content/{targetType}/{id:guid}/archive")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetContentArchiveState(
+        ContentArchiveTargetType targetType,
+        Guid id,
+        [FromBody] SetContentArchiveStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new SetContentArchiveStateCommand(targetType, id, request.ArchiveMode, GetUserId()),
+            cancellationToken);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1399,6 +1414,7 @@ public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyLis
 public record UpdateSectionDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record SetContentArchiveStateRequest(ContentArchiveMode ArchiveMode);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,
     string? HeroEyebrow,

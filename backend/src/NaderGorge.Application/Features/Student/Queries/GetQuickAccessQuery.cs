@@ -25,11 +25,13 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
 {
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetQuickAccessQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    public GetQuickAccessQueryHandler(IAppDbContext db, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<List<QuickAccessItemDto>>> Handle(GetQuickAccessQuery request, CancellationToken ct)
@@ -51,6 +53,8 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
         {
             if (grant.GrantType == CodeType.Term && grant.TermId.HasValue)
             {
+                if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Term, grant.TermId.Value, ct))
+                    continue;
                 if (!await IsEligibleAsync(StudentFacingScopeOwnerType.Term, grant.TermId.Value, request.UserId, ct))
                     continue;
 
@@ -78,6 +82,8 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
             }
             else if (grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue)
             {
+                if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Section, grant.ContentSectionId.Value, ct))
+                    continue;
                 if (!await IsEligibleAsync(StudentFacingScopeOwnerType.ContentSection, grant.ContentSectionId.Value, request.UserId, ct))
                     continue;
 
@@ -106,6 +112,8 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
             }
             else if (grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue)
             {
+                if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Lesson, grant.LessonId.Value, ct))
+                    continue;
                 if (!await IsEligibleAsync(StudentFacingScopeOwnerType.Lesson, grant.LessonId.Value, request.UserId, ct))
                     continue;
 
@@ -188,6 +196,8 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
 
                 foreach (var video in videos)
                 {
+                    if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
+                        continue;
                     if (!await IsEligibleAsync(StudentFacingScopeOwnerType.LessonVideo, video.Id, request.UserId, ct))
                         continue;
 

@@ -43,11 +43,13 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 {
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetDashboardQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    public GetDashboardQueryHandler(IAppDbContext db, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
@@ -112,6 +114,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
+            if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Package, pkg.Id, ct))
+                continue;
+
             var eligibleLessonIds = await FilterEligibleOwnerIdsAsync(
                 StudentFacingScopeOwnerType.Lesson,
                 pkg.Lessons.Select(l => l.Id).ToList(),
@@ -186,7 +191,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var lesson in lessonsWithExams)
         {
-            if (lesson.ExamId.HasValue && exams.TryGetValue(lesson.ExamId.Value, out var examTitle))
+            if (lesson.ExamId.HasValue
+                && exams.TryGetValue(lesson.ExamId.Value, out var examTitle)
+                && await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, lesson.ExamId.Value, ct))
             {
                 upcomingExams.Add(new UpcomingExamDto(lesson.ExamId.Value, examTitle, lesson.Title));
             }
@@ -198,6 +205,13 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Select(h => new { h.Id, h.Title, h.LessonId, h.PassingScoreThreshold, h.TotalScore })
             .ToListAsync(ct);
 
+        var visibleHomeworkIds = new HashSet<Guid>();
+        foreach (var homework in homeworkRows)
+        {
+            if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Homework, homework.Id, ct))
+                visibleHomeworkIds.Add(homework.Id);
+        }
+
         var gradedHomeworkIds = await _db.HomeworkSubmissions
             .AsNoTracking()
             .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
@@ -205,6 +219,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .ToListAsync(ct);
 
         var upcomingHomeworks = homeworkRows
+            .Where(h => visibleHomeworkIds.Contains(h.Id))
             .Where(h => !gradedHomeworkIds.Any(s => s.HomeworkId == h.Id && s.OverallScore >= (h.PassingScoreThreshold ?? 0)))
             .OrderBy(h => h.Title)
             .Take(5)

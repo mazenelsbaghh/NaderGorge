@@ -11,5 +11,6 @@ public enum PackageContentMode
     SectionOnly = 1,
     TermWithSections = 2,
     SectionWithLessons = 3,
-    LessonsOnly = 4
+    LessonsOnly = 4,
+    SingleLesson = 5
 }

@@ -21,7 +21,9 @@ public record LessonSummaryDto(
     string? LockedReason = null,
     Guid? BlockingExamId = null,
     Guid? BlockingHomeworkLessonId = null,
-    List<LessonVideoSummaryDto>? Videos = null
+    List<LessonVideoSummaryDto>? Videos = null,
+    ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
+    DateTime? ArchivedAt = null
 );
 
 public record LessonVideoSummaryDto(
@@ -31,7 +33,9 @@ public record LessonVideoSummaryDto(
     bool HasAccess,
     bool IsUnlockedByCode,
     Guid? VideoTypeId,
-    string? VideoTypeName
+    string? VideoTypeName,
+    ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
+    DateTime? ArchivedAt = null
 );
 
 public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiResponse<List<LessonSummaryDto>>>
@@ -39,12 +43,14 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
     private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetLessonsQueryHandler(IAppDbContext db, IAccessCheckService access, IAcademicScopeService academicScope)
+    public GetLessonsQueryHandler(IAppDbContext db, IAccessCheckService access, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _access = access;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<List<LessonSummaryDto>>> Handle(GetLessonsQuery request, CancellationToken ct)
@@ -59,7 +65,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             return ApiResponse<List<LessonSummaryDto>>.Fail("Section not found");
 
         var lessons = section.Lessons.OrderBy(l => l.Order).ToList();
-        if (!await IsPrivilegedUserAsync(request.UserId, ct))
+        var isPrivileged = await IsPrivilegedUserAsync(request.UserId, ct);
+        if (!isPrivileged)
         {
             var eligibleLessons = new List<Lesson>();
             foreach (var lesson in lessons)
@@ -68,7 +75,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                         StudentFacingScopeOwnerType.Lesson,
                         lesson.Id,
                         request.UserId,
-                        ct))
+                        ct) && await _archiveAccess.CanViewAsync(
+                        request.UserId, ContentArchiveTargetType.Lesson, lesson.Id, ct))
                 {
                     eligibleLessons.Add(lesson);
                 }
@@ -96,7 +104,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             var blockingState = await GetBlockingStateAsync(lesson, section, request.UserId, passedExamIds, ct);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
-            if (!await IsPrivilegedUserAsync(request.UserId, ct))
+            if (!isPrivileged)
             {
                 var eligibleVideos = new List<LessonVideo>();
                 foreach (var video in videos)
@@ -105,7 +113,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                             StudentFacingScopeOwnerType.LessonVideo,
                             video.Id,
                             request.UserId,
-                            ct))
+                            ct) && await _archiveAccess.CanViewAsync(
+                            request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
                     {
                         eligibleVideos.Add(video);
                     }
@@ -124,7 +133,9 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                     hasVideoAccess,
                     hasVideoAccess && !hasAccess,
                     video.VideoTypeId,
-                    video.VideoType?.Name
+                    video.VideoType?.Name,
+                    video.ArchiveMode,
+                    video.ArchivedAt
                 ));
             }
 
@@ -140,7 +151,9 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 blockingState.LockedReason,
                 blockingState.BlockingExamId,
                 blockingState.BlockingHomeworkLessonId,
-                videoSummaries
+                videoSummaries,
+                lesson.ArchiveMode,
+                lesson.ArchivedAt
             ));
         }
 

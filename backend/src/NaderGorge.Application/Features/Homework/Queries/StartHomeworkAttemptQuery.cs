@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Homework.Queries;
 
@@ -47,11 +48,13 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
 {
     private readonly IAppDbContext _dbContext;
     private readonly IAccessCheckService _access;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public StartHomeworkAttemptQueryHandler(IAppDbContext dbContext, IAccessCheckService access)
+    public StartHomeworkAttemptQueryHandler(IAppDbContext dbContext, IAccessCheckService access, IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
         _access = access;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<StartHomeworkAttemptDto>> Handle(StartHomeworkAttemptQuery request, CancellationToken ct)
@@ -64,6 +67,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             return ApiResponse<StartHomeworkAttemptDto>.Fail("Homework not found.");
         if (!homework.IsActive)
             return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب معطل حالياً.");
+        if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, ct))
+            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
         // Verify student has access to the lesson
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, ct);

@@ -98,6 +98,8 @@ export interface PublicExamProductDto {
   latestAttemptIsPassed?: boolean | null;
   latestAttemptScore?: number | null;
   academicScopes?: AcademicScopeSummary[] | null;
+  archiveMode?: import('./admin-service').ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface CreatePublicExamDto {

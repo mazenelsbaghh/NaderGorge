@@ -65,6 +65,47 @@ public sealed class GiftsAndPromotionalBalanceTests
         Assert.Contains(db.AuditLogs, x => x.Action == "GiftIssued");
     }
 
+    [Theory]
+    [InlineData(GiftTargetType.Term, CodeType.Term)]
+    [InlineData(GiftTargetType.ContentSection, CodeType.Month)]
+    public async Task IssueHierarchyGift_CreatesMatchingAccessGrant(GiftTargetType targetType, CodeType expectedGrantType)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, $"{targetType} Gift Student", $"15{(int)targetType:D3}31");
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, $"{targetType} Gift Admin", $"15{(int)targetType:D3}32");
+        var (term, section) = await SeedGiftHierarchyAsync(db);
+        var targetId = targetType == GiftTargetType.Term ? term.Id : section.Id;
+        var handler = new IssueGiftCommandHandler(
+            db,
+            new AccessCheckService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+
+        var result = await handler.Handle(new IssueGiftCommand(new IssueGiftRequest(
+            Guid.NewGuid(), targetType, targetId, null, null, null, null,
+            [student.Id], "هدية محتوى"), admin.Id), CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        var issuance = await db.GiftIssuances.SingleAsync(x => x.TargetType == targetType);
+        Assert.Equal(targetId, issuance.GetTargetId());
+        var grant = await db.StudentAccessGrants.SingleAsync(x => x.GiftRecipientId != null);
+        Assert.Equal(expectedGrantType, grant.GrantType);
+        Assert.Equal(targetId, grant.TermId ?? grant.ContentSectionId);
+    }
+
+    [Fact]
+    public async Task GiftTargetLookups_ReturnTermAndSectionOptions()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (term, section) = await SeedGiftHierarchyAsync(db);
+        var handler = new GetGiftTargetsLookupQueryHandler(db);
+
+        var terms = await handler.Handle(new GetGiftTargetsLookupQuery(GiftTargetType.Term), CancellationToken.None);
+        var sections = await handler.Handle(new GetGiftTargetsLookupQuery(GiftTargetType.ContentSection), CancellationToken.None);
+
+        Assert.Contains(terms.Data!, item => item.Id == term.Id && item.Name == term.Title);
+        Assert.Contains(sections.Data!, item => item.Id == section.Id && item.Name == section.Title);
+    }
+
     [Fact]
     public async Task StudentLookup_MarksRecipientsPreviouslyGiftedForTheSelectedTarget()
     {
@@ -375,6 +416,16 @@ public sealed class GiftsAndPromotionalBalanceTests
         db.AddRange(subject, package);
         await db.SaveChangesAsync();
         return package;
+    }
+
+    private static async Task<(Term Term, ContentSection Section)> SeedGiftHierarchyAsync(AppDbContext db)
+    {
+        var package = await SeedPackageAsync(db, 120m);
+        var term = new Term { Title = "Gift term", Package = package, Price = 80m };
+        var section = new ContentSection { Title = "Gift section", Term = term, Price = 40m };
+        db.AddRange(term, section);
+        await db.SaveChangesAsync();
+        return (term, section);
     }
 
     private static PromotionalBalanceAllocation AddAllocation(AppDbContext db, Guid studentId, Guid? teacherId, decimal amount, DateTime? expiresAt)

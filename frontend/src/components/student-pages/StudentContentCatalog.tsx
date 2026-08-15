@@ -21,6 +21,8 @@ import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal"
 import { type CodeType } from "@/services/balance-service";
 import {
   contentService,
+  getContentRootLabel,
+  getContentRootPurchaseReference,
   type ContentSectionDto,
   type LessonSummaryDto,
   type PackageDto,
@@ -52,14 +54,14 @@ const LEVELS: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { key: "packages", label: "الباقات", icon: Layers3 },
+  { key: "packages", label: "المحتوى", icon: Layers3 },
   { key: "terms", label: "الأترام", icon: GraduationCap },
   { key: "months", label: "الشهور / الأقسام", icon: CalendarDays },
   { key: "lessons", label: "الحصص", icon: BookOpen },
 ];
 
 const levelLabels: Record<CatalogLevel, string> = {
-  packages: "الباقات المتاحة",
+  packages: "المحتوى المتاح",
   terms: "الأترام المتاحة",
   months: "الشهور والأقسام المتاحة",
   lessons: "الحصص المتاحة",
@@ -90,7 +92,7 @@ async function fetchLessonGroups(packages: PackageDto[], sectionGroups: SectionG
     packageId: group.pkg.id,
     lessons: (await contentService.getLessons(section.id)).data.data,
   }))));
-  const directGroups = packages.filter((pkg) => pkg.contentMode === "LessonsOnly").map((pkg) => ({
+  const directGroups = packages.filter((pkg) => pkg.contentMode === "LessonsOnly" || pkg.contentMode === "SingleLesson").map((pkg) => ({
     packageId: pkg.id,
     lessons: (pkg.directLessons ?? []).map((lesson) => ({ ...lesson, hasAccess: lesson.hasAccess ?? false, isCompleted: false, videos: [] })),
   }));
@@ -196,7 +198,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
     setLessons([]);
     setError(null);
 
-    if (pkg.contentMode === "LessonsOnly") {
+    if (pkg.contentMode === "LessonsOnly" || pkg.contentMode === "SingleLesson") {
       setLessons(
         (pkg.directLessons ?? []).map((lesson) => ({
           id: lesson.id,
@@ -267,7 +269,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
     const canUseCurrentPath =
       (nextLevel === "terms" && selectedPackage?.contentMode === "TermWithSections") ||
       (nextLevel === "months" && (selectedTerm !== null || selectedPackage?.contentMode === "SectionWithLessons")) ||
-      (nextLevel === "lessons" && (selectedSection !== null || selectedPackage?.contentMode === "LessonsOnly"));
+      (nextLevel === "lessons" && (selectedSection !== null || selectedPackage?.contentMode === "LessonsOnly" || selectedPackage?.contentMode === "SingleLesson"));
     if (!canUseCurrentPath) {
       setLevel(nextLevel);
       void loadCatalogLevel(nextLevel);
@@ -347,7 +349,7 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
       {selectedPackage && level !== "packages" ? (
         <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--admin-muted)]">
           <button type="button" onClick={resetToPackages} className="transition hover:text-[var(--admin-primary)]">
-            الباقات
+            المحتوى
           </button>
           <ChevronLeft className="h-4 w-4" aria-hidden />
           <button type="button" onClick={() => goToLevel(selectedPackage.contentMode === "TermWithSections" ? "terms" : selectedPackage.contentMode === "SectionWithLessons" ? "months" : "lessons")} className="max-w-56 truncate text-[var(--admin-text)] transition hover:text-[var(--admin-primary)]">
@@ -392,17 +394,23 @@ export function StudentContentCatalog({ packages, onPurchaseComplete }: StudentC
 
       {!loading && level === "packages" ? (
         <div className="space-y-4">
-          <CatalogHeading title={levelLabels.packages} description="ابدأ من الباقة الكاملة أو افتحها لاستعراض مكوناتها." />
-          {packages.length === 0 ? <CatalogEmpty message="لا توجد باقات متاحة لبياناتك الدراسية حاليًا." /> : (
+          <CatalogHeading title={levelLabels.packages} description="اختر باقة أو ترمًا أو قسمًا أو حصة مستقلة، ثم استعرض المحتوى أو اشتره مباشرة." />
+          {packages.length === 0 ? <CatalogEmpty message="لا يوجد محتوى متاح لبياناتك الدراسية حاليًا." /> : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {packages.map((pkg) => (
-                <PackageCatalogCard
-                  key={pkg.id}
-                  pkg={pkg}
-                  onExplore={() => choosePackage(pkg)}
-                  onPurchase={() => setPurchaseTarget({ contentType: "Package", contentId: pkg.id, contentName: pkg.name, price: pkg.price ?? 0 })}
-                />
-              ))}
+              {packages.map((pkg) => {
+                const rootReference = getContentRootPurchaseReference(pkg);
+                const rootPurchaseTarget: PurchaseTarget | null = rootReference
+                  ? { ...rootReference, contentName: pkg.name, price: pkg.price ?? 0 }
+                  : null;
+                return (
+                  <PackageCatalogCard
+                    key={pkg.id}
+                    pkg={pkg}
+                    onExplore={() => choosePackage(pkg)}
+                    onPurchase={rootPurchaseTarget ? () => setPurchaseTarget(rootPurchaseTarget) : undefined}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -527,9 +535,10 @@ function CatalogLevelPanel({
   );
 }
 
-function PackageCatalogCard({ pkg, onExplore, onPurchase }: { pkg: PackageDto; onExplore: () => void; onPurchase: () => void }) {
-  const hasDirectAccess = pkg.hasDirectPackageAccess ?? false;
-  const hasPartialAccess = !hasDirectAccess && pkg.isEnrolled;
+function PackageCatalogCard({ pkg, onExplore, onPurchase }: { pkg: PackageDto; onExplore: () => void; onPurchase?: () => void }) {
+  const hasRootAccess = pkg.hasRootContentAccess ?? pkg.hasDirectPackageAccess ?? false;
+  const hasPartialAccess = !hasRootAccess && pkg.isEnrolled;
+  const contentRootLabel = getContentRootLabel(pkg.contentMode ?? "TermWithSections");
   return (
     <article className="group overflow-hidden rounded-[1.75rem] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
       <div className="flex min-h-52 flex-col gap-5 p-5 sm:flex-row">
@@ -545,13 +554,13 @@ function PackageCatalogCard({ pkg, onExplore, onPurchase }: { pkg: PackageDto; o
         </div>
         <div className="flex min-w-0 flex-1 flex-col text-right">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-xs font-black ${hasDirectAccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : hasPartialAccess ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-[var(--admin-primary-10)] text-[var(--admin-primary)]"}`}>
-              {hasDirectAccess ? "مفعّلة" : hasPartialAccess ? "محتوى مفعّل" : "متاحة للشراء"}
+            <span className={`rounded-full px-2.5 py-1 text-xs font-black ${hasRootAccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : hasPartialAccess ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-[var(--admin-primary-10)] text-[var(--admin-primary)]"}`}>
+              {hasRootAccess ? "مفعّل" : hasPartialAccess ? "محتوى مفعّل" : "متاح للشراء"}
             </span>
-            <span className="text-xs font-bold text-[var(--admin-muted)]">{pkg.subjectName || "مسار تعليمي"}</span>
+            <span className="text-xs font-bold text-[var(--admin-muted)]">{contentRootLabel} · {pkg.subjectName || "مسار تعليمي"}</span>
           </div>
           <h3 className="mt-3 line-clamp-2 text-xl font-black leading-7 text-[var(--admin-text)]">{pkg.name}</h3>
-          <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-[var(--admin-muted)]">{pkg.description || "استعرض مكونات الباقة واختر المستوى المناسب لك."}</p>
+          <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-[var(--admin-muted)]">{pkg.description || `استعرض محتوى ${contentRootLabel} قبل البدء.`}</p>
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
             <span className="text-lg font-black text-[var(--admin-primary)]">{pkg.price > 0 ? `${pkg.price} ج.م` : "مجانًا"}</span>
             <div className="flex flex-wrap gap-2">
@@ -559,10 +568,10 @@ function PackageCatalogCard({ pkg, onExplore, onPurchase }: { pkg: PackageDto; o
                 استعرض المحتوى
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              {!hasDirectAccess ? (
+              {!hasRootAccess && onPurchase ? (
                 <button type="button" onClick={onPurchase} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[var(--admin-primary)] px-3.5 text-sm font-black text-[var(--admin-primary-contrast)] transition hover:brightness-110">
                   <Sparkles className="h-4 w-4" />
-                  شراء الباقة
+                  شراء {contentRootLabel}
                 </button>
               ) : null}
             </div>

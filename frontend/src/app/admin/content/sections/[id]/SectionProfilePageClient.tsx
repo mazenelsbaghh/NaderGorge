@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpenText, ChevronRight, Video, Clock3, Users } from 'lucide-react';
-import { AdminPage, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton, AdminTabBar, AdminTab, ContentArchiveControl, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
@@ -111,6 +111,9 @@ export default function SectionProfilePageClient(props: { params: { id: string }
     price: l.price,
     subtitle: l.summary || undefined,
     href: `/admin/content/lessons/${l.id}`,
+    archiveMode: l.archiveMode,
+    archivedAt: l.archivedAt,
+    archiveTargetType: 'Lesson',
   }));
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
@@ -129,10 +132,13 @@ export default function SectionProfilePageClient(props: { params: { id: string }
       pageTitle={section.title}
       subtitle={`ترتيب: ${section.order} — ${lessons.length} حصة`}
       action={
-        <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
-          <ChevronRight className="h-4 w-4" />
-          الرجوع خطوة
-        </NeumorphButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <ContentArchiveControl targetType="Section" targetId={section.id} title={section.title} archiveMode={section.archiveMode} onChanged={loadSection} />
+          <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
+            <ChevronRight className="h-4 w-4" />
+            الرجوع خطوة
+          </NeumorphButton>
+        </div>
       }
     >
       {/* Always visible section image upload at the top */}
@@ -198,6 +204,7 @@ export default function SectionProfilePageClient(props: { params: { id: string }
               await loadLessons();
             }}
             onRetry={loadLessons}
+            onArchiveChanged={loadLessons}
           />
         </div>
       )}

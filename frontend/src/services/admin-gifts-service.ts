@@ -1,7 +1,15 @@
 import apiClient from './api-client';
 import type { AcademicScopeSummary } from '@/lib/academic-labels';
 
-export type GiftTargetType = 'Package' | 'Lesson' | 'Video' | 'Exam' | 'GeneralBalance' | 'TeacherBalance';
+export type GiftTargetType =
+  | 'Package'
+  | 'Term'
+  | 'ContentSection'
+  | 'Lesson'
+  | 'Video'
+  | 'Exam'
+  | 'GeneralBalance'
+  | 'TeacherBalance';
 export type GiftIssuanceStatus = 'Active' | 'PartiallySuccessful' | 'Completed' | 'Expired' | 'Revoked';
 
 export interface GiftLookupDto {
@@ -96,7 +104,9 @@ function unwrap<T>(response: { data?: { data?: T } }): T {
 }
 
 export const giftTargetLabels: Record<GiftTargetType, string> = {
-  Package: 'باكدج',
+  Package: 'باقة',
+  Term: 'ترم',
+  ContentSection: 'قسم',
   Lesson: 'حصة',
   Video: 'فيديو',
   Exam: 'امتحان',

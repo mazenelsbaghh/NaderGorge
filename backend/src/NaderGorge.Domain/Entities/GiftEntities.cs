@@ -9,6 +9,10 @@ public class GiftIssuance : BaseEntity
     public GiftTargetType TargetType { get; set; }
     public Guid? PackageId { get; set; }
     public Package? Package { get; set; }
+    public Guid? TermId { get; set; }
+    public Term? Term { get; set; }
+    public Guid? ContentSectionId { get; set; }
+    public ContentSection? ContentSection { get; set; }
     public Guid? LessonId { get; set; }
     public Lesson? Lesson { get; set; }
     public Guid? LessonVideoId { get; set; }
@@ -25,6 +29,9 @@ public class GiftIssuance : BaseEntity
     public User IssuedByUser { get; set; } = null!;
     public GiftIssuanceStatus Status { get; set; } = GiftIssuanceStatus.Active;
     public ICollection<GiftRecipient> Recipients { get; set; } = new List<GiftRecipient>();
+
+    public Guid? GetTargetId() =>
+        PackageId ?? TermId ?? ContentSectionId ?? LessonId ?? LessonVideoId ?? ExamId;
 }
 
 public class GiftRecipient : BaseEntity

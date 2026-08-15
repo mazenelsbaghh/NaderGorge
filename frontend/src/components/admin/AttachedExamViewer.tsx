@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Power } from 'lucide-react';
-import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
@@ -82,6 +82,7 @@ export function AttachedExamViewer({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <ContentArchiveControl targetType="Exam" targetId={examId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
             <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
               <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الامتحان' : 'تفعيل الامتحان'}
             </NeumorphButton>

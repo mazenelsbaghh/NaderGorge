@@ -33,7 +33,7 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
         var targetName = await GetGiftsQueryHandler.ResolveTargetNameAsync(
             _db,
             issuance.TargetType,
-            issuance.PackageId ?? issuance.LessonId ?? issuance.LessonVideoId ?? issuance.ExamId,
+            issuance.GetTargetId(),
             issuance.TeacherId,
             ct);
 
@@ -52,7 +52,7 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
         var expired = issuance.ExpiresAt.HasValue && issuance.ExpiresAt <= DateTime.UtcNow && issuance.Status != Domain.Enums.GiftIssuanceStatus.Revoked;
         var academicScopes = await ResolveScopeSummariesAsync(
             issuance.TargetType,
-            issuance.PackageId ?? issuance.LessonId ?? issuance.LessonVideoId ?? issuance.ExamId,
+            issuance.GetTargetId(),
             issuance.TeacherId,
             ct);
 
@@ -96,6 +96,8 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
         var owner = targetType switch
         {
             GiftTargetType.Package when targetId.HasValue => (StudentFacingScopeOwnerType.Package, targetId.Value),
+            GiftTargetType.Term when targetId.HasValue => (StudentFacingScopeOwnerType.Term, targetId.Value),
+            GiftTargetType.ContentSection when targetId.HasValue => (StudentFacingScopeOwnerType.ContentSection, targetId.Value),
             GiftTargetType.Lesson when targetId.HasValue => (StudentFacingScopeOwnerType.Lesson, targetId.Value),
             GiftTargetType.Video when targetId.HasValue => (StudentFacingScopeOwnerType.LessonVideo, targetId.Value),
             GiftTargetType.Exam when targetId.HasValue => (StudentFacingScopeOwnerType.Exam, targetId.Value),
@@ -113,4 +115,5 @@ public sealed class GetGiftDetailsQueryHandler : IRequestHandler<GetGiftDetailsQ
 
         return AcademicScopeService.ToScopeSummaries(scopes);
     }
+
 }

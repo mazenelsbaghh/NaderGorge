@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Common;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities;
 
@@ -9,7 +10,7 @@ public enum QuestionType
     FindTheMistake = 2
 }
 
-public class Exam : BaseEntity
+public class Exam : BaseEntity, IArchivableContent
 {
     public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
@@ -27,6 +28,9 @@ public class Exam : BaseEntity
     // Config properties
     public bool IsMandatory { get; set; } = true;
     public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
 

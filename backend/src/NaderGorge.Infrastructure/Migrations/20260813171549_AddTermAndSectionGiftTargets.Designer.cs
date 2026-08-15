@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaderGorge.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NaderGorge.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813171549_AddTermAndSectionGiftTargets")]
+    partial class AddTermAndSectionGiftTargets
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3200,15 +3203,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -4189,15 +4183,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -5135,15 +5120,6 @@ namespace NaderGorge.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -6425,15 +6401,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("ContentSectionId")
                         .HasColumnType("uuid");
 
@@ -6567,15 +6534,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -6609,15 +6567,6 @@ namespace NaderGorge.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -8346,15 +8295,6 @@ namespace NaderGorge.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ContentMode")
@@ -12029,15 +11969,6 @@ namespace NaderGorge.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ArchiveMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ArchivedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("ArchivedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")

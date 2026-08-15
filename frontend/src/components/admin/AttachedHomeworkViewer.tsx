@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type HomeworkDashboardDto } from '@/services/admin-service';
 import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power } from 'lucide-react';
-import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
@@ -84,6 +84,7 @@ export function AttachedHomeworkViewer({
             )}
           </div>
           <div className="flex flex-wrap gap-3">
+            <ContentArchiveControl targetType="Homework" targetId={homeworkId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
             <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
               <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الواجب' : 'تفعيل الواجب'}
             </NeumorphButton>

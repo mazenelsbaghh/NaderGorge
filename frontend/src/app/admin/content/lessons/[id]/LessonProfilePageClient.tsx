@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles, Users } from 'lucide-react';
-import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
+import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentArchiveControl, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -27,6 +27,8 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [lesson, setLesson] = useState<LessonCockpitDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [videoView, setVideoView] = useState<'current' | 'archived'>('current');
+  const [resourceView, setResourceView] = useState<'current' | 'archived'>('current');
 
   const loadData = useCallback(async () => {
     try {
@@ -84,6 +86,8 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
     { label: 'الواجبات', value: homeworkCount, icon: ClipboardList, tone: homeworkCount > 0 ? 'primary' : 'muted' },
     { label: 'التعليقات', value: `${totalComments}${pendingComments > 0 ? ` (${pendingComments} بانتظار)` : ''}`, icon: MessageSquareText, tone: pendingComments > 0 ? 'warning' : 'muted' },
   ];
+  const visibleVideos = (lesson.videos ?? []).filter((item) => videoView === 'archived' ? item.archiveMode !== 'None' : item.archiveMode === 'None');
+  const visibleResources = (lesson.resources ?? []).filter((item) => resourceView === 'archived' ? item.archiveMode !== 'None' : item.archiveMode === 'None');
 
   // Add exam status
   if (lesson.examId) {
@@ -97,12 +101,15 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       pageTitle={lesson.title}
       subtitle={lesson.summary || 'إدارة محتويات وإعدادات الحصة'}
       action={
-        <button
-          onClick={() => router.back()}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
-        >
-          <ArrowRight className="h-4 w-4" /> عودة للقائمة
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ContentArchiveControl targetType="Lesson" targetId={lesson.lessonId} title={lesson.title} archiveMode={lesson.archiveMode} onChanged={loadData} />
+          <button
+            onClick={() => router.back()}
+            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
+          >
+            <ArrowRight className="h-4 w-4" /> عودة للقائمة
+          </button>
+        </div>
       }
     >
       <div className="mb-6 flex justify-start">
@@ -201,7 +208,8 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الفيديوهات المرفقة ({lesson.videos?.length || 0})</h3>
-            <LessonVideoList videos={lesson.videos || []} lessonId={lesson.lessonId} onRefresh={loadData} />
+            <ArchiveViewTabs current={lesson.videos.filter((item) => item.archiveMode === 'None').length} archived={lesson.videos.filter((item) => item.archiveMode !== 'None').length} value={videoView} onChange={setVideoView} />
+            <LessonVideoList videos={visibleVideos} lessonId={lesson.lessonId} onRefresh={loadData} />
           </div>
         </div>
       )}
@@ -233,7 +241,8 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الملفات المرفقة ({lesson.resources?.length || 0})</h3>
-            <LessonResourceList resources={lesson.resources || []} />
+            <ArchiveViewTabs current={lesson.resources.filter((item) => item.archiveMode === 'None').length} archived={lesson.resources.filter((item) => item.archiveMode !== 'None').length} value={resourceView} onChange={setResourceView} />
+            <LessonResourceList resources={visibleResources} onRefresh={loadData} />
           </div>
         </div>
       )}
@@ -304,5 +313,14 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
         </div>
       )}
     </AdminPage>
+  );
+}
+
+function ArchiveViewTabs({ current, archived, value, onChange }: { current: number; archived: number; value: 'current' | 'archived'; onChange: (value: 'current' | 'archived') => void }) {
+  return (
+    <div className="mb-5 grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-1" role="tablist" aria-label="حالة المحتوى">
+      <button type="button" role="tab" aria-selected={value === 'current'} onClick={() => onChange('current')} className={`min-h-11 rounded-lg text-sm font-black ${value === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)]'}`}>المحتوى الحالي ({current})</button>
+      <button type="button" role="tab" aria-selected={value === 'archived'} onClick={() => onChange('archived')} className={`min-h-11 rounded-lg text-sm font-black ${value === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)]'}`}>المؤرشف ({archived})</button>
+    </div>
   );
 }

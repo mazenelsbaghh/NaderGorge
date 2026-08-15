@@ -491,6 +491,10 @@ public sealed class SavePublicExamProductCommandHandler : IRequestHandler<SavePu
             .AsNoTracking()
             .Where(x => x.OwnerType == StudentFacingScopeOwnerType.PublicExamProduct && x.OwnerId == product.Id)
             .ToListAsync(ct);
+        var archiveState = await db.Exams.AsNoTracking()
+            .Where(exam => exam.Id == product.ExamId)
+            .Select(exam => new { exam.ArchiveMode, exam.ArchivedAt })
+            .FirstAsync(ct);
 
         return new PublicExamProductDto(
             product.Id,
@@ -507,7 +511,9 @@ public sealed class SavePublicExamProductCommandHandler : IRequestHandler<SavePu
             product.AvailableFrom,
             product.AvailableUntil,
             product.DisabledAt,
-            AcademicScopeService.ToScopeSummaries(scopes));
+            AcademicScopeService.ToScopeSummaries(scopes),
+            archiveState.ArchiveMode,
+            archiveState.ArchivedAt);
     }
 }
 

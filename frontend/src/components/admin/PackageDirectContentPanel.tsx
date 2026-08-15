@@ -32,7 +32,7 @@ export function PackageDirectContentPanel({
   onChanged,
 }: PackageDirectContentPanelProps) {
   const showSections = mode === 'SectionWithLessons';
-  const showLessons = mode === 'LessonsOnly';
+  const showLessons = mode === 'LessonsOnly' || mode === 'SingleLesson';
   const sectionItems: HierarchyItem[] = sections.map((section) => ({
     id: section.id,
     title: section.title,
@@ -40,6 +40,9 @@ export function PackageDirectContentPanel({
     price: section.price,
     imageUrl: section.imageUrl,
     href: `${basePath}/sections/${section.id}`,
+    archiveMode: section.archiveMode,
+    archivedAt: section.archivedAt,
+    archiveTargetType: 'Section',
   }));
   const lessonItems: HierarchyItem[] = lessons.map((lesson) => ({
     id: lesson.id,
@@ -48,6 +51,9 @@ export function PackageDirectContentPanel({
     price: lesson.price,
     subtitle: lesson.summary || undefined,
     href: `${basePath}/lessons/${lesson.id}`,
+    archiveMode: lesson.archiveMode,
+    archivedAt: lesson.archivedAt,
+    archiveTargetType: 'Lesson',
   }));
 
   if (!showSections && !showLessons) {
@@ -96,18 +102,20 @@ export function PackageDirectContentPanel({
             await onChanged();
           }}
           onRetry={() => void onChanged()}
+          onArchiveChanged={onChanged}
         />
       )}
 
       {showLessons && rootSectionId && (
         <ContentHierarchyPanel
-          label="الحصص المباشرة"
+          label={mode === 'SingleLesson' ? 'الحصة المستقلة' : 'الحصص المباشرة'}
           icon={<BookOpenText className="h-5 w-5" />}
           items={lessonItems}
           loading={false}
           loadError={false}
           hasSummary
-          emptyDescription="أضف الحصة الأولى لتظهر مباشرة داخل هذا الكورس."
+          canCreate={mode !== 'SingleLesson'}
+          emptyDescription={mode === 'SingleLesson' ? 'تعذر تحميل الحصة المستقلة.' : 'أضف الحصة الأولى لتظهر مباشرة داخل هذا القسم.'}
           addPlaceholder="عنوان الحصة، مثال: مقدمة الدرس..."
           onCreate={async ({ title, summary, order, price }) => {
             await adminService.createLesson({
@@ -120,12 +128,13 @@ export function PackageDirectContentPanel({
             toast.success('تمت إضافة الحصة المباشرة.');
             await onChanged();
           }}
-          onUpdate={async (id, { title, summary, order, price }) => {
-            await adminService.updateLesson(id, { title, summary: summary ?? '', order, price });
-            toast.success('تم تحديث الحصة.');
-            await onChanged();
-          }}
+          onUpdate={mode === 'SingleLesson' ? undefined : async (id, { title, summary, order, price }) => {
+              await adminService.updateLesson(id, { title, summary: summary ?? '', order, price });
+              toast.success('تم تحديث الحصة.');
+              await onChanged();
+            }}
           onRetry={() => void onChanged()}
+          onArchiveChanged={onChanged}
         />
       )}
     </div>

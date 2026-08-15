@@ -6,9 +6,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags, Layers3, RefreshCw,
 } from 'lucide-react';
-import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, ContentSummaryPanel } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, ContentArchiveControl, ContentSummaryPanel } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
-import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type ContentSummaryTeacherDto, type PackageContentMode } from '@/services/content-service';
+import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, getContentRootLabel, getContentRootOption, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type ContentSummaryTeacherDto, type PackageContentMode } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -94,6 +94,7 @@ function CreatePackageRow({
   const [selectedGrades, setSelectedGrades] = useState<GradeLevel[]>([]);
   const [contentMode, setContentMode] = useState<PackageContentMode>('TermWithSections');
   const [saving, setSaving] = useState(false);
+  const selectedContentType = getContentRootOption(contentMode);
 
   // Image Upload States
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -152,11 +153,11 @@ function CreatePackageRow({
         try {
           await adminService.uploadContentImage('package', newPkg.id, imageFile);
         } catch {
-          toast.error('تم حفظ الباقة، لكن فشل رفع الصورة.');
+          toast.error(`تم حفظ ${selectedContentType.entityLabel}، لكن فشل رفع الصورة.`);
         }
       }
 
-      toast.success('تمت إضافة الباقة بنجاح.');
+      toast.success(`تمت إضافة ${selectedContentType.entityLabel} بنجاح.`);
       setName(''); setDescription(''); setPrice('');
       if (!activeTeacherId) setSelectedTeacherId('');
       setSelectedSubjectId(''); setSelectedGrades([]); setContentMode('TermWithSections');
@@ -196,20 +197,20 @@ function CreatePackageRow({
         className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--admin-border)] bg-transparent py-5 text-sm font-bold text-[var(--admin-muted)] transition hover:border-[var(--admin-primary)] hover:text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)]/20"
       >
         <Plus className="h-4 w-4" />
-        إضافة باقة جديدة
+        إضافة محتوى جديد
       </button>
     );
   }
 
   return (
     <div className="rounded-2xl border-2 border-dashed border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/30 p-5 space-y-3">
-      <p className="text-sm font-black text-[var(--admin-primary)]">باقة جديدة</p>
+      <p className="text-sm font-black text-[var(--admin-primary)]">إضافة محتوى جديد</p>
       <input
         autoFocus
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="اسم الباقة، مثال: الباقة التأسيسية للأول الثانوي"
+        placeholder={`اكتب اسم ${selectedContentType.entityLabel}`}
         className="admin-input"
         onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
       />
@@ -230,12 +231,12 @@ function CreatePackageRow({
       />
 
       <div className="space-y-2 text-right">
-        <span className="text-xs font-bold text-[var(--admin-muted)]">هيكل الباقة</span>
+        <span className="text-xs font-bold text-[var(--admin-muted)]">نوع المحتوى</span>
         <Dropdown
           value={contentMode}
           onChange={(value) => setContentMode((Array.isArray(value) ? value[0] : value) as PackageContentMode)}
           options={PACKAGE_CONTENT_MODE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-          placeholder="اختر هيكل الباقة..."
+          placeholder="اختر نوع المحتوى..."
           className="w-full"
         />
         <p className="text-xs text-[var(--admin-muted)]">
@@ -342,7 +343,7 @@ function CreatePackageRow({
           size="md"
           pill
         >
-          حفظ الباقة
+          حفظ {selectedContentType.entityLabel}
         </NeumorphButton>
       </div>
     </div>
@@ -496,11 +497,12 @@ function TermRow({ term }: { term: TermDto }) {
 }
 
 // ─── Package Card ─────────────────────────────────────────────────────────────
-function PackageCard({ pkg }: { pkg: PackageDto }) {
+function PackageCard({ pkg, onChanged }: { pkg: PackageDto; onChanged: () => void | Promise<void> }) {
   const [isOpen, setIsOpen] = useState(false);
   const [terms, setTerms] = useState<TermDto[] | null>(null);
   const [loading, setLoading] = useState(false);
   const contentMode = pkg.contentMode ?? 'TermWithSections';
+  const contentRootLabel = getContentRootLabel(contentMode);
   const directSections = pkg.directSections ?? [];
   const directLessons = pkg.directLessons ?? [];
 
@@ -536,6 +538,9 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="font-black text-[var(--admin-text)] leading-tight truncate">{pkg.name}</p>
+          <span className="mt-1 inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-primary)]">
+            {contentRootLabel}
+          </span>
           {pkg.description && (
             <p className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-1">{pkg.description}</p>
           )}
@@ -544,6 +549,14 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 
         {/* Action icons */}
         <div className="flex items-center gap-2 shrink-0">
+          <ContentArchiveControl
+            targetType="Package"
+            targetId={pkg.id}
+            title={pkg.name}
+            archiveMode={pkg.archiveMode}
+            onChanged={onChanged}
+            compact
+          />
           <Link
             href={`/admin/content/packages/${pkg.id}`}
             prefetch={false}
@@ -568,16 +581,16 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
             <div className="text-sm text-[var(--admin-muted)] py-4 text-center">جاري تحميل أترم الباقة...</div>
           ) : contentMode === 'SectionWithLessons' && directSections.length > 0 ? (
             directSections.map((section) => <SectionRow key={section.id} section={section} />)
-          ) : contentMode === 'LessonsOnly' && directLessons.length > 0 ? (
+          ) : (contentMode === 'LessonsOnly' || contentMode === 'SingleLesson') && directLessons.length > 0 ? (
             directLessons.map((lesson) => <LessonRow key={lesson.id} lesson={lesson} />)
           ) : contentMode === 'TermWithSections' && terms && terms.length > 0 ? (
             terms.map((term) => <TermRow key={term.id} term={term} />)
           ) : (
             <div className="text-sm text-[var(--admin-muted)] py-4 text-center">
               {contentMode === 'SectionWithLessons'
-                ? 'لا توجد أقسام في هذه الباقة.'
-                : contentMode === 'LessonsOnly'
-                  ? 'لا توجد حصص في هذه الباقة.'
+                ? 'لا توجد أقسام داخل هذا الترم.'
+                : contentMode === 'LessonsOnly' || contentMode === 'SingleLesson'
+                  ? `لا توجد حصص داخل ${contentRootLabel}.`
                   : 'لا توجد أترم في هذه الباقة.'}
             </div>
           )}
@@ -603,6 +616,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
   const loadSequenceRef = useRef(0);
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
+  const [contentView, setContentView] = useState<'current' | 'archived'>('current');
   const selectedTeacherId = 'All';
   const activeTab = searchParams.get('view') === 'content' ? 'content' : 'summary';
   const activeTeacherId = searchParams.get('teacher');
@@ -668,7 +682,9 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
     const matchesSearch = !search.trim() || p.name.toLowerCase().includes(search.toLowerCase());
     const matchesSubject = selectedSubjectId === 'All' || p.subjectId === selectedSubjectId;
     const matchesTeacher = activeTeacherId ? p.teacherId === activeTeacherId : (selectedTeacherId === 'All' || p.teacherId === selectedTeacherId);
-    return matchesSearch && matchesSubject && matchesTeacher;
+    const isArchived = (p.archiveMode ?? 'None') !== 'None';
+    const matchesArchive = contentView === 'archived' ? isArchived : !isArchived;
+    return matchesSearch && matchesSubject && matchesTeacher && matchesArchive;
   });
 
   // Filter teachers for the grid view
@@ -794,6 +810,16 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
               </div>
 
               {/* Search & Subject filter */}
+              <div className="grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1" role="tablist" aria-label="حالة المحتوى">
+                <button type="button" role="tab" aria-selected={contentView === 'current'} onClick={() => setContentView('current')} className={`min-h-11 rounded-lg px-4 text-sm font-black ${contentView === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)]'}`}>
+                  المحتوى الحالي ({packages.filter((item) => (item.archiveMode ?? 'None') === 'None').length})
+                </button>
+                <button type="button" role="tab" aria-selected={contentView === 'archived'} onClick={() => setContentView('archived')} className={`min-h-11 rounded-lg px-4 text-sm font-black ${contentView === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)]'}`}>
+                  المؤرشف ({packages.filter((item) => (item.archiveMode ?? 'None') !== 'None').length})
+                </button>
+              </div>
+
+              {/* Search & Subject filter */}
               <div className="flex flex-col gap-4 md:flex-row md:items-center">
                 <div className="relative flex-1">
                   <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
@@ -828,7 +854,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
               {/* Package list */}
               <div className="space-y-4">
                 {filtered.length > 0 ? (
-                  filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)
+                  filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} onChanged={loadPackages} />)
                 ) : (
                   <div className="text-center py-10 rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-sm text-[var(--admin-muted)] font-bold">
                     لا توجد باقات مضافة لهذا المعلم تلتزم بشروط الفلترة.

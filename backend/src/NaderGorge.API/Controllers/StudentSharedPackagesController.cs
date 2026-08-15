@@ -20,17 +20,20 @@ public class StudentSharedPackagesController : ControllerBase
     private readonly BalanceService _balanceService;
     private readonly TeacherAccountingService _teacherAccounting;
     private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     public StudentSharedPackagesController(
         IAppDbContext db,
         BalanceService balanceService,
         TeacherAccountingService teacherAccounting,
-        IAcademicScopeService academicScope)
+        IAcademicScopeService academicScope,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _balanceService = balanceService;
         _teacherAccounting = teacherAccounting;
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     [HttpGet]
@@ -676,6 +679,27 @@ public class StudentSharedPackagesController : ControllerBase
         if (!await _db.TeacherProfiles.AnyAsync(
                 teacher => teacher.Id == item.TeacherId && teacher.IsContentVisibleToStudents,
                 ct))
+        {
+            return false;
+        }
+
+        var archiveTarget = item.ContentType switch
+        {
+            SalesTargetType.Package => (ContentArchiveTargetType.Package, item.ContentId),
+            SalesTargetType.Term => (ContentArchiveTargetType.Term, item.ContentId),
+            SalesTargetType.ContentSection => (ContentArchiveTargetType.Section, item.ContentId),
+            SalesTargetType.Lesson => (ContentArchiveTargetType.Lesson, item.ContentId),
+            _ => ((ContentArchiveTargetType TargetType, Guid TargetId)?)null
+        };
+        if (item.ContentType == SalesTargetType.PublicExam)
+        {
+            var examId = await _db.PublicExamProducts
+                .Where(product => product.Id == item.ContentId)
+                .Select(product => (Guid?)product.ExamId)
+                .FirstOrDefaultAsync(ct);
+            archiveTarget = examId.HasValue ? (ContentArchiveTargetType.Exam, examId.Value) : null;
+        }
+        if (archiveTarget.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTarget.Value.TargetType, archiveTarget.Value.TargetId, ct))
         {
             return false;
         }

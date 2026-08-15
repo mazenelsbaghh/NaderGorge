@@ -37,19 +37,22 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
     private readonly TeacherAccountingService _teacherAccounting;
     private readonly TeacherAgreementResolver _agreementResolver;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     public ActivateCodeCommandHandler(
         IAppDbContext db,
         IJobEnqueuer jobEnqueuer,
         TeacherAccountingService? teacherAccounting = null,
         TeacherAgreementResolver? agreementResolver = null,
-        IAcademicScopeService? academicScope = null)
+        IAcademicScopeService? academicScope = null,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _jobEnqueuer = jobEnqueuer;
         _teacherAccounting = teacherAccounting ?? new TeacherAccountingService(db);
         _agreementResolver = agreementResolver ?? new TeacherAgreementResolver(db);
         _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<ActivateCodeResponse>> Handle(ActivateCodeCommand request, CancellationToken ct)
@@ -81,6 +84,18 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 throw new InvalidOperationException("This code group has expired.");
 
             var codeGroup = accessCode.CodeGroup;
+            var archiveTarget = codeGroup.CodeType switch
+            {
+                CodeType.Package when codeGroup.PackageId.HasValue => (ContentArchiveTargetType.Package, codeGroup.PackageId.Value),
+                CodeType.Term when codeGroup.TermId.HasValue => (ContentArchiveTargetType.Term, codeGroup.TermId.Value),
+                CodeType.Month when codeGroup.ContentSectionId.HasValue => (ContentArchiveTargetType.Section, codeGroup.ContentSectionId.Value),
+                CodeType.Lesson when codeGroup.LessonId.HasValue => (ContentArchiveTargetType.Lesson, codeGroup.LessonId.Value),
+                CodeType.Exam when codeGroup.ExamId.HasValue => (ContentArchiveTargetType.Exam, codeGroup.ExamId.Value),
+                _ => ((ContentArchiveTargetType TargetType, Guid TargetId)?)null
+            };
+            if (archiveTarget.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTarget.Value.TargetType, archiveTarget.Value.TargetId, ct))
+                return ApiResponse<ActivateCodeResponse>.Fail("هذا المحتوى مؤرشف ولا يقبل اشتراكات جديدة.", ["CONTENT_ARCHIVED"]);
+
             var academicResult = await ValidateCodeAcademicScopeAsync(codeGroup, user.Id, ct);
             if (!academicResult.IsEligible)
             {
