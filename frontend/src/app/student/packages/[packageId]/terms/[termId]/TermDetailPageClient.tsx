@@ -37,6 +37,7 @@ import {
   type PackageDto,
   type TermDto,
 } from "@/services/content-service";
+import { hasStudentTermAccess } from "@/lib/content-access";
 
 import { registerCacheStore } from "@/lib/cache-invalidation";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -100,8 +101,7 @@ export default function TermDetailPageClient() {
   }, [load, termId]);
 
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
-  const isTermPurchased = term?.isPurchased ?? false;
-  const hasAccess = hasDirectPackageAccess || isTermPurchased;
+  const hasAccess = hasStudentTermAccess(pkg, term);
 
   /* ── Loading skeleton ── */
   if (loading) {
@@ -380,7 +380,7 @@ export default function TermDetailPageClient() {
 
             {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !hasDirectPackageAccess ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'هذه الباقة مفعّلة في حسابك بالفعل.' : 'هذا الترم مفعّل في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">

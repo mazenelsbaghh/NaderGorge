@@ -36,6 +36,7 @@ import {
   type PackageDto,
   type TermDto,
 } from "@/services/content-service";
+import { hasStudentTermAccess } from "@/lib/content-access";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
 import { registerCacheStore } from "@/lib/cache-invalidation";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -111,6 +112,8 @@ export default function SectionDetailPageClient() {
   }, [load, sectionId]);
 
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
+  const hasTermAccess = hasStudentTermAccess(pkg, term);
+  const hasSectionAccess = hasTermAccess || (section?.isPurchased ?? false);
 
   const sectionPrice = section?.price ?? null;
   const termPrice = term?.price ?? null;
@@ -199,7 +202,7 @@ export default function SectionDetailPageClient() {
                 <BookOpen className="h-4 w-4" />
                 {lessons.length} حصة
               </span>
-              {(hasDirectPackageAccess || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) && (
+              {hasSectionAccess && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-0.5 text-xs font-bold text-emerald-300 backdrop-blur-sm">
                   <CheckCircle2 className="h-3 w-3" />
                   مفعّل
@@ -253,11 +256,11 @@ export default function SectionDetailPageClient() {
                 {lessons.map((lesson, idx) => {
                   const unlockedVideos = lesson.videos?.filter((video) => video.hasAccess) ?? [];
                   const hasVideoOnlyAccess = unlockedVideos.length > 0 && !lesson.hasAccess;
-                  const hasContentAccess = hasDirectPackageAccess || lesson.hasAccess || hasVideoOnlyAccess;
-                  const canBuyLesson = !hasDirectPackageAccess && !lesson.hasAccess;
+                  const hasContentAccess = hasSectionAccess || lesson.hasAccess || hasVideoOnlyAccess;
+                  const canBuyLesson = !hasSectionAccess && !lesson.hasAccess;
                   const canAccess = hasContentAccess && (!lesson.isLocked || hasVideoOnlyAccess);
                   const sortedVideos = [...(lesson.videos ?? [])].sort((a, b) => a.order - b.order);
-                  const openVideoCount = sortedVideos.filter((video) => hasDirectPackageAccess || lesson.hasAccess || video.hasAccess).length;
+                  const openVideoCount = sortedVideos.filter((video) => hasSectionAccess || lesson.hasAccess || video.hasAccess).length;
                   return (
                     <div
                       key={lesson.id}
@@ -381,7 +384,7 @@ export default function SectionDetailPageClient() {
                         <div className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2">
                           <div className="flex gap-2 overflow-x-auto pb-1">
                             {sortedVideos.map((video) => {
-                              const isVideoOpen = hasDirectPackageAccess || lesson.hasAccess || video.hasAccess;
+                              const isVideoOpen = hasSectionAccess || lesson.hasAccess || video.hasAccess;
                               const statusLabel = isVideoOpen ? (video.isUnlockedByCode ? "مفتوح بالكود" : "مفتوح") : "مقفول";
                               return (
                                 <button
@@ -463,9 +466,9 @@ export default function SectionDetailPageClient() {
                 )}
               </div>
 
-              {(hasDirectPackageAccess || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) ? (
+              {hasSectionAccess ? (
                 <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                  <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
+                  <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'الباقة مفعّلة' : hasTermAccess ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
