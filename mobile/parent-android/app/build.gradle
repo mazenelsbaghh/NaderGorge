@@ -18,8 +18,8 @@ android {
         applicationId "com.massar.parent"
         minSdk 26
         targetSdk 35
-        versionCode 13
-        versionName "2.0"
+        versionCode 14
+        versionName "2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -59,6 +59,10 @@ android {
         kotlinCompilerExtensionVersion '1.5.8'
     }
     packagingOptions {
+        jniLibs {
+            // AGP 8.5.1+ writes uncompressed native libraries on 16 KiB boundaries.
+            useLegacyPackaging false
+        }
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
