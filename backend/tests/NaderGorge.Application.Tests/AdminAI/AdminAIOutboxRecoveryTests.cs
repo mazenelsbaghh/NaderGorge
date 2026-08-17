@@ -1,6 +1,7 @@
 using NaderGorge.Infrastructure.Background;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -94,6 +95,34 @@ public sealed class AdminAIOutboxRecoveryTests
         Assert.Equal(AdminAITurnStatus.Cancelled, turn.Status);
         Assert.Equal("CANCELLED", turn.FailureCode);
         Assert.Equal(0, await new AdminAIRecoveryService(db).ReconcileAsync(1, default));
+    }
+
+    [Fact]
+    public async Task Recovery_FailsQueuedTurnWhoseDeliveryWasLost()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"admin-ai-stale-queue-{Guid.NewGuid()}").Options);
+        var actorId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = actorId,
+            UserRoles = [new UserRole { Role = new Role { Type = RoleType.Admin } }]
+        });
+        var turn = new AdminAITurn
+        {
+            Status = AdminAITurnStatus.Queued,
+            QueuedAt = DateTime.UtcNow.AddMinutes(-3),
+            ActorAdminUserId = actorId,
+            CallbackIdempotencyDigest = new string('e', 64)
+        };
+        db.Add(turn);
+        await db.SaveChangesAsync();
+
+        Assert.Equal(1, await new AdminAIRecoveryService(db).ReconcileAsync(10, default));
+        Assert.Equal(AdminAITurnStatus.Failed, turn.Status);
+        Assert.Equal("admin_ai_queue_stale", turn.FailureCode);
+        Assert.NotNull(turn.CompletedAt);
+        Assert.Equal(0, await new AdminAIRecoveryService(db).ReconcileAsync(10, default));
     }
 
     [Fact]

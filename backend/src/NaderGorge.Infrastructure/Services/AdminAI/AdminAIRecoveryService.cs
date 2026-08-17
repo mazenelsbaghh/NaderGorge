@@ -50,6 +50,18 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             .OrderBy(x => x.QueuedAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var turn in revokedTurns) { turn.Status = AdminAITurnStatus.AccessRevoked; turn.FailureCode = "admin_ai_access_revoked"; turn.CompletedAt = now; turn.Version++; changed++; }
         remaining = batchSize - changed;
+        var staleQueuedTurns = remaining == 0 ? [] : await db.AdminAITurns
+            .Where(turn => turn.Status == AdminAITurnStatus.Queued && turn.QueuedAt < now.AddMinutes(-2))
+            .OrderBy(turn => turn.QueuedAt).Take(remaining).ToListAsync(cancellationToken);
+        foreach (var turn in staleQueuedTurns)
+        {
+            turn.Status = AdminAITurnStatus.Failed;
+            turn.FailureCode = "admin_ai_queue_stale";
+            turn.CompletedAt = now;
+            turn.Version++;
+            changed++;
+        }
+        remaining = batchSize - changed;
         var staleSteps = remaining == 0 ? [] : await db.AdminAITurnSteps
             .Where(x => (x.Status == AdminAITurnStepStatus.Claimed || x.Status == AdminAITurnStepStatus.ProviderRunning) &&
                         x.StartedAt != null && x.StartedAt < now.AddMinutes(-2))
