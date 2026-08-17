@@ -144,7 +144,7 @@ test('new conversation opens its workspace on a phone with a direct API response
   ).toBeVisible();
 });
 
-// Regression: production rejected every Admin AI turn on 2026-08-17 because the client sent `message` instead of `content`.
+// Regression: keep the public JSON name (`message`) aligned with the backend DTO contract.
 test('sending a message uses the backend turn request contract', async ({
   page,
 }) => {
@@ -204,7 +204,7 @@ test('sending a message uses the backend turn request contract', async ({
   await expect
     .poll(() => turnRequest)
     .toEqual({
-      content: 'اعرض ملخص الطلاب',
+      message: 'اعرض ملخص الطلاب',
       expectedConversationVersion: 1,
     });
 });
