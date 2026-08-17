@@ -13,6 +13,22 @@ export interface AdminAIProviderResponse { text?: string; functionCalls?: Array<
 export type AdminAIProvider = (request: AdminAIProviderRequest) => Promise<AdminAIProviderResponse>;
 export interface AdminAIAgentResult { decision: AdminAIDecision; decisionHash: string; provider: string; model: string; providerResponseId: string | null; inputTokenCount: number | null; outputTokenCount: number | null; stepNumber: number; expectedTurnVersion: number; leaseToken: string }
 
+/**
+ * A read callback renews the backend lease.  Keep that continuation state with
+ * a later provider failure so the processor can record the terminal result
+ * instead of retrying forever with the superseded lease token.
+ */
+export class AdminAIAgentRuntimeError extends Error {
+  constructor(
+    public readonly causeError: unknown,
+    public readonly leaseToken: string,
+    public readonly expectedTurnVersion: number,
+  ) {
+    super(causeError instanceof Error ? causeError.message : 'AI_PROVIDER_FAILURE');
+    this.name = 'AdminAIAgentRuntimeError';
+  }
+}
+
 const MAX_PROMPT_BYTES = 65_536;
 const jsonObject = (value: unknown): value is JsonObject => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value), 'utf8');
@@ -83,7 +99,8 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
   const budgets = claim.budgets as { maxModelSteps?: number; maxReadCalls?: number; maxReadCallsPerStep?: number; remainingReadCalls?: number; remainingRedactedContextBytes?: number };
   const maxSteps = Math.min(10, Math.max(1, budgets.maxModelSteps ?? 3)); const maxCalls = Math.max(0, budgets.remainingReadCalls ?? budgets.maxReadCalls ?? 0); const maxPerStep = Math.max(1, budgets.maxReadCallsPerStep ?? 4);
   let callsUsed = 0; let contextBytes = 0; let stepNumber = claim.stepNumber; let expectedTurnVersion = claim.expectedTurnVersion; let leaseToken = claim.leaseToken; let last: AdminAIProviderResponse = {};
-  for (let step = 0; step < maxSteps; step++) {
+  try {
+    for (let step = 0; step < maxSteps; step++) {
     if (await cancelled()) throw new Error('CANCELLED'); if (now() >= Date.parse(claim.deadlineAt)) throw new Error('AI_PROVIDER_TIMEOUT');
     last = await provider({ model, systemInstruction: prompt.systemInstruction, contents, readFunctions: [...functionMap].map(([name, tool]) => ({ name, description: tool.descriptionAr, parametersJsonSchema: tool.parametersJsonSchema })), deadlineAt: claim.deadlineAt });
     if (await cancelled()) throw new Error('CANCELLED'); if (now() >= Date.parse(claim.deadlineAt)) throw new Error('AI_PROVIDER_TIMEOUT');
@@ -92,7 +109,7 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
       if (functionCalls.length > maxPerStep || callsUsed + functionCalls.length > maxCalls) throw new Error('TOOL_BUDGET_EXCEEDED');
       const calls = functionCalls.map((call, index) => {
         const tool = call.name ? functionMap.get(call.name) : undefined; if (!tool || !jsonObject(call.args) || !schemaAllows(tool.parametersJsonSchema, call.args)) throw new Error('READ_CAPABILITY_NOT_ALLOWED');
-        return { callId: call.id?.slice(0, 160) || `call-${step}-${index}-${randomUUID().slice(0, 8)}`, capabilityKey: tool.key, arguments: call.args };
+        return { callId: call.id?.slice(0, 160) || `call-${step}-${index}-${randomUUID().slice(0, 8)}`, functionName: call.name!, capabilityKey: tool.key, arguments: call.args };
       });
       const response = await callbacks.reads(claim.turnId, stepNumber, { schemaVersion: '1', leaseToken, expectedTurnVersion, expectedBaselineVersion: (claim.capabilityBaseline as JsonObject | undefined)?.version, expectedSensitivePolicyVersion: (claim.sensitiveDataPolicy as JsonObject | undefined)?.version, batchIdempotencyKey: `${claim.callbackIdempotencyKey}:read:${stepNumber}`, calls });
       if (await cancelled()) throw new Error('CANCELLED'); callsUsed += calls.length; contextBytes += bytes(response);
@@ -106,7 +123,7 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
         recordAdminAIMetric('read_outcome', 1, { capabilityKey: safeAdminAITelemetryLabel(calls[readIndex]!.capabilityKey), status: safeAdminAITelemetryLabel(String(readResult.status ?? 'unknown')) });
       }
       contents.push({ role: 'model', parts: functionCalls.map(call => ({ functionCall: call })) });
-      contents.push({ role: 'user', parts: calls.map((call, index) => ({ functionResponse: { id: call.callId, name: [...functionMap].find(([, tool]) => tool.key === call.capabilityKey)?.[0], response: { result: matchedResults[index] } } })) });
+      contents.push({ role: 'user', parts: calls.map((call, index) => ({ functionResponse: { id: call.callId, name: call.functionName, response: { result: matchedResults[index] } } })) });
       stepNumber += 1; continue;
     }
     if (!last.text) throw new Error('AI_INVALID_DECISION');
@@ -114,6 +131,10 @@ export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: Adm
     const decision = validateProposedActions(parseAdminAIDecision(raw), actionTools);
     if (decision.type === 'request_reads') throw new Error('AI_INVALID_DECISION');
     return { decision, decisionHash: hashAdminAIDecision(decision), provider: 'gemini-developer', model, providerResponseId: last.responseId ?? null, inputTokenCount: last.inputTokenCount ?? null, outputTokenCount: last.outputTokenCount ?? null, stepNumber, expectedTurnVersion, leaseToken };
+    }
+    throw new Error('TOOL_BUDGET_EXCEEDED');
+  } catch (error) {
+    if (error instanceof AdminAIAgentRuntimeError) throw error;
+    throw new AdminAIAgentRuntimeError(error, leaseToken, expectedTurnVersion);
   }
-  throw new Error('TOOL_BUDGET_EXCEEDED');
 }

@@ -126,6 +126,8 @@ services:
       AdminAI__ProposalTtlSeconds: ${ADMIN_AI_PROPOSAL_TTL_SECONDS:-300}
       AdminAI__SecureInputTtlSeconds: ${ADMIN_AI_SECURE_INPUT_TTL_SECONDS:-300}
       AdminAI__MaxActiveTurnsPerAdmin: ${ADMIN_AI_MAX_ACTIVE_TURNS_PER_ADMIN:-2}
+      AdminAI__TurnDeadlineSeconds: ${ADMIN_AI_TURN_DEADLINE_SECONDS:-120}
+      AdminAI__LeaseSeconds: ${ADMIN_AI_LEASE_SECONDS:-60}
       AdminAI__RecoveryIntervalSeconds: ${ADMIN_AI_RECOVERY_INTERVAL_SECONDS:-30}
       AdminAI__RecoveryBatchSize: ${ADMIN_AI_RECOVERY_BATCH_SIZE:-100}
       ParentReports__SigningSecret: ${PARENT_REPORT_SIGNING_SECRET:?PARENT_REPORT_SIGNING_SECRET is required}

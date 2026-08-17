@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
-import { assembleAdminAIPrompt, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
+import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
 
 function claim(overrides: Partial<AdminAIClaimContext> = {}): AdminAIClaimContext {
@@ -36,6 +36,16 @@ test('backend rejection is never synthesized and schema-invalid read calls stop 
   await assert.rejects(() => runAdminAIAgent(claim(), callbacks(async () => { throw new Error('READ_CAPABILITY_NOT_ALLOWED'); }), { provider: async () => ({ functionCalls: [{ name: 'read_0', args: { query: 'x' } }] }), model: 'test' }), /READ_CAPABILITY_NOT_ALLOWED/);
   await assert.rejects(() => runAdminAIAgent(claim(), callbacks(async () => ({})), { provider: async () => ({ functionCalls: [{ name: 'read_0', args: { unknown: true } }] }), model: 'test' }), /READ_CAPABILITY_NOT_ALLOWED/);
   await assert.rejects(() => runAdminAIAgent(claim(), callbacks(async () => ({ results: [] })), { provider: async () => ({ functionCalls: [{ id: 'missing', name: 'read_0', args: { query: 'x' } }] }), model: 'test' }), /AI_INVALID_READ_RESPONSE/);
+});
+
+test('a provider failure after a read preserves the renewed lease for terminal reporting', async () => {
+  const provider = async (request: AdminAIProviderRequest) => request.contents.length === 1
+    ? { functionCalls: [{ id: 'c1', name: 'read_0', args: { query: 'طلاب' } }] }
+    : Promise.reject(new Error('provider rejected the function result'));
+  await assert.rejects(
+    () => runAdminAIAgent(claim(), callbacks(async () => ({ turnVersion: 7, leaseToken: 'renewed-lease', results: [{ callId: 'c1', status: 'Succeeded', data: {} }] })), { provider, model: 'test' }),
+    (error: unknown) => error instanceof AdminAIAgentRuntimeError && error.leaseToken === 'renewed-lease' && error.expectedTurnVersion === 7,
+  );
 });
 
 test('propose_actions accepts only claim catalog arguments and remains advisory data', async () => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Job } from 'bullmq';
 import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from '../services/adminAICallbackClient.js';
+import { AdminAIAgentRuntimeError } from '../services/adminAIAgent.js';
 import { createAdminAITurnProcessor, type AdminAITurnJobData } from './processAdminAITurn.js';
 
 function claim(): AdminAIClaimContext { return { schemaVersion: '1', turnId: crypto.randomUUID(), conversationId: crypto.randomUUID(), actorAdminUserId: crypto.randomUUID(), stepNumber: 1, expectedTurnVersion: 4, expectedConversationVersion: 1, expectedSecurityVersion: 1, capabilityBaseline: { id: crypto.randomUUID(), version: 'b1', manifestHash: 'a'.repeat(64) }, sensitiveDataPolicy: { id: crypto.randomUUID(), version: 'p1', policyHash: 'b'.repeat(64) }, leaseToken: 'lease', leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(), callbackIdempotencyKey: 'cb', deadlineAt: new Date(Date.now() + 60_000).toISOString(), systemInstructions: 'safe', messages: [], readTools: [], actionTools: [], budgets: {} }; }
@@ -24,6 +25,16 @@ test('provider failure callback contains only stable safe code and no raw error'
   const context = claim(); let reported: unknown;
   const processor = createAdminAITurnProcessor({ callbacks: clients(context, async () => ({}), async (_id, payload) => { reported = payload; return {}; }), runAgent: async () => { throw new Error('SECRET_PROVIDER_BODY'); }, cancelled: async () => false });
   assert.equal((await processor(fakeJob(context))).reason, 'AI_PROVIDER_FAILURE'); assert.doesNotMatch(JSON.stringify(reported), /SECRET_PROVIDER_BODY/);
+});
+test('failure after a read uses the renewed lease token', async () => {
+  const context = claim(); let reported: unknown;
+  const processor = createAdminAITurnProcessor({
+    callbacks: clients(context, async () => ({}), async (_id, payload) => { reported = payload; return {}; }),
+    runAgent: async () => { throw new AdminAIAgentRuntimeError(new Error('provider failed'), 'renewed-lease', 6); },
+    cancelled: async () => false,
+  });
+  await processor(fakeJob(context));
+  assert.equal((reported as { leaseToken: string }).leaseToken, 'renewed-lease');
 });
 test('cancellation before claim prevents all callback and provider work', async () => {
   const context = claim(); let claims = 0; const callback = clients(context, async () => ({})); callback.claim = async () => { claims++; return context; };

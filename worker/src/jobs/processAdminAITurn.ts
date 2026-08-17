@@ -1,6 +1,6 @@
 import { UnrecoverableError, type Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
-import { runAdminAIAgent, type AdminAIAgentResult } from '../services/adminAIAgent.js';
+import { AdminAIAgentRuntimeError, runAdminAIAgent, type AdminAIAgentResult } from '../services/adminAIAgent.js';
 import { AdminAICallbackError, createAdminAICallbackClient, type AdminAICallbackClient } from '../services/adminAICallbackClient.js';
 import { logAdminAIEvent, recordAdminAIMetric, safeAdminAITelemetryLabel } from '../services/adminAITelemetry.js';
 
@@ -9,6 +9,7 @@ export interface AdminAITurnJobData { schemaVersion: '1'; turnId: string; conver
 interface Dependencies { callbacks: AdminAICallbackClient; runAgent: typeof runAdminAIAgent; now: () => number; workerInstanceId: string; cancelled: (job: Job<AdminAITurnJobData>) => Promise<boolean> }
 
 function failureCode(error: unknown) {
+  if (error instanceof AdminAIAgentRuntimeError) return failureCode(error.causeError);
   if (error instanceof Error && ['AI_PROVIDER_TIMEOUT', 'CANCELLED', 'TOOL_BUDGET_EXCEEDED'].includes(error.message)) return error.message;
   if (error instanceof Error && (error.name === 'AdminAIDecisionValidationError' || ['AI_INVALID_DECISION', 'ACTION_NOT_ALLOWED', 'READ_CAPABILITY_NOT_ALLOWED', 'REDACTED_CONTEXT_LIMIT'].includes(error.message))) return error.message === 'CANCELLED' ? 'CANCELLED' : error.message === 'TOOL_BUDGET_EXCEEDED' || error.message === 'REDACTED_CONTEXT_LIMIT' ? 'TOOL_BUDGET_EXCEEDED' : 'AI_INVALID_DECISION';
   return 'AI_PROVIDER_FAILURE';
@@ -46,7 +47,8 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
       const code = failureCode(error);
       recordAdminAIMetric('model_outcome', 1, { outcome: 'failure', failureCode: code });
       logAdminAIEvent('turn_failed', { outcome: 'failure', failureCode: code });
-      await dependencies.callbacks.fail(turnId, { schemaVersion: '1', leaseToken: context.leaseToken, callbackIdempotencyKey: context.callbackIdempotencyKey, failureCode: code, provider: null, model: null, latencyMs: Math.max(0, dependencies.now() - startedAt) });
+      const leaseToken = error instanceof AdminAIAgentRuntimeError ? error.leaseToken : context.leaseToken;
+      await dependencies.callbacks.fail(turnId, { schemaVersion: '1', leaseToken, callbackIdempotencyKey: context.callbackIdempotencyKey, failureCode: code, provider: null, model: null, latencyMs: Math.max(0, dependencies.now() - startedAt) });
       return { success: false, reason: code, failureReported: true };
     }
   };

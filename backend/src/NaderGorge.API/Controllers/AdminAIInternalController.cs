@@ -53,9 +53,9 @@ public sealed class AdminAIInternalController(
         var step = turn.Steps.OrderByDescending(x => x.StepNumber).FirstOrDefault();
         if (step is null || step.StepNumber is < 1 or > 3) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
         var now = DateTime.UtcNow;
-        var deadline = turn.QueuedAt.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:TurnDeadlineSeconds", 30), 10, 120));
+        var deadline = turn.QueuedAt.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:TurnDeadlineSeconds", 120), 10, 120));
         if (deadline <= now) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
-        var leaseExpiry = Min(deadline, now.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 30), 10, 60)));
+        var leaseExpiry = Min(deadline, now.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 60), 10, 60)));
         if (step.CallbackStatus == "Claimed" && step.NextCallbackAttemptAt > now && step.Provider != request.WorkerInstanceId)
             return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict));
         turn.Status = AdminAITurnStatus.Planning; turn.StartedAt ??= now; turn.CurrentStepNumber = step.StepNumber; turn.Version++;
@@ -74,8 +74,8 @@ public sealed class AdminAIInternalController(
             leaseToken, leaseExpiresAt = leaseExpiry, callbackIdempotencyKey = $"turn-{turn.Id:N}", deadlineAt = deadline,
             systemInstructions = configuration["AdminAI:SystemInstructions"] ?? "استخدم الأدوات المعلنة فقط ولا تطلب أو تعرض أسرارًا.",
             messages,
-            readTools = capabilities.All.Where(x => x.Kind == "read").Select(x => new { key = x.Key, parametersJsonSchema = JsonSerializer.Deserialize<JsonElement>(x.InputSchema), maxResultRecords = x.MaxRows, x.TimeoutMs }),
-            actionTools = capabilities.All.Where(x => x.Kind != "read").Select(x => new { key = x.Key, confirmationType = x.Confirmation }),
+            readTools = capabilities.All.Where(x => x.Kind == "read").Select(x => new { key = x.Key, descriptionAr = ReadToolDescription(x.Key), parametersJsonSchema = JsonSerializer.Deserialize<JsonElement>(x.InputSchema), maxResultRecords = x.MaxRows, x.TimeoutMs }),
+            actionTools = capabilities.All.Where(x => x.Kind != "read").Select(x => new { key = x.Key, descriptionAr = $"إجراء إداري مقترح: {x.Key}", parametersJsonSchema = JsonSerializer.Deserialize<JsonElement>(x.InputSchema), confirmationType = x.Confirmation }),
             budgets = new { maxModelSteps = 3, maxReadCalls = 6, maxReadCallsPerStep = 4, remainingReadCalls = 6 - turn.ReadInvocationCount, maxRedactedContextBytes = 65536, remainingRedactedContextBytes = 65536 - turn.RedactedContextBytes }
         });
     }
@@ -93,7 +93,7 @@ public sealed class AdminAIInternalController(
         if (step is null || step.Provider != request.WorkerInstanceId || !ValidateLease(request.LeaseToken, turn.Id, step.StepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         if (turn.CancellationRequestedAt is not null || turn.Status.IsTerminal()) return Conflict(SafeError(AdminAIErrorCodes.TurnCancelled));
         try { await access.RequireCurrentAdminAsync(turn.ActorAdminUserId, checked((int)turn.ExpectedSecurityVersion), ct); } catch { return StatusCode(403, SafeError(AdminAIErrorCodes.AccessRevoked)); }
-        var expiry = DateTime.UtcNow.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 30), 10, 60));
+        var expiry = DateTime.UtcNow.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 60), 10, 60));
         var leaseToken = IssueLease(turn.Id, step.StepNumber, turn.Version, expiry);
         step.CanonicalDecisionHash = HashToken(leaseToken); step.NextCallbackAttemptAt = expiry; step.Version++;
         await db.SaveChangesAsync(ct);
@@ -135,7 +135,7 @@ public sealed class AdminAIInternalController(
         turn.ReadInvocationCount += request.Calls.Count; turn.Status = AdminAITurnStatus.Retrieving; turn.Version++;
         step.Status = AdminAITurnStepStatus.ReadsCompleted; step.ToolCallsRequested += request.Calls.Count; step.Version++;
         await db.SaveChangesAsync(ct);
-        var expiry = DateTime.UtcNow.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 30), 10, 60));
+        var expiry = DateTime.UtcNow.AddSeconds(Math.Clamp(configuration.GetValue("AdminAI:LeaseSeconds", 60), 10, 60));
         var renewedToken = IssueLease(turnId, stepNumber, turn.Version, expiry);
         step.CanonicalDecisionHash = HashToken(renewedToken); step.NextCallbackAttemptAt = expiry;
         await db.SaveChangesAsync(ct);
@@ -216,4 +216,27 @@ public sealed class AdminAIInternalController(
     private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
     private static bool FixedEquals(string? left, string? right) => left is not null && right is not null && left.Length == right.Length && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(left), Encoding.ASCII.GetBytes(right));
     private static AdminAIError SafeError(string code) => new(code, "تعذر إكمال الطلب بأمان.");
+
+    private static string ReadToolDescription(string key) => key switch
+    {
+        "identity.users.summary" => "إحصاءات المستخدمين والطلاب، ومنها العدد الإجمالي للطلاب.",
+        "content.summary" => "ملخص المواد والأقسام والدروس والفيديوهات التعليمية.",
+        "assessment.summary" => "ملخص الاختبارات والمحاولات والنتائج.",
+        "codes.summary" => "ملخص الأكواد والباقات المشتركة.",
+        "community.summary" => "ملخص المجتمع والتعليقات والمراجعة.",
+        "forms-settings.summary" => "ملخص النماذج وإعدادات المنصة الآمنة.",
+        "hr-people.summary" => "ملخص الموظفين والهيكل البشري دون بيانات حساسة.",
+        "hr-operations.summary" => "ملخص الحضور والإجازات والعمليات البشرية.",
+        "hr-lifecycle.summary" => "ملخص التوظيف والعقود ودورة الموظف.",
+        "legacy-finance.summary" => "ملخص المالية القديمة وحسابات المدرسين.",
+        "platform-finance.summary" => "ملخص المركز المالي العام والخزينة والمصروفات.",
+        "teacher-finance.summary" => "ملخص اتفاقيات وتسويات مالية المدرسين.",
+        "sales.summary" => "ملخص المبيعات والكوبونات والطلبات.",
+        "wallet-recharge.summary" => "ملخص المحافظ وعمليات الشحن.",
+        "teacher.summary" => "ملخص المدرسين وموادهم.",
+        "operations.summary" => "ملخص المهام والعمليات الداخلية.",
+        "live-support.summary" => "ملخص الدعم المباشر وإدارته.",
+        "reporting.summary" => "ملخص التقارير والسجلات الآمنة ومؤشرات المنصة.",
+        _ => "ملخص إداري آمن ومحدود."
+    };
 }
