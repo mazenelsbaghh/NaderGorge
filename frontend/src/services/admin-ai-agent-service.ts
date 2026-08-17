@@ -115,7 +115,7 @@ export const adminAiAgentService = {
     apiClient
       .post<
         DataEnvelope<AdminAiTurn>
-      >(adminAiAgentPaths.turns(conversationId), { message, expectedConversationVersion }, config(signal, idempotencyKey))
+      >(adminAiAgentPaths.turns(conversationId), { content: message, expectedConversationVersion }, config(signal, idempotencyKey))
       .then((response) => unwrapAdminAiPayload<AdminAiTurn>(response.data)),
   cancelTurn: (
     signal: AbortSignal,

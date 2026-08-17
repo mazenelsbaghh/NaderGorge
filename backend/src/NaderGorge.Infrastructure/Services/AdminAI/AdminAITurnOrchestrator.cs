@@ -18,8 +18,8 @@ public sealed class AdminAITurnOrchestrator(IAppDbContext db, IAdminAIAccessGate
     {
         await using var transaction = await BeginSerializableIfSupportedAsync(ct);
         var accessState = await access.RequireCurrentAdminAsync(actorId, null, ct);
+        if (string.IsNullOrWhiteSpace(content) || content.Length > 8000 || string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > 200) throw new ArgumentException("Invalid turn request.");
         var normalizedContent = content.Trim();
-        if (normalizedContent.Length is < 1 or > 8000 || string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > 200) throw new ArgumentException("Invalid turn request.");
         var digest = protector.Digest("turn-callback", Encoding.UTF8.GetBytes($"{actorId:N}:{idempotencyKey}"));
         var admissionPayloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{conversationId:N}:{expectedVersion}:{normalizedContent}"))).ToLowerInvariant();
         var replay = await db.AdminAITurns.AsNoTracking().SingleOrDefaultAsync(x => x.CallbackIdempotencyDigest == digest, ct);

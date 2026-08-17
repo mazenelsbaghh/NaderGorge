@@ -50,6 +50,21 @@ public sealed class AdminAITurnOrchestratorTests
     }
 
     [Fact]
+    public async Task Admission_WithMissingContent_ReturnsValidationErrorWithoutPersistingTurn()
+    {
+        await using var db = CreateDb(); var actor = Guid.NewGuid();
+        var conversation = SeedReady(db, actor); await db.SaveChangesAsync();
+        var service = Service(db, actor);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.QueueAsync(actor, conversation.Id, null!, conversation.Version, "missing-content", default));
+
+        Assert.Empty(db.AdminAITurns);
+        Assert.Empty(db.AdminAIMessages);
+        Assert.Empty(db.OutboxEvents);
+    }
+
+    [Fact]
     public async Task Cancel_IsVersionedIdempotentAndNeverCancelsForeignTurn()
     {
         await using var db = CreateDb(); var actor = Guid.NewGuid();

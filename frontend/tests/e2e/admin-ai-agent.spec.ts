@@ -103,11 +103,16 @@ test('new conversation opens its workspace on a phone with a direct API response
     let data: unknown = null;
     if (pathname.endsWith('/auth/session'))
       data = { user: admin, authorizationVersion: 1 };
-    else if (pathname.endsWith('/admin/ai-agent/conversations') && method === 'POST')
+    else if (
+      pathname.endsWith('/admin/ai-agent/conversations') &&
+      method === 'POST'
+    )
       data = created;
     else if (pathname.endsWith('/admin/ai-agent/conversations'))
       data = { items: [], nextCursor: null };
-    else if (pathname.endsWith(`/admin/ai-agent/conversations/${created.id}/snapshot`))
+    else if (
+      pathname.endsWith(`/admin/ai-agent/conversations/${created.id}/snapshot`)
+    )
       data = {
         conversation: created,
         messages: [],
@@ -127,9 +132,81 @@ test('new conversation opens its workspace on a phone with a direct API response
       body: JSON.stringify(data),
     });
   });
-  await installAuthAndGoto(page, 'admin-ai-mobile-create', admin, `${adminUrl}/admin/ai-agent`);
+  await installAuthAndGoto(
+    page,
+    'admin-ai-mobile-create',
+    admin,
+    `${adminUrl}/admin/ai-agent`
+  );
   await page.getByRole('button', { name: 'محادثة جديدة', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'محادثة جديدة' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'محادثة جديدة' })
+  ).toBeVisible();
+});
+
+// Regression: production rejected every Admin AI turn on 2026-08-17 because the client sent `message` instead of `content`.
+test('sending a message uses the backend turn request contract', async ({
+  page,
+}) => {
+  let turnRequest: unknown;
+  await page.route('**/api/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const method = route.request().method();
+    let data: unknown = null;
+    let status = 200;
+    if (pathname.endsWith('/auth/session'))
+      data = { user: admin, authorizationVersion: 1 };
+    else if (pathname.endsWith('/admin/ai-agent/conversations'))
+      data = { items: [conversation], nextCursor: null };
+    else if (
+      pathname.endsWith(
+        `/admin/ai-agent/conversations/${conversation.id}/turns`
+      ) &&
+      method === 'POST'
+    ) {
+      turnRequest = route.request().postDataJSON();
+      status = 202;
+      data = {
+        id: '70000000-0000-4000-8000-000000000169',
+        status: 'Queued',
+        queuedAt: '2026-08-17T03:00:00Z',
+        version: 1,
+      };
+    } else if (
+      pathname.endsWith(
+        `/admin/ai-agent/conversations/${conversation.id}/snapshot`
+      )
+    )
+      data = {
+        conversation,
+        messages: [],
+        activeTurns: [],
+        proposals: [],
+        nextBeforeSequence: null,
+        latestSequence: 0,
+        baselineVersion: 'v1',
+        sensitivePolicyVersion: 'v1',
+        serverTime: new Date().toISOString(),
+      };
+    else if (pathname.endsWith('/admin/ai-agent/action-evidence'))
+      data = { items: [], nextCursor: null };
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data }),
+    });
+  });
+  await openConversation(page);
+  await page
+    .getByPlaceholder('اسأل عن أي بيانات مسموح بها…')
+    .fill('اعرض ملخص الطلاب');
+  await page.getByRole('button', { name: 'إرسال' }).click();
+  await expect
+    .poll(() => turnRequest)
+    .toEqual({
+      content: 'اعرض ملخص الطلاب',
+      expectedConversationVersion: 1,
+    });
 });
 
 const ordinaryProposal = {
