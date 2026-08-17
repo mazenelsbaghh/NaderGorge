@@ -21,6 +21,7 @@ function queues(existingJob?: any) {
     notifQueue: queue(),
     essayQueue: queue(),
     liveSupportQueue: queue(),
+    adminAIQueue: queue(),
   } as any;
 }
 
@@ -98,6 +99,7 @@ test('ingestStreamJob retries essay grading jobs after a fixed 20 seconds', asyn
       notifQueue: queue(),
       essayQueue,
       liveSupportQueue: queue(),
+      adminAIQueue: queue(),
     } as any;
 
     const result = await ingestStreamJob(redisRef as any, queueSet, '4-0', [
@@ -113,6 +115,46 @@ test('ingestStreamJob retries essay grading jobs after a fixed 20 seconds', asyn
     assert.equal(essayQueue.added.length, 1);
     assert.equal(essayQueue.added[0][2].attempts, 5);
     assert.deepEqual(essayQueue.added[0][2].backoff, { type: 'fixed', delay: 20_000 });
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
+});
+
+test('ingestStreamJob routes Admin AI turns to their isolated BullMQ queue', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    const adminAIQueue = queue();
+    const queueSet = {
+      aiQueue: queue(),
+      mindmapsQueue: queue(),
+      notifQueue: queue(),
+      essayQueue: queue(),
+      liveSupportQueue: queue(),
+      adminAIQueue,
+    } as any;
+
+    const result = await ingestStreamJob(redisRef as any, queueSet, '5-0', [
+      'jobType',
+      'admin ai turn',
+      'jobId',
+      'admin-ai-turn-70000000-0000-4000-8000-000000000001',
+      'payload',
+      JSON.stringify({
+        schemaVersion: '1',
+        turnId: '70000000-0000-4000-8000-000000000001',
+        conversationId: '60000000-0000-4000-8000-000000000001',
+      }),
+    ]);
+
+    assert.equal(result.action, 'enqueued');
+    assert.equal(adminAIQueue.added.length, 1);
+    assert.equal(adminAIQueue.added[0][0], 'respond');
+    assert.equal(adminAIQueue.added[0][1].schemaVersion, '1');
+    assert.equal(adminAIQueue.added[0][2].jobId, 'admin-ai-turn-70000000-0000-4000-8000-000000000001');
+    assert.deepEqual(adminAIQueue.added[0][2].backoff, { type: 'exponential', delay: 2000 });
+    assert.deepEqual(redisRef.acked, ['5-0']);
   } finally {
     Redis.prototype.get = originalGet;
   }

@@ -310,7 +310,7 @@ async function startWorker() {
   const essayQueue = new Queue('ai-essay-grading', { connection });
   const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
   const adminAIQueue = new Queue('ai-admin-agent-turns', { connection });
-  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue };
+  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue, adminAIQueue };
   const workerAdminGuard = createWorkerAdminGuard();
 
   const app = express();

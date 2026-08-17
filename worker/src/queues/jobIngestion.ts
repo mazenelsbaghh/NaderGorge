@@ -9,6 +9,7 @@ export interface QueueSet {
   notifQueue: Queue;
   essayQueue: Queue;
   liveSupportQueue: Queue;
+  adminAIQueue: Queue;
 }
 
 export interface IngestResult {
@@ -46,6 +47,10 @@ export function resolveQueueTarget(jobType: string, jobId: string, parsedPayload
     targetJobId = jobId;
   } else if (jobType === 'live support turn') {
     targetQueue = queues.liveSupportQueue;
+    bullmqJobName = 'respond';
+    targetJobId = jobId;
+  } else if (jobType === 'admin ai turn') {
+    targetQueue = queues.adminAIQueue;
     bullmqJobName = 'respond';
     targetJobId = jobId;
   } else {
@@ -112,6 +117,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
 
   try {
     const isLiveSupportTurn = jobType === 'live support turn';
+    const isAdminAITurn = jobType === 'admin ai turn';
     const isEssay = jobType === 'essay';
     await targetQueue.add(bullmqJobName, parsedPayload, {
       jobId: targetJobId,
@@ -119,7 +125,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
       attempts: isLiveSupportTurn ? 4 : 5,
       backoff: isEssay
         ? { type: 'fixed', delay: 20_000 }
-        : { type: 'exponential', delay: isLiveSupportTurn ? 2000 : 5000 },
+        : { type: 'exponential', delay: isLiveSupportTurn || isAdminAITurn ? 2000 : 5000 },
     });
     await acknowledge(redis, messageStreamId);
     return { action: 'enqueued', targetJobId };
