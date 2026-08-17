@@ -25,6 +25,7 @@ const quickLinks = [
 const supportLinks = [
   { label: 'تواصل معنا', href: '#contact' },
   { label: 'سياسة الخصوصية', href: '/privacy' },
+  { label: 'حذف الحساب والبيانات', href: '/account-deletion' },
   { label: 'الشروط والأحكام', href: null },
 ] as const;
 

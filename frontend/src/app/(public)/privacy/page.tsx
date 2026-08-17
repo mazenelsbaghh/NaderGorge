@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { ArrowUpLeft, ShieldCheck } from 'lucide-react';
+import { ArrowUpLeft, Mail, ShieldCheck, Trash2 } from 'lucide-react';
+
+const supportEmail = 'mazenelsbagh1@gmail.com';
 
 const sections = [
   {
@@ -36,6 +38,15 @@ const sections = [
     ],
   },
   {
+    title: 'حذف الحساب والبيانات',
+    body: [
+      'يحق للمستخدم أو ولي الأمر طلب حذف البيانات المرتبطة به في أي وقت من خلال صفحة طلب حذف الحساب والبيانات الموضحة أدناه.',
+      `يمكن إرسال الطلب من البريد المسجل أو بريد ولي الأمر إلى ${supportEmail} بعنوان «طلب حذف بيانات تطبيق ولي الأمر»، مع كتابة رقم الهاتف المرتبط بالحساب أو كود متابعة ولي الأمر للتحقق من ملكية الطلب.`,
+      'نراجع الطلب ونتحقق من هوية صاحبه، ثم نحذف أو نخفي هوية البيانات غير المطلوب الاحتفاظ بها خلال مدة لا تتجاوز 30 يومًا.',
+      'قد نحتفظ فقط بالسجلات التي يفرضها القانون أو اللازمة لمنع الاحتيال وتسوية المعاملات والنزاعات، ثم نحذفها أو نخفي هويتها بعد انتهاء مدة الاحتفاظ النظامية.',
+    ],
+  },
+  {
     title: 'حقوق المستخدم والتواصل',
     body: [
       'يمكنك طلب مراجعة بياناتك أو تعديلها أو الاستفسار عن استخدامها من خلال قنوات الدعم الرسمية للمنصة.',
@@ -45,9 +56,65 @@ const sections = [
 ];
 
 export const metadata = {
-  title: 'سياسة الخصوصية | منصة مسار',
-  description: 'سياسة الخصوصية لتطبيق ولي الأمر ومنصة مسار التعليمية.',
+  title: 'سياسة الخصوصية | متابعه ولي أمر- مسار اكاديمي',
+  description:
+    'سياسة الخصوصية لتطبيق متابعه ولي أمر- مسار اكاديمي، وشرح طلب حذف الحساب والبيانات.',
 };
+
+function AppIdentityCard() {
+  const identityFields = [
+    ['اسم التطبيق على Google Play', 'متابعه ولي أمر- مسار اكاديمي', 'rtl'],
+    ['اسم المطوّر', 'EGY Legal for smart technology', 'ltr'],
+    ['معرّف التطبيق', 'com.massar.parent', 'ltr'],
+    ['مسؤول التواصل', 'mazen nasser', 'ltr'],
+  ] as const;
+
+  return (
+    <article className="landing-panel mb-5 rounded-2xl p-6">
+      <h2 className="text-xl font-black text-[var(--landing-ink)]">
+        بيانات التطبيق والمطوّر
+      </h2>
+      <dl className="mt-4 grid gap-4 text-sm font-semibold leading-7 text-[var(--landing-muted)] sm:grid-cols-2">
+        {identityFields.map(([label, text, direction]) => (
+          <div key={label}>
+            <dt className="font-black text-[var(--landing-ink)]">{label}</dt>
+            <dd dir={direction} className="text-right">
+              {text}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </article>
+  );
+}
+
+function PrivacyActions() {
+  return (
+    <div className="mt-10 flex flex-wrap justify-start gap-3">
+      <Link
+        href="/account-deletion"
+        className="inline-flex items-center gap-2 rounded-full border border-[var(--landing-accent)] px-6 py-3 text-sm font-extrabold text-[var(--landing-accent)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-teal-soft)]"
+      >
+        طلب حذف الحساب والبيانات
+        <Trash2 className="h-4 w-4" />
+      </Link>
+      <a
+        href={`mailto:${supportEmail}?subject=${encodeURIComponent('طلب حذف بيانات تطبيق ولي الأمر')}`}
+        className="inline-flex items-center gap-2 rounded-full border border-[var(--landing-accent)] px-6 py-3 text-sm font-extrabold text-[var(--landing-accent)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-teal-soft)]"
+      >
+        مراسلة دعم الخصوصية
+        <Mail className="h-4 w-4" />
+      </a>
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-6 py-3 text-sm font-extrabold text-[var(--landing-accent-foreground)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
+      >
+        العودة للرئيسية
+        <ArrowUpLeft className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
 
 export default function PrivacyPolicyPage() {
   return (
@@ -62,17 +129,22 @@ export default function PrivacyPolicyPage() {
             <span>سياسة الخصوصية</span>
           </div>
           <h1 className="text-4xl font-black leading-tight text-[var(--landing-ink)] md:text-5xl">
-            سياسة الخصوصية لتطبيق ولي الأمر
+            سياسة الخصوصية لتطبيق متابعه ولي أمر- مسار اكاديمي
           </h1>
           <p className="mt-4 text-base font-semibold leading-8 text-[var(--landing-muted)]">
-            توضح هذه السياسة كيفية جمع واستخدام وحماية البيانات داخل منصة مسار
-            وتطبيق ولي الأمر. آخر تحديث: 6 يوليو 2026.
+            توضح هذه السياسة كيفية جمع واستخدام وحماية البيانات داخل التطبيق
+            ومنصة مسار. آخر تحديث: 17 أغسطس 2026.
           </p>
         </div>
 
+        <AppIdentityCard />
+
         <div className="space-y-5">
           {sections.map((section) => (
-            <article key={section.title} className="landing-panel rounded-2xl p-6">
+            <article
+              key={section.title}
+              className="landing-panel rounded-2xl p-6"
+            >
               <h2 className="text-xl font-black text-[var(--landing-ink)]">
                 {section.title}
               </h2>
@@ -88,15 +160,7 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
 
-        <div className="mt-10 flex justify-start">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-6 py-3 text-sm font-extrabold text-[var(--landing-accent-foreground)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
-          >
-            العودة للرئيسية
-            <ArrowUpLeft className="h-4 w-4" />
-          </Link>
-        </div>
+        <PrivacyActions />
       </section>
     </main>
   );
