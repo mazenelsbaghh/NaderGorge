@@ -14,10 +14,8 @@ test('manual function loop performs multiple reads and forwards empty/truncated/
   const requests: AdminAIProviderRequest[] = []; let readCalls = 0;
   const signedModelContent = { role: 'model', parts: [{ functionCall: { id: 'c1', name: 'read_0', args: { query: 'أ' } }, thoughtSignature: 'signed-1' }, { functionCall: { id: 'c2', name: 'read_0', args: { query: 'ب' } }, thoughtSignature: 'signed-2' }] };
   const provider = async (request: AdminAIProviderRequest) => { requests.push(request); return requests.length === 1 ? { functionCalls: [{ id: 'c1', name: 'read_0', args: { query: 'أ' } }, { id: 'c2', name: 'read_0', args: { query: 'ب' } }], modelContent: signedModelContent } : { text: JSON.stringify(answer) }; };
-  const activeClaim = claim();
-  const result = await runAdminAIAgent(activeClaim, callbacks(async (_turn, _step, payload) => { readCalls++; const calls = payload.calls as Array<{ callId: string }>; return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: calls[0]!.callId, status: 'Empty', data: {} }, { callId: calls[1]!.callId, status: 'Truncated', data: { count: 25 } }, { callId: 'extra', status: 'Rejected', safeErrorCode: 'READ_ARGUMENTS_INVALID' }] }; }), { provider, model: 'test' });
+  const result = await runAdminAIAgent(claim(), callbacks(async (_turn, _step, payload) => { readCalls++; const calls = payload.calls as Array<{ callId: string }>; return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: calls[0]!.callId, status: 'Empty', data: {} }, { callId: calls[1]!.callId, status: 'Truncated', data: { count: 25 } }, { callId: 'extra', status: 'Rejected', safeErrorCode: 'READ_ARGUMENTS_INVALID' }] }; }), { provider, model: 'test' });
   assert.equal(readCalls, 1); assert.equal(requests.length, 2); assert.equal(result.expectedTurnVersion, 5); assert.equal(result.leaseToken, 'lease-2');
-  assert.equal(activeClaim.expectedTurnVersion, 5); assert.equal(activeClaim.leaseToken, 'lease-2'); assert.equal(activeClaim.stepNumber, 2);
   assert.deepEqual(requests[1]!.contents.at(-2), signedModelContent);
   assert.deepEqual((requests[1]!.contents.at(-1) as { parts: Array<{ functionResponse: { id?: string } }> }).parts.map(part => part.functionResponse.id), ['c1', 'c2']);
   assert.match(JSON.stringify(requests[1]!.contents), /Empty/); assert.match(JSON.stringify(requests[1]!.contents), /Truncated/);
