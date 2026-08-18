@@ -694,6 +694,11 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
     return matchesSearch && matchesSubject;
   });
 
+  const scopedPackages = activeTeacherId
+    ? packages.filter((pkg) => pkg.teacherId === activeTeacherId)
+    : packages;
+  const currentPackageCount = scopedPackages.filter((pkg) => (pkg.archiveMode ?? 'None') === 'None').length;
+  const archivedPackageCount = scopedPackages.length - currentPackageCount;
   const activeTeacher = teachers.find(t => t.id === activeTeacherId);
   const activeSummaryTeacher = summaryTeachers.find(teacher => teacher.id === activeTeacherId);
   const activeTeacherName = activeTeacher?.fullName ?? activeSummaryTeacher?.fullName;
@@ -812,10 +817,10 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
               {/* Search & Subject filter */}
               <div className="grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1" role="tablist" aria-label="حالة المحتوى">
                 <button type="button" role="tab" aria-selected={contentView === 'current'} onClick={() => setContentView('current')} className={`min-h-11 rounded-lg px-4 text-sm font-black ${contentView === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)]'}`}>
-                  المحتوى الحالي ({packages.filter((item) => (item.archiveMode ?? 'None') === 'None').length})
+                  المحتوى الحالي ({currentPackageCount})
                 </button>
                 <button type="button" role="tab" aria-selected={contentView === 'archived'} onClick={() => setContentView('archived')} className={`min-h-11 rounded-lg px-4 text-sm font-black ${contentView === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)]'}`}>
-                  المؤرشف ({packages.filter((item) => (item.archiveMode ?? 'None') !== 'None').length})
+                  المؤرشف ({archivedPackageCount})
                 </button>
               </div>
 

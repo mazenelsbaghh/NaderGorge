@@ -7,6 +7,8 @@ namespace NaderGorge.Infrastructure.Services.AdminAI;
 
 public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryService
 {
+    private static readonly TimeSpan MaximumQueuedTurnAge = TimeSpan.FromMinutes(5);
+
     public async Task<int> ReconcileAsync(int batchSize, CancellationToken cancellationToken)
     {
         if (batchSize is < 1 or > 500) throw new ArgumentOutOfRangeException(nameof(batchSize));
@@ -40,6 +42,19 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
             changed++;
             var challenge = await db.AdminAIConfirmationChallenges.SingleOrDefaultAsync(x => x.ProposalId == proposal.Id && x.Status == AdminAIChallengeStatus.Pending, cancellationToken);
             if (challenge is not null) { challenge.Status = AdminAIChallengeStatus.Expired; challenge.Version++; }
+        }
+
+        remaining = batchSize - changed;
+        var staleQueuedTurns = remaining == 0 ? [] : await db.AdminAITurns
+            .Where(x => x.Status == AdminAITurnStatus.Queued && x.QueuedAt <= now - MaximumQueuedTurnAge)
+            .OrderBy(x => x.QueuedAt).Take(remaining).ToListAsync(cancellationToken);
+        foreach (var turn in staleQueuedTurns)
+        {
+            turn.Status = AdminAITurnStatus.Failed;
+            turn.FailureCode = "AI_QUEUE_STALE";
+            turn.CompletedAt = now;
+            turn.Version++;
+            changed++;
         }
 
         remaining = batchSize - changed;

@@ -74,7 +74,7 @@ public sealed class AdminAIOutboxRecoveryTests
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase($"admin-ai-revoked-{Guid.NewGuid()}").Options);
         var turn = new AdminAITurn { ActorAdminUserId = Guid.NewGuid(), Status = AdminAITurnStatus.Planning, CallbackIdempotencyDigest = new string('a', 64) }; db.Add(turn); await db.SaveChangesAsync();
-        Assert.Equal(1, await new AdminAIRecoveryService(db).ReconcileAsync(10, default));
+        Assert.Equal(1, await new AdminAIRecoveryService(db).ReconcileAsync(1, default));
         Assert.Equal(AdminAITurnStatus.AccessRevoked, turn.Status); Assert.Equal("admin_ai_access_revoked", turn.FailureCode);
     }
 

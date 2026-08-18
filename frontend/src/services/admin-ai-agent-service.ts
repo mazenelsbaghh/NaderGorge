@@ -3,6 +3,7 @@ import { createClientId } from '@/lib/client-id';
 import {
   adminAiAgentPaths,
   adminAiRequestConfig,
+  normalizeAdminAiSnapshot,
   unwrapAdminAiPayload,
   type AdminAiConversationSnapshot,
   type AdminAiConversationSummary,
@@ -62,9 +63,7 @@ export const adminAiAgentService = {
           params: { beforeSequence, pageSize: 50 },
         }
       )
-      .then((response) =>
-        unwrapAdminAiPayload<AdminAiConversationSnapshot>(response.data)
-      ),
+      .then((response) => normalizeAdminAiSnapshot(response.data)),
   rename: (
     signal: AbortSignal,
     conversationId: string,

@@ -66,6 +66,28 @@ public sealed class AdminAIConversationTests
     }
 
     [Fact]
+    public async Task Snapshot_ReturnsLatestFailedTurnSoClientCanExplainAndRetry()
+    {
+        await using var db = CreateDb(); var actor = Guid.NewGuid(); var service = Service(db, actor);
+        var conversation = await service.CreateAsync(actor, null, "create-failed-turn", default);
+        var failed = new AdminAITurn
+        {
+            ConversationId = conversation.Id,
+            ActorAdminUserId = actor,
+            Status = AdminAITurnStatus.Failed,
+            FailureCode = "TOOL_BUDGET_EXCEEDED",
+            CompletedAt = DateTime.UtcNow,
+        };
+        db.AdminAITurns.Add(failed); await db.SaveChangesAsync();
+
+        var snapshot = await service.SnapshotAsync(actor, conversation.Id, null, 50, default);
+
+        Assert.Equal(failed.Id, snapshot.ActiveTurn?.Id);
+        Assert.Equal(AdminAITurnStatus.Failed, snapshot.ActiveTurn?.Status);
+        Assert.Equal("TOOL_BUDGET_EXCEEDED", snapshot.ActiveTurn?.FailureCode);
+    }
+
+    [Fact]
     public async Task StaleVersion_HasNoMutation()
     {
         await using var db = CreateDb(); var actor = Guid.NewGuid(); var service = Service(db, actor);

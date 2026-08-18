@@ -59,6 +59,7 @@ export function AdminAiAgentWorkspace() {
         ) : (
           <AdminAiTranscript
             snapshot={c.snapshot}
+            submitting={Boolean(c.inFlightIntents.send) && !activeTurn}
             busyProposalId={c.proposalBusy}
             onConfirm={(id, phrase) => void c.confirm(id, phrase)}
             onCancelProposal={(id) => void c.cancelProposal(id)}

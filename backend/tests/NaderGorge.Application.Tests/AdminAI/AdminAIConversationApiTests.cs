@@ -26,7 +26,8 @@ public sealed class AdminAIConversationApiTests
             (new InvalidOperationException("private stale"), c => c.Archive(Guid.NewGuid(), new(1), "key", default), 409, AdminAIErrorCodes.StaleState),
             (new KeyNotFoundException("private target"), c => c.Restore(Guid.NewGuid(), new(1), "key", default), 404, AdminAIErrorCodes.CapabilityUnavailable),
             (new KeyNotFoundException("private snapshot"), c => c.Snapshot(Guid.NewGuid(), null, 20, default), 404, AdminAIErrorCodes.CapabilityUnavailable),
-            (new InvalidOperationException("private active limit"), c => c.Queue(Guid.NewGuid(), new("q", 1), "key", default), 409, AdminAIErrorCodes.StaleState),
+            (new AdminAIConflictException(AdminAIErrorCodes.ActiveTurnLimit), c => c.Queue(Guid.NewGuid(), new("q", 1), "key", default), 409, AdminAIErrorCodes.ActiveTurnLimit),
+            (new AdminAIConflictException(AdminAIErrorCodes.ActiveTurnExists), c => c.Queue(Guid.NewGuid(), new("q", 1), "key", default), 409, AdminAIErrorCodes.ActiveTurnExists),
             (new KeyNotFoundException("private turn"), c => c.Cancel(Guid.NewGuid(), Guid.NewGuid(), new(1), default), 404, AdminAIErrorCodes.CapabilityUnavailable)
         };
 

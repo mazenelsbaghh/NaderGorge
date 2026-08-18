@@ -88,6 +88,7 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
   const [confirmUser, setConfirmUser] = useState<AdminUserListDto | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -169,20 +170,21 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
     }
   }
 
-  const handleExport = async () => {
+  const handleExport = async (scope: 'all' | 'filtered') => {
     if (exporting) return;
 
+    setShowExportOptions(false);
     setExporting(true);
     const toastId = toast.loading('جاري تصدير بيانات الطلاب...');
 
     try {
       const itemsToExport = await adminService.exportUsers({
-        search: search.trim() || undefined,
-        educationStage: educationStageFilter || undefined,
-        gradeLevel: gradeLevelFilter || undefined,
-        studyTrack: studyTrackFilter || undefined,
-        gender: genderFilter || undefined,
-        governorate: governorateFilter || undefined,
+        search: scope === 'filtered' ? search.trim() || undefined : undefined,
+        educationStage: scope === 'filtered' ? educationStageFilter || undefined : undefined,
+        gradeLevel: scope === 'filtered' ? gradeLevelFilter || undefined : undefined,
+        studyTrack: scope === 'filtered' ? studyTrackFilter || undefined : undefined,
+        gender: scope === 'filtered' ? genderFilter || undefined : undefined,
+        governorate: scope === 'filtered' ? governorateFilter || undefined : undefined,
         role: 'Student',
       });
 
@@ -483,16 +485,31 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
                   <Filter className="h-4 w-4" />
                   تصفية
                 </button>
-                <button
-                  onClick={handleExport}
-                  disabled={exporting}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-50"
-                >
-                  <Download
-                    className={`h-4 w-4 ${exporting ? 'animate-spin' : ''}`}
-                  />
-                  {exporting ? 'جاري التصدير...' : 'تصدير البيانات'}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowExportOptions((isOpen) => !isOpen)}
+                    disabled={exporting}
+                    aria-expanded={showExportOptions}
+                    aria-controls="student-export-options"
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-50"
+                  >
+                    <Download className={`h-4 w-4 ${exporting ? 'animate-spin' : ''}`} />
+                    {exporting ? 'جاري التصدير...' : 'تصدير البيانات'}
+                  </button>
+                  {showExportOptions && (
+                    <div id="student-export-options" className="absolute left-0 z-20 mt-2 w-72 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-2 shadow-lg">
+                      <button type="button" onClick={() => void handleExport('all')} className="w-full rounded-lg px-3 py-2.5 text-right text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]">
+                        تصدير كل الطلاب
+                        <span className="mt-1 block text-xs font-medium text-[var(--admin-muted)]">يشمل جميع الطلاب المسجلين.</span>
+                      </button>
+                      <button type="button" onClick={() => void handleExport('filtered')} className="mt-1 w-full rounded-lg px-3 py-2.5 text-right text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]">
+                        تصدير حسب الفلاتر المختارة
+                        <span className="mt-1 block text-xs font-medium text-[var(--admin-muted)]">اختر المرحلة أو الصف أو الشعبة من «تصفية» أولاً.</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             }
           />

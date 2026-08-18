@@ -139,6 +139,7 @@ public sealed class AdminAIAgentController(IAdminAIConversationService conversat
         catch (KeyNotFoundException) { return NotFound(Error(AdminAIErrorCodes.CapabilityUnavailable)); }
         catch (ArgumentException) { return BadRequest(Error(AdminAIErrorCodes.InvalidRequest)); }
         catch (DbUpdateConcurrencyException) { return Conflict(Error(AdminAIErrorCodes.StaleState)); }
+        catch (AdminAIConflictException exception) { return Conflict(Error(exception.Code)); }
         catch (InvalidOperationException exception)
         {
             return Conflict(Error(exception.Message.Contains("Idempotency", StringComparison.OrdinalIgnoreCase)

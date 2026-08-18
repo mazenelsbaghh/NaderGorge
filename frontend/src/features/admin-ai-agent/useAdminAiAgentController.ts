@@ -13,7 +13,7 @@ import type {
   AdminAiProposal,
   AdminAiSecureInputKind,
 } from '@/services/admin-ai-agent-contract';
-import { parseAdminAiApiError } from '@/services/admin-ai-agent-contract';
+import { parseAdminAiErrorResponse } from '@/services/admin-ai-agent-contract';
 import { useAdminAiAgentStore } from './admin-ai-agent-store';
 import { useAdminAiAgentEvents } from '@/hooks/useAdminAiAgentEvents';
 import { adminAiRefreshKeys } from '@/lib/query-contracts';
@@ -24,7 +24,7 @@ const safeError = (error: unknown): AdminAiApiError => {
     response?: { data?: { error?: AdminAiApiError } };
   };
   return (
-    parseAdminAiApiError(candidate.response?.data?.error) ?? {
+    parseAdminAiErrorResponse(candidate.response?.data) ?? {
       code: 'UNKNOWN_SAFE_FAILURE',
       messageAr: 'حدث خطأ آمن غير متوقع. حاول مرة أخرى.',
       retryAfterSeconds: null,
@@ -227,7 +227,7 @@ export function useAdminAiAgentController() {
   };
   const retryTurn = async () => {
     const failedTurn = (snapshot?.activeTurns ?? snapshot?.turns)?.find(
-      (turn) => turn.canRetry
+      (turn) => turn.canRetry || turn.status === 'Failed'
     );
     const sourceMessage = snapshot?.messages
       .slice()

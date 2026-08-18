@@ -7,6 +7,7 @@ import { AdminAiTurnStatus } from './AdminAiTurnStatus';
 import { AdminAiEmptyState } from './AdminAiEmptyState';
 export function AdminAiTranscript({
   snapshot,
+  submitting,
   busyProposalId,
   onConfirm,
   onCancelProposal,
@@ -17,6 +18,7 @@ export function AdminAiTranscript({
   loadingOlder,
 }: {
   snapshot?: AdminAiConversationSnapshot;
+  submitting: boolean;
   busyProposalId?: string;
   onConfirm: (id: string, phrase?: string) => void;
   onCancelProposal: (id: string) => void;
@@ -48,7 +50,7 @@ export function AdminAiTranscript({
       setUnseen(false);
     } else setUnseen(true);
   }, [count]);
-  if (!snapshot || (count === 0 && !snapshot.proposals?.length))
+  if (!snapshot || (count === 0 && !snapshot.proposals?.length && !submitting))
     return <AdminAiEmptyState />;
   return (
     <div className="relative min-h-0 flex-1">
@@ -83,6 +85,7 @@ export function AdminAiTranscript({
         ))}
         <AdminAiTurnStatus
           turn={(snapshot.activeTurns ?? snapshot.turns)?.[0]}
+          submitting={submitting}
           onStop={onStop}
           onRetry={onRetry}
         />

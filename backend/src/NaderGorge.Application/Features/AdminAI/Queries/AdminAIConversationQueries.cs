@@ -33,16 +33,12 @@ public sealed partial class AdminAIConversationService
         var query = db.AdminAIMessages.AsNoTracking().Where(x => x.ConversationId == conversationId);
         if (beforeSequence is not null) query = query.Where(x => x.Sequence < beforeSequence);
         var messages = await query.OrderByDescending(x => x.Sequence).Take(pageSize + 1).ToListAsync(ct);
-        var activeTurn = await db.AdminAITurns.AsNoTracking()
-            .Where(x => x.ConversationId == conversationId &&
-                        x.Status != AdminAITurnStatus.Completed &&
-                        x.Status != AdminAITurnStatus.Cancelled &&
-                        x.Status != AdminAITurnStatus.Failed &&
-                        x.Status != AdminAITurnStatus.AccessRevoked)
+        var latestTurn = await db.AdminAITurns.AsNoTracking()
+            .Where(x => x.ConversationId == conversationId)
             .OrderByDescending(x => x.QueuedAt)
             .FirstOrDefaultAsync(ct);
         return new(Summary(conversation), messages.Take(pageSize).OrderBy(x => x.Sequence).Select(x => new AdminAIMessageDto(x.Id, x.Sequence, x.Role, x.Content, null, x.TurnId, x.CreatedAt)).ToArray(),
-            activeTurn is null ? null : new AdminAITurnDto(activeTurn.Id, activeTurn.Status, activeTurn.CurrentStepNumber, activeTurn.ReadInvocationCount, activeTurn.FailureCode, activeTurn.QueuedAt, activeTurn.CompletedAt, activeTurn.Version), messages.Count > pageSize);
+            latestTurn is null ? null : new AdminAITurnDto(latestTurn.Id, latestTurn.Status, latestTurn.CurrentStepNumber, latestTurn.ReadInvocationCount, latestTurn.FailureCode, latestTurn.QueuedAt, latestTurn.CompletedAt, latestTurn.Version), messages.Count > pageSize);
     }
 
     private static string EncodeCursor(NaderGorge.Domain.Entities.AdminAI.AdminAIConversation value) =>

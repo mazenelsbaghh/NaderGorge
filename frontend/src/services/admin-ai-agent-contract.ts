@@ -137,6 +137,65 @@ export function parseAdminAiApiError(
   return value as unknown as AdminAiApiError;
 }
 
+const currentApiErrorMessages: Partial<
+  Record<string, { code: AdminAiErrorCode; messageAr: string }>
+> = {
+  ACTIVE_TURN_EXISTS: {
+    code: 'ACTIVE_TURN_EXISTS',
+    messageAr: 'الوكيل ما زال يرد في هذه المحادثة. انتظر اكتمال الرد الحالي.',
+  },
+  ACTIVE_TURN_LIMIT: {
+    code: 'ACTIVE_TURN_LIMIT',
+    messageAr: 'لديك محادثتان قيد الرد. انتظر اكتمال إحداهما ثم أرسل سؤالك.',
+  },
+  admin_ai_stale_state: {
+    code: 'VERSION_CONFLICT',
+    messageAr: 'تغيّرت حالة المحادثة. تم تحديثها، حاول الإرسال مرة أخرى.',
+  },
+  admin_ai_idempotency_conflict: {
+    code: 'IDEMPOTENCY_PAYLOAD_CONFLICT',
+    messageAr:
+      'تعذر إعادة استخدام محاولة الإرسال السابقة. حاول الإرسال مرة أخرى.',
+  },
+  admin_ai_feature_disabled: {
+    code: 'ADMIN_AI_DISABLED',
+    messageAr: 'وكيل الإدارة غير متاح حاليًا.',
+  },
+  admin_ai_capability_unavailable: {
+    code: 'ADMIN_AI_BASELINE_UNAVAILABLE',
+    messageAr: 'بيانات تشغيل الوكيل غير جاهزة حاليًا. حاول لاحقًا.',
+  },
+};
+
+export function parseAdminAiErrorResponse(
+  raw: unknown
+): AdminAiApiError | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const response = raw as Record<string, unknown>;
+  const contractError = parseAdminAiApiError(response.error ?? raw);
+  if (contractError) return contractError;
+  if (
+    Object.keys(response).some(
+      (key) => !['code', 'message', 'retryable'].includes(key)
+    )
+  )
+    return undefined;
+  if (
+    typeof response.code !== 'string' ||
+    typeof response.message !== 'string' ||
+    typeof response.retryable !== 'boolean'
+  )
+    return undefined;
+  const mapped = currentApiErrorMessages[response.code];
+  if (!mapped) return undefined;
+  return {
+    ...mapped,
+    retryAfterSeconds: null,
+    traceId: '',
+    currentVersion: null,
+  };
+}
+
 export function adminAiRequestConfig(
   signal: AbortSignal,
   idempotencyKey?: string
@@ -164,6 +223,20 @@ export function unwrapAdminAiPayload<T>(payload: unknown): T {
     return (payload as { data: T }).data;
   }
   return payload as T;
+}
+
+export function normalizeAdminAiSnapshot(
+  payload: unknown
+): AdminAiConversationSnapshot {
+  const snapshot = unwrapAdminAiPayload<
+    AdminAiConversationSnapshot & { activeTurn?: AdminAiTurn | null }
+  >(payload);
+  if (snapshot.activeTurns || snapshot.turns || !('activeTurn' in snapshot))
+    return snapshot;
+  return {
+    ...snapshot,
+    turns: snapshot.activeTurn ? [snapshot.activeTurn] : [],
+  };
 }
 export interface AdminAiConversationSummary {
   id: string;

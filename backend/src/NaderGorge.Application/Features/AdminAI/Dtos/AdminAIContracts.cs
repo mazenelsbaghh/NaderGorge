@@ -4,6 +4,10 @@ using System.Text.Json.Serialization;
 namespace NaderGorge.Application.Features.AdminAI.Dtos;
 
 public sealed record AdminAIError(string Code, string Message, bool Retryable = false);
+public sealed class AdminAIConflictException(string code) : InvalidOperationException
+{
+    public string Code { get; } = code;
+}
 public sealed record AdminAIBaselineSummary(string Version, string ManifestHash, string SourceRevision, int ReadCount, int ActionCount, int ExclusionCount, DateTime ActivatedAt);
 public sealed record AdminAIConversationSummary(Guid Id, string Title, AdminAIConversationStatus Status, DateTime LastActivityAt, long Version);
 public sealed record AdminAIConversationPage(IReadOnlyList<AdminAIConversationSummary> Items, string? NextCursor);
@@ -97,6 +101,8 @@ public static class AdminAIErrorCodes
     public const string InvalidRequest = "admin_ai_invalid_request";
     public const string RateLimited = "admin_ai_rate_limited";
     public const string IdempotencyConflict = "admin_ai_idempotency_conflict";
+    public const string ActiveTurnExists = "ACTIVE_TURN_EXISTS";
+    public const string ActiveTurnLimit = "ACTIVE_TURN_LIMIT";
     public const string TurnNotFound = "TURN_NOT_FOUND";
     public const string TurnNotClaimable = "TURN_NOT_CLAIMABLE";
     public const string TurnLeaseConflict = "TURN_LEASE_CONFLICT";
@@ -122,7 +128,7 @@ public static class AdminAIErrorCodes
     {
         AccessDenied, StaleState, Expired, InvalidConfirmation, CapabilityUnavailable,
         UnsafeInput, ProviderUnavailable, FeatureDisabled, InvalidRequest, RateLimited,
-        IdempotencyConflict, TurnNotFound, TurnNotClaimable, TurnLeaseConflict,
+        IdempotencyConflict, ActiveTurnExists, ActiveTurnLimit, TurnNotFound, TurnNotClaimable, TurnLeaseConflict,
         TurnLeaseExpired, TurnCancelled, AccessRevoked, BaselineChanged,
         SensitivePolicyChanged, StepVersionConflict, ReadCapabilityNotAllowed,
         ReadArgumentsInvalid, ReadBudgetExceeded, RedactedContextLimit, ReadTimeout,

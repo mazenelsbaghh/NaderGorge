@@ -4,7 +4,9 @@ import {
   ADMIN_AI_ROUTE_BUILDERS,
   adminAiRequestConfig,
   adminAiAgentPaths,
+  normalizeAdminAiSnapshot,
   parseAdminAiApiError,
+  parseAdminAiErrorResponse,
   unwrapAdminAiPayload,
   type AdminAiRouteKey,
 } from './admin-ai-agent-contract.ts';
@@ -46,6 +48,54 @@ test('API errors accept the closed safe shape and reject additions or unknown co
     parseAdminAiApiError({ ...safe, code: 'MODEL_RAW_ERROR' }),
     undefined
   );
+});
+
+test('production API errors are normalized without exposing unexpected fields', () => {
+  assert.deepEqual(
+    parseAdminAiErrorResponse({
+      code: 'ACTIVE_TURN_LIMIT',
+      message: 'تعذر إكمال الطلب بأمان.',
+      retryable: false,
+    }),
+    {
+      code: 'ACTIVE_TURN_LIMIT',
+      messageAr: 'لديك محادثتان قيد الرد. انتظر اكتمال إحداهما ثم أرسل سؤالك.',
+      retryAfterSeconds: null,
+      traceId: '',
+      currentVersion: null,
+    }
+  );
+  assert.equal(
+    parseAdminAiErrorResponse({
+      code: 'ACTIVE_TURN_LIMIT',
+      message: 'safe',
+      retryable: false,
+      privateDetail: 'must-not-pass',
+    }),
+    undefined
+  );
+});
+
+test('current snapshot shape exposes its active turn to the workspace', () => {
+  const snapshot = {
+    conversation: {
+      id: 'conversation-id',
+      title: 'محادثة جديدة',
+      status: 'Active' as const,
+      lastActivityAt: '2026-08-17T00:00:00Z',
+      version: 2,
+    },
+    messages: [],
+    activeTurn: {
+      id: 'turn-id',
+      status: 'Queued' as const,
+      queuedAt: '2026-08-17T00:00:00Z',
+      version: 1,
+    },
+  };
+  assert.deepEqual(normalizeAdminAiSnapshot(snapshot).turns, [
+    snapshot.activeTurn,
+  ]);
 });
 
 test('resource identifiers are encoded in every Admin AI endpoint', () => {

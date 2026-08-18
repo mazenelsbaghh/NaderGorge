@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Domain.Entities.AdminAI;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -40,10 +41,12 @@ public sealed class AdminAITurnOrchestratorTests
         var service = Service(db, actor);
 
         await service.QueueAsync(actor, first.Id, "one", first.Version, "one", default);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.QueueAsync(actor, first.Id, "duplicate", first.Version + 1, "different", default));
+        var existingTurn = await Assert.ThrowsAsync<AdminAIConflictException>(() => service.QueueAsync(actor, first.Id, "duplicate", first.Version, "different", default));
         await service.QueueAsync(actor, second.Id, "two", second.Version, "two", default);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.QueueAsync(actor, third.Id, "three", third.Version, "three", default));
+        var activeTurnLimit = await Assert.ThrowsAsync<AdminAIConflictException>(() => service.QueueAsync(actor, third.Id, "three", third.Version, "three", default));
 
+        Assert.Equal(AdminAIErrorCodes.ActiveTurnExists, existingTurn.Code);
+        Assert.Equal(AdminAIErrorCodes.ActiveTurnLimit, activeTurnLimit.Code);
         Assert.Equal(2, db.AdminAITurns.Count());
         Assert.Equal(2, db.AdminAIMessages.Count());
         Assert.Equal(2, db.OutboxEvents.Count(x => x.Type == "AdminAITurnQueued"));
