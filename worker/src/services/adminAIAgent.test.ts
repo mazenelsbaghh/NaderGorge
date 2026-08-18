@@ -51,6 +51,18 @@ test('invalid final JSON gets one bounded correction attempt without weakening v
   assert.match(JSON.stringify(requests[1]!.contents.at(-1)), /DECISION JSON CONTRACT/);
 });
 
+test('repeated invalid final JSON exhausts the model-step budget and fails closed', async () => {
+  let providerCalls = 0;
+  await assert.rejects(
+    () => runAdminAIAgent(claim(), callbacks(async () => ({})), {
+      provider: async () => { providerCalls++; return { text: '{"type":"answer"}' }; },
+      model: 'test',
+    }),
+    /AI_INVALID_DECISION/,
+  );
+  assert.equal(providerCalls, 3);
+});
+
 test('read limits, response byte budget, deadline and cancellation fail closed', async () => {
   const twoCalls = async () => ({ functionCalls: [{ id: 'a', name: 'read_0', args: { query: 'a' } }, { id: 'b', name: 'read_0', args: { query: 'b' } }] });
   await assert.rejects(() => runAdminAIAgent(claim({ budgets: { maxModelSteps: 2, remainingReadCalls: 1, maxReadCallsPerStep: 4, remainingRedactedContextBytes: 1000 } }), callbacks(async () => ({})), { provider: twoCalls, model: 'test' }), /TOOL_BUDGET_EXCEEDED/);
