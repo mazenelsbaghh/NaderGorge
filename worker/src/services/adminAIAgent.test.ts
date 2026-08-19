@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
-import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
+import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
 
 function claim(overrides: Partial<AdminAIClaimContext> = {}): AdminAIClaimContext {
@@ -9,6 +9,30 @@ function claim(overrides: Partial<AdminAIClaimContext> = {}): AdminAIClaimContex
 }
 function callbacks(reads: AdminAICallbackClient['reads']): AdminAICallbackClient { return { claim: async () => null, renew: async () => ({}), reads, complete: async () => ({}), fail: async () => ({}) }; }
 const answer = { schemaVersion: '1', type: 'answer', answer: { summaryAr: 'تم', facts: [], calculations: [], inferences: [], limitations: [], suggestions: [], evidenceInvocationIds: [] } };
+
+test('Gemini function-call responses never access the terminal text getter', () => {
+  let textAccessed = false;
+  const signedModelContent = { role: 'model', parts: [{ functionCall: { id: 'c1', name: 'read_0', args: {} }, thoughtSignature: 'signed-1' }] };
+  const response = {
+    get text(): string {
+      textAccessed = true;
+      throw new Error('non-text response must not be read as text');
+    },
+    functionCalls: [{ id: 'c1', name: 'read_0', args: {} }],
+    candidates: [{ content: signedModelContent }],
+    responseId: 'response-1',
+    usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 3 },
+  };
+
+  assert.deepEqual(normalizeGeminiAdminAIResponse(response), {
+    functionCalls: [{ id: 'c1', name: 'read_0', args: {} }],
+    modelContent: signedModelContent,
+    responseId: 'response-1',
+    inputTokenCount: 12,
+    outputTokenCount: 3,
+  });
+  assert.equal(textAccessed, false);
+});
 
 test('manual function loop performs multiple reads and forwards empty/truncated/rejected results as untrusted function responses', async () => {
   const requests: AdminAIProviderRequest[] = []; let readCalls = 0;

@@ -13,6 +13,14 @@ export interface AdminAIProviderResponse { text?: string; functionCalls?: Array<
 export type AdminAIProvider = (request: AdminAIProviderRequest) => Promise<AdminAIProviderResponse>;
 export interface AdminAIAgentResult { decision: AdminAIDecision; decisionHash: string; provider: string; model: string; providerResponseId: string | null; inputTokenCount: number | null; outputTokenCount: number | null; stepNumber: number; expectedTurnVersion: number; leaseToken: string }
 
+interface GeminiAdminAIResponse {
+  text: string | undefined;
+  functionCalls: Array<{ id?: string; name?: string; args?: unknown }> | undefined;
+  candidates?: Array<{ content?: unknown }>;
+  responseId?: string | null;
+  usageMetadata?: { promptTokenCount?: number | null; candidatesTokenCount?: number | null };
+}
+
 /**
  * A read callback renews the backend lease.  Keep that continuation state with
  * a later provider failure so the processor can record the terminal result
@@ -46,6 +54,30 @@ function parseTerminalDecision(providerText: string, actionTools: AdminAIActionT
   const decision = validateProposedActions(parseAdminAIDecision(JSON.parse(normalizedText)), actionTools);
   if (decision.type === 'request_reads') throw new AdminAIDecisionValidationError();
   return decision;
+}
+
+export function normalizeGeminiAdminAIResponse(response: GeminiAdminAIResponse): AdminAIProviderResponse {
+  const functionCalls = response.functionCalls?.map(call => ({
+    ...(call.id ? { id: call.id } : {}),
+    ...(call.name ? { name: call.name } : {}),
+    ...(call.args !== undefined ? { args: call.args } : {}),
+  }));
+  const modelContent = response.candidates?.[0]?.content;
+  const usage = response.usageMetadata;
+
+  // The SDK text accessor warns about non-text parts and has changed behavior
+  // across releases. A function-call response is not a terminal text response,
+  // so do not touch that accessor until the model actually returns text.
+  const text = functionCalls?.length ? undefined : response.text;
+
+  return {
+    ...(text ? { text } : {}),
+    ...(functionCalls?.length ? { functionCalls } : {}),
+    ...(modelContent ? { modelContent } : {}),
+    responseId: response.responseId ?? null,
+    inputTokenCount: usage?.promptTokenCount ?? null,
+    outputTokenCount: usage?.candidatesTokenCount ?? null,
+  };
 }
 
 function schemaAllows(schema: JsonObject, value: unknown): boolean {
@@ -108,9 +140,7 @@ async function defaultProvider(request: AdminAIProviderRequest): Promise<AdminAI
       automaticFunctionCalling: { disable: true },
     } as never,
   }));
-  const usage = response.usageMetadata;
-  const modelContent = response.candidates?.[0]?.content;
-  return { ...(response.text ? { text: response.text } : {}), ...(response.functionCalls ? { functionCalls: response.functionCalls.map(call => ({ ...(call.id ? { id: call.id } : {}), ...(call.name ? { name: call.name } : {}), ...(call.args ? { args: call.args } : {}) })) } : {}), ...(modelContent ? { modelContent } : {}), responseId: response.responseId ?? null, inputTokenCount: usage?.promptTokenCount ?? null, outputTokenCount: usage?.candidatesTokenCount ?? null };
+  return normalizeGeminiAdminAIResponse(response);
 }
 
 export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: AdminAICallbackClient, options: { provider?: AdminAIProvider; model?: string; cancelled?: () => Promise<boolean>; now?: () => number } = {}): Promise<AdminAIAgentResult> {
