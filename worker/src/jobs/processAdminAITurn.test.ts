@@ -42,6 +42,20 @@ test('provider failure telemetry exposes only a safe category and status', async
   assert.match(serialized, /503/);
   assert.doesNotMatch(serialized, /SECRET_NAME/);
 });
+test('wrapped callback rejection telemetry exposes only its safe code and status', async (testContext) => {
+  const context = claim(); const events: unknown[][] = []; const originalInfo = console.info;
+  console.info = (...args: unknown[]) => { events.push(args); };
+  testContext.after(() => { console.info = originalInfo; });
+  const processor = createAdminAITurnProcessor({
+    callbacks: clients(context, async () => ({})),
+    runAgent: async () => { throw new AdminAIAgentRuntimeError(new AdminAICallbackError('CALLBACK_REJECTED', false, 400), 'lease', 4); },
+    cancelled: async () => false,
+  });
+  await processor(fakeJob(context));
+  const serialized = JSON.stringify(events);
+  assert.match(serialized, /CALLBACK_REJECTED/);
+  assert.match(serialized, /400/);
+});
 test('failure after a read uses the renewed lease token', async () => {
   const context = claim(); let reported: unknown;
   const processor = createAdminAITurnProcessor({

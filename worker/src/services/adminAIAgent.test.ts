@@ -58,13 +58,15 @@ test('Admin AI retries a transient Gemini failure before failing the turn', asyn
 });
 
 test('manual function loop performs multiple reads and forwards empty/truncated/rejected results as untrusted function responses', async () => {
-  const requests: AdminAIProviderRequest[] = []; let readCalls = 0;
+  const requests: AdminAIProviderRequest[] = []; let readCalls = 0; let callbackPayload: Record<string, unknown> | undefined;
   const signedModelContent = { role: 'model', parts: [{ functionCall: { id: 'c1', name: 'read_0', args: { query: 'أ' } }, thoughtSignature: 'signed-1' }, { functionCall: { id: 'c2', name: 'read_0', args: { query: 'ب' } }, thoughtSignature: 'signed-2' }] };
   const provider = async (request: AdminAIProviderRequest) => { requests.push(request); return requests.length === 1 ? { functionCalls: [{ id: 'c1', name: 'read_0', args: { query: 'أ' } }, { id: 'c2', name: 'read_0', args: { query: 'ب' } }], modelContent: signedModelContent } : { text: JSON.stringify(answer) }; };
-  const result = await runAdminAIAgent(claim(), callbacks(async (_turn, _step, payload) => { readCalls++; const calls = payload.calls as Array<{ callId: string }>; return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: calls[0]!.callId, status: 'Empty', data: {} }, { callId: calls[1]!.callId, status: 'Truncated', data: { count: 25 } }, { callId: 'extra', status: 'Rejected', safeErrorCode: 'READ_ARGUMENTS_INVALID' }] }; }), { provider, model: 'test' });
+  const result = await runAdminAIAgent(claim(), callbacks(async (_turn, _step, payload) => { readCalls++; callbackPayload = payload; const calls = payload.calls as Array<{ callId: string }>; return { turnVersion: 5, leaseToken: 'lease-2', results: [{ callId: calls[0]!.callId, status: 'Empty', data: {} }, { callId: calls[1]!.callId, status: 'Truncated', data: { count: 25 } }, { callId: 'extra', status: 'Rejected', safeErrorCode: 'READ_ARGUMENTS_INVALID' }] }; }), { provider, model: 'test' });
   assert.equal(readCalls, 1); assert.equal(requests.length, 2); assert.equal(result.expectedTurnVersion, 5); assert.equal(result.leaseToken, 'lease-2');
   assert.deepEqual(requests[1]!.contents.at(-2), signedModelContent);
   assert.deepEqual((requests[1]!.contents.at(-1) as { parts: Array<{ functionResponse: { id?: string } }> }).parts.map(part => part.functionResponse.id), ['c1', 'c2']);
+  assert.deepEqual(Object.keys((callbackPayload!.calls as Record<string, unknown>[])[0]!).sort(), ['arguments', 'callId', 'capabilityKey']);
+  assert.doesNotMatch(JSON.stringify(callbackPayload), /functionName/);
   assert.match(JSON.stringify(requests[1]!.contents), /Empty/); assert.match(JSON.stringify(requests[1]!.contents), /Truncated/);
   assert.deepEqual(requests[0]!.readFunctions.map(tool => tool.name), ['read_0']); assert.doesNotMatch(JSON.stringify(requests[0]), /googleSearch|mcp|codeExecution|automaticFunctionCalling/);
 });

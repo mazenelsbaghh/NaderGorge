@@ -16,13 +16,11 @@ function failureCode(error: unknown) {
   return 'AI_PROVIDER_FAILURE';
 }
 
-function safeProviderFailureDimensions(error: unknown) {
+function safeFailureDimensions(error: unknown) {
   const cause = error instanceof AdminAIAgentRuntimeError ? error.causeError : error;
-  if (!(cause instanceof GeminiDeveloperApiError)) return {};
-  return {
-    failureCategory: safeAdminAITelemetryLabel(cause.category),
-    ...(cause.providerStatus === undefined ? {} : { status: cause.providerStatus }),
-  };
+  if (cause instanceof GeminiDeveloperApiError) return { failureCategory: safeAdminAITelemetryLabel(cause.category), ...(cause.providerStatus === undefined ? {} : { status: cause.providerStatus }) };
+  if (cause instanceof AdminAICallbackError) return { failureCategory: safeAdminAITelemetryLabel(cause.code), ...(cause.httpStatus === undefined ? {} : { status: cause.httpStatus }) };
+  return {};
 }
 
 export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}) {
@@ -55,7 +53,7 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
         return { success: false, reason: 'CALLBACK_REJECTED' };
       }
       const code = failureCode(error);
-      const providerFailure = safeProviderFailureDimensions(error);
+      const providerFailure = safeFailureDimensions(error);
       recordAdminAIMetric('model_outcome', 1, { outcome: 'failure', failureCode: code, ...providerFailure });
       logAdminAIEvent('turn_failed', { outcome: 'failure', failureCode: code, ...providerFailure });
       const leaseToken = error instanceof AdminAIAgentRuntimeError ? error.leaseToken : context.leaseToken;
