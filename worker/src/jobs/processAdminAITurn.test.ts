@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import type { Job } from 'bullmq';
 import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from '../services/adminAICallbackClient.js';
 import { AdminAIAgentRuntimeError } from '../services/adminAIAgent.js';
+import { GeminiDeveloperApiError } from '../services/aiProvider.js';
 import { createAdminAITurnProcessor, type AdminAITurnJobData } from './processAdminAITurn.js';
 
 function claim(): AdminAIClaimContext { return { schemaVersion: '1', turnId: crypto.randomUUID(), conversationId: crypto.randomUUID(), actorAdminUserId: crypto.randomUUID(), stepNumber: 1, expectedTurnVersion: 4, expectedConversationVersion: 1, expectedSecurityVersion: 1, capabilityBaseline: { id: crypto.randomUUID(), version: 'b1', manifestHash: 'a'.repeat(64) }, sensitiveDataPolicy: { id: crypto.randomUUID(), version: 'p1', policyHash: 'b'.repeat(64) }, leaseToken: 'lease', leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(), callbackIdempotencyKey: 'cb', deadlineAt: new Date(Date.now() + 60_000).toISOString(), systemInstructions: 'safe', messages: [], readTools: [], actionTools: [], budgets: {} }; }
@@ -25,6 +26,21 @@ test('provider failure callback contains only stable safe code and no raw error'
   const context = claim(); let reported: unknown;
   const processor = createAdminAITurnProcessor({ callbacks: clients(context, async () => ({}), async (_id, payload) => { reported = payload; return {}; }), runAgent: async () => { throw new Error('SECRET_PROVIDER_BODY'); }, cancelled: async () => false });
   assert.equal((await processor(fakeJob(context))).reason, 'AI_PROVIDER_FAILURE'); assert.doesNotMatch(JSON.stringify(reported), /SECRET_PROVIDER_BODY/);
+});
+test('provider failure telemetry exposes only a safe category and status', async (testContext) => {
+  const context = claim(); const events: unknown[][] = []; const originalInfo = console.info;
+  console.info = (...args: unknown[]) => { events.push(args); };
+  testContext.after(() => { console.info = originalInfo; });
+  const processor = createAdminAITurnProcessor({
+    callbacks: clients(context, async () => ({})),
+    runAgent: async () => { throw new AdminAIAgentRuntimeError(new GeminiDeveloperApiError('provider-overloaded', 'SECRET_NAME', 503), 'lease', 4); },
+    cancelled: async () => false,
+  });
+  await processor(fakeJob(context));
+  const serialized = JSON.stringify(events);
+  assert.match(serialized, /provider-overloaded/);
+  assert.match(serialized, /503/);
+  assert.doesNotMatch(serialized, /SECRET_NAME/);
 });
 test('failure after a read uses the renewed lease token', async () => {
   const context = claim(); let reported: unknown;

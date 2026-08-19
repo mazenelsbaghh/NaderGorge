@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
-import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
+import { AdminAIAgentRuntimeError, assembleAdminAIPrompt, normalizeGeminiAdminAIResponse, requestAdminAIGemini, runAdminAIAgent, validateProposedActions, type AdminAIProviderRequest } from './adminAIAgent.js';
 import { parseAdminAIDecision } from './adminAIDecisionSchema.js';
+import { setGeminiRetryWaitForTests } from './aiProvider.js';
 
 function claim(overrides: Partial<AdminAIClaimContext> = {}): AdminAIClaimContext {
   return { schemaVersion: '1', turnId: crypto.randomUUID(), conversationId: crypto.randomUUID(), actorAdminUserId: crypto.randomUUID(), stepNumber: 1, expectedTurnVersion: 4, expectedConversationVersion: 2, expectedSecurityVersion: 3, capabilityBaseline: { id: crypto.randomUUID(), version: 'base-1', manifestHash: 'a'.repeat(64) }, sensitiveDataPolicy: { id: crypto.randomUUID(), version: 'policy-1', policyHash: 'b'.repeat(64) }, leaseToken: 'lease-1', leaseExpiresAt: new Date(Date.now() + 60_000).toISOString(), callbackIdempotencyKey: 'callback-1', deadlineAt: new Date(Date.now() + 60_000).toISOString(), systemInstructions: 'ساعد الأدمن بأمان.', messages: [{ role: 'user', content: 'اعرض الطلاب', createdAt: new Date().toISOString() }], readTools: [{ key: 'students.search', descriptionAr: 'بحث محدود', parametersJsonSchema: { type: 'object', properties: { query: { type: 'string', maxLength: 20 } }, required: ['query'], additionalProperties: false }, maxResultRecords: 25, timeoutMs: 5000 }], actionTools: [{ key: 'student.note.add', descriptionAr: 'إضافة ملاحظة', parametersJsonSchema: { type: 'object', properties: { studentId: { type: 'string' }, note: { type: 'string', maxLength: 100 } }, required: ['studentId', 'note'], additionalProperties: false }, confirmationType: 'Explicit' }], budgets: { maxModelSteps: 3, maxReadCalls: 6, maxReadCallsPerStep: 4, remainingReadCalls: 6, remainingRedactedContextBytes: 65_536 }, ...overrides };
@@ -32,6 +33,28 @@ test('Gemini function-call responses never access the terminal text getter', () 
     outputTokenCount: 3,
   });
   assert.equal(textAccessed, false);
+});
+
+test('Admin AI retries a transient Gemini failure before failing the turn', async (testContext) => {
+  let attempts = 0;
+  setGeminiRetryWaitForTests(async () => undefined);
+  testContext.after(() => setGeminiRetryWaitForTests());
+  const client = { models: { generateContent: async () => {
+    attempts += 1;
+    if (attempts < 3) throw { name: 'ApiError', status: 503 };
+    return { text: JSON.stringify(answer), functionCalls: undefined };
+  } } };
+
+  const response = await requestAdminAIGemini(client, {
+    model: 'gemini-flash',
+    systemInstruction: 'safe',
+    contents: [{ role: 'user', parts: [{ text: 'كم عدد الطلاب؟' }] }],
+    readFunctions: [],
+    deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+
+  assert.equal(attempts, 3);
+  assert.equal(response.text, JSON.stringify(answer));
 });
 
 test('manual function loop performs multiple reads and forwards empty/truncated/rejected results as untrusted function responses', async () => {

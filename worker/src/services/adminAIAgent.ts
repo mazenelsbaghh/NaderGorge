@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'node:crypto';
 import type { AdminAICallbackClient, AdminAIClaimContext } from './adminAICallbackClient.js';
 import { readAIConfig } from './aiConfig.js';
-import { executeGeminiRequest } from './aiProvider.js';
+import { executeRetriableGeminiRequest } from './aiProvider.js';
 import { AdminAIDecisionValidationError, hashAdminAIDecision, parseAdminAIDecision, type AdminAIDecision, type JsonObject } from './adminAIDecisionSchema.js';
 import { recordAdminAIMetric, safeAdminAITelemetryLabel } from './adminAITelemetry.js';
 
@@ -127,10 +127,15 @@ export function assembleAdminAIPrompt(claim: AdminAIClaimContext) {
   return { systemInstruction: boundedSystemInstruction, contents };
 }
 
-async function defaultProvider(request: AdminAIProviderRequest): Promise<AdminAIProviderResponse> {
-  const config = readAIConfig();
-  const client = new GoogleGenAI({ apiKey: config.developerApiKey });
-  const response = await executeGeminiRequest(signal => client.models.generateContent({
+interface AdminAIGeminiClient {
+  models: { generateContent: (request: unknown) => Promise<GeminiAdminAIResponse> };
+}
+
+export async function requestAdminAIGemini(client: AdminAIGeminiClient, request: AdminAIProviderRequest): Promise<AdminAIProviderResponse> {
+  // Admin requests use the same bounded retry policy as the other Gemini
+  // workloads. A transient 429/5xx or provider timeout must not immediately
+  // become a terminal turn failure for the administrator.
+  const response = await executeRetriableGeminiRequest(signal => client.models.generateContent({
     model: request.model,
     contents: request.contents as never,
     config: {
@@ -141,6 +146,12 @@ async function defaultProvider(request: AdminAIProviderRequest): Promise<AdminAI
     } as never,
   }));
   return normalizeGeminiAdminAIResponse(response);
+}
+
+async function defaultProvider(request: AdminAIProviderRequest): Promise<AdminAIProviderResponse> {
+  const config = readAIConfig();
+  const client = new GoogleGenAI({ apiKey: config.developerApiKey });
+  return requestAdminAIGemini(client as AdminAIGeminiClient, request);
 }
 
 export async function runAdminAIAgent(claim: AdminAIClaimContext, callbacks: AdminAICallbackClient, options: { provider?: AdminAIProvider; model?: string; cancelled?: () => Promise<boolean>; now?: () => number } = {}): Promise<AdminAIAgentResult> {

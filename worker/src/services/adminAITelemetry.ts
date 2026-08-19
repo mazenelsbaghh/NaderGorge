@@ -1,6 +1,6 @@
 export type AdminAIMetric = 'queue_age' | 'model_latency' | 'model_outcome' | 'read_outcome' | 'proposal_count' | 'execution_outcome' | 'recovery_outcome';
 type DimensionValue = string | number | boolean;
-const allowedDimensions = new Set(['queue', 'outcome', 'provider', 'model', 'decisionType', 'capabilityKey', 'status', 'failureCode', 'countBucket', 'latencyBucket']);
+const allowedDimensions = new Set(['queue', 'outcome', 'provider', 'model', 'decisionType', 'capabilityKey', 'status', 'failureCode', 'failureCategory', 'countBucket', 'latencyBucket']);
 const identifier = /^[a-zA-Z0-9._:-]{1,80}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

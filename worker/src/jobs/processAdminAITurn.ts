@@ -3,6 +3,7 @@ import { throwIfCancellationRequested } from '../cancellation.js';
 import { AdminAIAgentRuntimeError, runAdminAIAgent, type AdminAIAgentResult } from '../services/adminAIAgent.js';
 import { AdminAICallbackError, createAdminAICallbackClient, type AdminAICallbackClient } from '../services/adminAICallbackClient.js';
 import { logAdminAIEvent, recordAdminAIMetric, safeAdminAITelemetryLabel } from '../services/adminAITelemetry.js';
+import { GeminiDeveloperApiError } from '../services/aiProvider.js';
 
 export interface AdminAITurnCompletion extends Record<string, unknown> { schemaVersion: '1'; leaseToken: string; expectedTurnVersion: number; expectedStepNumber: number; expectedBaselineVersion: string; expectedSensitivePolicyVersion: string; decision: AdminAIAgentResult['decision']; decisionHash: string; callbackIdempotencyKey: string; provider: string; model: string; providerResponseId: string | null; inputTokenCount: number | null; outputTokenCount: number | null; latencyMs: number }
 export interface AdminAITurnJobData { schemaVersion: '1'; turnId: string; conversationId: string; queuedAt: string; completion?: AdminAITurnCompletion | null }
@@ -13,6 +14,15 @@ function failureCode(error: unknown) {
   if (error instanceof Error && ['AI_PROVIDER_TIMEOUT', 'CANCELLED', 'TOOL_BUDGET_EXCEEDED'].includes(error.message)) return error.message;
   if (error instanceof Error && (error.name === 'AdminAIDecisionValidationError' || ['AI_INVALID_DECISION', 'ACTION_NOT_ALLOWED', 'READ_CAPABILITY_NOT_ALLOWED', 'REDACTED_CONTEXT_LIMIT'].includes(error.message))) return error.message === 'CANCELLED' ? 'CANCELLED' : error.message === 'TOOL_BUDGET_EXCEEDED' || error.message === 'REDACTED_CONTEXT_LIMIT' ? 'TOOL_BUDGET_EXCEEDED' : 'AI_INVALID_DECISION';
   return 'AI_PROVIDER_FAILURE';
+}
+
+function safeProviderFailureDimensions(error: unknown) {
+  const cause = error instanceof AdminAIAgentRuntimeError ? error.causeError : error;
+  if (!(cause instanceof GeminiDeveloperApiError)) return {};
+  return {
+    failureCategory: safeAdminAITelemetryLabel(cause.category),
+    ...(cause.providerStatus === undefined ? {} : { status: cause.providerStatus }),
+  };
 }
 
 export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}) {
@@ -45,8 +55,9 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
         return { success: false, reason: 'CALLBACK_REJECTED' };
       }
       const code = failureCode(error);
-      recordAdminAIMetric('model_outcome', 1, { outcome: 'failure', failureCode: code });
-      logAdminAIEvent('turn_failed', { outcome: 'failure', failureCode: code });
+      const providerFailure = safeProviderFailureDimensions(error);
+      recordAdminAIMetric('model_outcome', 1, { outcome: 'failure', failureCode: code, ...providerFailure });
+      logAdminAIEvent('turn_failed', { outcome: 'failure', failureCode: code, ...providerFailure });
       const leaseToken = error instanceof AdminAIAgentRuntimeError ? error.leaseToken : context.leaseToken;
       await dependencies.callbacks.fail(turnId, { schemaVersion: '1', leaseToken, callbackIdempotencyKey: context.callbackIdempotencyKey, failureCode: code, provider: null, model: null, latencyMs: Math.max(0, dependencies.now() - startedAt) });
       return { success: false, reason: code, failureReported: true };
