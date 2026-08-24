@@ -85,6 +85,71 @@ test('eligible read aggregation retains per-identity counts for duplicate recomp
   ]);
 });
 
+test('RSC identity distinguishes segment prefetches and retains true duplicates', () => {
+  const allowedOrigins = {
+    appOrigin: 'https://app.example.test',
+    apiOrigin: 'https://api.example.test',
+  };
+  const request = {
+    method: 'GET',
+    resourceType: 'fetch',
+    url: 'https://app.example.test/login?_rsc=transient',
+    headers: {
+      'next-router-prefetch': '1',
+      'next-router-segment-prefetch': '/_tree/_index',
+    },
+  };
+  const firstSegment = eligibleReadIdentity(request, allowedOrigins);
+  const repeatedSegment = eligibleReadIdentity(
+    { ...request, url: request.url.replace('transient', 'another') },
+    allowedOrigins,
+  );
+  const differentSegment = eligibleReadIdentity(
+    {
+      ...request,
+      headers: {
+        ...request.headers,
+        'next-router-segment-prefetch': '/_tree/login',
+      },
+    },
+    allowedOrigins,
+  );
+  const navigation = eligibleReadIdentity(
+    { ...request, headers: {} },
+    allowedOrigins,
+  );
+
+  assert.deepEqual(firstSegment, repeatedSegment);
+  assert.notDeepEqual(firstSegment, differentSegment);
+  assert.notDeepEqual(firstSegment, navigation);
+  assert.deepEqual(
+    aggregateEligibleReads([
+      firstSegment!,
+      repeatedSegment!,
+      differentSegment!,
+      navigation!,
+    ]),
+    [
+      { ...firstSegment!, count: 2 },
+      { ...differentSegment!, count: 1 },
+      { ...navigation!, count: 1 },
+    ].sort((left, right) =>
+      `${left.category}:${left.identitySha256}`.localeCompare(
+        `${right.category}:${right.identitySha256}`,
+      )),
+  );
+  assert.throws(
+    () => eligibleReadIdentity(
+      {
+        ...request,
+        headers: { 'next-router-prefetch': '1' },
+      },
+      allowedOrigins,
+    ),
+    /missing next-router-segment-prefetch/,
+  );
+});
+
 test('nearest-rank p75 uses the fifteenth value from exactly twenty samples', () => {
   assert.equal(nearestRankP75(Array.from({ length: 20 }, (_, index) => index + 1)), 15);
   assert.throws(() => nearestRankP75([1, 2, 3]), /requires 20/);

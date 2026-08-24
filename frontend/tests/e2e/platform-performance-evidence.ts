@@ -6,6 +6,7 @@ type RequestIdentityInput = {
   method: string;
   resourceType: string;
   url: string;
+  headers?: Record<string, string | undefined>;
 };
 
 export type EligibleReadOrigins = {
@@ -46,6 +47,21 @@ export function eligibleReadIdentity(
   const category: EligibleReadCategory = url.searchParams.has('_rsc')
     ? 'rsc-read'
     : 'api-read';
+  let semanticDiscriminator = 'request';
+  if (category === 'rsc-read') {
+    const routerPrefetch = request.headers?.['next-router-prefetch'];
+    if (routerPrefetch === '1') {
+      const segment = request.headers?.['next-router-segment-prefetch'];
+      if (!segment) {
+        throw new Error(
+          'RSC segment prefetch is missing next-router-segment-prefetch.',
+        );
+      }
+      semanticDiscriminator = `segment:${segment}`;
+    } else {
+      semanticDiscriminator = 'navigation';
+    }
+  }
   url.searchParams.delete('_rsc');
   const sortedQuery = [...url.searchParams.entries()].sort(
     ([leftKey, leftValue], [rightKey, rightValue]) =>
@@ -53,7 +69,9 @@ export function eligibleReadIdentity(
   );
   const canonicalQuery = new URLSearchParams(sortedQuery).toString();
   const identitySha256 = createHash('sha256')
-    .update(`${category}\0${originClass}\0${url.pathname}\0${canonicalQuery}`)
+    .update(
+      `${category}\0${originClass}\0${url.pathname}\0${canonicalQuery}\0${semanticDiscriminator}`,
+    )
     .digest('hex');
 
   return { identitySha256, category };

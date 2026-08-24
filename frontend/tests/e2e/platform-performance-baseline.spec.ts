@@ -64,6 +64,7 @@ function repositoryRoot() {
 function startEligibleReadCapture(page: Page, allowedOrigins: EligibleReadOrigins) {
   const identities: EligibleReadIdentity[] = [];
   const trackedRequests = new WeakSet<Request>();
+  let captureFailure: Error | null = null;
   let quietStartedAt = 0;
   let lastActivityAt = performance.now();
 
@@ -71,11 +72,21 @@ function startEligibleReadCapture(page: Page, allowedOrigins: EligibleReadOrigin
     lastActivityAt = performance.now();
   };
   const onRequest = (request: Request) => {
-    const identity = eligibleReadIdentity({
-      method: request.method(),
-      resourceType: request.resourceType(),
-      url: request.url(),
-    }, allowedOrigins);
+    let identity: EligibleReadIdentity | null;
+    try {
+      identity = eligibleReadIdentity({
+        method: request.method(),
+        resourceType: request.resourceType(),
+        url: request.url(),
+        headers: request.headers(),
+      }, allowedOrigins);
+    } catch (error) {
+      captureFailure = error instanceof Error
+        ? error
+        : new Error('Eligible-read classification failed.');
+      recordActivity();
+      return;
+    }
     if (!identity) return;
     trackedRequests.add(request);
     identities.push(identity);
@@ -106,6 +117,7 @@ function startEligibleReadCapture(page: Page, allowedOrigins: EligibleReadOrigin
       }
       try {
         for (;;) {
+          if (captureFailure) throw captureFailure;
           const now = performance.now();
           if (now - lastActivityAt >= QUIET_WINDOW_MS) {
             return aggregateEligibleReads(identities);
