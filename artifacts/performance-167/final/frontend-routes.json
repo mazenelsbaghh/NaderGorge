@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "evidenceType": "assembled-performance-candidate",
+  "source": {
+    "releaseId": "git-b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
+    "measuredGitCommit": "b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
+    "sourceStateSha256": "b34387fc9e267baf4128a0b7cbc6df1b113d112abd27b65e3cf2c01d642f1cc9",
+    "dirtySourceSnapshot": false,
+    "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
+    "manifestSha256": "f2e3e09371730428e4d49f8c66be2180169beda65e59513aadde8299f02a8b93",
+    "commitBinding": "measured-commit-source-digest-authoritative"
+  },
+  "rawEvidence": {
+    "sourceManifest": {
+      "path": "artifacts/performance-167/final/raw/source-manifest.json",
+      "sha256": "f2e3e09371730428e4d49f8c66be2180169beda65e59513aadde8299f02a8b93"
+    },
+    "routeResources": {
+      "path": "artifacts/performance-167/final/raw/route-resources.json",
+      "sha256": "0a577b4cc6b2b721de9de3142892ac43617e4ac75e212d7c7bb1b104b4f93352"
+    },
+    "browserSamples": {
+      "path": "artifacts/performance-167/final/raw/browser-samples.json",
+      "sha256": "48c1219eebf8fecdc38d6dcbf46515a4b4b07f7f4eeb55f9677356bcacb20fbb"
+    },
+    "liveSupportQuery": {
+      "path": "artifacts/performance-167/final/raw/live-support-query.json",
+      "sha256": "de876b0feab3b9a26c0ae16d4fc4d39c134414733b111f393cd342d3faddf0ac"
+    }
+  },
+  "measurement": {
+    "productionBuildExecuted": true,
+    "buildId": "Q_x5a1cVRLo3-fl85H-8L",
+    "compression": {
+      "gzipLevel": 9,
+      "brotliQuality": 11,
+      "note": "Deterministic local compression for before/after comparison; effective transfer is verified separately."
+    },
+    "browserProfile": {
+      "name": "Pixel 5 / Android Chromium",
+      "browserName": "chromium",
+      "viewport": {
+        "width": 393,
+        "height": 727
+      },
+      "productionServer": true,
+      "buildId": "Q_x5a1cVRLo3-fl85H-8L"
+    },
+    "browserSampling": {
+      "warmupCount": 3,
+      "measuredCount": 20,
+      "quietWindowMs": 250,
+      "quietTimeoutMs": 2000,
+      "percentileMethod": "nearest-rank"
+    }
+  },
+  "routes": {
+    "login": {
+      "pathname": "/login",
+      "initial": {
+        "resourceCount": 3,
+        "bytes": 81070,
+        "gzipBytes": 29252,
+        "brotliBytes": 25671
+      },
+      "shared": {
+        "resourceCount": 10,
+        "bytes": 736192,
+        "gzipBytes": 173422,
+        "brotliBytes": 145880
+      },
+      "deferred": {
+        "resourceCount": 0,
+        "bytes": 0,
+        "gzipBytes": 0,
+        "brotliBytes": 0
+      },
+      "requests": {
+        "duplicateEligibleReads": 0,
+        "sampleCount": 20
+      },
+      "navigation": {
+        "warmP75Ms": 126.5049999999992,
+        "sampleCount": 20,
+        "percentileMethod": "nearest-rank"
+      }
+    },
+    "register": {
+      "pathname": "/register",
+      "initial": {
+        "resourceCount": 4,
+        "bytes": 149306,
+        "gzipBytes": 47584,
+        "brotliBytes": 41291
+      },
+      "shared": {
+        "resourceCount": 10,
+        "bytes": 736192,
+        "gzipBytes": 173422,
+        "brotliBytes": 145880
+      },
+      "deferred": {
+        "resourceCount": 0,
+        "bytes": 0,
+        "gzipBytes": 0,
+        "brotliBytes": 0
+      },
+      "requests": {
+        "duplicateEligibleReads": 0,
+        "sampleCount": 20
+      },
+      "navigation": {
+        "warmP75Ms": 133.23612500000309,
+        "sampleCount": 20,
+        "percentileMethod": "nearest-rank"
+      }
+    },
+    "student": {
+      "pathname": "/student",
+      "initial": {
+        "resourceCount": 7,
+        "bytes": 176034,
+        "gzipBytes": 55004,
+        "brotliBytes": 47521
+      },
+      "shared": {
+        "resourceCount": 10,
+        "bytes": 736192,
+        "gzipBytes": 173422,
+        "brotliBytes": 145880
+      },
+      "deferred": {
+        "resourceCount": 0,
+        "bytes": 0,
+        "gzipBytes": 0,
+        "brotliBytes": 0
+      },
+      "requests": {
+        "duplicateEligibleReads": 0,
+        "sampleCount": 20
+      },
+      "navigation": {
+        "warmP75Ms": 129.6258749999979,
+        "sampleCount": 20,
+        "percentileMethod": "nearest-rank"
+      }
+    },
+    "admin": {
+      "pathname": "/admin",
+      "initial": {
+        "resourceCount": 15,
+        "bytes": 1180929,
+        "gzipBytes": 301654,
+        "brotliBytes": 243736
+      },
+      "shared": {
+        "resourceCount": 10,
+        "bytes": 736192,
+        "gzipBytes": 173422,
+        "brotliBytes": 145880
+      },
+      "deferred": {
+        "resourceCount": 0,
+        "bytes": 0,
+        "gzipBytes": 0,
+        "brotliBytes": 0
+      }
+    }
+  },
+  "workflows": {
+    "live-support-admin": {
+      "maximumDatabaseCommandsObserved": 12,
+      "representativeRowCounts": [
+        1,
+        20,
+        100
+      ],
+      "measurementCount": 3
+    }
+  }
+}

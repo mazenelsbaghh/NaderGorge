@@ -1,0 +1,1886 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "browser-performance-samples",
+  "source": {
+    "releaseId": "git-b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
+    "gitCommit": "b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
+    "sourceStateSha256": "b34387fc9e267baf4128a0b7cbc6df1b113d112abd27b65e3cf2c01d642f1cc9",
+    "dirtySourceSnapshot": false,
+    "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
+    "manifestSha256": "f2e3e09371730428e4d49f8c66be2180169beda65e59513aadde8299f02a8b93"
+  },
+  "profile": {
+    "name": "Pixel 5 / Android Chromium",
+    "browserName": "chromium",
+    "viewport": {
+      "width": 393,
+      "height": 727
+    },
+    "productionServer": true,
+    "buildId": "Q_x5a1cVRLo3-fl85H-8L"
+  },
+  "sampling": {
+    "warmupCount": 3,
+    "measuredCount": 20,
+    "quietWindowMs": 250,
+    "quietTimeoutMs": 2000,
+    "percentileMethod": "nearest-rank"
+  },
+  "routes": {
+    "login": {
+      "pathname": "/login",
+      "samples": [
+        {
+          "sequence": 1,
+          "warmNavigationMs": 127.50154199999997,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 2,
+          "warmNavigationMs": 119.78758299999936,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 3,
+          "warmNavigationMs": 142.3371670000015,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 4,
+          "warmNavigationMs": 126.5049999999992,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 5,
+          "warmNavigationMs": 133.67454200000066,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 6,
+          "warmNavigationMs": 123.58529199999975,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 7,
+          "warmNavigationMs": 124.98629100000107,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 8,
+          "warmNavigationMs": 126.8045409999977,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 9,
+          "warmNavigationMs": 124.42391700000007,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 10,
+          "warmNavigationMs": 129.36583299999984,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 11,
+          "warmNavigationMs": 122.10612499999843,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 12,
+          "warmNavigationMs": 125.10895800000071,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 13,
+          "warmNavigationMs": 122.2011670000029,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 14,
+          "warmNavigationMs": 121.31208300000071,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 15,
+          "warmNavigationMs": 123.86758300000292,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 16,
+          "warmNavigationMs": 117.9275000000016,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 17,
+          "warmNavigationMs": 120.84554099999878,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 18,
+          "warmNavigationMs": 120.86483299999963,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 19,
+          "warmNavigationMs": 118.92599999999948,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 20,
+          "warmNavigationMs": 117.11162499999773,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "register": {
+      "pathname": "/register",
+      "samples": [
+        {
+          "sequence": 1,
+          "warmNavigationMs": 123.75479199999972,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 2,
+          "warmNavigationMs": 123.87183299999742,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 3,
+          "warmNavigationMs": 121.68537500000093,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 4,
+          "warmNavigationMs": 132.17891700000473,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 5,
+          "warmNavigationMs": 134.86912499999744,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 6,
+          "warmNavigationMs": 142.38950000000477,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 7,
+          "warmNavigationMs": 126.17766699999629,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 8,
+          "warmNavigationMs": 126.99470799999835,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 9,
+          "warmNavigationMs": 134.17924999999377,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 10,
+          "warmNavigationMs": 131.8935829999973,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 11,
+          "warmNavigationMs": 129.7401250000039,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 12,
+          "warmNavigationMs": 134.03800000000047,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 13,
+          "warmNavigationMs": 130.7734999999957,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 14,
+          "warmNavigationMs": 127.71308300000237,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 15,
+          "warmNavigationMs": 127.78891699999804,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 16,
+          "warmNavigationMs": 133.23612500000309,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 17,
+          "warmNavigationMs": 130.89837499999703,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 18,
+          "warmNavigationMs": 136.22212500000023,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 19,
+          "warmNavigationMs": 127.66662499999802,
+          "eligibleReads": []
+        },
+        {
+          "sequence": 20,
+          "warmNavigationMs": 128.4596249999886,
+          "eligibleReads": []
+        }
+      ]
+    },
+    "student": {
+      "pathname": "/student",
+      "samples": [
+        {
+          "sequence": 1,
+          "warmNavigationMs": 122.14074999999139,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 2,
+          "warmNavigationMs": 126.00345899999957,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 3,
+          "warmNavigationMs": 140.1478749999951,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 4,
+          "warmNavigationMs": 122.63775000000896,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 5,
+          "warmNavigationMs": 126.34779200000048,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 6,
+          "warmNavigationMs": 129.0445000000036,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 7,
+          "warmNavigationMs": 127.47695799999929,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 8,
+          "warmNavigationMs": 123.03058299999975,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 9,
+          "warmNavigationMs": 129.6258749999979,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 10,
+          "warmNavigationMs": 138.16358300000138,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 11,
+          "warmNavigationMs": 112.42837499998859,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 12,
+          "warmNavigationMs": 133.85520800000813,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 13,
+          "warmNavigationMs": 140.79404199999408,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 14,
+          "warmNavigationMs": 117.292082999993,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 15,
+          "warmNavigationMs": 129.61595799999486,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 16,
+          "warmNavigationMs": 121.7175419999985,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 17,
+          "warmNavigationMs": 136.80533400000422,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 18,
+          "warmNavigationMs": 122.91916700000002,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 19,
+          "warmNavigationMs": 128.12399999999616,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "sequence": 20,
+          "warmNavigationMs": 124.58529100001033,
+          "eligibleReads": [
+            {
+              "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "35373e64606a97fdfb5637c4c3d571013a2a99907421d9140a8a7fdaba5aa3d5",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8f70ca6192383d447bdcdb467d10aff169aa6726b45da47f0edd01bb3815c968",
+              "category": "api-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "f22e13aff4e222af97d51c725289ff65be0a64abcdf2add54f496502d0dea34a",
+              "category": "api-read",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
