@@ -509,7 +509,7 @@ public sealed class LiveSupportQueryBudgetTests
         {
             UserId = staff.Id,
             IsEnabled = true,
-            MaxActiveConversations = rowCount,
+            MaxActiveConversations = 1,
             ConfiguredByUserId = staff.Id,
             Version = 1
         });
@@ -536,16 +536,25 @@ public sealed class LiveSupportQueryBudgetTests
         Guid staffId,
         int index)
     {
-        db.LiveSupportAssignments.Add(new LiveSupportAssignment
+        db.LiveSupportAssignments.Add(NewAssignment(conversation, staffId));
+        db.LiveSupportMessages.Add(NewMessage(conversation, studentId, index));
+        db.LiveSupportEvents.Add(NewEvent(conversation, studentId, index));
+    }
+
+    private static LiveSupportAssignment NewAssignment(
+        LiveSupportConversation conversation,
+        Guid staffId) =>
+        new()
         {
             ConversationId = conversation.Id,
             StaffUserId = staffId,
             StartedAt = conversation.AssignedAt!.Value,
+            EndedAt = conversation.ClosedAt,
+            EndReason = conversation.ClosedAt.HasValue
+                ? LiveSupportAssignmentEndReason.Closed
+                : null,
             AssignmentSequence = 1
-        });
-        db.LiveSupportMessages.Add(NewMessage(conversation, studentId, index));
-        db.LiveSupportEvents.Add(NewEvent(conversation, studentId, index));
-    }
+        };
 
     private static void AddTimelineRows(
         AppDbContext db,
@@ -566,15 +575,22 @@ public sealed class LiveSupportQueryBudgetTests
         int index)
     {
         var createdAt = DateTime.UtcNow.AddMinutes(-index - 1);
+        var isOpen = index == 0;
+        DateTime? closedAt = isOpen ? null : createdAt.AddSeconds(3);
         return new LiveSupportConversation
         {
             ParticipantType = LiveSupportParticipantType.Student,
             StudentUserId = studentId,
             LinkedStudentUserId = studentId,
-            CurrentOwnerUserId = staffId,
-            Status = LiveSupportConversationStatus.Active,
+            CurrentOwnerUserId = isOpen ? staffId : null,
+            Status = isOpen
+                ? LiveSupportConversationStatus.Active
+                : LiveSupportConversationStatus.Closed,
             AssignedAt = createdAt.AddSeconds(1),
             LastMessageAt = createdAt.AddSeconds(2),
+            ClosedAt = closedAt,
+            ClosedByUserId = isOpen ? null : staffId,
+            CloseReason = isOpen ? null : "representative-history",
             Subject = $"budget-{index}",
             Version = 1,
             CreatedAt = createdAt

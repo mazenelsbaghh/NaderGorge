@@ -967,42 +967,63 @@ public sealed class LiveSupportService(
         var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo);
         var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localNow.Date, DateTimeKind.Unspecified), cairo);
-        var whatsAppConversationQuery =
-            from binding in _db.LiveSupportWhatsAppBindings.AsNoTracking()
-            join conversation in _db.LiveSupportConversations.AsNoTracking() on binding.ConversationId equals conversation.Id
-            select new { conversation.Status, conversation.ClosedAt };
-        var whatsAppConversationCounts = await whatsAppConversationQuery
+        var conversationOperations = await (
+            from conversation in _db.LiveSupportConversations.AsNoTracking()
+            join binding in _db.LiveSupportWhatsAppBindings.AsNoTracking()
+                on conversation.Id equals binding.ConversationId into bindingRows
+            from binding in bindingRows.DefaultIfEmpty()
+            select new { Conversation = conversation, Binding = binding })
             .GroupBy(_ => 1)
             .Select(group => new
             {
-                Open = group.Count(conversation =>
-                    conversation.Status != LiveSupportConversationStatus.Closed &&
-                    conversation.Status != LiveSupportConversationStatus.Abandoned),
-                Waiting = group.Count(conversation => conversation.Status == LiveSupportConversationStatus.Waiting),
-                Active = group.Count(conversation =>
-                    conversation.Status == LiveSupportConversationStatus.Assigned ||
-                    conversation.Status == LiveSupportConversationStatus.Active),
-                ClosedToday = group.Count(conversation =>
-                    conversation.Status == LiveSupportConversationStatus.Closed &&
-                    conversation.ClosedAt >= todayStartUtc)
+                ClosedToday = group.Count(row =>
+                    row.Conversation.Status == LiveSupportConversationStatus.Closed &&
+                    row.Conversation.ClosedAt >= todayStartUtc),
+                WhatsAppOpen = group.Count(row => row.Binding != null &&
+                    row.Conversation.Status != LiveSupportConversationStatus.Closed &&
+                    row.Conversation.Status != LiveSupportConversationStatus.Abandoned),
+                WhatsAppWaiting = group.Count(row => row.Binding != null &&
+                    row.Conversation.Status == LiveSupportConversationStatus.Waiting),
+                WhatsAppActive = group.Count(row => row.Binding != null &&
+                    (row.Conversation.Status == LiveSupportConversationStatus.Assigned ||
+                     row.Conversation.Status == LiveSupportConversationStatus.Active)),
+                WhatsAppClosedToday = group.Count(row => row.Binding != null &&
+                    row.Conversation.Status == LiveSupportConversationStatus.Closed &&
+                    row.Conversation.ClosedAt >= todayStartUtc),
+                LastWhatsAppInboundAt = group.Max(row => row.Binding == null
+                    ? (DateTime?)null
+                    : row.Binding.LastInboundAt)
+            })
+            .SingleOrDefaultAsync(ct);
+        var outboundWhatsAppOperations = await _db.LiveSupportWhatsAppMessages.AsNoTracking()
+            .Where(message => message.Direction == "Outbound")
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                Failed = group.Count(message => message.Status == "Failed"),
+                LastCreatedAt = group.Max(message => (DateTime?)message.CreatedAt)
+            })
+            .SingleOrDefaultAsync(ct);
+        var whatsAppTemplateOperations = await _db.LiveSupportWhatsAppTemplates.AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                Approved = group.Count(template => template.Status == "APPROVED"),
+                LastSyncedAt = group.Max(template => (DateTime?)template.LastSyncedAt)
             })
             .SingleOrDefaultAsync(ct);
         var whatsAppSummary = new LiveSupportWhatsAppOperationsSummaryDto(
-            whatsAppConversationCounts?.Open ?? 0,
-            whatsAppConversationCounts?.Waiting ?? 0,
-            whatsAppConversationCounts?.Active ?? 0,
-            whatsAppConversationCounts?.ClosedToday ?? 0,
-            await _db.LiveSupportWhatsAppMessages.AsNoTracking().CountAsync(
-                message => message.Direction == "Outbound" && message.Status == "Failed", ct),
-            await _db.LiveSupportWhatsAppTemplates.AsNoTracking().CountAsync(
-                template => template.Status == "APPROVED", ct),
-            await _db.LiveSupportWhatsAppBindings.AsNoTracking().MaxAsync(binding => (DateTime?)binding.LastInboundAt, ct),
-            await _db.LiveSupportWhatsAppMessages.AsNoTracking()
-                .Where(message => message.Direction == "Outbound")
-                .MaxAsync(message => (DateTime?)message.CreatedAt, ct),
-            await _db.LiveSupportWhatsAppTemplates.AsNoTracking().MaxAsync(template => (DateTime?)template.LastSyncedAt, ct));
+            conversationOperations?.WhatsAppOpen ?? 0,
+            conversationOperations?.WhatsAppWaiting ?? 0,
+            conversationOperations?.WhatsAppActive ?? 0,
+            conversationOperations?.WhatsAppClosedToday ?? 0,
+            outboundWhatsAppOperations?.Failed ?? 0,
+            whatsAppTemplateOperations?.Approved ?? 0,
+            conversationOperations?.LastWhatsAppInboundAt,
+            outboundWhatsAppOperations?.LastCreatedAt,
+            whatsAppTemplateOperations?.LastSyncedAt);
         return new LiveSupportAdminDashboardDto(conversations.Count(x => x.Status == LiveSupportConversationStatus.Waiting), conversations.Count(x => x.Status is LiveSupportConversationStatus.Assigned or LiveSupportConversationStatus.Active),
-            await _db.LiveSupportConversations.CountAsync(x => x.Status == LiveSupportConversationStatus.Closed && x.ClosedAt >= todayStartUtc, ct), rows, performance, whatsAppSummary);
+            conversationOperations?.ClosedToday ?? 0, rows, performance, whatsAppSummary);
     }
 
     public async Task<IReadOnlyList<LiveSupportRatingDto>> GetAdminRatingsAsync(DateTime? from, DateTime? to, CancellationToken ct)

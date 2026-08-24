@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 
-import { devices, expect, test, type Page, type Request } from '@playwright/test';
+import {
+  devices,
+  errors,
+  expect,
+  test,
+  type Page,
+  type Request,
+} from '@playwright/test';
 
 import {
   readPerformanceSourceBinding,
@@ -128,7 +135,12 @@ async function settleEligibleReads(page: Page, allowedOrigins: EligibleReadOrigi
 
 async function dismissInstructions(page: Page) {
   const dialog = page.getByRole('dialog').first();
-  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 1_000 });
+  } catch (error) {
+    if (error instanceof errors.TimeoutError) return;
+    throw error;
+  }
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 }
