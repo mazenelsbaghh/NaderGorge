@@ -246,7 +246,7 @@ test.describe('Platform performance 167 raw browser producer', () => {
         navigate: async (targetPage) => {
           await targetPage.locator('a[href="/login"]:visible').first().click();
           await expect(targetPage).toHaveURL(/\/login$/);
-          await expect(targetPage.locator('input[type="tel"]').first()).toBeVisible();
+          await expect(targetPage.getByLabel('رقم الهاتف')).toBeVisible();
         },
       },
       {
@@ -262,7 +262,12 @@ test.describe('Platform performance 167 raw browser producer', () => {
         navigate: async (targetPage) => {
           await targetPage.locator('a[href="/register"]:visible').first().click();
           await expect(targetPage).toHaveURL(/\/register$/);
-          await expect(targetPage.locator('main h1')).toBeVisible();
+          await expect(
+            targetPage.getByRole('heading', {
+              level: 1,
+              name: 'افتح حسابك خطوة بخطوة',
+            }),
+          ).toBeVisible();
         },
       },
       {
@@ -276,16 +281,22 @@ test.describe('Platform performance 167 raw browser producer', () => {
             `${appOrigin}/student/packages`,
           );
           await expect(targetPage).toHaveURL(/\/student\/packages$/);
-          await expect(targetPage.getByText('باقاتي').first()).toBeVisible({
-            timeout: 15_000,
-          });
+          await expect(
+            targetPage.getByRole('heading', {
+              level: 1,
+              name: 'الباقات والمسارات',
+            }),
+          ).toBeVisible({ timeout: 15_000 });
         },
         navigate: async (targetPage) => {
           await targetPage.locator('a[href="/student"]:visible').first().click();
           await expect(targetPage).toHaveURL(/\/student$/);
-          await expect(targetPage.getByText(/أهلاً بيك،/).first()).toBeVisible({
-            timeout: 15_000,
-          });
+          await expect(
+            targetPage.getByRole('heading', {
+              level: 1,
+              name: /أهلاً بيك،/,
+            }),
+          ).toBeVisible({ timeout: 15_000 });
         },
       },
     ];
