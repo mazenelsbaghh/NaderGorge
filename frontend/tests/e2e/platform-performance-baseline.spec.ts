@@ -145,6 +145,21 @@ async function dismissInstructions(page: Page) {
   await expect(dialog).toBeHidden();
 }
 
+async function dismissParentTrackingPopup(page: Page) {
+  const dialog = page.getByRole('dialog', {
+    name: 'تابع مستواك الدراسي مع ولي أمرك',
+  });
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch (error) {
+    if (error instanceof errors.TimeoutError) return;
+    throw error;
+  }
+
+  await dialog.getByRole('button', { name: 'حفظ ومتابعة' }).click();
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
+}
+
 async function measureScenario(
   page: Page,
   scenario: RouteScenario,
@@ -231,6 +246,7 @@ test.describe('Platform performance 167 raw browser producer', () => {
       },
       { studentId: studentSession.user.id },
     );
+    let studentPreparationCompleted = false;
 
     const scenarios: RouteScenario[] = [
       {
@@ -287,6 +303,10 @@ test.describe('Platform performance 167 raw browser producer', () => {
               name: 'الباقات والمسارات',
             }),
           ).toBeVisible({ timeout: 15_000 });
+          if (!studentPreparationCompleted) {
+            await dismissParentTrackingPopup(targetPage);
+            studentPreparationCompleted = true;
+          }
         },
         navigate: async (targetPage) => {
           await targetPage.locator('a[href="/student"]:visible').first().click();
