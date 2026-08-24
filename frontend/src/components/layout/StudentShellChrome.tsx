@@ -45,7 +45,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useStudentShellStore } from '@/stores/student-shell-store';
-import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import { ParentCodePopup } from '@/components/student/ParentCodePopup';
 import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
@@ -146,23 +145,6 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   });
 
   useRootOverscrollBackground();
-
-  usePlatformEvents({
-    onBalanceChanged: (payload) => {
-      useStudentShellStore.getState().setBalance(payload.newBalance);
-    },
-    onNotificationCreated: () => {
-      const current = useStudentShellStore.getState().unreadNotificationsCount;
-      useStudentShellStore.getState().setUnreadCount(current + 1);
-    },
-    onNotificationRead: () => {
-      const current = useStudentShellStore.getState().unreadNotificationsCount;
-      useStudentShellStore.getState().setUnreadCount(Math.max(0, current - 1));
-    },
-    onNotificationsCleared: () => {
-      useStudentShellStore.getState().setUnreadCount(0);
-    }
-  });
 
   const unreadCount = useStudentShellStore((state) => state.unreadNotificationsCount);
   const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);

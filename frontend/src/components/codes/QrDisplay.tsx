@@ -19,6 +19,12 @@ type PrintableCodeItem = {
   serialNumber?: number;
 };
 
+export type PrintableCodeDetails = {
+  groupName?: string;
+  teacherName?: string;
+  price?: string;
+};
+
 type TemplateElement = {
   id: string;
   label?: string;
@@ -32,6 +38,9 @@ function getElementDefaultSize(id: string) {
   if (id === 'qr') return 24;
   if (id === 'code') return 4;
   if (id === 'serial') return 3;
+  if (id === 'teacher') return 3.2;
+  if (id === 'price') return 3.4;
+  if (id === 'groupName') return 3.2;
   return 3;
 }
 
@@ -147,6 +156,7 @@ interface QrDisplayProps {
   groupName?: string;
   baseUrl?: string;
   template?: PrintableTemplateDto | null;
+  details?: PrintableCodeDetails;
 }
 
 function parseTemplateElements(template?: PrintableTemplateDto | null): TemplateElement[] {
@@ -177,7 +187,35 @@ function parseTemplateElements(template?: PrintableTemplateDto | null): Template
   ];
 }
 
-export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
+function getElementText(id: string, codeItem: PrintableCodeItem, details?: PrintableCodeDetails) {
+  if (id === 'code') return codeItem.code;
+  if (id === 'serial') return String(codeItem.serialNumber ?? '');
+  if (id === 'teacher') return details?.teacherName?.trim() || '';
+  if (id === 'price') return details?.price?.trim() ? `${details.price.trim()} ج.م` : '';
+  if (id === 'groupName') return details?.groupName?.trim() || '';
+  return '';
+}
+
+async function textToPngDataUrl(text: string, fontSizePx = 72) {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Unable to prepare printable text.');
+  context.font = `700 ${fontSizePx}px Tajawal, Arial, sans-serif`;
+  canvas.width = Math.max(16, Math.ceil(context.measureText(text).width + 24));
+  canvas.height = Math.ceil(fontSizePx * 1.5);
+  const draw = canvas.getContext('2d');
+  if (!draw) throw new Error('Unable to prepare printable text.');
+  draw.clearRect(0, 0, canvas.width, canvas.height);
+  draw.direction = 'rtl';
+  draw.textAlign = 'center';
+  draw.textBaseline = 'middle';
+  draw.fillStyle = '#020617';
+  draw.font = `700 ${fontSizePx}px Tajawal, Arial, sans-serif`;
+  draw.fillText(text, canvas.width / 2, canvas.height / 2);
+  return { dataUrl: canvas.toDataURL('image/png'), aspectRatio: canvas.width / canvas.height };
+}
+
+export function QrDisplay({ codes, groupName, baseUrl, template, details }: QrDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState('');
@@ -190,6 +228,7 @@ export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
   const cardHeightMm = template?.heightMm || 55;
   const backgroundImageUrl = getPrintableMediaUrl(resolveMediaUrl(template?.backgroundImageUrl));
   const backgroundColor = template?.backgroundColor || '#ffffff';
+  const printableDetails = { ...details, groupName: details?.groupName || groupName };
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -271,13 +310,20 @@ export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
               height: 100%;
             }
             .qr-code-text,
-            .qr-serial-text {
+            .qr-serial-text,
+            .qr-detail-text {
               font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
               font-weight: 900;
               color: #020617;
               line-height: 1;
               white-space: nowrap;
               letter-spacing: .12em;
+            }
+            .qr-detail-text {
+              font-family: Tajawal, Arial, sans-serif;
+              letter-spacing: 0;
+              direction: rtl;
+              text-align: center;
             }
           </style>
         </head>
@@ -347,8 +393,15 @@ export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
             continue;
           }
 
-          const text = element.id === 'code' ? item.code : element.id === 'serial' ? String(item.serialNumber ?? '') : '';
+          const text = getElementText(element.id, item, printableDetails);
           if (!text) continue;
+          if (['teacher', 'price', 'groupName'].includes(element.id)) {
+            const image = await textToPngDataUrl(text);
+            const heightMm = sizeMm;
+            const widthMm = Math.min(cardWidthMm * 0.9, heightMm * image.aspectRatio);
+            pdf.addImage(image.dataUrl, 'PNG', xMm - widthMm / 2, yMm - heightMm / 2, widthMm, heightMm);
+            continue;
+          }
           pdf.setTextColor(2, 6, 23);
           pdf.setFont('courier', 'bold');
           pdf.setFontSize(sizeMm * 2.835);
@@ -481,6 +534,10 @@ export function QrDisplay({ codes, baseUrl, template }: QrDisplayProps) {
                       ) : element.id === 'serial' ? (
                         <div className="qr-serial-text font-mono font-black tracking-wide text-gray-950">
                           {item.serialNumber ?? ''}
+                        </div>
+                      ) : ['teacher', 'price', 'groupName'].includes(element.id) ? (
+                        <div className="qr-detail-text whitespace-nowrap font-bold text-gray-950">
+                          {getElementText(element.id, item, printableDetails)}
                         </div>
                       ) : null}
                     </div>

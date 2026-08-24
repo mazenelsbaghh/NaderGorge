@@ -148,4 +148,40 @@ public sealed class AdminAIOutboxRecoveryTests
         Assert.Equal(AdminAITurnStatus.Failed, turn.Status);
         Assert.Equal("CALLBACK_UNAVAILABLE", turn.FailureCode);
     }
+
+    [Fact]
+    public async Task Recovery_ProductionRegression_August20_ReadCompletedTurnDoesNotBlockFutureChats()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"admin-ai-read-stall-{Guid.NewGuid()}").Options);
+        var actorId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = actorId,
+            UserRoles = [new UserRole { Role = new Role { Type = RoleType.Admin } }]
+        });
+        var turn = new AdminAITurn
+        {
+            ActorAdminUserId = actorId,
+            Status = AdminAITurnStatus.Retrieving,
+            CallbackIdempotencyDigest = new string('f', 64)
+        };
+        var step = new AdminAITurnStep
+        {
+            TurnId = turn.Id,
+            Turn = turn,
+            StepNumber = 1,
+            Status = AdminAITurnStepStatus.ReadsCompleted,
+            CallbackStatus = "Claimed",
+            StartedAt = DateTime.UtcNow.AddMinutes(-3),
+            NextCallbackAttemptAt = DateTime.UtcNow.AddMinutes(-2)
+        };
+        db.AddRange(turn, step);
+        await db.SaveChangesAsync();
+
+        Assert.Equal(1, await new AdminAIRecoveryService(db).ReconcileAsync(10, default));
+        Assert.Equal(AdminAITurnStepStatus.Failed, step.Status);
+        Assert.Equal(AdminAITurnStatus.Failed, turn.Status);
+        Assert.Equal("admin_ai_worker_lease_expired", turn.FailureCode);
+    }
 }

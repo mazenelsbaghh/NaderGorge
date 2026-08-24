@@ -116,6 +116,7 @@ export function BalanceDisplay() {
 
   const currentBalance = balanceDto?.currentBalance || 0;
   const promotionalBalance = balanceDto?.promotionalBalance || 0;
+  const totalAvailableBalance = currentBalance + promotionalBalance;
 
   return (
     <div className="flex flex-col gap-6">
@@ -128,10 +129,13 @@ export function BalanceDisplay() {
       <div className="relative overflow-hidden rounded-lg border border-[var(--admin-border)] bg-[var(--admin-primary)] p-6 text-[var(--admin-primary-contrast)] shadow-sm sm:p-8">
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="mb-1 text-sm font-medium tracking-[0.18em] opacity-80">الرصيد العام للمنصة</p>
+            <p className="mb-1 text-sm font-medium tracking-[0.18em] opacity-80">إجمالي الرصيد المتاح</p>
             <h2 className="text-4xl font-black leading-none sm:text-5xl">
-              {currentBalance.toLocaleString('en-US')} <span className="text-lg font-bold sm:text-xl">ج.م</span>
+              {totalAvailableBalance.toLocaleString('en-US')} <span className="text-lg font-bold sm:text-xl">ج.م</span>
             </h2>
+            <p className="mt-3 text-sm font-bold opacity-85">
+              عام: {money(currentBalance)} ج.م · مخصص للمدرسين: {money(promotionalBalance)} ج.م
+            </p>
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="self-start rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-15)] p-4 backdrop-blur-md sm:self-auto">
@@ -147,10 +151,10 @@ export function BalanceDisplay() {
           </div>
         </div>
 
-        {currentBalance <= 0 && (
+        {totalAvailableBalance <= 0 && (
           <div className="mt-6 flex items-start gap-3 rounded-xl border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)]/15 p-4 backdrop-blur-md">
             <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--admin-primary-contrast)]" />
-            <p className="text-sm font-medium leading-7 text-[var(--admin-primary-contrast)]">رصيدك العام غير كافٍ. يمكنك الشحن بكود عام أو التحويل ورفع لقطة الشاشة.</p>
+            <p className="text-sm font-medium leading-7 text-[var(--admin-primary-contrast)]">لا يوجد رصيد متاح. يمكنك الشحن بكود أو التحويل ورفع لقطة الشاشة.</p>
           </div>
         )}
       </div>
@@ -160,6 +164,7 @@ export function BalanceDisplay() {
           <div>
             <p className="text-sm font-bold text-[var(--admin-muted)]">أرصدة المدرسين / الرصيد المخصص</p>
             <p className="mt-1 text-3xl font-black text-[var(--admin-text)]">{money(promotionalBalance)} <span className="text-base">ج.م</span></p>
+            <p className="mt-2 text-xs font-bold text-[var(--admin-muted)]">كل رصيد مخصص يُستخدم فقط في محتوى المدرس الموضح أدناه.</p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
             <Gift className="h-6 w-6" />

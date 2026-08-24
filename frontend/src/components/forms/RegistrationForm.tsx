@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -22,7 +22,7 @@ import { ARAB_NATIONALITIES } from '@/data/arab-nationalities';
 import { SCHOOL_TYPES } from '@/data/school-types';
 import { computeBirthdayInfo } from '@/utils/birthday-utils';
 import { useWhatsAppCheck } from '@/utils/whatsapp-utils';
-import { z } from 'zod';
+import type { ZodIssue } from 'zod';
 import Image from 'next/image';
 import { AVATAR_LIST } from '@/data/avatars';
 
@@ -66,8 +66,16 @@ const egyptianPhoneRegex = /^01[0125]\d{8}$/;
 const isPastCairoDate = (date: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(date) && date < cairoCurrentDate();
 
-const schema = z
-  .object({
+type RegistrationSchema = {
+  safeParse: (value: unknown) =>
+    | { success: true; data: unknown }
+    | { success: false; error: { issues: ZodIssue[] } };
+};
+
+let registrationSchemaPromise: Promise<RegistrationSchema> | undefined;
+
+function getRegistrationSchema() {
+  registrationSchemaPromise ??= import('zod').then(({ z }) => z.object({
     fullName: z.string().min(5, 'يرجى إدخال اسمك رباعيًا')
       .regex(/^[\u0621-\u064A\s]+$/, 'يرجى كتابة الاسم بالحروف العربية فقط')
       .refine((n) => n.trim().split(/\s+/).length >= 4, 'يرجى إدخال اسمك رباعيًا (مثال: أحمد محمد محمود علي)'),
@@ -130,7 +138,10 @@ const schema = z
   }, {
     message: 'يرجى اختيار الشعبة / التخصص',
     path: ['studyTrack'],
-  });
+  }));
+
+  return registrationSchemaPromise;
+}
 
 type FormError = { field?: string; message: string };
 
@@ -249,6 +260,7 @@ const PANEL_ANIMATION = {
 export function RegistrationForm() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
+  const validationInFlight = useRef(false);
 
   const [formData, setFormData] = useState<RegistrationFormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -306,7 +318,7 @@ export function RegistrationForm() {
     );
   };
 
-  const mapIssuesToErrors = (issues: z.ZodIssue[]) =>
+  const mapIssuesToErrors = (issues: ZodIssue[]) =>
     issues.map((issue) => ({
       field: issue.path[0]?.toString(),
       message: issue.message,
@@ -318,7 +330,8 @@ export function RegistrationForm() {
     return index === -1 ? 0 : index;
   };
 
-  const validateStep = (stepIndex: number) => {
+  const validateStep = async (stepIndex: number) => {
+    const schema = await getRegistrationSchema();
     const result = schema.safeParse(formData);
     if (result.success) return true;
 
@@ -337,25 +350,38 @@ export function RegistrationForm() {
     return false;
   };
 
-  const goToNextStep = () => {
-    if (!validateStep(activeStep)) return;
-    setActiveStep((prev) => Math.min(prev + 1, REGISTRATION_STEPS.length - 1));
+  const goToNextStep = async () => {
+    if (validationInFlight.current) return;
+    validationInFlight.current = true;
+    try {
+      if (!(await validateStep(activeStep))) return;
+      setActiveStep((prev) => Math.min(prev + 1, REGISTRATION_STEPS.length - 1));
+    } finally {
+      validationInFlight.current = false;
+    }
   };
 
-  const goToStep = (stepIndex: number) => {
+  const goToStep = async (stepIndex: number) => {
     if (stepIndex <= activeStep) {
       setActiveStep(stepIndex);
       return;
     }
 
-    if (!validateStep(activeStep)) return;
-    setActiveStep(stepIndex);
+    if (validationInFlight.current) return;
+    validationInFlight.current = true;
+    try {
+      if (!(await validateStep(activeStep))) return;
+      setActiveStep(stepIndex);
+    } finally {
+      validationInFlight.current = false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
 
+    const schema = await getRegistrationSchema();
     const result = schema.safeParse(formData);
     if (!result.success) {
       const mappedErrors = mapIssuesToErrors(result.error.issues);

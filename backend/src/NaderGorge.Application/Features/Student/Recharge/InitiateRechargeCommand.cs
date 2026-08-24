@@ -48,7 +48,6 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         if (!teacherExists)
             return ApiResponse<InitiateRechargeDto>.Fail("المدرس المختار غير متاح للشحن حالياً.");
 
-        // Fetch active wallets
         var activeWallets = await _db.DigitalWallets
             .Where(w => w.IsActive)
             .ToListAsync(ct);
@@ -57,6 +56,22 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             return ApiResponse<InitiateRechargeDto>.Fail("عذراً، لا توجد محافظ شحن نشطة حالياً. يرجى المحاولة لاحقاً.");
 
         var now = DateTime.UtcNow;
+        var availableWallets = activeWallets
+            .Where(wallet => !wallet.IsRechargePaused
+                || (wallet.RechargeResumeAt.HasValue && wallet.RechargeResumeAt <= now))
+            .ToList();
+
+        if (availableWallets.Count == 0)
+        {
+            var pausedWallet = activeWallets
+                .OrderBy(wallet => wallet.RechargeResumeAt ?? DateTime.MaxValue)
+                .First();
+            var studentPauseMessage = string.IsNullOrWhiteSpace(pausedWallet.RechargePauseMessage)
+                ? "التحويل متوقف مؤقتاً. يرجى المحاولة لاحقاً."
+                : pausedWallet.RechargePauseMessage;
+            return ApiResponse<InitiateRechargeDto>.Fail(studentPauseMessage, ["RECHARGE_TEMPORARILY_PAUSED"]);
+        }
+
         var pendingCutoff = now.AddHours(-RechargeRequestExpiryService.PendingLifetimeHours);
         var existingPending = await _db.RechargeRequests
             .AsNoTracking()
@@ -106,7 +121,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
                 && monthlyUsed + request.Amount <= wallet.MonthlyLimit;
         }
 
-        foreach (var wallet in activeWallets)
+        foreach (var wallet in availableWallets)
         {
             var walletRequests = await _db.RechargeRequests
                 .Where(r => r.WalletId == wallet.Id

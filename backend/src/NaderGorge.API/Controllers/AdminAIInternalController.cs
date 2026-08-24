@@ -26,12 +26,18 @@ public sealed class AdminAIInternalController(
     private const int MaxReadsPerBatch = 4;
 
     [HttpGet("readiness")]
-    public IActionResult Ready()
+    public async Task<IActionResult> Ready(CancellationToken ct)
     {
         if (!Authorized()) return Unauthorized(SafeError(AdminAIErrorCodes.AccessDenied));
-        return !Enabled || capabilities.All.Count == 0
-        ? StatusCode(503, SafeError(AdminAIErrorCodes.FeatureDisabled))
-        : Ok(new { ready = true, schemaVersion = "1", baselineHash = capabilities.BaselineHash });
+        if (!Enabled || capabilities.All.Count == 0)
+            return StatusCode(503, SafeError(AdminAIErrorCodes.FeatureDisabled));
+        var activeRuntimeHash = await db.AdminAICapabilityBaselines.AsNoTracking()
+            .Where(baseline => baseline.Status == AdminAICapabilityBaselineStatus.Active)
+            .Select(baseline => baseline.RuntimeInventoryHash)
+            .SingleOrDefaultAsync(ct);
+        return !MatchesRuntimeInventory(activeRuntimeHash)
+            ? StatusCode(503, SafeError(AdminAIErrorCodes.BaselineChanged))
+            : Ok(new { ready = true, schemaVersion = "1", baselineHash = capabilities.BaselineHash });
     }
 
     [HttpPost("turns/{turnId:guid}/claim")]
@@ -48,7 +54,8 @@ public sealed class AdminAIInternalController(
         if (turn.Status != AdminAITurnStatus.Queued && turn.Status != AdminAITurnStatus.Planning) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict));
         var baseline = await db.AdminAICapabilityBaselines.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.CapabilityBaselineId && x.Status == AdminAICapabilityBaselineStatus.Active, ct);
         var policy = await db.AdminAISensitiveDataPolicyVersions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.SensitiveDataPolicyVersionId && x.Status == AdminAISensitiveDataPolicyStatus.Active, ct);
-        if (baseline is null) return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
+        if (baseline is null || !MatchesRuntimeInventory(baseline.RuntimeInventoryHash))
+            return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
         if (policy is null) return Conflict(SafeError(AdminAIErrorCodes.SensitivePolicyChanged));
         var step = turn.Steps.OrderByDescending(x => x.StepNumber).FirstOrDefault();
         if (step is null || step.StepNumber is < 1 or > 3) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
@@ -113,7 +120,9 @@ public sealed class AdminAIInternalController(
         if (!ValidateLease(request.LeaseToken, turnId, stepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         var baseline = await db.AdminAICapabilityBaselines.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.CapabilityBaselineId && x.Status == AdminAICapabilityBaselineStatus.Active, ct);
         var policy = await db.AdminAISensitiveDataPolicyVersions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.SensitiveDataPolicyVersionId && x.Status == AdminAISensitiveDataPolicyStatus.Active, ct);
-        if (baseline?.Version != request.ExpectedBaselineVersion) return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
+        if (baseline?.Version != request.ExpectedBaselineVersion ||
+            !MatchesRuntimeInventory(baseline.RuntimeInventoryHash))
+            return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
         if (policy?.Version != request.ExpectedSensitivePolicyVersion) return Conflict(SafeError(AdminAIErrorCodes.SensitivePolicyChanged));
         if (turn.ReadInvocationCount + request.Calls.Count > 6) return UnprocessableEntity(SafeError(AdminAIErrorCodes.ReadBudgetExceeded));
         try { await access.RequireCurrentAdminAsync(turn.ActorAdminUserId, checked((int)turn.ExpectedSecurityVersion), ct); } catch { return StatusCode(403, SafeError(AdminAIErrorCodes.AccessRevoked)); }
@@ -153,6 +162,14 @@ public sealed class AdminAIInternalController(
         var step = turn.Steps.SingleOrDefault(x => x.StepNumber == request.ExpectedStepNumber);
         if (step is null || turn.Version != request.ExpectedTurnVersion || !ValidateLease(request.LeaseToken, turnId, request.ExpectedStepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         if (turn.CancellationRequestedAt is not null || turn.Status.IsTerminal()) return Conflict(SafeError(AdminAIErrorCodes.CallbackDiscarded));
+        var runtimeInventoryHash = await db.AdminAICapabilityBaselines.AsNoTracking()
+            .Where(baseline =>
+                baseline.Id == turn.CapabilityBaselineId &&
+                baseline.Status == AdminAICapabilityBaselineStatus.Active)
+            .Select(baseline => baseline.RuntimeInventoryHash)
+            .SingleOrDefaultAsync(ct);
+        if (!MatchesRuntimeInventory(runtimeInventoryHash))
+            return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
         try
         {
             var result = await completion.CompleteAsync(turnId, request, ct);
@@ -187,6 +204,8 @@ public sealed class AdminAIInternalController(
     }
 
     private bool Enabled => configuration.GetValue("AdminAI:Enabled", false);
+    private bool MatchesRuntimeInventory(string? inventoryHash) =>
+        inventoryHash is not null && FixedEquals(inventoryHash, capabilities.BaselineHash);
     private bool Authorized()
     {
         var expected = configuration["AdminAI:CallbackSecret"];
@@ -220,6 +239,8 @@ public sealed class AdminAIInternalController(
     private static string ReadToolDescription(string key) => key switch
     {
         "identity.users.summary" => "إحصاءات المستخدمين والطلاب، ومنها العدد الإجمالي للطلاب.",
+        "students.search" => "ابحث عن طالب بالاسم أو كود الطالب أو رقم الهاتف الكامل. إذا تعددت النتائج لا تختر طالبًا تلقائيًا؛ اطلب من الأدمن التحديد.",
+        "student.snapshot" => "اقرأ بيانات طالب محدد بعد حسم studentId. مرر selection ككائن يحتوي الأقسام المطلوبة فقط: profile/contact يحتاجان fields صريحة، وactivity/assessments كذلك. balances وsubscriptions يقبل كل منهما teacherId اختياريًا لحساب رصيد المدرس أو إثبات الاشتراك معه بدقة. لا تطلب contact إلا إذا طلب الأدمن بيانات الاتصال أو العنوان صراحة.",
         "content.summary" => "ملخص المواد والأقسام والدروس والفيديوهات التعليمية.",
         "assessment.summary" => "ملخص الاختبارات والمحاولات والنتائج.",
         "codes.summary" => "ملخص الأكواد والباقات المشتركة.",
@@ -234,6 +255,8 @@ public sealed class AdminAIInternalController(
         "sales.summary" => "ملخص المبيعات والكوبونات والطلبات.",
         "wallet-recharge.summary" => "ملخص المحافظ وعمليات الشحن.",
         "teacher.summary" => "ملخص المدرسين وموادهم.",
+        "teachers.search" => "ابحث عن مدرس بالاسم أولًا، مع إزالة لقب مثل مستر عند الحاجة. إذا تعددت النتائج اطلب من الأدمن التحديد ولا تختر أول نتيجة.",
+        "teacher.subscribers.summary" => "احسب مشتركي مدرس محدد باستخدام teacherId الناتج من بحث المدرسين. يعيد النشط وغير الملغي تاريخيًا منفصلين، ويفصل هرم الباقات عن الفيديو والامتحان المباشرين. الأعداد nonGift وgiftOnly وليست إثباتًا على الدفع.",
         "operations.summary" => "ملخص المهام والعمليات الداخلية.",
         "live-support.summary" => "ملخص الدعم المباشر وإدارته.",
         "reporting.summary" => "ملخص التقارير والسجلات الآمنة ومؤشرات المنصة.",

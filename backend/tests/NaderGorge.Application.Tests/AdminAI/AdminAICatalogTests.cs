@@ -18,6 +18,20 @@ public sealed class AdminAICatalogTests
         Assert.Throws<NotSupportedException>(() => ((IList<AdminAICapabilityDefinition>)first.All).Add(Read("extra")));
     }
 
+    [Fact]
+    public void RegistryHash_ChangesWhenOnlyAContractOrLimitChanges()
+    {
+        var baseline = Read("read.users");
+        var original = new AdminAICapabilityRegistry([baseline]);
+        var changedInput = new AdminAICapabilityRegistry([baseline with { InputSchema = "input:v2" }]);
+        var changedOutput = new AdminAICapabilityRegistry([baseline with { OutputSchema = "output:v2" }]);
+        var changedLimit = new AdminAICapabilityRegistry([baseline with { MaxRows = baseline.MaxRows + 1 }]);
+
+        Assert.NotEqual(original.BaselineHash, changedInput.BaselineHash);
+        Assert.NotEqual(original.BaselineHash, changedOutput.BaselineHash);
+        Assert.NotEqual(original.BaselineHash, changedLimit.BaselineHash);
+    }
+
     [Theory]
     [InlineData("read", "read", "ordinary")]
     [InlineData("action", "strong", "ordinary")]
@@ -41,7 +55,7 @@ public sealed class AdminAICatalogTests
     {
         var registry = AdminAICapabilityRegistry.CreateProductionReadRegistry();
 
-        Assert.Equal(18, registry.All.Count);
+        Assert.Equal(22, registry.All.Count);
         Assert.All(registry.All, capability =>
         {
             Assert.Equal("read", capability.Kind);
@@ -50,6 +64,30 @@ public sealed class AdminAICatalogTests
         });
         Assert.True(registry.TryGet("identity.users.summary", out _));
         Assert.True(registry.TryGet("platform-finance.summary", out _));
+        Assert.True(registry.TryGet("teachers.search", out var teacherSearch));
+        Assert.Equal("1.1.0", teacherSearch.Version);
+        Assert.Equal(3, teacherSearch.MaxRows);
+        Assert.Contains("\"query\"", teacherSearch.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"additionalProperties\":false", teacherSearch.OutputSchema, StringComparison.Ordinal);
+        Assert.True(registry.TryGet("teacher.subscribers.summary", out var teacherSubscribers));
+        Assert.Equal("1.1.0", teacherSubscribers.Version);
+        Assert.Equal(1, teacherSubscribers.MaxRows);
+        Assert.Contains("\"teacherId\"", teacherSubscribers.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"nonCancelledHistorical\"", teacherSubscribers.OutputSchema, StringComparison.Ordinal);
+        Assert.True(registry.TryGet("students.search", out var studentSearch));
+        Assert.Equal("1.1.0", studentSearch.Version);
+        Assert.Equal(5, studentSearch.MaxRows);
+        Assert.Contains("\"additionalProperties\":false", studentSearch.OutputSchema, StringComparison.Ordinal);
+        Assert.True(registry.TryGet("student.snapshot", out var studentSnapshot));
+        Assert.Equal("1.1.0", studentSnapshot.Version);
+        Assert.Equal(1, studentSnapshot.MaxRows);
+        Assert.Contains("\"maximum\":10", studentSnapshot.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"uniqueItems\":true", studentSnapshot.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"selection\"", studentSnapshot.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"minProperties\":1", studentSnapshot.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"studentPhones\"", studentSnapshot.InputSchema, StringComparison.Ordinal);
+        Assert.Contains("\"contextTeacherEntitlement\"", studentSnapshot.OutputSchema, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"sections\"", studentSnapshot.InputSchema, StringComparison.Ordinal);
     }
 
     [Fact]

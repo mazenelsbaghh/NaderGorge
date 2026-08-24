@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Edit2,
   Wifi,
-  WifiOff
+  WifiOff,
+  PauseCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -35,6 +36,15 @@ const SMS_SENDER_OPTIONS = [
   { value: 'InstaPay', label: 'InstaPay', hint: 'إنستاباي' },
 ];
 
+const DEFAULT_RECHARGE_PAUSE_MESSAGE = 'التحويل متوقف مؤقتًا لحين تفعيل رقم التحويل الجديد. متوقع رجوع الخدمة خلال 24 ساعة. يرجى المحاولة لاحقًا.';
+
+const toLocalDateTimeInput = (dateTimeValue?: string) => {
+  if (!dateTimeValue) return '';
+  const date = new Date(dateTimeValue);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
+
 export default function AdminWalletsPageClient() {
   const [wallets, setWallets] = useState<WalletDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +62,9 @@ export default function AdminWalletsPageClient() {
   const [dailyLimit, setDailyLimit] = useState(30000);
   const [monthlyLimit, setMonthlyLimit] = useState(100000);
   const [smsSenderFilters, setSmsSenderFilters] = useState<string[]>(['VF-Cash', 'VodafoneCash']);
+  const [isRechargePaused, setIsRechargePaused] = useState(false);
+  const [rechargePauseMessage, setRechargePauseMessage] = useState(DEFAULT_RECHARGE_PAUSE_MESSAGE);
+  const [rechargeResumeAt, setRechargeResumeAt] = useState('');
 
   const toggleSmsSenderFilter = (value: string) => {
     setSmsSenderFilters((prev) =>
@@ -122,6 +135,9 @@ export default function AdminWalletsPageClient() {
     setDailyLimit(30000);
     setMonthlyLimit(100000);
     setSmsSenderFilters(['VF-Cash', 'VodafoneCash']);
+    setIsRechargePaused(false);
+    setRechargePauseMessage(DEFAULT_RECHARGE_PAUSE_MESSAGE);
+    setRechargeResumeAt('');
     setActiveModal('add');
   };
 
@@ -131,6 +147,9 @@ export default function AdminWalletsPageClient() {
     setDailyLimit(wallet.dailyLimit);
     setMonthlyLimit(wallet.monthlyLimit);
     setSmsSenderFilters(wallet.smsSenderFilters?.length ? wallet.smsSenderFilters : ['VF-Cash', 'VodafoneCash']);
+    setIsRechargePaused(wallet.isRechargePaused);
+    setRechargePauseMessage(wallet.rechargePauseMessage || DEFAULT_RECHARGE_PAUSE_MESSAGE);
+    setRechargeResumeAt(toLocalDateTimeInput(wallet.rechargeResumeAt));
     setActiveModal('edit');
   };
 
@@ -191,6 +210,9 @@ export default function AdminWalletsPageClient() {
       dailyLimit,
       monthlyLimit,
       smsSenderFilters,
+      isRechargePaused,
+      rechargePauseMessage: isRechargePaused ? rechargePauseMessage.trim() : undefined,
+      rechargeResumeAt: isRechargePaused && rechargeResumeAt ? new Date(rechargeResumeAt).toISOString() : undefined,
     };
 
     try {
@@ -353,6 +375,20 @@ export default function AdminWalletsPageClient() {
             <RefreshCw className={`h-3.5 w-3.5 ${actionLoading === w.id ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      )
+    },
+    {
+      key: 'rechargeStatus',
+      label: 'استقبال الطلاب',
+      render: (w) => (
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+          w.isRechargePaused
+            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+        }`}>
+          {w.isRechargePaused ? <PauseCircle className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}
+          {w.isRechargePaused ? 'متوقف مؤقتًا' : 'متاح'}
+        </span>
       )
     },
     {
@@ -623,6 +659,31 @@ export default function AdminWalletsPageClient() {
                 className="admin-input font-mono"
               />
             </div>
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${isRechargePaused ? 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10' : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)]'}`}>
+            <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4">
+              <span>
+                <span className="block text-sm font-black text-[var(--admin-text)]">إيقاف استقبال تحويلات الطلاب مؤقتًا</span>
+                <span className="mt-1 block text-sm font-semibold text-[var(--admin-muted)]">المحفظة ستظل مفعلة للرسائل والمراجعة، لكن لن تستقبل طلبات دفع جديدة.</span>
+              </span>
+              <input type="checkbox" checked={isRechargePaused} onChange={(event) => setIsRechargePaused(event.target.checked)} className="h-5 w-5 shrink-0 accent-amber-600" />
+            </label>
+            {isRechargePaused && (
+              <div className="mt-4 space-y-4 border-t border-amber-300/70 pt-4 dark:border-amber-500/30">
+                <label className="block text-sm font-bold text-[var(--admin-text)]">
+                  الرسالة التي ستظهر للطالب
+                  <textarea required maxLength={500} value={rechargePauseMessage} onChange={(event) => setRechargePauseMessage(event.target.value)} rows={4} className="admin-input mt-2 resize-y" />
+                </label>
+                <label className="block text-sm font-bold text-[var(--admin-text)]">
+                  العودة التلقائية (اختياري)
+                  <input type="datetime-local" value={rechargeResumeAt} onChange={(event) => setRechargeResumeAt(event.target.value)} className="admin-input mt-2 font-mono" />
+                </label>
+                <button type="button" onClick={() => setRechargeResumeAt(toLocalDateTimeInput(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()))} className="min-h-11 rounded-xl border border-amber-400 bg-white px-4 text-sm font-black text-amber-800 hover:bg-amber-100 dark:bg-transparent dark:text-amber-200">
+                  ضبط العودة بعد 24 ساعة
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">

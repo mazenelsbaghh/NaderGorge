@@ -36,7 +36,7 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
     const queueAge = dependencies.now() - Date.parse(job.data.queuedAt); const maximumAge = Math.max(30_000, Number.parseInt(process.env.AI_ADMIN_AGENT_MAX_QUEUE_AGE_MS || '300000', 10) || 300_000);
     if (!Number.isFinite(queueAge) || queueAge > maximumAge) { await dependencies.callbacks.fail(turnId, { schemaVersion: '1', leaseToken: context.leaseToken, callbackIdempotencyKey: context.callbackIdempotencyKey, failureCode: 'AI_QUEUE_STALE', provider: null, model: null, latencyMs: 0 }); return { success: false, reason: 'AI_QUEUE_STALE', failureReported: true }; }
     try {
-      const result = await dependencies.runAgent(context, dependencies.callbacks, { cancelled: () => dependencies.cancelled(job), now: dependencies.now });
+      const result = await dependencies.runAgent(context, dependencies.callbacks, { cancelled: () => dependencies.cancelled(job), now: dependencies.now, workerInstanceId: dependencies.workerInstanceId });
       const completion: AdminAITurnCompletion = { schemaVersion: '1', leaseToken: result.leaseToken, expectedTurnVersion: result.expectedTurnVersion, expectedStepNumber: result.stepNumber, expectedBaselineVersion: context.capabilityBaseline.version, expectedSensitivePolicyVersion: context.sensitiveDataPolicy.version, decision: result.decision, decisionHash: result.decisionHash, callbackIdempotencyKey: context.callbackIdempotencyKey, provider: result.provider, model: result.model, providerResponseId: result.providerResponseId, inputTokenCount: result.inputTokenCount, outputTokenCount: result.outputTokenCount, latencyMs: Math.max(0, dependencies.now() - startedAt) };
       await job.updateData({ ...job.data, completion });
       if (await dependencies.cancelled(job)) return { success: false, reason: 'CANCELLED', completionPending: true };
@@ -50,6 +50,8 @@ export function createAdminAITurnProcessor(overrides: Partial<Dependencies> = {}
     } catch (error) {
       if (error instanceof AdminAICallbackError) {
         if (error.retryable) throw error;
+        recordAdminAIMetric('recovery_outcome', 1, { outcome: 'callback-rejected', failureCategory: safeAdminAITelemetryLabel(error.code), ...(error.httpStatus === undefined ? {} : { status: error.httpStatus }) });
+        logAdminAIEvent('turn_failed', { outcome: 'failure', failureCode: 'CALLBACK_REJECTED', failureCategory: safeAdminAITelemetryLabel(error.code), ...(error.httpStatus === undefined ? {} : { status: error.httpStatus }) });
         return { success: false, reason: 'CALLBACK_REJECTED' };
       }
       const code = failureCode(error);

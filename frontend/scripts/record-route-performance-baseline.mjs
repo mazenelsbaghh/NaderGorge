@@ -1,16 +1,20 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 import vm from 'node:vm';
 import zlib from 'node:zlib';
+import { pathToFileURL } from 'node:url';
+
+import {
+  readPerformanceSourceBinding,
+  resolveRawEvidenceOutput,
+  writeJsonEvidenceCreateNew,
+} from './performance-evidence-io.mjs';
 
 const frontendRoot = path.resolve(import.meta.dirname, '..');
 const repositoryRoot = path.resolve(frontendRoot, '..');
 const nextRoot = path.join(frontendRoot, '.next');
-const outputPath = path.join(
-  repositoryRoot,
-  'artifacts/performance-167/baseline/frontend-routes.json'
-);
 
 const routes = [
   {
@@ -162,7 +166,38 @@ function summarize(resourcePaths) {
   };
 }
 
+function cliValues(args = process.argv.slice(2)) {
+  const { values } = parseArgs({
+    args,
+    options: {
+      output: { type: 'string' },
+      manifest: { type: 'string' },
+    },
+  });
+  return values;
+}
+
+export function reportOutputPath(args = process.argv.slice(2)) {
+  const values = cliValues(args);
+  return resolveRawEvidenceOutput(
+    repositoryRoot,
+    values.output,
+    'route-resources.json',
+  );
+}
+
+function readSource(args = process.argv.slice(2)) {
+  const values = cliValues(args);
+  return readPerformanceSourceBinding({
+    repositoryRoot,
+    manifestPath: values.manifest ?? process.env.PERFORMANCE_SOURCE_MANIFEST,
+  });
+}
+
 function main() {
+  const cliArgs = process.argv.slice(2);
+  const outputPath = reportOutputPath(cliArgs);
+  const source = readSource(cliArgs);
   const buildStartedAt = runProductionBuild();
   const buildIdPath = path.join(nextRoot, 'BUILD_ID');
   requireFreshFile(buildIdPath, buildStartedAt);
@@ -175,7 +210,14 @@ function main() {
 
   const evidence = {
     schemaVersion: 1,
+    evidenceType: 'route-resource-measurement',
     generatedAt: new Date().toISOString(),
+    source,
+    platform: {
+      operatingSystem: process.platform,
+      architecture: process.arch,
+      nodeVersion: process.version,
+    },
     measurement: {
       source: 'fresh Next.js production build client reference manifests',
       productionBuildExecuted: true,
@@ -217,9 +259,13 @@ function main() {
     ),
   };
 
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
+  writeJsonEvidenceCreateNew(outputPath, evidence);
   console.log(`Route baseline written to ${path.relative(repositoryRoot, outputPath)}`);
 }
 
-main();
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  main();
+}

@@ -5,10 +5,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import stat
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
+from assemble_performance_evidence import (
+    RAW_ROOT,
+    PerformanceEvidenceError,
+    validate_candidate,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 CHECKER = ROOT / "frontend/scripts/check-route-performance-budgets.mjs"
@@ -22,11 +30,27 @@ class PerformanceBudgetError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class VerificationRequest:
+    budgets: Path
+    baseline: Path
+    candidate: Path
+    matrix: Path = DEFAULT_MATRIX
+    repository: Path = ROOT
+    raw_root: Path = RAW_ROOT
+
+
 def regular_file(path: Path, label: str) -> Path:
-    resolved = path.expanduser().resolve()
-    if not resolved.is_file() or resolved.is_symlink():
+    absolute = Path(os.path.abspath(path.expanduser()))
+    try:
+        mode = absolute.lstat().st_mode
+    except FileNotFoundError as exc:
+        raise PerformanceBudgetError(
+            f"{label} must be a regular non-symlink file"
+        ) from exc
+    if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
         raise PerformanceBudgetError(f"{label} must be a regular non-symlink file")
-    return resolved
+    return absolute
 
 
 def validate_workflow_matrix(path: Path) -> None:
@@ -57,18 +81,14 @@ def validate_workflow_matrix(path: Path) -> None:
         raise PerformanceBudgetError("every production performance run must require workflows")
 
 
-def verify(
-    budgets: Path,
-    baseline: Path,
-    candidate: Path,
-    matrix: Path = DEFAULT_MATRIX,
-) -> dict[str, object]:
-    validate_workflow_matrix(matrix)
+def verify(request: VerificationRequest) -> dict[str, object]:
+    validate_workflow_matrix(request.matrix)
     inputs = {
-        "budgets": regular_file(budgets, "performance budgets"),
-        "baseline": regular_file(baseline, "route baseline evidence"),
-        "candidate": regular_file(candidate, "route candidate evidence"),
+        "budgets": regular_file(request.budgets, "performance budgets"),
+        "baseline": regular_file(request.baseline, "route baseline evidence"),
+        "candidate": regular_file(request.candidate, "route candidate evidence"),
     }
+    validate_candidate(request.repository, request.raw_root, inputs["candidate"])
     completed = subprocess.run(
         [
             "node",
@@ -85,14 +105,14 @@ def verify(
         text=True,
     )
     try:
-        result = json.loads(completed.stdout)
+        checker_report = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         raise PerformanceBudgetError("performance checker returned invalid JSON") from exc
-    if completed.returncode != 0 or result.get("passed") is not True:
-        violations = result.get("violations")
+    if completed.returncode != 0 or checker_report.get("passed") is not True:
+        violations = checker_report.get("violations")
         detail = ", ".join(violations) if isinstance(violations, list) else "unknown violation"
         raise PerformanceBudgetError(f"performance budgets failed: {detail}")
-    return result
+    return checker_report
 
 
 def main() -> int:
@@ -101,21 +121,32 @@ def main() -> int:
     parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
     parser.add_argument("--candidate", type=Path, default=DEFAULT_CANDIDATE)
     parser.add_argument("--matrix", type=Path, default=DEFAULT_MATRIX)
+    parser.add_argument("--repo", type=Path, default=ROOT)
+    parser.add_argument("--raw-root", type=Path, default=RAW_ROOT)
     args = parser.parse_args()
     try:
-        result = verify(args.budgets, args.baseline, args.candidate, args.matrix)
+        checker_report = verify(
+            VerificationRequest(
+                budgets=args.budgets,
+                baseline=args.baseline,
+                candidate=args.candidate,
+                matrix=args.matrix,
+                repository=args.repo,
+                raw_root=args.raw_root,
+            )
+        )
         print(
             json.dumps(
                 {
                     "status": "passed",
-                    "routeCount": len(result.get("routes", [])),
-                    "queryBudgetsPassed": result.get("workflows", {}).get("passed"),
+                    "routeCount": len(checker_report.get("routes", [])),
+                    "queryBudgetsPassed": checker_report.get("workflows", {}).get("passed"),
                 },
                 sort_keys=True,
             )
         )
         return 0
-    except (OSError, PerformanceBudgetError) as exc:
+    except (OSError, PerformanceBudgetError, PerformanceEvidenceError) as exc:
         print(f"performance budget verification blocked: {exc}", file=sys.stderr)
         return 6
 

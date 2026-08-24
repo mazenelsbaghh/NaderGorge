@@ -74,6 +74,22 @@ test('ingestStreamJob replaces a failed job when analysis is requested again', a
   }
 });
 
+test('video analysis ingestion caps the queue retry policy at three attempts', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    const result = await ingestStreamJob(redisRef as any, queues(), '2-2', [
+      'jobType', 'video analysis', 'jobId', 'job-video-attempts', 'payload', '{}',
+    ]);
+
+    assert.equal(result.action, 'enqueued');
+    assert.equal(queueRef.added[0][2].attempts, 3);
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
+});
+
 test('ingestStreamJob preserves cancellation marker on ordinary duplicate ingestion', async () => {
   const oldGet = Redis.prototype.get;
   try {

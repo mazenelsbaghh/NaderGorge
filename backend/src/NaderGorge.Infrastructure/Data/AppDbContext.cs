@@ -213,6 +213,10 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportQueueEntry> LiveSupportQueueEntries => Set<LiveSupportQueueEntry>();
     public DbSet<LiveSupportAssignment> LiveSupportAssignments => Set<LiveSupportAssignment>();
     public DbSet<LiveSupportMessage> LiveSupportMessages => Set<LiveSupportMessage>();
+    public DbSet<LiveSupportWhatsAppBinding> LiveSupportWhatsAppBindings => Set<LiveSupportWhatsAppBinding>();
+    public DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages => Set<LiveSupportWhatsAppMessage>();
+    public DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts => Set<LiveSupportWhatsAppPendingReceipt>();
+    public DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates => Set<LiveSupportWhatsAppTemplate>();
     public DbSet<LiveSupportAttachment> LiveSupportAttachments => Set<LiveSupportAttachment>();
     public DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories => Set<LiveSupportStudentLinkHistory>();
     public DbSet<LiveSupportEvent> LiveSupportEvents => Set<LiveSupportEvent>();
@@ -323,6 +327,10 @@ public class AppDbContext : DbContext, IAppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasDbFunction(typeof(PostgresSearchFunctions).GetMethod(
+            nameof(PostgresSearchFunctions.NormalizeArabic),
+            [typeof(string)])!);
+        modelBuilder.HasAnnotation("Massar:AdminAIEntitySearchContract", "1.0.0");
         AdminAIEntityConfigurations.Configure(modelBuilder);
         ConfigurePlatformFinance(modelBuilder);
 
@@ -2742,6 +2750,66 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(x => x.RevokedAt);
         });
 
+        modelBuilder.Entity<LiveSupportWhatsAppBinding>(e =>
+        {
+            e.ToTable("live_support_whatsapp_bindings");
+            e.Property(x => x.WhatsAppUserId).HasMaxLength(32).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(32).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.ConversationId).IsUnique();
+            e.HasIndex(x => new { x.WhatsAppUserId, x.LastInboundAt });
+            e.HasIndex(x => new { x.PhoneNumber, x.LastInboundAt });
+            e.HasOne<LiveSupportConversation>().WithOne().HasForeignKey<LiveSupportWhatsAppBinding>(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.GuestSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportWhatsAppMessage>(e =>
+        {
+            e.ToTable("live_support_whatsapp_messages");
+            e.Property(x => x.MetaMessageId).HasMaxLength(200);
+            e.Property(x => x.Direction).HasMaxLength(16).IsRequired();
+            e.Property(x => x.MessageType).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.TemplateName).HasMaxLength(512);
+            e.Property(x => x.TemplateLanguage).HasMaxLength(32);
+            e.Property(x => x.TemplateParametersJson).HasColumnType("jsonb");
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.MetaMessageId).IsUnique().HasFilter("\"MetaMessageId\" IS NOT NULL");
+            e.HasIndex(x => x.LiveSupportMessageId).IsUnique().HasFilter("\"LiveSupportMessageId\" IS NOT NULL");
+            e.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportMessage>().WithOne().HasForeignKey<LiveSupportWhatsAppMessage>(x => x.LiveSupportMessageId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportWhatsAppPendingReceipt>(e =>
+        {
+            e.ToTable("live_support_whatsapp_pending_receipts");
+            e.Property(x => x.MetaMessageId).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.MetaMessageId).IsUnique();
+            e.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<LiveSupportWhatsAppTemplate>(e =>
+        {
+            e.ToTable("live_support_whatsapp_templates");
+            e.Property(x => x.MetaTemplateId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Language).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Category).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ComponentsJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.MetaTemplateId).IsUnique();
+            e.HasIndex(x => new { x.Name, x.Language }).IsUnique();
+            e.HasIndex(x => new { x.Status, x.LastSyncedAt });
+        });
+
         modelBuilder.Entity<LiveSupportStaffConfig>(e =>
         {
             e.ToTable("live_support_staff_configs", table =>
@@ -3053,6 +3121,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(dw => dw.PairingToken).HasMaxLength(20).IsRequired();
             e.Property(dw => dw.DailyLimit).HasPrecision(18, 2);
             e.Property(dw => dw.MonthlyLimit).HasPrecision(18, 2);
+            e.Property(dw => dw.RechargePauseMessage).HasMaxLength(500);
             e.Property(dw => dw.CurrentBalance).HasPrecision(18, 2);
         });
 

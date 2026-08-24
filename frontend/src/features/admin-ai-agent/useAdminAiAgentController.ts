@@ -13,7 +13,10 @@ import type {
   AdminAiProposal,
   AdminAiSecureInputKind,
 } from '@/services/admin-ai-agent-contract';
-import { parseAdminAiErrorResponse } from '@/services/admin-ai-agent-contract';
+import {
+  isAdminAiTurnInProgress,
+  parseAdminAiErrorResponse,
+} from '@/services/admin-ai-agent-contract';
 import { useAdminAiAgentStore } from './admin-ai-agent-store';
 import { useAdminAiAgentEvents } from '@/hooks/useAdminAiAgentEvents';
 import { adminAiRefreshKeys } from '@/lib/query-contracts';
@@ -143,6 +146,23 @@ export function useAdminAiAgentController() {
     if (selectedConversationId) void reconcile();
     else setSnapshot(undefined);
   }, [selectedConversationId, reconcile]);
+  const inProgressTurnId = (snapshot?.activeTurns ?? snapshot?.turns)?.find(
+    (turn) => isAdminAiTurnInProgress(turn.status)
+  )?.id;
+  useEffect(() => {
+    if (!selectedConversationId || !inProgressTurnId) return;
+    let stopped = false;
+    let timer: number;
+    const poll = async () => {
+      if (document.visibilityState === 'visible') await reconcile();
+      if (!stopped) timer = window.setTimeout(poll, 3000);
+    };
+    timer = window.setTimeout(poll, 3000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [inProgressTurnId, reconcile, selectedConversationId]);
   useEffect(
     () => () => {
       retainedIntentKeys.current.clear();

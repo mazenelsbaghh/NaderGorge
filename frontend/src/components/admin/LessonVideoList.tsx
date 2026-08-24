@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
 import { ContentArchiveControl } from './ContentArchiveControl';
 import toast from 'react-hot-toast';
 import { adminService, type LessonCockpitVideoDto, type VideoProvider } from '@/services/admin-service';
@@ -16,11 +16,13 @@ import { ImageZoomModal } from './ImageZoomModal';
 import { ContentInternalCode } from './ContentInternalCode';
 import { VideoTypeSelect } from './VideoTypeSelect';
 import { AdminConfirmationDialog } from './AdminConfirmationDialog';
+import { aiJobStatusFromProgressEvent } from '@/lib/ai-job-status';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [statusUnavailable, setStatusUnavailable] = useState(false);
   const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const isFinishedRef = useRef(false);
@@ -31,15 +33,8 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
 
   const handleAiJobProgress = (payload: { jobId: string; progress: number; status: string; message: string }) => {
     if (payload.jobId === videoId) {
-      setStatus({
-        id: payload.jobId,
-        state: payload.progress >= 100 ? 'completed' : payload.progress < 0 ? 'failed' : 'active',
-        progress: {
-          percentage: payload.progress,
-          stage: payload.message || payload.status,
-        },
-        failedReason: payload.progress < 0 ? payload.message : null,
-      } as any);
+      setStatusUnavailable(false);
+      setStatus(aiJobStatusFromProgressEvent(payload));
 
       if (payload.progress >= 100) {
         isFinishedRef.current = true;
@@ -60,17 +55,18 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
     const checkStatus = async () => {
       if (isCancelling || isFinishedRef.current) return;
       try {
-        const data = await workerService.getWorkerJobStatus(videoId);
-        setStatus(data);
+        const workerStatus = await workerService.getWorkerJobStatus(videoId);
+        setStatusUnavailable(false);
+        setStatus(workerStatus);
 
-        if (data.state === 'completed' || data.state === 'not_found') {
+        if (workerStatus.state === 'completed' || workerStatus.state === 'not_found') {
           isFinishedRef.current = true;
           timeout = setTimeout(() => {
             if (onCompleteRef.current) onCompleteRef.current();
           }, 2000);
         }
       } catch {
-        // silently ignore fetch errors
+        setStatusUnavailable(true);
       }
     };
 
@@ -112,6 +108,7 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
         await adminService.triggerVideoAiAnalysis(realId);
       }
       toast.success('تم إعادة تشغيل العملية');
+      setStatusUnavailable(false);
       setStatus(null);
     } catch {
       toast.error('تعذر إعادة المحاولة');
@@ -121,10 +118,8 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   };
 
   // Derive display values
-  const progressVal = status?.progress
-    ? (typeof status.progress === 'object' ? status.progress.percentage : Number(status.progress)) || 0
-    : 0;
-  const progressText = status?.progress && typeof status.progress === 'object' && status.progress.stage
+  const progressVal = status?.progress.percentage ?? 0;
+  const progressText = status?.progress.stage
     ? status.progress.stage
     : status?.state === 'waiting'
       ? 'في الطابور...'
@@ -137,7 +132,7 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   const isWorking = status?.state === 'active' || status?.state === 'waiting';
 
   return (
-    <div className="flex flex-col gap-1 items-end px-1 py-0.5 min-w-[180px]">
+    <div className="flex w-full min-w-0 flex-col items-end gap-1 px-1 py-0.5 sm:w-[260px]">
       {/* Status text + spinner */}
       <div className="flex items-center gap-1.5 font-bold text-[var(--admin-primary)] w-full justify-end">
         {(isWorking || !status) && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
@@ -160,52 +155,55 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
         </div>
       )}
 
-      {/* Failed reason snippet */}
-      {isFailed && status.failedReason && (
-        <span className="text-xs text-red-400 truncate w-full" title={status.failedReason}>
-          {status.failedReason}
-        </span>
+      {/* Public failure guidance. Technical worker diagnostics never render here. */}
+      {isFailed && status.failure && (
+        <div
+          role="alert"
+          dir="rtl"
+          className="w-full rounded-lg border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-2.5 py-2 text-start text-xs leading-5 text-[var(--admin-danger)]"
+        >
+          {status.failure.message}
+        </div>
+      )}
+
+      {statusUnavailable && !isFailed && (
+        <div
+          role="status"
+          dir="rtl"
+          className="w-full rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-start text-xs leading-5 text-amber-700 dark:text-amber-300"
+        >
+          تعذر تحديث حالة التحليل حاليًا. سنحاول التحقق مرة أخرى تلقائيًا.
+        </div>
       )}
 
       {/* Action buttons */}
       {!isCompleted && (
-        <div className="flex items-center gap-1.5 mt-0.5">
-          {/* Copy error (failed only) */}
-        {isFailed && (
-          <button
-            onClick={() => {
-              if (status.failedReason) {
-                navigator.clipboard.writeText(status.failedReason);
-                toast.success('تم نسخ الخطأ');
-              }
-            }}
-            title="نسخ رسالة الخطأ"
-            className="flex items-center justify-center h-6 w-6 rounded text-red-400 bg-red-500/10 hover:bg-red-500/20 transition"
-          >
-            <Copy className="h-3 w-3" />
-          </button>
-        )}
+        <div className="mt-1 flex w-full flex-wrap items-center justify-end gap-2">
+          {isFailed && status.failure?.retryable && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              disabled={isRetrying || isCancelling}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--admin-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+              {isRetrying ? 'جاري إعادة التشغيل...' : 'إعادة المحاولة'}
+            </button>
+          )}
 
-        {/* Retry button — always shown when processing or failed */}
-        <button
-          onClick={handleRetry}
-          disabled={isRetrying || isCancelling}
-          title="إعادة التحليل من البداية"
-          className="flex h-8 w-8 items-center justify-center rounded text-[var(--admin-primary)] bg-[var(--admin-primary)]/10 transition hover:bg-[var(--admin-primary)]/20 disabled:opacity-40"
-        >
-          <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
-        </button>
-
-        {/* Cancel button — always shown */}
-        <button
-          onClick={() => setCancelConfirmationOpen(true)}
-          disabled={isCancelling || isRetrying}
-          title="إيقاف وإلغاء التحليل"
-          className="flex items-center justify-center h-6 w-6 rounded text-red-500 bg-red-500/10 hover:bg-red-500/20 transition disabled:opacity-40"
-        >
-          {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-        </button>
-      </div>
+          {!isFailed && (
+            <button
+              type="button"
+              onClick={() => setCancelConfirmationOpen(true)}
+              disabled={isCancelling || isRetrying}
+              title="إيقاف وإلغاء التحليل"
+              aria-label="إيقاف وإلغاء التحليل"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-[var(--admin-danger-10)] text-[var(--admin-danger)] transition hover:bg-[var(--admin-danger-20)] disabled:opacity-40"
+            >
+              {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
       )}
       <AdminConfirmationDialog
         open={cancelConfirmationOpen}

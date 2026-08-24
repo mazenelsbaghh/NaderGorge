@@ -43,6 +43,7 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
             .ToDictionaryAsync(item => item.WalletId, item => item.TotalReceived, ct);
 
         var walletDtos = new List<WalletDto>();
+        var now = DateTime.UtcNow;
 
         foreach (var w in wallets)
         {
@@ -91,6 +92,9 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
                 DeviceStatus = status,
                 LastSeenAt = w.LastSeenAt,
                 IsActive = w.IsActive,
+                IsRechargePaused = w.IsRechargePaused && (!w.RechargeResumeAt.HasValue || w.RechargeResumeAt > now),
+                RechargePauseMessage = w.RechargePauseMessage,
+                RechargeResumeAt = w.RechargeResumeAt,
                 SmsSenderFilters = filters,
                 DailyReceived = dailyReceived,
                 MonthlyReceived = monthlyReceived,

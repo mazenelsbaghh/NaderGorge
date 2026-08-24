@@ -10,8 +10,16 @@ import {
   GraduationCap,
   MessageSquareCode,
   X,
-  BookOpen
+  BookOpen,
+  type LucideIcon,
 } from 'lucide-react';
+
+import {
+  LOGIN_INSTRUCTION_COPY,
+  LOGIN_INSTRUCTION_NOTE,
+  REGISTRATION_INSTRUCTION_COPY,
+  REGISTRATION_INSTRUCTION_NOTE,
+} from './registration-instruction-copy';
 
 interface RegistrationInstructionsModalProps {
   open: boolean;
@@ -21,6 +29,75 @@ interface RegistrationInstructionsModalProps {
   subtitle?: string;
   mode?: 'register' | 'login';
 }
+
+type InstructionPresentation = {
+  icon: LucideIcon;
+  color: string;
+};
+
+const REGISTRATION_PRESENTATION: Record<
+  (typeof REGISTRATION_INSTRUCTION_COPY)[number]['key'],
+  InstructionPresentation
+> = {
+  'full-name': {
+    icon: User,
+    color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  },
+  'parent-details': {
+    icon: Users,
+    color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  },
+  'device-limit': {
+    icon: MonitorSmartphone,
+    color: 'text-red-500 bg-red-500/10 border-red-500/20',
+  },
+  'duplicate-accounts': {
+    icon: ShieldAlert,
+    color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+  },
+  'academic-details': {
+    icon: GraduationCap,
+    color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+  },
+  'whatsapp-numbers': {
+    icon: MessageSquareCode,
+    color: 'text-green-500 bg-green-500/10 border-green-500/20',
+  },
+};
+
+const LOGIN_PRESENTATION: Record<
+  (typeof LOGIN_INSTRUCTION_COPY)[number]['key'],
+  InstructionPresentation
+> = {
+  'personal-account': {
+    icon: User,
+    color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  },
+  'private-password': {
+    icon: ShieldAlert,
+    color: 'text-red-500 bg-red-500/10 border-red-500/20',
+  },
+  'usual-devices': {
+    icon: MonitorSmartphone,
+    color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  },
+  'forgot-password': {
+    icon: MessageSquareCode,
+    color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+  },
+};
+
+const REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTION_COPY.map(
+  (instruction) => ({
+    ...instruction,
+    ...REGISTRATION_PRESENTATION[instruction.key],
+  }),
+);
+
+const LOGIN_INSTRUCTIONS = LOGIN_INSTRUCTION_COPY.map((instruction) => ({
+  ...instruction,
+  ...LOGIN_PRESENTATION[instruction.key],
+}));
 
 export function RegistrationInstructionsModal({
   open,
@@ -42,71 +119,10 @@ export function RegistrationInstructionsModal({
 
   if (!open) return null;
 
-  const registrationInstructions = [
-    {
-      title: 'الاسم رباعي وحقيقي',
-      description: 'يجب كتابة الاسم رباعياً ومطابقاً للبطاقة الشخصية أو شهادة الميلاد الرسمية لتجنب إلغاء الحساب.',
-      icon: User,
-      color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    },
-    {
-      title: 'بيانات ولي الأمر والمتابعة',
-      description: 'تأكد من إدخال رقم هاتف الأب والأم بدقة، حيث يتم إرسال تقارير الغياب، الدرجات، ونسب مشاهدة المحاضرات إليهم بشكل دوري وتلقائي.',
-      icon: Users,
-      color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-    },
-    {
-      title: 'حد الأجهزة المسموح بها (Device Limit)',
-      description: 'الحساب مخصص لجهازين فقط كحد أقصى (مثل هاتف وكمبيوتر). مشاركة الحساب أو تسجيل الدخول من أجهزة متعددة يعرض الحساب للإيقاف التلقائي والنهائي فوراً.',
-      icon: MonitorSmartphone,
-      color: 'text-red-500 bg-red-500/10 border-red-500/20',
-    },
-    {
-      title: 'حظر الحسابات المتعددة',
-      description: 'يمنع تماماً إنشاء أكثر من حساب لنفس الطالب. في حال وجود مشكلة في حسابك السابق، يرجى التواصل مع الدعم الفني مباشرة بدلاً من إنشاء حساب جديد.',
-      icon: ShieldAlert,
-      color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-    },
-    {
-      title: 'دقة الصف الدراسي والمحافظة',
-      description: 'يرجى التأكد من اختيار المحافظة والصف الدراسي بدقة، حيث لا يمكن تعديل هذه البيانات بعد إتمام التسجيل إلا من خلال التواصل مع الدعم الفني ومراجعة الأوراق الثبوتية.',
-      icon: GraduationCap,
-      color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-    },
-    {
-      title: 'أرقام واتساب نشطة ومفعلة',
-      description: 'تأكد من أن الأرقام المسجلة (الهاتف الشخصي وأرقام أولياء الأمور) تحتوي على حسابات واتساب نشطة لاستلام أكواد التفعيل وتقارير الأداء.',
-      icon: MessageSquareCode,
-      color: 'text-green-500 bg-green-500/10 border-green-500/20',
-    },
-  ];
-  const loginInstructions = [
-    {
-      title: 'استخدم حسابك الشخصي فقط',
-      description: 'اكتب رقم الهاتف وكلمة المرور المسجلين للحساب نفسه. لا تنشئ حسابًا جديدًا إذا نسيت بيانات الدخول.',
-      icon: User,
-      color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-    },
-    {
-      title: 'لا تشارك كلمة المرور',
-      description: 'كلمة المرور سرية. مشاركتها قد تعرض حسابك وبياناتك الدراسية للإيقاف لحمايتك.',
-      icon: ShieldAlert,
-      color: 'text-red-500 bg-red-500/10 border-red-500/20',
-    },
-    {
-      title: 'استخدم أجهزتك المعتادة',
-      description: 'سجّل الدخول من أجهزتك الشخصية المعتمدة فقط، وتجنب التنقل المتكرر بين أجهزة كثيرة.',
-      icon: MonitorSmartphone,
-      color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    },
-    {
-      title: 'نسيت كلمة المرور؟',
-      description: 'استخدم استعادة كلمة المرور من صفحة الدخول بدل تكرار المحاولات أو إنشاء حساب ثانٍ.',
-      icon: MessageSquareCode,
-      color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-    },
-  ];
-  const instructions = mode === 'login' ? loginInstructions : registrationInstructions;
+  const instructions =
+    mode === 'login' ? LOGIN_INSTRUCTIONS : REGISTRATION_INSTRUCTIONS;
+  const instructionNote =
+    mode === 'login' ? LOGIN_INSTRUCTION_NOTE : REGISTRATION_INSTRUCTION_NOTE;
 
   return (
     <AnimatePresence>
@@ -191,9 +207,7 @@ export function RegistrationInstructionsModal({
             <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-500/90 text-xs font-semibold leading-relaxed flex gap-3 items-center text-right">
               <ShieldAlert className="h-5 w-5 shrink-0" />
               <span>
-                {mode === 'login'
-                  ? 'ملاحظة: إذا كانت بيانات الدخول غير متاحة لديك، استخدم استعادة كلمة المرور أو تواصل مع الدعم.'
-                  : 'ملاحظة: تلتزم الأكاديمية بحماية خصوصية بياناتك وتوفير المحتوى بأعلى معايير الأمان والجودة. مخالفة الشروط أعلاه قد يعرض حسابك للتجميد الفوري.'}
+                {instructionNote}
               </span>
             </div>
           </div>

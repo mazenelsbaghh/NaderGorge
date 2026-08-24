@@ -10,6 +10,27 @@ public sealed class AdminAICapabilityRegistry : IAdminAICapabilityRegistry
 {
     private const string EmptyObjectInputSchema = "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}";
     private const string ObjectOutputSchema = "{\"type\":\"object\"}";
+    private const string SearchInputSchema = "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"minLength\":2,\"maxLength\":200}},\"required\":[\"query\"],\"additionalProperties\":false}";
+    private const string TeacherSubscribersInputSchema = "{\"type\":\"object\",\"properties\":{\"teacherId\":{\"type\":\"string\",\"format\":\"uuid\",\"minLength\":36,\"maxLength\":36}},\"required\":[\"teacherId\"],\"additionalProperties\":false}";
+    private const string StudentSnapshotInputSchema = """
+        {
+          "type":"object",
+          "properties":{
+            "studentId":{"type":"string","format":"uuid","minLength":36,"maxLength":36},
+            "recentLimit":{"type":"integer","minimum":0,"maximum":10},
+            "selection":{"type":"object","minProperties":1,"maxProperties":6,"additionalProperties":false,"properties":{
+              "profile":{"type":"object","additionalProperties":false,"properties":{"fields":{"type":"array","minItems":1,"maxItems":4,"uniqueItems":true,"items":{"type":"string","enum":["account","personal","academic","school"]}}},"required":["fields"]},
+              "contact":{"type":"object","additionalProperties":false,"properties":{"fields":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["studentPhones","guardianPhones","location"]}}},"required":["fields"]},
+              "balances":{"type":"object","additionalProperties":false,"properties":{"teacherId":{"type":"string","format":"uuid","minLength":36,"maxLength":36}}},
+              "subscriptions":{"type":"object","additionalProperties":false,"properties":{"teacherId":{"type":"string","format":"uuid","minLength":36,"maxLength":36}}},
+              "activity":{"type":"object","additionalProperties":false,"properties":{"fields":{"type":"array","minItems":1,"maxItems":6,"uniqueItems":true,"items":{"type":"string","enum":["watching","lessonProgress","devices","commitment","warnings","adminNotes"]}}},"required":["fields"]},
+              "assessments":{"type":"object","additionalProperties":false,"properties":{"fields":{"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"string","enum":["exams","homework","essays"]}}},"required":["fields"]}
+            }}
+          },
+          "required":["studentId","selection","recentLimit"],
+          "additionalProperties":false
+        }
+        """;
     private static readonly HashSet<string> Kinds = new(StringComparer.Ordinal) { "read", "action" };
     private static readonly HashSet<string> Risks = new(StringComparer.Ordinal) { "read", "ordinary", "strong" };
     private static readonly HashSet<string> Confirmations = new(StringComparer.Ordinal) { "none", "ordinary", "strong" };
@@ -44,7 +65,7 @@ public sealed class AdminAICapabilityRegistry : IAdminAICapabilityRegistry
             "teacher.summary", "wallet-recharge.summary"
         ];
 
-        return new AdminAICapabilityRegistry(keys.Select(key => new AdminAICapabilityDefinition(
+        var definitions = keys.Select(key => new AdminAICapabilityDefinition(
             key,
             "1.0.0",
             "read",
@@ -56,8 +77,54 @@ public sealed class AdminAICapabilityRegistry : IAdminAICapabilityRegistry
             131_072,
             5_000,
             $"AdminAI.Reads.{key}",
-            [])));
+            [])).ToList();
+
+        definitions.Add(ReadDefinition(
+            "teachers.search",
+            SearchInputSchema,
+            AdminAIEntityReadSchemas.TeacherSearchOutput,
+            maxRows: 3,
+            maxBytes: 16_384));
+        definitions.Add(ReadDefinition(
+            "teacher.subscribers.summary",
+            TeacherSubscribersInputSchema,
+            AdminAIEntityReadSchemas.TeacherSubscribersOutput,
+            maxRows: 1,
+            maxBytes: 32_768));
+        definitions.Add(ReadDefinition(
+            "students.search",
+            SearchInputSchema,
+            AdminAIEntityReadSchemas.StudentSearchOutput,
+            maxRows: 5,
+            maxBytes: 24_576));
+        definitions.Add(ReadDefinition(
+            "student.snapshot",
+            StudentSnapshotInputSchema,
+            AdminAIEntityReadSchemas.StudentSnapshotOutput,
+            maxRows: 1,
+            maxBytes: 65_536));
+        return new AdminAICapabilityRegistry(definitions);
     }
+
+    private static AdminAICapabilityDefinition ReadDefinition(
+        string key,
+        string inputSchema,
+        string outputSchema,
+        int maxRows,
+        int maxBytes) =>
+        new(
+            key,
+            "1.1.0",
+            "read",
+            "read",
+            "none",
+            inputSchema,
+            outputSchema,
+            maxRows,
+            maxBytes,
+            5_000,
+            $"AdminAI.Reads.{key}",
+            []);
 
     private static JsonSerializerOptions CanonicalOptions { get; } = new()
     {

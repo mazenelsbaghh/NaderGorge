@@ -534,7 +534,7 @@ const navItems: AdminNavItem[] = [
   },
   {
     href: '/admin/live-support',
-    label: 'الدعم المباشر',
+    label: 'CRM واتساب والدعم',
     icon: Headphones,
     permission: 'live_support.manage',
   },

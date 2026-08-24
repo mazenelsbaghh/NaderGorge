@@ -115,6 +115,7 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [printDetails, setPrintDetails] = useState({ teacherName: '', price: '', groupName: '' });
   const [overviewForm, setOverviewForm] = useState({
     name: '',
     teacherId: '',
@@ -240,6 +241,11 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
 
   function openQrPrint() {
     setShowQrPrint(true);
+    setPrintDetails((current) => ({
+      teacherName: current.teacherName || (group?.teacherId ? teacherNameMap[group.teacherId] || '' : ''),
+      price: current.price || (group?.balanceAmount != null ? String(group.balanceAmount) : ''),
+      groupName: current.groupName || group?.name || '',
+    }));
     void loadTemplatesIfNeeded();
   }
 
@@ -676,10 +682,26 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
                 </span>
               ) : null}
             </div>
+            <div className="grid gap-3 rounded-xl bg-[var(--admin-card-soft)] p-4 print:hidden sm:grid-cols-3">
+              <label className="grid gap-1 text-xs font-bold text-[var(--admin-muted)]">
+                اسم المدرس في الطباعة
+                <input value={printDetails.teacherName} onChange={(event) => setPrintDetails((current) => ({ ...current, teacherName: event.target.value }))} placeholder="مثال: أ/ أحمد محمد" className="min-h-11 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]" />
+              </label>
+              <label className="grid gap-1 text-xs font-bold text-[var(--admin-muted)]">
+                السعر في الطباعة
+                <input inputMode="decimal" value={printDetails.price} onChange={(event) => setPrintDetails((current) => ({ ...current, price: event.target.value }))} placeholder="مثال: 250" className="min-h-11 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]" />
+              </label>
+              <label className="grid gap-1 text-xs font-bold text-[var(--admin-muted)]">
+                اسم المجموعة في الطباعة
+                <input value={printDetails.groupName} onChange={(event) => setPrintDetails((current) => ({ ...current, groupName: event.target.value }))} className="min-h-11 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]" />
+              </label>
+              <p className="text-xs font-medium text-[var(--admin-muted)] sm:col-span-3">ظهور كل قيمة ومكانها وحجمها يتم تحديده من قالب الطباعة المختار.</p>
+            </div>
             <QrDisplay
               codes={codes.map((c) => ({ code: c.code, serialNumber: c.serialNumber }))}
               groupName={group ? `${group.name || 'دفعة'} - ${formatDate(group.createdAt)}` : 'Batch'}
               template={selectedTemplate}
+              details={printDetails}
             />
           </div>
         ) : (

@@ -11,6 +11,9 @@ export interface WalletDto {
   deviceStatus: string;
   lastSeenAt?: string;
   isActive: boolean;
+  isRechargePaused: boolean;
+  rechargePauseMessage: string;
+  rechargeResumeAt?: string;
   smsSenderFilters: string[];
   dailyReceived: number;
   monthlyReceived: number;
@@ -31,6 +34,9 @@ export interface UpdateWalletLimitsDto {
   dailyLimit: number;
   monthlyLimit: number;
   smsSenderFilters: string[];
+  isRechargePaused: boolean;
+  rechargePauseMessage?: string;
+  rechargeResumeAt?: string;
 }
 
 export interface AdminRechargeRequestDto {

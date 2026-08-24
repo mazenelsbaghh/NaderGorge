@@ -109,3 +109,8 @@ def test_production_environment_enables_admin_ai_with_domain_separated_hmac() ->
     assert '"AdminAI__Enabled": "true"' in app_env
     assert '"AdminAI__HmacKey": admin_ai_hmac' in app_env
     assert '"AdminAI__CallbackSecret": ai_callback_secret' in app_env
+    assert '"WhatsAppCloudApi__AccessToken"' in app_env
+    assert '"WhatsAppCloudApi__PhoneNumberId"' in app_env
+    assert '"WhatsAppCloudApi__BusinessAccountId"' in app_env
+    assert '"WhatsAppCloudApi__VerifyToken"' in app_env
+    assert '"WhatsAppCloudApi__AppSecret"' in app_env

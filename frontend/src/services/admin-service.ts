@@ -224,6 +224,11 @@ export interface AdminUserListDto {
   suspensionReason?: string;
   avatarSlug?: string | null;
   currentBalance?: number;
+  scopedBalances: Array<{
+    teacherId?: string | null;
+    teacherName: string;
+    availableAmount: number;
+  }>;
 }
 
 export interface AdminUserFilters {
@@ -355,6 +360,7 @@ export interface StudentPackageDto {
   price: number;
   purchaseOperationId?: string | null;
   teacherId?: string | null;
+  teacherName?: string | null;
   paidAmount: number;
   platformShareAmount: number;
   teacherShareAmount: number;

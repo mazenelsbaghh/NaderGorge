@@ -8,7 +8,8 @@ namespace NaderGorge.Application.Features.Content;
 public sealed record ContentGrantFactScope(
     Guid[] PackageIds,
     DateTime? FromUtc = null,
-    DateTime? ToUtc = null);
+    DateTime? ToUtc = null,
+    Guid? StudentId = null);
 
 public sealed record ContentGrantFact(
     Guid PackageId,
@@ -120,6 +121,8 @@ public sealed class ContentGrantFactSource
             query = query.Where(grant => grant.GrantedAt >= scope.FromUtc.Value);
         if (scope.ToUtc.HasValue)
             query = query.Where(grant => grant.GrantedAt < scope.ToUtc.Value);
+        if (scope.StudentId.HasValue)
+            query = query.Where(grant => grant.UserId == scope.StudentId.Value);
         return query;
     }
 }

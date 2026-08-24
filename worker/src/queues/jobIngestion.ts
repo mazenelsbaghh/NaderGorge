@@ -119,10 +119,13 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     const isLiveSupportTurn = jobType === 'live support turn';
     const isAdminAITurn = jobType === 'admin ai turn';
     const isEssay = jobType === 'essay';
+    let attempts = 5;
+    if (jobType === 'video analysis') attempts = 3;
+    else if (isLiveSupportTurn) attempts = 4;
     await targetQueue.add(bullmqJobName, parsedPayload, {
       jobId: targetJobId,
       ...JOB_RETENTION_OPTIONS,
-      attempts: isLiveSupportTurn ? 4 : 5,
+      attempts,
       backoff: isEssay
         ? { type: 'fixed', delay: 20_000 }
         : { type: 'exponential', delay: isLiveSupportTurn || isAdminAITurn ? 2000 : 5000 },

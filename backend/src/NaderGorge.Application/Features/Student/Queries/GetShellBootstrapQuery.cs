@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities.Notifications;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Student.Queries;
 
@@ -11,6 +12,7 @@ public record GetShellBootstrapQuery(Guid UserId) : IRequest<ApiResponse<ShellBo
 public record ShellBootstrapDto(
     int UnreadNotificationsCount,
     decimal CurrentBalance,
+    decimal PromotionalBalance,
     StudentGamificationDto Gamification,
     StudentThemePreferencesDto ThemePreferences,
     string? AvatarSlug,
@@ -48,6 +50,16 @@ public class GetShellBootstrapQueryHandler : IRequestHandler<GetShellBootstrapQu
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.UserId == userId, ct);
         decimal currentBalance = balance?.CurrentBalance ?? 0m;
+        var now = DateTime.UtcNow;
+        var promotionalBalance = await _db.PromotionalBalanceAllocations
+            .AsNoTracking()
+            .Where(allocation =>
+                allocation.StudentId == userId &&
+                allocation.AvailableAmount > 0 &&
+                (allocation.Status == PromotionalBalanceStatus.Active ||
+                 allocation.Status == PromotionalBalanceStatus.PartiallyUsed) &&
+                (allocation.ExpiresAt == null || allocation.ExpiresAt > now))
+            .SumAsync(allocation => allocation.AvailableAmount, ct);
 
         // 3. Gamification
         var gamification = await _db.StudentGamifications
@@ -76,6 +88,7 @@ public class GetShellBootstrapQueryHandler : IRequestHandler<GetShellBootstrapQu
         var dto = new ShellBootstrapDto(
             unreadCount,
             currentBalance,
+            promotionalBalance,
             gamificationDto,
             themePreferencesDto,
             profile?.AvatarSlug,

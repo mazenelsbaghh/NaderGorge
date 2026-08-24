@@ -6,6 +6,15 @@ export function isFinalJobAttempt(job: Pick<Job, 'attemptsMade' | 'opts'>) {
   return job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
 }
 
+export function isTerminalJobFailure(
+  job: Pick<Job, 'attemptsMade' | 'opts'> | undefined,
+  error: Pick<Error, 'name'>,
+) {
+  if (error.name === 'UnrecoverableError') return true;
+  if (!job) return true;
+  return job.attemptsMade >= (job.opts.attempts ?? 1);
+}
+
 export function removeJobTempFile(filePath: string, jobId: string | number | undefined) {
   if (!filePath) return;
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sanitizeAiJobStatus } from '@/lib/ai-job-status';
 
 /**
  * Next.js API proxy for the worker service (BullMQ status API).
@@ -60,6 +61,28 @@ async function validateStaffAuthorization(authorization: string | null) {
   }
 }
 
+function getWorkerActionSuccess(method: string) {
+  if (method === 'DELETE') {
+    return { success: true, message: 'تم إرسال طلب إلغاء المعالجة.' };
+  }
+
+  return { success: true, message: 'تم إرسال طلب إعادة المحاولة.' };
+}
+
+function createWorkerProxyFailure(status: number) {
+  return NextResponse.json(
+    { error: 'تعذر تنفيذ طلب معالجة الفيديو حاليًا. حاول مرة أخرى بعد قليل.' },
+    { status },
+  );
+}
+
+function confirmsSuccessfulWorkerAction(payload: unknown) {
+  return typeof payload === 'object'
+    && payload !== null
+    && 'success' in payload
+    && payload.success === true;
+}
+
 async function proxyToWorker(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   if (!isAllowedWorkerRoute(request.method, path)) {
@@ -99,24 +122,36 @@ async function proxyToWorker(request: NextRequest, { params }: { params: Promise
 
     const response = await fetch(targetUrl, fetchOptions);
     
-    const contentType = response.headers.get('content-type') || '';
-    
-    if (contentType.includes('application/json')) {
-      const data = await response.json();
-      return NextResponse.json(data, { status: response.status });
+    if (!response.ok) {
+      return createWorkerProxyFailure(response.status);
     }
-    
-    const text = await response.text();
-    return new NextResponse(text, {
-      status: response.status,
-      headers: { 'Content-Type': contentType },
-    });
+
+    if (request.method === 'GET' && path[0] === 'status') {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return createWorkerProxyFailure(502);
+      }
+
+      const workerStatusPayload: unknown = await response.json();
+      return NextResponse.json(sanitizeAiJobStatus(workerStatusPayload, path[1]), { status: 200 });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return createWorkerProxyFailure(502);
+    }
+
+    const actionPayload: unknown = await response.json();
+    if (!confirmsSuccessfulWorkerAction(actionPayload)) {
+      return createWorkerProxyFailure(502);
+    }
+
+    // Mutation response fields are intentionally allowlisted so worker
+    // diagnostics can never cross the staff-facing API boundary.
+    return NextResponse.json(getWorkerActionSuccess(request.method), { status: 200 });
   } catch (error) {
     console.error(`[worker-proxy] Failed to reach worker at ${targetUrl}:`, error);
-    return NextResponse.json(
-      { error: 'Worker service unavailable' },
-      { status: 503 }
-    );
+    return createWorkerProxyFailure(503);
   }
 }
 

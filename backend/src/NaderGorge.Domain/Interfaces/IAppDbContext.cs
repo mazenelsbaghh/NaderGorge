@@ -199,6 +199,10 @@ public interface IAppDbContext
     DbSet<LiveSupportQueueEntry> LiveSupportQueueEntries { get; }
     DbSet<LiveSupportAssignment> LiveSupportAssignments { get; }
     DbSet<LiveSupportMessage> LiveSupportMessages { get; }
+    DbSet<LiveSupportWhatsAppBinding> LiveSupportWhatsAppBindings { get; }
+    DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages { get; }
+    DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts { get; }
+    DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates { get; }
     DbSet<LiveSupportAttachment> LiveSupportAttachments { get; }
     DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories { get; }
     DbSet<LiveSupportEvent> LiveSupportEvents { get; }

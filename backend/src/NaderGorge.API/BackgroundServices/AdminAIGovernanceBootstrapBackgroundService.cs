@@ -43,6 +43,7 @@ public sealed class AdminAIGovernanceBootstrapBackgroundService(
     {
         activation = "ready",
         mode = "read-only",
+        runtimeInventoryHash = registry.BaselineHash,
         items = registry.All.Select(capability => new
         {
             key = capability.Key,

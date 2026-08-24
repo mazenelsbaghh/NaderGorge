@@ -4,8 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'node:child_process';
 import type { AIConfig } from './aiConfig.js';
-import { analyzeVideoChapters, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, setAIServiceRuntimeFactoryForTests } from './geminiService.js';
+import { analyzeVideoChapters, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, setAIServiceRuntimeFactoryForTests, transcribePublicYouTubeVideo } from './geminiService.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
+import { setGeminiRetryWaitForTests } from './aiProvider.js';
+import { WorkerExternalError } from './workerFetch.js';
 
 const developerConfig: AIConfig = {
   primaryProvider: 'developer', developerApiKey: 'test-key', textModel: 'text-model', imageModel: 'image-model',
@@ -15,7 +17,64 @@ function runtime(client: any) {
   return { config: developerConfig, developer: client as any };
 }
 
-afterEach(() => setAIServiceRuntimeFactoryForTests(undefined));
+afterEach(() => {
+  setAIServiceRuntimeFactoryForTests(undefined);
+  setGeminiRetryWaitForTests(undefined);
+});
+
+test('public YouTube transcription sends the canonical URL directly to Gemini (2026-08-24 regression)', async () => {
+  const requests: any[] = [];
+  const client = { models: { generateContent: async (request: any) => {
+    requests.push(request);
+    return { text: '1\n00:00:00,000 --> 00:00:01,000\nمقدمة الدرس' };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  const source = 'https://www.youtube.com/watch?v=AbCdEf12_-3';
+  const result = await transcribePublicYouTubeVideo(source);
+
+  assert.match(result, /مقدمة الدرس/);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].contents[0].parts[0].fileData.fileUri, source);
+  assert.equal(requests[0].contents[0].parts[0].fileData.mimeType, 'video/*');
+  assert.equal(requests[0].contents[0].parts.some((part: any) => part.inlineData), false);
+  assert.equal(requests[0].config.responseMimeType, 'text/plain');
+});
+
+test('public or unavailable YouTube rejection is permanent and provider details stay private', async () => {
+  const client = { models: { generateContent: async () => {
+    throw { status: 400, name: 'SENSITIVE_PROVIDER_SENTINEL' };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(
+    transcribePublicYouTubeVideo('https://www.youtube.com/watch?v=AbCdEf12_-3'),
+    (error: unknown) => error instanceof WorkerExternalError
+      && !error.retryable
+      && error.category === 'rejected'
+      && !error.message.includes('SENSITIVE_PROVIDER_SENTINEL')
+      && !error.message.includes('AbCdEf12_-3'),
+  );
+});
+
+test('transient YouTube failure is classified for one bounded BullMQ retry layer', async () => {
+  let calls = 0;
+  setGeminiRetryWaitForTests(async () => {});
+  const client = { models: { generateContent: async () => {
+    calls += 1;
+    throw { status: 503, name: 'SENSITIVE_PROVIDER_SENTINEL' };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(
+    transcribePublicYouTubeVideo('https://www.youtube.com/watch?v=AbCdEf12_-3'),
+    (error: unknown) => error instanceof WorkerExternalError
+      && error.retryable
+      && error.category === 'provider'
+      && !error.message.includes('SENSITIVE_PROVIDER_SENTINEL'),
+  );
+  assert.equal(calls, 1);
+});
 
 test('video analysis grounds chapter language in the verbatim transcript (2026-08-10 regression)', async (testContext) => {
   const audioPath = path.join(process.cwd(), '.tmp', 'inline-audio-test.wav');

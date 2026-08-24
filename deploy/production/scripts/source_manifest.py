@@ -178,6 +178,8 @@ def classify_path(relative: str) -> str:
     path = PurePosixPath(relative)
     parts = tuple(part.lower() for part in path.parts)
     suffix = path.suffix.lower()
+    if parts[0] == "artifacts":
+        return "artifact"
     if parts[0] in {"specs"}:
         return "specification"
     if parts[0] in {"docs"} or suffix in {".md", ".mdx", ".rst"}:
@@ -191,8 +193,6 @@ def classify_path(relative: str) -> str:
         ".ts", ".tsx",
     }:
         return "source"
-    if parts[0] == "artifacts":
-        return "artifact"
     if path.name.lower() in {
         "dockerfile", "makefile", "package-lock.json", "package.json",
         "tsconfig.json",

@@ -16,19 +16,25 @@
 
 import '../auth.css';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
-import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
-import { useAuthTheme } from '@/hooks/useAuthTheme';
-import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
+import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
-import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
+
+const CompactRegistrationInstructionsDialog = dynamic(
+  () =>
+    import(
+      '@/components/registration/CompactRegistrationInstructionsDialog'
+    ).then((module) => module.CompactRegistrationInstructionsDialog),
+  { ssr: false },
+);
 
 function getLoginCopy(surface: string) {
   let title = 'بوابة الطالب';
@@ -50,13 +56,16 @@ function getLoginCopy(surface: string) {
 
 export default function LoginPageClient() {
   const router = useRouter();
-  const { isDark, themeVars, toggleTheme } = useAuthTheme();
-  useRootOverscrollBackground();
+  const { isDark, themeVars, toggleTheme } = useAdminTheme();
 
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const surface = getSurfaceName();
   const loginCopy = getLoginCopy(surface);
   const [showLoginInstructions, setShowLoginInstructions] = useState(true);
+  const authThemeVars = {
+    ...themeVars,
+    '--admin-footer': isDark ? '#d1c5b4' : '#0E8F8F',
+  } as CSSProperties;
 
   useEffect(() => {
     loadFromStorage();
@@ -110,7 +119,7 @@ export default function LoginPageClient() {
     return (
       <div
         className="auth-shell auth-redirect-screen relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]"
-        style={themeVars}
+        style={authThemeVars}
       >
         <section
           className="auth-redirect-card"
@@ -153,7 +162,7 @@ export default function LoginPageClient() {
   return (
     <div
       className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]"
-      style={themeVars}
+      style={authThemeVars}
     >
       <div className="auth-shell__glow pointer-events-none">
         <div className="auth-shell__glow-top" />
@@ -161,9 +170,9 @@ export default function LoginPageClient() {
       </div>
 
       <div className="auth-theme-bar">
-        <AnimatedThemeToggler
-          checked={isDark}
-          onToggle={toggleTheme}
+        <button
+          type="button"
+          onClick={toggleTheme}
           aria-label={
             isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
           }
@@ -171,7 +180,11 @@ export default function LoginPageClient() {
             isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
           }
           className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card-soft)]"
-        />
+        >
+          <span aria-hidden="true" className="text-xl leading-none">
+            {isDark ? '☀' : '☾'}
+          </span>
+        </button>
       </div>
 
       <main className="auth-login-main">
@@ -232,7 +245,7 @@ export default function LoginPageClient() {
         <p className="auth-footer-caption">© 2026 منصة مسار</p>
       </main>
 
-      {showLoginInstructions ? <RegistrationInstructionsModal
+      {showLoginInstructions ? <CompactRegistrationInstructionsDialog
         open
         mode="login"
         title="تعليمات مهمة قبل تسجيل الدخول"

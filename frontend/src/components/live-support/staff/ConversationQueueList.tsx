@@ -35,7 +35,9 @@ export function ConversationQueueList({ conversations = [], selectedId, onSelect
           const selected = selectedId === conversation.id;
           const unreadCount = selected ? 0 : conversation.unreadParticipantMessageCount ?? 0;
           const participantName = conversation.participantName?.trim() || (conversation.participantType === 'Guest' ? 'زائر' : 'طالب مسجل');
-          const participantDetail = conversation.subject || (conversation.participantType === 'Guest' ? 'زائر غير مسجل' : 'طالب مسجل');
+          const participantDetail = conversation.channel === 'WhatsApp'
+            ? `واتساب${conversation.externalPhoneNumber ? ` · ${conversation.externalPhoneNumber}` : ''}`
+            : conversation.subject || (conversation.participantType === 'Guest' ? 'زائر غير مسجل' : 'طالب مسجل');
           return (
             <button
               key={conversation.id}
@@ -48,7 +50,7 @@ export function ConversationQueueList({ conversations = [], selectedId, onSelect
               className={`w-full px-4 py-4 text-right transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--admin-primary)] ${selected ? 'bg-[var(--admin-primary-15)]' : 'bg-[var(--admin-card)] hover:bg-[var(--admin-hover)]'}`}
             >
               <span className="flex items-center justify-between gap-2">
-                <strong className="truncate text-[var(--admin-text)]">{participantName}</strong>
+                <span className="flex min-w-0 items-center gap-2"><strong className="truncate text-[var(--admin-text)]">{participantName}</strong>{conversation.channel === 'WhatsApp' ? <span className="shrink-0 rounded-full bg-[#DCF8E7] px-2 py-0.5 text-[0.6875rem] font-bold text-[#075E54]">واتساب</span> : null}</span>
                 {unreadCount > 0 ? <span className="rounded-full bg-[var(--admin-danger)] px-2 py-0.5 text-xs font-bold text-white">{unreadCount} جديد</span> : <small className="shrink-0 text-[var(--admin-muted)]">{statusLabels[conversation.status]}</small>}
               </span>
               <span className="mt-1 block truncate text-sm text-[var(--admin-muted)]" title={conversation.subject}>{participantDetail}</span>

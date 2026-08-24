@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.API.BackgroundServices;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Domain.Entities;
@@ -27,6 +29,37 @@ public sealed class AdminAITurnCompletionServiceTests
 
         Assert.Equal(AdminAIErrorCodes.DecisionEvidenceInvalid, exception.Message);
         Assert.Empty(db.AdminAIMessages.Where(x => x.Role == AdminAIMessageRole.Assistant));
+    }
+
+    [Fact]
+    public async Task Completion_ProductionRegression_August21_AcceptsWorkerHashForArabicAnswer()
+    {
+        await using var db = CreateDb();
+        var state = await SeedAsync(db);
+        var evidenceId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+        db.Add(new AdminAIReadInvocation
+        {
+            Id = evidenceId,
+            TurnId = state.Turn.Id,
+            TurnStepId = state.Turn.Steps.Single().Id,
+            InvocationSequence = 1,
+            Status = AdminAIReadInvocationStatus.Succeeded
+        });
+        await db.SaveChangesAsync();
+        var decision = Json("{\"schemaVersion\":\"1\",\"type\":\"answer\",\"answer\":{\"summaryAr\":\"عدد الطلاب 10 😀\",\"facts\":[\"سطر\\u2028جديد\"],\"calculations\":[],\"inferences\":[],\"limitations\":[],\"suggestions\":[],\"evidenceInvocationIds\":[\"11111111-1111-4111-8111-111111111111\"]}}");
+        var request = Request(state, decision) with
+        {
+            DecisionHash = "f0af81c51fddb9880cd4de4248b87a1aac7c5586824ed5b25a2ca0f90861a185"
+        };
+
+        var completion = await Service(db).CompleteAsync(state.Turn.Id, request, default);
+
+        Assert.Equal(AdminAITurnStatus.Completed, completion.Status);
+        Assert.Contains(db.AdminAIMessages, message => message.Role == AdminAIMessageRole.Assistant && message.Content == "عدد الطلاب 10 😀");
+        var realtimeEvent = Assert.Single(db.OutboxEvents.Where(outbox => outbox.Type == AdminAIOutboxQueueDispatcher.RealtimeEventType));
+        Assert.Equal(state.Turn.ActorAdminUserId.ToString(), realtimeEvent.TargetUserId);
+        Assert.Null(realtimeEvent.TargetGroup);
+        Assert.NotNull(AdminAIOutboxQueueDispatcher.ValidateRealtimeEnvelope(realtimeEvent));
     }
 
     [Fact]
@@ -65,7 +98,8 @@ public sealed class AdminAITurnCompletionServiceTests
     private static AdminAIInternalCompleteRequest Request(State state, JsonElement decision) => new("1", "lease", state.Turn.Version, 1, state.Baseline.Version, state.Policy.Version, decision, Hash(decision), "callback", "gemini-developer", "test-model", null, null, null, 10);
     private static string Hash(JsonElement decision)
     {
-        using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) Canonical(writer, decision);
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })) Canonical(writer, decision);
         return Convert.ToHexString(SHA256.HashData(stream.ToArray())).ToLowerInvariant();
     }
     private static void Canonical(Utf8JsonWriter writer, JsonElement value)

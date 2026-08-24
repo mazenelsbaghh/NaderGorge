@@ -84,22 +84,53 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var grantedPackages = await _context.Packages
             .AsNoTracking()
             .Where(package => packageGrantIds.Contains(package.Id))
-            .Select(package => new { package.Id, package.Name, package.Price })
+            .Select(package => new
+            {
+                package.Id,
+                package.Name,
+                package.Price,
+                package.TeacherId,
+                TeacherName = package.Teacher.User.FullName
+            })
             .ToDictionaryAsync(package => package.Id, cancellationToken);
         var grantedTerms = await _context.Terms
             .AsNoTracking()
             .Where(term => termGrantIds.Contains(term.Id))
-            .Select(term => new { term.Id, PackageName = term.Package.Name, term.Title, term.Price })
+            .Select(term => new
+            {
+                term.Id,
+                PackageName = term.Package.Name,
+                term.Title,
+                term.Price,
+                term.Package.TeacherId,
+                TeacherName = term.Package.Teacher.User.FullName
+            })
             .ToDictionaryAsync(term => term.Id, cancellationToken);
         var grantedSections = await _context.ContentSections
             .AsNoTracking()
             .Where(section => sectionGrantIds.Contains(section.Id))
-            .Select(section => new { section.Id, PackageName = section.Term.Package.Name, section.Title, section.Price })
+            .Select(section => new
+            {
+                section.Id,
+                PackageName = section.Term.Package.Name,
+                section.Title,
+                section.Price,
+                section.Term.Package.TeacherId,
+                TeacherName = section.Term.Package.Teacher.User.FullName
+            })
             .ToDictionaryAsync(section => section.Id, cancellationToken);
         var grantedLessons = await _context.Lessons
             .AsNoTracking()
             .Where(lesson => lessonGrantIds.Contains(lesson.Id))
-            .Select(lesson => new { lesson.Id, PackageName = lesson.ContentSection.Term.Package.Name, lesson.Title, lesson.Price })
+            .Select(lesson => new
+            {
+                lesson.Id,
+                PackageName = lesson.ContentSection.Term.Package.Name,
+                lesson.Title,
+                lesson.Price,
+                lesson.ContentSection.Term.Package.TeacherId,
+                TeacherName = lesson.ContentSection.Term.Package.Teacher.User.FullName
+            })
             .ToDictionaryAsync(lesson => lesson.Id, cancellationToken);
 
         var purchaseEffects = await _context.SalesFinancialEffects
@@ -110,6 +141,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 effect.PurchaseOperationId,
                 effect.TargetId,
                 effect.TeacherId,
+                TeacherName = effect.Teacher != null ? effect.Teacher.User.FullName : null,
                 effect.PaidAmount,
                 effect.PlatformShareImpact,
                 effect.TeacherShareImpact,
@@ -123,6 +155,10 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             string name = "غير معروف";
             decimal price = 0m;
             Guid contentId = Guid.Empty;
+            Guid? contentTeacherId = null;
+            string? contentTeacherName = null;
+            var codeTeacherId = grant.AccessCode?.CodeGroup?.TeacherId;
+            var codeTeacherName = grant.AccessCode?.CodeGroup?.Teacher?.User?.FullName;
 
             switch (grant.GrantType)
             {
@@ -132,13 +168,14 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         name = package.Name;
                         price = package.Price;
                         contentId = package.Id;
+                        contentTeacherId = package.TeacherId;
+                        contentTeacherName = package.TeacherName;
                     }
                     else
                     {
-                        var teacherName = grant.AccessCode?.CodeGroup?.Teacher?.User?.FullName;
-                        name = string.IsNullOrWhiteSpace(teacherName)
+                        name = string.IsNullOrWhiteSpace(codeTeacherName)
                             ? "باكدج عام للمنصة"
-                            : $"باكدج عام لمدرس {teacherName}";
+                            : $"باكدج عام لمدرس {codeTeacherName}";
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Term:
@@ -147,6 +184,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         name = $"{term.PackageName} — {term.Title}";
                         price = term.Price;
                         contentId = term.Id;
+                        contentTeacherId = term.TeacherId;
+                        contentTeacherName = term.TeacherName;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Month:
@@ -155,6 +194,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         name = $"{section.PackageName} — {section.Title}";
                         price = section.Price;
                         contentId = section.Id;
+                        contentTeacherId = section.TeacherId;
+                        contentTeacherName = section.TeacherName;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Lesson:
@@ -163,6 +204,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         name = $"{lesson.PackageName} — {lesson.Title}";
                         price = lesson.Price;
                         contentId = lesson.Id;
+                        contentTeacherId = lesson.TeacherId;
+                        contentTeacherName = lesson.TeacherName;
                     }
                     break;
             }
@@ -171,6 +214,19 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 .Where(effect => effect.TargetId == contentId)
                 .OrderBy(effect => Math.Abs((effect.CreatedAt - grant.CreatedAt).Ticks))
                 .FirstOrDefault();
+
+            var resolvedTeacherId = contentTeacherId;
+            var resolvedTeacherName = contentTeacherName;
+            if (codeTeacherId.HasValue)
+            {
+                resolvedTeacherId = codeTeacherId;
+                resolvedTeacherName = codeTeacherName;
+            }
+            if (purchaseEffect?.TeacherId is not null)
+            {
+                resolvedTeacherId = purchaseEffect.TeacherId;
+                resolvedTeacherName = purchaseEffect.TeacherName;
+            }
 
             packages.Add(new StudentPackageDto
             {
@@ -184,7 +240,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
                 Price = price,
                 PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
-                TeacherId = purchaseEffect?.TeacherId,
+                TeacherId = resolvedTeacherId,
+                TeacherName = resolvedTeacherName,
                 PaidAmount = purchaseEffect?.PaidAmount ?? 0m,
                 PlatformShareAmount = purchaseEffect?.PlatformShareImpact ?? 0m,
                 TeacherShareAmount = purchaseEffect?.TeacherShareImpact ?? 0m,

@@ -36,11 +36,20 @@ def test_frontend_uses_memory_incremental_cache_instead_of_writing_server_files(
     assert "entries.clear()" in handler
 
 
-def test_telegram_download_destroys_the_client_update_loop() -> None:
-    source = (ROOT / "worker/src/utils/audioExtractor.ts").read_text()
+def test_video_analysis_runtime_never_starts_a_telegram_client_update_loop() -> None:
+    """Regression for the 2026-08-03 worker TIMEOUT log storm."""
+    runtime_sources = "\n".join(
+        (ROOT / relative_path).read_text()
+        for relative_path in (
+            "worker/src/jobs/analyzeVideoChapters.ts",
+            "worker/src/services/geminiService.ts",
+            "worker/src/utils/audioExtractor.ts",
+        )
+    )
 
-    assert "await client.destroy();" in source
-    assert "await client.disconnect();" not in source
+    assert "TelegramClient" not in runtime_sources
+    assert "TELEGRAM_API_ID" not in runtime_sources
+    assert "TELEGRAM_STRING_SESSION" not in runtime_sources
 
 
 def test_backend_persists_data_protection_and_honors_forwarded_scheme_first() -> None:

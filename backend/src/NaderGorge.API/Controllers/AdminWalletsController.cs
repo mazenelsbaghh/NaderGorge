@@ -61,12 +61,17 @@ public class AdminWalletsController : ControllerBase
     [HttpPut("{id:guid}/limits")]
     public async Task<IActionResult> UpdateLimits([FromRoute] Guid id, [FromBody] UpdateWalletLimitsRequestDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateWalletLimitsCommand(
-            id,
-            dto.Label,
-            dto.DailyLimit,
-            dto.MonthlyLimit,
-            dto.SmsSenderFilters), ct);
+        var settings = new WalletSettingsUpdate
+        {
+            Label = dto.Label,
+            DailyLimit = dto.DailyLimit,
+            MonthlyLimit = dto.MonthlyLimit,
+            SmsSenderFilters = dto.SmsSenderFilters,
+            IsRechargePaused = dto.IsRechargePaused,
+            RechargePauseMessage = dto.RechargePauseMessage,
+            RechargeResumeAt = dto.RechargeResumeAt
+        };
+        var result = await _mediator.Send(new UpdateWalletLimitsCommand(id, settings), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -172,7 +177,10 @@ public record UpdateWalletLimitsRequestDto(
     string Label,
     decimal DailyLimit,
     decimal MonthlyLimit,
-    List<string> SmsSenderFilters);
+    List<string> SmsSenderFilters,
+    bool? IsRechargePaused = null,
+    string? RechargePauseMessage = null,
+    DateTime? RechargeResumeAt = null);
 
 public record ResolveRechargeRequestDto(
     bool Approve,

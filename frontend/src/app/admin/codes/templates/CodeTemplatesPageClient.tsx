@@ -10,16 +10,23 @@ import { invalidateMany } from '@/lib/cache-invalidation';
 
 type TemplateElement = { id: string; label: string; x: number; y: number; size?: number; anchor?: 'center' | 'top-left' };
 
-const DEFAULT_TEMPLATE_ELEMENTS: TemplateElement[] = [
+const AVAILABLE_TEMPLATE_ELEMENTS: TemplateElement[] = [
   { id: 'qr', label: 'QR', x: 26.1, y: 33.8, size: 24, anchor: 'center' },
   { id: 'code', label: 'الكود', x: 50, y: 18, size: 4, anchor: 'center' },
   { id: 'serial', label: 'السيريال', x: 50, y: 38, size: 3, anchor: 'center' },
+  { id: 'teacher', label: 'اسم المدرس', x: 70, y: 56, size: 3.2, anchor: 'center' },
+  { id: 'price', label: 'السعر', x: 70, y: 68, size: 3.4, anchor: 'center' },
+  { id: 'groupName', label: 'اسم المجموعة', x: 70, y: 80, size: 3.2, anchor: 'center' },
 ];
+const DEFAULT_TEMPLATE_ELEMENTS = AVAILABLE_TEMPLATE_ELEMENTS.slice(0, 3);
 
 function getElementDefaultSize(id: string) {
   if (id === 'qr') return 24;
   if (id === 'code') return 4;
   if (id === 'serial') return 3;
+  if (id === 'teacher') return 3.2;
+  if (id === 'price') return 3.4;
+  if (id === 'groupName') return 3.2;
   return 3;
 }
 
@@ -203,6 +210,15 @@ export default function CodeTemplatesPageClient() {
                 elements: form.elements.map((element) => element.id === id ? { ...element, size } : element),
               })}
             />
+            <ElementVisibilityControls
+              elements={form.elements}
+              onToggle={(candidate, enabled) => setForm({
+                ...form,
+                elements: enabled
+                  ? [...form.elements, candidate]
+                  : form.elements.filter((element) => element.id !== candidate.id),
+              })}
+            />
             <label className="flex items-center gap-2 rounded-md border border-[var(--admin-border)] px-3 py-2 text-sm font-bold text-[var(--admin-text)]">
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} />
               مفعل
@@ -368,6 +384,33 @@ function ElementSizeControls({
   );
 }
 
+function ElementVisibilityControls({
+  elements,
+  onToggle,
+}: {
+  elements: TemplateElement[];
+  onToggle: (element: TemplateElement, enabled: boolean) => void;
+}) {
+  const activeIds = new Set(elements.map((element) => element.id));
+  return (
+    <fieldset className="grid gap-2 rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3">
+      <legend className="px-1 text-sm font-black text-[var(--admin-text)]">العناصر الظاهرة في الكارت</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {AVAILABLE_TEMPLATE_ELEMENTS.map((element) => (
+          <label key={element.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md bg-[var(--admin-card)] px-3 text-xs font-bold text-[var(--admin-text)]">
+            <input
+              type="checkbox"
+              checked={activeIds.has(element.id)}
+              onChange={(event) => onToggle(element, event.target.checked)}
+            />
+            {element.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 function TemplateDesigner({
   elements,
   widthMm,
@@ -473,6 +516,12 @@ function TemplateDesigner({
             <span className="font-mono font-black tracking-widest text-slate-950">1234567890</span>
           ) : element.id === 'serial' ? (
             <span className="font-mono font-black tracking-wide text-slate-950">0001</span>
+          ) : element.id === 'teacher' ? (
+            <span className="whitespace-nowrap font-bold text-slate-950">اسم المدرس</span>
+          ) : element.id === 'price' ? (
+            <span className="whitespace-nowrap font-bold text-slate-950">250 ج.م</span>
+          ) : element.id === 'groupName' ? (
+            <span className="whitespace-nowrap font-bold text-slate-950">اسم المجموعة</span>
           ) : (
             element.label
           )}

@@ -113,7 +113,24 @@ public sealed class AdminAITurnCompletionService(
         step.LatencyMs = request.LatencyMs;
         step.CompletedAt = turn.CompletedAt;
         step.Version++;
-        db.OutboxEvents.Add(new OutboxEvent { Type = "AdminAITurnCompleted", PayloadJson = JsonSerializer.Serialize(new { schemaVersion = "1", turnId, turn.ConversationId, sequence = turn.Conversation.LastSequence }) });
+        var realtimeEventId = Guid.NewGuid();
+        db.OutboxEvents.Add(new OutboxEvent
+        {
+            Id = realtimeEventId,
+            Type = "AdminAIRealtime",
+            TargetUserId = turn.ActorAdminUserId.ToString(),
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                schemaVersion = "1",
+                eventId = realtimeEventId,
+                turn.ConversationId,
+                turnId,
+                proposalId = (Guid?)null,
+                sequence = turn.Conversation.Version,
+                type = "snapshot_changed",
+                occurredAt = turn.CompletedAt
+            })
+        });
         await db.SaveChangesAsync(ct);
         return new(turnId, turn.Status, turn.Version, proposalIds, false, false);
     }
@@ -191,20 +208,75 @@ public sealed class AdminAITurnCompletionService(
     private static bool FixedEquals(string? left, string? right) => left is not null && right is not null && left.Length == right.Length && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(left), Encoding.ASCII.GetBytes(right));
     private static string Canonicalize(object decision)
     {
-        using var document = JsonDocument.Parse(JsonSerializer.Serialize(decision), new JsonDocumentOptions { MaxDepth = 8 });
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream)) WriteCanonical(writer, document.RootElement);
-        return Encoding.UTF8.GetString(stream.ToArray());
+        var root = decision is JsonElement element ? element : JsonSerializer.SerializeToElement(decision);
+        var canonicalJson = new StringBuilder();
+        WriteCanonical(canonicalJson, root);
+        return canonicalJson.ToString();
     }
-    private static void WriteCanonical(Utf8JsonWriter writer, JsonElement value)
+    private static void WriteCanonical(StringBuilder canonicalJson, JsonElement value)
     {
         switch (value.ValueKind)
         {
-            case JsonValueKind.Object:
-                writer.WriteStartObject(); foreach (var property in value.EnumerateObject().OrderBy(x => x.Name, StringComparer.Ordinal)) { writer.WritePropertyName(property.Name); WriteCanonical(writer, property.Value); } writer.WriteEndObject(); break;
-            case JsonValueKind.Array:
-                writer.WriteStartArray(); foreach (var item in value.EnumerateArray()) WriteCanonical(writer, item); writer.WriteEndArray(); break;
-            default: value.WriteTo(writer); break;
+            case JsonValueKind.Object: WriteCanonicalObject(canonicalJson, value); break;
+            case JsonValueKind.Array: WriteCanonicalArray(canonicalJson, value); break;
+            case JsonValueKind.String: WriteJsonString(canonicalJson, value.GetString()!); break;
+            case JsonValueKind.True: canonicalJson.Append("true"); break;
+            case JsonValueKind.False: canonicalJson.Append("false"); break;
+            case JsonValueKind.Null: canonicalJson.Append("null"); break;
+            default: canonicalJson.Append(value.GetRawText()); break;
         }
+    }
+    private static void WriteCanonicalObject(StringBuilder canonicalJson, JsonElement value)
+    {
+        canonicalJson.Append('{');
+        var separator = false;
+        foreach (var property in value.EnumerateObject().OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            if (separator) canonicalJson.Append(',');
+            WriteJsonString(canonicalJson, property.Name);
+            canonicalJson.Append(':');
+            WriteCanonical(canonicalJson, property.Value);
+            separator = true;
+        }
+        canonicalJson.Append('}');
+    }
+    private static void WriteCanonicalArray(StringBuilder canonicalJson, JsonElement value)
+    {
+        canonicalJson.Append('[');
+        for (var index = 0; index < value.GetArrayLength(); index++)
+        {
+            if (index > 0) canonicalJson.Append(',');
+            WriteCanonical(canonicalJson, value[index]);
+        }
+        canonicalJson.Append(']');
+    }
+    private static void WriteJsonString(StringBuilder canonicalJson, string text)
+    {
+        canonicalJson.Append('"');
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (character == '"') canonicalJson.Append("\\\"");
+            else if (character == '\\') canonicalJson.Append("\\\\");
+            else if (character == '\b') canonicalJson.Append("\\b");
+            else if (character == '\t') canonicalJson.Append("\\t");
+            else if (character == '\n') canonicalJson.Append("\\n");
+            else if (character == '\f') canonicalJson.Append("\\f");
+            else if (character == '\r') canonicalJson.Append("\\r");
+            else if (character < ' ' || (char.IsSurrogate(character) && !IsPairedSurrogate(text, index))) AppendUnicodeEscape(canonicalJson, character);
+            else { canonicalJson.Append(character); if (char.IsHighSurrogate(character)) canonicalJson.Append(text[++index]); }
+        }
+        canonicalJson.Append('"');
+    }
+    private static bool IsPairedSurrogate(string text, int index) =>
+        char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]);
+    private static void AppendUnicodeEscape(StringBuilder canonicalJson, char character)
+    {
+        const string hexadecimal = "0123456789abcdef";
+        canonicalJson.Append("\\u");
+        canonicalJson.Append(hexadecimal[character >> 12]);
+        canonicalJson.Append(hexadecimal[character >> 8 & 15]);
+        canonicalJson.Append(hexadecimal[character >> 4 & 15]);
+        canonicalJson.Append(hexadecimal[character & 15]);
     }
 }

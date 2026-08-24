@@ -112,6 +112,9 @@ services:
       EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Massar}
       WhatsAppCloudApi__AccessToken: ${WHATSAPP_CLOUD_ACCESS_TOKEN:-}
       WhatsAppCloudApi__PhoneNumberId: ${WHATSAPP_CLOUD_PHONE_NUMBER_ID:-}
+      WhatsAppCloudApi__BusinessAccountId: ${WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID:-}
+      WhatsAppCloudApi__VerifyToken: ${WHATSAPP_CLOUD_VERIFY_TOKEN:-}
+      WhatsAppCloudApi__AppSecret: ${WHATSAPP_CLOUD_APP_SECRET:-}
       WhatsAppCloudApi__ApiVersion: ${WHATSAPP_CLOUD_API_VERSION:-v20.0}
       WhatsAppCloudApi__DefaultTemplateName: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_NAME:-student_result_2}
       WhatsAppCloudApi__DefaultTemplateLanguage: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_LANGUAGE:-ar_EG}

@@ -5,6 +5,7 @@ import { registerCacheStore } from '@/lib/cache-invalidation';
 interface StudentShellState {
   unreadNotificationsCount: number;
   currentBalance: number;
+  promotionalBalance: number;
   gamificationPoints: number;
   gamificationLevel: string;
   avatarSlug: string | null;
@@ -24,6 +25,7 @@ const CACHE_TTL = 30000; // 30 seconds cache
 export const useStudentShellStore = create<StudentShellState>((set, get) => ({
   unreadNotificationsCount: 0,
   currentBalance: 0,
+  promotionalBalance: 0,
   gamificationPoints: 0,
   gamificationLevel: 'طالب',
   avatarSlug: null,
@@ -49,6 +51,7 @@ export const useStudentShellStore = create<StudentShellState>((set, get) => ({
       set({
         unreadNotificationsCount: data.unreadNotificationsCount,
         currentBalance: Number(data.currentBalance),
+        promotionalBalance: Number(data.promotionalBalance ?? 0),
         gamificationPoints: data.gamification.totalPoints,
         gamificationLevel: data.gamification.levelName,
         avatarSlug: data.avatarSlug,

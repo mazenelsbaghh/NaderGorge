@@ -119,6 +119,48 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Initiate_shows_the_configured_message_when_all_active_wallets_are_temporarily_paused()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Paused Student", "01000000041");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000041");
+        var wallet = Wallet("01010000041");
+        wallet.IsRechargePaused = true;
+        wallet.RechargePauseMessage = "التحويل متوقف مؤقتًا لحين تفعيل الرقم الجديد.";
+        wallet.RechargeResumeAt = DateTime.UtcNow.AddHours(24);
+        db.DigitalWallets.Add(wallet);
+        await db.SaveChangesAsync();
+
+        var result = await new InitiateRechargeCommandHandler(db)
+            .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(wallet.RechargePauseMessage, result.Message);
+        Assert.Contains("RECHARGE_TEMPORARILY_PAUSED", result.Errors!);
+        Assert.Empty(await db.RechargeRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Initiate_automatically_uses_a_paused_wallet_after_its_resume_time()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Resumed Student", "01000000042");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000042");
+        var wallet = Wallet("01010000042");
+        wallet.IsRechargePaused = true;
+        wallet.RechargePauseMessage = "توقف مؤقت";
+        wallet.RechargeResumeAt = DateTime.UtcNow.AddMinutes(-1);
+        db.DigitalWallets.Add(wallet);
+        await db.SaveChangesAsync();
+
+        var result = await new InitiateRechargeCommandHandler(db)
+            .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(wallet.Id, (await db.RechargeRequests.SingleAsync()).WalletId);
+    }
+
+    [Fact]
     public async Task Student_history_hides_an_inactive_wallet_phone_number()
     {
         await using var db = TestAppDbContextFactory.Create();

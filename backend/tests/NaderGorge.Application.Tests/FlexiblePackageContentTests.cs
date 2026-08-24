@@ -50,6 +50,49 @@ public sealed class FlexiblePackageContentTests
     }
 
     [Fact]
+    public async Task DirectContent_UsesPackagePriceWhenStoredContainerPriceIsStale()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var packageHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+        var packageCreation = await packageHandler.Handle(
+            CreatePackage(subject, teacher, PackageContentMode.SectionWithLessons),
+            CancellationToken.None);
+        var rootTerm = await db.Terms.SingleAsync(term => term.PackageId == packageCreation.Data && term.IsSystemContainer);
+        rootTerm.Price = 0;
+        await db.SaveChangesAsync();
+
+        var target = await new SalesTargetResolver(db).ResolveFromCodeTypeAsync(CodeType.Term, rootTerm.Id);
+
+        Assert.NotNull(target);
+        Assert.Equal(100, target.Price);
+    }
+
+    [Fact]
+    public async Task UpdatePackage_SynchronizesDirectContentPrice()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var packageHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+        var packageCreation = await packageHandler.Handle(
+            CreatePackage(subject, teacher, PackageContentMode.SectionWithLessons),
+            CancellationToken.None);
+        var package = await db.Packages.SingleAsync(item => item.Id == packageCreation.Data);
+        var updateHandler = new UpdatePackageCommandHandler(db);
+
+        var update = await updateHandler.Handle(
+            new UpdatePackageCommand(package.Id, package.Name, package.Description, 160, package.IsActive),
+            CancellationToken.None);
+
+        var rootTermPrice = await db.Terms
+            .Where(term => term.PackageId == package.Id && term.IsSystemContainer)
+            .Select(term => term.Price)
+            .SingleAsync();
+        Assert.True(update.Success);
+        Assert.Equal(160, rootTermPrice);
+    }
+
+    [Fact]
     public async Task ProductionRegression_StandaloneLesson_CreatesReadyLessonWithoutVisiblePackageLevels()
     {
         await using var db = TestAppDbContextFactory.Create();

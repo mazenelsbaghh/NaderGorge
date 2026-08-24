@@ -214,37 +214,117 @@ export default function AdminStudentsPageClient({ staff = false }: { staff?: boo
         return getStudyTrackLabel(t);
       };
 
+      const mapBoolean = (value?: boolean) => {
+        if (value === undefined) return '—';
+        return value ? 'نعم' : 'لا';
+      };
+
+      const mapDate = (value?: string) => {
+        if (!value) return '—';
+        return new Date(value).toLocaleDateString('ar-EG-u-nu-latn', {
+          timeZone: 'Africa/Cairo',
+        });
+      };
+
+      const scopedBalanceColumns = Array.from(
+        new Map(
+          itemsToExport.flatMap((student) =>
+            student.scopedBalances.map((balance) => [
+              balance.teacherId ?? 'general',
+              balance.teacherName,
+            ])
+          )
+        )
+      ).sort(([, firstName], [, secondName]) =>
+        firstName.localeCompare(secondName, 'ar')
+      );
+
       const headers = [
+        'معرف الطالب',
+        'كود الطالب',
         'رقم متابعة ولي الأمر',
         'الاسم الكامل',
         'رقم الهاتف',
         'رقم الهاتف الإضافي',
         'هاتف الأب / ولي الأمر',
+        'رقم ولي الأمر الإضافي',
+        'هاتف الأم',
+        'تاريخ ميلاد الطالب',
+        'تاريخ ميلاد الأب',
+        'تاريخ ميلاد الأم',
+        'الأب على قيد الحياة',
+        'الأم على قيد الحياة',
+        'الجنسية',
         'المرحلة الدراسية',
         'الصف الدراسي',
         'الشعبة / التخصص',
+        'اسم المدرسة',
+        'نوع المدرسة',
         'المحافظة',
+        'المنطقة / المركز',
+        'العنوان',
         'النوع',
         'الحالة',
+        'سبب الإيقاف',
+        'الأدوار',
+        'الرصيد العام',
+        'إجمالي أرصدة المدرسين',
+        'الرصيد الكلي',
+        ...scopedBalanceColumns.map(([, teacherName]) => `رصيد: ${teacherName}`),
+        'معرف الصورة الشخصية',
         'تاريخ الانضمام',
       ];
 
       const csvRows = [headers.join(',')];
 
       for (const u of itemsToExport) {
+        const teacherBalanceTotal = u.scopedBalances
+          .filter((balance) => balance.teacherId)
+          .reduce((total, balance) => total + balance.availableAmount, 0);
+        const scopedBalanceTotal = u.scopedBalances.reduce(
+          (total, balance) => total + balance.availableAmount,
+          0
+        );
+        const scopedBalancesByOwner = new Map(
+          u.scopedBalances.map((balance) => [
+            balance.teacherId ?? 'general',
+            balance.availableAmount,
+          ])
+        );
         const rowData = [
+          u.id,
+          u.studentCode || '—',
           u.parentTrackingCode || '—',
           u.fullName,
           u.phoneNumber,
           u.secondaryPhone || '—',
           u.parentPhone || '—',
+          u.secondaryParentPhone || '—',
+          u.motherPhone || '—',
+          mapDate(u.dateOfBirth),
+          mapDate(u.fatherDateOfBirth),
+          mapDate(u.motherDateOfBirth),
+          mapBoolean(u.isFatherAlive),
+          mapBoolean(u.isMotherAlive),
+          u.nationality || '—',
           mapEducationStage(u.educationStage),
           mapGradeLevel(u.grade),
           mapStudyTrack(u.track),
+          u.schoolName || '—',
+          u.schoolType || '—',
           u.governorate || '—',
+          u.district || '—',
+          u.address || '—',
           mapGender(u.gender),
           statusLabel(u.status),
-          new Date(u.createdAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }),
+          u.suspensionReason || '—',
+          u.roles.join(' / ') || '—',
+          u.currentBalance ?? 0,
+          teacherBalanceTotal,
+          (u.currentBalance ?? 0) + scopedBalanceTotal,
+          ...scopedBalanceColumns.map(([ownerId]) => scopedBalancesByOwner.get(ownerId) ?? 0),
+          u.avatarSlug || '—',
+          mapDate(u.createdAt),
         ];
 
         const escapedRow = rowData.map((val) => {

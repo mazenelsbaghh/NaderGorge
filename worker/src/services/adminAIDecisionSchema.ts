@@ -66,6 +66,6 @@ export function parseAdminAIDecision(input: unknown): AdminAIDecision {
     default: return invalid();
   }
 }
-function canonical(value: unknown): unknown { if (Array.isArray(value)) return value.map(canonical); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as JsonObject).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonical(item)])); return value; }
+function canonical(value: unknown): unknown { if (Array.isArray(value)) return value.map(canonical); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as JsonObject).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([key, item]) => [key, canonical(item)])); return value; }
 export const canonicalAdminAIDecision = (decision: AdminAIDecision) => JSON.stringify(canonical(decision));
 export const hashAdminAIDecision = (decision: AdminAIDecision) => createHash('sha256').update(canonicalAdminAIDecision(decision), 'utf8').digest('hex');

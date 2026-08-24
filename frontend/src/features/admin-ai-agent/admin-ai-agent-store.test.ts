@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { useAdminAiAgentStore } from './admin-ai-agent-store.ts';
+import {
+  isAdminAiTurnInProgress,
+  type AdminAiTurnStatus,
+} from '../../services/admin-ai-agent-contract.ts';
 
 const controllerSource = readFileSync(
   new URL('./useAdminAiAgentController.ts', import.meta.url),
@@ -48,6 +52,24 @@ test('drafts stay bounded in memory without browser persistence', () => {
   useAdminAiAgentStore.getState().setDraft('س'.repeat(9000));
   assert.equal(useAdminAiAgentStore.getState().draft.length, 8000);
   assert.equal('persist' in useAdminAiAgentStore, false);
+});
+
+test('turn progress classification stops snapshot polling after terminal states', () => {
+  const expected: Record<AdminAiTurnStatus, boolean> = {
+    Queued: true,
+    Planning: true,
+    Retrieving: true,
+    Answering: true,
+    WaitingClarification: false,
+    ProposalReady: false,
+    Completed: false,
+    CancelRequested: true,
+    Cancelled: false,
+    Failed: false,
+    AccessRevoked: false,
+  };
+  for (const [status, inProgress] of Object.entries(expected))
+    assert.equal(isAdminAiTurnInProgress(status as AdminAiTurnStatus), inProgress);
 });
 
 test('snapshot generation guards reject late responses across conversation boundaries', () => {

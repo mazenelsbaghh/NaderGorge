@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
-  Copy,
   ExternalLink,
   Loader2,
   RefreshCw,
@@ -29,6 +28,10 @@ import { AdminPage, AdminTeacherPhotoUpload } from '@/components/admin';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import { registerCacheStore } from '@/lib/cache-invalidation';
+import {
+  aiJobStatusFromProgressEvent,
+  type AiJobFailure,
+} from '@/lib/ai-job-status';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,8 +43,8 @@ interface JobProgress {
 interface JobStatus {
   id: string;
   state: 'waiting' | 'active' | 'completed' | 'failed' | 'not_found';
-  progress: JobProgress | number;
-  failedReason?: string | null;
+  progress: JobProgress;
+  failure?: AiJobFailure;
 }
 
 interface MonitoredVideo {
@@ -50,30 +53,35 @@ interface MonitoredVideo {
   fetchError: boolean;
 }
 
-// ─── Progress stages matching the worker exactly ────────────────────────────
+// ─── Public progress stages ─────────────────────────────────────────────────
 
 const STAGE_CONFIG: Record<string, { label: string; fillClass: string; emoji: string }> = {
-  'جاري استخراج وتحضير الصوت من الفيديو...': {
-    label: 'استخراج الصوت',
+  'جاري تجهيز الفيديو للتحليل...': {
+    label: 'تجهيز الفيديو',
     fillClass: 'ai-progress-fill--audio',
-    emoji: '🎵',
+    emoji: '🎬',
   },
-  'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...': {
-    label: 'تحليل Gemini AI',
+  'جاري تحويل صوت المحاضرة إلى نص مكتوب...': {
+    label: 'تحويل المحاضرة إلى نص',
     fillClass: 'ai-progress-fill--analysis',
-    emoji: '🤖',
+    emoji: '🎙️',
   },
-  'جاري بناء هيكل الفصول وإنشاء الترجمة...': {
+  'جاري تقسيم المحاضرة وكتابة الملخصات...': {
+    label: 'كتابة الملخصات',
+    fillClass: 'ai-progress-fill--analysis',
+    emoji: '✨',
+  },
+  'جاري بناء الفصول وتجهيز الترجمة...': {
     label: 'بناء الفصول',
     fillClass: 'ai-progress-fill--chapters',
     emoji: '📋',
   },
-  'جاري حفظ الفصول وتحديث قواعد البيانات...': {
+  'جاري حفظ نتائج التحليل...': {
     label: 'حفظ البيانات',
     fillClass: 'ai-progress-fill--saving',
     emoji: '💾',
   },
-  'اكتملت المعالجة بنجاح مئة بالمئة.': {
+  'اكتملت معالجة الفيديو بنجاح.': {
     label: 'تم بنجاح',
     fillClass: 'ai-progress-fill--done',
     emoji: '✅',
@@ -84,29 +92,20 @@ function getStageConfig(stage: string) {
   return STAGE_CONFIG[stage] ?? { label: stage, fillClass: 'ai-progress-fill--default', emoji: '⚙️' };
 }
 
-function getProgressVal(progress: JobProgress | number): number {
-  if (typeof progress === 'object' && progress !== null) return progress.percentage ?? 0;
-  return Number(progress) || 0;
+function getProgressVal(progress: JobProgress): number {
+  return progress.percentage;
 }
 
-function getProgressStage(progress: JobProgress | number): string {
-  if (typeof progress === 'object' && progress !== null && progress.stage) return progress.stage;
-  return 'جاري التحضير ووضع المهمة في الطابور...';
+function getProgressStage(progress: JobProgress): string {
+  return progress.stage;
 }
 
 function normalizeJobStatus(status: WorkerJobStatus): JobStatus {
-  const progress = typeof status.progress === 'object' && status.progress !== null
-    ? {
-        percentage: status.progress.percentage ?? 0,
-        stage: status.progress.stage ?? 'جاري التحضير ووضع المهمة في الطابور...',
-      }
-    : status.progress ?? 0;
-
   return {
     id: status.id ?? '',
     state: status.state,
-    progress,
-    failedReason: status.failedReason,
+    progress: status.progress,
+    failure: status.failure,
   };
 }
 
@@ -162,7 +161,11 @@ function StateBadge({ state }: { state: JobStatus['state'] | null }) {
 // ─── Chapters Panel ──────────────────────────────────────────────────────────
 
 function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => void }) {
-  const [status, setStatus] = useState<{ state: string; progress: JobProgress | number; failedReason?: string | null } | null>(null);
+  const [status, setStatus] = useState<{
+    state: string;
+    progress: JobProgress;
+    failure?: AiJobFailure;
+  } | null>(null);
   const doneRef = useRef(false);
   // Track whether we've ever seen the job in a real state (waiting/active)
   // to avoid treating an early not_found as "done"
@@ -222,7 +225,7 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
   }
 
   const pct = getProgressVal(status.progress);
-  const stage = typeof status.progress === 'object' && status.progress !== null ? status.progress.stage : '';
+  const stage = status.progress.stage;
   // Only completed if we explicitly got completed state (not not_found in grace period)
   const isCompleted = status.state === 'completed';
   const isPending = status.state === 'not_found';
@@ -251,12 +254,13 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
         </div>
       )}
       {/* Stage text */}
-      {stage && !isCompleted && (
+      {stage && !isCompleted && !isFailed && (
         <div className="px-2.5 py-1 text-xs text-[var(--admin-muted)]">{stage}</div>
       )}
-      {/* Error reason */}
-      {isFailed && status.failedReason && (
-        <div className="px-2.5 py-1.5 text-xs text-[var(--admin-danger)]">{status.failedReason}</div>
+      {isFailed && status.failure && (
+        <div role="alert" dir="rtl" className="px-2.5 py-2 text-start text-xs leading-5 text-[var(--admin-danger)]">
+          {status.failure.message}
+        </div>
       )}
     </div>
   );
@@ -487,6 +491,7 @@ function JobCard({
             prefetch={false}
             className="ai-icon-btn"
             title="انتقل للدرس"
+            aria-label={`الانتقال إلى درس ${video.lessonTitle}`}
           >
             <ExternalLink className="h-4 w-4" />
           </Link>
@@ -497,6 +502,7 @@ function JobCard({
               disabled={actioning}
               className="ai-icon-btn ai-icon-btn--danger"
               title="إلغاء المهمة"
+              aria-label="إلغاء مهمة التحليل"
             >
               {actioning ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -506,25 +512,14 @@ function JobCard({
             </button>
           )}
 
-          {isFailed && (
+          {isFailed && jobStatus?.failure?.retryable && (
             <>
-              <button
-                onClick={() => {
-                  if (jobStatus?.failedReason) {
-                    navigator.clipboard.writeText(jobStatus.failedReason);
-                    toast.success('تم نسخ الخطأ');
-                  }
-                }}
-                className="ai-icon-btn"
-                title="نسخ رسالة الخطأ"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
               <button
                 onClick={handleRetry}
                 disabled={actioning}
                 className="ai-icon-btn ai-icon-btn--gold"
                 title="إعادة المحاولة"
+                aria-label="إعادة محاولة تحليل الفيديو"
               >
                 <RefreshCw className={`h-4 w-4 ${actioning ? 'animate-spin' : ''}`} />
               </button>
@@ -533,6 +528,7 @@ function JobCard({
                 disabled={actioning}
                 className="ai-icon-btn ai-icon-btn--danger"
                 title="إلغاء وحذف المهمة"
+                aria-label="إلغاء وحذف مهمة التحليل الفاشلة"
               >
                 <XCircle className="h-4 w-4" />
               </button>
@@ -568,15 +564,14 @@ function JobCard({
       {fetchError && (
         <div className="ai-card__error-banner">
           <WifiOff className="h-3.5 w-3.5 shrink-0" />
-          <span>تعذر الاتصال بخادم العمل (worker)</span>
+          <span>تعذر الاتصال بخدمة معالجة الفيديو. سنحاول التحقق مرة أخرى تلقائيًا.</span>
         </div>
       )}
 
-      {/* Failed reason */}
-      {isFailed && jobStatus?.failedReason && (
-        <div className="ai-card__fail-reason" title={jobStatus.failedReason}>
+      {isFailed && jobStatus?.failure && (
+        <div className="ai-card__fail-reason" role="alert" dir="rtl">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500" />
-          <span className="truncate text-xs text-red-400">{jobStatus.failedReason}</span>
+          <span>{jobStatus.failure.message}</span>
         </div>
       )}
 
@@ -586,7 +581,7 @@ function JobCard({
           {/* Stage label */}
           <div className="ai-card__stage">
             <span className="ai-card__stage-emoji">{stageConf.emoji}</span>
-            <span className="ai-card__stage-label">{progressStage || 'في الطابور...'}</span>
+            <span className="ai-card__stage-label">{stageConf.label || 'في الطابور...'}</span>
             <span className="ai-card__stage-pct">{progressVal}%</span>
           </div>
 
@@ -708,15 +703,7 @@ export default function AIMonitorPageClient() {
         const expectedJobId = `${item.video.id}${idSuffix}`;
 
         if (payload.jobId === expectedJobId) {
-          const updatedStatus: JobStatus = {
-            id: payload.jobId,
-            state: payload.progress >= 100 ? 'completed' : payload.progress < 0 ? 'failed' : 'active',
-            progress: {
-              percentage: payload.progress,
-              stage: payload.message || payload.status,
-            },
-            failedReason: payload.progress < 0 ? payload.message : null,
-          };
+          const updatedStatus = normalizeJobStatus(aiJobStatusFromProgressEvent(payload));
           return {
             ...item,
             jobStatus: updatedStatus,
@@ -1059,7 +1046,10 @@ export default function AIMonitorPageClient() {
           font-size: 0.75rem; color: var(--admin-muted); flex-wrap: wrap;
         }
         .ai-card__path-sep { opacity: 0.5; }
-        .ai-card__actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .ai-card__actions {
+          display: flex; align-items: center; justify-content: flex-end;
+          gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap;
+        }
         .ai-card__error-banner {
           display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;
           color: oklch(0.6 0.15 50); background: oklch(0.65 0.15 50 / 8%);
@@ -1067,9 +1057,12 @@ export default function AIMonitorPageClient() {
           padding: 0.4rem 0.75rem; margin-bottom: 0.75rem;
         }
         .ai-card__fail-reason {
-          display: flex; align-items: center; gap: 0.5rem;
+          display: flex; align-items: flex-start; gap: 0.5rem;
           font-size: 0.75rem; color: oklch(0.55 0.2 25);
-          margin-bottom: 0.75rem; overflow: hidden;
+          margin-bottom: 0.75rem; padding: 0.65rem 0.75rem;
+          border: 1px solid var(--admin-danger-20); border-radius: 0.65rem;
+          background: var(--admin-danger-10); line-height: 1.6;
+          overflow-wrap: anywhere;
         }
 
         /* ─── Progress ─── */
@@ -1345,6 +1338,14 @@ export default function AIMonitorPageClient() {
         }
         .ai-empty h3 { font-size: 1.1rem; font-weight: 700; color: var(--admin-text); margin: 0; }
         .ai-empty p { font-size: 0.85rem; max-width: 320px; margin: 0; color: var(--admin-muted); line-height: 1.6; }
+
+        @media (max-width: 640px) {
+          .ai-card { padding: 1rem; }
+          .ai-card__header { flex-direction: column; }
+          .ai-card__actions { width: 100%; justify-content: flex-start; }
+          .ai-icon-btn { width: 44px; height: 44px; }
+          .ai-card__video-name { white-space: normal; overflow-wrap: anywhere; }
+        }
       `}</style>
 
       <div className="ai-monitor">

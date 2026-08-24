@@ -90,7 +90,8 @@ public sealed class LiveSupportAITurnOrchestrator(
         await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var turn = await db.LiveSupportAITurns.SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
         if (turn is null) return "TURN_NOT_FOUND";
-        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.DiscardedAfterHandoff)
+        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.Failed or
+            LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.DiscardedAfterHandoff)
             return turn.DecisionHash == request.DecisionHash ? "REPLAYED" : "IDEMPOTENCY_CONFLICT";
 
         var conversation = await db.LiveSupportConversations.SingleAsync(item => item.Id == turn.ConversationId, cancellationToken);
@@ -131,6 +132,43 @@ public sealed class LiveSupportAITurnOrchestrator(
         turn.CallbackStatus = LiveSupportAICallbackStatus.Pending;
         ApplyProviderMetadata(turn, request);
 
+        var completionTime = DateTime.UtcNow;
+        var whatsAppWindowExpired = !string.IsNullOrWhiteSpace(request.Decision.MessageAr) &&
+            await db.LiveSupportWhatsAppBindings.AsNoTracking()
+                .AnyAsync(binding => binding.ConversationId == conversation.Id &&
+                    binding.CustomerServiceWindowExpiresAt <= completionTime, cancellationToken);
+        if (whatsAppWindowExpired)
+        {
+            turn.Status = LiveSupportAITurnStatus.Failed;
+            turn.CallbackStatus = LiveSupportAICallbackStatus.Delivered;
+            turn.CallbackAttemptCount++;
+            turn.DecisionType = ParseDecisionType(request.Decision.Type);
+            turn.FailureCode = "WHATSAPP_WINDOW_EXPIRED";
+            turn.LastSafeCallbackErrorCode = "WHATSAPP_WINDOW_EXPIRED";
+            turn.CompletedAt = completionTime;
+            turn.Version++;
+
+            state.Mode = LiveSupportAIMode.HumanQueued;
+            state.HandoffReasonCode = "WHATSAPP_WINDOW_EXPIRED";
+            state.HandoffSafeSummary = "انتهت نافذة الرد النصي على واتساب وتم تحويل المحادثة للدعم البشري لإرسال قالب معتمد.";
+            state.HandedOffAt = completionTime;
+            state.Version++;
+            if (!await db.LiveSupportQueueEntries.AnyAsync(item => item.ConversationId == conversation.Id && item.DequeuedAt == null, cancellationToken))
+                db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversation.Id, EnteredAt = completionTime, Sequence = completionTime.Ticks });
+            conversation.Status = LiveSupportConversationStatus.Waiting;
+            conversation.QueuedAt ??= completionTime;
+            conversation.Version++;
+            await AddEventAsync(conversation.Id, LiveSupportEventType.AITurnFailed, turn.Id, cancellationToken);
+            await AddEventAsync(conversation.Id, LiveSupportEventType.AIHandoffCompleted, turn.Id, cancellationToken);
+            await AddEventAsync(conversation.Id, LiveSupportEventType.QueueEntered, null, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            LiveSupportAITelemetry.CallbackOutcomes.Add(1,
+                new KeyValuePair<string, object?>("outcome", "failed"),
+                new KeyValuePair<string, object?>("failure_code", "WHATSAPP_WINDOW_EXPIRED"));
+            return "FAILED_AND_HANDED_OFF";
+        }
+
         LiveSupportMessage? outputMessage = null;
         if (!string.IsNullOrWhiteSpace(request.Decision.MessageAr))
         {
@@ -144,6 +182,21 @@ public sealed class LiveSupportAITurnOrchestrator(
                 SentAt = DateTime.UtcNow
             };
             db.LiveSupportMessages.Add(outputMessage);
+            var whatsAppWindowCutoff = DateTime.UtcNow;
+            if (await db.LiveSupportWhatsAppBindings.AsNoTracking()
+                    .AnyAsync(binding => binding.ConversationId == conversation.Id &&
+                        binding.CustomerServiceWindowExpiresAt > whatsAppWindowCutoff, cancellationToken))
+            {
+                db.LiveSupportWhatsAppMessages.Add(new LiveSupportWhatsAppMessage
+                {
+                    ConversationId = conversation.Id,
+                    LiveSupportMessageId = outputMessage.Id,
+                    Direction = "Outbound",
+                    MessageType = "text",
+                    Status = "Pending",
+                    Version = 1
+                });
+            }
             conversation.LastMessageAt = outputMessage.SentAt;
             conversation.Version++;
             turn.OutputMessageId = outputMessage.Id;

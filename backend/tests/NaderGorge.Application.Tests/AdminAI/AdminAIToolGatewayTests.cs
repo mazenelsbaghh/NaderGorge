@@ -63,6 +63,47 @@ public sealed class AdminAIToolGatewayTests
     }
 
     [Fact]
+    public async Task DurableInvocation_RevalidatesCachedOutputAgainstTheCurrentContract()
+    {
+        await using var db = Db();
+        var actor = Guid.NewGuid();
+        var turn = Guid.NewGuid();
+        var step = Guid.NewGuid();
+        var read = new CountingRead();
+        var protector = Protector();
+        const string originalOutputSchema = """
+            {"type":"object","additionalProperties":false,"properties":{
+              "label":{"type":"string"},
+              "metadata":{"type":"object","additionalProperties":false,"properties":{}}
+            }}
+            """;
+        var originalExecutor = new AdminAIReadCapabilityExecutor(
+            [read],
+            new AdminAICapabilityRegistry([Definition(outputSchema: originalOutputSchema)]),
+            new AdminAISensitiveDataPolicy(),
+            new AdminAIConversationTests.AllowAccess(actor),
+            db,
+            protector);
+        var call = new AdminAIReadCall("safe.read", "1", new { }, turn, step, 1);
+        await originalExecutor.ExecuteAsync(actor, call, default);
+
+        const string narrowedOutputSchema = """
+            {"type":"object","additionalProperties":false,"properties":{"label":{"type":"string"}}}
+            """;
+        var narrowedExecutor = new AdminAIReadCapabilityExecutor(
+            [read],
+            new AdminAICapabilityRegistry([Definition(outputSchema: narrowedOutputSchema)]),
+            new AdminAISensitiveDataPolicy(),
+            new AdminAIConversationTests.AllowAccess(actor),
+            db,
+            protector);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            narrowedExecutor.ExecuteAsync(actor, call, default));
+        Assert.Equal(1, read.Calls);
+    }
+
+    [Fact]
     public async Task ResultRecordBudget_IsEnforcedAndFailureEvidenceIsDurable()
     {
         await using var db = Db(); var actor = Guid.NewGuid();
@@ -105,8 +146,112 @@ public sealed class AdminAIToolGatewayTests
         Assert.Equal(0, read.Calls);
     }
 
-    private static AdminAICapabilityDefinition Definition(int maxRows = 10, int timeoutMs = 5000, string inputSchema = "{}") =>
-        new("safe.read", "1", "read", "read", "none", inputSchema, "{}", maxRows, 4096, timeoutMs, "SafeQuery", []);
+    [Fact]
+    public async Task TypedReadSchema_RejectsMalformedSnapshotArgumentsBeforeAdapterDispatch()
+    {
+        const string schema = """
+            {"type":"object","properties":{
+              "studentId":{"type":"string","format":"uuid","minLength":36,"maxLength":36},
+              "recentLimit":{"type":"integer","minimum":0,"maximum":10},
+              "selection":{"type":"object","minProperties":1,"maxProperties":2,"additionalProperties":false,"properties":{
+                "profile":{"type":"object","additionalProperties":false,"properties":{
+                  "fields":{"type":"array","minItems":1,"maxItems":2,"uniqueItems":true,"items":{"type":"string","enum":["account","academic"]}}
+                },"required":["fields"]},
+                "balances":{"type":"object","additionalProperties":false,"properties":{
+                  "teacherId":{"type":"string","format":"uuid","minLength":36,"maxLength":36}
+                }}
+              }}
+            },"required":["studentId","selection","recentLimit"],"additionalProperties":false}
+            """;
+        var validId = Guid.NewGuid().ToString("D");
+        string[] invalidJson =
+        [
+            "{\"studentId\":7,\"selection\":{\"profile\":{\"fields\":[\"account\"]}},\"recentLimit\":1}",
+            "{\"studentId\":\"bad\",\"selection\":{\"profile\":{\"fields\":[\"account\"]}},\"recentLimit\":1}",
+            $"{{\"studentId\":\"{Guid.Empty:D}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"]}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"unknown\":{{}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[]}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\",\"account\"]}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"unknown\"]}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"],\"extra\":true}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"balances\":{{\"teacherId\":\"bad\"}}}},\"recentLimit\":1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"]}}}},\"recentLimit\":-1}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"]}}}},\"recentLimit\":11}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"]}}}},\"recentLimit\":1.5}}",
+            $"{{\"studentId\":\"{validId}\",\"selection\":{{\"profile\":{{\"fields\":[\"account\"]}}}},\"recentLimit\":1,\"extra\":true}}"
+        ];
+
+        foreach (var invalid in invalidJson)
+        {
+            var actor = Guid.NewGuid();
+            var read = new CountingRead();
+            var executor = new AdminAIReadCapabilityExecutor(
+                [read],
+                new AdminAICapabilityRegistry([Definition(inputSchema: schema)]),
+                new AdminAISensitiveDataPolicy(),
+                new AdminAIConversationTests.AllowAccess(actor));
+            var input = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(invalid);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                executor.ExecuteAsync(actor, new AdminAIReadCall("safe.read", "1", input), default));
+            Assert.Equal(0, read.Calls);
+        }
+    }
+
+    [Fact]
+    public async Task ClosedOutputSchema_RejectsUnexpectedProviderVisibleFields()
+    {
+        const string outputSchema = """
+            {"type":"object","additionalProperties":false,"properties":{"label":{"type":"string"}}}
+            """;
+        var actor = Guid.NewGuid();
+        var read = new CountingRead();
+        var definition = Definition(outputSchema: outputSchema);
+        var executor = new AdminAIReadCapabilityExecutor(
+            [read],
+            new AdminAICapabilityRegistry([definition]),
+            new AdminAISensitiveDataPolicy(),
+            new AdminAIConversationTests.AllowAccess(actor));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            executor.ExecuteAsync(actor, new AdminAIReadCall("safe.read", "1", new { }), default));
+
+        Assert.Equal(1, read.Calls);
+    }
+
+    [Fact]
+    public async Task LocalSchemaReference_IsResolvedForNestedOutputValidation()
+    {
+        const string outputSchema = """
+            {"type":"object","additionalProperties":false,"properties":{
+              "label":{"type":"string"},"metadata":{"$ref":"#/$defs/metadata"}
+             },"$defs":{"metadata":{"type":"object","additionalProperties":false,"properties":{}}}}
+            """;
+        var actor = Guid.NewGuid();
+        var read = new CountingRead();
+        var definition = Definition(outputSchema: outputSchema);
+        var executor = new AdminAIReadCapabilityExecutor(
+            [read],
+            new AdminAICapabilityRegistry([definition]),
+            new AdminAISensitiveDataPolicy(),
+            new AdminAIConversationTests.AllowAccess(actor));
+
+        var result = await executor.ExecuteAsync(
+            actor,
+            new AdminAIReadCall("safe.read", "1", new { }),
+            default);
+
+        Assert.Equal(1, read.Calls);
+        Assert.Contains("\"label\":\"visible\"", System.Text.Json.JsonSerializer.Serialize(result), StringComparison.Ordinal);
+    }
+
+    private static AdminAICapabilityDefinition Definition(
+        int maxRows = 10,
+        int timeoutMs = 5000,
+        string inputSchema = "{}",
+        string outputSchema = "{}") =>
+        new("safe.read", "1", "read", "read", "none", inputSchema, outputSchema, maxRows, 4096, timeoutMs, "SafeQuery", []);
 
     private static AdminAIReadCapabilityExecutor DurableExecutor(Guid actor, AppDbContext db, IAdminAIReadCapability read, int maxRows = 10, int timeoutMs = 5000, IAdminAIAccessGate? access = null) =>
         new([read], new AdminAICapabilityRegistry([Definition(maxRows, timeoutMs)]), new AdminAISensitiveDataPolicy(), access ?? new AdminAIConversationTests.AllowAccess(actor), db, Protector());

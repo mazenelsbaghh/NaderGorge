@@ -11,6 +11,19 @@
  * ========================================================
  */
 
+html:has(.auth-shell),
+body:has(.auth-shell) {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background-color: #f5f8fb;
+  background-image: none;
+}
+
+html.dark:has(.auth-shell),
+html.dark:has(.auth-shell) body {
+  background-color: #111115;
+}
+
 /* ── Shell Container ─────────────────────────────────────
    Full-viewport wrapper. Receives all --admin-* CSS vars from
    useAdminTheme() injected inline, exactly like AdminShellChrome.

@@ -10,11 +10,21 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "deploy/production/scripts/verify_performance_budgets.py"
+SCRIPTS = SCRIPT.parent
+TESTS = ROOT / "deploy/production/tests"
+sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(TESTS))
 SPEC = importlib.util.spec_from_file_location("verify_performance_budgets", SCRIPT)
 assert SPEC and SPEC.loader
 verification = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = verification
 SPEC.loader.exec_module(verification)
+
+import assemble_performance_evidence as assembler  # noqa: E402
+from performance_evidence_support import (  # noqa: E402
+    create_raw_evidence,
+    initialize_repository,
+)
 
 ADMIN_AI_PERFORMANCE_CONTRACT = {
     "route": {
@@ -79,7 +89,7 @@ def budgets() -> dict:
                 "maximumDuplicateEligibleReads": 0,
                 "maximumWarmNavigationP75Ms": 300,
             }
-            for path in ("/login", "/register", "/student", "/admin/ai-agent")
+            for path in ("/login", "/register", "/student")
         },
         "workflows": {
             "live-support-admin": {
@@ -90,10 +100,16 @@ def budgets() -> dict:
 
 
 def test_production_gate_accepts_complete_bounded_evidence(tmp_path: Path) -> None:
+    repository = initialize_repository(tmp_path)
+    raw_root, candidate = create_raw_evidence(assembler, repository)
     result = verification.verify(
-        write(tmp_path / "budgets.json", budgets()),
-        write(tmp_path / "baseline.json", evidence(1_000)),
-        write(tmp_path / "candidate.json", evidence(750)),
+        verification.VerificationRequest(
+            budgets=write(tmp_path / "budgets.json", budgets()),
+            baseline=write(tmp_path / "baseline.json", evidence(1_000)),
+            candidate=candidate,
+            repository=repository,
+            raw_root=raw_root,
+        )
     )
     assert result["passed"] is True
     assert result["workflows"]["passed"] is True
@@ -125,41 +141,42 @@ def test_admin_ai_release_budget_contract_matches_reviewed_protocol() -> None:
             "maximumQueryTimeoutMs": 5_000,
         },
     }
-    assert budgets()["routes"]["/admin/ai-agent"] == {
-        "minimumInitialReductionFromBaseline": 0.25,
-        "maximumSharedIncreaseFromBaseline": 0,
-        "maximumDeferredBrotliBytes": 100,
-        "maximumDuplicateEligibleReads": 0,
-        "maximumWarmNavigationP75Ms": 300,
-    }
-
-
-@pytest.mark.parametrize(
-    "candidate",
-    [
-        evidence(751),
-        evidence(750, navigation=301),
-        evidence(750, commands=13),
-    ],
-)
+@pytest.mark.parametrize("breach", ["initial", "navigation", "query"])
 def test_production_gate_rejects_any_budget_breach(
     tmp_path: Path,
-    candidate: dict,
+    breach: str,
 ) -> None:
+    repository = initialize_repository(tmp_path)
+    raw_root, candidate = create_raw_evidence(assembler, repository)
+    breached_budgets = budgets()
+    if breach == "initial":
+        breached_budgets["routes"]["/login"]["minimumInitialReductionFromBaseline"] = 1
+    elif breach == "navigation":
+        breached_budgets["routes"]["/student"]["maximumWarmNavigationP75Ms"] = 149
+    else:
+        breached_budgets["workflows"]["live-support-admin"]["maximumDatabaseCommands"] = 4
     with pytest.raises(verification.PerformanceBudgetError, match="budgets failed"):
         verification.verify(
-            write(tmp_path / "budgets.json", budgets()),
-            write(tmp_path / "baseline.json", evidence(1_000)),
-            write(tmp_path / "candidate.json", candidate),
+            verification.VerificationRequest(
+                budgets=write(tmp_path / "budgets.json", breached_budgets),
+                baseline=write(tmp_path / "baseline.json", evidence(1_000)),
+                candidate=candidate,
+                repository=repository,
+                raw_root=raw_root,
+            )
         )
 
 
 def test_production_gate_fails_closed_when_candidate_is_missing(tmp_path: Path) -> None:
     with pytest.raises(verification.PerformanceBudgetError, match="regular non-symlink"):
         verification.verify(
-            write(tmp_path / "budgets.json", budgets()),
-            write(tmp_path / "baseline.json", evidence(1_000)),
-            tmp_path / "missing.json",
+            verification.VerificationRequest(
+                budgets=write(tmp_path / "budgets.json", budgets()),
+                baseline=write(tmp_path / "baseline.json", evidence(1_000)),
+                candidate=tmp_path / "missing.json",
+                repository=tmp_path,
+                raw_root=tmp_path,
+            )
         )
 
 

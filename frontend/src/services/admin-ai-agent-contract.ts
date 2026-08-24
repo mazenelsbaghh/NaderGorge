@@ -11,6 +11,15 @@ export type AdminAiTurnStatus =
   | 'Cancelled'
   | 'Failed'
   | 'AccessRevoked';
+const ADMIN_AI_PROGRESS_STATUSES: ReadonlySet<AdminAiTurnStatus> = new Set([
+  'Queued',
+  'Planning',
+  'Retrieving',
+  'Answering',
+  'CancelRequested',
+]);
+export const isAdminAiTurnInProgress = (status: AdminAiTurnStatus) =>
+  ADMIN_AI_PROGRESS_STATUSES.has(status);
 export type AdminAiProposalStatus =
   | 'PendingSecureInput'
   | 'PendingConfirmation'

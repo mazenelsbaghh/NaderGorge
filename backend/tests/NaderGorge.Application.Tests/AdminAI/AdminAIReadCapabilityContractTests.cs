@@ -38,7 +38,9 @@ public sealed class AdminAIReadCapabilityContractTests
             new AdminAIPlatformFinanceSummaryRead(db), new AdminAIHrPeopleSummaryRead(db),
             new AdminAIHrOperationsSummaryRead(db), new AdminAIHrLifecycleSummaryRead(db),
             new AdminAIOperationsSummaryRead(db), new AdminAICommunitySummaryRead(db),
-            new AdminAILiveSupportSummaryRead(db), new AdminAIReportingSummaryRead(db)
+            new AdminAILiveSupportSummaryRead(db), new AdminAIReportingSummaryRead(db),
+            new AdminAITeacherSearchRead(db), new AdminAITeacherSubscribersSummaryRead(db),
+            new AdminAIStudentSearchRead(db), new AdminAIStudentSnapshotRead(db)
         ];
         var definitions = adapters.Select(adapter => Read(adapter.Key)).ToArray();
 

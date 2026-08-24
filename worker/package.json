@@ -9,7 +9,6 @@
     "start": "node dist/index.js",
     "congratulate-birthdays": "tsc -p tsconfig.json && node dist/scripts/birthday-congratulator.js",
     "telegram-login": "tsc -p tsconfig.json && node dist/scripts/telegram-login.js",
-    "test-telegram-download": "tsc -p tsconfig.json && node dist/scripts/test-telegram-download.js",
     "dump-tg-history": "tsc -p tsconfig.json && node dist/scripts/dump-tg-history.js",
     "test": "npm run build && node scripts/run-tests.mjs",
     "accept:real-ai": "npm run build && node dist/scripts/accept-real-ai-provider.js"

@@ -108,6 +108,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 return ApiResponse<bool>.Fail("تعذر تحديد هدف البيع.");
             if (!target.IsSaleEligible)
                 return ApiResponse<bool>.Fail("المحتوى مؤرشف وغير متاح لعمليات شراء جديدة.");
+            if (request.ContentType != CodeType.Exam)
+                price = target.Price;
 
             if (target.TeacherId.HasValue)
             {

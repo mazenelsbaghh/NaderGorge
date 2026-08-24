@@ -48,7 +48,14 @@ public record AdminUserListDto(
     DateTime? MotherDateOfBirth,
     string? SuspensionReason,
     string? AvatarSlug,
-    decimal CurrentBalance
+    decimal CurrentBalance,
+    List<AdminStudentScopedBalanceDto> ScopedBalances
+);
+
+public record AdminStudentScopedBalanceDto(
+    Guid? TeacherId,
+    string TeacherName,
+    decimal AvailableAmount
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -135,6 +142,38 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             .Take(pageSize)
             .ToListAsync(ct);
 
+        var userIds = users.Select(u => u.Id).ToArray();
+        var now = DateTime.UtcNow;
+        var scopedBalanceRows = await _db.PromotionalBalanceAllocations
+            .AsNoTracking()
+            .Where(allocation =>
+                userIds.Contains(allocation.StudentId) &&
+                allocation.AvailableAmount > 0 &&
+                (allocation.ExpiresAt == null || allocation.ExpiresAt > now))
+            .Select(allocation => new
+            {
+                allocation.StudentId,
+                allocation.TeacherId,
+                TeacherName = allocation.Teacher != null
+                    ? allocation.Teacher.User.FullName
+                    : "رصيد مخصص عام",
+                allocation.AvailableAmount
+            })
+            .ToListAsync(ct);
+
+        var scopedBalancesByStudent = scopedBalanceRows
+            .GroupBy(row => row.StudentId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .GroupBy(row => new { row.TeacherId, row.TeacherName })
+                    .Select(balanceGroup => new AdminStudentScopedBalanceDto(
+                        balanceGroup.Key.TeacherId,
+                        balanceGroup.Key.TeacherName,
+                        balanceGroup.Sum(row => row.AvailableAmount)))
+                    .OrderBy(balance => balance.TeacherName)
+                    .ToList());
+
         var dtos = users.Select(u => new AdminUserListDto(
             u.Id,
             u.PhoneNumber,
@@ -165,7 +204,8 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.MotherDateOfBirth,
             u.SuspensionReason,
             u.StudentProfile?.AvatarSlug,
-            u.StudentBalance?.CurrentBalance ?? 0m
+            u.StudentBalance?.CurrentBalance ?? 0m,
+            scopedBalancesByStudent.GetValueOrDefault(u.Id) ?? []
         )).ToList();
 
         return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, page, pageSize));

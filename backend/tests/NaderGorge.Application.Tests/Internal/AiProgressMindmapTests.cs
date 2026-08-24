@@ -6,8 +6,14 @@ namespace NaderGorge.Application.Tests.Internal;
 
 public class AiProgressMindmapTests
 {
-    [Fact]
-    public async Task FailedMindmapJob_ClearsOnlyMindmapProcessingState()
+    [Theory]
+    [InlineData("", false, true)]
+    [InlineData("_mindmaps", true, false)]
+    // Regression: 2026-08-24 a failed lesson analysis broadcast yt-dlp diagnostics.
+    public async Task FailedCallback_WithHostileDiagnostics_ClearsMatchingState_AndSanitizesOutbox(
+        string jobIdSuffix,
+        bool expectedIsProcessingAi,
+        bool expectedIsProcessingMindmaps)
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Mindmap Teacher", "01070000001");
@@ -29,14 +35,43 @@ public class AiProgressMindmapTests
         db.LessonVideos.Add(video);
         await db.SaveChangesAsync();
 
+        const string rawWorkerMessage =
+            "ERROR yt-dlp --cookies /run/secrets/cookies.txt https://video.example/private?id=secret";
+        var expectedFailureCode = jobIdSuffix.Length == 0
+            ? "AI_VIDEO_ANALYSIS_FAILED"
+            : "AI_MINDMAP_GENERATION_FAILED";
+        var expectedFailureMessage = jobIdSuffix.Length == 0
+            ? AiProgressPublicContract.AnalysisFailureMessage
+            : AiProgressPublicContract.MindmapFailureMessage;
         var handler = new AiProgressCommandHandler(db);
         var result = await handler.Handle(
-            new AiProgressCommand($"{video.Id}_mindmaps", 0, "failed", "image generation failed"),
+            new AiProgressCommand($"{video.Id}{jobIdSuffix}", 0, "failed", rawWorkerMessage),
             CancellationToken.None);
 
         var updatedVideo = await db.LessonVideos.SingleAsync(candidate => candidate.Id == video.Id);
+        var outboxEvents = await db.OutboxEvents.ToListAsync();
         Assert.True(result.Success);
-        Assert.False(updatedVideo.IsProcessingMindmaps);
-        Assert.True(updatedVideo.IsProcessingAI);
+        Assert.Equal(expectedIsProcessingAi, updatedVideo.IsProcessingAI);
+        Assert.Equal(expectedIsProcessingMindmaps, updatedVideo.IsProcessingMindmaps);
+        Assert.Contains(outboxEvents, candidate => candidate.Type == "AiJobProgress");
+        Assert.Contains(outboxEvents, candidate => candidate.Type == "VideoFailed");
+        Assert.Contains(outboxEvents, candidate => candidate.Type == "AiJobFailed");
+        Assert.All(outboxEvents, outboxEvent =>
+        {
+            var payload = outboxEvent.PayloadJson;
+            Assert.DoesNotContain("yt-dlp", payload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("--cookies", payload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("/run/secrets", payload, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("https://", payload, StringComparison.OrdinalIgnoreCase);
+            using var document = System.Text.Json.JsonDocument.Parse(payload);
+            var root = document.RootElement;
+            var publicMessage = root.TryGetProperty("message", out var messageElement)
+                ? messageElement.GetString()
+                : root.GetProperty("error").GetString();
+            var publicFailure = root.GetProperty("failure");
+            Assert.Equal(expectedFailureMessage, publicMessage);
+            Assert.Equal(expectedFailureCode, publicFailure.GetProperty("code").GetString());
+            Assert.True(publicFailure.GetProperty("retryable").GetBoolean());
+        });
     }
 }

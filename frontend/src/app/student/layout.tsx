@@ -13,9 +13,9 @@ import { StudentShellChrome } from "@/components/layout/StudentShellChrome";
 import { StudentGuard } from "@/components/layout/StudentGuard";
 import { StudentThemeProvider } from "@/hooks/useStudentTheme";
 import { MaintenanceGuard } from "@/components/layout/MaintenanceGuard";
-import { LiveSupportLauncher } from "@/components/live-support/participant/LiveSupportLauncher";
-import { PlatformPopup } from '@/components/platform/PlatformPopup';
-import { StudentBirthdayCelebration } from '@/components/student/StudentBirthdayCelebration';
+import { DeferredLiveSupportLauncher } from "@/components/live-support/participant/DeferredLiveSupportLauncher";
+import { DeferredStudentRealtimeBridge } from '@/components/student/DeferredStudentRealtimeBridge';
+import { DeferredStudentOverlays } from '@/components/student/DeferredStudentOverlays';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -30,10 +30,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     <StudentThemeProvider>
       <StudentGuard>
         <MaintenanceGuard>
+          <DeferredStudentRealtimeBridge />
           <StudentShellChrome>{children}</StudentShellChrome>
-          <StudentBirthdayCelebration />
-          <PlatformPopup />
-          <LiveSupportLauncher avoidMobileBottomNav />
+          <DeferredStudentOverlays />
+          <DeferredLiveSupportLauncher avoidMobileBottomNav />
         </MaintenanceGuard>
       </StudentGuard>
     </StudentThemeProvider>

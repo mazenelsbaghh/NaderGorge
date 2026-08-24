@@ -116,6 +116,7 @@ public class StudentPackageDto
     public decimal Price { get; set; }
     public Guid? PurchaseOperationId { get; set; }
     public Guid? TeacherId { get; set; }
+    public string? TeacherName { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal PlatformShareAmount { get; set; }
     public decimal TeacherShareAmount { get; set; }

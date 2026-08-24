@@ -214,6 +214,8 @@ builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachme
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
+builder.Services.AddScoped<WhatsAppLiveSupportService>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.WhatsAppOutboundBackgroundService>();
 builder.Services.AddHttpClient<ThanaweyaResultsService>();
 builder.Services.AddHttpClient<NaderGorge.Application.Features.Admin.Ocr.IAssessmentOcrService, NaderGorge.Infrastructure.Services.GoogleVisionAssessmentOcrService>(client =>
 {
@@ -253,8 +255,12 @@ builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces
 builder.Services.AddSingleton<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAICapabilityRegistry>(_ =>
     NaderGorge.Application.Features.AdminAI.Catalog.AdminAICapabilityRegistry.CreateProductionReadRegistry());
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIIdentitySummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSearchRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIStudentSnapshotRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIOperationsSummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAITeacherSummaryRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAITeacherSearchRead>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAITeacherSubscribersSummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIPlatformFinanceSummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAIHrOperationsSummaryRead>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIReadCapability, NaderGorge.Infrastructure.Services.AdminAI.Reads.AdminAICommunitySummaryRead>();

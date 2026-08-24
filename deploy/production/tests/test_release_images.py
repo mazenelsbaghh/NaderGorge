@@ -93,6 +93,21 @@ def test_release_snapshot_excludes_gitlink_directories(
     assert release_images.release_source_entries(tmp_path) == []
 
 
+def test_release_source_digest_excludes_every_top_level_artifact_path(
+    complete_repository: Path,
+) -> None:
+    relative = "artifacts/production/snapshots/tests/probe.cs"
+    write(complete_repository / relative, "class FirstProbe {}\n")
+    git(complete_repository, "add", "-f", relative)
+    sealed = release_images.source_state(complete_repository)
+
+    write(complete_repository / relative, "class ChangedProbe {}\n")
+    current = release_images.source_state(complete_repository)
+
+    assert relative not in {entry["path"] for entry in sealed["sourcePaths"]}
+    assert current["sourceStateSha256"] == sealed["sourceStateSha256"]
+
+
 @pytest.mark.parametrize(
     ("relative", "initial", "changed"),
     [

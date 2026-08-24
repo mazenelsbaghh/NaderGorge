@@ -26,6 +26,7 @@ ANDROID_BUILDER_IMAGE := mobiledevops/android-sdk-image:34.0.0
 ANDROID_GRADLE_VOLUME := parent_android_gradle_cache
 PERFORMANCE_BASELINE ?= artifacts/performance-167/baseline/frontend-routes.json
 PERFORMANCE_CANDIDATE ?= artifacts/performance-167/final/frontend-routes.json
+PERFORMANCE_RAW_ROOT ?= artifacts/performance-167/final/raw
 PYTHON ?= python3
 OPS_BASE ?= AUTO
 SMALL_BASE ?= HEAD^
@@ -202,13 +203,21 @@ verify-performance-budget-contracts: ## Run local performance budget and product
 	node --check deploy/production/load/platform-workflows.js
 	$(PYTHON) -m pytest -q \
 		deploy/production/tests/test_static_cache_contract.py \
+		deploy/production/tests/test_performance_evidence_assembler.py \
 		deploy/production/tests/test_performance_budget_verification.py \
 		deploy/production/tests/test_load_contract.py
 
 verify-performance-budgets: verify-performance-budget-contracts ## Enforce candidate route/request/navigation/query budgets
 	$(PYTHON) deploy/production/scripts/verify_performance_budgets.py \
 		--baseline "$(PERFORMANCE_BASELINE)" \
-		--candidate "$(PERFORMANCE_CANDIDATE)"
+		--candidate "$(PERFORMANCE_CANDIDATE)" \
+		--raw-root "$(PERFORMANCE_RAW_ROOT)"
+
+performance-seal-source: ## Create source-bound performance provenance without overwriting evidence
+	$(PYTHON) deploy/production/scripts/assemble_performance_evidence.py seal-source
+
+performance-assemble: ## Assemble immutable candidate performance evidence from reviewed raw inputs
+	$(PYTHON) deploy/production/scripts/assemble_performance_evidence.py assemble
 
 verify-backend: ## Restore, build, and test the backend solution
 	dotnet restore backend/NaderGorge.sln

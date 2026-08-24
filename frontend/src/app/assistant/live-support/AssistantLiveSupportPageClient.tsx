@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LoaderCircle, MessageSquareText, Settings2 } from 'lucide-react';
 import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
-import { liveSupportService, type LiveSupportCannedReply, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportStaffBootstrap } from '@/services/live-support-service';
+import { liveSupportService, type LiveSupportCannedReply, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportStaffBootstrap, type LiveSupportWhatsAppTemplate } from '@/services/live-support-service';
 import { StudentContextPanel } from '@/components/live-support/student-context/StudentContextPanel';
 import { useLiveSupportHub } from '@/hooks/useLiveSupportHub';
 import { StaffStatusHeader } from '@/components/live-support/staff/StaffStatusHeader';
@@ -210,6 +210,19 @@ export default function AssistantLiveSupportPageClient() {
     } finally { setPendingAction(null); }
   }
 
+  async function sendWhatsAppTemplate(template: LiveSupportWhatsAppTemplate, parameters: string[], previewText: string) {
+    const conversationId = selected?.id;
+    if (!conversationId || ownershipLost || pendingAction) return;
+    setPendingAction('send');
+    try {
+      const message = await liveSupportService.sendWhatsAppTemplate(conversationId, { clientMessageId: createClientId(), templateId: template.id, parameters, previewText });
+      setMessages(items => items.some(item => item.id === message.id) ? items : [...items, message]);
+    } catch (cause) {
+      setError(getStaffMutationError(cause, 'تعذر إرسال قالب واتساب.'));
+      throw cause;
+    } finally { setPendingAction(null); }
+  }
+
   async function upload(file?: File): Promise<boolean> {
     const conversationId = selected?.id;
     const generation = selectionGeneration.current;
@@ -379,6 +392,7 @@ export default function AssistantLiveSupportPageClient() {
               setDraft(value);
             }}
             onSend={(replyToMessageId) => void send(undefined, replyToMessageId)}
+            onSendWhatsAppTemplate={sendWhatsAppTemplate}
             uploading={uploading}
             onUpload={(file) => upload(file)}
             onEditMessage={editMessage}

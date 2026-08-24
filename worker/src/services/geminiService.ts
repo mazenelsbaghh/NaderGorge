@@ -11,6 +11,7 @@ import { classifyAIError } from './aiErrors.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 import { parseLiveSupportDecision, type LiveSupportDecision } from './liveSupportDecisionSchema.js';
 import { atomicWriteFileSync, sharedMindmapsRoot } from '../config/storage.js';
+import { WorkerExternalError } from './workerFetch.js';
 
 const providerTimeoutMs = Number.parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '600000', 10);
 
@@ -217,6 +218,78 @@ async function generateTranscriptionContent(
     operation: 'transcription',
   });
   return executeRetriableGeminiRequest((abortSignal) => runtime.developer.models.generateContent(requestFor(audioPart, abortSignal)));
+}
+
+function directYoutubeFailure(error: unknown) {
+  if (!(error instanceof GeminiDeveloperApiError)) {
+    return new WorkerExternalError(
+      'provider',
+      true,
+      'تعذر تحليل فيديو YouTube مؤقتًا. ستتم إعادة المحاولة تلقائيًا.',
+    );
+  }
+
+  const transientStatus = error.providerStatus === 408
+    || error.providerStatus === 429
+    || (error.providerStatus !== undefined && error.providerStatus >= 500);
+  const retryable = transientStatus
+    || error.category === 'quota-exhausted'
+    || error.category === 'provider-timeout'
+    || (error.category === 'provider' && error.providerStatus === undefined);
+
+  if (retryable) {
+    return new WorkerExternalError(
+      'provider',
+      true,
+      'تعذر تحليل فيديو YouTube مؤقتًا. ستتم إعادة المحاولة تلقائيًا.',
+    );
+  }
+  if (error.category === 'authentication' || error.category === 'permission') {
+    return new WorkerExternalError(
+      'implementation',
+      false,
+      'إعداد مزود الذكاء الاصطناعي لا يسمح بتحليل روابط YouTube.',
+    );
+  }
+  return new WorkerExternalError(
+    'rejected',
+    false,
+    'تعذر قراءة فيديو YouTube. تأكد أنه عام ومتاح وليس خاصًا أو غير مدرج.',
+  );
+}
+
+export async function transcribePublicYouTubeVideo(youtubeUrl: string): Promise<string> {
+  const runtime = createRuntime();
+  try {
+    // Queue-level retries already provide bounded backoff. Avoid multiplying
+    // those attempts with the provider helper's own retry loop for long videos.
+    const response = await executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
+      model: runtime.config.textModel,
+      contents: [{
+        role: 'user',
+        parts: [
+          { fileData: { fileUri: youtubeUrl, mimeType: 'video/*' } },
+          { text: srtPrompt },
+        ],
+      }],
+      config: {
+        abortSignal,
+        responseMimeType: 'text/plain',
+      },
+    }));
+    const srtContent = (response.text || '').trim();
+    if (!srtContent) {
+      throw new WorkerExternalError(
+        'provider',
+        true,
+        'عاد مزود تحليل YouTube باستجابة فارغة. ستتم إعادة المحاولة تلقائيًا.',
+      );
+    }
+    return srtContent;
+  } catch (error) {
+    if (error instanceof WorkerExternalError) throw error;
+    throw directYoutubeFailure(error);
+  }
 }
 
 async function generateChapterContent(runtime: AIRuntime, srtContent: string): Promise<GeneratedContent> {

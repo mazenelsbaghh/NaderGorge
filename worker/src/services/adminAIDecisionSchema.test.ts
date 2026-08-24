@@ -8,6 +8,10 @@ test('canonical hash is stable across object key order', () => {
   const second = parseAdminAIDecision({ actions: [{ safeIntentAr: 'x', arguments: { a: 1, b: 2 }, capabilityKey: 'users.note', clientActionId: 'a' }], messageAr: 'x', type: 'propose_actions', schemaVersion: '1' });
   assert.equal(hashAdminAIDecision(first), hashAdminAIDecision(second)); assert.equal(hashAdminAIDecision(first).length, 64);
 });
+test('2026-08-21 Arabic answer hash matches the backend canonical JSON contract', () => {
+  const decision = parseAdminAIDecision({ schemaVersion: '1', type: 'answer', answer: { summaryAr: 'عدد الطلاب 10 😀', facts: ['سطر\u2028جديد'], calculations: [], inferences: [], limitations: [], suggestions: [], evidenceInvocationIds: ['11111111-1111-4111-8111-111111111111'] } });
+  assert.equal(hashAdminAIDecision(decision), 'f0af81c51fddb9880cd4de4248b87a1aac7c5586824ed5b25a2ca0f90861a185');
+});
 test('parser accepts every terminal closed branch', () => {
   const values = [
     { schemaVersion: '1', type: 'answer', answer: { summaryAr: 'x', facts: ['x'], calculations: [], inferences: [], limitations: [], suggestions: [], evidenceInvocationIds: [] } },

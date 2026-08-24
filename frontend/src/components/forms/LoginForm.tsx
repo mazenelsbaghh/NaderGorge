@@ -13,21 +13,16 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { isAxiosError } from 'axios';
-import { motion, useReducedMotion } from 'framer-motion';
-import { Eye, EyeOff, Phone } from 'lucide-react';
+import axios from 'axios';
 
 import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
-import { Checkbox, Label } from '@/components/ui/checkbox';
-import { ShinyButton } from '@/components/ui/shiny-button';
 import { getSurfaceOrigins, getSurfaceName } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
 
 export function LoginForm() {
   const { setAuth } = useAuthStore();
   const router = useRouter();
-  const reduceMotion = useReducedMotion();
 
   const [formData, setFormData] = useState({ phoneNumber: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -44,14 +39,16 @@ export function LoginForm() {
     // to an arbitrary position or hiding the submit action.
     const frame = window.requestAnimationFrame(() => {
       errorRef.current?.scrollIntoView({
-        behavior: reduceMotion ? 'auto' : 'smooth',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
         block: 'nearest',
         inline: 'nearest',
       });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [error, reduceMotion]);
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +128,7 @@ export function LoginForm() {
         window.location.replace(navigation.href);
       }
     } catch (error: unknown) {
-      const message = isAxiosError<{ message?: string }>(error)
+      const message = axios.isAxiosError<{ message?: string }>(error)
         ? error.response?.data?.message
         : undefined;
 
@@ -142,26 +139,20 @@ export function LoginForm() {
   };
 
   return (
-    <motion.form
+    <form
       onSubmit={handleSubmit}
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-      animate={reduceMotion ? {} : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="space-y-5"
     >
       {/* ── Error Banner ── */}
       {error && (
-        <motion.div
+        <div
           ref={errorRef}
           role="alert"
           aria-live="assertive"
           className="auth-error-banner"
-          initial={reduceMotion ? false : { opacity: 0, y: -6 }}
-          animate={reduceMotion ? {} : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
         >
           {error}
-        </motion.div>
+        </div>
       )}
 
       {/* ── Phone Number ── */}
@@ -184,7 +175,7 @@ export function LoginForm() {
             style={{ paddingRight: '2.75rem' }}
           />
           <span className="auth-input-icon">
-            <Phone size={15} />
+            <span aria-hidden="true" className="text-sm leading-none">☎</span>
           </span>
         </div>
       </div>
@@ -214,25 +205,36 @@ export function LoginForm() {
             onClick={() => setShowPassword((value) => !value)}
             aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
           >
-            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+            <span aria-hidden="true" className="text-sm leading-none">
+              {showPassword ? '◌' : '◉'}
+            </span>
           </button>
         </div>
       </div>
 
       {/* ── Remember me / Forgot ── */}
       <div className="auth-remember-row">
-        <Checkbox
-          id="login-remember"
-          isSelected={rememberMe}
-          onChange={setRememberMe}
+        <label
+          htmlFor="login-remember"
+          className="group relative flex cursor-pointer select-none items-center gap-3"
         >
-          <Checkbox.Control>
-            <Checkbox.Indicator />
-          </Checkbox.Control>
-          <Checkbox.Content>
-            <Label className="text-[var(--admin-text)]">تذكرني</Label>
-          </Checkbox.Content>
-        </Checkbox>
+          <input
+            id="login-remember"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
+            className="peer sr-only"
+          />
+          <span
+            aria-hidden="true"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 border-[var(--admin-border)] bg-[var(--admin-card)] text-sm font-black text-white transition peer-checked:border-[var(--admin-primary)] peer-checked:bg-[var(--admin-primary)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--admin-primary)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--admin-card)]"
+          >
+            {rememberMe ? '✓' : ''}
+          </span>
+          <span className="text-sm font-bold text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)]">
+            تذكرني
+          </span>
+        </label>
         <Link
           href="/forgot-password"
           className="text-xs font-bold underline-offset-2 hover:underline"
@@ -243,15 +245,15 @@ export function LoginForm() {
       </div>
 
       {/* ── Submit Button ── */}
-      <div style={{ '--landing-accent': 'var(--admin-primary)', '--landing-ink': 'var(--admin-text)' } as React.CSSProperties}>
-        <ShinyButton
+      <div>
+        <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 flex items-center justify-center mt-2 group"
+          className="auth-btn-primary mt-2 flex h-12 w-full items-center justify-center"
         >
           {loading ? 'جاري التحقق...' : 'تسجيل الدخول'}
-        </ShinyButton>
+        </button>
       </div>
-    </motion.form>
+    </form>
   );
 }

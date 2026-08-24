@@ -162,6 +162,17 @@ def test_large_artifact_is_hashed_but_not_text_scanned(
     assert entry["sha256"] == source_manifest.sha256_file(artifact)
 
 
+def test_top_level_artifact_stays_artifact_when_nested_path_looks_like_test_source(
+    repository: Path,
+) -> None:
+    relative = "artifacts/production/snapshots/tests/probe.cs"
+    write(repository / relative, "class DiagnosticProbe {}\n")
+
+    manifest = source_manifest.build_manifest(repository)
+
+    assert entry_by_path(manifest, relative)["classification"] == "artifact"
+
+
 def test_large_source_still_fails_closed(
     repository: Path,
     monkeypatch: pytest.MonkeyPatch,

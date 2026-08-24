@@ -51,6 +51,19 @@ export interface LiveSupportConversation {
   isAiTyping?: boolean;
   aiSummary?: LiveSupportAISummary | null;
   unreadParticipantMessageCount?: number;
+  channel?: 'Web' | 'WhatsApp';
+  externalPhoneNumber?: string | null;
+  customerServiceWindowExpiresAt?: string | null;
+}
+
+export interface LiveSupportWhatsAppTemplate {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  status: string;
+  components: Array<{ type?: string; text?: string; format?: string }>;
+  lastSyncedAt: string;
 }
 
 export interface LiveSupportMessage {
@@ -67,6 +80,7 @@ export interface LiveSupportMessage {
   editedAt?: string | null;
   deletedAt?: string | null;
   senderDisplayName?: string | null;
+  externalDeliveryStatus?: 'Pending' | 'Sending' | 'Sent' | 'Delivered' | 'Read' | 'Failed' | string | null;
   replyTo?: { id: string; senderType: LiveSupportMessage['senderType']; type: LiveSupportMessageType; content: string; isDeleted: boolean } | null;
 }
 
@@ -163,9 +177,46 @@ export interface LiveSupportStudentActionContext {
   watchRequests: Array<{ id: string; label: string }>;
   staff: Array<{ id: string; label: string }>;
 }
-export interface LiveSupportAdminConversation { id: string; participantName: string; participantType: LiveSupportParticipantType; status: LiveSupportConversationStatus; ownerName?: string; createdAt: string; assignedAt?: string; firstResponseAt?: string; closedAt?: string; waitSeconds?: number; handleSeconds?: number; subject?: string; aiTurnStatus?: string; aiTurnFailureCode?: string; }
+export interface LiveSupportAdminConversation {
+  id: string;
+  participantName: string;
+  participantType: LiveSupportParticipantType;
+  status: LiveSupportConversationStatus;
+  ownerName?: string;
+  createdAt: string;
+  assignedAt?: string;
+  firstResponseAt?: string;
+  closedAt?: string;
+  waitSeconds?: number;
+  handleSeconds?: number;
+  subject?: string;
+  aiTurnStatus?: string;
+  aiTurnFailureCode?: string;
+  channel?: 'Web' | 'WhatsApp';
+  externalPhoneNumber?: string | null;
+  customerServiceWindowExpiresAt?: string | null;
+  lastExternalDeliveryStatus?: string | null;
+}
 export interface LiveSupportStaffPerformance { staffUserId: string; staffName: string; participatedConversations: number; closedConversations: number; ratingCount: number; averageRating?: number; }
-export interface LiveSupportAdminDashboard { waitingCount: number; activeCount: number; closedToday: number; conversations: LiveSupportAdminConversation[]; staffPerformance: LiveSupportStaffPerformance[]; }
+export interface LiveSupportWhatsAppAdminSummary {
+  open: number;
+  waiting: number;
+  active: number;
+  closedToday: number;
+  failedOutbound: number;
+  approvedTemplates: number;
+  lastInboundAt?: string | null;
+  lastOutboundAt?: string | null;
+  lastTemplateSyncAt?: string | null;
+}
+export interface LiveSupportAdminDashboard {
+  waitingCount: number;
+  activeCount: number;
+  closedToday: number;
+  conversations: LiveSupportAdminConversation[];
+  staffPerformance: LiveSupportStaffPerformance[];
+  whatsApp?: LiveSupportWhatsAppAdminSummary | null;
+}
 export interface LiveSupportRating { id: string; conversationId: string; stars: number; comment?: string | null; submittedAt: string; submittedByName: string; isStudent: boolean; }
 export interface LiveSupportConversationTimeline { conversation: LiveSupportAdminConversation; items: Array<{ at: string; type: string; actorName?: string; summary: string; safeDetails?: string }>; ratingStars?: number; ratingComment?: string; }
 
@@ -318,6 +369,20 @@ export const liveSupportService = {
 
   sendStaffMessage: async (conversationId: string, payload: { clientMessageId: string; content?: string; type?: LiveSupportMessageType; attachmentId?: string; replyToMessageId?: string }) => {
     const response = await apiClient.post<ApiResponse<{ message: LiveSupportMessage; replayed: boolean }>>(`/live-support/staff/conversations/${conversationId}/messages`, payload);
+    invalidateSupport(['support:staff', 'support:dashboard']);
+    return response.data.data.message;
+  },
+
+  getWhatsAppTemplates: (signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportWhatsAppTemplate[]>>('/live-support/whatsapp/templates', { signal }).then((response) => response.data.data),
+
+  syncWhatsAppTemplates: async () => {
+    const response = await apiClient.post<ApiResponse<LiveSupportWhatsAppTemplate[]>>('/live-support/whatsapp/templates/sync');
+    return response.data.data;
+  },
+
+  sendWhatsAppTemplate: async (conversationId: string, payload: { clientMessageId: string; templateId: string; parameters: string[]; previewText: string }) => {
+    const response = await apiClient.post<ApiResponse<{ message: LiveSupportMessage; replayed: boolean }>>(`/live-support/staff/conversations/${conversationId}/whatsapp-template`, payload);
     invalidateSupport(['support:staff', 'support:dashboard']);
     return response.data.data.message;
   },

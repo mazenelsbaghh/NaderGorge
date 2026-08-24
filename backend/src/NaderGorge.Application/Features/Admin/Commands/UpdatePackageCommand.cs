@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities;
@@ -33,6 +34,7 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         package.Description = request.Description;
         package.Price = request.Price;
         package.IsActive = request.IsActive;
+        await SyncDirectContentPriceAsync(package, request.Price, ct);
         if (request.AcademicScopes != null)
         {
             package.TargetGrade = string.Join(',', ContentAcademicScopeValidation.GetTargetGrades(
@@ -95,5 +97,32 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         }
 
         return ApiResponse.Ok();
+    }
+
+    private async Task SyncDirectContentPriceAsync(Package package, decimal price, CancellationToken ct)
+    {
+        if (package.ContentMode == PackageContentMode.SectionWithLessons)
+        {
+            var rootTerm = await _db.Terms.SingleAsync(term => term.PackageId == package.Id && term.IsSystemContainer, ct);
+            rootTerm.Price = price;
+            return;
+        }
+
+        if (package.ContentMode == PackageContentMode.LessonsOnly)
+        {
+            var rootSection = await _db.ContentSections.SingleAsync(
+                section => section.Term.PackageId == package.Id && section.IsSystemContainer,
+                ct);
+            rootSection.Price = price;
+            return;
+        }
+
+        if (package.ContentMode == PackageContentMode.SingleLesson)
+        {
+            var rootLesson = await _db.Lessons.SingleAsync(
+                lesson => lesson.ContentSection.Term.PackageId == package.Id && lesson.ContentSection.IsSystemContainer,
+                ct);
+            rootLesson.Price = price;
+        }
     }
 }

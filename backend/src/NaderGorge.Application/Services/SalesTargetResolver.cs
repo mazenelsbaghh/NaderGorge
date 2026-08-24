@@ -46,17 +46,44 @@ public sealed class SalesTargetResolver : ISalesTargetResolver
 
             SalesTargetType.Term => await _db.Terms
                 .Where(x => x.Id == targetId.Value)
-                .Select(x => new SalesTargetContext(targetType, x.Id, x.Price, x.Package.TeacherId, x.Package.SubjectId, x.Package.TargetGrade, null, x.Package.IsActive, x.Title))
+                .Select(x => new SalesTargetContext(
+                    targetType,
+                    x.Id,
+                    x.IsSystemContainer && x.Package.ContentMode == PackageContentMode.SectionWithLessons ? x.Package.Price : x.Price,
+                    x.Package.TeacherId,
+                    x.Package.SubjectId,
+                    x.Package.TargetGrade,
+                    null,
+                    x.Package.IsActive,
+                    x.Title))
                 .FirstOrDefaultAsync(cancellationToken),
 
             SalesTargetType.ContentSection => await _db.ContentSections
                 .Where(x => x.Id == targetId.Value)
-                .Select(x => new SalesTargetContext(targetType, x.Id, x.Price, x.Term.Package.TeacherId, x.Term.Package.SubjectId, x.Term.Package.TargetGrade, null, x.Term.Package.IsActive, x.Title))
+                .Select(x => new SalesTargetContext(
+                    targetType,
+                    x.Id,
+                    x.IsSystemContainer && x.Term.Package.ContentMode == PackageContentMode.LessonsOnly ? x.Term.Package.Price : x.Price,
+                    x.Term.Package.TeacherId,
+                    x.Term.Package.SubjectId,
+                    x.Term.Package.TargetGrade,
+                    null,
+                    x.Term.Package.IsActive,
+                    x.Title))
                 .FirstOrDefaultAsync(cancellationToken),
 
             SalesTargetType.Lesson => await _db.Lessons
                 .Where(x => x.Id == targetId.Value)
-                .Select(x => new SalesTargetContext(targetType, x.Id, x.Price, x.ContentSection.Term.Package.TeacherId, x.ContentSection.Term.Package.SubjectId, x.ContentSection.Term.Package.TargetGrade, null, x.ContentSection.Term.Package.IsActive, x.Title))
+                .Select(x => new SalesTargetContext(
+                    targetType,
+                    x.Id,
+                    x.ContentSection.IsSystemContainer && x.ContentSection.Term.Package.ContentMode == PackageContentMode.SingleLesson ? x.ContentSection.Term.Package.Price : x.Price,
+                    x.ContentSection.Term.Package.TeacherId,
+                    x.ContentSection.Term.Package.SubjectId,
+                    x.ContentSection.Term.Package.TargetGrade,
+                    null,
+                    x.ContentSection.Term.Package.IsActive,
+                    x.Title))
                 .FirstOrDefaultAsync(cancellationToken),
 
             SalesTargetType.SpecificVideo => await _db.LessonVideos

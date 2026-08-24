@@ -63,7 +63,9 @@ public sealed class AdminAIRecoveryService(IAppDbContext db) : IAdminAIRecoveryS
         }
         remaining = batchSize - changed;
         var staleSteps = remaining == 0 ? [] : await db.AdminAITurnSteps
-            .Where(x => (x.Status == AdminAITurnStepStatus.Claimed || x.Status == AdminAITurnStepStatus.ProviderRunning) &&
+            .Where(x => (x.Status == AdminAITurnStepStatus.Claimed ||
+                         x.Status == AdminAITurnStepStatus.ProviderRunning ||
+                         x.Status == AdminAITurnStepStatus.ReadsCompleted) &&
                         x.StartedAt != null && x.StartedAt < now.AddMinutes(-2))
             .OrderBy(x => x.StartedAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var step in staleSteps)

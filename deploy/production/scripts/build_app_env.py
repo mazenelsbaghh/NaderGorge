@@ -26,6 +26,10 @@ COPIED_OPTIONAL_KEYS = (
     "EVOLUTION_API_INSTANCE",
     "WHATSAPP_CLOUD_ACCESS_TOKEN",
     "WHATSAPP_CLOUD_PHONE_NUMBER_ID",
+    "WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID",
+    "WHATSAPP_CLOUD_VERIFY_TOKEN",
+    "WHATSAPP_CLOUD_APP_SECRET",
+    "WHATSAPP_CLOUD_API_VERSION",
     "APNS_KEY_ID",
     "APNS_TEAM_ID",
     "APNS_BUNDLE_ID",
@@ -134,6 +138,17 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
     for key in COPIED_OPTIONAL_KEYS:
         if source.get(key):
             values[key] = source[key]
+    whatsapp_keys = {
+        "WHATSAPP_CLOUD_ACCESS_TOKEN": "WhatsAppCloudApi__AccessToken",
+        "WHATSAPP_CLOUD_PHONE_NUMBER_ID": "WhatsAppCloudApi__PhoneNumberId",
+        "WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID": "WhatsAppCloudApi__BusinessAccountId",
+        "WHATSAPP_CLOUD_VERIFY_TOKEN": "WhatsAppCloudApi__VerifyToken",
+        "WHATSAPP_CLOUD_APP_SECRET": "WhatsAppCloudApi__AppSecret",
+        "WHATSAPP_CLOUD_API_VERSION": "WhatsAppCloudApi__ApiVersion",
+    }
+    for source_key, application_key in whatsapp_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
     if not values.get("GEMINI_API_KEY"):
         raise ValueError("GEMINI_API_KEY is required for the Gemini Developer API")
     return [safe_line(key, value) for key, value in values.items()]

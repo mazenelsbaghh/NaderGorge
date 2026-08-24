@@ -10,7 +10,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 import { validateWorkerSecurityConfig } from './security.js';
-import { installSystemLogCapture, logInfo } from './logging.js';
+import { installSystemLogCapture, logError, logInfo } from './logging.js';
 import { markJobCancellation, clearJobCancellation } from './cancellation.js';
 import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAccess.js';
 import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
@@ -25,6 +25,8 @@ import { scheduleClusterCron } from './scheduling/clusterCron.js';
 import { databaseUrl } from './config/database.js';
 import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
 import { delayUntilNextCairoMidnight } from './scheduling/cairoTime.js';
+import { publicJobFailureReason } from './server/jobStatus.js';
+import { reportTerminalVideoFailure } from './services/videoAnalysisFailureReporter.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -154,12 +156,15 @@ async function startAIWorker() {
     console.log(`[AI Worker] Job ${job.id} has completed successfully!`);
   });
 
-  worker.on('failed', (job, err) => {
-    console.error(`[AI Worker] Job ${job?.id} has failed with ${err.message}`);
-    const maxAttempts = job?.opts.attempts ?? 1;
-    const attemptsExhausted = job ? job.attemptsMade >= maxAttempts : true;
-    if (job && attemptsExhausted) {
-      reportFailureToBackend(job.id!, err.message);
+  worker.on('failed', async (job, err) => {
+    logError('ai-video-worker', 'Video analysis job failed.', { jobId: job?.id, errorName: err.name });
+    try {
+      await reportTerminalVideoFailure(job, err);
+    } catch (callbackError) {
+      logError('ai-video-callback', 'Terminal failure callback exhausted its retry budget.', {
+        jobId: job?.id,
+        errorName: callbackError instanceof Error ? callbackError.name : 'UnknownError',
+      });
     }
   });
   
@@ -430,11 +435,11 @@ async function startWorker() {
           ? job.progress 
           : { percentage: Number(job.progress) || 0, stage: 'جاري التحضير ووضع المهمة في الطابور...' };
       
-      const failedReason = job.failedReason || null;
+      const failedReason = publicJobFailureReason(job.failedReason, state);
       
       return res.json({ id: job.id, state, progress, failedReason });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_STATUS_UNAVAILABLE' });
     }
   });
 

@@ -1,37 +1,52 @@
 import fs from 'node:fs';
+import { performance } from 'node:perf_hooks';
 import path from 'node:path';
 
 import { devices, expect, test, type Page, type Request } from '@playwright/test';
 
 import {
-  installAuthAndGoto,
-  login,
-  seedE2E,
-} from './e2e-contract-helpers';
+  readPerformanceSourceBinding,
+  resolveRawEvidenceOutput,
+  writeJsonEvidenceCreateNew,
+} from '../../scripts/performance-evidence-io.mjs';
+import {
+  aggregateEligibleReads,
+  eligibleReadIdentity,
+  nearestRankP75,
+  type EligibleReadCount,
+  type EligibleReadIdentity,
+  type EligibleReadOrigins,
+} from './platform-performance-evidence';
+import { installAuthAndGoto, login, seedE2E } from './e2e-contract-helpers';
 
+const WARMUP_COUNT = 3;
+const MEASURED_COUNT = 20;
+const QUIET_WINDOW_MS = 250;
+const QUIET_TIMEOUT_MS = 2_000;
 const androidProfile = devices['Pixel 5'];
+
 test.use({
   ...androidProfile,
+  trace: 'off',
+  screenshot: 'off',
+  video: 'off',
 });
+test.describe.configure({ mode: 'serial', retries: 0 });
 
-type RequestSummary = {
-  total: number;
-  get: number;
-  api: number;
-  nextData: number;
-  byPath: Record<string, number>;
+type RouteName = 'login' | 'register' | 'student';
+
+type BrowserSample = {
+  sequence: number;
+  warmNavigationMs: number;
+  eligibleReads: EligibleReadCount[];
 };
 
-type LongTaskEntry = {
-  startTime: number;
-  duration: number;
+type RouteScenario = {
+  name: RouteName;
+  pathname: `/${string}`;
+  prepare: (page: Page) => Promise<void>;
+  navigate: (page: Page) => Promise<void>;
 };
-
-declare global {
-  interface Window {
-    __performanceBaselineLongTasks?: LongTaskEntry[];
-  }
-}
 
 function repositoryRoot() {
   return path.basename(process.cwd()) === 'frontend'
@@ -39,228 +54,271 @@ function repositoryRoot() {
     : process.cwd();
 }
 
-function normalizedRequestPath(request: Request) {
-  const url = new URL(request.url());
-  return url.pathname
-    .replace(
-      /\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?=\/|$)/gi,
-      '/:id'
-    )
-    .replace(/\/\d+(?=\/|$)/g, '/:number');
-}
+function startEligibleReadCapture(page: Page, allowedOrigins: EligibleReadOrigins) {
+  const identities: EligibleReadIdentity[] = [];
+  const trackedRequests = new WeakSet<Request>();
+  let quietStartedAt = 0;
+  let lastActivityAt = performance.now();
 
-function startRequestCapture(page: Page) {
-  const requests: Request[] = [];
-  const listener = (request: Request) => {
-    if (request.resourceType() === 'websocket') return;
-    requests.push(request);
+  const recordActivity = () => {
+    lastActivityAt = performance.now();
   };
-  page.on('request', listener);
-
-  return () => {
-    page.off('request', listener);
-    const byPath: Record<string, number> = {};
-    for (const request of requests) {
-      const key = normalizedRequestPath(request);
-      byPath[key] = (byPath[key] ?? 0) + 1;
-    }
-    return {
-      total: requests.length,
-      get: requests.filter((request) => request.method() === 'GET').length,
-      api: requests.filter((request) => new URL(request.url()).pathname.startsWith('/api/')).length,
-      nextData: requests.filter((request) => {
-        const url = new URL(request.url());
-        return url.pathname.startsWith('/_next/') || url.searchParams.has('_rsc');
-      }).length,
-      byPath: Object.fromEntries(
-        Object.entries(byPath).sort(([left], [right]) => left.localeCompare(right))
-      ),
-    } satisfies RequestSummary;
+  const onRequest = (request: Request) => {
+    const identity = eligibleReadIdentity({
+      method: request.method(),
+      resourceType: request.resourceType(),
+      url: request.url(),
+    }, allowedOrigins);
+    if (!identity) return;
+    trackedRequests.add(request);
+    identities.push(identity);
+    recordActivity();
   };
-}
+  const onRequestComplete = (request: Request) => {
+    if (trackedRequests.has(request)) recordActivity();
+  };
 
-async function installLongTaskObserver(page: Page) {
-  await page.addInitScript(() => {
-    window.__performanceBaselineLongTasks = [];
-    if (!('PerformanceObserver' in window)) return;
-    try {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          window.__performanceBaselineLongTasks?.push({
-            startTime: entry.startTime,
-            duration: entry.duration,
-          });
+  page.on('request', onRequest);
+  page.on('requestfinished', onRequestComplete);
+  page.on('requestfailed', onRequestComplete);
+
+  const stop = () => {
+    page.off('request', onRequest);
+    page.off('requestfinished', onRequestComplete);
+    page.off('requestfailed', onRequestComplete);
+  };
+
+  return {
+    beginQuietWindow() {
+      quietStartedAt = performance.now();
+      lastActivityAt = quietStartedAt;
+    },
+    async finish() {
+      if (quietStartedAt === 0) {
+        throw new Error('The eligible-read quiet window was not started.');
+      }
+      try {
+        for (;;) {
+          const now = performance.now();
+          if (now - lastActivityAt >= QUIET_WINDOW_MS) {
+            return aggregateEligibleReads(identities);
+          }
+          if (now - quietStartedAt >= QUIET_TIMEOUT_MS) {
+            throw new Error(
+              `Eligible reads did not become quiet within ${QUIET_TIMEOUT_MS}ms.`,
+            );
+          }
+          await page.waitForTimeout(
+            Math.max(1, Math.min(50, QUIET_WINDOW_MS - (now - lastActivityAt))),
+          );
         }
+      } finally {
+        stop();
+      }
+    },
+    stop,
+  };
+}
+
+async function settleEligibleReads(page: Page, allowedOrigins: EligibleReadOrigins) {
+  const capture = startEligibleReadCapture(page, allowedOrigins);
+  capture.beginQuietWindow();
+  await capture.finish();
+}
+
+async function dismissInstructions(page: Page) {
+  const dialog = page.getByRole('dialog').first();
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+}
+
+async function measureScenario(
+  page: Page,
+  scenario: RouteScenario,
+  allowedOrigins: EligibleReadOrigins,
+) {
+  await scenario.prepare(page);
+  await settleEligibleReads(page, allowedOrigins);
+
+  const capture = startEligibleReadCapture(page, allowedOrigins);
+  const startedAt = performance.now();
+  try {
+    await scenario.navigate(page);
+    const warmNavigationMs = performance.now() - startedAt;
+    capture.beginQuietWindow();
+    const eligibleReads = await capture.finish();
+    return { warmNavigationMs, eligibleReads };
+  } catch (error) {
+    capture.stop();
+    throw error;
+  }
+}
+
+async function collectRouteSamples(
+  page: Page,
+  scenario: RouteScenario,
+  allowedOrigins: EligibleReadOrigins,
+) {
+  const samples: BrowserSample[] = [];
+  for (let run = 0; run < WARMUP_COUNT + MEASURED_COUNT; run += 1) {
+    const measurement = await measureScenario(page, scenario, allowedOrigins);
+    if (run >= WARMUP_COUNT) {
+      samples.push({
+        sequence: run - WARMUP_COUNT + 1,
+        warmNavigationMs: measurement.warmNavigationMs,
+        eligibleReads: measurement.eligibleReads,
       });
-      observer.observe({ type: 'longtask', buffered: true });
-    } catch {
-      // The browser may not expose Long Tasks; the baseline records that as unsupported.
     }
-  });
+  }
+
+  expect(samples).toHaveLength(MEASURED_COUNT);
+  expect(
+    nearestRankP75(samples.map((sample) => sample.warmNavigationMs)),
+  ).toBeGreaterThanOrEqual(0);
+  return samples;
 }
 
-async function measureInputResponse(page: Page, selector: string, value: string) {
-  return page.locator(selector).evaluate(async (element, nextValue) => {
-    const input = element as HTMLInputElement;
-    const startedAt = performance.now();
-    input.focus();
-    input.value = nextValue;
-    input.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: true,
-        data: nextValue,
-        inputType: 'insertText',
-      })
-    );
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    return performance.now() - startedAt;
-  }, value);
-}
-
-async function navigationTiming(page: Page) {
-  return page.evaluate(() => {
-    const navigation = performance.getEntriesByType(
-      'navigation'
-    )[0] as PerformanceNavigationTiming | undefined;
-    return navigation
-      ? {
-          domContentLoadedMs:
-            navigation.domContentLoadedEventEnd - navigation.startTime,
-          loadMs: navigation.loadEventEnd - navigation.startTime,
-          responseStartMs: navigation.responseStart - navigation.startTime,
-        }
-      : null;
-  });
-}
-
-async function longTaskSummary(page: Page) {
-  return page.evaluate(() => {
-    const entries = window.__performanceBaselineLongTasks;
-    if (!entries) return { supported: false, count: 0, maxDurationMs: null };
-    return {
-      supported: true,
-      count: entries.length,
-      maxDurationMs:
-        entries.length > 0
-          ? Math.max(...entries.map((entry) => entry.duration))
-          : 0,
-    };
-  });
-}
-
-test.describe('Platform performance 167 baseline', () => {
-  test('records public entry, student navigation, request counts, and Android interaction', async ({
+test.describe('Platform performance 167 raw browser producer', () => {
+  test('records bounded privacy-safe warm navigation samples', async ({
     browserName,
     page,
     request,
   }, testInfo) => {
-    test.skip(browserName !== 'chromium', 'The fixed Android baseline uses Chromium.');
+    test.setTimeout(12 * 60_000);
+    expect(browserName).toBe('chromium');
+    expect(process.env.PLAYWRIGHT_USE_PRODUCTION_BUILD).toBe('1');
 
+    const projectRoot = repositoryRoot();
     const webPort = process.env.PLAYWRIGHT_WEB_PORT || '3000';
-    const appOrigin =
-      process.env.PLAYWRIGHT_BASE_URL || `http://app.lvh.me:${webPort}`;
-    const outputPath = path.join(
-      repositoryRoot(),
-      'artifacts/performance-167/baseline/browser-baseline.json'
+    const appOrigin = process.env.PLAYWRIGHT_BASE_URL || `http://app.lvh.me:${webPort}`;
+    const apiOrigin = new URL(
+      process.env.E2E_API_URL || 'http://api.lvh.me:5245/api',
+    ).origin;
+    const allowedOrigins = { appOrigin, apiOrigin };
+    const outputPath = resolveRawEvidenceOutput(
+      projectRoot,
+      process.env.PERFORMANCE_BROWSER_OUTPUT,
+      'browser-samples.json',
     );
+    const source = readPerformanceSourceBinding({
+      repositoryRoot: projectRoot,
+      manifestPath: process.env.PERFORMANCE_SOURCE_MANIFEST,
+    });
+    const buildIdPath = path.join(projectRoot, 'frontend/.next/BUILD_ID');
+    const buildIdStat = fs.lstatSync(buildIdPath);
+    expect(buildIdStat.isSymbolicLink()).toBe(false);
+    expect(buildIdStat.isFile()).toBe(true);
+    const buildId = fs.readFileSync(buildIdPath, 'utf8').trim();
 
-    await installLongTaskObserver(page);
-    await seedE2E(request, 'Performance baseline requires the documented E2E seed.');
-
-    const loginRequests = startRequestCapture(page);
-    await page.goto(`${appOrigin}/login`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('input[type="tel"]').first()).toBeVisible();
-    const loginInputResponseMs = await measureInputResponse(
-      page,
-      'input[type="tel"]',
-      '20000000001'
-    );
-    const loginEvidence = {
-      navigation: await navigationTiming(page),
-      inputResponseMs: loginInputResponseMs,
-      requests: loginRequests(),
-      longTasks: await longTaskSummary(page),
-    };
-
-    const registerRequests = startRequestCapture(page);
-    const registerStartedAt = Date.now();
-    await page.getByRole('link', { name: /إنشاء حساب|حساب جديد/ }).first().click();
-    await expect(page).toHaveURL(/\/register$/);
-    await expect(page.locator('main h1')).toBeVisible();
-    const registerUsableMs = Date.now() - registerStartedAt;
-    const registerInput = page.locator('input').first();
-    const registerInputResponseMs = await measureInputResponse(
-      page,
-      `#${await registerInput.getAttribute('id')}`,
-      'طالب قياس الأداء'
-    ).catch(() => null);
-    const registerEvidence = {
-      clientNavigationUsableMs: registerUsableMs,
-      inputResponseMs: registerInputResponseMs,
-      requests: registerRequests(),
-      longTasks: await longTaskSummary(page),
-    };
-
+    await seedE2E(request, 'Performance samples require the documented E2E seed.');
     const studentSession = await login(request, 'student');
-    const studentInitialRequests = startRequestCapture(page);
-    await installAuthAndGoto(
-      page,
-      studentSession.accessToken,
-      studentSession.user,
-      `${appOrigin}/student`
+    await page.addInitScript(
+      ({ studentId }) => {
+        window.localStorage.setItem(`onboarding_ack_${studentId}`, '1');
+      },
+      { studentId: studentSession.user.id },
     );
-    await expect(page).toHaveURL(/\/student$/);
-    await expect(page.getByText('بوابة الطالب').first()).toBeVisible({
-      timeout: 15_000,
-    });
-    const studentInitialEvidence = {
-      navigation: await navigationTiming(page),
-      requests: studentInitialRequests(),
-      longTasks: await longTaskSummary(page),
-    };
 
-    const studentNavigationRequests = startRequestCapture(page);
-    const studentNavigationStartedAt = Date.now();
-    await page.locator('a[href="/student/packages"]').first().click();
-    await expect(page).toHaveURL(/\/student\/packages$/);
-    await expect(page.getByText('باقاتي').first()).toBeVisible({
-      timeout: 15_000,
-    });
-    const studentNavigationEvidence = {
-      clientNavigationUsableMs: Date.now() - studentNavigationStartedAt,
-      requests: studentNavigationRequests(),
-      longTasks: await longTaskSummary(page),
-    };
+    const scenarios: RouteScenario[] = [
+      {
+        name: 'login',
+        pathname: '/login',
+        prepare: async (targetPage) => {
+          await targetPage.goto(`${appOrigin}/register`, {
+            waitUntil: 'domcontentloaded',
+          });
+          await expect(targetPage).toHaveURL(/\/register$/);
+          await dismissInstructions(targetPage);
+        },
+        navigate: async (targetPage) => {
+          await targetPage.locator('a[href="/login"]:visible').first().click();
+          await expect(targetPage).toHaveURL(/\/login$/);
+          await expect(targetPage.locator('input[type="tel"]').first()).toBeVisible();
+        },
+      },
+      {
+        name: 'register',
+        pathname: '/register',
+        prepare: async (targetPage) => {
+          await targetPage.goto(`${appOrigin}/login`, {
+            waitUntil: 'domcontentloaded',
+          });
+          await expect(targetPage).toHaveURL(/\/login$/);
+          await dismissInstructions(targetPage);
+        },
+        navigate: async (targetPage) => {
+          await targetPage.locator('a[href="/register"]:visible').first().click();
+          await expect(targetPage).toHaveURL(/\/register$/);
+          await expect(targetPage.locator('main h1')).toBeVisible();
+        },
+      },
+      {
+        name: 'student',
+        pathname: '/student',
+        prepare: async (targetPage) => {
+          await installAuthAndGoto(
+            targetPage,
+            studentSession.accessToken,
+            studentSession.user,
+            `${appOrigin}/student/packages`,
+          );
+          await expect(targetPage).toHaveURL(/\/student\/packages$/);
+          await expect(targetPage.getByText('باقاتي').first()).toBeVisible({
+            timeout: 15_000,
+          });
+        },
+        navigate: async (targetPage) => {
+          await targetPage.locator('a[href="/student"]:visible').first().click();
+          await expect(targetPage).toHaveURL(/\/student$/);
+          await expect(targetPage.getByText(/أهلاً بيك،/).first()).toBeVisible({
+            timeout: 15_000,
+          });
+        },
+      },
+    ];
 
+    const routes = {} as Record<
+      RouteName,
+      { pathname: `/${string}`; samples: BrowserSample[] }
+    >;
+    for (const scenario of scenarios) {
+      routes[scenario.name] = {
+        pathname: scenario.pathname,
+        samples: await collectRouteSamples(page, scenario, allowedOrigins),
+      };
+    }
+
+    const viewport = page.viewportSize();
+    expect(viewport).toEqual(androidProfile.viewport);
     const evidence = {
       schemaVersion: 1,
-      generatedAt: new Date().toISOString(),
+      evidenceType: 'browser-performance-samples',
+      source,
       profile: {
         name: 'Pixel 5 / Android Chromium',
-        browserName,
-        viewport: page.viewportSize(),
-        productionServer:
-          process.env.PLAYWRIGHT_USE_PRODUCTION_BUILD === '1',
+        browserName: 'chromium' as const,
+        viewport,
+        productionServer: true,
+        buildId,
       },
-      measurements: {
-        login: loginEvidence,
-        register: registerEvidence,
-        studentInitial: studentInitialEvidence,
-        studentNavigation: studentNavigationEvidence,
+      sampling: {
+        warmupCount: WARMUP_COUNT,
+        measuredCount: MEASURED_COUNT,
+        quietWindowMs: QUIET_WINDOW_MS,
+        quietTimeoutMs: QUIET_TIMEOUT_MS,
+        percentileMethod: 'nearest-rank' as const,
       },
-      note:
-        'Observational baseline only. It intentionally defines no pass/fail performance threshold.',
+      routes,
     };
 
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
-    await testInfo.attach('platform-performance-167-browser-baseline', {
+    const serializedEvidence = JSON.stringify(evidence);
+    expect(serializedEvidence).not.toMatch(/https?:\/\//i);
+    expect(serializedEvidence).not.toContain(appOrigin);
+    writeJsonEvidenceCreateNew(outputPath, evidence);
+    await testInfo.attach('platform-performance-167-browser-samples', {
       body: JSON.stringify(evidence, null, 2),
       contentType: 'application/json',
     });
-
-    expect(loginEvidence.requests.total).toBeGreaterThan(0);
-    expect(registerEvidence.clientNavigationUsableMs).toBeGreaterThanOrEqual(0);
-    expect(studentNavigationEvidence.requests.total).toBeGreaterThan(0);
   });
 });

@@ -72,6 +72,13 @@ export interface AiJobProgressPayload {
   progress: number;
   status: string;
   message: string;
+  failure?: AiPublicFailurePayload | null;
+}
+
+export interface AiPublicFailurePayload {
+  code: 'AI_VIDEO_ANALYSIS_FAILED' | 'AI_MINDMAP_GENERATION_FAILED';
+  message: string;
+  retryable: boolean;
 }
 
 export interface PackagePublishedPayload {
@@ -83,6 +90,7 @@ export interface VideoFailedPayload {
   lessonId: string;
   videoId: string;
   error: string;
+  failure?: AiPublicFailurePayload | null;
 }
 
 export interface ExamSubmittedPayload {
@@ -107,6 +115,7 @@ export interface AiJobCompletedPayload {
 export interface AiJobFailedPayload {
   jobId: string;
   error: string;
+  failure?: AiPublicFailurePayload | null;
 }
 
 export interface PackageArchivedPayload {

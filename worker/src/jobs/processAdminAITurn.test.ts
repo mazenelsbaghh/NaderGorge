@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Job } from 'bullmq';
 import { AdminAICallbackError, type AdminAICallbackClient, type AdminAIClaimContext } from '../services/adminAICallbackClient.js';
-import { AdminAIAgentRuntimeError } from '../services/adminAIAgent.js';
+import { AdminAIAgentRuntimeError, runAdminAIAgent } from '../services/adminAIAgent.js';
 import { GeminiDeveloperApiError } from '../services/aiProvider.js';
 import { createAdminAITurnProcessor, type AdminAITurnJobData } from './processAdminAITurn.js';
 
@@ -69,4 +69,27 @@ test('failure after a read uses the renewed lease token', async () => {
 test('cancellation before claim prevents all callback and provider work', async () => {
   const context = claim(); let claims = 0; const callback = clients(context, async () => ({})); callback.claim = async () => { claims++; return context; };
   const result = await createAdminAITurnProcessor({ callbacks: callback, runAgent: async () => agentResult, cancelled: async () => true })(fakeJob(context)); assert.equal(result.reason, 'CANCELLED'); assert.equal(claims, 0);
+});
+
+test('2026-08-20 processor completes with the lease renewed during inference', async () => {
+  const context = claim(); let renewedLease = ''; let completion: Record<string, unknown> | undefined;
+  const callback = clients(context, async (_turnId, payload) => { completion = payload; return {}; });
+  callback.renew = async (_turnId, payload) => {
+    assert.equal(payload.workerInstanceId, 'worker-forwarded');
+    renewedLease = `renewed-${crypto.randomUUID()}`;
+    return { turnVersion: context.expectedTurnVersion, leaseToken: renewedLease };
+  };
+  await createAdminAITurnProcessor({
+    callbacks: callback,
+    workerInstanceId: 'worker-forwarded',
+    runAgent: (agentContext, callbacks, options) => runAdminAIAgent(agentContext, callbacks, {
+      ...options,
+      provider: async () => { await new Promise(resolve => setTimeout(resolve, 25)); return { text: JSON.stringify(agentResult.decision) }; },
+      model: 'test',
+      leaseRenewIntervalMs: 5,
+    }),
+    cancelled: async () => false,
+  })(fakeJob(context));
+  assert.ok(renewedLease);
+  assert.equal(completion?.leaseToken, renewedLease);
 });

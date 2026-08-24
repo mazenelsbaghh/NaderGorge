@@ -269,6 +269,7 @@ export interface StudentGamificationDto {
 export interface ShellBootstrapDto {
   unreadNotificationsCount: number;
   currentBalance: number;
+  promotionalBalance: number;
   gamification: StudentGamificationDto;
   themePreferences: StudentThemePreferencesDto;
   avatarSlug?: string | null;

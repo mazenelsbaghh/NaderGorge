@@ -50,6 +50,17 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpPost("conversations/{conversationId:guid}/whatsapp-template")]
+    public async Task<IActionResult> SendWhatsAppTemplate(Guid conversationId, SendLiveSupportWhatsAppTemplateRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var command = new SendLiveSupportWhatsAppTemplateCommand(UserId(), User.IsInRole("Admin"), conversationId, request);
+            return StatusCode(StatusCodes.Status201Created, ApiResponse<LiveSupportSendResultDto>.Ok(await _service.SendStaffWhatsAppTemplateAsync(command, ct)));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpPatch("conversations/{conversationId:guid}/messages/{messageId:guid}")]
     public async Task<IActionResult> UpdateMessage(Guid conversationId, Guid messageId, UpdateLiveSupportMessageDto request, CancellationToken ct)
     {

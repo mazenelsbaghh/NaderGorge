@@ -793,7 +793,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
                      <div className="mb-5">
                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">الباقات المسجلة</h3>
-                       <p className="text-[var(--admin-muted)]">قائمة بالباقات التي اشترك فيها الطالب مع تاريخ الاشتراك والانتهاء.</p>
+                       <p className="text-[var(--admin-muted)]">قائمة بالباقات التي اشترك فيها الطالب مع اسم المدرس وتاريخ الاشتراك والانتهاء.</p>
                      </div>
 
                      <AdminDataTable<StudentPackageDto>
@@ -801,6 +801,15 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                           {key: 'name', label: 'اسم الباقة', render: (row) => (
                             <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
                           )},
+                          {key: 'teacherName', label: 'اسم المدرس', render: (row) => {
+                            const teacherName = row.teacherName?.trim();
+                            return (
+                              <span className={`inline-flex min-w-36 items-center gap-2 font-bold ${teacherName ? 'text-[var(--admin-text)]' : 'text-[var(--admin-muted)]'}`}>
+                                <GraduationCap className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" aria-hidden="true" />
+                                {teacherName || 'غير محدد'}
+                              </span>
+                            );
+                          }},
                           {key: 'grantType', label: 'نوع الاشتراك', render: (row) => {
                             const types: Record<string, string> = { Package: 'باقة', Term: 'ترم', Month: 'قسم', Lesson: 'حصة' };
                             const colors: Record<string, string> = {
@@ -815,7 +824,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                 {types[gt] || 'باقة'}
                               </span>
                             );
-                          }},
+                          }, responsivePriority: 'secondary'},
                           {key: 'price', label: 'السعر', render: (row) => (
                             <span className="font-medium text-[var(--admin-text)]">{row.price} ج.م</span>
                           )},
@@ -823,9 +832,9 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.purchaseMethod === 'Code' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
                               {row.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}
                             </span>
-                          )},
-                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد'},
-                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد'},
+                          ), responsivePriority: 'optional'},
+                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد', responsivePriority: 'optional'},
+                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد', responsivePriority: 'optional'},
                           {key: 'status', label: 'الحالة', render: (row) => {
                             const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
                             const isGrantActive = row.isActive;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 
@@ -21,9 +22,16 @@ import {
   type QuickAccessItemDto,
 } from '@/services/student-service';
 import { useAuthStore } from '@/stores/auth-store';
-import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
 import { usePlatformQuery } from '@/components/providers/QueryProvider';
 import { queryKeys } from '@/lib/query-keys';
+
+const CompactRegistrationInstructionsDialog = dynamic(
+  () =>
+    import(
+      '@/components/registration/CompactRegistrationInstructionsDialog'
+    ).then((module) => module.CompactRegistrationInstructionsDialog),
+  { ssr: false },
+);
 
 export default function StudentDashboardClient() {
   const userId = useAuthStore((state) => state.user?.id);
@@ -260,13 +268,15 @@ export default function StudentDashboardClient() {
         </div>
       </details>
 
-      <RegistrationInstructionsModal
-        open={showInstructionsOnboard && !d.resumePoint}
-        onClose={handleCloseOnboard}
-        confirmLabel="قرأت التعليمات، ابدأ رحلتي"
-        title="قبل أول خطوة في مسارك"
-        subtitle="راجع تعليمات الاستخدام مرة واحدة، ثم ابدأ دراستك مباشرة."
-      />
+      {showInstructionsOnboard && !d.resumePoint ? (
+        <CompactRegistrationInstructionsDialog
+          open
+          onClose={handleCloseOnboard}
+          confirmLabel="قرأت التعليمات، ابدأ رحلتي"
+          title="قبل أول خطوة في مسارك"
+          subtitle="راجع تعليمات الاستخدام مرة واحدة، ثم ابدأ دراستك مباشرة."
+        />
+      ) : null}
     </div>
   );
 }

@@ -122,6 +122,7 @@ def _included_source_entries(
         parts = Path(relative).parts
         if (
             not parts
+            or parts[0] == "artifacts"
             or any(part in SOURCE_EXCLUDED_PARTS for part in parts)
             or value["classification"] == "artifact"
             or value["status"] == "deleted"

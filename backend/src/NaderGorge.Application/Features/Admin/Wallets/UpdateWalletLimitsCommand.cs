@@ -11,12 +11,18 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Wallets;
 
-public record UpdateWalletLimitsCommand(
-    Guid WalletId,
-    string Label,
-    decimal DailyLimit,
-    decimal MonthlyLimit,
-    List<string> SmsSenderFilters) : IRequest<ApiResponse>;
+public sealed record WalletSettingsUpdate
+{
+    public required string Label { get; init; }
+    public required decimal DailyLimit { get; init; }
+    public required decimal MonthlyLimit { get; init; }
+    public required List<string> SmsSenderFilters { get; init; }
+    public bool? IsRechargePaused { get; init; }
+    public string? RechargePauseMessage { get; init; }
+    public DateTime? RechargeResumeAt { get; init; }
+}
+
+public record UpdateWalletLimitsCommand(Guid WalletId, WalletSettingsUpdate Settings) : IRequest<ApiResponse>;
 
 public class UpdateWalletLimitsCommandHandler : IRequestHandler<UpdateWalletLimitsCommand, ApiResponse>
 {
@@ -30,25 +36,39 @@ public class UpdateWalletLimitsCommandHandler : IRequestHandler<UpdateWalletLimi
         if (wallet == null)
             return ApiResponse.Fail("المحفظة غير موجودة");
 
-        if (string.IsNullOrWhiteSpace(request.Label))
+        var settings = request.Settings;
+        if (string.IsNullOrWhiteSpace(settings.Label))
             return ApiResponse.Fail("الاسم التعريفي للمحفظة مطلوب");
 
-        if (request.DailyLimit <= 0)
+        if (settings.DailyLimit <= 0)
             return ApiResponse.Fail("الحد اليومي يجب أن يكون أكبر من صفر");
 
-        if (request.MonthlyLimit <= 0)
+        if (settings.MonthlyLimit <= 0)
             return ApiResponse.Fail("الحد الشهري يجب أن يكون أكبر من صفر");
 
-        if (request.MonthlyLimit < request.DailyLimit)
+        if (settings.MonthlyLimit < settings.DailyLimit)
             return ApiResponse.Fail("الحد الشهري لا يمكن أن يكون أقل من الحد اليومي");
 
-        wallet.Label = request.Label;
-        wallet.DailyLimit = request.DailyLimit;
-        wallet.MonthlyLimit = request.MonthlyLimit;
+        var pauseMessage = settings.RechargePauseMessage?.Trim() ?? string.Empty;
+        if (settings.IsRechargePaused == true && string.IsNullOrWhiteSpace(pauseMessage))
+            return ApiResponse.Fail("اكتب رسالة واضحة تظهر للطالب أثناء إيقاف التحويل");
 
-        if (request.SmsSenderFilters != null && request.SmsSenderFilters.Any())
+        if (pauseMessage.Length > 500)
+            return ApiResponse.Fail("رسالة إيقاف التحويل يجب ألا تتجاوز 500 حرف");
+
+        wallet.Label = settings.Label;
+        wallet.DailyLimit = settings.DailyLimit;
+        wallet.MonthlyLimit = settings.MonthlyLimit;
+        if (settings.IsRechargePaused.HasValue)
         {
-            var filters = request.SmsSenderFilters
+            wallet.IsRechargePaused = settings.IsRechargePaused.Value;
+            wallet.RechargePauseMessage = settings.IsRechargePaused.Value ? pauseMessage : string.Empty;
+            wallet.RechargeResumeAt = settings.IsRechargePaused.Value ? settings.RechargeResumeAt : null;
+        }
+
+        if (settings.SmsSenderFilters.Any())
+        {
+            var filters = settings.SmsSenderFilters
                 .Select(s => s.Trim())
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .Distinct(StringComparer.OrdinalIgnoreCase)

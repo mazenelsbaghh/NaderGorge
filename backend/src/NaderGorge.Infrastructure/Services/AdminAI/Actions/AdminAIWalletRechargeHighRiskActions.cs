@@ -31,7 +31,15 @@ public sealed class AdminAIToggleWalletAction(IMediator m, IAdminAIActionPreview
 public sealed class AdminAIUpdateWalletLimitsAction(IMediator m, IAdminAIActionPreviewSource p) : AdminAIMediatRActionCapability<AdminAIUpdateWalletLimitsInput, ApiResponse>(m, p)
 {
     public override string Key => "admin.wallet.limits.update";
-    protected override IRequest<ApiResponse> CreateCommand(AdminAIUpdateWalletLimitsInput i, Guid a, string o) => new UpdateWalletLimitsCommand(i.WalletId, i.Label, i.DailyLimit, i.MonthlyLimit, i.SmsSenderFilters);
+    protected override IRequest<ApiResponse> CreateCommand(AdminAIUpdateWalletLimitsInput i, Guid a, string o) => new UpdateWalletLimitsCommand(
+        i.WalletId,
+        new WalletSettingsUpdate
+        {
+            Label = i.Label,
+            DailyLimit = i.DailyLimit,
+            MonthlyLimit = i.MonthlyLimit,
+            SmsSenderFilters = i.SmsSenderFilters
+        });
     protected override AdminAIActionOutcome ToOutcome(ApiResponse r) => IdentityOutcome.From(r, ["wallets", "recharge"]);
 }
 public sealed class AdminAIRegenerateWalletTokenAction(IMediator m, IAdminAIActionPreviewSource p) : AdminAIMediatRActionCapability<AdminAIRegenerateWalletTokenInput, ApiResponse<string>>(m, p)
