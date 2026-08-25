@@ -22,9 +22,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0.2 AS runner
 
 WORKDIR /app
 
-# Install timezone data so .NET can resolve Africa/Cairo in production.
+# Install runtime health-check, media-conversion, and timezone dependencies.
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl tzdata \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ffmpeg tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only the published output (no SDK, no source code)

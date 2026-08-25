@@ -78,7 +78,7 @@ export function LessonMindmapDisplay({ chapters, currentTime }: LessonMindmapDis
               </div>
               <div>
                 <h3 className="text-lg font-black text-[var(--admin-text)]">الخريطة الذهنية للفصل</h3>
-                <p className="text-sm text-[var(--admin-muted)] font-medium">{currentChapter.title}</p>
+                <p className="text-start text-sm font-medium text-[var(--admin-muted)]" dir="auto">{currentChapter.title}</p>
               </div>
             </div>
           </div>

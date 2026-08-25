@@ -10,8 +10,6 @@ import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.nadergorge.paymentlistener.data.preference.PreferenceManager
-import java.text.SimpleDateFormat
-import java.util.*
 
 class SmsReceiver : BroadcastReceiver() {
 
@@ -44,22 +42,16 @@ class SmsReceiver : BroadcastReceiver() {
         val body = bodyBuilder.toString()
         val timestamp = messages[0].timestampMillis
 
-        Log.d(TAG, "Received SMS from: $sender")
+        Log.d(TAG, "SMS broadcast received.")
 
         // Get filters (clean and case-insensitive check)
         val filters = prefManager.getSmsFilters()
-        val isSenderAllowed = filters.any { filter ->
-            sender.contains(filter, ignoreCase = true) || filter.contains(sender, ignoreCase = true)
-        }
+        val isSenderAllowed = SmsInboxReconciliationPolicy.isAllowedSender(sender, filters)
 
         if (isSenderAllowed) {
             Log.i(TAG, "Allowed SMS detected. Scheduling synchronization...")
             
-            // Format timestamp to ISO 8601 string
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
-            val isoDate = sdf.format(Date(timestamp))
+            val isoDate = SmsInboxReconciliationPolicy.formatReceivedAt(timestamp)
 
             // Enqueue work to upload SMS
             val workInput = Data.Builder()
@@ -74,9 +66,9 @@ class SmsReceiver : BroadcastReceiver() {
 
             WorkManager.getInstance(context).enqueue(workRequest)
 
-            Toast.makeText(context, "تم التقاط رسالة تحويل من $sender وجاري إرسالها...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "تم التقاط رسالة تحويل وجاري إرسالها...", Toast.LENGTH_SHORT).show()
         } else {
-            Log.d(TAG, "SMS sender '$sender' not in filter list. Ignored.")
+            Log.d(TAG, "SMS sender is not in the configured filter list. Ignored.")
         }
     }
 }

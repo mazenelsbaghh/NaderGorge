@@ -13,7 +13,7 @@ function callbackUrl() {
   return `${baseUrl}/api/v1/internal/callbacks/ai-progress`;
 }
 
-async function postTerminalFailure(jobId: string, safeReason: string) {
+async function postTerminalFailure(jobId: string, generationRunId: string | undefined, safeReason: string) {
   const response = await fetchWithTimeout(callbackUrl(), {
     method: 'POST',
     timeoutMs: 5_000,
@@ -23,7 +23,13 @@ async function postTerminalFailure(jobId: string, safeReason: string) {
       'Content-Type': 'application/json',
       'X-Internal-Token': process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET || '',
     },
-    body: JSON.stringify({ jobId, progress: 0, status: 'failed', message: safeReason }),
+    body: JSON.stringify({
+      jobId,
+      ...(generationRunId ? { generationRunId } : {}),
+      progress: 0,
+      status: 'failed',
+      message: safeReason,
+    }),
   });
   if (response.ok) return;
 
@@ -35,10 +41,14 @@ async function postTerminalFailure(jobId: string, safeReason: string) {
   );
 }
 
-async function postTerminalFailureWithRetry(jobId: string, safeReason: string) {
+async function postTerminalFailureWithRetry(
+  jobId: string,
+  generationRunId: string | undefined,
+  safeReason: string,
+) {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      await postTerminalFailure(jobId, safeReason);
+      await postTerminalFailure(jobId, generationRunId, safeReason);
       return;
     } catch (error) {
       const failure = error instanceof WorkerExternalError
@@ -53,10 +63,19 @@ async function postTerminalFailureWithRetry(jobId: string, safeReason: string) {
 }
 
 export async function reportTerminalVideoFailure(
-  job: Pick<Job, 'id' | 'attemptsMade' | 'opts'> | undefined,
+  job: Pick<Job, 'id' | 'attemptsMade' | 'opts' | 'data'> | undefined,
   error: Pick<Error, 'name' | 'message'>,
 ) {
   if (!job?.id || !isTerminalJobFailure(job, error)) return false;
-  await postTerminalFailureWithRetry(String(job.id), publicFailedJobReason(error.message));
+  const data = job.data && typeof job.data === 'object'
+    ? job.data as Record<string, unknown>
+    : {};
+  const generationRunId = data.generationRunId || data.GenerationRunId;
+  const logicalJobId = data.logicalJobId || data.lessonVideoId || data.LessonVideoId || job.id;
+  await postTerminalFailureWithRetry(
+    String(logicalJobId),
+    typeof generationRunId === 'string' && generationRunId ? generationRunId : undefined,
+    publicFailedJobReason(error.message),
+  );
   return true;
 }

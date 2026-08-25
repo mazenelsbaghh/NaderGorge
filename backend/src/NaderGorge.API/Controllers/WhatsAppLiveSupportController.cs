@@ -54,8 +54,19 @@ public sealed class WhatsAppLiveSupportController(
 
     [HasPermission("live_support.manage")]
     [HttpPost("templates/sync")]
-    public async Task<IActionResult> SyncTemplates(CancellationToken ct) =>
-        Ok(ApiResponse<IReadOnlyList<LiveSupportWhatsAppTemplateDto>>.Ok(await service.SyncTemplatesAsync(ct)));
+    public async Task<IActionResult> SyncTemplates(CancellationToken ct)
+    {
+        try
+        {
+            return Ok(ApiResponse<IReadOnlyList<LiveSupportWhatsAppTemplateDto>>.Ok(
+                await service.SyncTemplatesAsync(User.RequireUserId(), ct)));
+        }
+        catch (WhatsAppCampaignException exception)
+        {
+            return StatusCode(exception.StatusCode,
+                ApiResponse<object>.Fail(exception.Message, [exception.Code]));
+        }
+    }
 
     private bool ValidSignature(byte[] body, string supplied)
     {

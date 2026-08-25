@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'node:child_process';
 import type { AIConfig } from './aiConfig.js';
-import { analyzeVideoChapters, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, setAIServiceRuntimeFactoryForTests, transcribePublicYouTubeVideo } from './geminiService.js';
+import { analyzeVideoChapters, assertChapterOutputLanguage, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, generateVideoChapters, setAIServiceRuntimeFactoryForTests, transcribePublicYouTubeVideo } from './geminiService.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 import { setGeminiRetryWaitForTests } from './aiProvider.js';
 import { WorkerExternalError } from './workerFetch.js';
@@ -92,6 +92,7 @@ test('video analysis grounds chapter language in the verbatim transcript (2026-0
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
 
   const result = await analyzeVideoChapters(audioPath);
+  assert.equal(result.srtContent, transcribedSrt);
   assert.equal(result.chapters.length, 1);
   assert.equal(result.chapters.at(0)?.title, 'Past Simple');
   const transcriptionRequest = requests.find((request) => request.config.responseMimeType === 'text/plain');
@@ -111,25 +112,68 @@ test('video analysis grounds chapter language in the verbatim transcript (2026-0
   assert.ok(bitrate <= 14_000, `expected compressed bitrate near 12kbps, received ${bitrate}`);
 });
 
-test('English lesson mindmap keeps visible text in the source language (2026-08-10 regression)', async () => {
+test('explicit English chapter language translates summaries while leaving the SRT source authoritative', async () => {
   const requests: any[] = [];
+  const sourceSrt = '1\n00:00:00,000 --> 00:00:01,000\nهنا هنتعلم تركيب الخلية.';
   const client = { models: { generateContent: async (request: any) => {
     requests.push(request);
-    return { candidates: [{ content: { parts: [] } }] };
+    return { text: '[{"title":"Cell Structure","startTime":0,"endTime":1,"summaryText":"In this part, we will learn the structure of a cell.","order":1}]' };
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
 
-  await assert.rejects(
-    generateChapterMindmap(
-      { title: 'Past Simple', summaryText: 'In this part, we will learn regular and irregular verbs.', order: 1 },
-      'english-language-regression',
-    ),
-    /returned no image/,
+  const chapters = await generateVideoChapters(sourceSrt, 'en');
+
+  assert.equal(chapters[0]?.title, 'Cell Structure');
+  assert.match(requests[0].contents, /هنا هنتعلم تركيب الخلية/);
+});
+
+test('chapter language validation rejects wrong-script output before persistence', () => {
+  const arabicChapters = [{
+    title: 'تركيب الخلية', startTime: 0, endTime: 1,
+    summaryText: 'هنا هنتعلم تركيب الخلية ووظيفة كل جزء فيها.', order: 1,
+  }];
+  const englishChapters = [{
+    title: 'Cell Structure', startTime: 0, endTime: 1,
+    summaryText: 'In this part, we will learn the structure of a cell.', order: 1,
+  }];
+
+  assert.doesNotThrow(() => assertChapterOutputLanguage(arabicChapters, 'ar'));
+  assert.doesNotThrow(() => assertChapterOutputLanguage(englishChapters, 'en'));
+  assert.throws(() => assertChapterOutputLanguage(arabicChapters, 'en'), /لغة عنوان الفصل/);
+  assert.throws(() => assertChapterOutputLanguage(englishChapters, 'ar'), /لغة عنوان الفصل/);
+});
+
+test('English lesson mindmap accepts verified English visible text (2026-08-10 regression)', async (testContext) => {
+  const videoId = 'english-language-regression';
+  const generationRunId = '11111111-1111-4111-8111-111111111111';
+  const client = { models: { generateContent: async (request: any) => {
+    if (request.config.responseMimeType === 'application/json') {
+      return { text: '{"arabicLetterCount":0,"latinLetterCount":18,"hasIllegibleText":false}' };
+    }
+    return { candidates: [{ content: { parts: [{ inlineData: {
+      data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      mimeType: 'image/png',
+    } }] } }] };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+  testContext.after(() => {
+    const mindmapsDirectory = path.resolve(process.cwd(), '../backend/src/NaderGorge.API/wwwroot/mindmaps');
+    if (!fs.existsSync(mindmapsDirectory)) return;
+    for (const file of fs.readdirSync(mindmapsDirectory)) {
+      if (file.startsWith(`${videoId}_run_${generationRunId}_chapter_1_`)) {
+        fs.rmSync(path.join(mindmapsDirectory, file), { force: true });
+      }
+    }
+  });
+
+  const imageUrl = await generateChapterMindmap(
+    { title: 'Past Simple', summaryText: 'In this part, we will learn regular and irregular verbs.', order: 1 },
+    videoId,
+    undefined,
+    { outputLanguage: 'en', generationRunId },
   );
 
-  const prompt = requests[0].contents[0].parts.at(-1).text;
-  assert.match(prompt, /<REQUIRED_VISIBLE_LANGUAGE>the same Latin-script language used in the source/);
-  assert.match(prompt, /Past Simple/);
+  assert.match(imageUrl, /\/mindmaps\/english-language-regression_run_/);
 });
 
 test('essay evaluation validates and returns the existing structured result', async () => {

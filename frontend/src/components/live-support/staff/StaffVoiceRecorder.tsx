@@ -153,7 +153,7 @@ export function StaffVoiceRecorder({ disabled = false, uploading = false, onSend
 
 function getSupportedMimeType() {
   if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
-  return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+  return ['audio/ogg;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? '';
 }
 

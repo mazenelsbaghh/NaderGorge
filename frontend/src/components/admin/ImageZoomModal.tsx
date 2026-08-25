@@ -44,7 +44,10 @@ export function ImageZoomModal({
         className="absolute top-4 start-4 end-4 flex items-center justify-between z-[var(--z-modal-toolbar)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-white font-bold text-sm md:text-base max-w-[60%] truncate select-none">
+        <div
+          className="max-w-[60%] truncate text-start text-sm font-bold text-white select-none md:text-base"
+          dir="auto"
+        >
           {title}
         </div>
         <div className="flex items-center gap-3">

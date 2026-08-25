@@ -217,6 +217,11 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages => Set<LiveSupportWhatsAppMessage>();
     public DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts => Set<LiveSupportWhatsAppPendingReceipt>();
     public DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates => Set<LiveSupportWhatsAppTemplate>();
+    public DbSet<WhatsAppCampaign> WhatsAppCampaigns => Set<WhatsAppCampaign>();
+    public DbSet<WhatsAppCampaignRecipient> WhatsAppCampaignRecipients => Set<WhatsAppCampaignRecipient>();
+    public DbSet<WhatsAppContactPreference> WhatsAppContactPreferences => Set<WhatsAppContactPreference>();
+    public DbSet<WhatsAppCampaignAuditEvent> WhatsAppCampaignAuditEvents => Set<WhatsAppCampaignAuditEvent>();
+    public DbSet<WhatsAppTemplateSyncRun> WhatsAppTemplateSyncRuns => Set<WhatsAppTemplateSyncRun>();
     public DbSet<LiveSupportAttachment> LiveSupportAttachments => Set<LiveSupportAttachment>();
     public DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories => Set<LiveSupportStudentLinkHistory>();
     public DbSet<LiveSupportEvent> LiveSupportEvents => Set<LiveSupportEvent>();
@@ -323,6 +328,8 @@ public class AppDbContext : DbContext, IAppDbContext
     {
         return Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     }
+
+    public void ClearTrackedChanges() => ChangeTracker.Clear();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -915,6 +922,14 @@ public class AppDbContext : DbContext, IAppDbContext
                 // TermOnly is the CLR enum default and must be persisted explicitly.
                 // An out-of-range sentinel leaves the database default for an intentionally unset value only.
                 .HasSentinel((PackageContentMode)(-1));
+            e.Property(p => p.AllowFullPackagePurchase)
+                .HasDefaultValue(true)
+                // true is the entity default; false must still be written when an admin disables full-package sales.
+                .HasSentinel(true);
+            e.Property(p => p.AiOutputLanguage)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(AiOutputLanguage.Auto);
         });
 
         modelBuilder.Entity<PackageCodePageProfile>(e =>
@@ -942,7 +957,6 @@ public class AppDbContext : DbContext, IAppDbContext
                 .HasForeignKey(p => p.UpdatedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
-
         // ContentSection
         modelBuilder.Entity<ContentSection>(e =>
         {
@@ -973,6 +987,8 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(l => l.InternalCode).HasMaxLength(40).IsRequired();
             e.HasIndex(l => l.InternalCode).IsUnique();
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
+            e.Property(l => l.CurrentAiAnalysisRunId).IsConcurrencyToken();
+            e.Property(l => l.CurrentMindmapGenerationRunId).IsConcurrencyToken();
             e.HasOne(l => l.Lesson).WithMany(le => le.Videos).HasForeignKey(l => l.LessonId);
             e.HasOne(l => l.VideoType)
                 .WithMany(type => type.Videos)
@@ -1043,6 +1059,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(v => v.Title).HasMaxLength(200).IsRequired();
             e.Property(v => v.SummaryText).HasMaxLength(2000);
             e.Property(v => v.MindmapImageUrl).HasMaxLength(2000);
+            e.Property(v => v.CurrentMindmapGenerationRunId).IsConcurrencyToken();
             e.HasOne(v => v.LessonVideo).WithMany(le => le.VideoChapters).HasForeignKey(v => v.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -2804,10 +2821,109 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Category).HasMaxLength(64).IsRequired();
             e.Property(x => x.Status).HasMaxLength(64).IsRequired();
             e.Property(x => x.ComponentsJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.Fingerprint).HasMaxLength(64).IsRequired();
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.MetaTemplateId).IsUnique();
             e.HasIndex(x => new { x.Name, x.Language }).IsUnique();
             e.HasIndex(x => new { x.Status, x.LastSyncedAt });
+        });
+
+        modelBuilder.Entity<WhatsAppCampaign>(e =>
+        {
+            e.ToTable("whatsapp_campaigns");
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.TemplateMetaId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.TemplateName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.TemplateLanguage).HasMaxLength(32).IsRequired();
+            e.Property(x => x.TemplateCategory).HasMaxLength(64).IsRequired();
+            e.Property(x => x.TemplateComponentsJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.TemplateFingerprint).HasMaxLength(64).IsRequired();
+            e.Property(x => x.AudienceFilterJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.VariableMappingsJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.AudienceFingerprint).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ExclusionSummaryJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.PauseReason).HasMaxLength(200);
+            e.Property(x => x.CreateIdempotencyKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreateRequestHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ReviewTokenHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProtectedReviewToken).HasColumnType("bytea").IsRequired();
+            e.Property(x => x.ProtectedReviewTokenDigest).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ConfirmationPhraseHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.LaunchIdempotencyKey).HasMaxLength(100);
+            e.Property(x => x.LaunchRequestHash).HasMaxLength(64);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => new { x.TemplateId, x.Status });
+            e.HasIndex(x => new { x.CreatedByUserId, x.LaunchIdempotencyKey })
+                .IsUnique().HasFilter("\"LaunchIdempotencyKey\" IS NOT NULL");
+            e.HasIndex(x => new { x.CreatedByUserId, x.CreateIdempotencyKey }).IsUnique();
+            e.HasOne<LiveSupportWhatsAppTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.LastChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WhatsAppCampaignRecipient>(e =>
+        {
+            e.ToTable("whatsapp_campaign_recipients");
+            e.Property(x => x.DestinationHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.DestinationLast4).HasMaxLength(4).IsRequired();
+            e.Property(x => x.ContactRole).HasMaxLength(24).IsRequired();
+            e.Property(x => x.ProtectedPayload).HasColumnType("bytea").IsRequired();
+            e.Property(x => x.PayloadDigest).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.MetaMessageId).HasMaxLength(200);
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.CampaignId, x.DestinationHash }).IsUnique();
+            e.HasIndex(x => x.MetaMessageId).IsUnique().HasFilter("\"MetaMessageId\" IS NOT NULL");
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt, x.CreatedAt });
+            e.HasIndex(x => new { x.CampaignId, x.Status });
+            e.HasOne<WhatsAppCampaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WhatsAppContactPreference>(e =>
+        {
+            e.ToTable("whatsapp_contact_preferences");
+            e.Property(x => x.DestinationHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.DestinationLast4).HasMaxLength(4).IsRequired();
+            e.Property(x => x.ContactRole).HasMaxLength(24).IsRequired();
+            e.Property(x => x.Category).HasConversion<int>();
+            e.Property(x => x.State).HasConversion<int>();
+            e.Property(x => x.Source).HasMaxLength(80).IsRequired();
+            e.Property(x => x.EvidenceReference).HasMaxLength(500).IsRequired();
+            e.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SourceMessageId).HasMaxLength(200);
+            e.HasIndex(x => new { x.DestinationHash, x.Category, x.EffectiveAt, x.CreatedAt });
+            e.HasIndex(x => new { x.RecordedByUserId, x.IdempotencyKey }).IsUnique();
+            e.HasIndex(x => x.SourceMessageId).IsUnique().HasFilter("\"SourceMessageId\" IS NOT NULL");
+            e.HasIndex(x => x.SupersedesPreferenceId).IsUnique().HasFilter("\"SupersedesPreferenceId\" IS NOT NULL");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.RecordedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<WhatsAppContactPreference>().WithMany().HasForeignKey(x => x.SupersedesPreferenceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WhatsAppCampaignAuditEvent>(e =>
+        {
+            e.ToTable("whatsapp_campaign_audit_events");
+            e.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            e.Property(x => x.SafeMetadataJson).HasColumnType("jsonb").IsRequired();
+            e.HasIndex(x => new { x.CampaignId, x.CreatedAt });
+            e.HasOne<WhatsAppCampaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WhatsAppTemplateSyncRun>(e =>
+        {
+            e.ToTable("whatsapp_template_sync_runs");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.HasIndex(x => new { x.Status, x.StartedAt });
+            e.HasIndex(x => x.Status).IsUnique()
+                .HasFilter("\"Status\" = 0");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<LiveSupportStaffConfig>(e =>

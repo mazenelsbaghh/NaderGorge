@@ -6,7 +6,12 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Internal.Commands;
 
-public record AiProgressCommand(string JobId, int Progress, string Status, string Message) : IRequest<ApiResponse>;
+public record AiProgressCommand(
+    string JobId,
+    int Progress,
+    string Status,
+    string Message,
+    Guid? GenerationRunId = null) : IRequest<ApiResponse>;
 
 public sealed record AiProgressPublicUpdate(
     string JobId,
@@ -108,6 +113,41 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
     }
     public async Task<ApiResponse> Handle(AiProgressCommand request, CancellationToken ct)
     {
+        string? teacherUserId = null;
+        LessonVideo? video = null;
+        var mindmapSuffixIndex = request.JobId.IndexOf("_mindmap", StringComparison.OrdinalIgnoreCase);
+        var isMindmapJob = mindmapSuffixIndex >= 0;
+        var isBatchMindmapRun = false;
+        var videoIdPart = isMindmapJob ? request.JobId[..mindmapSuffixIndex] : request.JobId;
+        if (Guid.TryParse(videoIdPart, out var videoId))
+        {
+            video = await _db.LessonVideos.FirstOrDefaultAsync(candidate => candidate.Id == videoId, ct);
+            if (video != null)
+            {
+                if (isMindmapJob)
+                {
+                    var runMatch = await CurrentMindmapRunAsync(video, request.GenerationRunId, ct);
+                    if (!runMatch.IsCurrent)
+                        return ApiResponse.Ok("Stale AI progress callback ignored");
+                    isBatchMindmapRun = runMatch.IsBatch;
+                }
+                else if (!AiGenerationRunContract.IsCurrent(
+                    video.CurrentAiAnalysisRunId,
+                    request.GenerationRunId,
+                    video.IsProcessingAI))
+                {
+                    return ApiResponse.Ok("Stale AI progress callback ignored");
+                }
+
+                video.UpdatedAt = DateTime.UtcNow;
+
+                teacherUserId = await _db.LessonVideos
+                    .Where(candidate => candidate.Id == videoId)
+                    .Select(candidate => (string?)candidate.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
+                    .SingleAsync(ct);
+            }
+        }
+
         var publicUpdate = AiProgressPublicContract.Create(request.JobId, request.Progress, request.Status);
         var failure = publicUpdate.FailureCode == null
             ? null
@@ -123,22 +163,9 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
             progress = publicUpdate.Progress,
             status = publicUpdate.Status,
             message = publicUpdate.Message,
+            generationRunId = request.GenerationRunId,
             failure
         });
-
-        string? teacherUserId = null;
-        Guid? parsedVideoId = null;
-        var mindmapSuffixIndex = request.JobId.IndexOf("_mindmap", StringComparison.OrdinalIgnoreCase);
-        var isMindmapJob = mindmapSuffixIndex >= 0;
-        var videoIdPart = isMindmapJob ? request.JobId[..mindmapSuffixIndex] : request.JobId;
-        if (Guid.TryParse(videoIdPart, out var videoId))
-        {
-            parsedVideoId = videoId;
-            teacherUserId = await _db.LessonVideos
-                .Where(v => v.Id == videoId)
-                .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
-                .FirstOrDefaultAsync(ct);
-        }
 
         var adminEvent = new OutboxEvent
         {
@@ -161,36 +188,36 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
 
         if (publicUpdate.Status == "failed")
         {
-            if (parsedVideoId.HasValue)
+            if (video != null)
             {
-                var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == parsedVideoId.Value, ct);
-                if (video != null)
+                if (isMindmapJob)
                 {
-                    if (isMindmapJob)
+                    if (isBatchMindmapRun)
                     {
                         video.IsProcessingMindmaps = false;
+                        video.CurrentMindmapGenerationRunId = null;
                     }
-                    else
-                    {
-                        video.IsProcessingAI = false;
-                    }
-                    video.UpdatedAt = DateTime.UtcNow;
-                    _db.LessonVideos.Update(video);
-
-                    var videoFailedEvent = new OutboxEvent
-                    {
-                        Type = "VideoFailed",
-                        TargetGroup = $"Lesson_{video.LessonId}",
-                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                        {
-                            lessonId = video.LessonId,
-                            videoId = video.Id,
-                            error = publicUpdate.Message,
-                            failure
-                        })
-                    };
-                    _db.OutboxEvents.Add(videoFailedEvent);
                 }
+                else
+                {
+                    video.IsProcessingAI = false;
+                    video.CurrentAiAnalysisRunId = null;
+                }
+                video.UpdatedAt = DateTime.UtcNow;
+
+                var videoFailedEvent = new OutboxEvent
+                {
+                    Type = "VideoFailed",
+                    TargetGroup = $"Lesson_{video.LessonId}",
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        lessonId = video.LessonId,
+                        videoId = video.Id,
+                        error = publicUpdate.Message,
+                        failure
+                    })
+                };
+                _db.OutboxEvents.Add(videoFailedEvent);
             }
 
             var failedEvent = new OutboxEvent
@@ -223,7 +250,42 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
             }
         }
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return ApiResponse.Ok("Stale AI progress callback ignored");
+        }
         return ApiResponse.Ok();
+    }
+
+    private async Task<(bool IsCurrent, bool IsBatch)> CurrentMindmapRunAsync(
+        LessonVideo video,
+        Guid? callbackRunId,
+        CancellationToken ct)
+    {
+        var isSingle = await _db.VideoChapters.AnyAsync(
+            chapter => chapter.LessonVideoId == video.Id &&
+                chapter.IsRegeneratingMindmap &&
+                chapter.CurrentMindmapGenerationRunId == callbackRunId,
+            ct);
+        if (isSingle)
+        {
+            var isCurrentSingle =
+                !callbackRunId.HasValue ||
+                AiGenerationRunContract.IsCurrent(
+                    video.CurrentMindmapGenerationRunId,
+                    callbackRunId,
+                    video.IsProcessingMindmaps);
+            return (isCurrentSingle, false);
+        }
+
+        var isBatch = AiGenerationRunContract.IsCurrent(
+            video.CurrentMindmapGenerationRunId,
+            callbackRunId,
+            video.IsProcessingMindmaps);
+        return (isBatch, isBatch);
     }
 }

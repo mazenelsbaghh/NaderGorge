@@ -5,9 +5,13 @@ const repositoryRoot = path.resolve(import.meta.dirname, '../..');
 const backendRoot = path.join(repositoryRoot, 'backend/src');
 const hookPath = path.join(repositoryRoot, 'frontend/src/hooks/usePlatformEvents.ts');
 const liveSupportHookPath = path.join(repositoryRoot, 'frontend/src/hooks/useLiveSupportHub.ts');
-const internalOnlyEvents = new Set([
+const nonClientOutboxEvents = new Set([
   'LiveSupportAITurnQueued',
   'EssayEvaluationQueued',
+  'AdminAITurnQueued',
+  // The outbox discriminator is translated to AdminAIEvent by the dispatcher.
+  // The literal SignalR producer is verified by the SendAsync scan below.
+  'AdminAIRealtime',
 ]);
 
 function listFiles(directory, extension) {
@@ -52,15 +56,19 @@ function eventTypes(initializer) {
   return literal ? [literal[1]] : [];
 }
 
-const producerTypes = new Set();
+const outboxProducerTypes = new Set();
+const directProducerTypes = new Set();
 const untargetedProducers = [];
 
 for (const filePath of listFiles(backendRoot, '.cs')) {
   const source = fs.readFileSync(filePath, 'utf8');
+  for (const match of source.matchAll(/\.SendAsync\(\s*"([^"]+)"/g)) {
+    directProducerTypes.add(match[1]);
+  }
   for (const initializer of outboxInitializers(source)) {
     const types = eventTypes(initializer);
-    types.forEach((type) => producerTypes.add(type));
-    if (types.length > 0 && types.some((type) => !internalOnlyEvents.has(type)) && !/Target(?:UserId|Group)\s*=/.test(initializer)) {
+    types.forEach((type) => outboxProducerTypes.add(type));
+    if (types.length > 0 && types.some((type) => !nonClientOutboxEvents.has(type)) && !/Target(?:UserId|Group)\s*=/.test(initializer)) {
       untargetedProducers.push(`${path.relative(repositoryRoot, filePath)}: ${types.join(', ')}`);
     }
   }
@@ -80,8 +88,9 @@ const registeredListeners = new Set(
 const cleanedListeners = new Set(
   [...hookSource.matchAll(/listeners\.([A-Za-z0-9]+)\.delete\(/g)].map((match) => match[1])
 );
-const missingListeners = [...producerTypes].filter((type) => !internalOnlyEvents.has(type) && !listenerTypes.has(type)).sort();
-const missingProducers = [...listenerTypes].filter((type) => !producerTypes.has(type)).sort();
+const allProducerTypes = new Set([...outboxProducerTypes, ...directProducerTypes]);
+const missingListeners = [...outboxProducerTypes].filter((type) => !nonClientOutboxEvents.has(type) && !listenerTypes.has(type)).sort();
+const missingProducers = [...listenerTypes].filter((type) => !allProducerTypes.has(type)).sort();
 const missingCleanup = [...registeredListeners]
   .filter((type) => !cleanedListeners.has(type))
   .sort();
@@ -106,4 +115,4 @@ if (
   process.exit(1);
 }
 
-console.log(`Platform event contracts verified: ${producerTypes.size} producers, ${listenerTypes.size} listeners.`);
+console.log(`Platform event contracts verified: ${allProducerTypes.size} producers, ${listenerTypes.size} listeners.`);

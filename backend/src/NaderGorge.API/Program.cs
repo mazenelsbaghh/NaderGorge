@@ -211,11 +211,19 @@ builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSuppor
 builder.Services.AddScoped<ILiveSupportGuestSessionService, LiveSupportGuestSessionService>();
 builder.Services.AddScoped<ILiveSupportEventWriter, NaderGorge.Application.Features.LiveSupport.Services.LiveSupportEventWriter>();
 builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachmentStorage>();
+builder.Services.AddSingleton<IWhatsAppAudioProcess, FfmpegWhatsAppAudioProcess>();
+builder.Services.AddSingleton<IWhatsAppOutboundMediaNormalizer, WhatsAppOutboundMediaNormalizer>();
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
+builder.Services.AddSingleton<IWhatsAppCampaignDataProtector, WhatsAppCampaignDataProtector>();
+builder.Services.AddScoped<WhatsAppCampaignService>();
+builder.Services.AddScoped<IWhatsAppCampaignService>(provider =>
+    provider.GetRequiredService<WhatsAppCampaignService>());
+builder.Services.AddSingleton<WhatsAppCampaignDispatcher>();
 builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.WhatsAppOutboundBackgroundService>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.WhatsAppCampaignBackgroundService>();
 builder.Services.AddHttpClient<ThanaweyaResultsService>();
 builder.Services.AddHttpClient<NaderGorge.Application.Features.Admin.Ocr.IAssessmentOcrService, NaderGorge.Infrastructure.Services.GoogleVisionAssessmentOcrService>(client =>
 {

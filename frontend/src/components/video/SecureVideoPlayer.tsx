@@ -1182,23 +1182,25 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     >
                        <X className="w-4 h-4" />
                     </button>
-                    <SplitText 
-                      key={`title-${activeChapterDesktop.id}`}
-                      text={activeChapterDesktop.title} 
-                      tag="h4" 
-                      className="text-white font-black text-sm mb-2 ml-6 block" 
-                      textAlign="right"
-                      splitType="words"
-                    />
-                    <SplitText 
-                      key={`summary-${activeChapterDesktop.id}`}
-                      text={activeChapterDesktop.summaryText} 
-                      tag="p" 
-                      className="text-white/90 text-xs sm:text-sm leading-relaxed block" 
-                      textAlign="right"
-                      splitType="words"
-                      delay={20}
-                    />
+                    <div className="w-full text-start" dir="auto">
+                      <SplitText
+                        key={`title-${activeChapterDesktop.id}`}
+                        text={activeChapterDesktop.title}
+                        tag="h4"
+                        className="mb-2 ml-6 block text-sm font-black text-white"
+                        textAlign="start"
+                        splitType="words"
+                      />
+                      <SplitText
+                        key={`summary-${activeChapterDesktop.id}`}
+                        text={activeChapterDesktop.summaryText}
+                        tag="p"
+                        className="block text-xs leading-relaxed text-white/90 sm:text-sm"
+                        textAlign="start"
+                        splitType="words"
+                        delay={20}
+                      />
+                    </div>
                  </motion.div>
                )}
              </AnimatePresence>
@@ -1248,14 +1250,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     >
                        <X className="w-4 h-4" />
                     </button>
-                    <SplitText 
-                      key={`mindmap-title-${activeMindmapChapter.id}`}
-                      text={`الخريطة الذهنية: ${activeMindmapChapter.title}`}
-                      tag="h4" 
-                      className="text-white font-black text-sm mb-4 pr-6 block" 
-                      textAlign="right"
-                      splitType="words"
-                    />
+                    <h4 className="mb-4 block ps-6 text-right text-sm font-black text-white" dir="rtl">
+                      <span>الخريطة الذهنية:</span>{' '}
+                      <bdi dir="auto">{activeMindmapChapter.title}</bdi>
+                    </h4>
                     <div className="flex-grow w-full relative rounded-lg overflow-hidden border border-white/10 bg-black/50">
                       <Image
                         src={resolveMediaUrl(activeMindmapChapter.mindmapImageUrl)}

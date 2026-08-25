@@ -10,6 +10,13 @@ import type {
   AcademicScopePayload,
   AcademicScopeSummary,
 } from '@/lib/academic-labels';
+import type { AiOutputLanguage } from '@/lib/ai-output-language';
+import type {
+  PackageContentMode,
+  PackageDirectLessonDto,
+  PackageDirectSectionDto,
+  TermDto,
+} from './content-service';
 
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
 
@@ -869,6 +876,51 @@ export interface AdminPackageListItemDto {
   subjectId: string;
 }
 
+export interface AdminPackageDetailDto {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  programId: string;
+  isActive: boolean;
+  imageUrl?: string | null;
+  targetGrade: string;
+  academicScopes: AcademicScopeSummary[];
+  terms: TermDto[];
+  contentMode: PackageContentMode;
+  rootTermId?: string | null;
+  rootSectionId?: string | null;
+  directSections: PackageDirectSectionDto[];
+  directLessons: PackageDirectLessonDto[];
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+  aiOutputLanguage: AiOutputLanguage;
+  allowFullPackagePurchase: boolean;
+}
+
+export interface CreatePackagePayload {
+  name: string;
+  description: string;
+  price: number;
+  subjectId: string;
+  targetGrade: string;
+  teacherId?: string;
+  academicScopes?: AcademicScopePayload[];
+  contentMode?: PackageContentMode;
+  aiOutputLanguage: AiOutputLanguage;
+  allowFullPackagePurchase?: boolean;
+}
+
+export interface UpdatePackagePayload {
+  name: string;
+  description: string;
+  price: number;
+  isActive: boolean;
+  academicScopes?: AcademicScopePayload[];
+  aiOutputLanguage?: AiOutputLanguage;
+  allowFullPackagePurchase?: boolean;
+}
+
 export const adminService = {
   setContentArchiveState: async (
     targetType: ContentArchiveTargetType,
@@ -1285,16 +1337,7 @@ export const adminService = {
   },
 
   // Content Creators (Simplified)
-  createPackage: async (payload: {
-    name: string;
-    description: string;
-    price: number;
-    subjectId: string;
-    targetGrade: string;
-    teacherId?: string;
-    academicScopes?: AcademicScopePayload[];
-    contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly' | 'SingleLesson';
-  }) => {
+  createPackage: async (payload: CreatePackagePayload) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(
       '/admin/packages',
       payload
@@ -1327,10 +1370,10 @@ export const adminService = {
     return res.data.data;
   },
   getPackageById: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<any>>(`/admin/packages/${id}`);
+    const res = await apiClient.get<ApiResponse<AdminPackageDetailDto>>(`/admin/packages/${id}`);
     return res.data?.data;
   },
-  updatePackage: async (id: string, payload: any) => {
+  updatePackage: async (id: string, payload: UpdatePackagePayload) => {
     const res = await apiClient.put<ApiResponse<any>>(
       `/admin/packages/${id}`,
       payload

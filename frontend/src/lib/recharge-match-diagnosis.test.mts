@@ -21,7 +21,7 @@ const request = (code: RechargeMatchDiagnosisCode): AdminRechargeRequestDto => (
   amount: 200,
   teacherId: 'teacher-1',
   teacherName: 'مدرس',
-  senderPhoneNumber: '01091993554',
+  senderPhoneNumber: '01000000002',
   requiresSenderPhoneConfirmation: false,
   screenshotUrl: '/proof.webp',
   status: 0,
@@ -35,7 +35,7 @@ const request = (code: RechargeMatchDiagnosisCode): AdminRechargeRequestDto => (
       walletId: 'wallet-2',
       walletLabel: 'المحفظة الثانية',
       amount: 200,
-      senderPhoneNumber: '01091993554',
+      senderPhoneNumber: '01000000002',
       receivedAt: '2026-08-09T10:44:00Z',
       timeOffsetMinutes: -536,
       outsideWindowByMinutes: 416,
@@ -93,4 +93,13 @@ test('does not describe a pending request as processed when diagnosis data is un
 
   assert.equal(presentation?.code, 'Unavailable');
   assert.match(presentation?.title ?? '', /التشخيص غير متاح/);
+});
+
+test('does not treat a missing candidate as proof that the transfer reached the wallet', () => {
+  const presentation = describeRechargeMatchDiagnosis(request('NoCandidate'));
+
+  assert.equal(presentation?.code, 'NoCandidate');
+  assert.match(presentation?.title ?? '', /لا توجد رسالة مطابقة حتى الآن/);
+  assert.match(presentation?.detail ?? '', /إذا كان هاتف المحفظة متصلًا/);
+  assert.match(presentation?.detail ?? '', /لا تثبت وصول التحويل/);
 });

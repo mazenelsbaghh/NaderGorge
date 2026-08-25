@@ -33,7 +33,9 @@ public record PackageDto(
     IReadOnlyList<PackageDirectSectionDto> DirectSections,
     IReadOnlyList<PackageDirectLessonDto> DirectLessons,
     ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
-    DateTime? ArchivedAt = null
+    DateTime? ArchivedAt = null,
+    AiOutputLanguage AiOutputLanguage = AiOutputLanguage.Auto,
+    bool AllowFullPackagePurchase = true
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -293,7 +295,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 directSectionDtos,
                 directLessonDtos,
                 pk.ArchiveMode,
-                pk.ArchivedAt
+                pk.ArchivedAt,
+                pk.AiOutputLanguage,
+                pk.AllowFullPackagePurchase
             ));
         }
 

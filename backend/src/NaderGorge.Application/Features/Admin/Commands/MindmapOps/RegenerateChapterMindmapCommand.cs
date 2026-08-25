@@ -15,11 +15,16 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
 {
     private readonly IAppDbContext _db;
     private readonly IJobEnqueuer _jobEnqueuer;
+    private readonly IAiJobCancellationStore _cancellations;
 
-    public RegenerateChapterMindmapCommandHandler(IAppDbContext db, IJobEnqueuer jobEnqueuer)
+    public RegenerateChapterMindmapCommandHandler(
+        IAppDbContext db,
+        IJobEnqueuer jobEnqueuer,
+        IAiJobCancellationStore cancellations)
     {
         _db = db;
         _jobEnqueuer = jobEnqueuer;
+        _cancellations = cancellations;
     }
 
     public async Task<ApiResponse> Handle(RegenerateChapterMindmapCommand request, CancellationToken ct)
@@ -31,16 +36,20 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         if (chapter == null)
             return ApiResponse.Fail("Chapter not found.");
 
-        var teacherUserId = await _db.LessonVideos
+        var packageContext = await _db.LessonVideos
             .Where(v => v.Id == chapter.LessonVideoId)
-            .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
-            .FirstOrDefaultAsync(ct);
+            .Select(v => new
+            {
+                TeacherUserId = (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId,
+                v.Lesson.ContentSection.Term.Package.AiOutputLanguage
+            })
+            .SingleAsync(ct);
 
         var teacherPhotoUrls = new List<string>();
-        if (teacherUserId != null)
+        if (packageContext.TeacherUserId != null)
         {
             teacherPhotoUrls = await _db.TeacherPhotos
-                .Where(tp => tp.TeacherId == teacherUserId.Value && tp.IsActive)
+                .Where(tp => tp.TeacherId == packageContext.TeacherUserId.Value && tp.IsActive)
                 .OrderByDescending(tp => tp.UploadedAt)
                 .Take(1)
                 .Select(tp => tp.FileUrl)
@@ -53,15 +62,34 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         var visualStyles = MindmapStyleOptions.ValidVisualStyles(request.VisualStyles);
         var teacherStyles = MindmapStyleOptions.ValidTeacherStyles(request.TeacherStyles);
 
-        var lockRows = await _db.VideoChapters
-            .Where(c => c.Id == request.ChapterId && !c.IsRegeneratingMindmap)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.IsRegeneratingMindmap, true), ct);
+        var generationRunId = Guid.NewGuid();
+        var videoLockRows = await _db.LessonVideos
+            .Where(video => video.Id == chapter.LessonVideoId &&
+                !video.IsProcessingAI &&
+                !video.IsProcessingMindmaps)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(video => video.IsProcessingMindmaps, true)
+                .SetProperty(video => video.CurrentMindmapGenerationRunId, generationRunId), ct);
 
-        if (lockRows == 0)
-            return ApiResponse.Fail("Chapter mindmap regeneration is already running.");
+        if (videoLockRows == 0)
+            return ApiResponse.Fail("Video is already processing an AI task.");
 
         try
         {
+            var lockRows = await _db.VideoChapters
+                .Where(c => c.Id == request.ChapterId && !c.IsRegeneratingMindmap)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(c => c.IsRegeneratingMindmap, true)
+                    .SetProperty(c => c.CurrentMindmapGenerationRunId, generationRunId), ct);
+
+            if (lockRows == 0)
+            {
+                await ReleaseVideoLockAsync(chapter.LessonVideoId, generationRunId, ct);
+                return ApiResponse.Fail("Chapter mindmap regeneration is already running.");
+            }
+
+            await _cancellations.ClearMindmapCancellationAsync(chapter.LessonVideoId);
+
             await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "regenerate-single-mindmap", new
             {
                 chapterId = chapter.Id,
@@ -74,19 +102,40 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
                     title = chapter.Title,
                     summaryText = chapter.SummaryText,
                     order = chapter.Order
-                }
+                },
+                outputLanguage = AiOutputLanguageContract.ToWorkerCode(packageContext.AiOutputLanguage),
+                generationRunId
             });
         }
         catch
         {
-            await _db.VideoChapters
-                .Where(c => c.Id == request.ChapterId)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(c => c.IsRegeneratingMindmap, false),
-                    CancellationToken.None);
+            try
+            {
+                await _db.VideoChapters
+                    .Where(c => c.Id == request.ChapterId && c.CurrentMindmapGenerationRunId == generationRunId)
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                            .SetProperty(c => c.IsRegeneratingMindmap, false)
+                            .SetProperty(c => c.CurrentMindmapGenerationRunId, (Guid?)null),
+                        CancellationToken.None);
+            }
+            finally
+            {
+                await ReleaseVideoLockAsync(chapter.LessonVideoId, generationRunId, CancellationToken.None);
+            }
             throw;
         }
 
         return ApiResponse.Ok("Mindmap regeneration queued successfully.");
+    }
+
+    private async Task ReleaseVideoLockAsync(Guid videoId, Guid generationRunId, CancellationToken ct)
+    {
+        await _db.LessonVideos
+            .Where(video => video.Id == videoId &&
+                video.CurrentMindmapGenerationRunId == generationRunId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(video => video.IsProcessingMindmaps, false)
+                .SetProperty(video => video.CurrentMindmapGenerationRunId, (Guid?)null), ct);
     }
 }

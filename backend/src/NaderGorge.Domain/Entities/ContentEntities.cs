@@ -18,6 +18,8 @@ public class Package : BaseEntity, IArchivableContent
     public DateTime? ArchivedAt { get; set; }
     public Guid? ArchivedByUserId { get; set; }
     public PackageContentMode ContentMode { get; set; } = PackageContentMode.TermWithSections;
+    public bool AllowFullPackagePurchase { get; set; } = true;
+    public AiOutputLanguage AiOutputLanguage { get; set; } = AiOutputLanguage.Auto;
 
     public Guid SubjectId { get; set; }
     public Subject Subject { get; set; } = null!;
@@ -91,6 +93,8 @@ public class LessonVideo : BaseEntity, IArchivableContent
     public string? SubtitleUrl { get; set; }
     public bool IsProcessingAI { get; set; } = false;
     public bool IsProcessingMindmaps { get; set; } = false;
+    public Guid? CurrentAiAnalysisRunId { get; set; }
+    public Guid? CurrentMindmapGenerationRunId { get; set; }
     public bool IsActive { get; set; } = true;
     public ContentArchiveMode ArchiveMode { get; set; }
     public DateTime? ArchivedAt { get; set; }

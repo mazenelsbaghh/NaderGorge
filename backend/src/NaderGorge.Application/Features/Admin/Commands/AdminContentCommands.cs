@@ -17,9 +17,11 @@ public record CreatePackageCommand(
     string TargetGrade,
     Guid? TeacherId = null,
     Guid? CurrentUserId = null,
-    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    AiOutputLanguage AiOutputLanguage = AiOutputLanguage.Auto) : IRequest<ApiResponse<Guid>>
 {
     public PackageContentMode ContentMode { get; init; } = PackageContentMode.TermWithSections;
+    public bool AllowFullPackagePurchase { get; init; } = true;
 }
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
@@ -141,7 +143,10 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             SubjectId = request.SubjectId,
             TargetGrade = string.Join(',', requestedGrades),
             TeacherId = teacherId,
-            ContentMode = request.ContentMode
+            ContentMode = request.ContentMode,
+            AllowFullPackagePurchase = request.ContentMode != PackageContentMode.TermWithSections
+                || request.AllowFullPackagePurchase,
+            AiOutputLanguage = request.AiOutputLanguage
         };
         _db.Packages.Add(pkg);
 

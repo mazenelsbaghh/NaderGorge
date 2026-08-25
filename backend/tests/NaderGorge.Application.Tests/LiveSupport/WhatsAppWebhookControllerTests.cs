@@ -48,7 +48,8 @@ public sealed class WhatsAppWebhookControllerTests
         var cloud = new WhatsAppCloudService(
             new HttpClient(), configuration, NullLogger<WhatsAppCloudService>.Instance);
         var service = new WhatsAppLiveSupportService(
-            db, support, new RejectingStorage(), cloud, new LiveSupportEventWriter(db), configuration);
+            db, support, new RejectingStorage(), cloud, new LiveSupportEventWriter(db), configuration,
+            new StubWhatsAppCampaignService());
         var controller = new WhatsAppLiveSupportController(configuration, service);
         const string body = "{\"object\":\"unsupported\"}";
         SetRequest(controller, body, Signature(body));

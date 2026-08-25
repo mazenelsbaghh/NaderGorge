@@ -15,8 +15,10 @@ test('claimStaleStreamMessages uses XAUTOCLAIM and processes claimed messages', 
       },
       xack: async () => undefined,
       xdel: async () => undefined,
+      eval: async () => 1,
     };
     const queue = {
+      name: 'ai-video-chapters',
       getJob: async () => undefined,
       add: async () => undefined,
     };

@@ -23,6 +23,7 @@
     "check:route-permissions": "node scripts/check-route-permission-contracts.mjs",
     "check:admin-ai-capabilities": "node scripts/generate-admin-ai-capability-baseline.mjs --check",
     "check:admin-student-paging": "node scripts/check-admin-student-paging-contracts.mjs",
+    "check:ai-output-language": "node --no-warnings --experimental-strip-types --test src/lib/ai-output-language.test.mts",
     "check:recharge-match-diagnosis": "node --no-warnings --experimental-strip-types --test src/lib/recharge-match-diagnosis.test.mts",
     "check:route-performance-budgets": "node scripts/check-route-performance-budgets.mjs",
     "test:route-performance-budgets": "node --test scripts/check-route-performance-budgets.test.mjs",

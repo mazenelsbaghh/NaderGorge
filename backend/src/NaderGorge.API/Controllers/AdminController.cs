@@ -350,7 +350,18 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
     {
-        var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive, dto.AcademicScopes, GetUserId()));
+        var result = await _mediator.Send(new UpdatePackageCommand(
+            id,
+            dto.Name,
+            dto.Description,
+            dto.Price,
+            dto.IsActive,
+            dto.AcademicScopes,
+            GetUserId(),
+            dto.AiOutputLanguage)
+        {
+            AllowFullPackagePurchase = dto.AllowFullPackagePurchase
+        });
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1413,7 +1424,14 @@ public record SetContentStatusRequest(bool IsActive);
 public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdateSectionDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
-public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdatePackageDto(
+    string Name,
+    string Description,
+    decimal Price,
+    bool IsActive,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    AiOutputLanguage? AiOutputLanguage = null,
+    bool? AllowFullPackagePurchase = null);
 public record SetContentArchiveStateRequest(ContentArchiveMode ArchiveMode);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,

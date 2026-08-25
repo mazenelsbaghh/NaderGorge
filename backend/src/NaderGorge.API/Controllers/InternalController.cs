@@ -34,7 +34,12 @@ public class InternalController : ControllerBase
     [HttpPost("ai-analysis-completed")]
     public async Task<IActionResult> AiAnalysisCompleted([FromBody] AiAnalysisCompletedWebhookRequest request)
     {
-        var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters, request.JobId);
+        var cmd = new AiAnalysisCompletedCommand(
+            request.VideoId,
+            request.SubtitleUrl,
+            request.Chapters,
+            request.JobId,
+            request.GenerationRunId);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
@@ -44,7 +49,12 @@ public class InternalController : ControllerBase
     [HttpPost("ai-progress")]
     public async Task<IActionResult> AiProgress([FromBody] AiProgressWebhookRequest request)
     {
-        var cmd = new AiProgressCommand(request.JobId, request.Progress, request.Status, request.Message);
+        var cmd = new AiProgressCommand(
+            request.JobId,
+            request.Progress,
+            request.Status,
+            request.Message,
+            request.GenerationRunId);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
@@ -54,7 +64,7 @@ public class InternalController : ControllerBase
     [HttpPost("mindmaps-completed")]
     public async Task<IActionResult> MindmapsCompleted([FromBody] MindmapsCompletedWebhookRequest request)
     {
-        var cmd = new MindmapsCompletedCommand(request.VideoId, request.Mindmaps);
+        var cmd = new MindmapsCompletedCommand(request.VideoId, request.Mindmaps, request.GenerationRunId);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
@@ -64,7 +74,7 @@ public class InternalController : ControllerBase
     [HttpPost("single-mindmap-completed")]
     public async Task<IActionResult> SingleMindmapCompleted([FromBody] SingleMindmapCompletedWebhookRequest request)
     {
-        var cmd = new SingleMindmapCompletedCommand(request.ChapterId, request.ImageUrl);
+        var cmd = new SingleMindmapCompletedCommand(request.ChapterId, request.ImageUrl, request.GenerationRunId);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
@@ -74,7 +84,7 @@ public class InternalController : ControllerBase
     [HttpPost("single-mindmap-failed")]
     public async Task<IActionResult> SingleMindmapFailed([FromBody] SingleMindmapFailedWebhookRequest request)
     {
-        var result = await _mediator.Send(new SingleMindmapFailedCommand(request.ChapterId));
+        var result = await _mediator.Send(new SingleMindmapFailedCommand(request.ChapterId, request.GenerationRunId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -143,6 +153,7 @@ public class AiAnalysisCompletedWebhookRequest
     public string SubtitleUrl { get; set; } = string.Empty;
     public List<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
     public string? JobId { get; set; }
+    public Guid? GenerationRunId { get; set; }
 }
 
 public class AiProgressWebhookRequest
@@ -151,23 +162,27 @@ public class AiProgressWebhookRequest
     public int Progress { get; set; }
     public string Status { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    public Guid? GenerationRunId { get; set; }
 }
 
 public class MindmapsCompletedWebhookRequest
 {
     public Guid VideoId { get; set; }
     public List<MindmapDto> Mindmaps { get; set; } = new List<MindmapDto>();
+    public Guid? GenerationRunId { get; set; }
 }
 
 public class SingleMindmapCompletedWebhookRequest
 {
     public Guid ChapterId { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
+    public Guid? GenerationRunId { get; set; }
 }
 
 public class SingleMindmapFailedWebhookRequest
 {
     public Guid ChapterId { get; set; }
+    public Guid? GenerationRunId { get; set; }
 }
 
 public class EssayGradedWebhookRequest

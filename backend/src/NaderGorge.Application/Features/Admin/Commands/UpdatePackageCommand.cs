@@ -8,7 +8,18 @@ using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record UpdatePackageCommand(Guid Id, string Name, string Description, decimal Price, bool IsActive, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdatePackageCommand(
+    Guid Id,
+    string Name,
+    string Description,
+    decimal Price,
+    bool IsActive,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    Guid? CurrentUserId = null,
+    AiOutputLanguage? AiOutputLanguage = null) : IRequest<ApiResponse>
+{
+    public bool? AllowFullPackagePurchase { get; init; }
+}
 
 public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand, ApiResponse>
 {
@@ -34,6 +45,13 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         package.Description = request.Description;
         package.Price = request.Price;
         package.IsActive = request.IsActive;
+        if (request.AllowFullPackagePurchase.HasValue
+            && package.ContentMode == PackageContentMode.TermWithSections)
+        {
+            package.AllowFullPackagePurchase = request.AllowFullPackagePurchase.Value;
+        }
+        if (request.AiOutputLanguage.HasValue)
+            package.AiOutputLanguage = request.AiOutputLanguage.Value;
         await SyncDirectContentPriceAsync(package, request.Price, ct);
         if (request.AcademicScopes != null)
         {
@@ -51,7 +69,8 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
                 packageId = package.Id,
                 name = package.Name,
                 price = package.Price,
-                isActive = package.IsActive
+                isActive = package.IsActive,
+                allowFullPackagePurchase = package.AllowFullPackagePurchase
             })
         };
         _db.OutboxEvents.Add(outboxEvent);

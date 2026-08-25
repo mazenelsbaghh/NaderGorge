@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle, BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags, Layers3, RefreshCw,
 } from 'lucide-react';
-import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, ContentArchiveControl, ContentSummaryPanel } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton, AdminStatCard, AdminTabBar, AiOutputLanguageField, ContentArchiveControl, ContentSummaryPanel } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, getContentRootLabel, getContentRootOption, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type ContentSummaryTeacherDto, type PackageContentMode } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/academic-labels';
 import { useAuthStore } from '@/stores/auth-store';
 import { registerCacheStore } from '@/lib/cache-invalidation';
+import type { AiOutputLanguage } from '@/lib/ai-output-language';
 
 const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
@@ -93,6 +94,7 @@ function CreatePackageRow({
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [selectedGrades, setSelectedGrades] = useState<GradeLevel[]>([]);
   const [contentMode, setContentMode] = useState<PackageContentMode>('TermWithSections');
+  const [aiOutputLanguage, setAiOutputLanguage] = useState<AiOutputLanguage>('Auto');
   const [saving, setSaving] = useState(false);
   const selectedContentType = getContentRootOption(contentMode);
 
@@ -147,6 +149,7 @@ function CreatePackageRow({
           subjectId: selectedSubjectId,
         })),
         contentMode,
+        aiOutputLanguage,
       });
 
       if (newPkg?.id && imageFile) {
@@ -160,7 +163,7 @@ function CreatePackageRow({
       toast.success(`تمت إضافة ${selectedContentType.entityLabel} بنجاح.`);
       setName(''); setDescription(''); setPrice('');
       if (!activeTeacherId) setSelectedTeacherId('');
-      setSelectedSubjectId(''); setSelectedGrades([]); setContentMode('TermWithSections');
+      setSelectedSubjectId(''); setSelectedGrades([]); setContentMode('TermWithSections'); setAiOutputLanguage('Auto');
       setImageFile(null); setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setOpen(false);
@@ -243,6 +246,12 @@ function CreatePackageRow({
           {PACKAGE_CONTENT_MODE_OPTIONS.find((option) => option.value === contentMode)?.description}
         </p>
       </div>
+
+      <AiOutputLanguageField
+        language={aiOutputLanguage}
+        onLanguageChange={setAiOutputLanguage}
+        disabled={saving}
+      />
 
       {/* صورة الباقة */}
       <div className="space-y-1 text-right">

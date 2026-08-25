@@ -4,6 +4,7 @@ import {
   ADMIN_AI_ROUTE_BUILDERS,
   type AdminAiGroundedAnswer,
 } from '@/services/admin-ai-agent-contract';
+import { formatCairoTimestamp } from '@/lib/cairo-time';
 
 export function AdminAiEvidenceDisclosure({
   answer,
@@ -50,7 +51,7 @@ export function AdminAiEvidenceDisclosure({
             <dd>{evidence.resultCount}</dd>
             <dt className="text-[var(--admin-muted)]">وقت البيانات</dt>
             <dd dir="ltr">
-              {new Date(evidence.dataAsOf).toLocaleString('ar-EG')}
+              {formatCairoTimestamp(evidence.dataAsOf)}
             </dd>
             <dt className="text-[var(--admin-muted)]">الحالة</dt>
             <dd>

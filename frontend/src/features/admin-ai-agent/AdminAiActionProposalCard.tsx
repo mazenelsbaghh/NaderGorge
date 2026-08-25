@@ -5,6 +5,7 @@ import { AdminAiExecutionResult } from './AdminAiExecutionResult';
 import { AdminAiStrongConfirmation } from './AdminAiStrongConfirmation';
 import Link from 'next/link';
 import { ADMIN_AI_ROUTE_BUILDERS } from '@/services/admin-ai-agent-contract';
+import { formatCairoTimestamp } from '@/lib/cairo-time';
 export function AdminAiActionProposalCard({
   proposal,
   busy,
@@ -179,7 +180,7 @@ export function AdminAiActionProposalCard({
         className="mt-3 block text-xs text-[var(--admin-muted)]"
         dateTime={proposal.expiresAt}
       >
-        ينتهي: {new Date(proposal.expiresAt).toLocaleString('ar-EG')}
+        ينتهي: {formatCairoTimestamp(proposal.expiresAt)}
       </time>
       {!pending && !proposal.execution && (
         <p

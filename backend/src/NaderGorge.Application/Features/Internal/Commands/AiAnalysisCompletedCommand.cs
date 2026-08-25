@@ -17,9 +17,14 @@ public class ChapterDto
     public int Order { get; set; }
 }
 
-public record AiAnalysisCompletedCommand(Guid VideoId, string SubtitleUrl, List<ChapterDto> Chapters, string? JobId = null) : IRequest<ApiResponse>;
+public record AiAnalysisCompletedCommand(
+    Guid VideoId,
+    string SubtitleUrl,
+    List<ChapterDto> Chapters,
+    string? JobId = null,
+    Guid? GenerationRunId = null) : IRequest<ApiResponse<AiCallbackReceipt>>;
 
-public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompletedCommand, ApiResponse>
+public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompletedCommand, ApiResponse<AiCallbackReceipt>>
 {
     private readonly IAppDbContext _db;
     private readonly ILogger<AiAnalysisCompletedCommandHandler> _logger;
@@ -30,7 +35,7 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
         _logger = logger;
     }
 
-    public async Task<ApiResponse> Handle(AiAnalysisCompletedCommand request, CancellationToken ct)
+    public async Task<ApiResponse<AiCallbackReceipt>> Handle(AiAnalysisCompletedCommand request, CancellationToken ct)
     {
         _logger.LogInformation("[AI Callback] Processing video {VideoId} — {ChapterCount} chapters incoming",
             request.VideoId, request.Chapters?.Count ?? 0);
@@ -43,23 +48,35 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
         if (video == null)
         {
             _logger.LogWarning("[AI Callback] Video {VideoId} not found", request.VideoId);
-            return ApiResponse.Fail("Video not found");
+            return ApiResponse<AiCallbackReceipt>.Fail("Video not found");
         }
 
-        if (!video.IsProcessingAI)
+        var isAlreadyRetained =
+            !video.IsProcessingAI &&
+            !video.CurrentAiAnalysisRunId.HasValue &&
+            !string.IsNullOrWhiteSpace(request.SubtitleUrl) &&
+            string.Equals(video.SubtitleUrl, request.SubtitleUrl, StringComparison.Ordinal);
+        if (isAlreadyRetained)
         {
-            var hasStoredResults = !string.IsNullOrWhiteSpace(video.SubtitleUrl) ||
-                await _db.VideoChapters.AnyAsync(vc => vc.LessonVideoId == request.VideoId, ct);
-            var hasIncomingResults = !string.IsNullOrWhiteSpace(request.SubtitleUrl) ||
-                request.Chapters is { Count: > 0 };
+            _logger.LogInformation(
+                "[AI Callback] Analysis artifact for video {VideoId} is already retained",
+                request.VideoId);
+            return ApiResponse<AiCallbackReceipt>.Ok(
+                new AiCallbackReceipt(true),
+                "AI analysis artifact already retained");
+        }
 
-            if (hasStoredResults || !hasIncomingResults)
-            {
-                _logger.LogInformation("[AI Callback] Video {VideoId} is not in processing state and already has terminal AI results. Skipping duplicate callback.", request.VideoId);
-                return ApiResponse.Ok("AI chapters already processed");
-            }
-
-            _logger.LogWarning("[AI Callback] Video {VideoId} is not in processing state but has no stored AI results. Accepting late successful callback.", request.VideoId);
+        if (!AiGenerationRunContract.IsCurrent(
+                video.CurrentAiAnalysisRunId,
+                request.GenerationRunId,
+                video.IsProcessingAI))
+        {
+            _logger.LogInformation(
+                "[AI Callback] Ignoring stale analysis callback for video {VideoId}",
+                request.VideoId);
+            return ApiResponse<AiCallbackReceipt>.Ok(
+                new AiCallbackReceipt(false),
+                "Stale AI analysis callback ignored");
         }
 
         // 2. Delete old chapters by fetching them separately (no tracking on the parent video)
@@ -74,7 +91,7 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
                 oldChapters.Count, request.VideoId);
         }
 
-        // 3. Attach the video as Modified — update only the two fields we care about
+        // Attach a partial entity so unrelated video fields cannot be overwritten by the callback.
         var trackedVideo = new LessonVideo
         {
             Id = video.Id,
@@ -87,15 +104,17 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             LessonId = video.LessonId,
             ExamId = video.ExamId,
             CreatedAt = video.CreatedAt,
-            // The two fields we actually want to change:
             IsProcessingAI = false,
             SubtitleUrl = request.SubtitleUrl,
             UpdatedAt = DateTime.UtcNow,
+            CurrentAiAnalysisRunId = video.CurrentAiAnalysisRunId,
         };
         _db.LessonVideos.Attach(trackedVideo);
+        trackedVideo.CurrentAiAnalysisRunId = null;
         _db.LessonVideos.Entry(trackedVideo).Property(v => v.IsProcessingAI).IsModified = true;
         _db.LessonVideos.Entry(trackedVideo).Property(v => v.SubtitleUrl).IsModified = true;
         _db.LessonVideos.Entry(trackedVideo).Property(v => v.UpdatedAt).IsModified = true;
+        _db.LessonVideos.Entry(trackedVideo).Property(v => v.CurrentAiAnalysisRunId).IsModified = true;
 
         // 4. Add new chapters
         if (request.Chapters is { Count: > 0 })
@@ -167,10 +186,12 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             _db.OutboxEvents.Add(teacherCompletedEvent);
         }
 
-        // 5. Single save — no concurrency token on LessonVideo, so no concurrency exception possible
+        // The run-id concurrency token rolls every chapter change back if a newer run starts before this save.
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("[AI Callback] Successfully saved AI results for video {VideoId}", request.VideoId);
-        return ApiResponse.Ok("AI chapters processed successfully");
+        return ApiResponse<AiCallbackReceipt>.Ok(
+            new AiCallbackReceipt(true),
+            "AI chapters processed successfully");
     }
 }

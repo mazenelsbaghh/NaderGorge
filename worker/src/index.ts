@@ -11,9 +11,10 @@ import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 import { validateWorkerSecurityConfig } from './security.js';
 import { installSystemLogCapture, logError, logInfo } from './logging.js';
-import { markJobCancellation, clearJobCancellation } from './cancellation.js';
+import { markJobCancellation } from './cancellation.js';
 import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAccess.js';
 import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
+import { resolveGenerationJob } from './queues/logicalJobResolver.js';
 import { claimStaleStreamMessages } from './queues/streamRecovery.js';
 import { readAIConfig } from './services/aiConfig.js';
 import { generateLiveSupportReply } from './services/geminiService.js';
@@ -26,7 +27,10 @@ import { databaseUrl } from './config/database.js';
 import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
 import { delayUntilNextCairoMidnight } from './scheduling/cairoTime.js';
 import { publicJobFailureReason } from './server/jobStatus.js';
+import { directGenerationRetryDenied } from './server/generationRetryPolicy.js';
 import { reportTerminalVideoFailure } from './services/videoAnalysisFailureReporter.js';
+import { reportTerminalSingleMindmapFailure } from './services/mindmapFailureReporter.js';
+import { isTerminalJobFailure } from './utils/jobTempFiles.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -58,7 +62,22 @@ const pool = new Pool({
 // BullMQ Connection Shared config
 const connection = redisConnectionOptions();
 
-async function reportProgressToBackend(jobId: string, progress: any) {
+function jobGenerationRunId(jobPayload: unknown) {
+  if (!jobPayload || typeof jobPayload !== 'object') return undefined;
+  const payload = jobPayload as Record<string, unknown>;
+  const runId = payload.generationRunId || payload.GenerationRunId;
+  return typeof runId === 'string' && runId ? runId : undefined;
+}
+
+function jobLogicalId(jobPayload: unknown, fallbackJobId: string) {
+  if (!jobPayload || typeof jobPayload !== 'object') return fallbackJobId;
+  const payload = jobPayload as Record<string, unknown>;
+  return typeof payload.logicalJobId === 'string' && payload.logicalJobId
+    ? payload.logicalJobId
+    : fallbackJobId;
+}
+
+async function reportProgressToBackend(jobId: string, generationRunId: string | undefined, progress: any) {
   try {
     const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
     const apiKey = process.env.API_CALLBACK_SECRET;
@@ -80,6 +99,7 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       },
       body: JSON.stringify({
         jobId,
+        ...(generationRunId ? { generationRunId } : {}),
         progress: percentage,
         status: 'active',
         message: stage
@@ -89,11 +109,13 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       console.error(`[Worker] Progress callback failed for job ${jobId} with status ${res.status}`);
     }
   } catch (err) {
-    console.error(`[Worker] Failed to report progress for job ${jobId}:`, err);
+    console.error(`[Worker] Failed to report progress for job ${jobId}.`, {
+      errorName: err instanceof Error ? err.name : 'UnknownError',
+    });
   }
 }
 
-async function reportFailureToBackend(jobId: string, errorMsg: string) {
+async function reportFailureToBackend(jobId: string, generationRunId: string | undefined, errorMsg: string) {
   try {
     const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
     const apiKey = process.env.API_CALLBACK_SECRET;
@@ -106,6 +128,7 @@ async function reportFailureToBackend(jobId: string, errorMsg: string) {
       },
       body: JSON.stringify({
         jobId,
+        ...(generationRunId ? { generationRunId } : {}),
         progress: 0,
         status: 'failed',
         message: errorMsg
@@ -115,7 +138,9 @@ async function reportFailureToBackend(jobId: string, errorMsg: string) {
       console.error(`[Worker] Failure callback failed for job ${jobId} with status ${res.status}`);
     }
   } catch (err) {
-    console.error(`[Worker] Failed to report failure for job ${jobId}:`, err);
+    console.error(`[Worker] Failed to report failure for job ${jobId}.`, {
+      errorName: err instanceof Error ? err.name : 'UnknownError',
+    });
   }
 }
 
@@ -136,6 +161,13 @@ async function startNotificationWorker() {
 }
 
 async function startAIWorker() {
+  const { sweepExpiredVideoAnalysisCheckpoints } = await import('./services/aiVideoCheckpoint.js');
+  const removedCheckpointCount = sweepExpiredVideoAnalysisCheckpoints();
+  if (removedCheckpointCount > 0) {
+    logInfo('ai-video-checkpoint', 'Expired crash-leftover checkpoints were removed.', {
+      removedCheckpointCount,
+    });
+  }
   const worker = new Worker('ai-video-chapters', async (job) => {
     // Dynamic import to avoid loading heavy modules if not needed immediately
     const processor = await import('./jobs/analyzeVideoChapters.js');
@@ -149,7 +181,11 @@ async function startAIWorker() {
   });
 
   worker.on('progress', (job, progress) => {
-    reportProgressToBackend(job.id!, progress);
+    const logicalJobId = jobLogicalId(
+      job.data,
+      String(job.data.lessonVideoId || job.data.LessonVideoId || job.id),
+    );
+    reportProgressToBackend(logicalJobId, jobGenerationRunId(job.data), progress);
   });
 
   worker.on('completed', job => {
@@ -195,19 +231,36 @@ async function startMindmapsWorker() {
   }, { connection });
 
   worker.on('progress', (job, progress) => {
-    reportProgressToBackend(job.id!, progress);
+    const videoId = job.data.lessonVideoId || job.data.LessonVideoId;
+    const logicalJobId = jobLogicalId(job.data, videoId ? `${videoId}_mindmaps` : String(job.id));
+    reportProgressToBackend(logicalJobId, jobGenerationRunId(job.data), progress);
   });
 
   worker.on('completed', job => {
     console.log(`[Mindmaps Worker] Job ${job.id} has completed successfully!`);
   });
 
-  worker.on('failed', (job, err) => {
-    console.error(`[Mindmaps Worker] Job ${job?.id} has failed with ${err.message}`);
-    const maxAttempts = job?.opts.attempts ?? 1;
-    const attemptsExhausted = job ? job.attemptsMade >= maxAttempts : true;
-    if (job && attemptsExhausted) {
-      reportFailureToBackend(job.id!, err.message);
+  worker.on('failed', async (job, err) => {
+    logError('mindmaps-worker', 'Mindmap generation job failed.', {
+      jobId: job?.id,
+      errorName: err.name,
+    });
+    if (job && isTerminalJobFailure(job, err)) {
+      const videoId = job.data.lessonVideoId || job.data.LessonVideoId;
+      const logicalJobId = jobLogicalId(job.data, videoId ? `${videoId}_mindmaps` : String(job.id));
+      await reportFailureToBackend(
+        logicalJobId,
+        jobGenerationRunId(job.data),
+        'تعذر إكمال توليد الخرائط الذهنية. ابدأ محاولة جديدة من لوحة التحكم.',
+      );
+      try {
+        await reportTerminalSingleMindmapFailure(job, err);
+      } catch (callbackError) {
+        logError('single-mindmap-failed', 'Terminal callback exhausted its retry budget.', {
+          jobId: job.id,
+          errorName: callbackError instanceof Error ? callbackError.name : 'UnknownError',
+        });
+      }
     }
   });
   
@@ -423,10 +476,12 @@ async function startWorker() {
   app.get('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
-      }
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
       if (!job) {
           return res.json({ id: jobId, state: 'not_found', progress: 0 });
       }
@@ -437,7 +492,7 @@ async function startWorker() {
       
       const failedReason = publicJobFailureReason(job.failedReason, state);
       
-      return res.json({ id: job.id, state, progress, failedReason });
+      return res.json({ id: jobId, state, progress, failedReason });
     } catch {
         return res.status(500).json({ error: 'WORKER_STATUS_UNAVAILABLE' });
     }
@@ -447,21 +502,24 @@ async function startWorker() {
   app.delete('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
-      }
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
       if (job) {
           const cancellation = await markJobCancellation(job);
           return res.json({
+            id: jobId,
             success: true,
             message: cancellation.removed ? 'Job cancelled' : 'Cancellation requested',
             state: cancellation.state
           });
       }
-      return res.status(404).json({ success: false, message: 'Job not found' });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+      return res.status(404).json({ id: jobId, success: false, message: 'Job not found' });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_CANCELLATION_UNAVAILABLE' });
     }
   });
 
@@ -469,18 +527,19 @@ async function startWorker() {
   app.post('/api/status/:id/retry', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
+      if (job) {
+        const denied = directGenerationRetryDenied(jobId);
+        return res.status(denied.statusCode).json(denied.body);
       }
-      if (job && await job.getState() === 'failed') {
-          await clearJobCancellation(jobId);
-          await job.retry();
-          return res.json({ success: true, message: 'Job retried' });
-      }
-      return res.status(400).json({ success: false, message: 'Job not found or not in failed state' });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+      return res.status(400).json({ id: jobId, success: false, message: 'Job not found or not in failed state' });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_RETRY_UNAVAILABLE' });
     }
   });
 

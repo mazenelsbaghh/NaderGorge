@@ -37,6 +37,7 @@ import {
   type PackageDto,
 } from "@/services/content-service";
 import { registerCacheStore } from "@/lib/cache-invalidation";
+import { isFullPackagePurchaseDisabled } from "@/lib/content-access";
 
 const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
@@ -147,6 +148,7 @@ export default function PackageProfilePageClient() {
   const directSections = pkg?.directSections ?? [];
   const directLessons = pkg?.directLessons ?? [];
   const hasRootContentAccess = pkg?.hasRootContentAccess ?? hasDirectPackageAccess;
+  const fullPackagePurchaseDisabled = isFullPackagePurchaseDisabled(pkg);
   const rootPurchaseTarget = pkg ? getContentRootPurchaseReference(pkg) : null;
 
   return (
@@ -436,6 +438,13 @@ export default function PackageProfilePageClient() {
             {hasRootContentAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                 <CheckCircle2 className="inline h-4 w-4 mr-1" /> تم تفعيل {contentRootLabel} في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
+              </div>
+            ) : fullPackagePurchaseDisabled ? (
+              <div
+                role="status"
+                className="rounded-2xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-sm font-bold leading-7 text-[var(--admin-warning)]"
+              >
+                شراء الباقة كاملة متوقف حالياً. يمكنك فتح الترمات وشراء الترم أو القسم أو الحصة بشكل منفصل.
               </div>
             ) : rootPurchaseTarget ? (
               <div className="flex flex-col gap-3">

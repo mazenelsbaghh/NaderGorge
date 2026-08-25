@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { Redis } from 'ioredis';
 import { ingestStreamJob, resolveQueueTarget } from './jobIngestion.js';
 
-function queue(existingJob?: any) {
+function queue(existingJob?: any, name = 'ai-video-chapters') {
   const instance = {
+    name,
     added: [] as any[],
     getJob: async () => existingJob,
     add: async (...args: any[]) => { instance.added.push(args); },
@@ -17,11 +18,11 @@ function queues(existingJob?: any) {
   queueRef = queue(existingJob);
   return {
     aiQueue: queueRef,
-    mindmapsQueue: queue(),
-    notifQueue: queue(),
-    essayQueue: queue(),
-    liveSupportQueue: queue(),
-    adminAIQueue: queue(),
+    mindmapsQueue: queue(undefined, 'generate-chapter-mindmaps'),
+    notifQueue: queue(undefined, 'notifications'),
+    essayQueue: queue(undefined, 'ai-essay-grading'),
+    liveSupportQueue: queue(undefined, 'ai-live-support-turns'),
+    adminAIQueue: queue(undefined, 'ai-admin-agent-turns'),
   } as any;
 }
 
@@ -29,8 +30,18 @@ function redis() {
   return {
     acked: [] as string[],
     deleted: [] as string[],
-    xack: async (_stream: string, _group: string, id: string) => { redisRef.acked.push(id); },
+    events: [] as string[],
+    aliases: [] as Array<{ key: string; value: string; expiryMode?: string; ttl?: number }>,
+    xack: async (_stream: string, _group: string, id: string) => {
+      redisRef.acked.push(id);
+      redisRef.events.push(`ack:${id}`);
+    },
     xdel: async (_stream: string, id: string) => { redisRef.deleted.push(id); },
+    eval: async (_script: string, _keyCount: number, key: string, value: string, _streamId: string, ttl: string) => {
+      redisRef.aliases.push({ key, value, expiryMode: 'EX', ttl: Number(ttl) });
+      redisRef.events.push('alias');
+      return 1;
+    },
   };
 }
 let redisRef: ReturnType<typeof redis>;
@@ -38,6 +49,18 @@ let redisRef: ReturnType<typeof redis>;
 test('resolveQueueTarget sanitizes BullMQ job ids', () => {
   const result = resolveQueueTarget('video analysis', 'a:b/c job', {}, queues());
   assert.equal(result?.targetJobId, 'a-b-c-job');
+});
+
+test('generation jobs use a run-scoped physical id and retain a stable logical id', () => {
+  const generationRunId = '11111111-1111-4111-8111-111111111111';
+  const result = resolveQueueTarget('mind maps', 'stream-job', {
+    lessonVideoId: 'video-1',
+    chapterId: 'chapter-1',
+    generationRunId,
+  }, queues());
+
+  assert.equal(result?.logicalJobId, 'video-1_mindmaps');
+  assert.equal(result?.targetJobId, `video-1_mindmap_chapter-1--run-${generationRunId}`);
 });
 
 test('ingestStreamJob acknowledges invalid JSON without enqueue', async () => {
@@ -48,14 +71,20 @@ test('ingestStreamJob acknowledges invalid JSON without enqueue', async () => {
   assert.equal(queueRef.added.length, 0);
 });
 
-test('ingestStreamJob skips existing completed job without removing or enqueuing', async () => {
-  redisRef = redis();
-  let removed = false;
-  const existing = { getState: async () => 'completed', remove: async () => { removed = true; } };
-  const result = await ingestStreamJob(redisRef as any, queues(existing), '2-0', ['jobType', 'video analysis', 'jobId', 'job-2', 'payload', '{}']);
-  assert.equal(result.action, 'skipped-existing');
-  assert.equal(removed, false);
-  assert.equal(queueRef.added.length, 0);
+test('ingestStreamJob replaces a retained completed job when generation is requested again', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    let removed = false;
+    const existing = { getState: async () => 'completed', remove: async () => { removed = true; } };
+    const result = await ingestStreamJob(redisRef as any, queues(existing), '2-0', ['jobType', 'video analysis', 'jobId', 'job-2', 'payload', '{}']);
+    assert.equal(result.action, 'enqueued');
+    assert.equal(removed, true);
+    assert.equal(queueRef.added.length, 1);
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
 });
 
 test('ingestStreamJob replaces a failed job when analysis is requested again', async () => {
@@ -74,6 +103,27 @@ test('ingestStreamJob replaces a failed job when analysis is requested again', a
   }
 });
 
+test('ingestStreamJob deduplicates non-terminal jobs without removing them', async () => {
+  const scenarios = [
+    { state: 'active', messageStreamId: '20-0' },
+    { state: 'waiting', messageStreamId: '20-1' },
+    { state: 'delayed', messageStreamId: '20-2' },
+  ];
+  for (const { state, messageStreamId } of scenarios) {
+    redisRef = redis();
+    let removed = false;
+    const existing = { getState: async () => state, remove: async () => { removed = true; } };
+    const result = await ingestStreamJob(redisRef as any, queues(existing), messageStreamId, [
+      'jobType', 'video analysis', 'jobId', `job-${state}`, 'payload', '{}',
+    ]);
+    assert.equal(result.action, 'skipped-existing');
+    assert.equal(removed, false);
+    assert.equal(queueRef.added.length, 0);
+    assert.equal(redisRef.aliases.length, 1);
+    assert.ok(redisRef.events.indexOf('alias') < redisRef.events.indexOf(`ack:${messageStreamId}`));
+  }
+});
+
 test('video analysis ingestion caps the queue retry policy at three attempts', async () => {
   const originalGet = Redis.prototype.get;
   try {
@@ -85,6 +135,35 @@ test('video analysis ingestion caps the queue retry policy at three attempts', a
 
     assert.equal(result.action, 'enqueued');
     assert.equal(queueRef.added[0][2].attempts, 3);
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
+});
+
+test('generation ingestion adds the stable logical callback id to the queued payload', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    const generationRunId = '11111111-1111-4111-8111-111111111111';
+    await ingestStreamJob(redisRef as any, queues(), '2-3', [
+      'jobType', 'video analysis', 'jobId', 'video-logical', 'payload', JSON.stringify({ generationRunId }),
+    ]);
+
+    assert.equal(queueRef.added[0][1].logicalJobId, 'video-logical');
+    assert.equal(queueRef.added[0][2].jobId, `video-logical--run-${generationRunId}`);
+    assert.equal(redisRef.aliases.length, 1);
+    const aliasWrite = redisRef.aliases[0]!;
+    assert.match(aliasWrite.key, /^job-alias:v1:[0-9a-f]{64}$/);
+    assert.deepEqual(JSON.parse(aliasWrite.value), {
+      logicalJobId: 'video-logical',
+      physicalJobId: `video-logical--run-${generationRunId}`,
+      queueName: 'ai-video-chapters',
+      sourceStreamId: '2-3',
+    });
+    assert.equal(aliasWrite.expiryMode, 'EX');
+    assert.ok((aliasWrite.ttl ?? 0) > 0);
+    assert.ok(redisRef.events.indexOf('alias') < redisRef.events.indexOf('ack:2-3'));
   } finally {
     Redis.prototype.get = originalGet;
   }

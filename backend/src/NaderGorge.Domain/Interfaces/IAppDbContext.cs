@@ -203,6 +203,11 @@ public interface IAppDbContext
     DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages { get; }
     DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts { get; }
     DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates { get; }
+    DbSet<WhatsAppCampaign> WhatsAppCampaigns { get; }
+    DbSet<WhatsAppCampaignRecipient> WhatsAppCampaignRecipients { get; }
+    DbSet<WhatsAppContactPreference> WhatsAppContactPreferences { get; }
+    DbSet<WhatsAppCampaignAuditEvent> WhatsAppCampaignAuditEvents { get; }
+    DbSet<WhatsAppTemplateSyncRun> WhatsAppTemplateSyncRuns { get; }
     DbSet<LiveSupportAttachment> LiveSupportAttachments { get; }
     DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories { get; }
     DbSet<LiveSupportEvent> LiveSupportEvents { get; }
@@ -293,6 +298,7 @@ public interface IAppDbContext
 
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
+    void ClearTrackedChanges();
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

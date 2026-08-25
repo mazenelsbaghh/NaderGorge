@@ -6635,6 +6635,14 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<Guid?>("CurrentAiAnalysisRunId")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CurrentMindmapGenerationRunId")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
@@ -8277,6 +8285,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -8318,6 +8331,463 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("Status", "LastSyncedAt");
 
                     b.ToTable("live_support_whatsapp_templates", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AudienceFilterJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("AudienceFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ConfirmationPhraseHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CreateIdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CreateRequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DeliveredCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ExcludedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExclusionSummaryJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("LastChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LaunchIdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LaunchRequestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LaunchedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("PauseReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("PausedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("PendingCount")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ProtectedReviewToken")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ProtectedReviewTokenDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ReadCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ReviewTokenExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ReviewTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("SentCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SkippedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TemplateCategory")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TemplateComponentsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("TemplateFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TemplateLanguage")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("TemplateMetaId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("UncertainCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("VariableMappingsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastChangedByUserId");
+
+                    b.HasIndex("CreatedByUserId", "CreateIdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId", "LaunchIdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("\"LaunchIdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("TemplateId", "Status");
+
+                    b.ToTable("whatsapp_campaigns", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaignAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SafeMetadataJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("CampaignId", "CreatedAt");
+
+                    b.ToTable("whatsapp_campaign_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaignRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ContactRole")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DestinationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("DestinationLast4")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("MetaMessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PayloadDigest")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<byte[]>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("ProviderTimestamp")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetaMessageId")
+                        .IsUnique()
+                        .HasFilter("\"MetaMessageId\" IS NOT NULL");
+
+                    b.HasIndex("StudentUserId");
+
+                    b.HasIndex("CampaignId", "DestinationHash")
+                        .IsUnique();
+
+                    b.HasIndex("CampaignId", "Status");
+
+                    b.HasIndex("Status", "NextAttemptAt", "CreatedAt");
+
+                    b.ToTable("whatsapp_campaign_recipients", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppContactPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContactRole")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DestinationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("DestinationLast4")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.Property<DateTime>("EffectiveAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("EvidenceReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("RecordedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("SourceMessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SupersedesPreferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceMessageId")
+                        .IsUnique()
+                        .HasFilter("\"SourceMessageId\" IS NOT NULL");
+
+                    b.HasIndex("StudentUserId");
+
+                    b.HasIndex("SupersedesPreferenceId")
+                        .IsUnique()
+                        .HasFilter("\"SupersedesPreferenceId\" IS NOT NULL");
+
+                    b.HasIndex("RecordedByUserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("DestinationHash", "Category", "EffectiveAt", "CreatedAt");
+
+                    b.ToTable("whatsapp_contact_preferences", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppTemplateSyncRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("CreatedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("ReceivedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("StaleCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("Status")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 0");
+
+                    b.HasIndex("Status", "StartedAt");
+
+                    b.ToTable("whatsapp_template_sync_runs", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.MediaProductionPipeline", b =>
@@ -8617,6 +9087,18 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AiOutputLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Auto");
+
+                    b.Property<bool>("AllowFullPackagePurchase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<int>("ArchiveMode")
                         .HasColumnType("integer");
@@ -12612,6 +13094,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<Guid?>("CurrentMindmapGenerationRunId")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<int>("EndTime")
                         .HasColumnType("integer");
 
@@ -15343,6 +15829,81 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessage", null)
                         .WithOne()
                         .HasForeignKey("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppMessage", "LiveSupportMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaign", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("LastChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaignAuditEvent", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaignRecipient", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.WhatsAppCampaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("StudentUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppContactPreference", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("StudentUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.WhatsAppContactPreference", null)
+                        .WithMany()
+                        .HasForeignKey("SupersedesPreferenceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.WhatsAppTemplateSyncRun", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

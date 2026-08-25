@@ -16,11 +16,80 @@ using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class WhatsAppOutboundBackgroundServiceTests
 {
+    [Fact]
+    public async Task ProductionRegression_20260825_StoredWebp_IsNormalizedBeforeProviderUpload()
+    {
+        await using var webp = new MemoryStream();
+        using (var image = new Image<Rgba32>(2, 2, new Rgba32(20, 40, 60, 255)))
+            await image.SaveAsWebpAsync(webp, CancellationToken.None);
+        var storedBytes = webp.ToArray();
+        var handler = new RecordingMediaMetaHandler();
+        var storage = new MemoryAttachmentStorage(storedBytes);
+        var normalizer = new WhatsAppOutboundMediaNormalizer(new RejectingAudioProcess());
+        await using var harness = await Harness.CreateAsync(handler, storage, normalizer);
+        Guid attachmentId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            attachmentId = AddMediaDelivery(db, LiveSupportMessageType.Image,
+                "legacy.webp", "image/webp", storedBytes.Length).AttachmentId!.Value;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Contains("Content-Type: image/jpeg", handler.Requests[0].Body);
+        Assert.Contains("legacy.jpg", handler.Requests[0].Body);
+        Assert.DoesNotContain("image/webp", handler.Requests[0].Body);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var attachment = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportAttachments.SingleAsync(item => item.Id == attachmentId);
+        Assert.Equal("image/webp", attachment.ContentType);
+        Assert.Equal("legacy.webp", attachment.OriginalFileName);
+    }
+
+    [Fact]
+    public async Task ProductionRegression_20260825_StoredWebm_IsNormalizedBeforeProviderUpload()
+    {
+        byte[] storedBytes = [0x1A, 0x45, 0xDF, 0xA3, 1, 2, 3];
+        byte[] normalizedBytes = [0x4F, 0x67, 0x67, 0x53, 4, 5, 6];
+        var handler = new RecordingMediaMetaHandler();
+        var storage = new MemoryAttachmentStorage(storedBytes);
+        var normalizer = new WhatsAppOutboundMediaNormalizer(
+            new FixedAudioProcess(normalizedBytes));
+        await using var harness = await Harness.CreateAsync(handler, storage, normalizer);
+        Guid attachmentId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            attachmentId = AddMediaDelivery(db, LiveSupportMessageType.Audio,
+                "legacy.webm", "audio/webm", storedBytes.Length).AttachmentId!.Value;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Contains("Content-Type: audio/ogg", handler.Requests[0].Body);
+        Assert.Contains("legacy.ogg", handler.Requests[0].Body);
+        Assert.DoesNotContain("audio/webm", handler.Requests[0].Body);
+        Assert.Contains("\"voice\":true", handler.Requests[1].Body);
+        Assert.DoesNotContain("caption", handler.Requests[1].Body);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var attachment = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportAttachments.SingleAsync(item => item.Id == attachmentId);
+        Assert.Equal("audio/webm", attachment.ContentType);
+        Assert.Equal("legacy.webm", attachment.OriginalFileName);
+    }
+
     [Fact]
     public async Task UnexpectedFailure_IsRecoveredWithoutBlockingTheNextMessage()
     {
@@ -373,6 +442,32 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
         return delivery;
     }
 
+    private static LiveSupportMessage AddMediaDelivery(
+        AppDbContext db,
+        LiveSupportMessageType messageType,
+        string fileName,
+        string contentType,
+        long sizeBytes)
+    {
+        var delivery = AddDelivery(db, withBinding: true, createdAt: DateTime.UtcNow.AddMinutes(-1));
+        var message = db.LiveSupportMessages.Local.Single(item => item.Id == delivery.LiveSupportMessageId);
+        var attachment = new LiveSupportAttachment
+        {
+            StoragePath = "stored/legacy",
+            OriginalFileName = fileName,
+            ContentType = contentType,
+            SizeBytes = sizeBytes,
+            Sha256 = new string('A', 64),
+            UploadedByIdentity = "staff"
+        };
+        message.Type = messageType;
+        message.Content = messageType == LiveSupportMessageType.Image ? "صورة" : "تسجيل صوتي";
+        message.AttachmentId = attachment.Id;
+        delivery.MessageType = messageType.ToString().ToLowerInvariant();
+        db.LiveSupportAttachments.Add(attachment);
+        return message;
+    }
+
     private static LiveSupportWhatsAppPendingReceipt PendingReceipt(string metaMessageId, DateTime createdAt) => new()
     {
         MetaMessageId = metaMessageId,
@@ -408,6 +503,68 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
             throw new InvalidOperationException("No attachment read expected.");
         public Task DeleteAsync(string storagePath, CancellationToken ct) =>
             throw new InvalidOperationException("No attachment delete expected.");
+    }
+
+    private sealed class RejectingMediaNormalizer : IWhatsAppOutboundMediaNormalizer
+    {
+        public Task<WhatsAppOutboundMedia> NormalizeAsync(
+            WhatsAppOutboundMediaSource source,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("No media normalization expected.");
+    }
+
+    private sealed class MemoryAttachmentStorage(byte[] content) : ILiveSupportAttachmentStorage
+    {
+        public Task<LiveSupportStoredAttachment> SaveAsync(
+            Stream source,
+            string fileName,
+            string contentType,
+            long sizeBytes,
+            CancellationToken ct) =>
+            throw new InvalidOperationException("No attachment write expected.");
+
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct) =>
+            Task.FromResult<Stream>(new MemoryStream(content, writable: false));
+
+        public Task DeleteAsync(string storagePath, CancellationToken ct) =>
+            throw new InvalidOperationException("No attachment delete expected.");
+    }
+
+    private sealed class RejectingAudioProcess : IWhatsAppAudioProcess
+    {
+        public Task<byte[]> TranscodeToOggOpusMonoAsync(
+            ReadOnlyMemory<byte> source,
+            int maximumOutputBytes,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("No audio conversion expected.");
+    }
+
+    private sealed class FixedAudioProcess(byte[] output) : IWhatsAppAudioProcess
+    {
+        public Task<byte[]> TranscodeToOggOpusMonoAsync(
+            ReadOnlyMemory<byte> source,
+            int maximumOutputBytes,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(output);
+    }
+
+    private sealed class RecordingMediaMetaHandler : HttpMessageHandler
+    {
+        public List<(string Path, string Body)> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add((request.RequestUri?.AbsolutePath ?? string.Empty,
+                request.Content is null
+                    ? string.Empty
+                    : await request.Content.ReadAsStringAsync(cancellationToken)));
+            var responseBody = Requests.Count == 1
+                ? "{\"id\":\"media-normalized\"}"
+                : "{\"messages\":[{\"id\":\"wamid.normalized\"}]}";
+            return JsonResponse(HttpStatusCode.OK, responseBody);
+        }
     }
 
     private sealed class EnabledSettings : ICachedPlatformSettingsReader
@@ -465,6 +622,17 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
 
         public static async Task<Harness> CreateAsync(HttpMessageHandler handler)
         {
+            return await CreateAsync(
+                handler,
+                new RejectingAttachmentStorage(),
+                new RejectingMediaNormalizer());
+        }
+
+        public static async Task<Harness> CreateAsync(
+            HttpMessageHandler handler,
+            ILiveSupportAttachmentStorage attachmentStorage,
+            IWhatsAppOutboundMediaNormalizer mediaNormalizer)
+        {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -484,8 +652,10 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
                 .AddSingleton<ICachedPlatformSettingsReader>(new EnabledSettings())
                 .AddScoped<ILiveSupportService, LiveSupportService>()
                 .AddScoped<ILiveSupportEventWriter, LiveSupportEventWriter>()
+                .AddSingleton<IWhatsAppCampaignService>(new StubWhatsAppCampaignService())
                 .AddScoped<WhatsAppLiveSupportService>()
-                .AddSingleton<ILiveSupportAttachmentStorage>(new RejectingAttachmentStorage())
+                .AddSingleton<ILiveSupportAttachmentStorage>(attachmentStorage)
+                .AddSingleton<IWhatsAppOutboundMediaNormalizer>(mediaNormalizer)
                 .AddSingleton(cloud)
                 .BuildServiceProvider();
             await using var scope = services.CreateAsyncScope();

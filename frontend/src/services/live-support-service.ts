@@ -56,14 +56,261 @@ export interface LiveSupportConversation {
   customerServiceWindowExpiresAt?: string | null;
 }
 
+export interface LiveSupportWhatsAppTemplateButton {
+  type?: string;
+  text?: string;
+  url?: string;
+  phoneNumber?: string;
+}
+
+export interface LiveSupportWhatsAppTemplateComponent {
+  type?: string;
+  text?: string;
+  format?: string;
+  buttons?: LiveSupportWhatsAppTemplateButton[];
+}
+
 export interface LiveSupportWhatsAppTemplate {
   id: string;
   name: string;
   language: string;
   category: string;
   status: string;
-  components: Array<{ type?: string; text?: string; format?: string }>;
+  components: LiveSupportWhatsAppTemplateComponent[];
   lastSyncedAt: string;
+  fingerprint: string;
+}
+
+export type WhatsAppCampaignStatus =
+  | 'Draft'
+  | 'Locked'
+  | 'Running'
+  | 'Paused'
+  | 'Completed'
+  | 'Cancelled'
+  | 'Failed';
+
+export type WhatsAppCampaignTemplateComponentType = 'HEADER' | 'BODY';
+export type WhatsAppCampaignContactRole =
+  | 'StudentPrimary'
+  | 'StudentSecondary'
+  | 'FatherPrimary'
+  | 'FatherSecondary'
+  | 'Mother';
+export type WhatsAppCampaignVariableSource =
+  | 'Literal'
+  | 'StudentFirstName'
+  | 'StudentFullName'
+  | 'EducationStage'
+  | 'GradeLevel'
+  | 'StudyTrack'
+  | 'Governorate'
+  | 'SchoolName'
+  | 'TeacherName'
+  | 'SubjectName'
+  | 'PackageName'
+  | 'LessonName'
+  | 'PurchaseDate';
+
+export interface WhatsAppCampaignVariableMapping {
+  componentType: WhatsAppCampaignTemplateComponentType;
+  position: number;
+  source: WhatsAppCampaignVariableSource;
+  literalValue?: string | null;
+  referenceId?: string | null;
+  format?: string | null;
+}
+
+/**
+ * Categories are combined with AND. Values selected inside one category are
+ * combined with OR. This shape deliberately does not expose an unrestricted
+ * boolean-rule builder that could accidentally widen a sensitive audience.
+ */
+export interface WhatsAppCampaignAudienceFilters {
+  contactRoles: WhatsAppCampaignContactRole[];
+  educationStages: string[];
+  gradeLevels: string[];
+  studyTracks: string[];
+  teacherIds: string[];
+  subjectIds: string[];
+  packageIds: string[];
+  crmStatuses: string[];
+  hasActiveAccess?: boolean | null;
+  hasPaidPurchase?: boolean | null;
+  purchaseFromUtc?: string | null;
+  purchaseToUtc?: string | null;
+  hasWatched?: boolean | null;
+  lessonIds: string[];
+  watchFromUtc?: string | null;
+  watchToUtc?: string | null;
+  hasExamAttempt?: boolean | null;
+  examIds: string[];
+  examFromUtc?: string | null;
+  examToUtc?: string | null;
+  hasHomeworkSubmission?: boolean | null;
+  homeworkIds: string[];
+  homeworkFromUtc?: string | null;
+  homeworkToUtc?: string | null;
+}
+
+export interface WhatsAppCampaignFacetOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface WhatsAppCampaignFacets {
+  educationStages: WhatsAppCampaignFacetOption[];
+  gradeLevels: WhatsAppCampaignFacetOption[];
+  studyTracks: WhatsAppCampaignFacetOption[];
+  crmStatuses: WhatsAppCampaignFacetOption[];
+  teachers: WhatsAppCampaignFacetOption[];
+  subjects: WhatsAppCampaignFacetOption[];
+  packages: WhatsAppCampaignFacetOption[];
+  lessons: WhatsAppCampaignFacetOption[];
+  exams: WhatsAppCampaignFacetOption[];
+  homeworks: WhatsAppCampaignFacetOption[];
+}
+
+export interface WhatsAppCampaignPreviewSample {
+  maskedName: string;
+  maskedPhone: string;
+  contactRole: string;
+  renderedPreview: string;
+}
+
+export interface WhatsAppCampaignAudiencePreview {
+  eligibleCount: number;
+  excludedCount: number;
+  excludedByReason: Record<string, number>;
+  audienceFingerprint: string;
+  templateFingerprint: string;
+  expiresAt: string;
+  samples: WhatsAppCampaignPreviewSample[];
+}
+
+export interface WhatsAppCampaignSummary {
+  id: string;
+  name: string;
+  templateName: string;
+  templateLanguage: string;
+  templateCategory: string;
+  status: WhatsAppCampaignStatus;
+  recipientCount: number;
+  excludedCount: number;
+  pendingCount: number;
+  sentCount: number;
+  deliveredCount: number;
+  readCount: number;
+  failedCount: number;
+  skippedCount: number;
+  uncertainCount: number;
+  version: number;
+  createdAt: string;
+  launchedAt?: string | null;
+  completedAt?: string | null;
+  pauseReason?: string | null;
+}
+
+export interface WhatsAppCampaignPage {
+  items: WhatsAppCampaignSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WhatsAppCampaignBootstrap {
+  templates: LiveSupportWhatsAppTemplate[];
+  facets: WhatsAppCampaignFacets;
+  campaigns: WhatsAppCampaignPage;
+}
+
+export interface WhatsAppCampaignTemplateSnapshot {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  fingerprint: string;
+  components: LiveSupportWhatsAppTemplateComponent[];
+}
+
+export interface WhatsAppCampaignDraft {
+  campaignId: string;
+  version: number;
+  status: 'Draft' | 'Locked';
+  recipientCount: number;
+  excludedCount: number;
+  templateSnapshot: WhatsAppCampaignTemplateSnapshot;
+  reviewToken: string;
+  confirmationPhrase: string;
+  reviewExpiresAt: string;
+}
+
+export interface WhatsAppCampaignState {
+  campaignId: string;
+  status: WhatsAppCampaignStatus;
+  version: number;
+}
+
+export interface WhatsAppContactPreference {
+  id: string;
+  studentUserId?: string | null;
+  studentName?: string | null;
+  contactRole: WhatsAppCampaignContactRole | string;
+  maskedDestination: string;
+  category: 'Marketing' | 'Utility' | 'All';
+  state: 'OptedIn' | 'OptedOut';
+  source: string;
+  evidenceReference: string;
+  effectiveAt: string;
+  recordedAt: string;
+  recordedByUserId?: string | null;
+}
+
+export interface WhatsAppContactPreferencePage {
+  items: WhatsAppContactPreference[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export type WhatsAppContactPreferenceEffectiveState = 'Unknown' | 'OptedIn' | 'OptedOut';
+
+export interface WhatsAppContactCategoryState {
+  effectiveState: WhatsAppContactPreferenceEffectiveState;
+  latestPreferenceId?: string | null;
+  latestEffectiveAt?: string | null;
+  overriddenByGlobalOptOut: boolean;
+  effectivePreferenceId?: string | null;
+}
+
+export interface WhatsAppContactCandidate {
+  studentUserId: string;
+  studentName: string;
+  contactRole: WhatsAppCampaignContactRole;
+  maskedDestination: string;
+  marketing: WhatsAppContactCategoryState;
+  utility: WhatsAppContactCategoryState;
+  global: WhatsAppContactCategoryState;
+}
+
+export interface WhatsAppContactCandidatePage {
+  items: WhatsAppContactCandidate[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface RecordWhatsAppContactPreferencePayload {
+  studentUserId: string;
+  contactRole: WhatsAppCampaignContactRole;
+  category: 'Marketing' | 'Utility' | 'All';
+  state: 'OptedIn' | 'OptedOut';
+  source: string;
+  evidenceReference: string;
+  effectiveAt?: string | null;
+  expectedLatestPreferenceId?: string | null;
+  expectedLatestGlobalPreferenceId?: string | null;
 }
 
 export interface LiveSupportMessage {
@@ -271,12 +518,20 @@ export interface LiveSupportRegisterGuestPayload {
 interface ApiResponse<T> {
   success: boolean;
   message?: string;
+  errors?: string[];
   data: T;
 }
 
 export function getLiveSupportApiError(error: unknown, fallback: string) {
   const response = (error as { response?: { data?: { message?: unknown } } } | null)?.response;
   return typeof response?.data?.message === 'string' ? response.data.message : fallback;
+}
+
+export function getLiveSupportApiErrorCode(error: unknown) {
+  const data = (error as { response?: { data?: { code?: unknown; errors?: unknown } } } | null)?.response?.data;
+  if (typeof data?.code === 'string') return data.code;
+  if (Array.isArray(data?.errors) && typeof data.errors[0] === 'string') return data.errors[0];
+  return undefined;
 }
 
 export const liveSupportService = {
@@ -378,6 +633,123 @@ export const liveSupportService = {
 
   syncWhatsAppTemplates: async () => {
     const response = await apiClient.post<ApiResponse<LiveSupportWhatsAppTemplate[]>>('/live-support/whatsapp/templates/sync');
+    return response.data.data;
+  },
+
+  getWhatsAppCampaignBootstrap: (signal?: AbortSignal) =>
+    apiClient
+      .get<ApiResponse<WhatsAppCampaignBootstrap>>('/live-support/whatsapp/campaigns/bootstrap', { signal })
+      .then((response) => response.data.data),
+
+  previewWhatsAppCampaignAudience: async (payload: {
+    templateId: string;
+    filters: WhatsAppCampaignAudienceFilters;
+    variableMappings: WhatsAppCampaignVariableMapping[];
+  }, signal?: AbortSignal) => {
+    const response = await apiClient.post<ApiResponse<WhatsAppCampaignAudiencePreview>>(
+      '/live-support/whatsapp/campaigns/audience/preview',
+      payload,
+      { signal },
+    );
+    return response.data.data;
+  },
+
+  createWhatsAppCampaignDraft: async (payload: {
+    name: string;
+    templateId: string;
+    audienceFingerprint: string;
+    filters: WhatsAppCampaignAudienceFilters;
+    variableMappings: WhatsAppCampaignVariableMapping[];
+  }, idempotencyKey = createClientId()) => {
+    const response = await apiClient.post<ApiResponse<WhatsAppCampaignDraft>>(
+      '/live-support/whatsapp/campaigns/drafts',
+      payload,
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
+    invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
+    return response.data.data;
+  },
+
+  launchWhatsAppCampaign: async (campaignId: string, payload: {
+    expectedVersion: number;
+    audienceFingerprint: string;
+    reviewToken: string;
+    confirmationPhrase: string;
+    idempotencyKey?: string;
+  }) => {
+    const idempotencyKey = payload.idempotencyKey ?? createClientId();
+    const response = await apiClient.post<ApiResponse<WhatsAppCampaignState>>(
+      `/live-support/whatsapp/campaigns/${campaignId}/launch`,
+      {
+        expectedVersion: payload.expectedVersion,
+        audienceFingerprint: payload.audienceFingerprint,
+        reviewToken: payload.reviewToken,
+        confirmationPhrase: payload.confirmationPhrase,
+        idempotencyKey,
+      },
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
+    invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
+    return response.data.data;
+  },
+
+  getWhatsAppCampaigns: (params: { page?: number; pageSize?: number } = {}, signal?: AbortSignal) =>
+    apiClient
+      .get<ApiResponse<WhatsAppCampaignPage>>('/live-support/whatsapp/campaigns', {
+        params: { page: params.page ?? 1, pageSize: params.pageSize ?? 20 },
+        signal,
+      })
+      .then((response) => response.data.data),
+
+  changeWhatsAppCampaignStatus: async (
+    campaignId: string,
+    operation: 'pause' | 'resume' | 'cancel',
+    expectedVersion: number,
+    reason?: string,
+    idempotencyKey = createClientId(),
+  ) => {
+    const response = await apiClient.post<ApiResponse<WhatsAppCampaignState>>(
+      `/live-support/whatsapp/campaigns/${campaignId}/${operation}`,
+      { expectedVersion, reason: reason?.trim() || null },
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
+    invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
+    return response.data.data;
+  },
+
+  getWhatsAppContactPreferences: (
+    params: { search: string; page?: number; pageSize?: number },
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .get<ApiResponse<WhatsAppContactPreferencePage>>('/live-support/whatsapp/preferences', {
+        params: { search: params.search, page: params.page ?? 1, pageSize: params.pageSize ?? 20 },
+        signal,
+      })
+      .then((response) => response.data.data),
+
+  searchWhatsAppContactCandidates: (
+    params: { search: string; page?: number; pageSize?: number },
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .post<ApiResponse<WhatsAppContactCandidatePage>>(
+        '/live-support/whatsapp/preferences/contacts/search',
+        { search: params.search, page: params.page ?? 1, pageSize: params.pageSize ?? 20 },
+        { signal },
+      )
+      .then((response) => response.data.data),
+
+  recordWhatsAppContactPreference: async (
+    payload: RecordWhatsAppContactPreferencePayload,
+    idempotencyKey = createClientId(),
+  ) => {
+    const response = await apiClient.post<ApiResponse<WhatsAppContactPreference>>(
+      '/live-support/whatsapp/preferences',
+      payload,
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
+    invalidateSupport(['whatsapp:campaigns']);
     return response.data.data;
   },
 

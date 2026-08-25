@@ -54,6 +54,7 @@ public sealed class LiveSupportWhatsAppTemplate : BaseEntity
     public string Category { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string ComponentsJson { get; set; } = "[]";
+    public string Fingerprint { get; set; } = string.Empty;
     public DateTime LastSyncedAt { get; set; }
     public long Version { get; set; }
 }

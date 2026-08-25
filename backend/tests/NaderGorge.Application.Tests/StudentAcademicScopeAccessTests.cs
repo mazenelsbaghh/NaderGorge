@@ -35,6 +35,7 @@ public class StudentAcademicScopeAccessTests
 
         var exact = SeedPackage(db, teacher, exactSubject, "Exact package");
         var platformWide = SeedPackage(db, teacher, generalSubject, "Platform package");
+        platformWide.AllowFullPackagePurchase = false;
         var stageWide = SeedPackage(db, teacher, generalSubject, "Stage package");
         var gradeAllSubjects = SeedPackage(db, teacher, hiddenSubject, "Grade package");
         var nonMatching = SeedPackage(db, teacher, hiddenSubject, "Second secondary package");
@@ -93,6 +94,8 @@ public class StudentAcademicScopeAccessTests
         Assert.Equal(
             ["Exact package", "Grade package", "Platform package", "Stage package"],
             names);
+        Assert.False(result.Data.Single(package => package.Name == "Platform package").AllowFullPackagePurchase);
+        Assert.True(result.Data.Single(package => package.Name == "Exact package").AllowFullPackagePurchase);
 
         var otherResult = await handler.Handle(new GetPackagesQuery(otherStudent.Id), CancellationToken.None);
 

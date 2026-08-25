@@ -1192,6 +1192,24 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           }
         });
 
+        const onContentArchiveStateChanged = (payloadJson: string) => {
+          try {
+            JSON.parse(payloadJson);
+            invalidateMany([
+              'content:packages',
+              'content:lesson',
+              'student:dashboard',
+              'student:quick-access',
+              'student:exams',
+              'student:homeworks',
+            ]);
+          } catch (e) {
+            console.error('Error handling content archive state event:', e);
+          }
+        };
+        sharedConnection.on('ContentArchived', onContentArchiveStateChanged);
+        sharedConnection.on('ContentRestored', onContentArchiveStateChanged);
+
         sharedConnection.on('PackageAccessGranted', (payloadJson: string) => {
           try {
             const payload = JSON.parse(payloadJson) as PackageAccessGrantedPayload;

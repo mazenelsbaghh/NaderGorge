@@ -9,6 +9,8 @@ namespace NaderGorge.Application.Services;
 public sealed class WhatsAppCloudService
 {
     private const int MaxInboundMediaBytes = 10 * 1024 * 1024;
+    private const int MaxOutboundImageBytes = 5 * 1024 * 1024;
+    private const int MaxOutboundAudioBytes = 16 * 1024 * 1024;
     private const int MaxTemplatePages = 1_000;
 
     private readonly HttpClient _httpClient;
@@ -299,11 +301,15 @@ public sealed class WhatsAppCloudService
         CancellationToken cancellationToken)
     {
         var recipient = NormalizeRecipient(message.RecipientPhoneNumber);
+        var validationFailure = ValidateOutboundMedia(message, recipient);
+        if (validationFailure is not null) return validationFailure;
         var uploaded = await UploadMediaAsync(message, cancellationToken);
         if (!uploaded.Success) return uploaded with { RecipientPhoneNumber = recipient };
 
         var media = new Dictionary<string, object?> { ["id"] = uploaded.MetaMessageId };
-        if (!string.IsNullOrWhiteSpace(message.Caption)) media["caption"] = message.Caption;
+        if (message.MediaType == "image" && !string.IsNullOrWhiteSpace(message.Caption))
+            media["caption"] = message.Caption;
+        if (message.MediaType == "audio") media["voice"] = true;
         var payload = new Dictionary<string, object?>
         {
             ["messaging_product"] = "whatsapp",
@@ -313,6 +319,39 @@ public sealed class WhatsAppCloudService
         };
         return await PostMessageAsync(payload, recipient, cancellationToken);
     }
+
+    private static SendTestMessageResult? ValidateOutboundMedia(
+        MediaMessageRequest message,
+        string recipient)
+    {
+        if (message.Content.Length == 0)
+            return InvalidOutboundMedia(recipient, "WHATSAPP_MEDIA_EMPTY", 422,
+                "WhatsApp media is empty.");
+        var expectedContentType = message.MediaType switch
+        {
+            "image" => "image/jpeg",
+            "audio" => "audio/ogg",
+            _ => null
+        };
+        if (expectedContentType is null ||
+            !string.Equals(message.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
+            return InvalidOutboundMedia(recipient, "WHATSAPP_MEDIA_UNSUPPORTED", 422,
+                "WhatsApp media type is not supported.");
+        var maximumBytes = message.MediaType == "image"
+            ? MaxOutboundImageBytes
+            : MaxOutboundAudioBytes;
+        if (message.Content.Length > maximumBytes)
+            return InvalidOutboundMedia(recipient, "WHATSAPP_MEDIA_TOO_LARGE", 413,
+                "WhatsApp media exceeds the supported size.");
+        return null;
+    }
+
+    private static SendTestMessageResult InvalidOutboundMedia(
+        string recipient,
+        string errorCode,
+        int statusCode,
+        string message) =>
+        new(false, message, recipient, null, statusCode, errorCode, false);
 
     private async Task<SendTestMessageResult> UploadMediaAsync(
         MediaMessageRequest message,

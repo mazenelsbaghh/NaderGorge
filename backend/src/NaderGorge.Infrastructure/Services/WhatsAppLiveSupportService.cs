@@ -1,8 +1,11 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
@@ -19,7 +22,9 @@ public sealed class WhatsAppLiveSupportService(
     ILiveSupportAttachmentStorage attachmentStorage,
     WhatsAppCloudService cloud,
     ILiveSupportEventWriter eventWriter,
-    IConfiguration configuration)
+    IConfiguration configuration,
+    IWhatsAppCampaignService campaigns,
+    IServiceScopeFactory? serviceScopeFactory = null)
 {
     private const string UnsupportedDocumentMessage = "تعذر استلام مرفق واتساب. يُسمح بملفات PDF فقط.";
     private const string UnavailableMediaMessage = "تعذر استلام مرفق واتساب لأن الملف غير متاح أو غير مدعوم.";
@@ -42,40 +47,235 @@ public sealed class WhatsAppLiveSupportService(
         }
     }
 
-    public async Task<IReadOnlyList<LiveSupportWhatsAppTemplateDto>> SyncTemplatesAsync(CancellationToken ct)
+    public Task<IReadOnlyList<LiveSupportWhatsAppTemplateDto>> SyncTemplatesAsync(CancellationToken ct) =>
+        SyncTemplatesAsync(null, ct);
+
+    public async Task<IReadOnlyList<LiveSupportWhatsAppTemplateDto>> SyncTemplatesAsync(
+        Guid? requestedByUserId,
+        CancellationToken ct)
     {
-        var snapshots = await cloud.GetTemplatesAsync(ct);
-        var now = DateTime.UtcNow;
-        var existingTemplates = await db.LiveSupportWhatsAppTemplates.ToListAsync(ct);
-        var templatesByMetaId = existingTemplates.ToDictionary(template => template.MetaTemplateId);
-        var seenMetaIds = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var snapshot in snapshots)
+        var run = await StartTemplateSyncRunAsync(requestedByUserId, ct);
+        try
         {
-            if (!seenMetaIds.Add(snapshot.Id)) continue;
-            if (!templatesByMetaId.TryGetValue(snapshot.Id, out var template))
+            var snapshots = await cloud.GetTemplatesAsync(ct);
+            if (snapshots.GroupBy(snapshot => (snapshot.Name, snapshot.Language))
+                .Any(group => group.Select(snapshot => snapshot.Id).Distinct(StringComparer.Ordinal).Count() > 1))
+                throw new InvalidDataException(
+                    "WhatsApp returned more than one template identity for the same name and language.");
+
+            var now = DateTime.UtcNow;
+            await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var existingTemplates = await db.LiveSupportWhatsAppTemplates.ToListAsync(ct);
+            var templatesByMetaId = existingTemplates.ToDictionary(
+                template => template.MetaTemplateId, StringComparer.Ordinal);
+            var incomingMetaIds = snapshots.Select(snapshot => snapshot.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            var rebindableByNameLanguage = existingTemplates
+                .Where(template => !incomingMetaIds.Contains(template.MetaTemplateId))
+                .GroupBy(template => (template.Name, template.Language))
+                .ToDictionary(group => group.Key, group => group.OrderBy(item => item.Id).First());
+            var seenTemplateIds = new HashSet<Guid>();
+            var changedTemplateIds = new HashSet<Guid>();
+            foreach (var snapshot in snapshots)
             {
-                template = new LiveSupportWhatsAppTemplate { MetaTemplateId = snapshot.Id, Version = 1 };
-                db.LiveSupportWhatsAppTemplates.Add(template);
+                var componentsJson = snapshot.Components.GetRawText();
+                var fingerprint = WhatsAppCampaignTemplatePolicy.Fingerprint(
+                    snapshot.Id, snapshot.Name, snapshot.Language, snapshot.Category,
+                    snapshot.Status, componentsJson);
+                if (!templatesByMetaId.TryGetValue(snapshot.Id, out var template))
+                {
+                    if (rebindableByNameLanguage.TryGetValue(
+                            (snapshot.Name, snapshot.Language), out var rebound))
+                    {
+                        template = rebound;
+                        templatesByMetaId.Remove(template.MetaTemplateId);
+                        template.MetaTemplateId = snapshot.Id;
+                        templatesByMetaId[snapshot.Id] = template;
+                        template.Version++;
+                        run.UpdatedCount++;
+                        changedTemplateIds.Add(template.Id);
+                    }
+                    else
+                    {
+                        template = new LiveSupportWhatsAppTemplate
+                        {
+                            MetaTemplateId = snapshot.Id,
+                            Version = 1
+                        };
+                        db.LiveSupportWhatsAppTemplates.Add(template);
+                        templatesByMetaId[snapshot.Id] = template;
+                        run.CreatedCount++;
+                    }
+                }
+                else if (!string.Equals(template.Fingerprint, fingerprint, StringComparison.Ordinal))
+                {
+                    template.Version++;
+                    run.UpdatedCount++;
+                    changedTemplateIds.Add(template.Id);
+                }
+                template.Name = snapshot.Name;
+                template.Language = snapshot.Language;
+                template.Category = snapshot.Category;
+                template.Status = snapshot.Status;
+                template.ComponentsJson = componentsJson;
+                template.Fingerprint = fingerprint;
+                template.LastSyncedAt = now;
+                template.UpdatedAt = now;
+                seenTemplateIds.Add(template.Id);
             }
-            else template.Version++;
-            template.Name = snapshot.Name;
-            template.Language = snapshot.Language;
-            template.Category = snapshot.Category;
-            template.Status = snapshot.Status;
-            template.ComponentsJson = snapshot.Components.GetRawText();
-            template.LastSyncedAt = now;
-            template.UpdatedAt = now;
+            foreach (var staleTemplate in existingTemplates.Where(template =>
+                         !seenTemplateIds.Contains(template.Id)))
+            {
+                var previousFingerprint = staleTemplate.Fingerprint;
+                var becameStale = !string.Equals(staleTemplate.Status, "STALE", StringComparison.Ordinal);
+                staleTemplate.Status = "STALE";
+                staleTemplate.LastSyncedAt = now;
+                staleTemplate.UpdatedAt = now;
+                staleTemplate.Fingerprint = WhatsAppCampaignTemplatePolicy.Fingerprint(staleTemplate);
+                if (becameStale || !string.Equals(
+                        previousFingerprint, staleTemplate.Fingerprint, StringComparison.Ordinal))
+                {
+                    staleTemplate.Version++;
+                    run.StaleCount++;
+                    changedTemplateIds.Add(staleTemplate.Id);
+                }
+            }
+            await db.SaveChangesAsync(ct);
+            if (changedTemplateIds.Count > 0 && await db.WhatsAppCampaigns.AsNoTracking().AnyAsync(
+                    campaign => campaign.Status == WhatsAppCampaignStatus.Running &&
+                        changedTemplateIds.Contains(campaign.TemplateId), ct))
+            {
+                var pauseReason = "تغير قالب واتساب بعد المراجعة؛ يلزم إنشاء مراجعة جديدة.";
+                await db.WhatsAppCampaigns.Where(campaign =>
+                        campaign.Status == WhatsAppCampaignStatus.Running &&
+                        changedTemplateIds.Contains(campaign.TemplateId))
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(campaign => campaign.Status, WhatsAppCampaignStatus.Paused)
+                        .SetProperty(campaign => campaign.PausedAt, now)
+                        .SetProperty(campaign => campaign.PauseReason, pauseReason)
+                        .SetProperty(campaign => campaign.UpdatedAt, now)
+                        .SetProperty(campaign => campaign.Version, campaign => campaign.Version + 1), ct);
+            }
+            run.ReceivedCount = snapshots.Count;
+            run.Status = WhatsAppTemplateSyncRunStatus.Succeeded;
+            run.CompletedAt = DateTime.UtcNow;
+            run.UpdatedAt = run.CompletedAt;
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return await ListTemplatesAsync(ct);
         }
-        foreach (var staleTemplate in existingTemplates.Where(template => !seenMetaIds.Contains(template.MetaTemplateId)))
+        catch (Exception exception)
         {
-            staleTemplate.Status = "STALE";
-            staleTemplate.LastSyncedAt = now;
-            staleTemplate.UpdatedAt = now;
-            staleTemplate.Version++;
+            await FinalizeTemplateSyncFailureAsync(run.Id, SyncFailureCode(exception));
+            throw;
         }
-        await db.SaveChangesAsync(ct);
-        return await ListTemplatesAsync(ct);
     }
+
+    private async Task<WhatsAppTemplateSyncRun> StartTemplateSyncRunAsync(
+        Guid? requestedByUserId,
+        CancellationToken ct)
+    {
+        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var now = DateTime.UtcNow;
+        var staleBefore = now.AddMinutes(-30);
+        var staleRuns = await db.WhatsAppTemplateSyncRuns
+            .Where(item => item.Status == WhatsAppTemplateSyncRunStatus.Running &&
+                item.StartedAt < staleBefore)
+            .ToListAsync(ct);
+        foreach (var staleRun in staleRuns)
+        {
+            staleRun.Status = WhatsAppTemplateSyncRunStatus.Failed;
+            staleRun.FailureCode = "WHATSAPP_TEMPLATE_SYNC_STALE";
+            staleRun.CompletedAt = now;
+            staleRun.UpdatedAt = now;
+        }
+        if (staleRuns.Count > 0) await db.SaveChangesAsync(ct);
+        if (await db.WhatsAppTemplateSyncRuns.AsNoTracking().AnyAsync(item =>
+                item.Status == WhatsAppTemplateSyncRunStatus.Running, ct))
+            throw new WhatsAppCampaignException(
+                WhatsAppCampaignErrorCodes.Conflict,
+                "مزامنة قوالب واتساب قيد التنفيذ بالفعل.", 409);
+        var run = new WhatsAppTemplateSyncRun
+        {
+            RequestedByUserId = requestedByUserId,
+            Status = WhatsAppTemplateSyncRunStatus.Running,
+            StartedAt = now
+        };
+        db.WhatsAppTemplateSyncRuns.Add(run);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return run;
+        }
+        catch (DbUpdateException exception) when (IsTemplateSyncSingleFlightConflict(exception))
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            db.Entry(run).State = EntityState.Detached;
+            throw new WhatsAppCampaignException(
+                WhatsAppCampaignErrorCodes.Conflict,
+                "مزامنة قوالب واتساب قيد التنفيذ بالفعل.", 409);
+        }
+        catch (PostgresException exception) when (
+            exception.SqlState == PostgresErrorCodes.SerializationFailure)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            db.Entry(run).State = EntityState.Detached;
+            throw new WhatsAppCampaignException(
+                WhatsAppCampaignErrorCodes.Conflict,
+                "مزامنة قوالب واتساب قيد التنفيذ بالفعل.", 409);
+        }
+    }
+
+    private async Task FinalizeTemplateSyncFailureAsync(Guid runId, string failureCode)
+    {
+        try
+        {
+            if (serviceScopeFactory is not null)
+            {
+                using var scope = serviceScopeFactory.CreateScope();
+                var freshDb = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
+                await MarkTemplateSyncFailedAsync(freshDb, runId, failureCode);
+                return;
+            }
+            await MarkTemplateSyncFailedAsync(db, runId, failureCode);
+        }
+        catch
+        {
+            // The original sync error remains authoritative. A stale Running row is
+            // recovered by StartTemplateSyncRunAsync after the bounded timeout.
+        }
+    }
+
+    private static Task<int> MarkTemplateSyncFailedAsync(
+        IAppDbContext targetDb,
+        Guid runId,
+        string failureCode)
+    {
+        var now = DateTime.UtcNow;
+        return targetDb.WhatsAppTemplateSyncRuns.Where(item =>
+                item.Id == runId && item.Status == WhatsAppTemplateSyncRunStatus.Running)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(item => item.Status, WhatsAppTemplateSyncRunStatus.Failed)
+                .SetProperty(item => item.FailureCode, failureCode)
+                .SetProperty(item => item.CompletedAt, now)
+                .SetProperty(item => item.UpdatedAt, now), CancellationToken.None);
+    }
+
+    private static bool IsTemplateSyncSingleFlightConflict(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation or PostgresErrorCodes.SerializationFailure
+        };
+
+    private static string SyncFailureCode(Exception exception) => exception switch
+    {
+        WhatsAppCloudService.WhatsAppCloudException cloudException => cloudException.ErrorCode,
+        OperationCanceledException => "WHATSAPP_TEMPLATE_SYNC_CANCELLED",
+        InvalidDataException => "WHATSAPP_TEMPLATE_SYNC_INVALID_RESPONSE",
+        DbUpdateException => "WHATSAPP_TEMPLATE_SYNC_PERSISTENCE_FAILED",
+        _ => "WHATSAPP_TEMPLATE_SYNC_FAILED"
+    };
 
     public async Task<IReadOnlyList<LiveSupportWhatsAppTemplateDto>> ListTemplatesAsync(CancellationToken ct)
     {
@@ -118,9 +318,12 @@ public sealed class WhatsAppLiveSupportService(
     {
         var metaMessageId = Text(message, "id");
         var whatsAppUserId = Text(message, "from");
-        if (metaMessageId is null || whatsAppUserId is null || await db.LiveSupportWhatsAppMessages.AnyAsync(item => item.MetaMessageId == metaMessageId, ct)) return;
-        var displayName = ContactName(envelope, whatsAppUserId);
+        if (metaMessageId is null || whatsAppUserId is null) return;
         var providerTimestamp = ProviderTimestamp(message);
+        if (IsOptOutKeyword(message))
+            await campaigns.RecordInboundOptOutAsync(whatsAppUserId, metaMessageId, providerTimestamp, ct);
+        if (await db.LiveSupportWhatsAppMessages.AnyAsync(item => item.MetaMessageId == metaMessageId, ct)) return;
+        var displayName = ContactName(envelope, whatsAppUserId);
         var (content, messageType, attachmentId) = await ContentAsync(message, ct);
         var (conversation, participant, binding) = await ConversationAsync(whatsAppUserId, displayName, providerTimestamp, ct);
         binding.DisplayName = displayName;
@@ -276,10 +479,14 @@ public sealed class WhatsAppLiveSupportService(
             ? DateTimeOffset.FromUnixTimeSeconds(unixTime).UtcDateTime
             : delivery?.ProviderTimestamp ?? DateTime.UtcNow;
         var receipt = new ReceiptObservation(metaMessageId, state, at, ReceiptFailureCode(status));
+        var campaignHandled = await campaigns.ProcessReceiptAsync(
+            receipt.MetaMessageId, receipt.Status, receipt.ProviderTimestamp, receipt.FailureCode, ct);
         if (delivery is null)
         {
+            if (campaignHandled) return;
             await StorePendingReceiptAsync(receipt, ct);
             await ReconcilePendingReceiptAsync(metaMessageId, ct);
+            await campaigns.ReconcilePendingReceiptAsync(metaMessageId, ct);
             return;
         }
         var pending = await db.LiveSupportWhatsAppPendingReceipts
@@ -397,6 +604,9 @@ public sealed class WhatsAppLiveSupportService(
         switch (incomingStatus)
         {
             case "sent":
+                if (IsOlderTerminalObservation(delivery, providerTimestamp) ||
+                    delivery.ProviderTimestamp == providerTimestamp && delivery.Status == "Failed")
+                    return false;
                 if (SuccessRank(delivery.Status) > SuccessRank("Sent")) return false;
                 delivery.Status = "Sent";
                 delivery.FailureCode = null;
@@ -418,6 +628,7 @@ public sealed class WhatsAppLiveSupportService(
                 delivery.ReadAt = Earlier(delivery.ReadAt, providerTimestamp);
                 break;
             case "failed":
+                if (IsOlderTerminalObservation(delivery, providerTimestamp)) return false;
                 if (SuccessRank(delivery.Status) >= SuccessRank("Delivered")) return false;
                 delivery.Status = "Failed";
                 delivery.FailureCode = failureCode ?? "WHATSAPP_DELIVERY_FAILED";
@@ -434,6 +645,13 @@ public sealed class WhatsAppLiveSupportService(
         delivery.Version++;
         return true;
     }
+
+    private static bool IsOlderTerminalObservation(
+        LiveSupportWhatsAppMessage delivery,
+        DateTime providerTimestamp) =>
+        delivery.Status is "Sent" or "Failed" &&
+        delivery.ProviderTimestamp.HasValue &&
+        providerTimestamp < delivery.ProviderTimestamp.Value;
 
     private static int SuccessRank(string? status) => status switch
     {
@@ -467,15 +685,57 @@ public sealed class WhatsAppLiveSupportService(
         return safe.Length == 0 ? null : $"WHATSAPP_CLOUD_{safe}";
     }
 
+    private static bool IsOptOutKeyword(JsonElement message)
+    {
+        if (!string.Equals(Text(message, "type"), "text", StringComparison.OrdinalIgnoreCase) ||
+            !message.TryGetProperty("text", out var text)) return false;
+        var body = Text(text, "body")?.Normalize(NormalizationForm.FormC).Trim();
+        return string.Equals(body, "STOP", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(body, "إيقاف", StringComparison.Ordinal) ||
+            string.Equals(body, "ايقاف", StringComparison.Ordinal);
+    }
+
     private async Task<Guid?> FindStudentAsync(string phone, CancellationToken ct)
     {
-        var international = phone.StartsWith("01", StringComparison.Ordinal) ? $"20{phone[1..]}" : phone;
-        return await db.Users.AsNoTracking()
+        var normalized = WhatsAppCampaignService.NormalizeE164(phone);
+        if (normalized is null) return null;
+        var suffix = normalized[^8..];
+        var candidates = await db.Users.AsNoTracking()
             .Where(item => item.IsActive && !item.IsDeleted &&
-                (item.PhoneNumber == phone || item.PhoneNumber == international) &&
-                item.UserRoles.Any(link => link.Role.Type == RoleType.Student))
-            .Select(item => (Guid?)item.Id)
-            .FirstOrDefaultAsync(ct);
+                item.StudentProfile != null &&
+                item.UserRoles.Any(link => link.Role.Type == RoleType.Student) &&
+                (item.PhoneNumber.EndsWith(suffix) ||
+                 item.StudentProfile.SecondaryPhone != null &&
+                 item.StudentProfile.SecondaryPhone.EndsWith(suffix) ||
+                 item.StudentProfile.ParentPhone != null &&
+                 item.StudentProfile.ParentPhone.EndsWith(suffix) ||
+                 item.StudentProfile.SecondaryParentPhone != null &&
+                 item.StudentProfile.SecondaryParentPhone.EndsWith(suffix) ||
+                 item.StudentProfile.MotherPhone != null &&
+                 item.StudentProfile.MotherPhone.EndsWith(suffix)))
+            .OrderBy(item => item.Id)
+            .Take(101)
+            .Select(item => new
+            {
+                item.Id,
+                Primary = item.PhoneNumber,
+                Secondary = item.StudentProfile!.SecondaryPhone,
+                Father = item.StudentProfile.ParentPhone,
+                FatherSecondary = item.StudentProfile.SecondaryParentPhone,
+                Mother = item.StudentProfile.MotherPhone
+            })
+            .ToListAsync(ct);
+        if (candidates.Count > 100) return null;
+        var matches = candidates.Where(candidate =>
+                new[] { candidate.Primary, candidate.Secondary, candidate.Father,
+                        candidate.FatherSecondary, candidate.Mother }
+                    .Any(value => string.Equals(
+                        WhatsAppCampaignService.NormalizeE164(value), normalized, StringComparison.Ordinal)))
+            .Select(candidate => candidate.Id)
+            .Distinct()
+            .Take(2)
+            .ToArray();
+        return matches.Length == 1 ? matches[0] : null;
     }
 
     private static IReadOnlyList<JsonElement> Array(JsonElement value, string property) =>
@@ -520,6 +780,6 @@ public sealed class WhatsAppLiveSupportService(
     {
         using var document = JsonDocument.Parse(template.ComponentsJson);
         return new(template.Id, template.Name, template.Language, template.Category, template.Status,
-            document.RootElement.Clone(), template.LastSyncedAt);
+            document.RootElement.Clone(), template.LastSyncedAt, template.Version, template.Fingerprint);
     }
 }

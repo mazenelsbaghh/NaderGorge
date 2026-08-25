@@ -51,7 +51,8 @@ public sealed class WhatsAppLiveSupportTests
         var support = new LiveSupportService(db, new LiveSupportEnabledSettings());
         var cloud = new WhatsAppCloudService(new HttpClient(), new ConfigurationBuilder().Build(), NullLogger<WhatsAppCloudService>.Instance);
         var service = new WhatsAppLiveSupportService(
-            db, support, new RejectingAttachmentStorage(), cloud, new LiveSupportEventWriter(db), ChannelConfiguration());
+            db, support, new RejectingAttachmentStorage(), cloud, new LiveSupportEventWriter(db), ChannelConfiguration(),
+            new StubWhatsAppCampaignService());
         using var webhook = JsonDocument.Parse(WebhookJson);
 
         await service.ProcessWebhookAsync(webhook.RootElement, CancellationToken.None);
@@ -125,7 +126,7 @@ public sealed class WhatsAppLiveSupportTests
     }
 
     [Fact]
-    public async Task SendMedia_UploadsFileBeforeSendingItsMediaId()
+    public async Task AudioSend_UploadsOggThenSendsVoiceWithoutCaption()
     {
         var handler = new RecordingMetaHandler();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -142,8 +143,57 @@ public sealed class WhatsAppLiveSupportTests
         Assert.Equal("wamid.sent", response.MetaMessageId);
         Assert.Equal(2, handler.Requests.Count);
         Assert.EndsWith("/phone-id/media", handler.Requests[0].Url);
+        Assert.Contains("Content-Type: audio/ogg", handler.Requests[0].Body);
+        Assert.Contains("reply.ogg", handler.Requests[0].Body);
         Assert.Contains("media-1", handler.Requests[1].Body);
         Assert.Contains("\"type\":\"audio\"", handler.Requests[1].Body);
+        Assert.Contains("\"voice\":true", handler.Requests[1].Body);
+        Assert.DoesNotContain("caption", handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task ImageSend_AllowsCaptionWithoutVoiceFlag()
+    {
+        var handler = new RecordingMetaHandler();
+        var cloud = Cloud(handler);
+
+        var response = await cloud.SendMediaAsync(new WhatsAppCloudService.MediaMessageRequest(
+            "01099999999", "image", "reply.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF], "صورة"),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Contains("Content-Type: image/jpeg", handler.Requests[0].Body);
+        Assert.Contains("reply.jpg", handler.Requests[0].Body);
+        using var sentMessage = JsonDocument.Parse(handler.Requests[1].Body);
+        var imagePayload = sentMessage.RootElement.GetProperty("image");
+        Assert.Equal("صورة", imagePayload.GetProperty("caption").GetString());
+        Assert.False(imagePayload.TryGetProperty("voice", out _));
+    }
+
+    [Theory]
+    [InlineData("image", "image/webp", 3, "WHATSAPP_MEDIA_UNSUPPORTED")]
+    [InlineData("audio", "audio/webm", 3, "WHATSAPP_MEDIA_UNSUPPORTED")]
+    [InlineData("video", "video/mp4", 3, "WHATSAPP_MEDIA_UNSUPPORTED")]
+    [InlineData("image", "image/jpeg", 0, "WHATSAPP_MEDIA_EMPTY")]
+    [InlineData("image", "image/jpeg", 5 * 1024 * 1024 + 1, "WHATSAPP_MEDIA_TOO_LARGE")]
+    [InlineData("audio", "audio/ogg", 16 * 1024 * 1024 + 1, "WHATSAPP_MEDIA_TOO_LARGE")]
+    public async Task UnsupportedOrOversizedOutboundMedia_FailsBeforeProviderUpload(
+        string mediaType,
+        string contentType,
+        int contentLength,
+        string expectedErrorCode)
+    {
+        var handler = new RecordingMetaHandler();
+        var cloud = Cloud(handler);
+
+        var response = await cloud.SendMediaAsync(new WhatsAppCloudService.MediaMessageRequest(
+            "01099999999", mediaType, "stored.bin", contentType, new byte[contentLength], "caption"),
+            CancellationToken.None);
+
+        Assert.False(response.Success);
+        Assert.Equal(expectedErrorCode, response.ErrorCode);
+        Assert.False(response.IsRetryable);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -923,7 +973,8 @@ public sealed class WhatsAppLiveSupportTests
         NaderGorge.Infrastructure.Data.AppDbContext db,
         WhatsAppCloudService cloud) =>
         new(db, new LiveSupportService(db, new LiveSupportEnabledSettings()),
-            new RejectingAttachmentStorage(), cloud, new LiveSupportEventWriter(db), ChannelConfiguration());
+            new RejectingAttachmentStorage(), cloud, new LiveSupportEventWriter(db), ChannelConfiguration(),
+            new StubWhatsAppCampaignService());
 
     private static IConfiguration ChannelConfiguration() =>
         new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

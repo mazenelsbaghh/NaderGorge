@@ -332,6 +332,23 @@ public class StudentSharedPackagesController : ControllerBase
             });
         }
 
+        // Only the chosen teacher/content alternatives are granted and charged.
+        // An unselected alternative must not make another valid selection unavailable.
+        var selectedFullPackageIds = selectedItems
+            .Where(item => item.ContentType == SalesTargetType.Package)
+            .Select(item => item.ContentId)
+            .Distinct()
+            .ToList();
+        if (await FullPackagePurchasePolicy.ContainsDisabledPackageAsync(_db, selectedFullPackageIds, ct))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = FullPackagePurchasePolicy.ErrorMessage,
+                errors = new[] { FullPackagePurchasePolicy.ErrorCode }
+            });
+        }
+
         foreach (var item in selectedItems)
         {
             if (!await IsSharedPackageItemEligibleAsync(item, studentId, ct))

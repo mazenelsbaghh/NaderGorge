@@ -58,6 +58,7 @@ const PERMISSION_DEFINITIONS = [
   { key: 'finance.manage', label: 'الحسابات المالية للمدرسين والموظفين', desc: 'حساب أرباح وعمولات المدرسين وأكواد التفعيل وصرف رواتب الموظفين' },
   { key: 'reports.manage', label: 'مركز التقارير وسجل المراقبة', desc: 'إنشاء التقارير متعددة الفلاتر وتصديرها، وعرض مؤشرات وسجلات المنصة' },
   { key: 'live_support.manage', label: 'إدارة الدعم المباشر', desc: 'تسمح بإدارة الخدمة والسعات والجداول ولا تُدخل صاحب الدور في التوزيع' },
+  { key: 'whatsapp_campaigns.manage', label: 'إدارة حملات واتساب', desc: 'بناء جمهور بموافقات موثقة، إدارة تفضيلات التواصل، وتأكيد الإرسال؛ تظهر داخل صفحة الدعم لمن لديه صلاحيتا الدعم والحملات' },
   { key: 'live_support.route', label: 'استقبال محادثات الدعم', desc: 'يضيف أصحاب هذا الدور إلى توزيع المحادثات تلقائياً بسعة افتراضية، ويمكن تعديل كل موظف لاحقاً' }
 ];
 
@@ -165,6 +166,7 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/live-support/ai',
     '/assistant/live-support'
   ],
+  'whatsapp_campaigns.manage': [],
   'live_support.route': [
     '/assistant/live-support'
   ]

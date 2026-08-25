@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { isAxiosError } from "axios";
 import Link from "next/link";
 import { BarChart3, BookOpenText, Plus, ChevronLeft, Sparkles, Video, Eye, Folder, FolderOpen, FileText, Upload, Layers3 } from "lucide-react";
-import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard, AdminTabBar, ContentSummaryPanel } from "@/components/admin";
+import { AdminPageSkeleton, AdminSearchToolbar, AdminStatCard, AdminTabBar, AiOutputLanguageField, ContentSummaryPanel } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { contentService, PACKAGE_CONTENT_MODE_OPTIONS, getContentRootLabel, getContentRootOption, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from "@/services/content-service";
 import { adminService } from "@/services/admin-service";
@@ -14,6 +14,7 @@ import NeumorphButton from "@/components/ui/neumorph-button";
 import toast from "react-hot-toast";
 import { Dropdown } from "@/components/ui/dropdown";
 import { GRADES_BY_STAGE, getGradeLevelLabel, type EducationStage, type GradeLevel } from "@/lib/academic-labels";
+import type { AiOutputLanguage } from "@/lib/ai-output-language";
 
 function getStageForGrade(grade: string): EducationStage | '' {
   for (const [stage, groups] of Object.entries(GRADES_BY_STAGE) as [EducationStage, typeof GRADES_BY_STAGE[EducationStage]][]) {
@@ -60,6 +61,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [contentMode, setContentMode] = useState<PackageContentMode>("TermWithSections");
+  const [aiOutputLanguage, setAiOutputLanguage] = useState<AiOutputLanguage>("Auto");
   const [saving, setSaving] = useState(false);
   const selectedContentType = getContentRootOption(contentMode);
 
@@ -105,6 +107,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
           subjectId: selectedSubjectId,
         })),
         contentMode,
+        aiOutputLanguage,
       });
 
       if (newPkg?.id && imageFile) {
@@ -116,7 +119,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
       }
 
       toast.success(`تمت إضافة ${selectedContentType.entityLabel} بنجاح.`);
-      setName(""); setDescription(""); setPrice(""); setSelectedSubjectId(""); setSelectedGrades([]); setContentMode("TermWithSections");
+      setName(""); setDescription(""); setPrice(""); setSelectedSubjectId(""); setSelectedGrades([]); setContentMode("TermWithSections"); setAiOutputLanguage("Auto");
       setImageFile(null); setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setOpen(false);
@@ -182,6 +185,12 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
           {PACKAGE_CONTENT_MODE_OPTIONS.find((option) => option.value === contentMode)?.description}
         </p>
       </div>
+
+      <AiOutputLanguageField
+        language={aiOutputLanguage}
+        onLanguageChange={setAiOutputLanguage}
+        disabled={saving}
+      />
 
       {/* صورة الباقة */}
       <div className="space-y-1 text-right">

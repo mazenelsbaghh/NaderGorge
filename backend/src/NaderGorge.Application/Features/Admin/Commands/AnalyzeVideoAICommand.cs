@@ -24,54 +24,56 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
 
     public async Task<ApiResponse> Handle(AnalyzeVideoAICommand request, CancellationToken ct)
     {
+        var generationRunId = Guid.NewGuid();
         var lockRows = await _db.LessonVideos
-            .Where(v => v.Id == request.VideoId && !v.IsProcessingAI)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingAI, true), ct);
+            .Where(v => v.Id == request.VideoId && !v.IsProcessingAI && !v.IsProcessingMindmaps)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.IsProcessingAI, true)
+                .SetProperty(v => v.CurrentAiAnalysisRunId, generationRunId), ct);
 
         if (lockRows == 0)
         {
             var exists = await _db.LessonVideos.AnyAsync(v => v.Id == request.VideoId, ct);
             return exists
-                ? ApiResponse.Fail("Video is already processing AI chapters.")
+                ? ApiResponse.Fail("Video is already processing an AI task.")
                 : ApiResponse.Fail("Video not found");
-        }
-
-        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
-        if (video == null)
-            return ApiResponse.Fail("Video not found");
-
-        await _cancellations.ClearVideoAnalysisCancellationAsync(video.Id);
-
-        // The URL extraction here assumes standard embed code implies the backend 
-        // has access to the raw URL or the FFmpeg extractor can download the video.
-        // For standard standard provider extraction we use string extraction if not full remote MP4.
-
-        string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4";
-        // In real life context, if this is a vimeo ID, we'd resolve it to a CDN link.
-
-        var teacherUserId = await _db.LessonVideos
-            .Where(v => v.Id == video.Id)
-            .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
-            .FirstOrDefaultAsync(ct);
-
-        var teacherPhotoUrls = new List<string>();
-        if (teacherUserId != null)
-        {
-            teacherPhotoUrls = await _db.TeacherPhotos
-                .Where(tp => tp.TeacherId == teacherUserId.Value)
-                .OrderByDescending(tp => tp.IsActive)
-                .ThenByDescending(tp => tp.UploadedAt)
-                .Select(tp => tp.FileUrl)
-                .ToListAsync(ct);
         }
 
         try
         {
+            var video = await _db.LessonVideos.SingleAsync(v => v.Id == request.VideoId, ct);
+
+            await _cancellations.ClearVideoAnalysisCancellationAsync(video.Id);
+
+            string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4";
+
+            var packageContext = await _db.LessonVideos
+                .Where(v => v.Id == video.Id)
+                .Select(v => new
+                {
+                    TeacherUserId = (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId,
+                    v.Lesson.ContentSection.Term.Package.AiOutputLanguage
+                })
+                .SingleAsync(ct);
+
+            var teacherPhotoUrls = new List<string>();
+            if (packageContext.TeacherUserId != null)
+            {
+                teacherPhotoUrls = await _db.TeacherPhotos
+                    .Where(tp => tp.TeacherId == packageContext.TeacherUserId.Value)
+                    .OrderByDescending(tp => tp.IsActive)
+                    .ThenByDescending(tp => tp.UploadedAt)
+                    .Select(tp => tp.FileUrl)
+                    .ToListAsync(ct);
+            }
+
             await _jobEnqueuer.EnqueueJobAsync("ai-video-queue", "analyze-chapters", new
             {
                 lessonVideoId = video.Id,
                 sourceUrl = sourceUrl,
-                teacherPhotoUrls = teacherPhotoUrls
+                teacherPhotoUrls = teacherPhotoUrls,
+                outputLanguage = AiOutputLanguageContract.ToWorkerCode(packageContext.AiOutputLanguage),
+                generationRunId
             });
 
             var adminEvent = new OutboxEvent
@@ -86,12 +88,12 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
             };
             _db.OutboxEvents.Add(adminEvent);
 
-            if (teacherUserId != null)
+            if (packageContext.TeacherUserId != null)
             {
                 var teacherEvent = new OutboxEvent
                 {
                     Type = "AiJobQueued",
-                    TargetUserId = teacherUserId.Value.ToString(),
+                    TargetUserId = packageContext.TeacherUserId.Value.ToString(),
                     PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
                     {
                         lessonVideoId = video.Id,
@@ -105,8 +107,10 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
         catch
         {
             await _db.LessonVideos
-                .Where(v => v.Id == request.VideoId)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingAI, false), ct);
+                .Where(v => v.Id == request.VideoId && v.CurrentAiAnalysisRunId == generationRunId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(v => v.IsProcessingAI, false)
+                    .SetProperty(v => v.CurrentAiAnalysisRunId, (Guid?)null), CancellationToken.None);
             throw;
         }
 

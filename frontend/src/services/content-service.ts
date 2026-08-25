@@ -1,5 +1,9 @@
 import apiClient from './api-client';
 import type { AxiosResponse } from 'axios';
+import type { AiOutputLanguage } from '@/lib/ai-output-language';
+import { isFullPackagePurchaseDisabled } from '@/lib/content-access';
+
+export type { AiOutputLanguage } from '@/lib/ai-output-language';
 
 export const CONTENT_CACHE_KEYS = {
   packages: 'content:packages',
@@ -58,7 +62,9 @@ export interface PackageDto {
   teacherBio?: string;
   teacherSpecialization?: string;
   targetGrade?: string;
+  aiOutputLanguage?: AiOutputLanguage;
   contentMode?: PackageContentMode;
+  allowFullPackagePurchase?: boolean;
   rootTermId?: string;
   rootSectionId?: string;
   directSections?: PackageDirectSectionDto[];
@@ -73,6 +79,10 @@ export type ContentRootPurchaseReference = {
 };
 
 export function getContentRootPurchaseReference(pkg: PackageDto): ContentRootPurchaseReference | null {
+  if (isFullPackagePurchaseDisabled(pkg)) {
+    return null;
+  }
+
   switch (pkg.contentMode ?? 'TermWithSections') {
     case 'SectionWithLessons':
       return pkg.rootTermId ? { contentType: 'Term', contentId: pkg.rootTermId } : null;

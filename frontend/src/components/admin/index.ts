@@ -29,6 +29,7 @@ export * from './AdminDataTable';
 export * from './TermListManager';
 export * from './AddTermForm';
 export * from './PackageDetailsForm';
+export * from './AiOutputLanguageField';
 export * from './PackageCodeProfileForm';
 export * from './LessonVideoList';
 export * from './AddVideoForm';

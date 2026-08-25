@@ -1,10 +1,25 @@
 export type StudentPackageAccess = {
   id: string;
   contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly' | 'SingleLesson';
+  allowFullPackagePurchase?: boolean;
   rootTermId?: string;
   hasDirectPackageAccess?: boolean;
   hasRootContentAccess?: boolean;
 };
+
+/**
+ * Missing values are treated as enabled for compatibility with cached/legacy DTOs.
+ * The policy applies only to full-year packages; other root content modes keep
+ * their existing term/section/lesson acquisition behavior.
+ */
+export function isFullPackagePurchaseDisabled(
+  pkg: Pick<StudentPackageAccess, 'contentMode' | 'allowFullPackagePurchase'> | null | undefined,
+): boolean {
+  return (
+    (pkg?.contentMode ?? 'TermWithSections') === 'TermWithSections' &&
+    pkg?.allowFullPackagePurchase === false
+  );
+}
 
 export type StudentTermAccess = {
   id: string;

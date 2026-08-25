@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ClipboardCheck, ChevronDown } from 'lucide-react';
 import { adminAiAgentService } from '@/services/admin-ai-agent-service';
 import type { AdminAiAuditEvidence as Evidence } from '@/services/admin-ai-agent-contract';
+import { formatCairoTimestamp } from '@/lib/cairo-time';
 
 export function AdminAiAuditEvidence() {
   const [open, setOpen] = useState(false);
@@ -76,7 +77,7 @@ export function AdminAiAuditEvidence() {
                   <dd>{evidence.resultStatus ?? '—'}</dd>
                   <dt className="text-[var(--admin-muted)]">الوقت</dt>
                   <dd dir="ltr">
-                    {new Date(evidence.occurredAt).toLocaleString('ar-EG')}
+                    {formatCairoTimestamp(evidence.occurredAt)}
                   </dd>
                 </dl>
                 <p

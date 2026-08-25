@@ -76,7 +76,9 @@ public sealed record LiveSupportWhatsAppTemplateDto(
     string Category,
     string Status,
     System.Text.Json.JsonElement Components,
-    DateTime LastSyncedAt);
+    DateTime LastSyncedAt,
+    long Version,
+    string Fingerprint);
 
 public sealed record SendLiveSupportWhatsAppTemplateRequest(
     string ClientMessageId,

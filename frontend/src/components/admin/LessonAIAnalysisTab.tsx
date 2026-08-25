@@ -466,12 +466,12 @@ export function LessonAIAnalysisTab({
                           <span className="w-5 h-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-xs font-bold flex items-center justify-center">
                             {ch.order}
                           </span>
-                          <span className="text-xs font-bold text-[var(--admin-text)] truncate flex-1">
+                          <span className="flex-1 truncate text-start text-xs font-bold text-[var(--admin-text)]" dir="auto">
                             {ch.title}
                           </span>
                         </div>
                         {ch.summaryText && (
-                          <p className="text-sm text-[var(--admin-muted)] line-clamp-2 leading-relaxed">
+                          <p className="line-clamp-2 text-start text-sm leading-relaxed text-[var(--admin-muted)]" dir="auto">
                             {ch.summaryText}
                           </p>
                         )}

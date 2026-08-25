@@ -10,6 +10,7 @@ const resultTemplate: LiveSupportWhatsAppTemplate = {
   category: 'UTILITY',
   status: 'APPROVED',
   lastSyncedAt: '2026-08-24T00:00:00Z',
+  fingerprint: 'test-template-v1',
   components: [
     { type: 'HEADER', text: 'ولي الأمر {{1}}' },
     { type: 'BODY', text: 'الطالب {{1}} حصل على {{2}} من {{3}} في {{4}}، {{5}}' },

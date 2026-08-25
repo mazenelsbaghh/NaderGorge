@@ -32,6 +32,7 @@ import {
   type PackageDto,
   type TermDto,
 } from '@/services/content-service';
+import { isFullPackagePurchaseDisabled } from '@/lib/content-access';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 type CatalogLevel = 'packages' | 'terms' | 'months' | 'lessons';
@@ -880,6 +881,7 @@ function PackageCatalogCard({
   const hasRootAccess =
     pkg.hasRootContentAccess ?? pkg.hasDirectPackageAccess ?? false;
   const hasPartialAccess = !hasRootAccess && pkg.isEnrolled;
+  const fullPackagePurchaseDisabled = isFullPackagePurchaseDisabled(pkg);
   const contentRootLabel = getContentRootLabel(
     pkg.contentMode ?? 'TermWithSections'
   );
@@ -917,6 +919,14 @@ function PackageCatalogCard({
             {pkg.description || `استعرض محتوى ${contentRootLabel} قبل البدء.`}
           </p>
           <CatalogTeacher pkg={pkg} />
+          {fullPackagePurchaseDisabled && !hasRootAccess ? (
+            <p
+              role="status"
+              className="mt-3 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-3 py-2 text-xs font-bold leading-5 text-[var(--admin-warning)]"
+            >
+              شراء الباقة كاملة متوقف حالياً، ويمكنك شراء الترم أو القسم أو الحصة بشكل منفصل.
+            </p>
+          ) : null}
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-border)] pt-4">
             <PriceLabel price={pkg.price} />
             <div className="flex flex-1 flex-wrap justify-end gap-2 sm:flex-none">
@@ -924,7 +934,7 @@ function PackageCatalogCard({
                 label="استعرض المحتوى"
                 onClick={onExplore}
               />
-              {!hasRootAccess && onPurchase ? (
+              {!hasRootAccess && !fullPackagePurchaseDisabled && onPurchase ? (
                 <PurchaseButton
                   label={`شراء ${contentRootLabel}`}
                   onClick={onPurchase}

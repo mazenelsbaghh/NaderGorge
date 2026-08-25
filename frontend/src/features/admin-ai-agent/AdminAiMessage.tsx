@@ -1,4 +1,5 @@
 import type { AdminAiMessage as Message } from '@/services/admin-ai-agent-contract';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import { AdminAiEvidenceDisclosure } from './AdminAiEvidenceDisclosure';
 
 export function AdminAiMessage({ message }: { message: Message }) {
@@ -22,7 +23,7 @@ export function AdminAiMessage({ message }: { message: Message }) {
         className={`mt-2 block text-[11px] ${mine ? 'text-[var(--admin-primary-contrast)] opacity-70' : 'text-[var(--admin-muted)]'}`}
         dateTime={message.createdAt}
       >
-        {new Date(message.createdAt).toLocaleTimeString('ar-EG', {
+        {formatCairoDateTime(message.createdAt, {
           hour: '2-digit',
           minute: '2-digit',
         })}

@@ -77,7 +77,9 @@ class MainActivity : ComponentActivity() {
                         val readGranted = permissions[Manifest.permission.READ_SMS] ?: false
                         
                         hasSmsPermission = receiveGranted && readGranted
-                        if (!hasSmsPermission) {
+                        if (hasSmsPermission) {
+                            BackgroundSyncScheduler.schedule(this)
+                        } else {
                             Toast.makeText(
                                 this,
                                 "التطبيق بحاجة لصلاحيات قراءة الـ SMS لالتقاط رسائل التحويل الرقمي.",

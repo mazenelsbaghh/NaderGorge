@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -10,6 +11,99 @@ namespace NaderGorge.Application.Tests;
 
 public sealed class FlexiblePackageContentTests
 {
+    [Fact]
+    public async Task CreatePackage_SelectedAiLanguageIsPersistedAndReturned()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var createHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+        var command = CreatePackage(subject, teacher, PackageContentMode.TermWithSections) with
+        {
+            AiOutputLanguage = AiOutputLanguage.English
+        };
+
+        var creation = await createHandler.Handle(command, CancellationToken.None);
+        var queryHandler = new GetPackageByIdQueryHandler(
+            db,
+            new TeacherAuthorizationService(db),
+            new AcademicScopeService(db));
+        var detail = await queryHandler.Handle(
+            new GetPackageByIdQuery(creation.Data),
+            CancellationToken.None);
+
+        Assert.True(creation.Success);
+        Assert.True(detail.Success);
+        Assert.Equal(AiOutputLanguage.English, detail.Data!.AiOutputLanguage);
+        Assert.True(detail.Data.AllowFullPackagePurchase);
+    }
+
+    [Fact]
+    public async Task UpdatePackage_OmittedAiLanguagePreservesExistingSelection()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var createHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+        var creation = await createHandler.Handle(
+            CreatePackage(subject, teacher, PackageContentMode.TermWithSections) with
+            {
+                AiOutputLanguage = AiOutputLanguage.Arabic
+            },
+            CancellationToken.None);
+        var package = await db.Packages.SingleAsync(candidate => candidate.Id == creation.Data);
+        var updateHandler = new UpdatePackageCommandHandler(db);
+
+        var update = await updateHandler.Handle(new UpdatePackageCommand(
+            package.Id,
+            package.Name,
+            package.Description,
+            package.Price,
+            package.IsActive), CancellationToken.None);
+
+        Assert.True(update.Success);
+        Assert.Equal(AiOutputLanguage.Arabic, package.AiOutputLanguage);
+    }
+
+    [Fact]
+    public async Task UpdatePackage_OmittedFullPurchasePolicyPreservesDisabledSelection()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (teacher, subject) = await SeedTeacherAndSubjectAsync(db);
+        var createHandler = new CreatePackageCommandHandler(db, new TeacherAuthorizationService(db));
+        var creation = await createHandler.Handle(
+            CreatePackage(subject, teacher, PackageContentMode.TermWithSections),
+            CancellationToken.None);
+        var package = await db.Packages.SingleAsync(candidate => candidate.Id == creation.Data);
+        var updateHandler = new UpdatePackageCommandHandler(db);
+
+        var disable = await updateHandler.Handle(new UpdatePackageCommand(
+            package.Id,
+            package.Name,
+            package.Description,
+            package.Price,
+            package.IsActive)
+        {
+            AllowFullPackagePurchase = false
+        }, CancellationToken.None);
+        var unrelatedUpdate = await updateHandler.Handle(new UpdatePackageCommand(
+            package.Id,
+            package.Name,
+            "وصف محدث",
+            package.Price,
+            package.IsActive), CancellationToken.None);
+
+        Assert.True(disable.Success);
+        Assert.True(unrelatedUpdate.Success);
+        Assert.False(package.AllowFullPackagePurchase);
+
+        var detail = await new GetPackageByIdQueryHandler(
+                db,
+                new TeacherAuthorizationService(db),
+                new AcademicScopeService(db))
+            .Handle(new GetPackageByIdQuery(package.Id), CancellationToken.None);
+        Assert.True(detail.Success);
+        Assert.False(detail.Data!.AllowFullPackagePurchase);
+    }
+
     [Fact]
     public async Task CreatePackage_LessonsOnlyCreatesHiddenRootContainers()
     {

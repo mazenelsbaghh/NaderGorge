@@ -23,6 +23,7 @@ public sealed class WhatsAppOutboundBackgroundService(
         WhatsAppCloudService Cloud,
         WhatsAppLiveSupportService WhatsAppSupport,
         ILiveSupportAttachmentStorage AttachmentStorage,
+        IWhatsAppOutboundMediaNormalizer MediaNormalizer,
         ILiveSupportEventWriter EventWriter);
 
     private sealed class ProviderAcceptedPersistenceException(Exception innerException)
@@ -188,6 +189,7 @@ public sealed class WhatsAppOutboundBackgroundService(
         scope.ServiceProvider.GetRequiredService<WhatsAppCloudService>(),
         scope.ServiceProvider.GetRequiredService<WhatsAppLiveSupportService>(),
         scope.ServiceProvider.GetRequiredService<ILiveSupportAttachmentStorage>(),
+        scope.ServiceProvider.GetRequiredService<IWhatsAppOutboundMediaNormalizer>(),
         scope.ServiceProvider.GetRequiredService<ILiveSupportEventWriter>());
 
     private static async Task<WhatsAppCloudService.SendTestMessageResult> SendAsync(
@@ -231,12 +233,30 @@ public sealed class WhatsAppOutboundBackgroundService(
         var attachment = await context.Db.LiveSupportAttachments.AsNoTracking()
             .SingleAsync(item => item.Id == supportMessage.AttachmentId, ct);
         await using var source = await context.AttachmentStorage.OpenReadAsync(attachment.StoragePath, ct);
-        using var buffer = new MemoryStream();
-        await source.CopyToAsync(buffer, ct);
-        var mediaType = supportMessage.Type.ToString().ToLowerInvariant();
+        WhatsAppOutboundMedia normalized;
+        try
+        {
+            normalized = await context.MediaNormalizer.NormalizeAsync(
+                new WhatsAppOutboundMediaSource(
+                    supportMessage.Type,
+                    attachment.OriginalFileName,
+                    attachment.ContentType,
+                    attachment.SizeBytes,
+                    source),
+                ct);
+        }
+        catch (WhatsAppMediaNormalizationException exception)
+        {
+            return new(false, exception.Message, phoneNumber, null, exception.StatusCode,
+                exception.ErrorCode, exception.IsRetryable);
+        }
+
+        var caption = supportMessage.Type == LiveSupportMessageType.Image
+            ? supportMessage.Content
+            : null;
         var request = new WhatsAppCloudService.MediaMessageRequest(
-            phoneNumber, mediaType, attachment.OriginalFileName, attachment.ContentType,
-            buffer.ToArray(), supportMessage.Content);
+            phoneNumber, normalized.MediaType, normalized.FileName, normalized.ContentType,
+            normalized.Content, caption);
         return await context.Cloud.SendMediaAsync(request, ct);
     }
 
@@ -373,7 +393,8 @@ public sealed class WhatsAppOutboundBackgroundService(
             delivery.MetaMessageId = response.MetaMessageId;
             delivery.Status = "Sent";
             delivery.FailureCode = null;
-            delivery.ProviderTimestamp = DateTime.UtcNow;
+            // ProviderTimestamp is receipt authority, not the local HTTP acceptance time.
+            // Leaving it null allows a subsequent Meta sent/failed event to order correctly.
         }
         else
         {

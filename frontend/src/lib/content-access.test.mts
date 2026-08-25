@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { hasStudentTermAccess, type StudentPackageAccess, type StudentTermAccess } from './content-access.ts';
+import {
+  hasStudentTermAccess,
+  isFullPackagePurchaseDisabled,
+  type StudentPackageAccess,
+  type StudentTermAccess,
+} from './content-access.ts';
 
 function packageFixture(overrides: Partial<StudentPackageAccess> = {}): StudentPackageAccess {
   return {
@@ -39,4 +44,21 @@ test('root access does not unlock an unrelated term', () => {
 test('direct package and direct term grants still unlock the term', () => {
   assert.equal(hasStudentTermAccess(packageFixture({ hasDirectPackageAccess: true }), term), true);
   assert.equal(hasStudentTermAccess(packageFixture(), { ...term, isPurchased: true }), true);
+});
+
+test('only an explicitly disabled full-year package blocks root purchase', () => {
+  const scenarios = [
+    { name: 'legacy omitted flag', pkg: packageFixture(), expected: false },
+    { name: 'explicitly enabled full-year package', pkg: packageFixture({ allowFullPackagePurchase: true }), expected: false },
+    { name: 'explicitly disabled full-year package', pkg: packageFixture({ allowFullPackagePurchase: false }), expected: true },
+    {
+      name: 'a non-year root content mode',
+      pkg: packageFixture({ contentMode: 'SectionWithLessons', allowFullPackagePurchase: false }),
+      expected: false,
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    assert.equal(isFullPackagePurchaseDisabled(scenario.pkg), scenario.expected, scenario.name);
+  }
 });

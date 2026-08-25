@@ -43,6 +43,64 @@ export function classifyExternalFailure(error: unknown, fallback: ExternalFailur
   return new WorkerExternalError(fallback, fallback !== 'implementation', `External operation failed (${fallback}).`, redactExternalText(error instanceof Error ? error.message : error));
 }
 
+function responseTooLarge() {
+  return new WorkerExternalError(
+    'response-too-large',
+    false,
+    'External response exceeded the allowed size.',
+  );
+}
+
+function joinResponseChunks(chunks: Uint8Array[], byteLength: number) {
+  const body = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
+async function collectBoundedBody(
+  body: ReadableStream<Uint8Array>,
+  maxResponseBytes: number,
+  controller: AbortController,
+) {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      byteLength += next.value.byteLength;
+      if (byteLength > maxResponseBytes) {
+        controller.abort();
+        throw responseTooLarge();
+      }
+      chunks.push(next.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return joinResponseChunks(chunks, byteLength);
+}
+
+async function readBoundedResponseBody(
+  response: Response,
+  maxResponseBytes: number,
+  controller: AbortController,
+) {
+  if (!response.body) return response;
+  const body = await collectBoundedBody(response.body, maxResponseBytes, controller);
+  return new Response(body.byteLength === 0 ? null : body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 export async function fetchWithTimeout(
   url: string,
   init: RequestInit & { timeoutMs?: number; maxResponseBytes?: number; operation?: string } = {},
@@ -56,8 +114,10 @@ export async function fetchWithTimeout(
     if (maxResponseBytes) {
       const declared = Number(response.headers.get('content-length'));
       if (Number.isFinite(declared) && declared > maxResponseBytes) {
-        throw new WorkerExternalError('response-too-large', false, 'External response exceeded the allowed size.');
+        controller.abort();
+        throw responseTooLarge();
       }
+      return await readBoundedResponseBody(response, maxResponseBytes, controller);
     }
     return response;
   } catch (error) {

@@ -62,6 +62,12 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 case CodeType.Package:
                     var pkg = await _db.Packages.FirstOrDefaultAsync(p => p.Id == request.ContentId, ct);
                     if (pkg == null) return ApiResponse<bool>.Fail("الباقة غير موجودة");
+                    if (FullPackagePurchasePolicy.IsDisabled(pkg))
+                    {
+                        return ApiResponse<bool>.Fail(
+                            FullPackagePurchasePolicy.ErrorMessage,
+                            [FullPackagePurchasePolicy.ErrorCode]);
+                    }
                     price = pkg.Price;
                     contentName = pkg.Name;
                     break;

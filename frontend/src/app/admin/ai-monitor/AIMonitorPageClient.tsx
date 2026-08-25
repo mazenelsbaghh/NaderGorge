@@ -295,9 +295,9 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
     <div className="ai-chapter-row">
       <div className="ai-chapter-row__num">{index + 1}</div>
       <div className="ai-chapter-row__body">
-        <div className="ai-chapter-row__title">{ch.title}</div>
+        <div className="ai-chapter-row__title text-start" dir="auto">{ch.title}</div>
         {ch.summaryText && (
-          <div className="ai-chapter-row__summary">{ch.summaryText}</div>
+          <div className="ai-chapter-row__summary text-start" dir="auto">{ch.summaryText}</div>
         )}
         {/* Mindmap section */}
         <div className="mt-3">

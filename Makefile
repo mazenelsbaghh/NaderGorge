@@ -230,7 +230,7 @@ verify-backend: ## Restore, build, and test the backend solution
 	fi
 
 verify-frontend: ## Run focused checks, lint, and build the frontend
-	cd frontend && npm run check:recharge-match-diagnosis && npm run lint && npm run build
+	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run lint && npm run build
 
 verify-worker: ## Build the Node.js worker
 	cd worker && npm run build

@@ -22,10 +22,12 @@ import { StaffConfigurationPanel } from '@/components/live-support/admin/StaffCo
 import { ConversationInvestigation } from '@/components/live-support/admin/ConversationInvestigation';
 import { LiveSupportRatingsPanel } from '@/components/live-support/admin/LiveSupportRatingsPanel';
 import { WhatsAppOperationsPanel } from '@/components/live-support/admin/WhatsAppOperationsPanel';
+import { WhatsAppCampaignStudio } from '@/components/live-support/admin/WhatsAppCampaignStudio';
 import { devConsole } from '@/utils/dev-console';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const statusLabels: Record<LiveSupportConversationStatus, string> = {
@@ -37,6 +39,8 @@ const statusLabels: Record<LiveSupportConversationStatus, string> = {
 };
 
 export default function AdminLiveSupportPageClient() {
+  const { hasPermission } = useHasPermission();
+  const canManageWhatsAppCampaigns = hasPermission('whatsapp_campaigns.manage');
   const [config, setConfig] = useState<LiveSupportAdminConfig>();
   const [error, setError] = useState('');
   const [dashboard, setDashboard] = useState<LiveSupportAdminDashboard>();
@@ -165,6 +169,13 @@ export default function AdminLiveSupportPageClient() {
     {!config || !dashboard ? <SupportPageSkeleton /> : <div dir="rtl" className="space-y-5">
       <LiveOperationsBoard dashboard={dashboard}/>
       <WhatsAppOperationsPanel dashboard={dashboard} templates={templates} syncing={syncingTemplates} syncFeedback={templateSyncFeedback} onSync={() => void syncTemplates()} />
+      <WhatsAppCampaignStudio
+        templates={templates}
+        syncingTemplates={syncingTemplates}
+        templateSyncFeedback={templateSyncFeedback}
+        canManage={canManageWhatsAppCampaigns}
+        onSyncTemplates={() => void syncTemplates()}
+      />
       <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]">
         <div className="border-b border-[var(--admin-border)] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">

@@ -1,3 +1,4 @@
+using System.Data;
 using MediatR;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Interfaces;
@@ -22,68 +23,131 @@ public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeV
 
     public async Task<bool> Handle(CancelAnalyzeVideoAICommand request, CancellationToken cancellationToken)
     {
-        var video = await _context.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, cancellationToken);
+        var capturedState = await _context.LessonVideos
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == request.VideoId)
+            .Select(candidate => new
+            {
+                candidate.IsProcessingAI,
+                candidate.IsProcessingMindmaps,
+                candidate.CurrentAiAnalysisRunId,
+                candidate.CurrentMindmapGenerationRunId
+            })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (video == null)
+        if (capturedState == null)
             return false;
 
-        if (request.IsMindmapOnly)
-        {
-            await _cancellations.RequestMindmapCancellationAsync(video.Id);
-            video.IsProcessingMindmaps = false;
-        }
-        else
-        {
-            await _cancellations.RequestVideoAnalysisCancellationAsync(video.Id);
-            await _cancellations.RequestMindmapCancellationAsync(video.Id);
-            video.IsProcessingAI = false;
-            video.IsProcessingMindmaps = false;
-            video.SubtitleUrl = null;
+        var hasActiveMindmapRun =
+            capturedState.IsProcessingMindmaps ||
+            capturedState.CurrentMindmapGenerationRunId.HasValue;
+        var hasAnyActiveRun =
+            capturedState.IsProcessingAI ||
+            capturedState.CurrentAiAnalysisRunId.HasValue ||
+            hasActiveMindmapRun;
+        if (request.IsMindmapOnly ? !hasActiveMindmapRun : !hasAnyActiveRun)
+            return false;
 
-            var existingChapters = await _context.VideoChapters
-                .Where(c => c.LessonVideoId == request.VideoId)
-                .ToListAsync(cancellationToken);
+        await using var transaction = await _context.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
 
-            if (existingChapters.Any())
+        try
+        {
+            var now = DateTime.UtcNow;
+            int videoRows;
+            if (request.IsMindmapOnly)
             {
-                _context.VideoChapters.RemoveRange(existingChapters);
+                videoRows = await _context.LessonVideos
+                    .Where(candidate =>
+                        candidate.Id == request.VideoId &&
+                        candidate.IsProcessingMindmaps == capturedState.IsProcessingMindmaps &&
+                        candidate.CurrentMindmapGenerationRunId == capturedState.CurrentMindmapGenerationRunId)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(candidate => candidate.IsProcessingMindmaps, false)
+                        .SetProperty(candidate => candidate.CurrentMindmapGenerationRunId, (Guid?)null)
+                        .SetProperty(candidate => candidate.UpdatedAt, now), cancellationToken);
             }
-        }
-
-        var teacherUserId = await _context.LessonVideos
-            .Where(v => v.Id == video.Id)
-            .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var adminEvent = new OutboxEvent
-        {
-            Type = "AiJobCancelled",
-            TargetGroup = "Role_Admin",
-            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            else
             {
-                lessonVideoId = video.Id,
-                isMindmapOnly = request.IsMindmapOnly
-            })
-        };
-        _context.OutboxEvents.Add(adminEvent);
+                videoRows = await _context.LessonVideos
+                    .Where(candidate =>
+                        candidate.Id == request.VideoId &&
+                        candidate.IsProcessingAI == capturedState.IsProcessingAI &&
+                        candidate.IsProcessingMindmaps == capturedState.IsProcessingMindmaps &&
+                        candidate.CurrentAiAnalysisRunId == capturedState.CurrentAiAnalysisRunId &&
+                        candidate.CurrentMindmapGenerationRunId == capturedState.CurrentMindmapGenerationRunId)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(candidate => candidate.IsProcessingAI, false)
+                        .SetProperty(candidate => candidate.IsProcessingMindmaps, false)
+                        .SetProperty(candidate => candidate.CurrentAiAnalysisRunId, (Guid?)null)
+                        .SetProperty(candidate => candidate.CurrentMindmapGenerationRunId, (Guid?)null)
+                        .SetProperty(candidate => candidate.SubtitleUrl, (string?)null)
+                        .SetProperty(candidate => candidate.UpdatedAt, now), cancellationToken);
+            }
 
-        if (teacherUserId != null)
-        {
-            var teacherEvent = new OutboxEvent
+            // The conditional update is deliberately first: it fences the captured run and
+            // holds the LessonVideo row lock until the cancellation marker and outbox commit.
+            if (videoRows != 1)
+                return false;
+
+            if (request.IsMindmapOnly)
+            {
+                await _context.VideoChapters
+                    .Where(candidate =>
+                        candidate.LessonVideoId == request.VideoId &&
+                        (candidate.IsRegeneratingMindmap ||
+                         candidate.CurrentMindmapGenerationRunId.HasValue))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(candidate => candidate.IsRegeneratingMindmap, false)
+                        .SetProperty(candidate => candidate.CurrentMindmapGenerationRunId, (Guid?)null),
+                        cancellationToken);
+
+                await _cancellations.RequestMindmapCancellationAsync(request.VideoId);
+            }
+            else
+            {
+                await _context.VideoChapters
+                    .Where(candidate => candidate.LessonVideoId == request.VideoId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                await _cancellations.RequestVideoAnalysisCancellationAsync(request.VideoId);
+                await _cancellations.RequestMindmapCancellationAsync(request.VideoId);
+            }
+
+            var teacherUserId = await _context.LessonVideos
+                .Where(candidate => candidate.Id == request.VideoId)
+                .Select(candidate => (string?)candidate.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
+                .SingleAsync(cancellationToken);
+            var payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonVideoId = request.VideoId,
+                isMindmapOnly = request.IsMindmapOnly
+            });
+            _context.OutboxEvents.Add(new OutboxEvent
             {
                 Type = "AiJobCancelled",
-                TargetUserId = teacherUserId,
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                TargetGroup = "Role_Admin",
+                PayloadJson = payload
+            });
+
+            if (teacherUserId != null)
+            {
+                _context.OutboxEvents.Add(new OutboxEvent
                 {
-                    lessonVideoId = video.Id,
-                    isMindmapOnly = request.IsMindmapOnly
-                })
-            };
-            _context.OutboxEvents.Add(teacherEvent);
+                    Type = "AiJobCancelled",
+                    TargetUserId = teacherUserId,
+                    PayloadJson = payload
+                });
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
         }
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return true;
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
+        }
     }
 }

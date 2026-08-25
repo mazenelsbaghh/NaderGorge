@@ -99,13 +99,14 @@ export function ChapterList({ chapters, currentTime, onSeek }: ChapterListProps)
                   )}
                 </div>
                 
-                <div className="flex flex-col overflow-hidden text-right">
-                  <span className="font-bold text-sm truncate w-full">{chapter.title}</span>
+                <div className="flex min-w-0 flex-col overflow-hidden text-start" dir="auto">
+                  <span className="w-full truncate text-sm font-bold">{chapter.title}</span>
                   {chapter.summaryText && isActive && (
                     <motion.span 
                       initial={{ opacity: 0, height: 0 }} 
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="text-xs w-full mt-1.5 text-white/80 leading-relaxed font-medium"
+                      className="mt-1.5 w-full text-start text-xs font-medium leading-relaxed text-white/80"
+                      dir="auto"
                     >
                       {chapter.summaryText}
                     </motion.span>

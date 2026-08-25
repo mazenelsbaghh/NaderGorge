@@ -27,6 +27,7 @@ export function WhatsAppOperationsPanel({
   onSync,
 }: WhatsAppOperationsPanelProps) {
   const summary = dashboard.whatsApp ?? fallbackSummary(dashboard, templates);
+  const templateStatuses = summarizeTemplateStatuses(templates);
   const hasServerSummary = Boolean(dashboard.whatsApp);
   const metrics = [
     { label: 'محادثات مفتوحة', value: summary.open },
@@ -61,6 +62,12 @@ export function WhatsAppOperationsPanel({
             <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
               متابعة القناة، نوافذ الرد، وحالة القوالب المعتمدة من مكان واحد.
             </p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-black">
+              <StatusCount label="APPROVED" value={templateStatuses.approved} tone="success" />
+              <StatusCount label="PENDING" value={templateStatuses.pending} tone="warning" />
+              <StatusCount label="REJECTED" value={templateStatuses.rejected} tone="danger" />
+              <StatusCount label="STALE" value={templateStatuses.stale} />
+            </div>
           </div>
         </div>
         <button
@@ -74,7 +81,7 @@ export function WhatsAppOperationsPanel({
             size={17}
             className={syncing ? 'animate-spin' : ''}
           />
-          {syncing ? 'جارٍ مزامنة القوالب…' : 'مزامنة القوالب'}
+          {syncing ? 'جارٍ مزامنة كل القوالب…' : 'مزامنة كل القوالب'}
         </button>
       </div>
 
@@ -134,6 +141,29 @@ function formatOptionalTimestamp(value?: string | null) {
   return Number.isNaN(parsed.getTime())
     ? 'غير متاح'
     : formatCairoTimestamp(parsed);
+}
+
+function summarizeTemplateStatuses(templates: LiveSupportWhatsAppTemplate[]) {
+  const counts = { approved: 0, pending: 0, rejected: 0, stale: 0 };
+  for (const template of templates) {
+    const status = template.status.toUpperCase();
+    if (status === 'APPROVED') counts.approved += 1;
+    else if (status === 'PENDING' || status === 'IN_APPEAL') counts.pending += 1;
+    else if (status === 'REJECTED' || status === 'DISABLED') counts.rejected += 1;
+    else if (status === 'STALE' || status === 'PAUSED') counts.stale += 1;
+  }
+  return counts;
+}
+
+function StatusCount({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warning' | 'danger' }) {
+  const color = tone === 'success'
+    ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)]'
+    : tone === 'warning'
+      ? 'bg-[var(--admin-warning-10)] text-[var(--admin-warning)]'
+      : tone === 'danger'
+        ? 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]'
+        : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]';
+  return <span className={`rounded-full px-2 py-1 ${color}`}>{label}: {new Intl.NumberFormat('ar-EG').format(value)}</span>;
 }
 
 function fallbackSummary(
