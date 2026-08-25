@@ -2,35 +2,35 @@
   "schemaVersion": 2,
   "evidenceType": "assembled-performance-candidate",
   "source": {
-    "releaseId": "git-c62d5e9df0fada742a403bfb769274ff9d30e217",
-    "measuredGitCommit": "c62d5e9df0fada742a403bfb769274ff9d30e217",
-    "sourceStateSha256": "20c68f1ecb12c66be8ee45de5705e7b4491d0c3962f68197e37737d408d8877a",
+    "releaseId": "git-76fb4216d11b561924162cb4430d113aee99070a",
+    "measuredGitCommit": "76fb4216d11b561924162cb4430d113aee99070a",
+    "sourceStateSha256": "d719ddb8c8827ea0d6a3cf72b17a36771414b6e45abbaa9d319db8bea99b8aaa",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f9133e9a5bebca51c641483bc989205e85449b3036d1c202ac1fce5d4621b087",
+    "manifestSha256": "a92c6f187e8828465061c063f8b268ec98e2a36f178e8fe1372accae394f462b",
     "commitBinding": "measured-commit-source-digest-authoritative"
   },
   "rawEvidence": {
     "sourceManifest": {
       "path": "artifacts/performance-167/final/raw/source-manifest.json",
-      "sha256": "f9133e9a5bebca51c641483bc989205e85449b3036d1c202ac1fce5d4621b087"
+      "sha256": "a92c6f187e8828465061c063f8b268ec98e2a36f178e8fe1372accae394f462b"
     },
     "routeResources": {
       "path": "artifacts/performance-167/final/raw/route-resources.json",
-      "sha256": "984b058de1d0dcaecbaa4061dd31ec2d02a8cd98d1fb930f1e6d5d0266a638b0"
+      "sha256": "5717850ed44600825335c2dd9cd47a28112a69a327f1b2aeaac241a45c735e37"
     },
     "browserSamples": {
       "path": "artifacts/performance-167/final/raw/browser-samples.json",
-      "sha256": "ae2f167f84efc778707e024b99a31b6097baa7a5484e752147616cf4a2e22eec"
+      "sha256": "d03594415005b1b7383b81dacdcf88fa8fbd94e72bd6a7542da830cc9d2f38bd"
     },
     "liveSupportQuery": {
       "path": "artifacts/performance-167/final/raw/live-support-query.json",
-      "sha256": "da12689136b352db4a2aa64b5056d2c4f1a41234df02708666808be97add2c41"
+      "sha256": "aaa41c134d2ab6ac8abc91462ba105ad5663db808f3c66f3c5dc99a5c5a66503"
     }
   },
   "measurement": {
     "productionBuildExecuted": true,
-    "buildId": "wr9Jj71rIsnTpLL8vs1fr",
+    "buildId": "D3IhY_7ZVLJjwdsTlvhYS",
     "compression": {
       "gzipLevel": 9,
       "brotliQuality": 11,
@@ -44,7 +44,7 @@
         "height": 727
       },
       "productionServer": true,
-      "buildId": "wr9Jj71rIsnTpLL8vs1fr"
+      "buildId": "D3IhY_7ZVLJjwdsTlvhYS"
     },
     "browserSampling": {
       "warmupCount": 3,
@@ -60,14 +60,14 @@
       "initial": {
         "resourceCount": 3,
         "bytes": 81070,
-        "gzipBytes": 29253,
-        "brotliBytes": 25689
+        "gzipBytes": 29252,
+        "brotliBytes": 25680
       },
       "shared": {
         "resourceCount": 10,
-        "bytes": 740507,
+        "bytes": 740506,
         "gzipBytes": 173811,
-        "brotliBytes": 146269
+        "brotliBytes": 146284
       },
       "deferred": {
         "resourceCount": 0,
@@ -80,7 +80,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 130.33233299999847,
+        "warmP75Ms": 138.2067079999979,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
@@ -89,15 +89,15 @@
       "pathname": "/register",
       "initial": {
         "resourceCount": 4,
-        "bytes": 149306,
-        "gzipBytes": 47610,
-        "brotliBytes": 41275
+        "bytes": 149305,
+        "gzipBytes": 47606,
+        "brotliBytes": 41252
       },
       "shared": {
         "resourceCount": 10,
-        "bytes": 740507,
+        "bytes": 740506,
         "gzipBytes": 173811,
-        "brotliBytes": 146269
+        "brotliBytes": 146284
       },
       "deferred": {
         "resourceCount": 0,
@@ -110,7 +110,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 129.88308300000062,
+        "warmP75Ms": 138.63791700000002,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
@@ -119,15 +119,15 @@
       "pathname": "/student",
       "initial": {
         "resourceCount": 7,
-        "bytes": 176034,
-        "gzipBytes": 55006,
-        "brotliBytes": 47511
+        "bytes": 176033,
+        "gzipBytes": 55000,
+        "brotliBytes": 47532
       },
       "shared": {
         "resourceCount": 10,
-        "bytes": 740507,
+        "bytes": 740506,
         "gzipBytes": 173811,
-        "brotliBytes": 146269
+        "brotliBytes": 146284
       },
       "deferred": {
         "resourceCount": 0,
@@ -140,7 +140,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 125.0175409999938,
+        "warmP75Ms": 125.60125000000698,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
@@ -149,15 +149,15 @@
       "pathname": "/admin",
       "initial": {
         "resourceCount": 16,
-        "bytes": 1247346,
-        "gzipBytes": 322081,
-        "brotliBytes": 261062
+        "bytes": 1247344,
+        "gzipBytes": 322076,
+        "brotliBytes": 261042
       },
       "shared": {
         "resourceCount": 10,
-        "bytes": 740507,
+        "bytes": 740506,
         "gzipBytes": 173811,
-        "brotliBytes": 146269
+        "brotliBytes": 146284
       },
       "deferred": {
         "resourceCount": 0,

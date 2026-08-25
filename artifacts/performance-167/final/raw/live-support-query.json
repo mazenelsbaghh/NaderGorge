@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "evidenceType": "live-support-query-budget",
   "source": {
-    "releaseId": "git-c62d5e9df0fada742a403bfb769274ff9d30e217",
-    "gitCommit": "c62d5e9df0fada742a403bfb769274ff9d30e217",
-    "sourceStateSha256": "20c68f1ecb12c66be8ee45de5705e7b4491d0c3962f68197e37737d408d8877a",
+    "releaseId": "git-76fb4216d11b561924162cb4430d113aee99070a",
+    "gitCommit": "76fb4216d11b561924162cb4430d113aee99070a",
+    "sourceStateSha256": "d719ddb8c8827ea0d6a3cf72b17a36771414b6e45abbaa9d319db8bea99b8aaa",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f9133e9a5bebca51c641483bc989205e85449b3036d1c202ac1fce5d4621b087"
+    "manifestSha256": "a92c6f187e8828465061c063f8b268ec98e2a36f178e8fe1372accae394f462b"
   },
   "database": {
-    "databaseName": "massar_live_support_query_budget_disposable_c62d5e9df",
-    "identitySha256": "6d2d808add475e34f36f6ca9afc97767550a80290edd0555afaf9ee5a58c0629",
+    "databaseName": "massar_live_support_query_budget_disposable_head76fb4216d",
+    "identitySha256": "e7686c0b69369f9d71c12c7e4cc2dc1007065ea53f61267d345949347d158720",
     "serverVersion": "17.11 (Homebrew)",
     "serverVersionNumber": 170011
   },
