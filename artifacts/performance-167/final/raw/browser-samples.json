@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "evidenceType": "browser-performance-samples",
   "source": {
-    "releaseId": "git-b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
-    "gitCommit": "b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
-    "sourceStateSha256": "b34387fc9e267baf4128a0b7cbc6df1b113d112abd27b65e3cf2c01d642f1cc9",
+    "releaseId": "git-c62d5e9df0fada742a403bfb769274ff9d30e217",
+    "gitCommit": "c62d5e9df0fada742a403bfb769274ff9d30e217",
+    "sourceStateSha256": "20c68f1ecb12c66be8ee45de5705e7b4491d0c3962f68197e37737d408d8877a",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f2e3e09371730428e4d49f8c66be2180169beda65e59513aadde8299f02a8b93"
+    "manifestSha256": "f9133e9a5bebca51c641483bc989205e85449b3036d1c202ac1fce5d4621b087"
   },
   "profile": {
     "name": "Pixel 5 / Android Chromium",
@@ -17,7 +17,7 @@
       "height": 727
     },
     "productionServer": true,
-    "buildId": "Q_x5a1cVRLo3-fl85H-8L"
+    "buildId": "wr9Jj71rIsnTpLL8vs1fr"
   },
   "sampling": {
     "warmupCount": 3,
@@ -32,7 +32,7 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 127.50154199999997,
+          "warmNavigationMs": 126.76475000000028,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -93,7 +93,7 @@
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 119.78758299999936,
+          "warmNavigationMs": 132.718832999999,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -154,7 +154,7 @@
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 142.3371670000015,
+          "warmNavigationMs": 130.33233299999847,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -215,7 +215,7 @@
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 126.5049999999992,
+          "warmNavigationMs": 124.93041699999958,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -276,7 +276,7 @@
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 133.67454200000066,
+          "warmNavigationMs": 122.15904100000262,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -337,7 +337,7 @@
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 123.58529199999975,
+          "warmNavigationMs": 121.65266699999847,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -398,7 +398,7 @@
         },
         {
           "sequence": 7,
-          "warmNavigationMs": 124.98629100000107,
+          "warmNavigationMs": 126.80320800000118,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -459,7 +459,7 @@
         },
         {
           "sequence": 8,
-          "warmNavigationMs": 126.8045409999977,
+          "warmNavigationMs": 119.8692919999994,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -520,7 +520,7 @@
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 124.42391700000007,
+          "warmNavigationMs": 131.58200000000215,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -581,7 +581,7 @@
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 129.36583299999984,
+          "warmNavigationMs": 125.05745799999931,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -642,7 +642,7 @@
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 122.10612499999843,
+          "warmNavigationMs": 125.27129200000127,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -703,7 +703,7 @@
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 125.10895800000071,
+          "warmNavigationMs": 124.88312500000029,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -764,7 +764,7 @@
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 122.2011670000029,
+          "warmNavigationMs": 123.8284590000003,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -825,7 +825,7 @@
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 121.31208300000071,
+          "warmNavigationMs": 125.43208400000003,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -886,7 +886,7 @@
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 123.86758300000292,
+          "warmNavigationMs": 131.34704199999396,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -947,7 +947,7 @@
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 117.9275000000016,
+          "warmNavigationMs": 126.1383330000026,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1008,7 +1008,7 @@
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 120.84554099999878,
+          "warmNavigationMs": 130.60916700000234,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1069,7 +1069,7 @@
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 120.86483299999963,
+          "warmNavigationMs": 121.66325000000506,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1130,7 +1130,7 @@
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 118.92599999999948,
+          "warmNavigationMs": 134.88420800000313,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1138,12 +1138,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -1168,6 +1178,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -1181,17 +1196,12 @@
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
               "category": "rsc-read",
               "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
-              "category": "rsc-read",
-              "count": 1
             }
           ]
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 117.11162499999773,
+          "warmNavigationMs": 124.4429170000003,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1257,102 +1267,102 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 123.75479199999972,
+          "warmNavigationMs": 121.10020900000382,
           "eligibleReads": []
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 123.87183299999742,
+          "warmNavigationMs": 127.47241599999688,
           "eligibleReads": []
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 121.68537500000093,
+          "warmNavigationMs": 139.64850000000297,
           "eligibleReads": []
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 132.17891700000473,
+          "warmNavigationMs": 119.79483400000026,
           "eligibleReads": []
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 134.86912499999744,
+          "warmNavigationMs": 145.1426250000004,
           "eligibleReads": []
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 142.38950000000477,
+          "warmNavigationMs": 143.41508299999987,
           "eligibleReads": []
         },
         {
           "sequence": 7,
-          "warmNavigationMs": 126.17766699999629,
+          "warmNavigationMs": 120.40629099999933,
           "eligibleReads": []
         },
         {
           "sequence": 8,
-          "warmNavigationMs": 126.99470799999835,
+          "warmNavigationMs": 116.74295899999561,
           "eligibleReads": []
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 134.17924999999377,
+          "warmNavigationMs": 127.84824999999546,
           "eligibleReads": []
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 131.8935829999973,
+          "warmNavigationMs": 129.88308300000062,
           "eligibleReads": []
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 129.7401250000039,
+          "warmNavigationMs": 122.25683299999946,
           "eligibleReads": []
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 134.03800000000047,
+          "warmNavigationMs": 128.26283300000068,
           "eligibleReads": []
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 130.7734999999957,
+          "warmNavigationMs": 123.25383400000283,
           "eligibleReads": []
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 127.71308300000237,
+          "warmNavigationMs": 128.86633299999812,
           "eligibleReads": []
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 127.78891699999804,
+          "warmNavigationMs": 129.2354159999959,
           "eligibleReads": []
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 133.23612500000309,
+          "warmNavigationMs": 125.09949999999662,
           "eligibleReads": []
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 130.89837499999703,
+          "warmNavigationMs": 126.91166699999303,
           "eligibleReads": []
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 136.22212500000023,
+          "warmNavigationMs": 125.83787499999744,
           "eligibleReads": []
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 127.66662499999802,
+          "warmNavigationMs": 133.79649999999674,
           "eligibleReads": []
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 128.4596249999886,
+          "warmNavigationMs": 134.07012499999837,
           "eligibleReads": []
         }
       ]
@@ -1362,7 +1372,7 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 122.14074999999139,
+          "warmNavigationMs": 129.83162500000617,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1388,7 +1398,7 @@
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 126.00345899999957,
+          "warmNavigationMs": 122.77954200000386,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1414,7 +1424,7 @@
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 140.1478749999951,
+          "warmNavigationMs": 123.75129200000083,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1440,7 +1450,7 @@
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 122.63775000000896,
+          "warmNavigationMs": 125.1955830000079,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1466,7 +1476,7 @@
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 126.34779200000048,
+          "warmNavigationMs": 125.0175409999938,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1492,7 +1502,7 @@
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 129.0445000000036,
+          "warmNavigationMs": 124.28458300000057,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1518,7 +1528,7 @@
         },
         {
           "sequence": 7,
-          "warmNavigationMs": 127.47695799999929,
+          "warmNavigationMs": 132.98791600001277,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1544,7 +1554,7 @@
         },
         {
           "sequence": 8,
-          "warmNavigationMs": 123.03058299999975,
+          "warmNavigationMs": 110.67333400000643,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1570,7 +1580,7 @@
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 129.6258749999979,
+          "warmNavigationMs": 119.7855419999978,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1596,7 +1606,7 @@
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 138.16358300000138,
+          "warmNavigationMs": 121.25024999999732,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1622,7 +1632,7 @@
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 112.42837499998859,
+          "warmNavigationMs": 124.10695800000394,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1648,7 +1658,7 @@
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 133.85520800000813,
+          "warmNavigationMs": 125.64104200000293,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1674,7 +1684,7 @@
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 140.79404199999408,
+          "warmNavigationMs": 117.84812500000407,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1700,7 +1710,7 @@
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 117.292082999993,
+          "warmNavigationMs": 118.8560839999991,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1726,7 +1736,7 @@
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 129.61595799999486,
+          "warmNavigationMs": 121.94870799999626,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1752,7 +1762,7 @@
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 121.7175419999985,
+          "warmNavigationMs": 117.5511669999978,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1778,7 +1788,7 @@
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 136.80533400000422,
+          "warmNavigationMs": 124.82933400000911,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1804,7 +1814,7 @@
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 122.91916700000002,
+          "warmNavigationMs": 125.78575000001001,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1830,7 +1840,7 @@
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 128.12399999999616,
+          "warmNavigationMs": 123.76858400000492,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1856,7 +1866,7 @@
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 124.58529100001033,
+          "warmNavigationMs": 121.57200000000012,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",

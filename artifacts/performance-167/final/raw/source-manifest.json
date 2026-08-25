@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "releaseId": "git-b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
-  "gitCommit": "b6406f53315f2bcf514da8a7350c1c3e8e83bcdb",
-  "sourceStateSha256": "b34387fc9e267baf4128a0b7cbc6df1b113d112abd27b65e3cf2c01d642f1cc9",
+  "releaseId": "git-c62d5e9df0fada742a403bfb769274ff9d30e217",
+  "gitCommit": "c62d5e9df0fada742a403bfb769274ff9d30e217",
+  "sourceStateSha256": "20c68f1ecb12c66be8ee45de5705e7b4491d0c3962f68197e37737d408d8877a",
   "dirtySourceSnapshot": false,
   "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
   "sourcePaths": [
@@ -1984,8 +1984,8 @@
       "path": "Makefile",
       "status": "tracked",
       "classification": "configuration",
-      "sizeBytes": 24910,
-      "sha256": "365552349775ec66900d3fb859da59e00dfa55d0e74518a5d3982ca981b7a835"
+      "sizeBytes": 24946,
+      "sha256": "21b251ebc90185bf40efc3af33a3ecb05e7f38e1c418cc3574d1be36de2e04bf"
     },
     {
       "path": "PRODUCT.md",
@@ -2019,8 +2019,8 @@
       "path": "backend/Dockerfile",
       "status": "tracked",
       "classification": "configuration",
-      "sizeBytes": 1610,
-      "sha256": "d43ca8146dece36c85631ecf494b98d80a99743fa0ea969e7e28e13393174030"
+      "sizeBytes": 1622,
+      "sha256": "25f2ddc8fc9de75d24ceb0672246ca4c6be1904a2a2a2f5992a38feab2982c2d"
     },
     {
       "path": "backend/Dockerfile.migrator",
@@ -2100,11 +2100,18 @@
       "sha256": "4b8da2fec381f4ed4d7d748aab33609eead626c9ec15aa8c2d274f8c7c34a34f"
     },
     {
+      "path": "backend/src/NaderGorge.API/BackgroundServices/WhatsAppCampaignBackgroundService.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 2198,
+      "sha256": "a02a7d3763fa44d07aee634a5ae8638b8fa727b4fcca92ebf54234cc54c511cb"
+    },
+    {
       "path": "backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 19955,
-      "sha256": "9263e3ef22e2e6f5f34efdb848e0ab6b391af15bb309ac99ac4936b4c9d45b6e"
+      "sizeBytes": 20833,
+      "sha256": "c4063c4d914de246f1175f643ec89aa14a6974cb470c70c72c54408b6b104ba4"
     },
     {
       "path": "backend/src/NaderGorge.API/Configuration/E2eOnlyAttribute.cs",
@@ -2187,8 +2194,8 @@
       "path": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 65552,
-      "sha256": "8eca8bfde79a8dc60c14cf860f1512c48bd9522040f6edc120b8848f95ab0658"
+      "sizeBytes": 65870,
+      "sha256": "4427b8ce095ab7b3c30f77e8410b1e0175c9a8f4a84bf6f417a8f349465b533c"
     },
     {
       "path": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
@@ -2495,8 +2502,8 @@
       "path": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7350,
-      "sha256": "d665f25e5ec54cb2167502a5a8a67693aa9b41bcb0e64f049d86c566cb23c369"
+      "sizeBytes": 7832,
+      "sha256": "792f9d20913e80756d7ed9b0b6d66221705a18e140170545b19b74f8cc96db13"
     },
     {
       "path": "backend/src/NaderGorge.API/Controllers/LiveSupportAIAdminController.cs",
@@ -2586,8 +2593,8 @@
       "path": "backend/src/NaderGorge.API/Controllers/StudentSharedPackagesController.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 32404,
-      "sha256": "01ae2a9ecb5dd0c4d17e7baca06f854f6535cdda2344884aca9193c23d8718a7"
+      "sizeBytes": 33149,
+      "sha256": "25f3e04b8ca28f5cc80a2d1b7694186bc27d52a1123a2776fd4e7afcf1519335"
     },
     {
       "path": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
@@ -2639,6 +2646,13 @@
       "sha256": "da4d68c3524d25d0e18b2ed3d708cacd3bed51983422e2355b7831273c01a73a"
     },
     {
+      "path": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 4293,
+      "sha256": "0cae423c4a505a8c13ca417a7625b5067985c27a32a27e0c2738a7a403eaa879"
+    },
+    {
       "path": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
       "status": "tracked",
       "classification": "source",
@@ -2649,8 +2663,8 @@
       "path": "backend/src/NaderGorge.API/Controllers/WhatsAppLiveSupportController.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3285,
-      "sha256": "454880da29459a690b38a1c05aea36a71119b067178b7296544ce323f559a115"
+      "sizeBytes": 3580,
+      "sha256": "cd0b7a8ac4ae6eb5f38e41b0e50db7888961408aadcb143a528aa9c453ff9d6c"
     },
     {
       "path": "backend/src/NaderGorge.API/Extensions/ClaimsPrincipalExtensions.cs",
@@ -2754,8 +2768,8 @@
       "path": "backend/src/NaderGorge.API/Program.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 32415,
-      "sha256": "4c1c81aa784c17869682fde67358a9f02bcf409ec642ed92557ff806fbc05313"
+      "sizeBytes": 33043,
+      "sha256": "941317cc7ada8a6e3b08cee24875b0818fb8993266f945e9a4642262b2ae6f0e"
     },
     {
       "path": "backend/src/NaderGorge.API/Properties/AssemblyInfo.cs",
@@ -3164,6 +3178,27 @@
       "sha256": "508fa7f43832ed9982c2afcb784f2ee6ad05a43e62b253e79793de723e432b1f"
     },
     {
+      "path": "backend/src/NaderGorge.Application/Common/AiCallbackReceipt.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 223,
+      "sha256": "3e6f22514499e13c620cd540d3d1ccbf6822fa7d3940993e15507f1ea31a4eaa"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Common/AiGenerationRunContract.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 309,
+      "sha256": "49b5d6f5e475e4fc18db95cfac6c52e30b0b2af07d4fb09281d26b16b3b39881"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Common/AiOutputLanguageContract.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 460,
+      "sha256": "40dbf466800c48ba9956c84448fa26c8fe486dd4c270fc956099f5c9a6d07b2a"
+    },
+    {
       "path": "backend/src/NaderGorge.Application/Common/ApiResponse.cs",
       "status": "tracked",
       "classification": "source",
@@ -3370,8 +3405,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/AdminContentCommands.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 57827,
-      "sha256": "5567a31676e11f25d466d1eb2e28a16893f7703bef36cc2e5bc2d623dbda9d63"
+      "sizeBytes": 58162,
+      "sha256": "b6f028a33490511bb8021c1251c2b8b91c8264bf49aa4d92c237c177b3a0a308"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/AdminCreateUserCommand.cs",
@@ -3426,8 +3461,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/AnalyzeVideoAICommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 4380,
-      "sha256": "a08a6e999b8ba8b222d907b30274a789ca056c8a66a36886d450b588b272911b"
+      "sizeBytes": 4671,
+      "sha256": "b37f42945fe3bad52b0d7418e02521b18c5f5cba17de902d78f668fc4a0e0a58"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/ApproveCommunityCommentCommand.cs",
@@ -3482,8 +3517,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/CancelAnalyzeVideoAICommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3081,
-      "sha256": "48d3b083b9b0883053eca79c35a72d21141f6c01c479246a3d9abf4a61fef8df"
+      "sizeBytes": 6755,
+      "sha256": "5f711981e644bdd9095545bc24d5e191f10ca87c6578dcbb9fb83d211a76bb22"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/CancelPackageGrantCommand.cs",
@@ -3531,8 +3566,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/MindmapOps/GenerateChapterMindmapsCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3762,
-      "sha256": "2f0c20db3e5b9844921ecc000a4a33a19b5ee96ec4de8fd9898190d0f675595e"
+      "sizeBytes": 4662,
+      "sha256": "0d5aea2aa1e0aef4503ee76c3a3eae5fa47c0455913b7a8216903d7810606f55"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/MindmapOps/MindmapStyleOptions.cs",
@@ -3545,8 +3580,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/MindmapOps/RegenerateChapterMindmapCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3485,
-      "sha256": "1cf0c42ca2a1720f833750544a03eb56f2a4eefef90ea25006a649dab58161d8"
+      "sizeBytes": 5747,
+      "sha256": "77fc9fa66f87f856e0885288cc3e518db2675788485cb87ea73b3d0a399fe1da"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/OverrideVideoLimitCommand.cs",
@@ -3554,6 +3589,13 @@
       "classification": "source",
       "sizeBytes": 5644,
       "sha256": "eb7b601005c96cbb13f036cd3c1def988e5c2519f7191ce5d30167a17df65809"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/PackageAiOutputLanguageValidators.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 601,
+      "sha256": "43b25b443dc3bc46f5445594e73b4c7781eb0c671c8ca085f185584a84e33b43"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/RejectCommunityCommentCommand.cs",
@@ -3692,8 +3734,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/UpdatePackageCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 4910,
-      "sha256": "2ce825907fa621553bbff1378231fde7fb7a291fbd518df0f8402a35906f5c03"
+      "sizeBytes": 5477,
+      "sha256": "5d68cdfe705a072ec5e40991b7659feb33e9a98aae6e97ac8d3f9ac6b2e07d60"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Admin/Commands/UpdatePlatformSettingsCommand.cs",
@@ -4735,8 +4777,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Content/Queries/GetPackageByIdQuery.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6785,
-      "sha256": "392da6a4a90b51d5dd81eb34aa4790ff48af9be9b9ce3e7e7a9e87be3b116a8a"
+      "sizeBytes": 6974,
+      "sha256": "b2b05bfa6c0a7773c0239b7539d3e0f7e9b102c5c266b0052b7cc2e09a13b74a"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Content/Queries/GetPackageCodePageQuery.cs",
@@ -4749,8 +4791,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Content/Queries/GetPackagesQuery.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 13034,
-      "sha256": "d5305c57a8e7b83030b0a6b0edc4280ae09e6035d89761ca52118842c864c5c3"
+      "sizeBytes": 13221,
+      "sha256": "cbe7a71928b9fa2607b68500360a426909c27647a9efb87202e862973a454d3b"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Content/Queries/GetSectionByIdQuery.cs",
@@ -5176,15 +5218,15 @@
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/AiAnalysisCompletedCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7104,
-      "sha256": "4a019033437dde2a30baf850de70f577fe49e6dc903e37d2de7f32cbcc402639"
+      "sizeBytes": 7750,
+      "sha256": "7d90c7806ca854d0669d8433da655694e5d7b1671ec19cde24c906560f00b4b8"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/AiProgressCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 8779,
-      "sha256": "32389fe41fe5bd663baba2274e1d321f6b1d2f5de78fb1a6040ac74a6ab14d50"
+      "sizeBytes": 10878,
+      "sha256": "7e68a9f6dd6fe524eba3fce5f2fa5599839c978b13639f79d4f409f36ef655ab"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/ArchiveChatRoomCommand.cs",
@@ -5211,8 +5253,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/MindmapsCompletedCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1502,
-      "sha256": "b9c55f63ae863be85fc909bb010e0c023619a8e46bcf1c3b2313f0c7e89aa96f"
+      "sizeBytes": 6242,
+      "sha256": "d4604d7e2798f31f6cdea17a64b08927a52ec76fe0b3b0aa12cff469d0d192a7"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/SendChatMessageCommand.cs",
@@ -5225,15 +5267,15 @@
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/SingleMindmapCompletedCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1083,
-      "sha256": "c57ce6cdd330e5f65610dd44bf44927b3dd90f1401f42845bbb89cc2564b5941"
+      "sizeBytes": 3992,
+      "sha256": "3cb411f3ab8faa99eff1decfbd458603b054af0c4856c6f9acb55c455b4379af"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/SingleMindmapFailedCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 904,
-      "sha256": "e84b78922371e08f97194395143dccc9c6d2b725971c1df3390d5705b4e1baf5"
+      "sizeBytes": 2001,
+      "sha256": "403d3c30c279f74263d2d1bd3465af450ae0ce78650613218f83e9f0eeb27f81"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Internal/Commands/TogglePinMessageCommand.cs",
@@ -5267,8 +5309,15 @@
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Dtos/LiveSupportDtos.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 10841,
-      "sha256": "5adc2fc74abe1695d3a25a3a7b75e27ebb92f3a4979e2b96d684d3e15f7b2eed"
+      "sizeBytes": 10883,
+      "sha256": "f2f093990254bd8d95b4d962b122450a50fa48b77ecaf044b482265ca36f8875"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Dtos/WhatsAppCampaignDtos.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 8072,
+      "sha256": "b1bd9a4749f01eb188bf8d023cd35f032115fac63de42fa71747fb3c1ea86870"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/ILiveSupportActionExecutor.cs",
@@ -5318,6 +5367,20 @@
       "classification": "source",
       "sizeBytes": 9674,
       "sha256": "b90bc9e75ff579f9b57007bac837c26580b11345ef17eb6e7106d7c12087f858"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/IWhatsAppCampaignService.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 2399,
+      "sha256": "afcd3f4ce2ad9b9f560a74629131a7f8956eafeb9758031d37fc9df817a2f3c7"
+    },
+    {
+      "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/IWhatsAppOutboundMediaNormalizer.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 1067,
+      "sha256": "c592e0a0bf3f5670d7a2d8ed3339650c2a73f13cb6d5ef02d28ad4b196d61dc9"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Queries/GetLiveSupportMessageSnapshotQuery.cs",
@@ -5680,8 +5743,8 @@
       "path": "backend/src/NaderGorge.Application/Features/Student/Commands/PurchaseContentCommand.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 34626,
-      "sha256": "4f9ce1327ac8ac9425fd732eef3750115b56c7fe3d5e0cbe6c25764ed2cacf4e"
+      "sizeBytes": 34928,
+      "sha256": "15e6265c76122f5f52e1ceecf38856dc5b7f12202e50d092b6ebdd8d4dd35674"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/Student/Commands/TrackWatchProgressCommand.cs",
@@ -6069,6 +6132,13 @@
       "sha256": "cb03b9fc5ca128b43c0909c22e4e3974181821b210e5d23aa8ce5dd5f400e78f"
     },
     {
+      "path": "backend/src/NaderGorge.Application/Services/FullPackagePurchasePolicy.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 1350,
+      "sha256": "768679a996896612c29d2be4048651533a0d9b556b77ee76a0ac7bb070167e17"
+    },
+    {
       "path": "backend/src/NaderGorge.Application/Services/GiftUsageService.cs",
       "status": "tracked",
       "classification": "source",
@@ -6177,8 +6247,8 @@
       "path": "backend/src/NaderGorge.Application/Services/WhatsAppCloudService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 30984,
-      "sha256": "f2c623a18451f910f84b9997e710cdf2cf016214664df2f440aa0caa8d94a60a"
+      "sizeBytes": 32730,
+      "sha256": "ba3c52f700b3a3a2a381a4b7cd1c32ec3efdd0f4bbc07642dcdb45790fb66f1b"
     },
     {
       "path": "backend/src/NaderGorge.Application/Services/WhatsAppExamNotificationService.cs",
@@ -6352,8 +6422,8 @@
       "path": "backend/src/NaderGorge.Domain/Entities/ContentEntities.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7885,
-      "sha256": "c0fefcc2862d37826699b23081e84b24b69ba0e218a839dcbb1019682339abec"
+      "sizeBytes": 8147,
+      "sha256": "e5798328d3de67fc207f2c2a96e8a890f511a745a7b95d2326489f923a6e55b8"
     },
     {
       "path": "backend/src/NaderGorge.Domain/Entities/CrmCallLog.cs",
@@ -6919,8 +6989,15 @@
       "path": "backend/src/NaderGorge.Domain/Entities/LiveSupport/LiveSupportWhatsAppChannel.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 2371,
-      "sha256": "827099e3080d6d5ce0b3780514ec34cbe00fa7bffa9fd1cd105b9e30ade5ef95"
+      "sizeBytes": 2431,
+      "sha256": "3a25a8226f1cc8cc73ccf195c70bb801dcafde66f56755bfd1f3ebd9313126f8"
+    },
+    {
+      "path": "backend/src/NaderGorge.Domain/Entities/LiveSupport/WhatsAppCampaign.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 5797,
+      "sha256": "53cac319c0f472c636fe1e5268a6cca6b4321d34a99ed3a893033ece268791d2"
     },
     {
       "path": "backend/src/NaderGorge.Domain/Entities/MediaProductionPipeline.cs",
@@ -7192,8 +7269,8 @@
       "path": "backend/src/NaderGorge.Domain/Entities/VideoChapter.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 544,
-      "sha256": "e90f3cd69a197a94a31d8baf287f68d0d59724c19fec10206a2b5a2c8c13957c"
+      "sizeBytes": 605,
+      "sha256": "c681b17de3a10764f0460f5955e0a37736ab31e9381c895818d5d6f98df7d61f"
     },
     {
       "path": "backend/src/NaderGorge.Domain/Entities/VideoPlaybackSession.cs",
@@ -7222,6 +7299,13 @@
       "classification": "source",
       "sizeBytes": 2800,
       "sha256": "87e5580a15e153d54127a2956d3cc453d68a9813a30cf59791dec59f84592b05"
+    },
+    {
+      "path": "backend/src/NaderGorge.Domain/Enums/AiOutputLanguage.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 115,
+      "sha256": "bf19dfc0ed7e04b3a473254d4bb9e9198d271ec69e0bde38fa62cf46dbcb7545"
     },
     {
       "path": "backend/src/NaderGorge.Domain/Enums/AttendanceBreakKind.cs",
@@ -7605,8 +7689,8 @@
       "path": "backend/src/NaderGorge.Domain/Interfaces/IAppDbContext.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 15289,
-      "sha256": "b2f1fe7cad8396761e9c48fcb4602046f7238554bf258a0ea87faa4d8e2ae7da"
+      "sizeBytes": 15666,
+      "sha256": "117e98d65e6b35973a213f16c0e6acf8c166dd03ce519108716ed769982c6c7d"
     },
     {
       "path": "backend/src/NaderGorge.Domain/Interfaces/IAuditRepository.cs",
@@ -7724,8 +7808,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Data/AppDbContext.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 225734,
-      "sha256": "56bf74ea7d75fb3ef722cc98e32ef719189d6dbe231411db9146694a3c22b1f6"
+      "sizeBytes": 233697,
+      "sha256": "eaa55238eb6abd20e51cb94ca05cca3689fdd5b897b2ad66a27ffcf1c5617c6d"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Data/Configurations/AdminAI/AdminAIEntityConfigurations.cs",
@@ -7766,8 +7850,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Data/Seeder.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 4341,
-      "sha256": "b625be285f22d363b31ae804aad373604cecf7e1189bbecae0188a5e0f0c3771"
+      "sizeBytes": 4371,
+      "sha256": "1715c2da469600b1091a0d3b40b92ecbdd266b140a8854b1b3bb616b9289b17f"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Data/SlowQueryInterceptor.cs",
@@ -9947,11 +10031,25 @@
       "sha256": "7268bc79ae915002f4fd7ba4ce7fbba86275a49e4a4403db9e461c1bafafcc68"
     },
     {
+      "path": "backend/src/NaderGorge.Infrastructure/Migrations/20260825174643_AddAiCampaignsAndPackagePurchaseControls.Designer.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 681473,
+      "sha256": "7a28ceedf015b07e5a5a2ee0c3ab3187b6afbde3dc7b32376a2bc5c5398f5c44"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Migrations/20260825174643_AddAiCampaignsAndPackagePurchaseControls.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 24466,
+      "sha256": "146109a78cad9a85b20e7bd549f0d0e754cb92b45a54cb95f0079f289bdfe88e"
+    },
+    {
       "path": "backend/src/NaderGorge.Infrastructure/Migrations/AppDbContextModelSnapshot.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 659147,
-      "sha256": "07b46111f60e751b48284a2fa1296e91f54df455e9c9ac644756e2688604cf89"
+      "sizeBytes": 681318,
+      "sha256": "93defd18116aace47bced852d89e934888b92b9e53806e4ff87af7c9755e6405"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/NaderGorge.Infrastructure.csproj",
@@ -10507,6 +10605,13 @@
       "sha256": "cbf24d67a0c6cbc811f31e564857b8ef6635f3e3230d4aa2c5f90bc1581abaf3"
     },
     {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/FfmpegWhatsAppAudioProcess.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 7270,
+      "sha256": "f5ac304848cd5e014d126a4d6ab8e043bbb3e0ee63434d703cd97a54522a263e"
+    },
+    {
       "path": "backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/PayrollFinancialAdapter.cs",
       "status": "tracked",
       "classification": "source",
@@ -10596,6 +10701,13 @@
       "classification": "source",
       "sizeBytes": 5859,
       "sha256": "c9ca1af7747704931c4b9f53883bcd2df7109dd21c187cdc8258f3e039de642e"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/IWhatsAppAudioProcess.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 251,
+      "sha256": "55c6c10c1f04f92dd1f91dc16588094f09c7535be5c9ea325960c653a17997bf"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/LiveSupportAI/LiveSupportAIActionExecutor.cs",
@@ -10766,11 +10878,67 @@
       "sha256": "344210f2ff12808570991189c4cba523c787515386c5bd3d907bd5cb06257f6d"
     },
     {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignAudience.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 50134,
+      "sha256": "2041b30e5861e6ca0403759ee622b222017d4a045d09f12a1aac6074575e085b"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignDataProtector.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 3557,
+      "sha256": "a222f252e8b11799edf9646ed546d17856857d80a264370a2b5c483c80bd206a"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignDispatcher.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 22721,
+      "sha256": "7de726c5085626c83a638785b11860e6754ea63e2f6cab047526dc0f07315150"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignReceipts.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 10867,
+      "sha256": "205f7a779666174ff9e87482dcc8fc2ef97d2634b4cd2c794cd6d187a9dfadd2"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignService.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 44310,
+      "sha256": "5f96a1cf05c91ae3ee6479d353c39a676d2d1360363c4e6f81fa403d2694e8a1"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignTemplatePolicy.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 10035,
+      "sha256": "f20c32fc48ac57f5ed7078b0f93765e5b820b44291c94129b0d5e53347c62d5a"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppContactCandidateSearch.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 6309,
+      "sha256": "ecf30ea8419e72b44d4c826e0a064b9bcc574ef9ce965f890071a37d3e02195b"
+    },
+    {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppLiveSupportService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 26594,
-      "sha256": "df878f29ad31fbc4e5ba365549764f9a01446d21865c93e305195222f1c4aecb"
+      "sizeBytes": 39740,
+      "sha256": "1f3792edfe4a9a3d2a5209d94412c9f7864dc2d9617cd89c03a3b70c0e6df2e1"
+    },
+    {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppOutboundMediaNormalizer.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 8290,
+      "sha256": "3e0b37b356945f71ed8c05eea01220d6b0e03f3394111ee3d3b37501e2f9a813"
     },
     {
       "path": "backend/src/NaderGorge.Migrator/NaderGorge.Migrator.csproj",
@@ -11130,6 +11298,20 @@
       "sha256": "e6eaad1089bc14f6d04f1b9d6480057eb09d0627f864be4e585ee39c2a2f3373"
     },
     {
+      "path": "backend/tests/NaderGorge.Application.Tests/AiGenerationRunFencingTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 45606,
+      "sha256": "8c85253ed89222d4741f7cfd11f1f6440182031acbb39b3b8b673a125795615d"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Application.Tests/AiOutputLanguageJobContractTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 7474,
+      "sha256": "9b98a6f01b2b5f577499f6022f5fbf343e6733b936671edb44bb6e4b4007e622"
+    },
+    {
       "path": "backend/tests/NaderGorge.Application.Tests/AssessmentOcrQuestionParserTests.cs",
       "status": "tracked",
       "classification": "test",
@@ -11371,8 +11553,15 @@
       "path": "backend/tests/NaderGorge.Application.Tests/FlexiblePackageContentTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 8210,
-      "sha256": "03adfcdb25b25c7d59544e14271c0d385f45b4d69a30651dfd32bb0835cd3b5d"
+      "sizeBytes": 12235,
+      "sha256": "1547cf400147d22a1b7e32cbc2cc4aec8f3e1606809526ee639777184de5757a"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Application.Tests/FullPackagePurchasePolicyTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 11189,
+      "sha256": "7b4810cad235940d1ccaf1ee22f3cca266be2fa9f01d1f5f437042b9738833c3"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/GetLatestPassedExamResultQueryTests.cs",
@@ -11613,6 +11802,13 @@
       "sha256": "57c6e87f2c45365a8d5e28907360738712f134d08761ae65ad86f614d6038be7"
     },
     {
+      "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/StubWhatsAppCampaignService.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 2793,
+      "sha256": "a780606d04ae913e0880fdc6422120656b9c68270703982990825b5d984436bd"
+    },
+    {
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/StudentActionCatalogContractTests.cs",
       "status": "tracked",
       "classification": "test",
@@ -11644,15 +11840,22 @@
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppLiveSupportTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 52435,
-      "sha256": "7fc5482dc1003eac6361f7de43bc40dd9a2d5213f1f7511cb92eeaa102374721"
+      "sizeBytes": 54897,
+      "sha256": "a2179f9654b8a957d78263155ba53b840f17a0310d783c3d2c1e94467b884c7e"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppOutboundMediaNormalizerTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 3883,
+      "sha256": "3f4dd0dfab8305b866da8cb086d3cd4fbcfafd20ef3a62c8176f95aa9174d96c"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppWebhookControllerTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 4137,
-      "sha256": "98036eb3d6658de78e4140ed76d6b97bd2879e2204344c8573c6740463f5b93f"
+      "sizeBytes": 4184,
+      "sha256": "b71c9c17d8f8f1f4a09bc6f63365d3b299b6300b1a5fe770296c32228da22e57"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupportAI/AIAdminAuthorizationTests.cs",
@@ -12008,8 +12211,8 @@
       "path": "backend/tests/NaderGorge.Application.Tests/StudentAcademicScopeAccessTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 29059,
-      "sha256": "f12368746dcb552ee6d51faa43d14f22927bd0d799ee52cd638df171dceaebb0"
+      "sizeBytes": 29338,
+      "sha256": "c86f44a423b41879139d5ab328c535858f9f3a1ce631c317be7e69caaa5879c5"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/StudentAcademicScopeAdminValidationTests.cs",
@@ -12376,11 +12579,25 @@
       "sha256": "224f98fce43997b05a1a98a7e916ea5c4609332653f6cee005b2a3c6693c2aeb"
     },
     {
+      "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/StubWhatsAppCampaignService.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 2703,
+      "sha256": "1746dad80a1425e5d483b9d395ef5f2b4d5a7ba050744bc5a9dd25b5d6858375"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppCampaignSafetyTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 5312,
+      "sha256": "27c7b865e16335d9076697991264cce554c68377068ada8de89dfa3a09401155"
+    },
+    {
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppOutboundBackgroundServiceTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 23372,
-      "sha256": "cb29f56412a966960377c1a1d8ce2a9e43eef1ffc84382c407d257585af73c58"
+      "sizeBytes": 31260,
+      "sha256": "97aa3c6b9e9856bfb8a465839d128ac4164ccac6aab7653d0f0dbd3606e91499"
     },
     {
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIActionConcurrencyTests.cs",
@@ -14493,8 +14710,8 @@
       "path": "frontend/package.json",
       "status": "tracked",
       "classification": "configuration",
-      "sizeBytes": 3546,
-      "sha256": "770c132895bf2e26bae123412af1cc7ae1ed8ea05dcc0106b53228a5a81703d6"
+      "sizeBytes": 3670,
+      "sha256": "516bbef759231c94cbdfd14da4bb33395d81ada2d893a377a82abd7cd190196f"
     },
     {
       "path": "frontend/performance-budgets.json",
@@ -14703,8 +14920,8 @@
       "path": "frontend/scripts/check-platform-event-contracts.mjs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3917,
-      "sha256": "d4dcbee7cc98659026beef6cbc9247805b67eb1f4c9a9f117c4e336d877ffaa9"
+      "sizeBytes": 4385,
+      "sha256": "853f2a0380dfbb7a070ff9487854616c4694d597f58ae22f54062814566b0b7e"
     },
     {
       "path": "frontend/scripts/check-query-contracts.mjs",
@@ -15018,8 +15235,8 @@
       "path": "frontend/src/app/admin/ai-monitor/AIMonitorPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 58666,
-      "sha256": "990d7dd7ebee70342735164051bb742f47af4a5bf91237e2483e37b8d211ccd6"
+      "sizeBytes": 58710,
+      "sha256": "6107e3fd84813d2d379e6040a535b4d86f6323820c6b902bc05f6394fa809f98"
     },
     {
       "path": "frontend/src/app/admin/ai-monitor/page.tsx",
@@ -15144,8 +15361,8 @@
       "path": "frontend/src/app/admin/content/AdminContentPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 47038,
-      "sha256": "2e312410a795d850cc21bd842e755bd69b3f760a04035db0af95c06d0c2bd690"
+      "sizeBytes": 47416,
+      "sha256": "271308b5ed57d355e5e3c62571ee6a2b1fd15cb816b99979add614e4a07222f5"
     },
     {
       "path": "frontend/src/app/admin/content/exams/[id]/ExamProfilePageClient.tsx",
@@ -15683,8 +15900,8 @@
       "path": "frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 34777,
-      "sha256": "9c3fae619d948a09e576e1311259e08d1649e5e132352f6b336762aa49d7acbb"
+      "sizeBytes": 35329,
+      "sha256": "a3a12d246d0f638cbc9fc9d1b4edca96a19eefefe665bfa057eb1e91b99cb84c"
     },
     {
       "path": "frontend/src/app/admin/live-support/ai/AdminAISupportPageClient.tsx",
@@ -16012,8 +16229,8 @@
       "path": "frontend/src/app/admin/settings/AdminSettingsPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 97515,
-      "sha256": "3ec6a54239fd3d324d8225948ac3066e15d65ef303dde01f2b6297bba4426f9a"
+      "sizeBytes": 97864,
+      "sha256": "c4bfbd59cd73058e61ed359c0659b1e2f79c439710e387d95ceea8af7bf30bca"
     },
     {
       "path": "frontend/src/app/admin/settings/page.tsx",
@@ -16880,8 +17097,8 @@
       "path": "frontend/src/app/student/packages/[packageId]/PackageProfilePageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 24685,
-      "sha256": "2a28502b9bbcc32feae0d51b1bd82b049a9657936d268c0af1a7e87c47fcdad7"
+      "sizeBytes": 25314,
+      "sha256": "2978738bfacf840b61ed7309d1eb01c46023a4e4b0ecbede0458b041a2ececdf"
     },
     {
       "path": "frontend/src/app/student/packages/[packageId]/lessons/[lessonId]/LessonDetailPageClient.tsx",
@@ -17195,8 +17412,8 @@
       "path": "frontend/src/app/teacher/packages/TeacherContentPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 26654,
-      "sha256": "328a4f36e3241a66a457e0f1186e4d82c9b662f20872fbf8535b14b7fe417ca5"
+      "sizeBytes": 27032,
+      "sha256": "4c01dfddca94d863a5c1516ece6dfd682efb459275bdf1e894604f10667c2362"
     },
     {
       "path": "frontend/src/app/teacher/packages/exams/[id]/add-question/page.tsx",
@@ -17465,6 +17682,13 @@
       "sha256": "e0f5bfa7e36caef37d1c86c45e26ea0dd2fb4f612d423d565aec2f50554dce7f"
     },
     {
+      "path": "frontend/src/components/admin/AiOutputLanguageField.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 3431,
+      "sha256": "4f05f137e565b701ee5780f712b5ef7a925fb5c09a9cece162f5b6b7be50a53e"
+    },
+    {
       "path": "frontend/src/components/admin/AttachedExamViewer.tsx",
       "status": "tracked",
       "classification": "source",
@@ -17587,15 +17811,15 @@
       "path": "frontend/src/components/admin/ImageZoomModal.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3236,
-      "sha256": "fcc69c9cedb011de1351969e4a69c3475ee3f7a7f9cb32bc62e23f4206ceec4c"
+      "sizeBytes": 3287,
+      "sha256": "e4c476cd76c47f4018da5b11553a7cde9b8f9051ddf62ed1e0970ee2e54cb87f"
     },
     {
       "path": "frontend/src/components/admin/LessonAIAnalysisTab.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 26687,
-      "sha256": "baec5d0eddcfdd6bf9da356ecf0974ceb4311935e448bbfaa06d5bb4b2d9c58c"
+      "sizeBytes": 26731,
+      "sha256": "e8b2a3f562e535174dc82a011f0611b947c5c45380680de254c276c393d4fddf"
     },
     {
       "path": "frontend/src/components/admin/LessonCommentsModerationTab.tsx",
@@ -17629,8 +17853,8 @@
       "path": "frontend/src/components/admin/LessonVideoList.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 41699,
-      "sha256": "5cd7cf5e60258add1e30c544243387ccd44fbd2872b4eaf7be610beafeabed10"
+      "sizeBytes": 41743,
+      "sha256": "d997ee479e2a0cec1d2bedcbdb4e2b10fcc7273a3b1333b7ed63f20a9fcb2c95"
     },
     {
       "path": "frontend/src/components/admin/LinkExamForm.tsx",
@@ -17657,8 +17881,8 @@
       "path": "frontend/src/components/admin/PackageDetailsForm.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6801,
-      "sha256": "8739b64b97485888eaad5797b898a1e0aebe39a45bf1a21c56a358dfaa741d83"
+      "sizeBytes": 9255,
+      "sha256": "b8c35ad17803bb5c20917351bbe966cfbdeec8cc163b771eb11697004e145234"
     },
     {
       "path": "frontend/src/components/admin/PackageDirectContentPanel.tsx",
@@ -17776,8 +18000,8 @@
       "path": "frontend/src/components/admin/index.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 2593,
-      "sha256": "903711aa8ced72ea3531329b77def6bf94b6c575177b0f4fcb6a0ea42ceea769"
+      "sizeBytes": 2634,
+      "sha256": "2358e5ac13449e53493590c049b2e5b8f5973f4ca2a5bc7764cc8d5b48253c6b"
     },
     {
       "path": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
@@ -18291,11 +18515,46 @@
       "sha256": "5ede0a5594f0ed471c1f6392ceadf2977896e3a95ad7678a8bac0be8008ef4b5"
     },
     {
+      "path": "frontend/src/components/live-support/admin/WhatsAppCampaignAudienceBuilder.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 23041,
+      "sha256": "49ec5fd0d9be3efa01a1d5a34658bf4cbfb1879e0a1bc36b80eec947442dd38f"
+    },
+    {
+      "path": "frontend/src/components/live-support/admin/WhatsAppCampaignHistory.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 15278,
+      "sha256": "86d44be351d12c4014938c167aa41b9cfe02f8529aacf36d2215e59ad0840f02"
+    },
+    {
+      "path": "frontend/src/components/live-support/admin/WhatsAppCampaignStudio.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 43102,
+      "sha256": "796b83a95812c2ca1c8243657b093372e274295ce7faf66e09d9119c296a6121"
+    },
+    {
+      "path": "frontend/src/components/live-support/admin/WhatsAppCampaignTemplateEditor.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 20998,
+      "sha256": "a0fb621b939e9773a7a34d4a40af7f38e02a142619a949e1c6a20da6c02b5b5c"
+    },
+    {
+      "path": "frontend/src/components/live-support/admin/WhatsAppContactPreferencesPanel.tsx",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 29995,
+      "sha256": "f2a46c5b9bc299ea915bb644192d18b31e3cbe7e85b9c9587f932da5d98973c4"
+    },
+    {
       "path": "frontend/src/components/live-support/admin/WhatsAppOperationsPanel.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6793,
-      "sha256": "133e511de2eaae0c10b3283cb6907952993234e7ca49292dadc97890a8220487"
+      "sizeBytes": 8483,
+      "sha256": "2caa199bf70d7ef4b2476e2025d249b551c1b48993810b086668a037be0b0cee"
     },
     {
       "path": "frontend/src/components/live-support/ai-admin/AIActivityEvidence.tsx",
@@ -18504,8 +18763,8 @@
       "path": "frontend/src/components/live-support/staff/StaffVoiceRecorder.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 8011,
-      "sha256": "3b183bc0c0b7fa13aed015aa326f79991d3aeb14ff2c2ea25da7f46452d981bc"
+      "sizeBytes": 8041,
+      "sha256": "98e528ee5f28a55e4a32dac94516bf2618154e996fc8255c681899500e3f36fd"
     },
     {
       "path": "frontend/src/components/live-support/staff/WhatsAppTemplatePicker.tsx",
@@ -18518,8 +18777,8 @@
       "path": "frontend/src/components/live-support/staff/whatsapp-template.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1128,
-      "sha256": "da93c753811c2e75b28379ba1dd201b0e01f970248e840c5560df52b0e2c0d5a"
+      "sizeBytes": 1163,
+      "sha256": "3bdc120189c4ebf2a1532925bb68250d53c99aec253e88c0dc488d3b650b701d"
     },
     {
       "path": "frontend/src/components/live-support/staff/whatsapp-template.ts",
@@ -18777,8 +19036,8 @@
       "path": "frontend/src/components/student-pages/StudentContentCatalog.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 55595,
-      "sha256": "32e6573902160e7267e3dfff9a8315960fc7fa0e3fbad3da27ae2b6fe58dcbf9"
+      "sizeBytes": 56262,
+      "sha256": "86e6093b444611f387f7948b004f2ff6304200494f229c4e7cf7ba189ed2480d"
     },
     {
       "path": "frontend/src/components/student/CommunityFeed.tsx",
@@ -19092,15 +19351,15 @@
       "path": "frontend/src/components/video/ChapterList.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 5330,
-      "sha256": "92fe6965cfad08c450034457095e64088b7f772350c867914ba2351795c6ab4a"
+      "sizeBytes": 5393,
+      "sha256": "5716c6441b49846485f9220c3f40be8196b5f753886a1ed8a33eaac2085850aa"
     },
     {
       "path": "frontend/src/components/video/LessonMindmapDisplay.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6262,
-      "sha256": "5d51b45ed2eb77e710cefa8f6be56627df72540a665db8390107657808f62526"
+      "sizeBytes": 6284,
+      "sha256": "bd1920660e16addad9d311c7e05c4e15267eb2aedbc9a2bb383d95b54a29bd73"
     },
     {
       "path": "frontend/src/components/video/PlayerControls.tsx",
@@ -19120,8 +19379,8 @@
       "path": "frontend/src/components/video/SecureVideoPlayer.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 59876,
-      "sha256": "960eeef7703d40993fa1f3d8eb72ae9c8b2744448388a222b0e5223095635576"
+      "sizeBytes": 59859,
+      "sha256": "5aee1e586da77a134a253a0dea09165adb827474f5203110122adcb7389f1a62"
     },
     {
       "path": "frontend/src/components/video/WatchStatusBar.tsx",
@@ -19169,8 +19428,8 @@
       "path": "frontend/src/features/admin-ai-agent/AdminAiActionProposalCard.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7030,
-      "sha256": "72fecc82285c52acb91211d50c065ebea74d63fd7d8ea68ec4cc43674d1c98bf"
+      "sizeBytes": 7075,
+      "sha256": "d03d7f91fd33e7fe3f2ee36d432b4ebe95176042199f20c93d6ecd7e15cdeff1"
     },
     {
       "path": "frontend/src/features/admin-ai-agent/AdminAiAgentWorkspace.tsx",
@@ -19183,8 +19442,8 @@
       "path": "frontend/src/features/admin-ai-agent/AdminAiAuditEvidence.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 4109,
-      "sha256": "d4957873610efe57b6f4903ef20f1424c4ed1c81c358e2db1d4651e47031cd53"
+      "sizeBytes": 4154,
+      "sha256": "eb2a5bf80cfee8e3fd83ebd2ef4886c019f27a5f046c7339a199b5e850feb6b6"
     },
     {
       "path": "frontend/src/features/admin-ai-agent/AdminAiComposer.tsx",
@@ -19225,8 +19484,8 @@
       "path": "frontend/src/features/admin-ai-agent/AdminAiEvidenceDisclosure.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3022,
-      "sha256": "6eca32d0d9d560d194b0497074a3daafbd8bd2d1ea2b3b9897ef2915dcc7b9e3"
+      "sizeBytes": 3067,
+      "sha256": "b86ad2eb5a86180d2fdde9b5a49cf5da6d727d6c2c99d1dd6915d587c09fa2db"
     },
     {
       "path": "frontend/src/features/admin-ai-agent/AdminAiExecutionResult.tsx",
@@ -19239,8 +19498,8 @@
       "path": "frontend/src/features/admin-ai-agent/AdminAiMessage.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1301,
-      "sha256": "b25301128d9e66e62b3a6a1fbd2309cdcf73b41b536c222a72b4c19a46f5accb"
+      "sizeBytes": 1340,
+      "sha256": "7a72045cb1ca7d1fae67baf050be21629b0ad2786a22dbc814190afe435621d9"
     },
     {
       "path": "frontend/src/features/admin-ai-agent/AdminAiSecureInputOverlay.test.tsx",
@@ -19603,8 +19862,8 @@
       "path": "frontend/src/hooks/usePlatformEvents.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 68675,
-      "sha256": "7e6cfd761a3c0b2412ef5e5de74f26b42a4af9d9fe3893516fe55a8e8a6fb1c9"
+      "sizeBytes": 69331,
+      "sha256": "8c24f1f51b11cb9473aff6a0e7802d21ac696ca57ae0605105cfa8bbd3aa8ff4"
     },
     {
       "path": "frontend/src/hooks/useRootOverscrollBackground.ts",
@@ -19733,6 +19992,20 @@
       "sha256": "24baf7d73717656e7cff7ff458b967f824c18c1f6dcfc640fbbaf623f0fde2c5"
     },
     {
+      "path": "frontend/src/lib/ai-output-language.test.mts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 638,
+      "sha256": "073bd2f6e62de9a3862c49fab57ed9b90b6b5125c30f7a90df26707e7b8eaa06"
+    },
+    {
+      "path": "frontend/src/lib/ai-output-language.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 812,
+      "sha256": "5e14ee92dab9c20d79398dd98f6cd36076c87fd8c65735b5a5b51ee511ff97ff"
+    },
+    {
       "path": "frontend/src/lib/api-errors.test.mts",
       "status": "tracked",
       "classification": "source",
@@ -19792,15 +20065,15 @@
       "path": "frontend/src/lib/content-access.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1273,
-      "sha256": "ec72db9021b6838cb273e7a7bfaee243ea37a8014995e9205f62ce3b8163085c"
+      "sizeBytes": 2081,
+      "sha256": "5973a871d1e4ca9651a075e84a24b81c7bd69bdb30b3b2446ba939f0dd590a7e"
     },
     {
       "path": "frontend/src/lib/content-access.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1049,
-      "sha256": "e5158a9b3530b5d4bcbd7dcd35c0c8c8dcfef010e788838a3447c21a14f95ff0"
+      "sizeBytes": 1611,
+      "sha256": "1a8f5b03b27a2b4a410e54f9f61b0f15496a31bfa239769c4c1a47abaa199068"
     },
     {
       "path": "frontend/src/lib/conversation-drafts.ts",
@@ -19932,15 +20205,15 @@
       "path": "frontend/src/lib/recharge-match-diagnosis.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3432,
-      "sha256": "be4921a5cb3e91ff63e145a7f14e9a98efd45f783e2d813e0bf9457cba00d4ad"
+      "sizeBytes": 3948,
+      "sha256": "161f20468220d83e2221b0c2e06ad1d2b13cb6e8e55385530f78d4479a384eb6"
     },
     {
       "path": "frontend/src/lib/recharge-match-diagnosis.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6304,
-      "sha256": "769ad9d0f6ae0c1c6bae08929ed29eb56417d7354fd5a4f09c753eb69abf4bd3"
+      "sizeBytes": 6498,
+      "sha256": "835fca1479c2ed55ccc5f6fe84b6cc2eb1f0b5557e6adcee664bf1866868b38d"
     },
     {
       "path": "frontend/src/lib/safe-return-url.ts",
@@ -20004,6 +20277,20 @@
       "classification": "source",
       "sizeBytes": 535,
       "sha256": "162454f3635277cc00432d87db0d9c753a7a1d5555b51ef717748ebba28f2b86"
+    },
+    {
+      "path": "frontend/src/lib/whatsapp-campaign.test.mts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 7183,
+      "sha256": "6e61ac0c14c4c33a5c2a21ae1d04768a4f31df97665634073414f05ea61bea62"
+    },
+    {
+      "path": "frontend/src/lib/whatsapp-campaign.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 13027,
+      "sha256": "2764d1ad6a4bc0087e653a5c32d5fc5351fdba75dc8c973eeb3a9198255a50d5"
     },
     {
       "path": "frontend/src/packages/admin/index.ts",
@@ -20121,8 +20408,8 @@
       "path": "frontend/src/services/admin-service.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 59390,
-      "sha256": "3e8d1bd8550aaa120f43fb9515f8c29f46448b9e34a6c9967a0d66d7973cc214"
+      "sizeBytes": 60517,
+      "sha256": "17681d769b61f37d874c40a18dc8a2121e6ca26e66437f8d4627aa10a02376be"
     },
     {
       "path": "frontend/src/services/advanced-report-service.ts",
@@ -20184,8 +20471,8 @@
       "path": "frontend/src/services/content-service.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 11577,
-      "sha256": "21982a4e80b8223f5057fedf36b23b6a9c3a0304d521c5a60a39855ed4fa5582"
+      "sizeBytes": 11923,
+      "sha256": "6387b73b9da05bf8438a162d6fcc6998e7e9c7d0d32ac40d035aa0c1dd63e58d"
     },
     {
       "path": "frontend/src/services/crm-service.ts",
@@ -20289,8 +20576,8 @@
       "path": "frontend/src/services/live-support-service.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 27443,
-      "sha256": "66f5065f37ba2ac4cd2b84fa46b6dae82be4e8ae88be9193b823ce09c8fb4082"
+      "sizeBytes": 38545,
+      "sha256": "c8fe186ccbefc8841f063eb491f0caaf0ec7cecc08326b59406678678f328653"
     },
     {
       "path": "frontend/src/services/media-service.ts",
@@ -21591,8 +21878,15 @@
       "path": "mobile/payment-listener-android/app/build.gradle",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 2481,
-      "sha256": "15b2b3858158952344eb4e16070bdda6fd3da024dc00ec373770b4bb73972d50"
+      "sizeBytes": 2483,
+      "sha256": "13c3e107b74c61675fac0e83c0dcab59545f9071c213f19739fd4b0fc280f0df"
+    },
+    {
+      "path": "mobile/payment-listener-android/app/src/androidTest/java/com/nadergorge/paymentlistener/data/preference/PreferenceManagerReconciliationTest.kt",
+      "status": "tracked",
+      "classification": "other",
+      "sizeBytes": 3938,
+      "sha256": "66cef19f1cbe1b0a3413f73e63bc7f53d3555264be1662459d0db500bdcc64b1"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/AndroidManifest.xml",
@@ -21605,8 +21899,8 @@
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/MainActivity.kt",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 7934,
-      "sha256": "b935df3c13f02fdf483473f393fb6b8bf5bfea72fadae17b190962bd9686af83"
+      "sizeBytes": 8033,
+      "sha256": "189112d8a5bf51c837a0a03e47b15d271212ab1ccac4eb122f675f014aabf2be"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/data/api/ApiClient.kt",
@@ -21626,15 +21920,15 @@
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/data/preference/PreferenceManager.kt",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 3258,
-      "sha256": "74e5126407fdf7a1403acf0001cf9ddc40cb74d7d394894d45be8455e441586a"
+      "sizeBytes": 8090,
+      "sha256": "94ff6b37053c1ec4a8595673ca9885074c7739aac51a78ff90598817c321bbb2"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/BackgroundSyncScheduler.kt",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 1709,
-      "sha256": "a591dd6533b4a3fe5ac856cda3e598b4b94e1f504020c0e3366547759151d559"
+      "sizeBytes": 3051,
+      "sha256": "dff052d421b5497b69a4d3492edcc15212a7325d109d0f9883b6c4ae7cb4a336"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/BootReceiver.kt",
@@ -21651,18 +21945,39 @@
       "sha256": "7e93e50108e609720eae7c708827ea5b8cbe1382cc99076708fc6a5ed3e6b7c6"
     },
     {
+      "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/SmsInboxReconciliationPolicy.kt",
+      "status": "tracked",
+      "classification": "other",
+      "sizeBytes": 2168,
+      "sha256": "35cfc12f9bfb22297f6ededadc76c95a534d5446515ee43e3a8183992ce622de"
+    },
+    {
+      "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/SmsInboxReconciliationWorker.kt",
+      "status": "tracked",
+      "classification": "other",
+      "sizeBytes": 5456,
+      "sha256": "f8c14b04ba7b5705b33b49853d96e3ad224dfba484a94dab2c1f6c1887568ce4"
+    },
+    {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/SmsReceiver.kt",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 3005,
-      "sha256": "f062de0b606d9ed9ec4a4886e648d59a1eb4eee0c389c151398b8e69f84a3aa8"
+      "sizeBytes": 2694,
+      "sha256": "a4347e2a3db97cbd23fa7eac3050c361f8426edf95e792a17c03c8b4a7cf956c"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/SmsSyncWorker.kt",
       "status": "tracked",
       "classification": "other",
-      "sizeBytes": 2543,
-      "sha256": "eda46f2e29bc85560f29dbdce7d2335d773b7a26e6a6b7d82ec7af3c1facad8d"
+      "sizeBytes": 1471,
+      "sha256": "792ca8224640b26092ffc7372acf4d4779b2df4561beb8569dfff6c535c8a28e"
+    },
+    {
+      "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/SmsUploadGateway.kt",
+      "status": "tracked",
+      "classification": "other",
+      "sizeBytes": 1783,
+      "sha256": "80ff14f3df54ac26b5cc8ac0a5753dc3930b600fbd5506637fd0bade5d4dc51b"
     },
     {
       "path": "mobile/payment-listener-android/app/src/main/java/com/nadergorge/paymentlistener/service/StatusSyncWorker.kt",
@@ -21810,6 +22125,13 @@
       "classification": "other",
       "sizeBytes": 121,
       "sha256": "a1bacd484e6a5d6b19a8afd6c050296f55c3e069583163612715990573306d93"
+    },
+    {
+      "path": "mobile/payment-listener-android/app/src/test/java/com/nadergorge/paymentlistener/service/SmsInboxReconciliationPolicyTest.kt",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 3429,
+      "sha256": "1a14be053b86158b91b85e7e4ca9357e2b7d1043da9bee0c463f02dc9365c5c9"
     },
     {
       "path": "mobile/payment-listener-android/build.gradle",
@@ -30950,8 +31272,8 @@
       "path": "tests/admin_ai_frontend_reachable_calls.json",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 171434,
-      "sha256": "f8af664edd8700ae76f82aff4c65f01a2bb424aac87ee3714d2714be4fa12764"
+      "sizeBytes": 174526,
+      "sha256": "bd1a4f3c3b5a30b4aeb151078eb22a8de078acbc5934f22095fa305a1dd006b4"
     },
     {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
@@ -31258,22 +31580,22 @@
       "path": "worker/src/index.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 21734,
-      "sha256": "ecd5ec72c9534a0ddd6df948494f04d7834af31959b83ed21a9b3b3e3029c68f"
+      "sizeBytes": 24528,
+      "sha256": "57044fc0f4a5117a67082abfb27907aa5270509ec5f886aaaa600ef675621a82"
     },
     {
       "path": "worker/src/jobs/analyzeVideoChapters.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 9154,
-      "sha256": "9b898b92af4c50810471ecb5dab064c7fb1072a164ed8b585d28ad3c918aefea"
+      "sizeBytes": 13850,
+      "sha256": "b76ef702466fe61d12d238f8500c95d5fa1838c6e89ad1309b69c5df6230795f"
     },
     {
       "path": "worker/src/jobs/analyzeVideoChapters.youtube.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 5733,
-      "sha256": "5b2a908953993f902c7c0af2a261951ac90c9fa22b197d308b329181f0ec14fe"
+      "sizeBytes": 9749,
+      "sha256": "196a8f4cd9a613f4ee5c6ff97231c9b82e3e99876fa5193fe01620525a3d3f09"
     },
     {
       "path": "worker/src/jobs/commitment-engine.ts",
@@ -31293,15 +31615,29 @@
       "path": "worker/src/jobs/generateChapterMindmaps.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 2392,
-      "sha256": "0b8ddc9562144a5d661ca72d887ebc0617508b9449db194d584beef178171c8e"
+      "sizeBytes": 17649,
+      "sha256": "81eb63a4f7ceb89d54dd3dce4f7fc3a1b92fec77c4dd9158ec69aab390208a3b"
     },
     {
       "path": "worker/src/jobs/generateChapterMindmaps.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 12926,
-      "sha256": "a836eeced9214147fe18df3876e6aca9631f3fc608633555adf5d6fe6259a78f"
+      "sizeBytes": 18313,
+      "sha256": "09643522dd8f2ed8486de491751ec681e23c753f458a1cf5fd822b15fd5fff1d"
+    },
+    {
+      "path": "worker/src/jobs/generationCancellation.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 882,
+      "sha256": "30e9a062ac9c3740da9554586e62da91573609b2edb14c1235be4df0fdfd07f4"
+    },
+    {
+      "path": "worker/src/jobs/generationCancellation.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 751,
+      "sha256": "bb7bb1a2cf87923da7fe7617d9d961b21521ee0741fcbadd210dc1c0b8837f0d"
     },
     {
       "path": "worker/src/jobs/notification-sender.test.ts",
@@ -31353,25 +31689,46 @@
       "sha256": "f030d2ceca02dffa1e7964b295ed2adbf74963de47acecc0d13caeb839a5e966"
     },
     {
+      "path": "worker/src/queues/jobAlias.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 5848,
+      "sha256": "c01118afad3716cd3bf5ada4f31dfabd54fd6709031cd2b0beb9c9a898176481"
+    },
+    {
+      "path": "worker/src/queues/jobAlias.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 3941,
+      "sha256": "284cf401c29be57042cd318eaf9b00e9022c8d3047dfbb55f3c7648a6315484e"
+    },
+    {
       "path": "worker/src/queues/jobIngestion.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6178,
-      "sha256": "f51dbe950e541ae7e8f60edd1a1cbeccdb953f645941376738c4b1e22e052190"
+      "sizeBytes": 9628,
+      "sha256": "75e9614f88b3ad8ba2ecfae06c9151ab8fc040d5a6943179425f62b784ce17fd"
     },
     {
       "path": "worker/src/queues/jobIngestion.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 5139,
-      "sha256": "97976bf25c49829aef8a27f311fe10d1ef559dbb48dbf63bd6a28736bd15c68d"
+      "sizeBytes": 6700,
+      "sha256": "8f31d853e56910140c1202cec6f1541022dc50aeeadee08827c56abb9f8f106a"
+    },
+    {
+      "path": "worker/src/queues/logicalJobResolver.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 1490,
+      "sha256": "106d306b34f6482de654d3d767293a48595f2fca060c66f3259b74ea64c1542b"
     },
     {
       "path": "worker/src/queues/streamRecovery.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1214,
-      "sha256": "855a5e2c67474cdfa3d0909151c7f2d5228bedd9278d419a9fa42393f44d4a07"
+      "sizeBytes": 1274,
+      "sha256": "0a81a8c2ef09155234ea06fdece9f9b8ccad29c2f814cae92d31cc8d9eada1b9"
     },
     {
       "path": "worker/src/queues/streamRecovery.ts",
@@ -31472,6 +31829,20 @@
       "sha256": "2d75c39ca0cf80f635acd8c8df01cec05f539f0ee74d5842ee14dfe051205b33"
     },
     {
+      "path": "worker/src/server/generationRetryPolicy.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 606,
+      "sha256": "fb35df891ec2d07004f96e200489eef53373285a1e71173fbf751ca89a71887b"
+    },
+    {
+      "path": "worker/src/server/generationRetryPolicy.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 407,
+      "sha256": "6deb16e76e8d35b4f29d5a843523cd02176ef6ab096c544835d0fe8f474e03d0"
+    },
+    {
       "path": "worker/src/server/jobStatus.test.ts",
       "status": "tracked",
       "classification": "source",
@@ -31570,6 +31941,20 @@
       "sha256": "c871fa21bb7d6d226f3d870b550dcc4b3dfc3a255334d1ac26de0021682f8953"
     },
     {
+      "path": "worker/src/services/aiGenerationContract.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 1517,
+      "sha256": "728fccfdd0235bd6a7ba9438213aaea8e018882e634d7ec11d6028a7cb7405de"
+    },
+    {
+      "path": "worker/src/services/aiGenerationContract.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 2300,
+      "sha256": "f1b0b419ba572531b690014d858b7e2f33d2f26d2254c77466d574ceb3c0ba52"
+    },
+    {
       "path": "worker/src/services/aiProvider.test.ts",
       "status": "tracked",
       "classification": "source",
@@ -31587,15 +31972,15 @@
       "path": "worker/src/services/aiVideoCheckpoint.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1939,
-      "sha256": "ffdcbb08df479c00d42945bbab8476b3ed5f30d2c5e87917c5bc3982702d761b"
+      "sizeBytes": 3958,
+      "sha256": "1be7f608579364a4cb6593fd577b02d8dbcba503e552fc3984daa28170ceb8aa"
     },
     {
       "path": "worker/src/services/aiVideoCheckpoint.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 2750,
-      "sha256": "00da2290f72bddddab6b364d5a727ab7aca8d7b254096aba7b89bad8b99cdbc9"
+      "sizeBytes": 5247,
+      "sha256": "cfdf1124c020cc906b8b50266ba62a5eaea6e6d4dbcaeee44a59697789d65472"
     },
     {
       "path": "worker/src/services/apns.ts",
@@ -31608,15 +31993,29 @@
       "path": "worker/src/services/geminiService.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 10076,
-      "sha256": "f7bcd23eee72125236677240d36812a9e75e83fd356fc38851ae307efaa1d8ea"
+      "sizeBytes": 12507,
+      "sha256": "87232486b79c9f700c4d2dbfc3da2eed58830c7fd8a0bd919392ae75a48b6d35"
     },
     {
       "path": "worker/src/services/geminiService.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 29713,
-      "sha256": "5511d4919bcbce5776070c10c5ab60aee0ed45aa9f871346c7fe59706c4955d0"
+      "sizeBytes": 37851,
+      "sha256": "0d11ffaf9e0eadb83fc87a504633e45fc81bcbad112fef0f9a9189abeae52c3a"
+    },
+    {
+      "path": "worker/src/services/generationArtifactCleanup.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 7753,
+      "sha256": "55e72ba597b98fc51eebf9dd5620c842dcb190d21f02492bd19fe14deed5887f"
+    },
+    {
+      "path": "worker/src/services/generationArtifactCleanup.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 6305,
+      "sha256": "84d792b00f2530330b4e0a54e5bbdd37839829a25a382d0e805d91a2ef463454"
     },
     {
       "path": "worker/src/services/liveSupportAgent.test.ts",
@@ -31675,32 +32074,46 @@
       "sha256": "a8107370372a3ca7eb0b975f91eb93cc0ec891e84c834e958ba2363c7820c7ae"
     },
     {
+      "path": "worker/src/services/mindmapFailureReporter.test.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 2559,
+      "sha256": "1ffe7381c690e480cc3a7b57b93c911aafcf892371a0929e746af5973ee34fbc"
+    },
+    {
+      "path": "worker/src/services/mindmapFailureReporter.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 2802,
+      "sha256": "415820cdef09335129a484e288a018176afe6a69aebe028b71c0d28d840568db"
+    },
+    {
       "path": "worker/src/services/videoAnalysisFailureReporter.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1995,
-      "sha256": "72d675a6e25384c0ff378f5bff75d543119e654a98f6230789b27288423beb25"
+      "sizeBytes": 3184,
+      "sha256": "595354ec9c7b5b9071610fa03f73772e2af901c2b0a100b69bc2d48282313dcb"
     },
     {
       "path": "worker/src/services/videoAnalysisFailureReporter.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 2450,
-      "sha256": "e539fdc17099107fd723efd437ebd18af96fd61e7c234e200cd28fd18edb0745"
+      "sizeBytes": 3028,
+      "sha256": "a20b36a4a0b9b6ee88f92bf055bea3bdff163eb2ea33068fb80239c207d84b9d"
     },
     {
       "path": "worker/src/services/workerFetch.test.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1265,
-      "sha256": "f5905c7b55d9e980063fefd0ecfac684dfc63bf19f54bf2a8795af3201dc37b9"
+      "sizeBytes": 3011,
+      "sha256": "ddf18e2ebda8ff6835e22301aded382a8cc8e19747cf182e2b5c58455860343e"
     },
     {
       "path": "worker/src/services/workerFetch.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 3477,
-      "sha256": "87fe4651b641b6f948f3b63dc4b81ad897492a922b78c3564b418154e92fc859"
+      "sizeBytes": 4940,
+      "sha256": "b9c3c77feeaccbae8d885205d5b51ef3e160ae3675bf5a1743312557e0ac0248"
     },
     {
       "path": "worker/src/utils/audioExtractor.ts",
