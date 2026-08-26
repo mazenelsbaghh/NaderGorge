@@ -2,12 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  availableWhatsAppCampaignVariableSources,
   createEmptyWhatsAppAudienceFilters,
   inspectCampaignTemplate,
   isWhatsAppCampaignPreviewCurrent,
   maskWhatsAppDestination,
   validateWhatsAppAudienceFilters,
   validateWhatsAppVariableMappings,
+  WHATSAPP_CAMPAIGN_VARIABLE_SOURCES,
+  whatsAppCampaignVariableSourceLabel,
 } from './whatsapp-campaign.ts';
 
 const approvedTextTemplate = {
@@ -197,6 +200,70 @@ test('fixed variables require a non-empty audited value', () => {
   assert.match(validateWhatsAppVariableMappings(requirements, [
     { componentType: 'HEADER', componentIndex: 0, buttonIndex: 0, position: 1, source: 'Literal', literalValue: 'ولي الأمر' },
   ]).join(' '), /لا يطابق/);
+});
+
+test('utility templates offer parent tracking code with a generic preview label', () => {
+  const requirements = inspectCampaignTemplate({
+    ...approvedTextTemplate,
+    components: [{ type: 'BODY', text: 'رقم متابعة الطالب {{1}}' }],
+  }).parameters;
+  const mapping = {
+    componentType: 'BODY' as const,
+    componentIndex: 0,
+    position: 1,
+    source: 'ParentTrackingCode' as const,
+  };
+
+  assert.deepEqual(validateWhatsAppVariableMappings(requirements, [mapping], undefined, 'UTILITY'), []);
+  assert.deepEqual(
+    WHATSAPP_CAMPAIGN_VARIABLE_SOURCES.find((source) => source.value === mapping.source),
+    { value: 'ParentTrackingCode', label: 'رقم متابعة الطالب' },
+  );
+  assert.equal(whatsAppCampaignVariableSourceLabel(mapping.source), 'رقم متابعة الطالب');
+  assert.equal(
+    availableWhatsAppCampaignVariableSources('UTILITY', 'TEXT').some((source) => source.value === mapping.source),
+    true,
+  );
+});
+
+test('parent tracking code rejects literal and reference configuration', () => {
+  const requirements = inspectCampaignTemplate({
+    ...approvedTextTemplate,
+    components: [{ type: 'BODY', text: 'رقم متابعة الطالب {{1}}' }],
+  }).parameters;
+  const mapping = {
+    componentType: 'BODY' as const,
+    componentIndex: 0,
+    position: 1,
+    source: 'ParentTrackingCode' as const,
+  };
+
+  assert.match(validateWhatsAppVariableMappings(requirements, [
+    { ...mapping, literalValue: 'لا يُسمح', referenceId: 'student-1' },
+  ], undefined, 'UTILITY')[0], /لا يقبل/);
+});
+
+test('parent tracking code is unavailable to marketing campaign templates', () => {
+  const requirements = inspectCampaignTemplate({
+    ...approvedTextTemplate,
+    category: 'MARKETING',
+    components: [{ type: 'BODY', text: 'رقم متابعة الطالب {{1}}' }],
+  }).parameters;
+  const mapping = {
+    componentType: 'BODY' as const,
+    componentIndex: 0,
+    position: 1,
+    source: 'ParentTrackingCode' as const,
+  };
+
+  assert.equal(
+    availableWhatsAppCampaignVariableSources('MARKETING', 'TEXT').some((source) => source.value === mapping.source),
+    false,
+  );
+  assert.match(
+    validateWhatsAppVariableMappings(requirements, [mapping], undefined, 'MARKETING')[0],
+    /UTILITY/,
+  );
 });
 
 test('purchase date mapping stays bound to one paid package and complete range', () => {

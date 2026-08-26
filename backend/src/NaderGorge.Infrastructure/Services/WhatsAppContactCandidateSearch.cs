@@ -32,7 +32,7 @@ public sealed partial class WhatsAppCampaignService
                 user.StudentProfile.ParentPhone, user.StudentProfile.SecondaryParentPhone,
                 user.StudentProfile.MotherPhone, user.StudentProfile.EducationStage,
                 user.StudentProfile.GradeLevel, user.StudentProfile.StudyTrack,
-                user.StudentProfile.Governorate, user.StudentProfile.SchoolName))
+                user.StudentProfile.Governorate, user.StudentProfile.SchoolName, null))
             .ToListAsync(ct);
         if (students.Count > 5_000) throw Invalid("نتائج البحث كثيرة؛ اكتب اسمًا أو كود طالب أدق.");
         var contacts = students.SelectMany(student => ContactRoleWhitelist.Select(role => new

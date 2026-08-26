@@ -124,7 +124,7 @@ export function WhatsAppCampaignStudio({
   const selectedTemplate = availableTemplates.find((template) => template.id === selectedTemplateId);
   const templateSupport = selectedTemplate ? inspectCampaignTemplate(selectedTemplate) : undefined;
   const mappingErrors = templateSupport?.supported
-    ? validateWhatsAppVariableMappings(templateSupport.parameters, mappings, filters)
+    ? validateWhatsAppVariableMappings(templateSupport.parameters, mappings, filters, selectedTemplate?.category)
     : ['اختر قالبًا نصيًا معتمدًا.'];
   const audienceErrors = validateWhatsAppAudienceFilters(filters);
   const templateStepValid = Boolean(selectedTemplate && templateSupport?.supported && mappingErrors.length === 0);

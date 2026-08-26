@@ -5,10 +5,12 @@ import { useMemo, useState } from 'react';
 
 import { formatCairoTimestamp } from '@/lib/cairo-time';
 import {
+  availableWhatsAppCampaignVariableSources,
   inspectCampaignTemplate,
   mappingMatchesRequirement,
   requirementLabel,
   validateWhatsAppVariableMappings,
+  whatsAppCampaignVariableSourceLabel,
   type WhatsAppTemplateParameterRequirement,
 } from '@/lib/whatsapp-campaign';
 import type {
@@ -33,26 +35,6 @@ interface WhatsAppCampaignTemplateEditorProps {
   onSync: () => void;
 }
 
-const variableSources: ReadonlyArray<{
-  value: WhatsAppCampaignVariableSource;
-  label: string;
-  referenceFacet?: 'teachers' | 'subjects' | 'packages' | 'lessons';
-}> = [
-  { value: 'StudentFirstName', label: 'اسم الطالب الأول' },
-  { value: 'StudentFullName', label: 'اسم الطالب كاملًا' },
-  { value: 'EducationStage', label: 'المرحلة التعليمية' },
-  { value: 'GradeLevel', label: 'الصف الدراسي' },
-  { value: 'StudyTrack', label: 'المسار الدراسي' },
-  { value: 'Governorate', label: 'المحافظة' },
-  { value: 'SchoolName', label: 'المدرسة' },
-  { value: 'TeacherName', label: 'اسم المدرس', referenceFacet: 'teachers' },
-  { value: 'SubjectName', label: 'اسم المادة', referenceFacet: 'subjects' },
-  { value: 'PackageName', label: 'اسم الباقة', referenceFacet: 'packages' },
-  { value: 'LessonName', label: 'اسم الحصة', referenceFacet: 'lessons' },
-  { value: 'PurchaseDate', label: 'تاريخ الشراء' },
-  { value: 'Literal', label: 'نص ثابت' },
-];
-
 export function WhatsAppCampaignTemplateEditor({
   templates,
   facets,
@@ -70,7 +52,7 @@ export function WhatsAppCampaignTemplateEditor({
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const selectedSupport = selectedTemplate ? inspectCampaignTemplate(selectedTemplate) : undefined;
   const mappingErrors = selectedSupport?.supported
-    ? validateWhatsAppVariableMappings(selectedSupport.parameters, mappings, audienceFilters)
+    ? validateWhatsAppVariableMappings(selectedSupport.parameters, mappings, audienceFilters, selectedTemplate?.category)
     : [];
   const templateSummary = useMemo(() => summarizeTemplates(templates), [templates]);
 
@@ -219,11 +201,12 @@ export function WhatsAppCampaignTemplateEditor({
               <div className="space-y-3">
                 {selectedSupport.parameters.map((parameter) => {
                   const mapping = mappings.find((candidate) => mappingMatchesRequirement(candidate, parameter));
-                  const sourceDefinition = variableSources.find((source) => source.value === mapping?.source);
+                  const availableSources = availableWhatsAppCampaignVariableSources(
+                    selectedTemplate.category,
+                    parameter.parameterType,
+                  );
+                  const sourceDefinition = availableSources.find((source) => source.value === mapping?.source);
                   const referenceOptions = sourceDefinition?.referenceFacet ? facets[sourceDefinition.referenceFacet] : [];
-                  const availableSources = parameter.parameterType === 'URL_SUFFIX'
-                    ? variableSources.filter((source) => source.value === 'Literal')
-                    : variableSources;
                   const selectedSource = availableSources.some((source) => source.value === mapping?.source)
                     ? mapping?.source
                     : '';
@@ -448,7 +431,7 @@ function renderComponentText({
     );
     if (!mapping) return `{{${position}}}`;
     if (mapping.source === 'Literal') return mapping.literalValue?.trim() || `{{${position}}}`;
-    return `‹${variableSources.find((source) => source.value === mapping.source)?.label ?? 'قيمة الطالب'}›`;
+    return `‹${whatsAppCampaignVariableSourceLabel(mapping.source)}›`;
   });
 }
 

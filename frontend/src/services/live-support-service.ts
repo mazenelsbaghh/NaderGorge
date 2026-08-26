@@ -101,6 +101,7 @@ export type WhatsAppCampaignVariableSource =
   | 'Literal'
   | 'StudentFirstName'
   | 'StudentFullName'
+  | 'ParentTrackingCode'
   | 'EducationStage'
   | 'GradeLevel'
   | 'StudyTrack'

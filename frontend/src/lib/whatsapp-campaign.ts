@@ -4,6 +4,7 @@ import type {
   WhatsAppCampaignAudiencePreview,
   WhatsAppCampaignTemplateComponentType,
   WhatsAppCampaignVariableMapping,
+  WhatsAppCampaignVariableSource,
 } from '@/services/live-support-service';
 
 export interface WhatsAppTemplateParameterRequirement {
@@ -43,10 +44,46 @@ const PLACEHOLDER_PATTERN = /\{\{\s*(\d+)\s*\}\}/g;
 const ANY_PLACEHOLDER_PATTERN = /\{\{[^{}]*\}\}/g;
 const DYNAMIC_URL_SUFFIX_PATTERN = /\{\{\s*1\s*\}\}$/;
 const STUDENT_VARIABLE_SOURCES = new Set([
-  'StudentFirstName', 'StudentFullName', 'EducationStage', 'GradeLevel',
+  'StudentFirstName', 'StudentFullName', 'ParentTrackingCode', 'EducationStage', 'GradeLevel',
   'StudyTrack', 'Governorate', 'SchoolName',
 ]);
 const REFERENCE_VARIABLE_SOURCES = new Set(['TeacherName', 'SubjectName', 'PackageName', 'LessonName']);
+
+export const WHATSAPP_CAMPAIGN_VARIABLE_SOURCES: ReadonlyArray<{
+  value: WhatsAppCampaignVariableSource;
+  label: string;
+  referenceFacet?: 'teachers' | 'subjects' | 'packages' | 'lessons';
+}> = [
+  { value: 'StudentFirstName', label: 'اسم الطالب الأول' },
+  { value: 'StudentFullName', label: 'اسم الطالب كاملًا' },
+  { value: 'ParentTrackingCode', label: 'رقم متابعة الطالب' },
+  { value: 'EducationStage', label: 'المرحلة التعليمية' },
+  { value: 'GradeLevel', label: 'الصف الدراسي' },
+  { value: 'StudyTrack', label: 'المسار الدراسي' },
+  { value: 'Governorate', label: 'المحافظة' },
+  { value: 'SchoolName', label: 'المدرسة' },
+  { value: 'TeacherName', label: 'اسم المدرس', referenceFacet: 'teachers' },
+  { value: 'SubjectName', label: 'اسم المادة', referenceFacet: 'subjects' },
+  { value: 'PackageName', label: 'اسم الباقة', referenceFacet: 'packages' },
+  { value: 'LessonName', label: 'اسم الحصة', referenceFacet: 'lessons' },
+  { value: 'PurchaseDate', label: 'تاريخ الشراء' },
+  { value: 'Literal', label: 'نص ثابت' },
+];
+
+export function whatsAppCampaignVariableSourceLabel(source: string) {
+  return WHATSAPP_CAMPAIGN_VARIABLE_SOURCES.find((candidate) => candidate.value === source)?.label ?? 'قيمة الطالب';
+}
+
+export function availableWhatsAppCampaignVariableSources(
+  templateCategory: string,
+  parameterType: WhatsAppTemplateParameterRequirement['parameterType'],
+) {
+  if (parameterType === 'URL_SUFFIX') {
+    return WHATSAPP_CAMPAIGN_VARIABLE_SOURCES.filter((source) => source.value === 'Literal');
+  }
+  return WHATSAPP_CAMPAIGN_VARIABLE_SOURCES.filter((source) =>
+    source.value !== 'ParentTrackingCode' || templateCategory.toUpperCase() === 'UTILITY');
+}
 
 export function createEmptyWhatsAppAudienceFilters(): WhatsAppCampaignAudienceFilters {
   return {
@@ -284,9 +321,10 @@ export function validateWhatsAppVariableMappings(
   requirements: WhatsAppTemplateParameterRequirement[],
   mappings: WhatsAppCampaignVariableMapping[],
   filters?: WhatsAppCampaignAudienceFilters,
+  templateCategory?: string,
 ) {
   const errors = requirements.flatMap((requirement) =>
-    requirementMappingErrors(requirement, mappings, filters));
+    requirementMappingErrors(requirement, mappings, filters, templateCategory));
   if (mappings.some((mapping) => !requirements.some((requirement) => mappingMatchesRequirement(mapping, requirement)))) {
     errors.push('يوجد ربط متغير لا يطابق مكونات القالب الحالي. أعد اختيار القالب.');
   }
@@ -297,6 +335,7 @@ function requirementMappingErrors(
   requirement: WhatsAppTemplateParameterRequirement,
   mappings: WhatsAppCampaignVariableMapping[],
   filters?: WhatsAppCampaignAudienceFilters,
+  templateCategory?: string,
 ) {
   const matches = mappings.filter((mapping) => mappingMatchesRequirement(mapping, requirement));
   if (matches.length === 0) {
@@ -305,7 +344,7 @@ function requirementMappingErrors(
   if (matches.length > 1) {
     return [`يوجد أكثر من ربط للمتغير ${requirement.parameterIndex} في ${requirementLabel(requirement)}.`];
   }
-  const error = mappingValueError(requirement, matches[0], filters);
+  const error = mappingValueError(requirement, matches[0], filters, templateCategory);
   return error ? [error] : [];
 }
 
@@ -313,6 +352,7 @@ function mappingValueError(
   requirement: WhatsAppTemplateParameterRequirement,
   mapping: WhatsAppCampaignVariableMapping,
   filters?: WhatsAppCampaignAudienceFilters,
+  templateCategory?: string,
 ) {
   const label = requirementLabel(requirement);
   if (requirement.parameterType === 'URL_SUFFIX' && mapping.source !== 'Literal') {
@@ -326,6 +366,9 @@ function mappingValueError(
   }
   if (mapping.source === 'Literal' && mapping.referenceId) {
     return `النص الثابت في ${label} لا يقبل مرجع محتوى.`;
+  }
+  if (mapping.source === 'ParentTrackingCode' && templateCategory?.toUpperCase() !== 'UTILITY') {
+    return 'رقم متابعة الطالب متاح في قوالب UTILITY فقط.';
   }
   if (STUDENT_VARIABLE_SOURCES.has(mapping.source) && (mapping.referenceId || mapping.literalValue != null)) {
     return `مصدر بيانات الطالب في ${label} لا يقبل قيمة أو مرجعًا إضافيًا.`;

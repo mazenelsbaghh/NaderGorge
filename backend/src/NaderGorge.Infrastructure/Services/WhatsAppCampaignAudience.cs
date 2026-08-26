@@ -31,7 +31,8 @@ public sealed partial class WhatsAppCampaignService
         GradeLevel? GradeLevel,
         StudyTrack? StudyTrack,
         string? Governorate,
-        string? SchoolName);
+        string? SchoolName,
+        string? ParentTrackingCode);
 
     private sealed record ExpandedContact(
         AudienceStudentRow Student,
@@ -239,7 +240,9 @@ public sealed partial class WhatsAppCampaignService
         var canonicalMappings = WhatsAppCampaignTemplatePolicy.ValidateMappings(campaignTemplate, mappings);
         var variableMappings = canonicalMappings.Select(entry => entry.Mapping).ToArray();
         var normalized = NormalizeAndValidateFilters(filters);
-        ValidateVariableMappings(variableMappings, normalized);
+        ValidateVariableMappings(variableMappings, normalized, template.Category);
+        var needsParentTrackingCode = variableMappings.Any(mapping =>
+            string.Equals(mapping.Source.Trim(), "ParentTrackingCode", StringComparison.OrdinalIgnoreCase));
         var targetPackageIds = await ResolveTargetPackageIdsAsync(normalized, ct);
         if (normalized.HasTargetScope && targetPackageIds.Length == 0)
             throw Invalid("نطاق المحتوى المحدد لا يطابق أي باقة أكاديمية نشطة.");
@@ -259,7 +262,10 @@ public sealed partial class WhatsAppCampaignService
                 user.StudentProfile == null ? null : user.StudentProfile.GradeLevel,
                 user.StudentProfile == null ? null : user.StudentProfile.StudyTrack,
                 user.StudentProfile == null ? null : user.StudentProfile.Governorate,
-                user.StudentProfile == null ? null : user.StudentProfile.SchoolName))
+                user.StudentProfile == null ? null : user.StudentProfile.SchoolName,
+                needsParentTrackingCode && user.StudentProfile != null
+                    ? user.StudentProfile.ParentTrackingCode
+                    : null))
             .ToListAsync(ct);
         if (rows.Count > MaximumAudienceRows)
             throw Invalid("الجمهور واسع جدًا؛ أضف فلاتر أكاديمية أكثر تحديدًا.");
@@ -593,7 +599,8 @@ public sealed partial class WhatsAppCampaignService
 
     private static void ValidateVariableMappings(
         IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
-        NormalizedAudienceFilters filters)
+        NormalizedAudienceFilters filters,
+        string templateCategory)
     {
         foreach (var mapping in mappings)
         {
@@ -611,6 +618,12 @@ public sealed partial class WhatsAppCampaignService
                 case "STUDYTRACK":
                 case "GOVERNORATE":
                 case "SCHOOLNAME":
+                    if (mapping.ReferenceId.HasValue || mapping.LiteralValue is not null)
+                        throw Invalid("مصدر متغير الطالب لا يقبل قيمة أو مرجعًا إضافيًا.");
+                    break;
+                case "PARENTTRACKINGCODE":
+                    if (!string.Equals(templateCategory, "UTILITY", StringComparison.OrdinalIgnoreCase))
+                        throw Invalid("رقم متابعة الطالب متاح لقوالب الخدمة فقط.");
                     if (mapping.ReferenceId.HasValue || mapping.LiteralValue is not null)
                         throw Invalid("مصدر متغير الطالب لا يقبل قيمة أو مرجعًا إضافيًا.");
                     break;
@@ -742,6 +755,7 @@ public sealed partial class WhatsAppCampaignService
                 "STUDYTRACK" => "الشعبة",
                 "GOVERNORATE" => "المحافظة",
                 "SCHOOLNAME" => "المدرسة",
+                "PARENTTRACKINGCODE" => "رقم متابعة محجوب",
                 "PURCHASEDATE" => "تاريخ الشراء",
                 _ => preview[key]
             };
@@ -770,6 +784,7 @@ public sealed partial class WhatsAppCampaignService
                 "STUDYTRACK" => student.StudyTrack?.ToString(),
                 "GOVERNORATE" => student.Governorate,
                 "SCHOOLNAME" => student.SchoolName,
+                "PARENTTRACKINGCODE" => student.ParentTrackingCode,
                 "TEACHERNAME" or "SUBJECTNAME" or "PACKAGENAME" or "LESSONNAME" =>
                     mapping.ReferenceId.HasValue && references.TryGetValue((source, mapping.ReferenceId.Value), out var reference)
                         ? reference : null,
