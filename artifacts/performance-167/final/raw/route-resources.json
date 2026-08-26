@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "evidenceType": "route-resource-measurement",
-  "generatedAt": "2026-08-26T15:15:28.938Z",
+  "generatedAt": "2026-08-26T20:47:11.217Z",
   "source": {
-    "releaseId": "git-e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "gitCommit": "e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "sourceStateSha256": "4c2aa1224f45529f653fc0531c2981d51caf5d0dd04fd1b6ddec130f893ff635",
+    "releaseId": "git-dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "gitCommit": "dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "sourceStateSha256": "f313e5372d3ba32b0cf19962e6834168bac0a36a6c685089dabb16104e1994e9",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f08fb9b0e5adcdf91f1d8abefd447cb7c997bd079020081c68498372a5f7987d"
+    "manifestSha256": "fec8521a3034063c29350a4b4fc8d69b4bf6e238f6ad1ff334269fc0d2ab9661"
   },
   "platform": {
     "operatingSystem": "darwin",
@@ -18,8 +18,8 @@
   "measurement": {
     "source": "fresh Next.js production build client reference manifests",
     "productionBuildExecuted": true,
-    "buildStartedAt": "2026-08-26T15:15:04.284Z",
-    "buildId": "yH98lZHNbnuKM8rcP4x2v",
+    "buildStartedAt": "2026-08-26T20:46:45.388Z",
+    "buildId": "kIousbqAyLFXfa3pB6A-E",
     "compression": {
       "gzipLevel": 9,
       "brotliQuality": 11,

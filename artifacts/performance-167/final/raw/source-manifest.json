@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "releaseId": "git-e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-  "gitCommit": "e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-  "sourceStateSha256": "4c2aa1224f45529f653fc0531c2981d51caf5d0dd04fd1b6ddec130f893ff635",
+  "releaseId": "git-dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+  "gitCommit": "dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+  "sourceStateSha256": "f313e5372d3ba32b0cf19962e6834168bac0a36a6c685089dabb16104e1994e9",
   "dirtySourceSnapshot": false,
   "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
   "sourcePaths": [
@@ -10881,8 +10881,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignAudience.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 51346,
-      "sha256": "371bca0a0c93f8d9b26d771ae33bd79bc6fdfad31520bc412c685587458bde2b"
+      "sizeBytes": 52430,
+      "sha256": "513b8f7cf8450d8821af6faa5a3aae9da1e3104e5d840c9cb9b6596b620a14df"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignDataProtector.cs",
@@ -10923,8 +10923,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppContactCandidateSearch.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 6309,
-      "sha256": "ecf30ea8419e72b44d4c826e0a064b9bcc574ef9ce965f890071a37d3e02195b"
+      "sizeBytes": 6315,
+      "sha256": "9f1decab9833f687af27019db59ad87bd1e28d1c5d5d15b31aeed3dc59df9a3d"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppDirectTemplatePolicy.cs",
@@ -12605,6 +12605,13 @@
       "classification": "test",
       "sizeBytes": 12813,
       "sha256": "1a476db9d9e310473f323984dba697a1c6d7f264a5d8b14305b45ceaa42a0384"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppCampaignVariableTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 6358,
+      "sha256": "9de5ad2c5342c4b6757dba95cf5e81647883fa9ea404de86cee90d8426b75454"
     },
     {
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppOutboundBackgroundServiceTests.cs",
@@ -18553,15 +18560,15 @@
       "path": "frontend/src/components/live-support/admin/WhatsAppCampaignStudio.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 43102,
-      "sha256": "796b83a95812c2ca1c8243657b093372e274295ce7faf66e09d9119c296a6121"
+      "sizeBytes": 43130,
+      "sha256": "3f17c3285dffc1ed70e399e3f3c6b6fd57740454c62487f99f967fd7b56163bb"
     },
     {
       "path": "frontend/src/components/live-support/admin/WhatsAppCampaignTemplateEditor.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 24941,
-      "sha256": "665cb6168961138d230178b324b9eec14d27568d7e046cef2421e4cd79dc339f"
+      "sizeBytes": 23910,
+      "sha256": "f86acd318d78ab8569b09b97521abdcb098c4252bc93b654bc60b7375de7dc03"
     },
     {
       "path": "frontend/src/components/live-support/admin/WhatsAppContactPreferencesPanel.tsx",
@@ -20310,15 +20317,15 @@
       "path": "frontend/src/lib/whatsapp-campaign.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 11651,
-      "sha256": "4a72d95c01a68e22591155ecd2e37a0cf4a786b5d180d3d3ce13595db1357272"
+      "sizeBytes": 14059,
+      "sha256": "633fcd5d6e70aff7e72a81f58786f154d441509eca15b0ce49c0fa9a18333ad0"
     },
     {
       "path": "frontend/src/lib/whatsapp-campaign.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 21506,
-      "sha256": "5654caf6e3ecdc4addf1c196b3b79c4782ac6799d7e7e9075b654dc449231ce4"
+      "sizeBytes": 23722,
+      "sha256": "597441cce3d97d9279d9a6a1aa014ea8bd8097b0fa0e00f7fc52b5c3f25c36b6"
     },
     {
       "path": "frontend/src/packages/admin/index.ts",
@@ -20604,8 +20611,8 @@
       "path": "frontend/src/services/live-support-service.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 39398,
-      "sha256": "7383cb3a14f5449dc9a4273a46f2a74f0df2ecf81dede3b190e971d8a4ac987f"
+      "sizeBytes": 39423,
+      "sha256": "dc960eed2c0671735045c904bc0e02195c66beed5e3b97cfe98be41c01dc5fe6"
     },
     {
       "path": "frontend/src/services/media-service.ts",

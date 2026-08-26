@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "evidenceType": "browser-performance-samples",
   "source": {
-    "releaseId": "git-e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "gitCommit": "e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "sourceStateSha256": "4c2aa1224f45529f653fc0531c2981d51caf5d0dd04fd1b6ddec130f893ff635",
+    "releaseId": "git-dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "gitCommit": "dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "sourceStateSha256": "f313e5372d3ba32b0cf19962e6834168bac0a36a6c685089dabb16104e1994e9",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f08fb9b0e5adcdf91f1d8abefd447cb7c997bd079020081c68498372a5f7987d"
+    "manifestSha256": "fec8521a3034063c29350a4b4fc8d69b4bf6e238f6ad1ff334269fc0d2ab9661"
   },
   "profile": {
     "name": "Pixel 5 / Android Chromium",
@@ -17,7 +17,7 @@
       "height": 727
     },
     "productionServer": true,
-    "buildId": "yH98lZHNbnuKM8rcP4x2v"
+    "buildId": "kIousbqAyLFXfa3pB6A-E"
   },
   "sampling": {
     "warmupCount": 3,
@@ -32,7 +32,7 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 145.73966699999983,
+          "warmNavigationMs": 137.9617500000004,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -103,7 +103,7 @@
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 141.30041600000004,
+          "warmNavigationMs": 139.24241599999914,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -174,7 +174,7 @@
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 148.25987499999974,
+          "warmNavigationMs": 132.1820000000007,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -182,22 +182,12 @@
               "count": 1
             },
             {
-              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -222,11 +212,6 @@
               "count": 1
             },
             {
-              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -240,12 +225,17 @@
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
               "category": "rsc-read",
               "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
             }
           ]
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 122.94350000000122,
+          "warmNavigationMs": 135.18624999999884,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -306,7 +296,7 @@
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 138.96766600000046,
+          "warmNavigationMs": 137.00466700000106,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -377,68 +367,7 @@
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 139.6922909999994,
-          "eligibleReads": [
-            {
-              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
-              "category": "rsc-read",
-              "count": 1
-            }
-          ]
-        },
-        {
-          "sequence": 7,
-          "warmNavigationMs": 138.47716699999728,
+          "warmNavigationMs": 132.77220800000032,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -508,8 +437,69 @@
           ]
         },
         {
+          "sequence": 7,
+          "warmNavigationMs": 128.87195799999972,
+          "eligibleReads": [
+            {
+              "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "7d3aab4feada9c23606c19ba03ae24ef4b091b0d8768891980e0a2ac1924d23d",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "8c0dfa3934e2aab6c4e64ef2b711283915c33219a8e837d15eb828c171f87ed5",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "94be3df142eb7aac7fd895be5d3ad839d72f99972167f71f9f4e8c7435d6fe74",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "bcaaf23aaac06f39e8dd564fabe1964ce960bbf295bc4902e9da578c885cad10",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "dcd2709c9a2390e5da9c7aeaeaef0e2fcb9444a2606441452dfc64bb71e47ecb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
+              "category": "rsc-read",
+              "count": 1
+            }
+          ]
+        },
+        {
           "sequence": 8,
-          "warmNavigationMs": 130.5500839999986,
+          "warmNavigationMs": 142.31508400000166,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -570,7 +560,7 @@
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 127.5895840000012,
+          "warmNavigationMs": 135.80720900000233,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -578,12 +568,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -608,6 +608,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -619,11 +624,6 @@
             },
             {
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
               "category": "rsc-read",
               "count": 1
             }
@@ -631,7 +631,7 @@
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 136.56029200000194,
+          "warmNavigationMs": 140.3832500000026,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -639,12 +639,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -669,6 +679,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -682,17 +697,12 @@
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
               "category": "rsc-read",
               "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
-              "category": "rsc-read",
-              "count": 1
             }
           ]
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 123.21245799999815,
+          "warmNavigationMs": 122.78399999999965,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -753,7 +763,7 @@
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 137.61108400000012,
+          "warmNavigationMs": 134.27220900000248,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -814,7 +824,7 @@
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 139.33079200000066,
+          "warmNavigationMs": 124.6475419999988,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -875,7 +885,7 @@
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 133.75608300000022,
+          "warmNavigationMs": 133.9905409999992,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -936,7 +946,7 @@
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 137.343458000003,
+          "warmNavigationMs": 138.9985830000005,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1007,7 +1017,7 @@
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 143.98191700000098,
+          "warmNavigationMs": 128.95208400000047,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1068,7 +1078,7 @@
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 134.63283299999966,
+          "warmNavigationMs": 142.82791599999837,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1076,12 +1086,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -1106,6 +1126,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -1119,17 +1144,12 @@
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
               "category": "rsc-read",
               "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
-              "category": "rsc-read",
-              "count": 1
             }
           ]
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 129.90112500000396,
+          "warmNavigationMs": 125.95704200000182,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1190,7 +1210,7 @@
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 142.7549579999977,
+          "warmNavigationMs": 142.35637500000303,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1198,12 +1218,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -1228,6 +1258,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -1239,11 +1274,6 @@
             },
             {
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
               "category": "rsc-read",
               "count": 1
             }
@@ -1251,7 +1281,7 @@
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 131.64687499999854,
+          "warmNavigationMs": 135.7826669999995,
           "eligibleReads": [
             {
               "identitySha256": "0297ec519c7cce7d21053a791c2407598a7ecbcb9075ce91c6a872d11730259e",
@@ -1259,12 +1289,22 @@
               "count": 1
             },
             {
-              "identitySha256": "3ab502ec73502b48b24c86c9a8e2895d3b791dd6a8866a40061bd7af32f3ad3b",
+              "identitySha256": "1bcb02d47eb8a85bd326c388256a012728c2d86fe8fb32120bd4f50d3d4d9b4b",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "2d2973aa3e34ddca11317e17ae20538bd7d230cd9b6e722519fcc600e0fc7e92",
               "category": "rsc-read",
               "count": 1
             },
             {
               "identitySha256": "584f027b52ce3697fdece25bf724c1c13a9f17b984e78c6308f81af04853befc",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
+              "identitySha256": "655050e40b2102c4b4bc8fd1b22366e00b24ded9a37409f77403e056f47f1bc2",
               "category": "rsc-read",
               "count": 1
             },
@@ -1289,6 +1329,11 @@
               "count": 1
             },
             {
+              "identitySha256": "cb5125fadba035474fa3f6910dee7e4a31fdd29ac3ccfe0dbd65428f7825b01f",
+              "category": "rsc-read",
+              "count": 1
+            },
+            {
               "identitySha256": "ce34af76373d6ac7fedee14d0975d01bc237a8611b416bb80c6170cb9180345f",
               "category": "rsc-read",
               "count": 1
@@ -1300,11 +1345,6 @@
             },
             {
               "identitySha256": "ed87eb7b49a4d3d3760a8720314d4b1279d62571943fb85525f5c76ece7445bb",
-              "category": "rsc-read",
-              "count": 1
-            },
-            {
-              "identitySha256": "fe8e0eaf81f9b72bc4b1bc18b6e403a69bead610a7244e3feab23d36d6f70e3e",
               "category": "rsc-read",
               "count": 1
             }
@@ -1317,102 +1357,102 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 54.65649999999732,
+          "warmNavigationMs": 134.50074999999924,
           "eligibleReads": []
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 131.67412499999773,
+          "warmNavigationMs": 140.3325840000034,
           "eligibleReads": []
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 133.37454100000468,
+          "warmNavigationMs": 138.45500000000175,
           "eligibleReads": []
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 135.1773749999993,
+          "warmNavigationMs": 139.74750000000495,
           "eligibleReads": []
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 133.9916250000024,
+          "warmNavigationMs": 130.11170799999672,
           "eligibleReads": []
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 139.90224999999919,
+          "warmNavigationMs": 130.8515830000033,
           "eligibleReads": []
         },
         {
           "sequence": 7,
-          "warmNavigationMs": 130.27954199999658,
+          "warmNavigationMs": 144.78762500000448,
           "eligibleReads": []
         },
         {
           "sequence": 8,
-          "warmNavigationMs": 132.06575000000157,
+          "warmNavigationMs": 131.66004199999588,
           "eligibleReads": []
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 133.3145000000004,
+          "warmNavigationMs": 138.93645800000377,
           "eligibleReads": []
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 130.04262500000186,
+          "warmNavigationMs": 136.73012500000186,
           "eligibleReads": []
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 134.15904199999932,
+          "warmNavigationMs": 136.99245800000062,
           "eligibleReads": []
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 134.33279200000106,
+          "warmNavigationMs": 144.36133300000074,
           "eligibleReads": []
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 132.25112499999523,
+          "warmNavigationMs": 134.34995799999888,
           "eligibleReads": []
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 135.00341599999956,
+          "warmNavigationMs": 55.72320799999579,
           "eligibleReads": []
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 125.39020799999707,
+          "warmNavigationMs": 127.0522920000003,
           "eligibleReads": []
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 126.80262499999662,
+          "warmNavigationMs": 132.42533399999957,
           "eligibleReads": []
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 135.48566700000083,
+          "warmNavigationMs": 128.56925000000047,
           "eligibleReads": []
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 136.75199999999313,
+          "warmNavigationMs": 125.56391599999915,
           "eligibleReads": []
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 131.82858299999498,
+          "warmNavigationMs": 127.84824999999546,
           "eligibleReads": []
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 138.68379199999617,
+          "warmNavigationMs": 120.62895800000115,
           "eligibleReads": []
         }
       ]
@@ -1422,7 +1462,7 @@
       "samples": [
         {
           "sequence": 1,
-          "warmNavigationMs": 127.56575000000885,
+          "warmNavigationMs": 123.53504200000316,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1448,7 +1488,7 @@
         },
         {
           "sequence": 2,
-          "warmNavigationMs": 145.4685419999878,
+          "warmNavigationMs": 134.6352920000063,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1474,7 +1514,7 @@
         },
         {
           "sequence": 3,
-          "warmNavigationMs": 119.38195799999812,
+          "warmNavigationMs": 120.77999999999884,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1500,7 +1540,7 @@
         },
         {
           "sequence": 4,
-          "warmNavigationMs": 128.68683299999975,
+          "warmNavigationMs": 132.216207999998,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1526,7 +1566,7 @@
         },
         {
           "sequence": 5,
-          "warmNavigationMs": 125.79920799999672,
+          "warmNavigationMs": 125.96950000000652,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1552,7 +1592,7 @@
         },
         {
           "sequence": 6,
-          "warmNavigationMs": 132.48895900000934,
+          "warmNavigationMs": 143.05495799999335,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1578,7 +1618,7 @@
         },
         {
           "sequence": 7,
-          "warmNavigationMs": 114.44795899999735,
+          "warmNavigationMs": 128.20650000000023,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1604,7 +1644,7 @@
         },
         {
           "sequence": 8,
-          "warmNavigationMs": 123.58049999999639,
+          "warmNavigationMs": 127.18099999999686,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1630,7 +1670,7 @@
         },
         {
           "sequence": 9,
-          "warmNavigationMs": 122.39445799999521,
+          "warmNavigationMs": 132.53304199999548,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1656,7 +1696,7 @@
         },
         {
           "sequence": 10,
-          "warmNavigationMs": 138.94720799999777,
+          "warmNavigationMs": 119.78833399999712,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1682,7 +1722,7 @@
         },
         {
           "sequence": 11,
-          "warmNavigationMs": 129.95079200000328,
+          "warmNavigationMs": 123.58654099999694,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1708,7 +1748,7 @@
         },
         {
           "sequence": 12,
-          "warmNavigationMs": 114.62337499999558,
+          "warmNavigationMs": 139.40512500000477,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1734,7 +1774,7 @@
         },
         {
           "sequence": 13,
-          "warmNavigationMs": 126.25754099999904,
+          "warmNavigationMs": 127.65016699999978,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1760,7 +1800,7 @@
         },
         {
           "sequence": 14,
-          "warmNavigationMs": 144.63091700000223,
+          "warmNavigationMs": 132.33925000000454,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1786,7 +1826,7 @@
         },
         {
           "sequence": 15,
-          "warmNavigationMs": 132.35333299999184,
+          "warmNavigationMs": 124.90120900000329,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1812,7 +1852,7 @@
         },
         {
           "sequence": 16,
-          "warmNavigationMs": 128.12562500000058,
+          "warmNavigationMs": 120.72195899998769,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1838,7 +1878,7 @@
         },
         {
           "sequence": 17,
-          "warmNavigationMs": 126.8339580000029,
+          "warmNavigationMs": 136.77787499999977,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1864,7 +1904,7 @@
         },
         {
           "sequence": 18,
-          "warmNavigationMs": 129.2526249999937,
+          "warmNavigationMs": 134.5017499999958,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1890,7 +1930,7 @@
         },
         {
           "sequence": 19,
-          "warmNavigationMs": 129.57991699999548,
+          "warmNavigationMs": 123.5326250000071,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",
@@ -1916,7 +1956,7 @@
         },
         {
           "sequence": 20,
-          "warmNavigationMs": 140.54091699999117,
+          "warmNavigationMs": 131.78662499999336,
           "eligibleReads": [
             {
               "identitySha256": "2cecfb784935abc89894dad628adba240de2fe9f45a49ed35471a4457a59e437",

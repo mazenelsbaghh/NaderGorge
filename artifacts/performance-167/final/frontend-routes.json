@@ -2,35 +2,35 @@
   "schemaVersion": 2,
   "evidenceType": "assembled-performance-candidate",
   "source": {
-    "releaseId": "git-e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "measuredGitCommit": "e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
-    "sourceStateSha256": "4c2aa1224f45529f653fc0531c2981d51caf5d0dd04fd1b6ddec130f893ff635",
+    "releaseId": "git-dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "measuredGitCommit": "dd8f7ee88f7d0b760fc489c06681e28699fa1c39",
+    "sourceStateSha256": "f313e5372d3ba32b0cf19962e6834168bac0a36a6c685089dabb16104e1994e9",
     "dirtySourceSnapshot": false,
     "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
-    "manifestSha256": "f08fb9b0e5adcdf91f1d8abefd447cb7c997bd079020081c68498372a5f7987d",
+    "manifestSha256": "fec8521a3034063c29350a4b4fc8d69b4bf6e238f6ad1ff334269fc0d2ab9661",
     "commitBinding": "measured-commit-source-digest-authoritative"
   },
   "rawEvidence": {
     "sourceManifest": {
       "path": "artifacts/performance-167/final/raw/source-manifest.json",
-      "sha256": "f08fb9b0e5adcdf91f1d8abefd447cb7c997bd079020081c68498372a5f7987d"
+      "sha256": "fec8521a3034063c29350a4b4fc8d69b4bf6e238f6ad1ff334269fc0d2ab9661"
     },
     "routeResources": {
       "path": "artifacts/performance-167/final/raw/route-resources.json",
-      "sha256": "c1ebc827951d7f7e00334b76b1865e8634e2a26d3085437f42a8a739e65e65a1"
+      "sha256": "33026209f271507d06349f182f973b392d299b9468d3b0f56b9c15d8d3fed302"
     },
     "browserSamples": {
       "path": "artifacts/performance-167/final/raw/browser-samples.json",
-      "sha256": "f399f0c616f68cb1bc41758504df0fa17817cfcd32a43fa2c7b231445d14d287"
+      "sha256": "404981398282a4174cb53b5ca7460701d221c9230064358de6e74d6106b74292"
     },
     "liveSupportQuery": {
       "path": "artifacts/performance-167/final/raw/live-support-query.json",
-      "sha256": "6ce29157e62f7abdb998f5c6794cf05adc45e02e2d187a7d8e44321af9dd3067"
+      "sha256": "74b3b7e4f7a6bf21441797869453a78f78d5f54ff6f30b21b8904f382ae440d8"
     }
   },
   "measurement": {
     "productionBuildExecuted": true,
-    "buildId": "yH98lZHNbnuKM8rcP4x2v",
+    "buildId": "kIousbqAyLFXfa3pB6A-E",
     "compression": {
       "gzipLevel": 9,
       "brotliQuality": 11,
@@ -44,7 +44,7 @@
         "height": 727
       },
       "productionServer": true,
-      "buildId": "yH98lZHNbnuKM8rcP4x2v"
+      "buildId": "kIousbqAyLFXfa3pB6A-E"
     },
     "browserSampling": {
       "warmupCount": 3,
@@ -80,7 +80,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 139.6922909999994,
+        "warmP75Ms": 138.9985830000005,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
@@ -110,7 +110,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 135.00341599999956,
+        "warmP75Ms": 138.45500000000175,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
@@ -140,7 +140,7 @@
         "sampleCount": 20
       },
       "navigation": {
-        "warmP75Ms": 132.35333299999184,
+        "warmP75Ms": 132.53304199999548,
         "sampleCount": 20,
         "percentileMethod": "nearest-rank"
       }
