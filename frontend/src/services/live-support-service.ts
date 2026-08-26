@@ -60,7 +60,7 @@ export interface LiveSupportWhatsAppTemplateButton {
   type?: string;
   text?: string;
   url?: string;
-  phoneNumber?: string;
+  phone_number?: string;
 }
 
 export interface LiveSupportWhatsAppTemplateComponent {
@@ -90,7 +90,7 @@ export type WhatsAppCampaignStatus =
   | 'Cancelled'
   | 'Failed';
 
-export type WhatsAppCampaignTemplateComponentType = 'HEADER' | 'BODY';
+export type WhatsAppCampaignTemplateComponentType = 'HEADER' | 'BODY' | 'BUTTON';
 export type WhatsAppCampaignContactRole =
   | 'StudentPrimary'
   | 'StudentSecondary'
@@ -114,7 +114,9 @@ export type WhatsAppCampaignVariableSource =
 
 export interface WhatsAppCampaignVariableMapping {
   componentType: WhatsAppCampaignTemplateComponentType;
+  componentIndex: number;
   position: number;
+  buttonIndex?: number | null;
   source: WhatsAppCampaignVariableSource;
   literalValue?: string | null;
   referenceId?: string | null;
@@ -336,6 +338,11 @@ export interface LiveSupportMessagePage {
   nextCursor?: string;
   lastEventSequence: number;
   missedEvents: Array<{ at: string; type: string; summary: string; safeDetails?: string }>;
+}
+
+export interface LiveSupportWhatsAppThreadPage {
+  items: LiveSupportMessage[];
+  nextCursor?: string | null;
 }
 export interface LiveSupportAttachment { id: string; fileName: string; contentType: string; sizeBytes: number; downloadUrl: string; }
 
@@ -578,6 +585,14 @@ export const liveSupportService = {
     return response.data;
   },
 
+  getStaffWhatsAppThreadAttachmentBlob: async (conversationId: string, attachmentId: string) => {
+    const response = await apiClient.get<Blob>(
+      `/live-support/staff/conversations/${conversationId}/whatsapp-thread/attachments/${attachmentId}`,
+      { responseType: 'blob' },
+    );
+    return response.data;
+  },
+
   sendParticipantMessage: async (conversationId: string, payload: { clientMessageId: string; type: LiveSupportMessageType; content?: string; attachmentId?: string }) => {
     const response = await apiClient.post<ApiResponse<{ message: LiveSupportMessage; replayed: boolean }>>(`/live-support/participant/conversations/${conversationId}/messages`, payload);
     invalidateSupport(['support:staff', 'support:dashboard']);
@@ -773,6 +788,12 @@ export const liveSupportService = {
 
   getStaffMessages: (conversationId: string, signal?: AbortSignal) =>
     apiClient.get<ApiResponse<LiveSupportMessage[]>>(`/live-support/staff/conversations/${conversationId}/messages`, { params: { pageSize: 100 }, signal }).then((response) => response.data.data),
+
+  getStaffWhatsAppThreadMessages: (conversationId: string, cursor?: string, signal?: AbortSignal) =>
+    apiClient.get<ApiResponse<LiveSupportWhatsAppThreadPage>>(
+      `/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages`,
+      { params: { pageSize: 50, cursor }, signal },
+    ).then((response) => response.data.data),
 
   closeConversation: async (conversationId: string, reason?: string) => {
     const response = await apiClient.post<ApiResponse<LiveSupportConversation>>(`/live-support/staff/conversations/${conversationId}/close`, { reason: reason?.trim() || null });

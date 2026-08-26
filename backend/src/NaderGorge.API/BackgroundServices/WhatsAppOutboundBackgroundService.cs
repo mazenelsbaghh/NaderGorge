@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.LiveSupport;
@@ -213,14 +212,25 @@ public sealed class WhatsAppOutboundBackgroundService(
         CancellationToken ct)
     {
         var template = await context.Db.LiveSupportWhatsAppTemplates.AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Name == delivery.TemplateName && item.Language == delivery.TemplateLanguage, ct);
-        var parameters = JsonSerializer.Deserialize<List<string>>(delivery.TemplateParametersJson ?? "[]") ?? [];
-        var components = template is null ? null : TemplateComponents(template.ComponentsJson, parameters);
-        if (components is null)
+            .SingleOrDefaultAsync(item => item.Name == delivery.TemplateName &&
+                item.Language == delivery.TemplateLanguage && item.Status == "APPROVED", ct);
+        var parameterSnapshot = WhatsAppDirectTemplatePolicy.DeserializeParameterSnapshot(
+            delivery.TemplateParametersJson);
+        if (parameterSnapshot?.Fingerprint is not null &&
+            (template is null || !string.Equals(
+                parameterSnapshot.Fingerprint,
+                template.Fingerprint,
+                StringComparison.Ordinal)))
+            return new(false, "The approved template changed after this message was queued.",
+                phoneNumber, null, 409, "WHATSAPP_TEMPLATE_DRIFT");
+        var validatedTemplate = WhatsAppDirectTemplatePolicy.Validate(
+            template,
+            parameterSnapshot?.Parameters);
+        if (validatedTemplate is null)
             return new(false, "Template parameters do not match the approved template.", phoneNumber, null, 422,
                 "WHATSAPP_TEMPLATE_PARAMETERS_INVALID");
         var request = new WhatsAppCloudService.TemplateMessageRequest(
-            phoneNumber, template!.Name, template.Language, components);
+            phoneNumber, template!.Name, template.Language, validatedTemplate.ProviderComponents);
         return await context.Cloud.SendTemplateAsync(request, ct);
     }
 
@@ -436,24 +446,4 @@ public sealed class WhatsAppOutboundBackgroundService(
         return safe.Length == 0 ? "WHATSAPP_DISPATCH_FAILED" : safe;
     }
 
-    private static IReadOnlyList<WhatsAppCloudService.TemplateComponent>? TemplateComponents(string componentsJson, IReadOnlyList<string> parameters)
-    {
-        using var document = JsonDocument.Parse(componentsJson);
-        if (document.RootElement.ValueKind != JsonValueKind.Array) return null;
-        var components = new List<WhatsAppCloudService.TemplateComponent>();
-        var parameterIndex = 0;
-        foreach (var component in document.RootElement.EnumerateArray())
-        {
-            if (!component.TryGetProperty("type", out var typeProperty) || !component.TryGetProperty("text", out var textProperty)) continue;
-            var type = typeProperty.GetString();
-            var text = textProperty.GetString();
-            if (type is null || text is null) continue;
-            var count = Regex.Matches(text, @"\{\{\d+\}\}").Count;
-            if (count == 0) continue;
-            if (parameterIndex + count > parameters.Count) return null;
-            components.Add(new WhatsAppCloudService.TemplateComponent(type, parameters.Skip(parameterIndex).Take(count).ToArray()));
-            parameterIndex += count;
-        }
-        return parameterIndex == parameters.Count ? components : null;
-    }
 }

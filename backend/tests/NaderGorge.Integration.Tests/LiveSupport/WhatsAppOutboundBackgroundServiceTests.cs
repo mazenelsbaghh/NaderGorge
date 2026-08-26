@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -23,6 +24,156 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class WhatsAppOutboundBackgroundServiceTests
 {
+    [Fact]
+    public async Task ProductionRegression_20260826_StaffTemplateWithStaticUrls_SendsOnlyBodyParameters()
+    {
+        var handler = new RecordingMessageMetaHandler();
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid deliveryId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            deliveryId = AddTemplateDelivery(db, """
+                [
+                  {"type":"HEADER","format":"TEXT","text":"Student progress"},
+                  {"type":"BODY","text":"Hello {{1}}, score {{2}}"},
+                  {"type":"BUTTONS","buttons":[
+                    {"type":"URL","text":"Open report","url":"https://massar-academy.net/report"},
+                    {"type":"URL","text":"Open platform","url":"https://massar-academy.net"}
+                  ]}
+                ]
+                """, ["Mazen", "95%"]).Id;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        using var request = JsonDocument.Parse(Assert.Single(handler.Bodies));
+        var components = request.RootElement.GetProperty("template").GetProperty("components");
+        var body = Assert.Single(components.EnumerateArray());
+        Assert.Equal("body", body.GetProperty("type").GetString());
+        Assert.Equal("Mazen", body.GetProperty("parameters")[0].GetProperty("text").GetString());
+        Assert.Equal("95%", body.GetProperty("parameters")[1].GetProperty("text").GetString());
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var delivery = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportWhatsAppMessages.SingleAsync(item => item.Id == deliveryId);
+        Assert.Equal("Sent", delivery.Status);
+    }
+
+    [Fact]
+    public async Task LegacyStaffTemplateWithStaticPhoneButton_OmitsButtonRuntimeComponent()
+    {
+        var handler = new RecordingMessageMetaHandler();
+        await using var harness = await Harness.CreateAsync(handler);
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            AddTemplateDelivery(db, """
+                [
+                  {"type":"BODY","text":"Hello {{1}}"},
+                  {"type":"BUTTONS","buttons":[
+                    {"type":"PHONE_NUMBER","text":"Call","phone_number":"+201000000000"}
+                  ]}
+                ]
+                """, ["Mazen"], legacyPayload: true);
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        using var request = JsonDocument.Parse(Assert.Single(handler.Bodies));
+        var components = request.RootElement.GetProperty("template").GetProperty("components");
+        Assert.Equal("body", Assert.Single(components.EnumerateArray()).GetProperty("type").GetString());
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"HEADER\",\"format\":\"IMAGE\"}")]
+    [InlineData("{\"type\":\"BUTTONS\",\"buttons\":[{\"type\":\"URL\",\"text\":\"Open\",\"url\":\"https://massar-academy.net/{{1}}\"}]}")]
+    [InlineData("{\"type\":\"BUTTONS\",\"buttons\":[{\"type\":\"QUICK_REPLY\",\"text\":\"Reply\"}]}")]
+    [InlineData("{\"type\":\"BUTTONS\",\"buttons\":[{\"type\":\"FLOW\",\"text\":\"Open\"}]}")]
+    [InlineData("{\"type\":\"CAROUSEL\"}")]
+    public async Task StaffTemplateWithUnsupportedRuntimeShape_FailsBeforeProvider(string component)
+    {
+        var handler = new StubMetaHandler(_ => throw new InvalidOperationException("No provider call expected."));
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid deliveryId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            deliveryId = AddTemplateDelivery(db,
+                $"[{{\"type\":\"BODY\",\"text\":\"Hello\"}},{component}]", []).Id;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Empty(handler.Requests);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var delivery = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportWhatsAppMessages.SingleAsync(item => item.Id == deliveryId);
+        Assert.Equal("Failed", delivery.Status);
+        Assert.Equal("WHATSAPP_TEMPLATE_PARAMETERS_INVALID", delivery.FailureCode);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-valid-fingerprint")]
+    public async Task StaffTemplateWithoutSynchronizedFingerprint_FailsBeforeProvider(string fingerprint)
+    {
+        var handler = new StubMetaHandler(_ => throw new InvalidOperationException("No provider call expected."));
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid deliveryId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            deliveryId = AddTemplateDelivery(
+                db,
+                """[{"type":"BODY","text":"Hello"}]""",
+                [],
+                fingerprint).Id;
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Empty(handler.Requests);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var delivery = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportWhatsAppMessages.SingleAsync(item => item.Id == deliveryId);
+        Assert.Equal("Failed", delivery.Status);
+        Assert.Equal("WHATSAPP_TEMPLATE_PARAMETERS_INVALID", delivery.FailureCode);
+    }
+
+    [Fact]
+    public async Task StaffTemplateChangedAfterQueue_FailsWithDriftBeforeProvider()
+    {
+        var handler = new StubMetaHandler(_ => throw new InvalidOperationException("No provider call expected."));
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid deliveryId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            deliveryId = AddTemplateDelivery(
+                db,
+                """[{"type":"BODY","text":"Hello {{1}}"}]""",
+                ["Mazen"]).Id;
+            await db.SaveChangesAsync();
+            var template = await db.LiveSupportWhatsAppTemplates.SingleAsync();
+            template.ComponentsJson = """[{"type":"BODY","text":"Changed {{1}}"}]""";
+            template.Fingerprint = new string('b', 64);
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Empty(handler.Requests);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var delivery = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
+            .LiveSupportWhatsAppMessages.SingleAsync(item => item.Id == deliveryId);
+        Assert.Equal("Failed", delivery.Status);
+        Assert.Equal("WHATSAPP_TEMPLATE_DRIFT", delivery.FailureCode);
+    }
+
     [Fact]
     public async Task ProductionRegression_20260825_StoredWebp_IsNormalizedBeforeProviderUpload()
     {
@@ -468,6 +619,36 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
         return message;
     }
 
+    private static LiveSupportWhatsAppMessage AddTemplateDelivery(
+        AppDbContext db,
+        string componentsJson,
+        IReadOnlyList<string> parameters,
+        string? fingerprint = null,
+        bool legacyPayload = false)
+    {
+        var delivery = AddDelivery(db, withBinding: true, createdAt: DateTime.UtcNow.AddMinutes(-1));
+        var templateFingerprint = fingerprint ?? new string('a', 64);
+        delivery.MessageType = "template";
+        delivery.TemplateName = "staff_template";
+        delivery.TemplateLanguage = "ar";
+        delivery.TemplateParametersJson = legacyPayload
+            ? JsonSerializer.Serialize(parameters)
+            : WhatsAppDirectTemplatePolicy.SerializeParameterSnapshot(templateFingerprint, parameters);
+        db.LiveSupportWhatsAppTemplates.Add(new LiveSupportWhatsAppTemplate
+        {
+            MetaTemplateId = "meta-staff-template",
+            Name = delivery.TemplateName,
+            Language = delivery.TemplateLanguage,
+            Category = "UTILITY",
+            Status = "APPROVED",
+            ComponentsJson = componentsJson,
+            Fingerprint = templateFingerprint,
+            LastSyncedAt = DateTime.UtcNow,
+            Version = 1
+        });
+        return delivery;
+    }
+
     private static LiveSupportWhatsAppPendingReceipt PendingReceipt(string metaMessageId, DateTime createdAt) => new()
     {
         MetaMessageId = metaMessageId,
@@ -564,6 +745,21 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
                 ? "{\"id\":\"media-normalized\"}"
                 : "{\"messages\":[{\"id\":\"wamid.normalized\"}]}";
             return JsonResponse(HttpStatusCode.OK, responseBody);
+        }
+    }
+
+    private sealed class RecordingMessageMetaHandler : HttpMessageHandler
+    {
+        public List<string> Bodies { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Bodies.Add(request.Content is null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken));
+            return JsonResponse(HttpStatusCode.OK, "{\"messages\":[{\"id\":\"wamid.template\"}]}");
         }
     }
 

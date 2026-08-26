@@ -20,6 +20,8 @@ namespace NaderGorge.Application.Tests.LiveSupport;
 
 public sealed class WhatsAppLiveSupportTests
 {
+    private static readonly string ValidTemplateFingerprint = new('a', 64);
+
     [Fact]
     public async Task DuplicateWebhookDelivery_CreatesOneSupportMessage()
     {
@@ -368,6 +370,53 @@ public sealed class WhatsAppLiveSupportTests
             Assert.Equal(expectedRetryable, response.IsRetryable);
         });
         Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task CampaignTemplateComponents_SerializeToExactMetaTextAndDynamicUrlShape()
+    {
+        var handler = new BodyRecordingMetaHandler();
+        var cloud = Cloud(handler);
+
+        var response = await cloud.SendTemplateAsync(new WhatsAppCloudService.TemplateMessageRequest(
+            "01099999999",
+            "progress_template",
+            "ar",
+            [
+                new WhatsAppCloudService.TemplateComponent("BODY", ["Mazen", "95%"]),
+                new WhatsAppCloudService.TemplateComponent("BUTTON", ["student-token"], "text", "url", 0)
+            ]), CancellationToken.None);
+
+        Assert.True(response.Success);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.Body));
+        var components = request.RootElement.GetProperty("template").GetProperty("components");
+        var body = components[0];
+        Assert.Equal("body", body.GetProperty("type").GetString());
+        Assert.False(body.TryGetProperty("sub_type", out _));
+        Assert.False(body.TryGetProperty("index", out _));
+        Assert.Equal("text", body.GetProperty("parameters")[0].GetProperty("type").GetString());
+        Assert.Equal("Mazen", body.GetProperty("parameters")[0].GetProperty("text").GetString());
+        Assert.Equal("95%", body.GetProperty("parameters")[1].GetProperty("text").GetString());
+        var button = components[1];
+        Assert.Equal("button", button.GetProperty("type").GetString());
+        Assert.Equal("url", button.GetProperty("sub_type").GetString());
+        Assert.Equal("0", button.GetProperty("index").GetString());
+        Assert.Equal("text", button.GetProperty("parameters")[0].GetProperty("type").GetString());
+        Assert.Equal("student-token", button.GetProperty("parameters")[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public async Task StaticTemplate_OmitsEmptyComponentsFromMetaPayload()
+    {
+        var handler = new BodyRecordingMetaHandler();
+        var cloud = Cloud(handler);
+
+        var response = await cloud.SendTemplateAsync(new WhatsAppCloudService.TemplateMessageRequest(
+            "01099999999", "hello_world", "en_US", []), CancellationToken.None);
+
+        Assert.True(response.Success);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.Body));
+        Assert.False(request.RootElement.GetProperty("template").TryGetProperty("components", out _));
     }
 
     [Fact]
@@ -869,7 +918,16 @@ public sealed class WhatsAppLiveSupportTests
             Language = "ar",
             Category = "UTILITY",
             Status = "APPROVED",
-            ComponentsJson = """[{"type":"BODY","text":"أهلًا {{1}} - كود {{2}}"}]""",
+            ComponentsJson = """
+                [
+                  {"type":"BODY","text":"كود {{2}} - أهلًا {{1}}"},
+                  {"type":"BUTTONS","buttons":[
+                    {"type":"URL","text":"فتح التقرير","url":"https://massar-academy.net/report"},
+                    {"type":"URL","text":"فتح المنصة","url":"https://massar-academy.net"}
+                  ]}
+                ]
+                """,
+            Fingerprint = new string('a', 64),
             LastSyncedAt = DateTime.UtcNow,
             Version = 1
         };
@@ -881,6 +939,7 @@ public sealed class WhatsAppLiveSupportTests
             Category = "UTILITY",
             Status = "APPROVED",
             ComponentsJson = firstTemplate.ComponentsJson,
+            Fingerprint = new string('b', 64),
             LastSyncedAt = DateTime.UtcNow,
             Version = 1
         };
@@ -900,11 +959,30 @@ public sealed class WhatsAppLiveSupportTests
                     "نص لا يطابق القالب")),
             CancellationToken.None);
 
-        Assert.Equal("أهلًا أحمد - كود 123", sent.Message.Content);
+        Assert.Equal("كود 123 - أهلًا أحمد", sent.Message.Content);
         var delivery = scenario.Db.LiveSupportWhatsAppMessages.Single(item => item.LiveSupportMessageId == sent.Message.Id);
         Assert.Equal("welcome_one", delivery.TemplateName);
-        var storedParameters = JsonSerializer.Deserialize<string[]>(delivery.TemplateParametersJson!) ?? [];
-        Assert.Equal(["أحمد", "123"], storedParameters);
+        var storedSnapshot = WhatsAppDirectTemplatePolicy.DeserializeParameterSnapshot(
+            delivery.TemplateParametersJson);
+        Assert.Equal(firstTemplate.Fingerprint, storedSnapshot?.Fingerprint);
+        Assert.Equal(["أحمد", "123"], storedSnapshot?.Parameters);
+        delivery.TemplateParametersJson = $$"""
+            { "parameters": ["أحمد", "123"], "fingerprint": "{{firstTemplate.Fingerprint}}" }
+            """;
+        await scenario.Db.SaveChangesAsync();
+
+        var replay = await scenario.Service.SendStaffWhatsAppTemplateAsync(
+            new SendLiveSupportWhatsAppTemplateCommand(
+                LiveSupportTestData.AdminId,
+                true,
+                scenario.Conversation.Id,
+                new SendLiveSupportWhatsAppTemplateRequest(
+                    clientMessageId,
+                    firstTemplate.Id,
+                    ["أحمد", "123"],
+                    sent.Message.Content)),
+            CancellationToken.None);
+        Assert.True(replay.Replayed);
 
         var conflict = await Assert.ThrowsAsync<LiveSupportException>(() =>
             scenario.Service.SendStaffWhatsAppTemplateAsync(
@@ -919,6 +997,93 @@ public sealed class WhatsAppLiveSupportTests
                         sent.Message.Content)),
                 CancellationToken.None));
         Assert.Equal(LiveSupportErrorCodes.MessageConflict, conflict.Code);
+    }
+
+    public static TheoryData<string, string[], string> RejectedDirectTemplateCases => new()
+    {
+        {
+            """[{"type":"HEADER","format":"IMAGE"},{"type":"BODY","text":"خبر جديد"}]""",
+            [],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"BODY","text":"مرحبًا {{1}}"},{"type":"BUTTONS","buttons":[{"type":"URL","text":"فتح","url":"https://massar-academy.net/{{1}}"}]}]""",
+            ["student-token"],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"BODY","text":"خبر جديد"},{"type":"BUTTONS","buttons":[{"type":"QUICK_REPLY","text":"رد"}]}]""",
+            [],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"HEADER","format":"TEXT","text":"عنوان فقط"}]""",
+            [],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"BODY","text":"مرحبًا {{1}} ثم {{1}}"}]""",
+            ["أحمد"],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"BODY","text":"مرحبًا {{ 1 }}"}]""",
+            ["أحمد"],
+            ValidTemplateFingerprint
+        },
+        {
+            """[{"type":"BODY","text":"خبر جديد"}]""",
+            [],
+            string.Empty
+        },
+        {
+            """[{"type":"BODY","text":"خبر جديد"}]""",
+            [],
+            new string('z', 64)
+        }
+    };
+
+    [Theory]
+    [MemberData(nameof(RejectedDirectTemplateCases))]
+    public async Task StaffTemplateSend_RejectsUnsafeTemplateBeforePersistingMessage(
+        string componentsJson,
+        string[] parameters,
+        string fingerprint)
+    {
+        await using var scenario = await CreateStaffWhatsAppScenarioAsync();
+        var template = new LiveSupportWhatsAppTemplate
+        {
+            MetaTemplateId = $"meta-{Guid.NewGuid():N}",
+            Name = $"unsafe_{Guid.NewGuid():N}",
+            Language = "ar",
+            Category = "UTILITY",
+            Status = "APPROVED",
+            ComponentsJson = componentsJson,
+            Fingerprint = fingerprint,
+            LastSyncedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        scenario.Db.LiveSupportWhatsAppTemplates.Add(template);
+        await scenario.Db.SaveChangesAsync();
+        var messageCount = await scenario.Db.LiveSupportMessages.CountAsync();
+        var deliveryCount = await scenario.Db.LiveSupportWhatsAppMessages.CountAsync();
+
+        var failure = await Assert.ThrowsAsync<LiveSupportException>(() =>
+            scenario.Service.SendStaffWhatsAppTemplateAsync(
+                new SendLiveSupportWhatsAppTemplateCommand(
+                    LiveSupportTestData.AdminId,
+                    true,
+                    scenario.Conversation.Id,
+                    new SendLiveSupportWhatsAppTemplateRequest(
+                        Guid.NewGuid().ToString("N"),
+                        template.Id,
+                        parameters,
+                        "معاينة غير موثوقة")),
+                CancellationToken.None));
+
+        Assert.Equal("WHATSAPP_TEMPLATE_PARAMETERS_INVALID", failure.Code);
+        Assert.Equal(messageCount, await scenario.Db.LiveSupportMessages.CountAsync());
+        Assert.Equal(deliveryCount, await scenario.Db.LiveSupportWhatsAppMessages.CountAsync());
     }
 
     private static async Task<StaffWhatsAppScenario> CreateStaffWhatsAppScenarioAsync()
@@ -1164,6 +1329,21 @@ public sealed class WhatsAppLiveSupportTests
         {
             Requests.Add(request.RequestUri?.PathAndQuery ?? string.Empty);
             return Task.FromResult(response(request));
+        }
+    }
+
+    private sealed class BodyRecordingMetaHandler : HttpMessageHandler
+    {
+        public string? Body { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Body = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+            return JsonResponse(HttpStatusCode.OK, "{\"messages\":[{\"id\":\"wamid.sent\"}]}");
         }
     }
 

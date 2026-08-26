@@ -1,7 +1,6 @@
 using System.Data;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 using NaderGorge.Application.Common;
@@ -259,6 +258,25 @@ public sealed class LiveSupportService(
         return new(await _attachmentStorage.OpenReadAsync(attachment.StoragePath, ct), attachment.OriginalFileName, attachment.ContentType, attachment.SizeBytes);
     }
 
+    public async Task<LiveSupportAttachmentDownloadDto> OpenStaffWhatsAppThreadAttachmentAsync(
+        LiveSupportStaffWhatsAppAttachmentQuery request,
+        CancellationToken ct)
+    {
+        var whatsAppUserId = await RequireStaffWhatsAppUserIdAsync(
+            request.StaffUserId, request.IsAdmin, request.ConversationId, ct);
+        var conversationIds = await GetWhatsAppConversationIdsAsync(
+            whatsAppUserId, request.ConversationId, request.IsAdmin, ct);
+        var attachment = await _db.LiveSupportAttachments.AsNoTracking()
+            .FirstOrDefaultAsync(candidate =>
+                candidate.Id == request.AttachmentId &&
+                !candidate.IsBlocked &&
+                _db.LiveSupportMessages.Any(message =>
+                    conversationIds.Contains(message.ConversationId) && message.AttachmentId == candidate.Id), ct);
+        if (attachment is null) throw new LiveSupportException("NOT_FOUND", "المرفق غير موجود.");
+        if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "المرفق غير متاح مؤقتًا.");
+        return new(await _attachmentStorage.OpenReadAsync(attachment.StoragePath, ct), attachment.OriginalFileName, attachment.ContentType, attachment.SizeBytes);
+    }
+
     public async Task<LiveSupportConversationDto> AdminInterveneAsync(Guid adminUserId, Guid conversationId, string operation, Guid? targetStaffUserId, string reason, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length < 3) throw new LiveSupportException("VALIDATION_ERROR", "سبب تدخل الإدارة مطلوب.");
@@ -400,6 +418,39 @@ public sealed class LiveSupportService(
         return await EnrichMessageDtosAsync(rows, ct);
     }
 
+    public async Task<LiveSupportWhatsAppThreadPageDto> GetStaffWhatsAppThreadAsync(
+        LiveSupportStaffWhatsAppThreadQuery request,
+        CancellationToken ct)
+    {
+        var whatsAppUserId = await RequireStaffWhatsAppUserIdAsync(
+            request.StaffUserId, request.IsAdmin, request.ConversationId, ct);
+        if (!request.IsAdmin)
+            await AcknowledgeParticipantMessagesAsync(request.ConversationId, ct);
+        var conversationIds = await GetWhatsAppConversationIdsAsync(
+            whatsAppUserId, request.ConversationId, request.IsAdmin, ct);
+        var take = Math.Clamp(request.PageSize, 1, 100);
+        var rows = await LoadWhatsAppThreadMessagesAsync(conversationIds, take, request.Cursor, ct);
+        var hasMore = rows.Count > take;
+        if (hasMore) rows.RemoveAt(rows.Count - 1);
+        var nextCursor = hasMore ? EncodeCursor(rows[^1].SentAt, rows[^1].Id) : null;
+        rows.Reverse();
+        return new LiveSupportWhatsAppThreadPageDto(await EnrichMessageDtosAsync(rows, ct), nextCursor);
+    }
+
+    private async Task<List<LiveSupportMessage>> LoadWhatsAppThreadMessagesAsync(
+        Guid[] conversationIds,
+        int take,
+        string? cursor,
+        CancellationToken ct)
+    {
+        var messages = _db.LiveSupportMessages.AsNoTracking()
+            .Include(message => message.ReplyToMessage)
+            .Where(message => conversationIds.Contains(message.ConversationId));
+        if (TryDecodeCursor(cursor, out var sentAt, out var id))
+            messages = messages.Where(message => message.SentAt < sentAt || message.SentAt == sentAt && message.Id.CompareTo(id) < 0);
+        return await messages.OrderByDescending(message => message.SentAt).ThenByDescending(message => message.Id).Take(take + 1).ToListAsync(ct);
+    }
+
     public async Task<long> GetStaffLastEventSequenceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
     {
         await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
@@ -455,8 +506,14 @@ public sealed class LiveSupportService(
             throw new LiveSupportException("VALIDATION_ERROR", "قيم قالب واتساب غير صالحة.");
 
         var normalizedParameters = command.Request.Parameters.Select(value => value.Trim()).ToArray();
-        var serializedParameters = JsonSerializer.Serialize(normalizedParameters);
-        var serverPreview = RenderWhatsAppTemplatePreview(template, normalizedParameters);
+        var validatedTemplate = WhatsAppDirectTemplatePolicy.Validate(template, normalizedParameters);
+        if (validatedTemplate is null)
+            throw new LiveSupportException(
+                "WHATSAPP_TEMPLATE_PARAMETERS_INVALID",
+                "تركيب قالب واتساب أو عدد القيم غير مدعوم للإرسال المباشر.");
+        var serializedParameters = WhatsAppDirectTemplatePolicy.SerializeParameterSnapshot(
+            template.Fingerprint,
+            normalizedParameters);
 
         var sendResult = await SendMessageAsync(
             new PersistMessageRequest(
@@ -465,7 +522,7 @@ public sealed class LiveSupportService(
                 command.StaffUserId,
                 null,
                 command.Request.ClientMessageId,
-                serverPreview,
+                validatedTemplate.Preview,
                 LiveSupportMessageType.Text),
             message => StageStaffMessageSideEffects(
                 conversation,
@@ -482,11 +539,15 @@ public sealed class LiveSupportService(
         {
             var existingDelivery = await _db.LiveSupportWhatsAppMessages.AsNoTracking()
                 .SingleOrDefaultAsync(item => item.LiveSupportMessageId == sendResult.Message.Id, ct);
+            var existingSnapshot = WhatsAppDirectTemplatePolicy.DeserializeParameterSnapshot(
+                existingDelivery?.TemplateParametersJson);
             if (existingDelivery is null ||
                 !string.Equals(existingDelivery.MessageType, "template", StringComparison.Ordinal) ||
                 !string.Equals(existingDelivery.TemplateName, template.Name, StringComparison.Ordinal) ||
                 !string.Equals(existingDelivery.TemplateLanguage, template.Language, StringComparison.Ordinal) ||
-                !string.Equals(existingDelivery.TemplateParametersJson, serializedParameters, StringComparison.Ordinal))
+                existingSnapshot is null ||
+                !string.Equals(existingSnapshot.Fingerprint, template.Fingerprint, StringComparison.Ordinal) ||
+                !existingSnapshot.Parameters.SequenceEqual(normalizedParameters, StringComparer.Ordinal))
                 throw new LiveSupportException(LiveSupportErrorCodes.MessageConflict, "معرّف الرسالة مستخدم لقالب واتساب مختلف.");
         }
         return WithPendingWhatsAppStatus(sendResult, true);
@@ -1343,6 +1404,35 @@ public sealed class LiveSupportService(
         return c;
     }
 
+    private async Task<string> RequireStaffWhatsAppUserIdAsync(Guid userId, bool admin, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireStaffConversationAsync(userId, admin, conversationId, ct);
+        if (!admin && IsTerminal(conversation.Status))
+            throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "سجل واتساب متاح من المحادثة المفتوحة الحالية فقط.");
+        return await _db.LiveSupportWhatsAppBindings.AsNoTracking()
+            .Where(binding => binding.ConversationId == conversationId)
+            .Select(binding => binding.WhatsAppUserId)
+            .SingleOrDefaultAsync(ct)
+            ?? throw new LiveSupportException("NOT_FOUND", "محادثة واتساب غير موجودة.");
+    }
+
+    private Task<Guid[]> GetWhatsAppConversationIdsAsync(
+        string whatsAppUserId,
+        Guid currentConversationId,
+        bool includeActiveConversations,
+        CancellationToken ct) =>
+        (from binding in _db.LiveSupportWhatsAppBindings.AsNoTracking()
+         join conversation in _db.LiveSupportConversations.AsNoTracking()
+             on binding.ConversationId equals conversation.Id
+         where binding.WhatsAppUserId == whatsAppUserId &&
+             (includeActiveConversations ||
+              conversation.Id == currentConversationId ||
+              conversation.Status == LiveSupportConversationStatus.Closed ||
+              conversation.Status == LiveSupportConversationStatus.Abandoned)
+         select conversation.Id)
+            .Distinct()
+            .ToArrayAsync(ct);
+
     private async Task<IReadOnlyList<LiveSupportConversationDto>> MapManyAsync(IReadOnlyList<LiveSupportConversation> items, CancellationToken ct)
     {
         if (items.Count == 0) return [];
@@ -2176,43 +2266,6 @@ public sealed class LiveSupportService(
         string? TemplateName = null,
         string? TemplateLanguage = null,
         string? TemplateParametersJson = null);
-
-    private static string RenderWhatsAppTemplatePreview(
-        LiveSupportWhatsAppTemplate template,
-        IReadOnlyList<string> parameters)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(template.ComponentsJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
-                throw new LiveSupportException("WHATSAPP_TEMPLATE_INVALID", "بيانات قالب واتساب غير صالحة.");
-
-            var parameterIndex = 0;
-            var renderedParts = new List<string>();
-            foreach (var component in document.RootElement.EnumerateArray())
-            {
-                if (!component.TryGetProperty("text", out var textProperty) || textProperty.ValueKind != JsonValueKind.String)
-                    continue;
-                var text = textProperty.GetString();
-                if (string.IsNullOrWhiteSpace(text)) continue;
-                renderedParts.Add(Regex.Replace(text, @"\{\{\d+\}\}", _ =>
-                {
-                    if (parameterIndex >= parameters.Count)
-                        throw new LiveSupportException("WHATSAPP_TEMPLATE_PARAMETERS_INVALID", "عدد قيم قالب واتساب غير مطابق للقالب.");
-                    return parameters[parameterIndex++];
-                }));
-            }
-
-            if (parameterIndex != parameters.Count)
-                throw new LiveSupportException("WHATSAPP_TEMPLATE_PARAMETERS_INVALID", "عدد قيم قالب واتساب غير مطابق للقالب.");
-            var preview = string.Join('\n', renderedParts).Trim();
-            return preview.Length > 0 ? preview : $"قالب واتساب: {template.Name}";
-        }
-        catch (JsonException)
-        {
-            throw new LiveSupportException("WHATSAPP_TEMPLATE_INVALID", "بيانات قالب واتساب غير صالحة.");
-        }
-    }
 
     private async Task EnsureMessageIsNotWhatsAppAsync(Guid messageId, CancellationToken ct)
     {

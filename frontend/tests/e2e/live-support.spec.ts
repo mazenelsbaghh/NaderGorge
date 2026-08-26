@@ -44,6 +44,53 @@ async function installAssistantAuth(page: import('@playwright/test').Page) {
   }));
 }
 
+async function installAdminAuth(page: import('@playwright/test').Page) {
+  const user = {
+    id: 'a0000000-0000-0000-0000-000000000098',
+    fullName: 'Synthetic admin',
+    phone: '01000000001',
+    roles: ['Admin'],
+    permissions: ['live_support.manage'],
+    profileComplete: true,
+    allowedDomains: ['admin'],
+    allowedNavbarItems: [],
+    authorizationVersion: 1,
+  };
+  await page.addInitScript(({ token, authUser }) => {
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('user', JSON.stringify(authUser));
+  }, { token: 'synthetic-admin-token', authUser: user });
+  await page.route('**/api/auth/session', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { user, authorizationVersion: 1, serverTime: new Date().toISOString() } }),
+  }));
+}
+
+async function openSyntheticAdminInvestigation(
+  page: import('@playwright/test').Page,
+  conversation: Record<string, unknown> & { id: string; participantName: string }
+) {
+  await installAdminAuth(page);
+  await page.route('**/api/live-support/admin/ratings**', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data: [{ id: `${conversation.id}-rating`, conversationId: conversation.id, stars: 5, comment: 'متابعة', submittedAt: '2026-08-26T11:30:00.000Z', submittedByName: conversation.participantName, isStudent: false }] }),
+  }));
+  await page.route(`**/api/live-support/admin/conversations/${conversation.id}/timeline`, route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data: { conversation, items: [] } }),
+  }));
+  await page.route('**/api/live-support/whatsapp/templates**', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data: [] }),
+  }));
+
+  await page.goto(`${adminUrl}/admin/live-support/ratings`);
+  await page.getByRole('button', { name: 'عرض التقييمات' }).click();
+  const ratingRow = page.getByRole('row').filter({ hasText: conversation.participantName });
+  await expect(ratingRow).toBeVisible();
+  await ratingRow.getByRole('button', { name: 'فتح المحادثة' }).click();
+}
+
 test.describe('live support participant', () => {
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => console.log('PARTICIPANT PAGE LOG:', msg.text()));
@@ -324,7 +371,7 @@ test.describe('live support client boundary contracts (synthetic HTTP only)', ()
   test('switching conversations does not expose a draft from another conversation', async ({ page }) => {
     const staffId = 'a0000000-0000-0000-0000-000000000099';
     await installAssistantAuth(page);
-    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 2, maxActiveConversations: 2, conversations: [{ id: 'a0000000-0000-0000-0000-000000000001', subject: 'أولى', status: 'Active', participantType: 'Guest', currentOwnerUserId: staffId }, { id: 'a0000000-0000-0000-0000-000000000002', subject: 'ثانية', status: 'Active', participantType: 'Guest', currentOwnerUserId: staffId }] } }) }));
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 2, maxActiveConversations: 2, conversations: [{ id: 'a0000000-0000-0000-0000-000000000001', subject: 'أولى', status: 'Active', participantType: 'Guest', participantName: 'أولى', currentOwnerUserId: staffId }, { id: 'a0000000-0000-0000-0000-000000000002', subject: 'ثانية', status: 'Active', participantType: 'Guest', participantName: 'ثانية', currentOwnerUserId: staffId }] } }) }));
     await page.route('**/api/live-support/staff/conversations/*/messages**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) }));
     await page.goto(`${staffUrl}/assistant/live-support`);
     await expect(page.getByRole('heading', { name: 'أولى', exact: true })).toBeVisible();
@@ -332,5 +379,712 @@ test.describe('live support client boundary contracts (synthetic HTTP only)', ()
     await page.getByLabel('رد موظف الدعم').fill('مسودة المحادثة الأولى');
     await page.getByRole('option', { name: /ثانية/ }).click();
     await expect(page.getByLabel('رد موظف الدعم')).not.toHaveValue('مسودة المحادثة الأولى');
+  });
+
+  // Regression 2026-08-26: a bootstrap started for A could reclaim selection
+  // after the employee selected B, abort B's message request, and show A again.
+  test('delayed staff bootstrap cannot overwrite a newer conversation selection', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAssistantAuth(page);
+    const staffId = 'a0000000-0000-0000-0000-000000000099';
+    const conversationA = {
+      id: 'a0000000-0000-0000-0000-000000000011',
+      subject: 'طلب أ',
+      status: 'Active',
+      participantType: 'Guest',
+      participantName: 'عميل أ',
+      currentOwnerUserId: staffId,
+      channel: 'Web',
+      createdAt: '2026-08-26T10:00:00.000Z',
+      version: 1,
+      canSend: true,
+      canRate: false,
+    };
+    const conversationB = {
+      ...conversationA,
+      id: 'a0000000-0000-0000-0000-000000000012',
+      subject: 'طلب ب',
+      participantName: 'عميل ب',
+      createdAt: '2026-08-26T10:01:00.000Z',
+    };
+    let delayNextBootstrap = false;
+    let delayedBootstrapRequests = 0;
+    let releaseBootstrap = () => {};
+    const bootstrapGate = new Promise<void>((resolve) => {
+      releaseBootstrap = resolve;
+    });
+    let bMessageRequests = 0;
+    let releaseBMessages = () => {};
+    const bMessagesGate = new Promise<void>((resolve) => {
+      releaseBMessages = resolve;
+    });
+
+    await page.route('**/api/live-support/staff/bootstrap', async route => {
+      let waitingCount = 0;
+      if (delayNextBootstrap) {
+        delayNextBootstrap = false;
+        delayedBootstrapRequests += 1;
+        await bootstrapGate;
+        waitingCount = 7;
+      }
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount, activeCount: 2, maxActiveConversations: 2, conversations: [conversationA, conversationB], cannedReplies: [] } }),
+      }).catch(() => undefined);
+    });
+    await page.route('**/api/live-support/staff/conversations/*/messages**', async route => {
+      const url = route.request().url();
+      if (route.request().method() !== 'GET') {
+        const sentMessage = {
+          id: 'a0000000-0000-0000-0000-000000000091',
+          conversationId: conversationA.id,
+          senderType: 'Staff',
+          clientMessageId: 'selection-race-send',
+          type: 'Text',
+          content: 'تشغيل تحديث الخلفية',
+          sentAt: '2026-08-26T10:03:00.000Z',
+        };
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { message: sentMessage, replayed: false } }) });
+      }
+      const isConversationB = url.includes(conversationB.id);
+      if (isConversationB) {
+        bMessageRequests += 1;
+        await bMessagesGate;
+      }
+      const conversationId = isConversationB ? conversationB.id : conversationA.id;
+      const content = isConversationB ? 'رسالة ب الصحيحة' : 'رسالة أ القديمة';
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [{ id: `${conversationId}-message`, conversationId, senderType: 'Guest', clientMessageId: `${conversationId}-client`, type: 'Text', content, sentAt: '2026-08-26T10:02:00.000Z' }] }),
+      }).catch(() => undefined);
+    });
+
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    const conversationAMessage = page.locator(
+      `[data-live-support-message-id="${conversationA.id}-message"]`
+    );
+    await expect(conversationAMessage).toContainText('رسالة أ القديمة');
+    delayNextBootstrap = true;
+    await page.getByLabel('رد موظف الدعم').fill('تشغيل تحديث الخلفية');
+    await page.getByRole('button', { name: 'إرسال الرد' }).click();
+    await expect.poll(() => delayedBootstrapRequests).toBe(1);
+
+    const optionB = page.getByRole('option', { name: /عميل ب/ });
+    await optionB.click();
+    await expect.poll(() => bMessageRequests).toBe(1);
+    await expect(optionB).toHaveAttribute('aria-selected', 'true');
+
+    releaseBootstrap();
+    await expect(page.getByText('7 بانتظار التوزيع', { exact: true })).toBeVisible();
+    await expect(optionB).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'عميل ب', exact: true })).toBeVisible();
+
+    releaseBMessages();
+    await expect(page.locator(
+      `[data-live-support-message-id="${conversationB.id}-message"]`
+    )).toContainText('رسالة ب الصحيحة');
+    await expect(conversationAMessage).toHaveCount(0);
+  });
+
+  // Regression 2026-08-26: two same-selection head refreshes can resolve out
+  // of order even when abort is requested; only the latest request may apply.
+  test('late WhatsApp head response cannot rewind the newer head frontier', async ({ page }) => {
+    await installAssistantAuth(page);
+    const conversationId = 'b3000000-0000-0000-0000-000000000001';
+    const conversation = {
+      id: conversationId,
+      subject: 'ترتيب تحديث واتساب',
+      status: 'Active',
+      participantType: 'Guest',
+      participantName: 'عميل ترتيب التحديث',
+      currentOwnerUserId: 'a0000000-0000-0000-0000-000000000099',
+      channel: 'WhatsApp',
+      externalPhoneNumber: '01000000005',
+      customerServiceWindowExpiresAt: '2099-08-26T12:00:00.000Z',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      version: 1,
+      canSend: true,
+      canRate: false,
+    };
+    const baseMessage = {
+      id: 'b3000000-0000-0000-0000-000000000010',
+      conversationId,
+      senderType: 'Guest',
+      clientMessageId: 'ordered-base',
+      type: 'Text',
+      content: 'الرأس الأساسي',
+      sentAt: '2026-08-26T12:00:00.000Z',
+    };
+    const newerHeadMessage = {
+      ...baseMessage,
+      id: 'b3000000-0000-0000-0000-000000000011',
+      clientMessageId: 'ordered-newer',
+      content: 'الرأس الأحدث الصحيح',
+      sentAt: '2026-08-26T12:01:00.000Z',
+    };
+    const staleHeadMessage = {
+      ...baseMessage,
+      id: 'b3000000-0000-0000-0000-000000000012',
+      clientMessageId: 'ordered-stale',
+      content: 'الرأس المتأخر الخاطئ',
+      sentAt: '2026-08-26T12:02:00.000Z',
+    };
+    let preSendHeadRequests = 0;
+    let preSendHeadSettled = 0;
+    let postSendHeadRequests = 0;
+    let sentMessages = 0;
+    let messageSent = false;
+    let releasePreSendHeads = () => {};
+    const preSendHeadGate = new Promise<void>((resolve) => { releasePreSendHeads = resolve; });
+    const requestedCursors: Array<string | null> = [];
+
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 1, maxActiveConversations: 2, conversations: [conversation], cannedReplies: [] } }),
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages**`, async route => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      requestedCursors.push(cursor);
+      if (cursor === 'historical-frontier') {
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [], nextCursor: null } }) });
+        return;
+      }
+      if (!messageSent) {
+        preSendHeadRequests += 1;
+        await preSendHeadGate;
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [staleHeadMessage], nextCursor: 'stale-bridge' } }) }).catch(() => undefined);
+        preSendHeadSettled += 1;
+        return;
+      }
+      postSendHeadRequests += 1;
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [baseMessage, newerHeadMessage], nextCursor: 'historical-frontier' } }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages`, route => {
+      sentMessages += 1;
+      messageSent = true;
+      const message = {
+        ...baseMessage,
+        id: `b3000000-0000-0000-0000-${String(100 + sentMessages).padStart(12, '0')}`,
+        senderType: 'Staff',
+        clientMessageId: `ordered-local-${sentMessages}`,
+        content: `تشغيل التحديث ${sentMessages}`,
+        sentAt: new Date(Date.UTC(2026, 7, 26, 13, 0, sentMessages)).toISOString(),
+      };
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { message, replayed: false } }) });
+    });
+
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    await expect.poll(() => preSendHeadRequests).toBeGreaterThanOrEqual(1);
+    await expect(page.getByText('جارٍ تحميل الرسائل…', { exact: true })).toBeVisible();
+    await page.getByLabel('رد موظف الدعم').fill('تشغيل التحديث 1');
+    await page.getByRole('button', { name: 'إرسال الرد' }).click();
+    await expect.poll(() => postSendHeadRequests).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('[data-live-support-message-id="b3000000-0000-0000-0000-000000000011"]')).toContainText('الرأس الأحدث الصحيح');
+    await expect(page.getByText('جارٍ تحميل الرسائل…', { exact: true })).toHaveCount(0);
+
+    const staleRequestsBeforeRelease = preSendHeadRequests;
+    releasePreSendHeads();
+    await expect.poll(() => preSendHeadSettled).toBe(staleRequestsBeforeRelease);
+    await expect(page.locator('[data-live-support-message-id="b3000000-0000-0000-0000-000000000012"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'استكمال الرسائل الناقصة' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
+    await expect.poll(() => requestedCursors.filter((cursor) => cursor === 'historical-frontier').length).toBe(1);
+    expect(requestedCursors).not.toContain('stale-bridge');
+  });
+
+  // Regression 2026-08-26: reopening WhatsApp hid prior episodes and refreshes dropped loaded pages.
+  test('staff WhatsApp thread keeps older pages visible after a head refresh', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAssistantAuth(page);
+    const staffId = 'a0000000-0000-0000-0000-000000000099';
+    const currentConversationId = 'a0000000-0000-0000-0000-000000000021';
+    const previousConversationId = 'a0000000-0000-0000-0000-000000000020';
+    const olderAttachmentId = 'a0000000-0000-0000-0000-000000000099';
+    const conversation = {
+      id: currentConversationId,
+      subject: 'متابعة واتساب',
+      status: 'Active',
+      participantType: 'Guest',
+      participantName: 'عميل واتساب',
+      currentOwnerUserId: staffId,
+      channel: 'WhatsApp',
+      externalPhoneNumber: '01000000000',
+      customerServiceWindowExpiresAt: '2099-08-26T12:00:00.000Z',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      version: 1,
+      canSend: true,
+      canRate: false,
+    };
+    const currentMessages = Array.from({ length: 24 }, (_, index) => ({
+      id: `a1000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      conversationId: currentConversationId,
+      senderType: index % 2 ? 'Staff' : 'Guest',
+      clientMessageId: `current-${index + 1}`,
+      type: 'Text',
+      content: `الحالية ${index + 1}`,
+      sentAt: new Date(Date.UTC(2026, 7, 26, 12, index)).toISOString(),
+    }));
+    const olderMessages = Array.from({ length: 12 }, (_, index) => ({
+      id: `a0000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      conversationId: previousConversationId,
+      senderType: index % 2 ? 'Staff' : 'Guest',
+      clientMessageId: `older-${index + 1}`,
+      type: index === 0 ? 'Image' : 'Text',
+      content: `السابقة ${index + 1}`,
+      sentAt: new Date(Date.UTC(2026, 7, 25, 12, index)).toISOString(),
+      attachmentId: index === 0 ? olderAttachmentId : null,
+    }));
+    let sentMessage: (typeof currentMessages)[number] | undefined;
+    let headRequests = 0;
+    let legacyMessageGets = 0;
+    let threadAttachmentGets = 0;
+    let legacyAttachmentGets = 0;
+
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 1, maxActiveConversations: 2, conversations: [conversation], cannedReplies: [] } }),
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/messages**`, route => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      if (cursor === 'older-page') {
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: olderMessages, nextCursor: null } }) });
+      }
+      headRequests += 1;
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: sentMessage ? [...currentMessages, sentMessage] : currentMessages, nextCursor: 'older-page' } }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/messages`, route => {
+      if (route.request().method() === 'GET') {
+        legacyMessageGets += 1;
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+      }
+      sentMessage = {
+        ...currentMessages.at(-1)!,
+        id: 'a2000000-0000-0000-0000-000000000001',
+        clientMessageId: 'sent-current',
+        content: 'رد بعد تحميل القديم',
+        sentAt: '2026-08-26T13:00:00.000Z',
+      };
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { message: sentMessage, replayed: false } }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/attachments/${olderAttachmentId}`, route => {
+      threadAttachmentGets += 1;
+      return route.fulfill({
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+      });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${previousConversationId}/attachments/${olderAttachmentId}`, route => {
+      legacyAttachmentGets += 1;
+      return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+    });
+
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    await expect(page.locator('[data-live-support-message-id="a1000000-0000-0000-0000-000000000024"]')).toContainText('الحالية 24', { timeout: 15_000 });
+    const viewport = page.getByLabel('سجل رسائل المحادثة');
+    await viewport.evaluate((element) => { element.scrollTop = 0; });
+    const firstCurrentMessage = page.locator('[data-live-support-message-id="a1000000-0000-0000-0000-000000000001"]');
+    const beforePrepend = await firstCurrentMessage.boundingBox();
+    expect(beforePrepend).toBeTruthy();
+
+    await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
+    const firstOlderMessage = page.locator('[data-live-support-message-id="a0000000-0000-0000-0000-000000000001"]');
+    await expect(firstOlderMessage).toBeAttached();
+    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
+    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
+    await expect(page.getByRole('separator', { name: 'بداية محادثة سابقة' })).toHaveCount(1);
+    await expect(page.getByRole('separator', { name: 'بداية المحادثة الحالية' })).toHaveCount(1);
+    const afterPrepend = await firstCurrentMessage.boundingBox();
+    expect(afterPrepend).toBeTruthy();
+    expect(Math.abs(afterPrepend!.y - beforePrepend!.y)).toBeLessThan(4);
+
+    const headRequestsBeforeSend = headRequests;
+    await page.getByLabel('رد موظف الدعم').fill('رد بعد تحميل القديم');
+    await page.getByRole('button', { name: 'إرسال الرد' }).click();
+    await expect.poll(() => headRequests).toBeGreaterThan(headRequestsBeforeSend);
+    await expect(firstOlderMessage).toHaveCount(1);
+    await expect(page.locator('[data-live-support-message-id="a2000000-0000-0000-0000-000000000001"]')).toContainText('رد بعد تحميل القديم');
+    expect(legacyMessageGets).toBe(0);
+    expect(legacyAttachmentGets).toBe(0);
+  });
+
+  // Regression 2026-08-26: when more than one page arrived between head
+  // refreshes, the preserved historical cursor skipped the unseen middle.
+  test('staff WhatsApp thread bridges a disjoint realtime head before resuming older history', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAssistantAuth(page);
+    const staffId = 'b0000000-0000-0000-0000-000000000099';
+    const currentConversationId = 'b0000000-0000-0000-0000-000000000021';
+    const previousConversationId = 'b0000000-0000-0000-0000-000000000020';
+    const conversation = {
+      id: currentConversationId,
+      subject: 'دفعة واتساب كبيرة',
+      status: 'Active',
+      participantType: 'Guest',
+      participantName: 'عميل دفعة واتساب',
+      currentOwnerUserId: staffId,
+      channel: 'WhatsApp',
+      externalPhoneNumber: '01000000004',
+      customerServiceWindowExpiresAt: '2099-08-26T12:00:00.000Z',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      version: 1,
+      canSend: true,
+      canRate: false,
+    };
+    const makeCurrentMessage = (number: number) => ({
+      id: `b1000000-0000-0000-0000-${String(number).padStart(12, '0')}`,
+      conversationId: currentConversationId,
+      senderType: number % 2 ? 'Guest' : 'Staff',
+      clientMessageId: `rollover-${number}`,
+      type: 'Text',
+      content: `رسالة الدفعة ${number}`,
+      sentAt: new Date(Date.UTC(2026, 7, 26, 12, 0, number)).toISOString(),
+    });
+    const initialHead = Array.from({ length: 50 }, (_, index) =>
+      makeCurrentMessage(index + 1)
+    );
+    const rolledHead = Array.from({ length: 50 }, (_, index) =>
+      makeCurrentMessage(index + 52)
+    );
+    const bridgePage = Array.from({ length: 50 }, (_, index) =>
+      makeCurrentMessage(index + 2)
+    );
+    const historicalMessage = {
+      id: 'b0000000-0000-0000-0000-000000000001',
+      conversationId: previousConversationId,
+      senderType: 'Guest',
+      clientMessageId: 'rollover-history',
+      type: 'Text',
+      content: 'رسالة من جلسة واتساب الأقدم',
+      sentAt: '2026-08-25T12:00:00.000Z',
+    };
+    const locallySentMessage = {
+      ...makeCurrentMessage(200),
+      id: 'b2000000-0000-0000-0000-000000000001',
+      senderType: 'Staff',
+      clientMessageId: 'rollover-local-send',
+      content: 'تشغيل تحديث الدفعة',
+    };
+    let rolled = false;
+    let headRequests = 0;
+    const requestedCursors: Array<string | null> = [];
+
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 1, maxActiveConversations: 2, conversations: [conversation], cannedReplies: [] } }),
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/messages**`, route => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      requestedCursors.push(cursor);
+      if (cursor === 'bridge-page') {
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: bridgePage, nextCursor: 'unused-after-overlap' } }) });
+      }
+      if (cursor === 'historical-page') {
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: [historicalMessage], nextCursor: null } }) });
+      }
+      headRequests += 1;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: rolled
+          ? { items: rolledHead, nextCursor: 'bridge-page' }
+          : { items: initialHead, nextCursor: 'historical-page' } }),
+      });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/messages`, route => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+      }
+      rolled = true;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { message: locallySentMessage, replayed: false } }),
+      });
+    });
+
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    await expect(page.locator('[data-live-support-message-id="b1000000-0000-0000-0000-000000000050"]')).toContainText('رسالة الدفعة 50');
+    const headRequestsBeforeSend = headRequests;
+    await page.getByLabel('رد موظف الدعم').fill('تشغيل تحديث الدفعة');
+    await page.getByRole('button', { name: 'إرسال الرد' }).click();
+    await expect.poll(() => headRequests).toBeGreaterThan(headRequestsBeforeSend);
+    await expect(page.locator('[data-live-support-message-id="b1000000-0000-0000-0000-000000000101"]')).toContainText('رسالة الدفعة 101');
+    await expect(page.locator('[data-live-support-message-id="b1000000-0000-0000-0000-000000000051"]')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'استكمال الرسائل الناقصة' }).click();
+    await expect(page.locator('[data-live-support-message-id="b1000000-0000-0000-0000-000000000051"]')).toContainText('رسالة الدفعة 51');
+    await expect(page.getByRole('button', { name: 'تحميل الرسائل الأقدم' })).toBeVisible();
+    await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
+    await expect(page.locator('[data-live-support-message-id="b0000000-0000-0000-0000-000000000001"]')).toContainText('رسالة من جلسة واتساب الأقدم');
+    await expect(page.getByRole('button', { name: /الرسائل الأقدم|الرسائل الناقصة/ })).toHaveCount(0);
+    expect(requestedCursors.filter((cursor) => cursor === 'bridge-page')).toHaveLength(1);
+    expect(requestedCursors.filter((cursor) => cursor === 'historical-page')).toHaveLength(1);
+  });
+
+  // Regression 2026-08-26: the admin investigation still used the capped
+  // single-conversation endpoint even when an open WhatsApp thread had history.
+  test('admin WhatsApp investigation pages the full thread and preserves it on refresh', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const currentConversationId = 'a0000000-0000-0000-0000-000000000041';
+    const previousConversationId = 'a0000000-0000-0000-0000-000000000040';
+    const olderAttachmentId = 'a0000000-0000-0000-0000-000000000049';
+    const conversation = {
+      id: currentConversationId,
+      participantName: 'مدير واتساب',
+      participantType: 'Guest',
+      status: 'Active',
+      ownerName: 'موظف الدعم',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      subject: 'تحقيق سجل واتساب',
+      channel: 'WhatsApp',
+      externalPhoneNumber: '01000000002',
+      customerServiceWindowExpiresAt: '2099-08-26T12:00:00.000Z',
+    };
+    const currentMessages = Array.from({ length: 24 }, (_, index) => ({
+      id: `a4000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      conversationId: currentConversationId,
+      senderType: index % 2 ? 'Staff' : 'Guest',
+      clientMessageId: `admin-current-${index + 1}`,
+      type: 'Text',
+      content: `تحقيق الحالية ${index + 1}`,
+      sentAt: new Date(Date.UTC(2026, 7, 26, 12, index)).toISOString(),
+    }));
+    const olderMessages = Array.from({ length: 12 }, (_, index) => ({
+      id: `a3000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      conversationId: previousConversationId,
+      senderType: index % 2 ? 'Staff' : 'Guest',
+      clientMessageId: `admin-older-${index + 1}`,
+      type: index === 0 ? 'Image' : 'Text',
+      content: `تحقيق السابقة ${index + 1}`,
+      sentAt: new Date(Date.UTC(2026, 7, 25, 12, index)).toISOString(),
+      attachmentId: index === 0 ? olderAttachmentId : null,
+    }));
+    const sentMessage = {
+      ...currentMessages.at(-1)!,
+      id: 'a5000000-0000-0000-0000-000000000001',
+      clientMessageId: 'admin-sent-current',
+      senderType: 'Admin',
+      content: 'رد الإدارة بعد تحميل القديم',
+      sentAt: '2026-08-26T13:00:00.000Z',
+    };
+    let headRequests = 0;
+    let legacyMessageGets = 0;
+    let threadAttachmentGets = 0;
+    let legacyAttachmentGets = 0;
+
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/messages**`, route => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      if (cursor === 'admin-older-page') {
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: olderMessages, nextCursor: null } }) });
+      }
+      headRequests += 1;
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { items: currentMessages, nextCursor: 'admin-older-page' } }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/messages`, route => {
+      if (route.request().method() === 'GET') {
+        legacyMessageGets += 1;
+        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+      }
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { message: sentMessage, replayed: false } }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/attachments/${olderAttachmentId}`, route => {
+      threadAttachmentGets += 1;
+      return route.fulfill({
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+      });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${previousConversationId}/attachments/${olderAttachmentId}`, route => {
+      legacyAttachmentGets += 1;
+      return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+    });
+
+    await openSyntheticAdminInvestigation(page, conversation);
+    await expect(page.locator('[data-live-support-message-id="a4000000-0000-0000-0000-000000000024"]')).toContainText('تحقيق الحالية 24', { timeout: 15_000 });
+
+    const viewport = page.getByLabel('سجل رسائل المحادثة');
+    await viewport.evaluate((element) => { element.scrollTop = 0; });
+    const firstCurrentMessage = page.locator('[data-live-support-message-id="a4000000-0000-0000-0000-000000000001"]');
+    const beforePrepend = await firstCurrentMessage.boundingBox();
+    expect(beforePrepend).toBeTruthy();
+
+    await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
+    const firstOlderMessage = page.locator('[data-live-support-message-id="a3000000-0000-0000-0000-000000000001"]');
+    await expect(firstOlderMessage).toBeAttached();
+    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
+    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
+    await expect(page.getByRole('separator', { name: 'بداية جلسة واتساب أخرى' })).toHaveCount(1);
+    await expect(page.getByRole('separator', { name: 'بداية المحادثة المحددة' })).toHaveCount(1);
+    const afterPrepend = await firstCurrentMessage.boundingBox();
+    expect(afterPrepend).toBeTruthy();
+    expect(Math.abs(afterPrepend!.y - beforePrepend!.y)).toBeLessThan(4);
+
+    const headRequestsBeforeSend = headRequests;
+    await page.getByLabel('رد الإدارة على المحادثة').fill('رد الإدارة بعد تحميل القديم');
+    await page.getByRole('button', { name: 'إرسال الرسالة' }).click();
+    await expect.poll(() => headRequests).toBeGreaterThan(headRequestsBeforeSend);
+    await expect(firstOlderMessage).toHaveCount(1);
+    await expect(page.locator('[data-live-support-message-id="a5000000-0000-0000-0000-000000000001"]')).toContainText('رد الإدارة بعد تحميل القديم');
+    expect(legacyMessageGets).toBe(0);
+    expect(legacyAttachmentGets).toBe(0);
+  });
+
+  // Regression 2026-08-26: terminal WhatsApp anchors are valid thread roots;
+  // the admin must see their earlier episodes without regaining send controls.
+  test('closed admin WhatsApp investigation keeps cross-episode history read-only', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const currentConversationId = 'a0000000-0000-0000-0000-000000000051';
+    const previousConversationId = 'a0000000-0000-0000-0000-000000000050';
+    const conversation = {
+      id: currentConversationId,
+      participantName: 'سجل واتساب مغلق',
+      participantType: 'Guest',
+      status: 'Closed',
+      ownerName: 'موظف سابق',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      closedAt: '2026-08-26T13:00:00.000Z',
+      subject: 'تحقيق مغلق',
+      channel: 'WhatsApp',
+      externalPhoneNumber: '01000000003',
+      customerServiceWindowExpiresAt: '2026-08-26T12:00:00.000Z',
+    };
+    const currentMessage = {
+      id: 'a7000000-0000-0000-0000-000000000001',
+      conversationId: currentConversationId,
+      senderType: 'Staff',
+      clientMessageId: 'closed-current',
+      type: 'Text',
+      content: 'آخر رسالة قبل الإغلاق',
+      sentAt: '2026-08-26T12:30:00.000Z',
+    };
+    const previousMessage = {
+      id: 'a6000000-0000-0000-0000-000000000001',
+      conversationId: previousConversationId,
+      senderType: 'Guest',
+      clientMessageId: 'closed-previous',
+      type: 'Text',
+      content: 'رسالة من المحادثة السابقة',
+      sentAt: '2026-08-25T12:30:00.000Z',
+    };
+    let legacyMessageGets = 0;
+
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/whatsapp-thread/messages**`, route => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: cursor === 'closed-older-page'
+          ? { items: [previousMessage], nextCursor: null }
+          : { items: [currentMessage], nextCursor: 'closed-older-page' } }),
+      });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${currentConversationId}/messages`, route => {
+      if (route.request().method() === 'GET') legacyMessageGets += 1;
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+    });
+
+    await openSyntheticAdminInvestigation(page, conversation);
+    await expect(page.locator('[data-live-support-message-id="a7000000-0000-0000-0000-000000000001"]')).toContainText('آخر رسالة قبل الإغلاق');
+    await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
+    await expect(page.locator('[data-live-support-message-id="a6000000-0000-0000-0000-000000000001"]')).toContainText('رسالة من المحادثة السابقة');
+    await expect(page.getByRole('separator', { name: 'بداية جلسة واتساب أخرى' })).toHaveCount(1);
+    await expect(page.getByRole('separator', { name: 'بداية المحادثة المحددة' })).toHaveCount(1);
+    await expect(page.getByLabel('رد الإدارة على المحادثة')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'إرسال الرسالة' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'قالب واتساب' })).toHaveCount(0);
+    expect(legacyMessageGets).toBe(0);
+  });
+
+  test('admin Web investigation keeps the exact conversation message contract', async ({ page }) => {
+    const conversationId = 'a0000000-0000-0000-0000-000000000061';
+    const conversation = {
+      id: conversationId,
+      participantName: 'مستخدم الموقع',
+      participantType: 'Student',
+      status: 'Active',
+      ownerName: 'موظف الموقع',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      subject: 'دعم الموقع',
+      channel: 'Web',
+    };
+    let exactMessageGets = 0;
+    let threadMessageGets = 0;
+
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages**`, route => {
+      exactMessageGets += 1;
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [{ id: 'a8000000-0000-0000-0000-000000000001', conversationId, senderType: 'Student', clientMessageId: 'web-exact', type: 'Text', content: 'رسالة الموقع الحالية', sentAt: '2026-08-26T12:00:00.000Z' }] }),
+      });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages**`, route => {
+      threadMessageGets += 1;
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    });
+
+    await openSyntheticAdminInvestigation(page, conversation);
+    await expect(page.locator('[data-live-support-message-id="a8000000-0000-0000-0000-000000000001"]')).toContainText('رسالة الموقع الحالية');
+    await expect(page.getByRole('button', { name: 'تحميل الرسائل الأقدم' })).toHaveCount(0);
+    await expect(page.getByLabel('رد الإدارة على المحادثة')).toBeEnabled();
+    expect(exactMessageGets).toBeGreaterThan(0);
+    expect(threadMessageGets).toBe(0);
+  });
+
+  // Regression 2026-08-26: a delayed history response could replace a newer selection.
+  test('late student-history response cannot overwrite the newly selected conversation', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installAssistantAuth(page);
+    const staffId = 'a0000000-0000-0000-0000-000000000099';
+    const conversationId = 'a0000000-0000-0000-0000-000000000031';
+    const historyAId = 'a0000000-0000-0000-0000-000000000032';
+    const historyBId = 'a0000000-0000-0000-0000-000000000033';
+    const conversation = {
+      id: conversationId,
+      subject: 'سجل الطالب',
+      status: 'Active',
+      participantType: 'Student',
+      participantName: 'طالب الاختبار',
+      linkedStudentUserId: 'a0000000-0000-0000-0000-000000000034',
+      currentOwnerUserId: staffId,
+      channel: 'Web',
+      createdAt: '2026-08-26T11:00:00.000Z',
+      version: 1,
+      canSend: true,
+      canRate: false,
+    };
+    const history = [
+      { conversationId: historyAId, status: 'Closed', subject: 'السجل أ', startedAt: '2026-08-20T10:00:00.000Z', endedAt: '2026-08-20T11:00:00.000Z', lastActivityAt: '2026-08-20T11:00:00.000Z', messageCount: 1, lastMessagePreview: 'رسالة أ', activities: [] },
+      { conversationId: historyBId, status: 'Closed', subject: 'السجل ب', startedAt: '2026-08-21T10:00:00.000Z', endedAt: '2026-08-21T11:00:00.000Z', lastActivityAt: '2026-08-21T11:00:00.000Z', messageCount: 1, lastMessagePreview: 'رسالة ب', activities: [] },
+    ];
+    let releaseHistoryA = () => {};
+    const historyAGate = new Promise<void>((resolve) => { releaseHistoryA = resolve; });
+    let settleHistoryAResponse = () => {};
+    const historyAResponseSettled = new Promise<void>((resolve) => { settleHistoryAResponse = resolve; });
+    let historyARequests = 0;
+
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0, activeCount: 1, maxActiveConversations: 2, conversations: [conversation], cannedReplies: [] } }),
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages**`, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/student-history`, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: history }) }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/student-history/*/messages**`, async route => {
+      const isHistoryA = route.request().url().includes(historyAId);
+      if (isHistoryA) {
+        historyARequests += 1;
+        await historyAGate;
+      }
+      const historyConversationId = isHistoryA ? historyAId : historyBId;
+      const content = isHistoryA ? 'تفاصيل السجل أ المتأخرة' : 'تفاصيل السجل ب الصحيحة';
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [{ id: `${historyConversationId}-message`, conversationId: historyConversationId, senderType: 'Staff', clientMessageId: `${historyConversationId}-client`, type: 'Text', content, sentAt: '2026-08-21T10:30:00.000Z' }] }) }).catch(() => undefined);
+      if (isHistoryA) settleHistoryAResponse();
+    });
+
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    await page.getByRole('button', { name: /السجل أ/ }).click();
+    await expect.poll(() => historyARequests).toBe(1);
+    await page.getByRole('button', { name: /السجل ب/ }).click();
+    await expect(page.getByText('تفاصيل السجل ب الصحيحة', { exact: true })).toBeVisible();
+    releaseHistoryA();
+    await historyAResponseSettled;
+    await expect(page.getByText('تفاصيل السجل ب الصحيحة', { exact: true })).toBeVisible();
+    await expect(page.getByText('تفاصيل السجل أ المتأخرة', { exact: true })).toHaveCount(0);
   });
 });

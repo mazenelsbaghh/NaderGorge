@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 433,
+  "reachableFileCount": 434,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -1504,6 +1504,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/lib/live-support-message-pages.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/lib/navigation-state.ts",
       "route": null
     },
@@ -1736,7 +1740,7 @@
       "route": null
     }
   ],
-  "callCount": 536,
+  "callCount": 538,
   "calls": [
     {
       "method": "DELETE",
@@ -1924,7 +1928,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 594
+        "line": 609
       }
     },
     {
@@ -1933,7 +1937,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 769
+        "line": 784
       }
     },
     {
@@ -3265,7 +3269,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 574
+        "line": 581
       }
     },
     {
@@ -3319,7 +3323,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 790
+        "line": 811
       }
     },
     {
@@ -3328,7 +3332,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 799
+        "line": 820
       }
     },
     {
@@ -3337,7 +3341,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 793
+        "line": 814
       }
     },
     {
@@ -3346,7 +3350,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 796
+        "line": 817
       }
     },
     {
@@ -3355,7 +3359,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 539
+        "line": 546
       }
     },
     {
@@ -3364,7 +3368,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 542
+        "line": 549
       }
     },
     {
@@ -3373,7 +3377,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 551
+        "line": 558
       }
     },
     {
@@ -3382,7 +3386,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 917
+        "line": 938
       }
     },
     {
@@ -3391,7 +3395,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 560
+        "line": 567
       }
     },
     {
@@ -3400,7 +3404,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 920
+        "line": 941
       }
     },
     {
@@ -3409,7 +3413,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 554
+        "line": 561
       }
     },
     {
@@ -3418,7 +3422,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 612
+        "line": 627
       }
     },
     {
@@ -3427,7 +3431,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 825
+        "line": 846
       }
     },
     {
@@ -3436,7 +3440,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 854
+        "line": 875
       }
     },
     {
@@ -3445,7 +3449,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 860
+        "line": 881
       }
     },
     {
@@ -3454,7 +3458,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 857
+        "line": 878
       }
     },
     {
@@ -3463,7 +3467,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 775
+        "line": 790
       }
     },
     {
@@ -3472,7 +3476,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 842
+        "line": 863
       }
     },
     {
@@ -3481,7 +3485,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 845
+        "line": 866
       }
     },
     {
@@ -3490,7 +3494,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 848
+        "line": 869
       }
     },
     {
@@ -3499,7 +3503,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 851
+        "line": 872
       }
     },
     {
@@ -3508,7 +3512,25 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 833
+        "line": 854
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 589
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/messages",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 793
       }
     },
     {
@@ -3517,7 +3539,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 697
+        "line": 712
       }
     },
     {
@@ -3526,7 +3548,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 640
+        "line": 655
       }
     },
     {
@@ -3535,7 +3557,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 724
+        "line": 739
       }
     },
     {
@@ -3544,7 +3566,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 632
+        "line": 647
       }
     },
     {
@@ -4066,7 +4088,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 588
+        "line": 603
       }
     },
     {
@@ -4075,7 +4097,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 763
+        "line": 778
       }
     },
     {
@@ -5596,7 +5618,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 802
+        "line": 823
       }
     },
     {
@@ -5605,7 +5627,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 545
+        "line": 552
       }
     },
     {
@@ -5614,7 +5636,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 600
+        "line": 615
       }
     },
     {
@@ -5623,7 +5645,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 911
+        "line": 932
       }
     },
     {
@@ -5632,7 +5654,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 875
+        "line": 896
       }
     },
     {
@@ -5641,7 +5663,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 869
+        "line": 890
       }
     },
     {
@@ -5650,7 +5672,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 893
+        "line": 914
       }
     },
     {
@@ -5659,7 +5681,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 881
+        "line": 902
       }
     },
     {
@@ -5668,7 +5690,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 887
+        "line": 908
       }
     },
     {
@@ -5677,7 +5699,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 905
+        "line": 926
       }
     },
     {
@@ -5686,7 +5708,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 899
+        "line": 920
       }
     },
     {
@@ -5695,7 +5717,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 564
+        "line": 571
       }
     },
     {
@@ -5704,7 +5726,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 582
+        "line": 597
       }
     },
     {
@@ -5713,7 +5735,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 606
+        "line": 621
       }
     },
     {
@@ -5722,7 +5744,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 863
+        "line": 884
       }
     },
     {
@@ -5731,7 +5753,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 617
+        "line": 632
       }
     },
     {
@@ -5740,7 +5762,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 778
+        "line": 799
       }
     },
     {
@@ -5749,7 +5771,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 626
+        "line": 641
       }
     },
     {
@@ -5758,7 +5780,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 784
+        "line": 805
       }
     },
     {
@@ -5767,7 +5789,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 757
+        "line": 772
       }
     },
     {
@@ -5776,7 +5798,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 711
+        "line": 726
       }
     },
     {
@@ -5785,7 +5807,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 681
+        "line": 696
       }
     },
     {
@@ -5794,7 +5816,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 649
+        "line": 664
       }
     },
     {
@@ -5803,7 +5825,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 664
+        "line": 679
       }
     },
     {
@@ -5812,7 +5834,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 747
+        "line": 762
       }
     },
     {
@@ -5821,7 +5843,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 735
+        "line": 750
       }
     },
     {
@@ -5830,7 +5852,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 635
+        "line": 650
       }
     },
     {
@@ -6496,7 +6518,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 841
       }
     },
     {
@@ -6505,7 +6527,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 808
+        "line": 829
       }
     },
     {
@@ -6514,7 +6536,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 814
+        "line": 835
       }
     },
     {
@@ -6523,7 +6545,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 828
+        "line": 849
       }
     },
     {
@@ -6532,7 +6554,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 836
+        "line": 857
       }
     },
     {
@@ -7007,5 +7029,5 @@
       }
     }
   ],
-  "digest": "4cda88c7e894c51f8aee121fbae38bfe1ec8ffd65d2b078107178250204cf7f0"
+  "digest": "43230e9a13f40aae5b0e1a3e7ee37dc596b8ad576ae9dd3f6b3ac03ec79c7bee"
 }

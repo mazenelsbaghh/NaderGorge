@@ -99,10 +99,34 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("conversations/{conversationId:guid}/whatsapp-thread/attachments/{attachmentId:guid}")]
+    public async Task<IActionResult> DownloadWhatsAppThreadAttachment(Guid conversationId, Guid attachmentId, CancellationToken ct)
+    {
+        try
+        {
+            var query = new LiveSupportStaffWhatsAppAttachmentQuery(UserId(), User.IsInRole("Admin"), conversationId, attachmentId);
+            var item = await _service.OpenStaffWhatsAppThreadAttachmentAsync(query, ct);
+            Response.Headers.ContentDisposition = $"inline; filename=\"{Uri.EscapeDataString(item.FileName)}\"";
+            return File(item.Content, item.ContentType, enableRangeProcessing: true);
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpGet("conversations/{conversationId:guid}/messages")]
     public async Task<IActionResult> Messages(Guid conversationId, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         try { return Ok(ApiResponse<IReadOnlyList<LiveSupportMessageDto>>.Ok(await _service.GetStaffMessagesAsync(UserId(), User.IsInRole("Admin"), conversationId, pageSize, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/whatsapp-thread/messages")]
+    public async Task<IActionResult> WhatsAppThreadMessages(Guid conversationId, [FromQuery] int pageSize = 50, [FromQuery] string? cursor = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var query = new LiveSupportStaffWhatsAppThreadQuery(UserId(), User.IsInRole("Admin"), conversationId, pageSize, cursor);
+            return Ok(ApiResponse<LiveSupportWhatsAppThreadPageDto>.Ok(await _service.GetStaffWhatsAppThreadAsync(query, ct)));
+        }
         catch (LiveSupportException ex) { return Error(ex); }
     }
 

@@ -2,25 +2,51 @@ import type {
   LiveSupportWhatsAppTemplate,
   WhatsAppCampaignAudienceFilters,
   WhatsAppCampaignAudiencePreview,
+  WhatsAppCampaignTemplateComponentType,
   WhatsAppCampaignVariableMapping,
 } from '@/services/live-support-service';
 
 export interface WhatsAppTemplateParameterRequirement {
   key: string;
-  componentType: 'HEADER' | 'BODY';
+  componentType: WhatsAppCampaignTemplateComponentType;
   componentIndex: number;
   parameterIndex: number;
+  buttonIndex?: number;
+  parameterType: 'TEXT' | 'URL_SUFFIX';
   surroundingText: string;
 }
 
-export interface WhatsAppCampaignTemplateSupport {
-  supported: boolean;
-  reason?: string;
+interface WhatsAppTemplateInspectionFailure {
+  supported: false;
+  reason: string;
+  parameters: [];
+}
+
+interface WhatsAppTemplateInspectionSuccess {
+  supported: true;
   parameters: WhatsAppTemplateParameterRequirement[];
 }
 
+export type WhatsAppCampaignTemplateSupport =
+  | WhatsAppTemplateInspectionFailure
+  | WhatsAppTemplateInspectionSuccess;
+
+type WhatsAppComponentInspection = WhatsAppTemplateInspectionFailure | (
+  WhatsAppTemplateInspectionSuccess & { componentType: string }
+);
+
+type WhatsAppComponentsInspection = WhatsAppTemplateInspectionFailure | (
+  WhatsAppTemplateInspectionSuccess & { hasBody: boolean }
+);
+
 const PLACEHOLDER_PATTERN = /\{\{\s*(\d+)\s*\}\}/g;
 const ANY_PLACEHOLDER_PATTERN = /\{\{[^{}]*\}\}/g;
+const DYNAMIC_URL_SUFFIX_PATTERN = /\{\{\s*1\s*\}\}$/;
+const STUDENT_VARIABLE_SOURCES = new Set([
+  'StudentFirstName', 'StudentFullName', 'EducationStage', 'GradeLevel',
+  'StudyTrack', 'Governorate', 'SchoolName',
+]);
+const REFERENCE_VARIABLE_SOURCES = new Set(['TeacherName', 'SubjectName', 'PackageName', 'LessonName']);
 
 export function createEmptyWhatsAppAudienceFilters(): WhatsAppCampaignAudienceFilters {
   return {
@@ -54,116 +80,204 @@ export function createEmptyWhatsAppAudienceFilters(): WhatsAppCampaignAudienceFi
 export function inspectCampaignTemplate(
   template: LiveSupportWhatsAppTemplate,
 ): WhatsAppCampaignTemplateSupport {
-  if (template.status.toUpperCase() !== 'APPROVED') {
-    return { supported: false, reason: 'القالب غير معتمد من واتساب.', parameters: [] };
-  }
+  const capability = inspectWhatsAppTemplateCapabilities(template);
+  if (!capability.supported) return capability;
   if (!['MARKETING', 'UTILITY'].includes(template.category.toUpperCase())) {
-    return { supported: false, reason: 'الحملات تدعم قوالب MARKETING وUTILITY المعتمدة فقط.', parameters: [] };
+    return unsupportedTemplate('الحملات تدعم قوالب MARKETING وUTILITY المعتمدة فقط.');
   }
+  return capability;
+}
 
-  const parameters: WhatsAppTemplateParameterRequirement[] = [];
-  const seenTextComponentTypes = new Set<string>();
-  let hasBody = false;
-
-  for (const [componentIndex, component] of template.components.entries()) {
-    const componentType = (component.type ?? '').toUpperCase();
-    const format = (component.format ?? 'TEXT').toUpperCase();
-
-    if (!['HEADER', 'BODY', 'FOOTER'].includes(componentType)) {
-      return {
-        supported: false,
-        reason: 'هذه المرحلة تدعم قوالب النص فقط، بدون أزرار أو مكونات تفاعلية.',
-        parameters: [],
-      };
-    }
-    if (componentType === 'HEADER' && format !== 'TEXT') {
-      return {
-        supported: false,
-        reason: 'رأس القالب يحتوي وسائط. الإرسال الجماعي الحالي يدعم رأسًا نصيًا فقط.',
-        parameters: [],
-      };
-    }
-    if (component.buttons?.length) {
-      return {
-        supported: false,
-        reason: 'القوالب ذات الأزرار غير متاحة في الإصدار الحالي من الحملات.',
-        parameters: [],
-      };
-    }
-    const text = component.text ?? '';
-    const allPlaceholders = text.match(ANY_PLACEHOLDER_PATTERN) ?? [];
-    const numericPlaceholders = text.match(PLACEHOLDER_PATTERN) ?? [];
-    if (allPlaceholders.length !== numericPlaceholders.length) {
-      return {
-        supported: false,
-        reason: 'القالب يحتوي متغيرًا غير مرقّم. الحملات تدعم {{1}} و{{2}} فقط.',
-        parameters: [],
-      };
-    }
-    if (componentType === 'FOOTER' && allPlaceholders.length > 0) {
-      return {
-        supported: false,
-        reason: 'تذييل القالب يجب أن يكون نصًا ثابتًا بلا متغيرات.',
-        parameters: [],
-      };
-    }
-    if (componentType !== 'HEADER' && componentType !== 'BODY') continue;
-
-    if (seenTextComponentTypes.has(componentType)) {
-      return {
-        supported: false,
-        reason: `القالب يحتوي أكثر من ${componentLabel(componentType)}؛ هذا التركيب غير مدعوم بأمان.`,
-        parameters: [],
-      };
-    }
-    seenTextComponentTypes.add(componentType);
-    if (componentType === 'BODY') hasBody = true;
-
-    for (const match of text.matchAll(PLACEHOLDER_PATTERN)) {
-      const parameterIndex = Number(match[1]);
-      if (!Number.isInteger(parameterIndex) || parameterIndex < 1) {
-        return { supported: false, reason: 'ترقيم متغيرات القالب يجب أن يبدأ من {{1}}.', parameters: [] };
-      }
-      const start = Math.max(0, (match.index ?? 0) - 28);
-      const end = Math.min(text.length, (match.index ?? 0) + match[0].length + 28);
-      parameters.push({
-        key: `${componentType}:${componentIndex}:${parameterIndex}`,
-        componentType,
-        componentIndex,
-        parameterIndex,
-        surroundingText: text.slice(start, end).trim(),
-      });
-    }
-  }
-
-  parameters.sort((left, right) =>
+export function inspectWhatsAppTemplateCapabilities(
+  template: LiveSupportWhatsAppTemplate,
+): WhatsAppCampaignTemplateSupport {
+  const authorityFailure = synchronizedApprovedTemplateFailure(template);
+  if (authorityFailure) return unsupportedTemplate(authorityFailure);
+  const inspection = inspectTemplateComponents(template.components);
+  if (!inspection.supported) return inspection;
+  if (!inspection.hasBody) return unsupportedTemplate('القالب لا يحتوي مكوّن BODY نصيًا.');
+  inspection.parameters.sort((left, right) =>
     left.componentIndex - right.componentIndex || left.parameterIndex - right.parameterIndex
   );
+  return { supported: true, parameters: inspection.parameters };
+}
 
-  if (!hasBody) {
-    return { supported: false, reason: 'القالب لا يحتوي مكوّن BODY نصيًا.', parameters: [] };
+function synchronizedApprovedTemplateFailure(template: LiveSupportWhatsAppTemplate) {
+  if (!/^[0-9a-f]{64}$/i.test(template.fingerprint)) {
+    return 'يجب مزامنة القالب بنجاح قبل استخدامه في حملة.';
+  }
+  if (template.status.toUpperCase() !== 'APPROVED') return 'القالب غير معتمد من واتساب.';
+  return undefined;
+}
+
+function inspectTemplateComponents(
+  components: LiveSupportWhatsAppTemplate['components'],
+): WhatsAppComponentsInspection {
+  const seenComponentTypes = new Set<string>();
+  const parameters: WhatsAppTemplateParameterRequirement[] = [];
+  let hasBody = false;
+  for (const [componentIndex, component] of components.entries()) {
+    const inspection = inspectTemplateComponent(component, componentIndex);
+    if (!inspection.supported) return inspection;
+    if (seenComponentTypes.has(inspection.componentType)) {
+      return unsupportedTemplate(`القالب يحتوي أكثر من ${componentLabel(inspection.componentType)}؛ هذا التركيب غير مدعوم بأمان.`);
+    }
+    seenComponentTypes.add(inspection.componentType);
+    hasBody ||= inspection.componentType === 'BODY';
+    parameters.push(...inspection.parameters);
+  }
+  return { supported: true, parameters, hasBody };
+}
+
+function inspectTemplateComponent(
+  component: LiveSupportWhatsAppTemplate['components'][number],
+  componentIndex: number,
+): WhatsAppComponentInspection {
+  const componentType = (component.type ?? '').toUpperCase();
+  if (!['HEADER', 'BODY', 'FOOTER', 'BUTTONS'].includes(componentType)) {
+    return unsupportedTemplate('القالب يحتوي مكوّنًا لا يمكن إرساله بأمان من مركز الحملات.');
+  }
+  if (componentType === 'HEADER' && (component.format ?? 'TEXT').toUpperCase() !== 'TEXT') {
+    return unsupportedTemplate('رأس القالب يحتوي وسائط ولا يوجد له مصدر وسائط معتمد داخل الحملات.');
+  }
+  const inspection = componentType === 'BUTTONS'
+    ? inspectTemplateButtons(component.buttons, componentIndex)
+    : inspectTextComponent(component.text ?? '', componentType, componentIndex);
+  return inspection.supported ? { ...inspection, componentType } : inspection;
+}
+
+function inspectTextComponent(
+  text: string,
+  componentType: string,
+  componentIndex: number,
+): WhatsAppCampaignTemplateSupport {
+  if (!text.trim()) return unsupportedTemplate(`${componentLabel(componentType)} بلا نص صالح.`);
+  if (componentType === 'FOOTER' && (text.match(ANY_PLACEHOLDER_PATTERN)?.length ?? 0) > 0) {
+    return unsupportedTemplate('تذييل القالب يجب أن يكون نصًا ثابتًا بلا متغيرات.');
+  }
+  return inspectTextParameters(text, componentType, componentIndex);
+}
+
+function inspectTextParameters(
+  text: string,
+  componentType: string,
+  componentIndex: number,
+): WhatsAppCampaignTemplateSupport {
+  const allPlaceholders = text.match(ANY_PLACEHOLDER_PATTERN) ?? [];
+  const matches = [...text.matchAll(PLACEHOLDER_PATTERN)];
+  if (allPlaceholders.length !== matches.length) {
+    return unsupportedTemplate('القالب يحتوي متغيرًا غير مرقّم. الحملات تدعم {{1}} و{{2}} فقط.');
   }
 
-  for (const componentType of ['HEADER', 'BODY'] as const) {
-    const positions = [...new Set(parameters
-      .filter((parameter) => parameter.componentType === componentType)
-      .map((parameter) => parameter.parameterIndex))]
-      .sort((left, right) => left - right);
-    if (positions.some((position, index) => position !== index + 1)) {
-      return {
-        supported: false,
-        reason: `ترقيم متغيرات ${componentLabel(componentType)} يجب أن يبدأ من {{1}} بلا فجوات.`,
-        parameters: [],
-      };
-    }
+  const positions = [...new Set(matches.map((match) => Number(match[1])))].sort((left, right) => left - right);
+  if (positions.some((position, index) => position !== index + 1)) {
+    return unsupportedTemplate(`ترقيم متغيرات ${componentLabel(componentType)} يجب أن يبدأ من {{1}} بلا فجوات.`);
+  }
+  if (componentType !== 'HEADER' && componentType !== 'BODY') {
+    return { supported: true, parameters: [] };
   }
 
   return {
     supported: true,
-    parameters: parameters.filter((parameter, index, all) =>
-      all.findIndex((candidate) => candidate.key === parameter.key) === index
-    ),
+    parameters: positions.map((parameterIndex) => ({
+      key: `${componentType}:${componentIndex}:${parameterIndex}`,
+      componentType,
+      componentIndex,
+      parameterIndex,
+      parameterType: 'TEXT',
+      surroundingText: placeholderContext(text, parameterIndex),
+    })),
   };
+}
+
+function inspectTemplateButtons(
+  buttons: LiveSupportWhatsAppTemplate['components'][number]['buttons'],
+  componentIndex: number,
+): WhatsAppCampaignTemplateSupport {
+  if (!buttons?.length) return unsupportedTemplate('مكوّن الأزرار لا يحتوي أزرارًا صالحة.');
+  const parameters: WhatsAppTemplateParameterRequirement[] = [];
+  for (const [buttonIndex, button] of buttons.entries()) {
+    const inspection = inspectTemplateButton(button, componentIndex, buttonIndex);
+    if (!inspection.supported) return inspection;
+    parameters.push(...inspection.parameters);
+  }
+  return { supported: true, parameters };
+}
+
+function inspectTemplateButton(
+  button: NonNullable<LiveSupportWhatsAppTemplate['components'][number]['buttons']>[number],
+  componentIndex: number,
+  buttonIndex: number,
+): WhatsAppCampaignTemplateSupport {
+  const buttonType = (button.type ?? '').toUpperCase();
+  if (!button.text?.trim()) return unsupportedTemplate('أحد أزرار القالب بلا عنوان واضح.');
+  if ((button.text.match(ANY_PLACEHOLDER_PATTERN)?.length ?? 0) > 0) {
+    return unsupportedTemplate('نص زر القالب يجب أن يكون ثابتًا.');
+  }
+  if (buttonType === 'URL') return inspectUrlButton(button.url, componentIndex, buttonIndex);
+  if (buttonType === 'PHONE_NUMBER') return inspectPhoneButton(button.phone_number);
+  return unsupportedTemplate(`نوع الزر «${buttonType || 'غير معروف'}» يحتاج عقد إرسال خاصًا وغير متاح في الحملات حاليًا.`);
+}
+
+function inspectPhoneButton(phoneNumber: string | undefined): WhatsAppCampaignTemplateSupport {
+  const normalizedPhoneNumber = phoneNumber?.trim() ?? '';
+  if (!normalizedPhoneNumber || (normalizedPhoneNumber.match(ANY_PLACEHOLDER_PATTERN)?.length ?? 0) > 0) {
+    return unsupportedTemplate('رقم زر الاتصال يجب أن يكون ثابتًا.');
+  }
+  return { supported: true, parameters: [] };
+}
+
+function inspectUrlButton(
+  rawUrl: string | undefined,
+  componentIndex: number,
+  buttonIndex: number,
+): WhatsAppCampaignTemplateSupport {
+  const url = rawUrl?.trim() ?? '';
+  if (!isSafeTemplateUrl(url)) return unsupportedTemplate('رابط أحد أزرار القالب غير صالح أو غير آمن.');
+  const placeholders = url.match(ANY_PLACEHOLDER_PATTERN) ?? [];
+  if (placeholders.length === 0) return { supported: true, parameters: [] };
+  if (placeholders.length !== 1 || !DYNAMIC_URL_SUFFIX_PATTERN.test(url)) {
+    return unsupportedTemplate('زر الرابط الديناميكي يجب أن ينتهي بمتغير واحد {{1}} فقط.');
+  }
+  return { supported: true, parameters: [dynamicUrlRequirement(componentIndex, buttonIndex, url)] };
+}
+
+function dynamicUrlRequirement(
+  componentIndex: number,
+  buttonIndex: number,
+  url: string,
+): WhatsAppTemplateParameterRequirement {
+  return {
+    key: `BUTTON:${componentIndex}:${buttonIndex}:1`,
+    componentType: 'BUTTON',
+    componentIndex,
+    buttonIndex,
+    parameterIndex: 1,
+    parameterType: 'URL_SUFFIX',
+    surroundingText: url,
+  };
+}
+
+function isSafeTemplateUrl(url: string) {
+  try {
+    const parsed = new URL(url.replace(DYNAMIC_URL_SUFFIX_PATTERN, 'preview'));
+    return parsed.protocol === 'https:' && Boolean(parsed.hostname) && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+}
+
+function placeholderContext(text: string, parameterIndex: number) {
+  const pattern = new RegExp(`\\{\\{\\s*${parameterIndex}\\s*\\}\\}`);
+  const match = pattern.exec(text);
+  if (!match) return text.slice(0, 56).trim();
+  const start = Math.max(0, match.index - 28);
+  const end = Math.min(text.length, match.index + match[0].length + 28);
+  return text.slice(start, end).trim();
+}
+
+function unsupportedTemplate(reason: string): WhatsAppTemplateInspectionFailure {
+  return { supported: false, reason, parameters: [] };
 }
 
 export function validateWhatsAppVariableMappings(
@@ -171,32 +285,91 @@ export function validateWhatsAppVariableMappings(
   mappings: WhatsAppCampaignVariableMapping[],
   filters?: WhatsAppCampaignAudienceFilters,
 ) {
-  return requirements.flatMap((requirement) => {
-    const mapping = mappings.find((candidate) =>
-      candidate.componentType === requirement.componentType &&
-      candidate.position === requirement.parameterIndex
-    );
-    if (!mapping) return [`اختر قيمة للمتغير ${requirement.parameterIndex} في ${componentLabel(requirement.componentType)}.`];
-    if (mapping.source === 'Literal' && !mapping.literalValue?.trim()) {
-      return [`اكتب النص الثابت للمتغير ${requirement.parameterIndex} في ${componentLabel(requirement.componentType)}.`];
-    }
-    if (['TeacherName', 'SubjectName', 'PackageName', 'LessonName'].includes(mapping.source) && !mapping.referenceId) {
-      return [`اختر المرجع المحدد للمتغير ${requirement.parameterIndex} في ${componentLabel(requirement.componentType)}.`];
-    }
-    if (mapping.source === 'PurchaseDate') {
-      const packageId = filters?.packageIds.length === 1 ? filters.packageIds[0] : undefined;
-      if (
-        filters?.hasPaidPurchase !== true ||
-        !filters.purchaseFromUtc ||
-        !filters.purchaseToUtc ||
-        !packageId ||
-        mapping.referenceId !== packageId
-      ) {
-        return [`تاريخ الشراء يحتاج «اشترى ودفع»، باقة واحدة مطابقة، وفترة شراء كاملة.`];
-      }
-    }
-    return [];
-  });
+  const errors = requirements.flatMap((requirement) =>
+    requirementMappingErrors(requirement, mappings, filters));
+  if (mappings.some((mapping) => !requirements.some((requirement) => mappingMatchesRequirement(mapping, requirement)))) {
+    errors.push('يوجد ربط متغير لا يطابق مكونات القالب الحالي. أعد اختيار القالب.');
+  }
+  return errors;
+}
+
+function requirementMappingErrors(
+  requirement: WhatsAppTemplateParameterRequirement,
+  mappings: WhatsAppCampaignVariableMapping[],
+  filters?: WhatsAppCampaignAudienceFilters,
+) {
+  const matches = mappings.filter((mapping) => mappingMatchesRequirement(mapping, requirement));
+  if (matches.length === 0) {
+    return [`اختر قيمة للمتغير ${requirement.parameterIndex} في ${requirementLabel(requirement)}.`];
+  }
+  if (matches.length > 1) {
+    return [`يوجد أكثر من ربط للمتغير ${requirement.parameterIndex} في ${requirementLabel(requirement)}.`];
+  }
+  const error = mappingValueError(requirement, matches[0], filters);
+  return error ? [error] : [];
+}
+
+function mappingValueError(
+  requirement: WhatsAppTemplateParameterRequirement,
+  mapping: WhatsAppCampaignVariableMapping,
+  filters?: WhatsAppCampaignAudienceFilters,
+) {
+  const label = requirementLabel(requirement);
+  if (requirement.parameterType === 'URL_SUFFIX' && mapping.source !== 'Literal') {
+    return `لاحقة الرابط في ${label} يجب أن تكون نصًا ثابتًا.`;
+  }
+  if (mapping.source === 'Literal' && !mapping.literalValue?.trim()) {
+    return `اكتب النص الثابت للمتغير ${requirement.parameterIndex} في ${label}.`;
+  }
+  if (mapping.source === 'Literal' && !isSafeLiteral(mapping.literalValue ?? '')) {
+    return `النص الثابت في ${label} طويل أو يحتوي رابطًا أو محارف غير مسموحة.`;
+  }
+  if (mapping.source === 'Literal' && mapping.referenceId) {
+    return `النص الثابت في ${label} لا يقبل مرجع محتوى.`;
+  }
+  if (STUDENT_VARIABLE_SOURCES.has(mapping.source) && (mapping.referenceId || mapping.literalValue != null)) {
+    return `مصدر بيانات الطالب في ${label} لا يقبل قيمة أو مرجعًا إضافيًا.`;
+  }
+  if (REFERENCE_VARIABLE_SOURCES.has(mapping.source) && (!mapping.referenceId || mapping.literalValue != null)) {
+    return `اختر المرجع المحدد للمتغير ${requirement.parameterIndex} في ${label}.`;
+  }
+  return mapping.source === 'PurchaseDate' ? purchaseDateMappingError(mapping, filters) : undefined;
+}
+
+function purchaseDateMappingError(
+  mapping: WhatsAppCampaignVariableMapping,
+  filters?: WhatsAppCampaignAudienceFilters,
+) {
+  const packageId = filters?.packageIds.length === 1 ? filters.packageIds[0] : undefined;
+  const valid = filters?.hasPaidPurchase === true &&
+    Boolean(filters.purchaseFromUtc && filters.purchaseToUtc) &&
+    Boolean(packageId && mapping.referenceId === packageId) &&
+    mapping.literalValue == null;
+  return valid ? undefined : 'تاريخ الشراء يحتاج «اشترى ودفع»، باقة واحدة مطابقة، وفترة شراء كاملة.';
+}
+
+function isSafeLiteral(literalValue: string) {
+  const normalized = literalValue.normalize('NFC').trim();
+  return normalized.length <= 1_024 &&
+    !/\p{Cc}/u.test(normalized) &&
+    !/https?:\/\//i.test(normalized);
+}
+
+export function mappingMatchesRequirement(
+  mapping: WhatsAppCampaignVariableMapping,
+  requirement: WhatsAppTemplateParameterRequirement,
+) {
+  return mapping.componentType === requirement.componentType &&
+    mapping.componentIndex === requirement.componentIndex &&
+    mapping.position === requirement.parameterIndex &&
+    (requirement.componentType === 'BUTTON'
+      ? mapping.buttonIndex === requirement.buttonIndex
+      : mapping.buttonIndex == null);
+}
+
+export function requirementLabel(requirement: WhatsAppTemplateParameterRequirement) {
+  if (requirement.componentType !== 'BUTTON') return componentLabel(requirement.componentType);
+  return `الزر ${Number(requirement.buttonIndex) + 1}`;
 }
 
 export function validateWhatsAppAudienceFilters(filters: WhatsAppCampaignAudienceFilters) {
@@ -298,6 +471,10 @@ export function whatsappCampaignExcludedTotal(
   return Object.values(excludedByReason).reduce((total, value) => total + Math.max(0, value || 0), 0);
 }
 
-export function componentLabel(componentType: 'HEADER' | 'BODY') {
-  return componentType === 'HEADER' ? 'رأس الرسالة' : 'نص الرسالة';
+export function componentLabel(componentType: string) {
+  if (componentType === 'HEADER') return 'رأس الرسالة';
+  if (componentType === 'BODY') return 'نص الرسالة';
+  if (componentType === 'FOOTER') return 'تذييل الرسالة';
+  if (componentType === 'BUTTON' || componentType === 'BUTTONS') return 'مكوّن الأزرار';
+  return 'مكوّن القالب';
 }

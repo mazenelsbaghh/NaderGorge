@@ -20,6 +20,7 @@ public interface ILiveSupportService
     Task SubmitRatingAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int stars, string? comment, CancellationToken ct);
     Task<LiveSupportStaffBootstrapDto> GetStaffBootstrapAsync(Guid staffUserId, bool isAdmin, CancellationToken ct);
     Task<IReadOnlyList<LiveSupportMessageDto>> GetStaffMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, int pageSize, CancellationToken ct);
+    Task<LiveSupportWhatsAppThreadPageDto> GetStaffWhatsAppThreadAsync(LiveSupportStaffWhatsAppThreadQuery query, CancellationToken ct);
     Task<long> GetStaffLastEventSequenceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
     Task AcknowledgeParticipantMessagesAsync(Guid conversationId, CancellationToken ct);
     Task AcknowledgeStaffMessagesAsync(Guid conversationId, CancellationToken ct);
@@ -51,6 +52,7 @@ public interface ILiveSupportService
     Task<LiveSupportAttachmentDownloadDto> OpenParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid attachmentId, CancellationToken ct);
     Task<LiveSupportAttachmentDto> SaveStaffAttachmentAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct);
     Task<LiveSupportAttachmentDownloadDto> OpenStaffAttachmentAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid attachmentId, CancellationToken ct);
+    Task<LiveSupportAttachmentDownloadDto> OpenStaffWhatsAppThreadAttachmentAsync(LiveSupportStaffWhatsAppAttachmentQuery query, CancellationToken ct);
     Task<LiveSupportConversationDto> AdminInterveneAsync(Guid adminUserId, Guid conversationId, string operation, Guid? targetStaffUserId, string reason, CancellationToken ct);
     Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct);
     Task CompleteAITurnAsync(Guid turnId, LiveSupportAITurnCompleteRequest request, CancellationToken ct);

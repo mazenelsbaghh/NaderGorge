@@ -392,7 +392,11 @@ public sealed class WhatsAppLiveSupportService(
         var conversation = await db.LiveSupportConversations
             .Where(item => item.GuestSessionId == guest.Id && item.Status != LiveSupportConversationStatus.Closed && item.Status != LiveSupportConversationStatus.Abandoned)
             .OrderByDescending(item => item.CreatedAt).FirstOrDefaultAsync(ct);
-        conversation ??= await CreateConversationAsync(participant, ct);
+        if (conversation is null)
+        {
+            var previousConversationId = await LatestTerminalWhatsAppConversationIdAsync(whatsAppUserId, ct);
+            conversation = await CreateConversationAsync(participant, previousConversationId, ct);
+        }
         var linkedStudentId = await FindStudentAsync(phone, ct);
         if (linkedStudentId.HasValue) conversation.LinkedStudentUserId = linkedStudentId;
         binding = new LiveSupportWhatsAppBinding
@@ -411,11 +415,24 @@ public sealed class WhatsAppLiveSupportService(
         return (conversation, participant, binding);
     }
 
-    private async Task<LiveSupportConversation> CreateConversationAsync(LiveSupportParticipantIdentity participant, CancellationToken ct)
+    private async Task<Guid?> LatestTerminalWhatsAppConversationIdAsync(string whatsAppUserId, CancellationToken ct) =>
+        await (from binding in db.LiveSupportWhatsAppBindings.AsNoTracking()
+               join conversation in db.LiveSupportConversations.AsNoTracking()
+                   on binding.ConversationId equals conversation.Id
+               where binding.WhatsAppUserId == whatsAppUserId &&
+                   (conversation.Status == LiveSupportConversationStatus.Closed || conversation.Status == LiveSupportConversationStatus.Abandoned)
+               orderby (conversation.ClosedAt ?? conversation.CreatedAt) descending, conversation.Id descending
+               select (Guid?)conversation.Id)
+            .FirstOrDefaultAsync(ct);
+
+    private async Task<LiveSupportConversation> CreateConversationAsync(
+        LiveSupportParticipantIdentity participant,
+        Guid? previousConversationId,
+        CancellationToken ct)
     {
         try
         {
-            var created = await support.CreateConversationAsync(participant, null, null, ct);
+            var created = await support.CreateConversationAsync(participant, null, previousConversationId, ct);
             return await db.LiveSupportConversations.SingleAsync(item => item.Id == created.Id, ct);
         }
         catch (LiveSupportException exception) when (exception.Code == LiveSupportErrorCodes.SupportUnavailable)
@@ -425,6 +442,7 @@ public sealed class WhatsAppLiveSupportService(
             {
                 ParticipantType = LiveSupportParticipantType.Guest,
                 GuestSessionId = participant.GuestSessionId,
+                PreviousConversationId = previousConversationId,
                 Status = LiveSupportConversationStatus.Waiting,
                 QueuedAt = now,
                 LastMessageAt = now,

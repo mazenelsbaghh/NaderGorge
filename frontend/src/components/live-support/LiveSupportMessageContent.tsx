@@ -21,6 +21,7 @@ import { formatCairoTimestamp } from '@/lib/cairo-time';
 interface LiveSupportMessageContentProps {
   message: LiveSupportMessage;
   audience: 'participant' | 'staff';
+  staffWhatsAppThreadConversationId?: string;
 }
 
 export function LiveSupportMessageMeta({
@@ -92,6 +93,7 @@ export function LiveSupportMessageMeta({
 export function LiveSupportMessageContent({
   message,
   audience,
+  staffWhatsAppThreadConversationId,
 }: LiveSupportMessageContentProps) {
   const [attachmentUrl, setAttachmentUrl] = useState<string>();
   const [attachmentFailed, setAttachmentFailed] = useState(false);
@@ -108,8 +110,17 @@ export function LiveSupportMessageContent({
     let objectUrl: string | undefined;
     setAttachmentUrl(undefined);
     setAttachmentFailed(false);
-    void liveSupportService
-      .getAttachmentBlob(audience, message.conversationId, message.attachmentId)
+    const attachmentRequest = staffWhatsAppThreadConversationId
+      ? liveSupportService.getStaffWhatsAppThreadAttachmentBlob(
+          staffWhatsAppThreadConversationId,
+          message.attachmentId,
+        )
+      : liveSupportService.getAttachmentBlob(
+          audience,
+          message.conversationId,
+          message.attachmentId,
+        );
+    void attachmentRequest
       .then((blob) => {
         if (!active) return;
         objectUrl = URL.createObjectURL(blob);
@@ -122,7 +133,13 @@ export function LiveSupportMessageContent({
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [audience, message.attachmentId, message.conversationId, message.type]);
+  }, [
+    audience,
+    message.attachmentId,
+    message.conversationId,
+    message.type,
+    staffWhatsAppThreadConversationId,
+  ]);
 
   if (message.deletedAt)
     return <span className="italic opacity-75">تم حذف الرسالة</span>;

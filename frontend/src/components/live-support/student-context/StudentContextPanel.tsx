@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search, UserRound, Wallet, MonitorSmartphone, BookOpenCheck, Trophy, StickyNote, ChevronDown, ChevronUp, AlertCircle, RefreshCw, History, MessageSquareText } from 'lucide-react';
 import { liveSupportService, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportStudentContextSectionKey, type LiveSupportStudentContextSections, type LiveSupportStudentSearchResult, type LiveSupportStudentSupportHistory } from '@/services/live-support-service';
 import { StudentActionsPanel } from './StudentActionsPanel';
@@ -337,9 +337,14 @@ function StudentSupportHistory({ conversation }: { conversation: LiveSupportConv
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState('');
+  const historyMessagesAbort = useRef<AbortController | null>(null);
+  const historySelectionGeneration = useRef(0);
 
   useEffect(() => {
     if (!conversation.linkedStudentUserId) return;
+    historySelectionGeneration.current += 1;
+    historyMessagesAbort.current?.abort();
+    historyMessagesAbort.current = null;
     const controller = new AbortController();
     setLoading(true);
     setError('');
@@ -350,25 +355,40 @@ function StudentSupportHistory({ conversation }: { conversation: LiveSupportConv
       .then(setItems)
       .catch((cause) => { if (!isAbortError(cause)) setError('تعذر تحميل سجل دعم الطالب.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      historySelectionGeneration.current += 1;
+      historyMessagesAbort.current?.abort();
+      historyMessagesAbort.current = null;
+    };
   }, [conversation.id, conversation.linkedStudentUserId]);
 
   async function openHistory(item: LiveSupportStudentSupportHistory) {
+    const generation = ++historySelectionGeneration.current;
+    historyMessagesAbort.current?.abort();
+    historyMessagesAbort.current = null;
     if (selectedHistory?.conversationId === item.conversationId) {
       setSelectedHistory(undefined);
       setMessages([]);
+      setMessagesLoading(false);
       return;
     }
+    const controller = new AbortController();
+    historyMessagesAbort.current = controller;
     setSelectedHistory(item);
     setMessages([]);
     setMessagesLoading(true);
     setError('');
     try {
-      setMessages(await liveSupportService.getStudentHistoryMessages(conversation.id, item.conversationId));
-    } catch {
-      setError('تعذر تحميل رسائل هذه المحادثة.');
+      const nextMessages = await liveSupportService.getStudentHistoryMessages(conversation.id, item.conversationId, controller.signal);
+      if (generation === historySelectionGeneration.current) setMessages(nextMessages);
+    } catch (cause) {
+      if (!isAbortError(cause) && generation === historySelectionGeneration.current) {
+        setError('تعذر تحميل رسائل هذه المحادثة.');
+      }
     } finally {
-      setMessagesLoading(false);
+      if (historyMessagesAbort.current === controller) historyMessagesAbort.current = null;
+      if (generation === historySelectionGeneration.current) setMessagesLoading(false);
     }
   }
 

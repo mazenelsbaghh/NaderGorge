@@ -43,7 +43,9 @@ public sealed record WhatsAppCampaignVariableMappingDto(
     string Source,
     string? LiteralValue = null,
     Guid? ReferenceId = null,
-    string? Format = null);
+    string? Format = null,
+    int? ComponentIndex = null,
+    int? ButtonIndex = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record WhatsAppCampaignPreviewRequest(

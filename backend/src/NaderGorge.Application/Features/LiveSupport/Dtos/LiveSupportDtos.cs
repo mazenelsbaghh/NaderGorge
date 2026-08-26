@@ -112,6 +112,9 @@ public sealed record LiveSupportExternalMessage(
     LiveSupportMessageType Type,
     Guid? AttachmentId = null);
 public sealed record LiveSupportMessagePageDto(IReadOnlyList<LiveSupportMessageDto> Items, string? NextCursor, long LastEventSequence, IReadOnlyList<LiveSupportTimelineItemDto> MissedEvents);
+public sealed record LiveSupportWhatsAppThreadPageDto(IReadOnlyList<LiveSupportMessageDto> Items, string? NextCursor);
+public sealed record LiveSupportStaffWhatsAppThreadQuery(Guid StaffUserId, bool IsAdmin, Guid ConversationId, int PageSize, string? Cursor);
+public sealed record LiveSupportStaffWhatsAppAttachmentQuery(Guid StaffUserId, bool IsAdmin, Guid ConversationId, Guid AttachmentId);
 public sealed record LiveSupportAttachmentDto(Guid Id, string FileName, string ContentType, long SizeBytes, string DownloadUrl);
 public sealed record LiveSupportAttachmentDownloadDto(Stream Content, string FileName, string ContentType, long SizeBytes);
 

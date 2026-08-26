@@ -42,6 +42,13 @@ public sealed partial class WhatsAppCampaignService
         string Destination,
         IReadOnlyList<WhatsAppCloudService.TemplateComponent> Components);
 
+    internal static string SerializeFrozenRecipientPayload(FrozenRecipientPayload payload) =>
+        JsonSerializer.Serialize(payload, JsonOptions);
+
+    internal static FrozenRecipientPayload? DeserializeFrozenRecipientPayload(
+        ReadOnlySpan<byte> payload) =>
+        JsonSerializer.Deserialize<FrozenRecipientPayload>(payload, JsonOptions);
+
     private sealed record ResolvedAudienceRecipient(
         Guid StudentUserId,
         string StudentName,
@@ -228,10 +235,11 @@ public sealed partial class WhatsAppCampaignService
     {
         if (filters is null || mappings is null)
             throw Invalid("شروط الجمهور وتعيينات القالب مطلوبة.");
-        var textTemplate = WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(template);
-        WhatsAppCampaignTemplatePolicy.ValidateMappings(textTemplate, mappings);
+        var campaignTemplate = WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(template);
+        var canonicalMappings = WhatsAppCampaignTemplatePolicy.ValidateMappings(campaignTemplate, mappings);
+        var variableMappings = canonicalMappings.Select(entry => entry.Mapping).ToArray();
         var normalized = NormalizeAndValidateFilters(filters);
-        ValidateVariableMappings(mappings, normalized);
+        ValidateVariableMappings(variableMappings, normalized);
         var targetPackageIds = await ResolveTargetPackageIdsAsync(normalized, ct);
         if (normalized.HasTargetScope && targetPackageIds.Length == 0)
             throw Invalid("نطاق المحتوى المحدد لا يطابق أي باقة أكاديمية نشطة.");
@@ -303,9 +311,9 @@ public sealed partial class WhatsAppCampaignService
         var consentCategory = string.Equals(template.Category, "MARKETING", StringComparison.OrdinalIgnoreCase)
             ? WhatsAppContactPreferenceCategory.Marketing
             : WhatsAppContactPreferenceCategory.Utility;
-        var referenceValues = await LoadReferenceValuesAsync(mappings, ct);
+        var referenceValues = await LoadReferenceValuesAsync(variableMappings, ct);
         var purchaseDates = await LoadPurchaseDatesAsync(
-            rows.Select(row => row.StudentUserId).ToArray(), mappings, normalized, ct);
+            rows.Select(row => row.StudentUserId).ToArray(), variableMappings, normalized, ct);
         var consented = new List<ResolvedAudienceRecipient>();
         foreach (var item in normalizedContacts)
         {
@@ -326,19 +334,22 @@ public sealed partial class WhatsAppCampaignService
                 Increment(exclusions, "opted_out");
                 continue;
             }
-            IReadOnlyDictionary<(string Type, int Position), string> values;
+            IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> resolvedParameters;
             try
             {
-                values = ResolveVariableValues(item.Contact.Student, mappings, referenceValues, purchaseDates);
+                resolvedParameters = ResolveVariableValues(
+                    item.Contact.Student, canonicalMappings, referenceValues, purchaseDates);
             }
             catch (MissingCampaignVariableException)
             {
                 Increment(exclusions, "missing_variable");
                 continue;
             }
-            var components = WhatsAppCampaignTemplatePolicy.ProviderComponents(textTemplate, values);
-            var payloadJson = JsonSerializer.Serialize(new FrozenRecipientPayload(item.E164, components), JsonOptions);
-            var maskedPreviewValues = MaskPreviewValues(mappings, values);
+            var components = WhatsAppCampaignTemplatePolicy.ProviderComponents(
+                campaignTemplate, resolvedParameters);
+            var payloadJson = SerializeFrozenRecipientPayload(
+                new FrozenRecipientPayload(item.E164, components));
+            var maskedPreviewValues = MaskPreviewValues(canonicalMappings, resolvedParameters);
             consented.Add(new ResolvedAudienceRecipient(
                 item.Contact.Student.StudentUserId,
                 item.Contact.Student.FullName,
@@ -346,7 +357,7 @@ public sealed partial class WhatsAppCampaignService
                 item.Hash,
                 item.E164[^4..],
                 payloadJson,
-                WhatsAppCampaignTemplatePolicy.RenderPreview(textTemplate, maskedPreviewValues)));
+                WhatsAppCampaignTemplatePolicy.RenderPreview(campaignTemplate, maskedPreviewValues)));
         }
 
         var deduplicated = new List<ResolvedAudienceRecipient>();
@@ -367,8 +378,20 @@ public sealed partial class WhatsAppCampaignService
         {
             template = template.Fingerprint,
             filters = normalized.Dto,
-            mappings = mappings.OrderBy(mapping => mapping.ComponentType, StringComparer.Ordinal)
-                .ThenBy(mapping => mapping.Position),
+            mappings = canonicalMappings.OrderBy(entry => entry.Requirement.Key.ComponentIndex)
+                .ThenBy(entry => entry.Requirement.Key.ButtonIndex)
+                .ThenBy(entry => entry.Requirement.Key.Position)
+                .Select(entry => new
+                {
+                    entry.Requirement.Key.ComponentType,
+                    entry.Requirement.Key.ComponentIndex,
+                    entry.Requirement.Key.ButtonIndex,
+                    entry.Requirement.Key.Position,
+                    entry.Mapping.Source,
+                    entry.Mapping.LiteralValue,
+                    entry.Mapping.ReferenceId,
+                    entry.Mapping.Format
+                }),
             recipients = deduplicated.OrderBy(item => item.DestinationHash, StringComparer.Ordinal)
                 .Select(item => new { item.DestinationHash, payload = HashText(item.PayloadJson) })
         };
@@ -701,14 +724,15 @@ public sealed partial class WhatsAppCampaignService
             .ToDictionary(group => group.Key, group => group.Max(item => item.CreatedAt));
     }
 
-    private static IReadOnlyDictionary<(string Type, int Position), string> MaskPreviewValues(
-        IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
-        IReadOnlyDictionary<(string Type, int Position), string> resolved)
+    private static IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> MaskPreviewValues(
+        IReadOnlyList<WhatsAppCanonicalVariableMapping> mappings,
+        IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> resolved)
     {
-        var preview = new Dictionary<(string Type, int Position), string>(resolved);
-        foreach (var mapping in mappings)
+        var preview = new Dictionary<WhatsAppTemplateParameterKey, string>(resolved);
+        foreach (var canonicalMapping in mappings)
         {
-            var key = (mapping.ComponentType.Trim().ToUpperInvariant(), mapping.Position);
+            var mapping = canonicalMapping.Mapping;
+            var key = canonicalMapping.Requirement.Key;
             preview[key] = mapping.Source.Trim().ToUpperInvariant() switch
             {
                 "STUDENTFIRSTNAME" => "اسم الطالب",
@@ -725,15 +749,16 @@ public sealed partial class WhatsAppCampaignService
         return preview;
     }
 
-    private static IReadOnlyDictionary<(string Type, int Position), string> ResolveVariableValues(
+    private static IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> ResolveVariableValues(
         AudienceStudentRow student,
-        IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
+        IReadOnlyList<WhatsAppCanonicalVariableMapping> mappings,
         IReadOnlyDictionary<(string Source, Guid Id), string> references,
         IReadOnlyDictionary<(Guid StudentId, Guid PackageId), DateTime> purchaseDates)
     {
-        var resolvedValues = new Dictionary<(string Type, int Position), string>();
-        foreach (var mapping in mappings)
+        var resolvedValues = new Dictionary<WhatsAppTemplateParameterKey, string>();
+        foreach (var canonicalMapping in mappings)
         {
+            var mapping = canonicalMapping.Mapping;
             var source = mapping.Source.Trim().ToUpperInvariant();
             var value = source switch
             {
@@ -753,8 +778,7 @@ public sealed partial class WhatsAppCampaignService
                         ? FormatDate(date, mapping.Format) : null,
                 _ => throw Invalid("مصدر متغير القالب غير مدعوم.")
             };
-            resolvedValues[(mapping.ComponentType.Trim().ToUpperInvariant(), mapping.Position)] =
-                SafeVariable(value);
+            resolvedValues[canonicalMapping.Requirement.Key] = SafeVariable(value);
         }
         return resolvedValues;
     }

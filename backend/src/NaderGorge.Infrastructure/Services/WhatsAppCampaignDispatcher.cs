@@ -174,7 +174,7 @@ public sealed class WhatsAppCampaignDispatcher(
         {
             var plaintext = protector.Unprotect(
                 recipient.Id, recipient.ProtectedPayload, recipient.PayloadDigest);
-            payload = JsonSerializer.Deserialize<WhatsAppCampaignService.FrozenRecipientPayload>(plaintext)
+            payload = WhatsAppCampaignService.DeserializeFrozenRecipientPayload(plaintext)
                 ?? throw new JsonException("Campaign payload is empty.");
             var normalized = WhatsAppCampaignService.NormalizeE164(payload.Destination);
             if (normalized is null || payload.Components is null ||

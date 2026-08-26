@@ -19,6 +19,13 @@ import { registerCacheStore } from '@/lib/cache-invalidation';
 import { acquireMutationLock, releaseMutationLock } from '@/lib/conversation-mutation-lock';
 import { createClientId } from '@/lib/client-id';
 import { AdminModal } from '@/components/ui/admin-modal';
+import {
+  advanceLiveSupportThreadHistory,
+  createLiveSupportThreadPagination,
+  mergeOrderedLiveSupportMessages,
+  reconcileLiveSupportThreadHead,
+  type LiveSupportThreadPagination,
+} from '@/lib/live-support-message-pages';
 
 export default function AssistantLiveSupportPageClient() {
   const [bootstrap, setBootstrap] = useState<LiveSupportStaffBootstrap>();
@@ -30,6 +37,10 @@ export default function AssistantLiveSupportPageClient() {
   const [needsStaffActivation, setNeedsStaffActivation] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState('');
+  const [olderMessagesCursor, setOlderMessagesCursor] = useState<string>();
+  const [olderMessagesLoading, setOlderMessagesLoading] = useState(false);
+  const [olderMessagesError, setOlderMessagesError] = useState('');
+  const [threadHistoryGap, setThreadHistoryGap] = useState(false);
   const [pendingAction, setPendingAction] = useState<'send' | 'close' | 'transfer' | null>(null);
   const [uploading, setUploading] = useState(false);
   const [personalReplies, setPersonalReplies] = useState<LiveSupportCannedReply[]>([]);
@@ -44,14 +55,19 @@ export default function AssistantLiveSupportPageClient() {
   const { preferences, updatePreferences } = useLiveSupportPreferences();
   const refreshGeneration = useRef(0);
   const selectionGeneration = useRef(0);
+  const headRequestGeneration = useRef(0);
+  const selectedConversationIdRef = useRef<string | undefined>(undefined);
   const refreshAbort = useRef<AbortController | null>(null);
   const messagesAbort = useRef<AbortController | null>(null);
+  const olderMessagesAbort = useRef<AbortController | null>(null);
+  const threadPagination = useRef(createLiveSupportThreadPagination());
   const mutationInFlight = useRef(false);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const knownMessageIds = useRef<Record<string, Set<string>>>({});
   const knownConversationIds = useRef<Set<string> | undefined>(undefined);
   const selectedId = selected?.id;
   const selectedOwnerUserId = selected?.currentOwnerUserId;
+  const selectedContextGeneration = selectionGeneration.current;
   const ownershipLost = useLiveSupportStore(state => selectedId ? state.ownershipLost[selectedId] ?? false : false);
   const setOwnershipLost = useLiveSupportStore(state => state.setOwnershipLost);
   const drafts = useLiveSupportStore(state => state.drafts);
@@ -94,7 +110,30 @@ export default function AssistantLiveSupportPageClient() {
     }
   }, [preferences]);
 
-  const loadMessages = useCallback(async (conversationId: string, generation: number, showLoading = true) => {
+  const updateThreadPagination = useCallback((pagination: LiveSupportThreadPagination) => {
+    threadPagination.current = pagination;
+    setOlderMessagesCursor(pagination.cursor);
+    setThreadHistoryGap(pagination.resumePoints.length > 0);
+  }, []);
+
+  const resetMessageView = useCallback(() => {
+    headRequestGeneration.current += 1;
+    messagesAbort.current?.abort();
+    messagesAbort.current = null;
+    olderMessagesAbort.current?.abort();
+    olderMessagesAbort.current = null;
+    threadPagination.current = createLiveSupportThreadPagination();
+    setMessages([]);
+    setMessagesLoading(false);
+    setMessagesError('');
+    setOlderMessagesCursor(undefined);
+    setOlderMessagesLoading(false);
+    setOlderMessagesError('');
+    setThreadHistoryGap(false);
+  }, []);
+
+  const loadMessages = useCallback(async (conversation: LiveSupportConversation, generation: number, showLoading = true) => {
+    const requestGeneration = ++headRequestGeneration.current;
     messagesAbort.current?.abort();
     const controller = new AbortController();
     messagesAbort.current = controller;
@@ -103,27 +142,86 @@ export default function AssistantLiveSupportPageClient() {
       setMessagesError('');
     }
     try {
-      const nextMessages = await liveSupportService.getStaffMessages(conversationId, controller.signal);
-      if (generation === selectionGeneration.current) {
-        alertForIncomingMessages(conversationId, nextMessages);
-        setMessages(nextMessages);
-        setBootstrap((current) => current ? {
-          ...current,
-          conversations: current.conversations.map((conversation) => conversation.id === conversationId
-            ? { ...conversation, unreadParticipantMessageCount: 0 }
-            : conversation),
-        } : current);
+      const snapshot = await getStaffMessageSnapshot(conversation, controller.signal);
+      if (
+        generation !== selectionGeneration.current
+        || requestGeneration !== headRequestGeneration.current
+        || controller.signal.aborted
+        || messagesAbort.current !== controller
+      ) return;
+      alertForIncomingMessages(conversation.id, snapshot.items);
+      if (snapshot.isWhatsAppThread) {
+        updateThreadPagination(reconcileLiveSupportThreadHead(
+          threadPagination.current,
+          snapshot,
+        ));
+        setOlderMessagesError('');
+        setMessages((current) => mergeOrderedLiveSupportMessages(current, snapshot.items));
+      } else {
+        setMessages(snapshot.items);
       }
+      setBootstrap((current) => current ? {
+        ...current,
+        conversations: current.conversations.map((item) => item.id === conversation.id
+          ? { ...item, unreadParticipantMessageCount: 0 }
+          : item),
+      } : current);
     } catch (cause) {
       if (isAbortError(cause)) return;
-      if (showLoading && generation === selectionGeneration.current) setMessagesError('تعذر تحميل الرسائل. أعد المحاولة.');
+      if (
+        showLoading
+        && generation === selectionGeneration.current
+        && requestGeneration === headRequestGeneration.current
+      ) setMessagesError('تعذر تحميل الرسائل. أعد المحاولة.');
     } finally {
-      if (showLoading && generation === selectionGeneration.current) setMessagesLoading(false);
+      if (messagesAbort.current === controller) messagesAbort.current = null;
+      if (
+        generation === selectionGeneration.current
+        && requestGeneration === headRequestGeneration.current
+      ) setMessagesLoading(false);
     }
-  }, [alertForIncomingMessages]);
+  }, [alertForIncomingMessages, updateThreadPagination]);
+
+  const loadOlderMessages = useCallback(async () => {
+    const conversation = selected;
+    const cursor = threadPagination.current.cursor;
+    if (conversation?.channel !== 'WhatsApp' || !cursor || olderMessagesAbort.current) return;
+    const generation = selectionGeneration.current;
+    const controller = new AbortController();
+    olderMessagesAbort.current = controller;
+    setOlderMessagesLoading(true);
+    setOlderMessagesError('');
+    try {
+      const page = await liveSupportService.getStaffWhatsAppThreadMessages(conversation.id, cursor, controller.signal);
+      if (generation !== selectionGeneration.current) return;
+      const advancement = advanceLiveSupportThreadHistory(
+        threadPagination.current,
+        cursor,
+        page,
+      );
+      if (!advancement.stale) {
+        updateThreadPagination(advancement.pagination);
+        setOlderMessagesError(advancement.historyGapUnresolved
+          ? 'لم يكتمل ربط أجزاء السجل بعد. أعد المحاولة لاستكمال الرسائل الناقصة.'
+          : '');
+      }
+      setMessages((current) => mergeOrderedLiveSupportMessages(current, page.items));
+    } catch (cause) {
+      if (!isAbortError(cause) && generation === selectionGeneration.current) {
+        setOlderMessagesError('تعذر تحميل الرسائل الأقدم. أعد المحاولة.');
+      }
+    } finally {
+      if (olderMessagesAbort.current === controller) {
+        olderMessagesAbort.current = null;
+        if (generation === selectionGeneration.current) setOlderMessagesLoading(false);
+      }
+    }
+  }, [selected, updateThreadPagination]);
 
   const refresh = useCallback(async () => {
     const generation = ++refreshGeneration.current;
+    const selectionGenerationAtStart = selectionGeneration.current;
+    const selectedIdAtStart = selectedConversationIdRef.current;
     refreshAbort.current?.abort();
     const controller = new AbortController();
     refreshAbort.current = controller;
@@ -134,21 +232,25 @@ export default function AssistantLiveSupportPageClient() {
       setBootstrap(next);
       setError('');
       setNeedsStaffActivation(false);
-      const refreshedSelection = next.conversations.find((item) => item.id === selectedId);
-      if (selectedId && (!refreshedSelection || refreshedSelection.currentOwnerUserId !== selectedOwnerUserId)) {
-        setOwnershipLost(selectedId, true);
+      if (
+        selectionGenerationAtStart !== selectionGeneration.current
+        || selectedIdAtStart !== selectedConversationIdRef.current
+      ) return;
+      const refreshedSelection = next.conversations.find((item) => item.id === selectedIdAtStart);
+      if (selectedIdAtStart && (!refreshedSelection || refreshedSelection.currentOwnerUserId !== selectedOwnerUserId)) {
+        setOwnershipLost(selectedIdAtStart, true);
         selectionGeneration.current += 1;
-        messagesAbort.current?.abort();
+        selectedConversationIdRef.current = undefined;
         selectConversation(undefined);
         setSelected(undefined);
-        setMessages([]);
-        setMessagesError('');
+        resetMessageView();
       }
       const current = refreshedSelection ?? next.conversations[0];
+      selectedConversationIdRef.current = current?.id;
       setSelected(current);
       if (current) {
         setOwnershipLost(current.id, false);
-        await loadMessages(current.id, selectionGeneration.current, current.id !== selectedId);
+        await loadMessages(current, selectionGeneration.current, current.id !== selectedIdAtStart);
       }
     } catch (cause) {
       if (isAbortError(cause) || generation !== refreshGeneration.current) return;
@@ -162,7 +264,7 @@ export default function AssistantLiveSupportPageClient() {
       setError(message);
       setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
     }
-  }, [alertForIncomingConversation, loadMessages, selectConversation, selectedId, selectedOwnerUserId, setOwnershipLost]);
+  }, [alertForIncomingConversation, loadMessages, resetMessageView, selectConversation, selectedOwnerUserId, setOwnershipLost]);
   const showParticipantDraft = useCallback((preview: string | null) => {
     setParticipantDraft(preview);
     if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
@@ -187,6 +289,12 @@ export default function AssistantLiveSupportPageClient() {
     return registerCacheStore('support:staff', () => {}, () => void refresh());
   }, [refresh]);
 
+  useEffect(() => () => {
+    refreshAbort.current?.abort();
+    messagesAbort.current?.abort();
+    olderMessagesAbort.current?.abort();
+  }, []);
+
   async function send(contentOverride?: string, replyToMessageId?: string) {
     const conversationId = selected?.id;
     const generation = selectionGeneration.current;
@@ -198,7 +306,7 @@ export default function AssistantLiveSupportPageClient() {
     try {
       const message = await liveSupportService.sendStaffMessage(conversationId, { clientMessageId: createClientId(), content: value, replyToMessageId });
       if (generation === selectionGeneration.current && selected?.id === conversationId) {
-        setMessages((items) => items.some((item) => item.id === message.id) ? items : [...items, message]);
+        setMessages((items) => mergeOrderedLiveSupportMessages(items, [message]));
         clearStoredDraft(conversationId);
       }
     } catch (cause) {
@@ -212,11 +320,14 @@ export default function AssistantLiveSupportPageClient() {
 
   async function sendWhatsAppTemplate(template: LiveSupportWhatsAppTemplate, parameters: string[], previewText: string) {
     const conversationId = selected?.id;
+    const generation = selectionGeneration.current;
     if (!conversationId || ownershipLost || pendingAction) return;
     setPendingAction('send');
     try {
       const message = await liveSupportService.sendWhatsAppTemplate(conversationId, { clientMessageId: createClientId(), templateId: template.id, parameters, previewText });
-      setMessages(items => items.some(item => item.id === message.id) ? items : [...items, message]);
+      if (generation === selectionGeneration.current && selected?.id === conversationId) {
+        setMessages((items) => mergeOrderedLiveSupportMessages(items, [message]));
+      }
     } catch (cause) {
       setError(getStaffMutationError(cause, 'تعذر إرسال قالب واتساب.'));
       throw cause;
@@ -244,7 +355,7 @@ export default function AssistantLiveSupportPageClient() {
         attachmentId: attachment.id,
       });
       if (generation === selectionGeneration.current && selected?.id === conversationId) {
-        setMessages((items) => items.some((item) => item.id === message.id) ? items : [...items, message]);
+        setMessages((items) => mergeOrderedLiveSupportMessages(items, [message]));
       }
       return true;
     } catch (cause) {
@@ -313,16 +424,37 @@ export default function AssistantLiveSupportPageClient() {
 
   async function close() {
     if (!selected || !acquireMutationLock(mutationInFlight)) return;
+    const conversationId = selected.id;
     setPendingAction('close');
-    try { await liveSupportService.closeConversation(selected.id); setConversationAction(null); setSelected(undefined); setMessages([]); await refresh(); }
+    try {
+      await liveSupportService.closeConversation(conversationId);
+      setConversationAction(null);
+      selectionGeneration.current += 1;
+      selectedConversationIdRef.current = undefined;
+      selectConversation(undefined);
+      setSelected(undefined);
+      resetMessageView();
+      await refresh();
+    }
     catch (cause) { setError(getStaffMutationError(cause, 'تعذر إغلاق المحادثة. راجع الملكية وحاول مرة أخرى.')); }
     finally { releaseMutationLock(mutationInFlight); setPendingAction(null); }
   }
 
   async function transfer(reason: string) {
     if (!selected || !acquireMutationLock(mutationInFlight)) return;
+    const conversationId = selected.id;
     setPendingAction('transfer');
-    try { await liveSupportService.transferConversation(selected.id, reason); setConversationAction(null); setTransferReason(''); setSelected(undefined); setMessages([]); await refresh(); }
+    try {
+      await liveSupportService.transferConversation(conversationId, reason);
+      setConversationAction(null);
+      setTransferReason('');
+      selectionGeneration.current += 1;
+      selectedConversationIdRef.current = undefined;
+      selectConversation(undefined);
+      setSelected(undefined);
+      resetMessageView();
+      await refresh();
+    }
     catch (cause) { setError(getStaffMutationError(cause, 'تعذر تحويل المحادثة. راجع الملكية وحاول مرة أخرى.')); }
     finally { releaseMutationLock(mutationInFlight); setPendingAction(null); }
   }
@@ -345,11 +477,11 @@ export default function AssistantLiveSupportPageClient() {
   function selectStaffConversation(item: LiveSupportConversation) {
     selectionGeneration.current += 1;
     delete knownMessageIds.current[item.id];
+    selectedConversationIdRef.current = item.id;
     selectConversation(item.id);
     setSelected(item);
-    setMessages([]);
-    setMessagesError('');
-    void loadMessages(item.id, selectionGeneration.current);
+    resetMessageView();
+    void loadMessages(item, selectionGeneration.current);
   }
 
   return <NavRouteGuard routePath="/assistant/live-support"><AssistantPage activePath="/assistant/live-support" sectionLabel="خدمة العملاء" pageTitle="مركز الدعم المباشر" subtitle="التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.">
@@ -386,7 +518,12 @@ export default function AssistantLiveSupportPageClient() {
             pendingAction={pendingAction}
             messagesLoading={messagesLoading}
             messagesError={messagesError}
-            onRetryMessages={() => selected && void loadMessages(selected.id, selectionGeneration.current)}
+            hasOlderMessages={selected?.channel === 'WhatsApp' && Boolean(olderMessagesCursor)}
+            hasPendingMessageGap={threadHistoryGap}
+            olderMessagesLoading={olderMessagesLoading}
+            olderMessagesError={olderMessagesError}
+            onRetryMessages={() => selected && void loadMessages(selected, selectionGeneration.current)}
+            onLoadOlderMessages={loadOlderMessages}
             onDraftChange={(value) => {
               if (selectedId) setStoredDraft(selectedId, value);
               setDraft(value);
@@ -405,7 +542,7 @@ export default function AssistantLiveSupportPageClient() {
             replyFocusRequest={replyFocusRequest}
           />
         }
-        context={selected ? <StudentContextPanel conversation={selected} onActionCompleted={() => setReplyFocusRequest((request) => request + 1)} onConversationChange={(updated) => { setSelected(updated); setBootstrap((current) => current ? { ...current, conversations: current.conversations.map((item) => item.id === updated.id ? updated : item) } : current); }}/> : undefined}
+        context={selected ? <StudentContextPanel conversation={selected} onActionCompleted={() => setReplyFocusRequest((request) => request + 1)} onConversationChange={(updated) => { if (selectedContextGeneration !== selectionGeneration.current || selectedConversationIdRef.current !== updated.id) return; setSelected(updated); setBootstrap((current) => current ? { ...current, conversations: current.conversations.map((item) => item.id === updated.id ? updated : item) } : current); }}/> : undefined}
       />
     </div>}
     <StaffCannedRepliesDialog open={isRepliesDialogOpen} replies={personalReplies} saving={repliesSaving} error={repliesError} onClose={() => { if (!repliesSaving) setIsRepliesDialogOpen(false); }} onChange={setPersonalReplies} onSave={() => void savePersonalReplies()} />
@@ -427,6 +564,21 @@ export default function AssistantLiveSupportPageClient() {
       </div>
     </AdminModal>
   </AssistantPage></NavRouteGuard>;
+}
+
+async function getStaffMessageSnapshot(conversation: LiveSupportConversation, signal: AbortSignal) {
+  if (conversation.channel === 'WhatsApp') {
+    const page = await liveSupportService.getStaffWhatsAppThreadMessages(conversation.id, undefined, signal);
+    return {
+      items: page.items,
+      nextCursor: page.nextCursor ?? undefined,
+      isWhatsAppThread: true,
+    } as const;
+  }
+  return {
+    items: await liveSupportService.getStaffMessages(conversation.id, signal),
+    isWhatsAppThread: false,
+  } as const;
 }
 
 function isAbortError(cause: unknown) {

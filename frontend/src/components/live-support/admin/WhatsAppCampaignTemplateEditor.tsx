@@ -1,13 +1,15 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2, FileText, RefreshCw, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Phone, RefreshCw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { formatCairoTimestamp } from '@/lib/cairo-time';
 import {
-  componentLabel,
   inspectCampaignTemplate,
+  mappingMatchesRequirement,
+  requirementLabel,
   validateWhatsAppVariableMappings,
+  type WhatsAppTemplateParameterRequirement,
 } from '@/lib/whatsapp-campaign';
 import type {
   LiveSupportWhatsAppTemplate,
@@ -83,16 +85,15 @@ export function WhatsAppCampaignTemplateEditor({
   }, [search, templates]);
 
   function updateMapping(
-    componentType: 'HEADER' | 'BODY',
-    position: number,
+    requirement: WhatsAppTemplateParameterRequirement,
     change: Partial<WhatsAppCampaignVariableMapping>,
   ) {
-    const existing = mappings.find((mapping) =>
-      mapping.componentType === componentType && mapping.position === position
-    );
+    const existing = mappings.find((mapping) => mappingMatchesRequirement(mapping, requirement));
     const next: WhatsAppCampaignVariableMapping = {
-      componentType,
-      position,
+      componentType: requirement.componentType,
+      componentIndex: requirement.componentIndex,
+      position: requirement.parameterIndex,
+      buttonIndex: requirement.buttonIndex ?? null,
       source: existing?.source ?? 'StudentFirstName',
       literalValue: existing?.literalValue ?? null,
       referenceId: existing?.referenceId ?? null,
@@ -100,11 +101,13 @@ export function WhatsAppCampaignTemplateEditor({
       ...change,
     };
     onMappingsChange([
-      ...mappings.filter((mapping) =>
-        mapping.componentType !== componentType || mapping.position !== position
-      ),
+      ...mappings.filter((mapping) => !mappingMatchesRequirement(mapping, requirement)),
       next,
     ]);
+  }
+
+  function clearMapping(requirement: WhatsAppTemplateParameterRequirement) {
+    onMappingsChange(mappings.filter((mapping) => !mappingMatchesRequirement(mapping, requirement)));
   }
 
   return (
@@ -204,7 +207,7 @@ export function WhatsAppCampaignTemplateEditor({
                 <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">كل متغير مربوط بمكوّنه ومكانه؛ لن تُرسل أي رسالة ينقصها متغير.</p>
               </div>
               <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">
-                {selectedSupport.parameters.length} متغير
+                {selectedSupport.parameters.length} مدخل مطلوب
               </span>
             </div>
 
@@ -215,17 +218,20 @@ export function WhatsAppCampaignTemplateEditor({
             ) : (
               <div className="space-y-3">
                 {selectedSupport.parameters.map((parameter) => {
-                  const mapping = mappings.find((candidate) =>
-                    candidate.componentType === parameter.componentType &&
-                    candidate.position === parameter.parameterIndex
-                  );
+                  const mapping = mappings.find((candidate) => mappingMatchesRequirement(candidate, parameter));
                   const sourceDefinition = variableSources.find((source) => source.value === mapping?.source);
                   const referenceOptions = sourceDefinition?.referenceFacet ? facets[sourceDefinition.referenceFacet] : [];
+                  const availableSources = parameter.parameterType === 'URL_SUFFIX'
+                    ? variableSources.filter((source) => source.value === 'Literal')
+                    : variableSources;
+                  const selectedSource = availableSources.some((source) => source.value === mapping?.source)
+                    ? mapping?.source
+                    : '';
                   return (
                     <div key={parameter.key} className="grid min-w-0 gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 lg:grid-cols-[minmax(11rem,0.7fr)_minmax(13rem,1fr)]">
                       <div className="min-w-0">
                         <p className="text-xs font-black text-[var(--admin-primary)]">
-                          {componentLabel(parameter.componentType)} · متغير {parameter.parameterIndex}
+                          {requirementLabel(parameter)} · {parameter.parameterType === 'URL_SUFFIX' ? 'لاحقة الرابط' : `متغير ${parameter.parameterIndex}`}
                         </p>
                         <p className="mt-1 line-clamp-2 [overflow-wrap:anywhere] text-xs leading-5 text-[var(--admin-muted)]" dir="auto" title={parameter.surroundingText}>
                           {parameter.surroundingText}
@@ -233,12 +239,16 @@ export function WhatsAppCampaignTemplateEditor({
                       </div>
                       <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                         <label className="min-w-0">
-                          <span className="sr-only">مصدر متغير {parameter.parameterIndex}</span>
+                          <span className="sr-only">مصدر {requirementLabel(parameter)}، متغير {parameter.parameterIndex}</span>
                           <select
-                            value={mapping?.source ?? ''}
+                            value={selectedSource}
                             onChange={(event) => {
+                              if (!event.target.value) {
+                                clearMapping(parameter);
+                                return;
+                              }
                               const source = event.target.value as WhatsAppCampaignVariableSource;
-                              updateMapping(parameter.componentType, parameter.parameterIndex, {
+                              updateMapping(parameter, {
                                 source,
                                 literalValue: null,
                                 referenceId: source === 'PurchaseDate' && canUsePurchaseDate
@@ -250,7 +260,7 @@ export function WhatsAppCampaignTemplateEditor({
                             className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
                           >
                             <option value="">اختر مصدر القيمة</option>
-                            {variableSources.map((source) => (
+                            {availableSources.map((source) => (
                               <option key={source.value} value={source.value} disabled={source.value === 'PurchaseDate' && !canUsePurchaseDate}>
                                 {source.label}{source.value === 'PurchaseDate' && !canUsePurchaseDate ? ' — اختر شراءً مدفوعًا وباقة واحدة' : ''}
                               </option>
@@ -259,22 +269,22 @@ export function WhatsAppCampaignTemplateEditor({
                         </label>
                         {mapping?.source === 'Literal' ? (
                           <label className="min-w-0">
-                            <span className="sr-only">النص الثابت للمتغير {parameter.parameterIndex}</span>
+                            <span className="sr-only">النص الثابت في {requirementLabel(parameter)}، متغير {parameter.parameterIndex}</span>
                             <input
                               value={mapping.literalValue ?? ''}
-                              onChange={(event) => updateMapping(parameter.componentType, parameter.parameterIndex, { literalValue: event.target.value.slice(0, 1024) })}
+                              onChange={(event) => updateMapping(parameter, { literalValue: event.target.value.slice(0, 1024) })}
                               maxLength={1024}
-                              placeholder="اكتب النص الثابت"
+                              placeholder={parameter.parameterType === 'URL_SUFFIX' ? 'اكتب لاحقة الرابط' : 'اكتب النص الثابت'}
                               dir="auto"
                               className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
                             />
                           </label>
                         ) : sourceDefinition?.referenceFacet ? (
                           <label className="min-w-0">
-                            <span className="sr-only">القيمة المرجعية للمتغير {parameter.parameterIndex}</span>
+                            <span className="sr-only">القيمة المرجعية في {requirementLabel(parameter)}، متغير {parameter.parameterIndex}</span>
                             <select
                               value={mapping?.referenceId ?? ''}
-                              onChange={(event) => updateMapping(parameter.componentType, parameter.parameterIndex, { referenceId: event.target.value || null })}
+                              onChange={(event) => updateMapping(parameter, { referenceId: event.target.value || null })}
                               className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
                             >
                               <option value="">اختر {sourceDefinition.label}</option>
@@ -320,9 +330,7 @@ export function WhatsAppCampaignTemplateEditor({
               <span aria-hidden="true">·</span>
               <span>{selectedTemplate.category}</span>
             </div>
-            <p className="max-h-80 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl bg-[color-mix(in_srgb,var(--admin-primary-contrast)_10%,transparent)] p-4 text-sm leading-7" dir="auto">
-              {renderLocalPreview(selectedTemplate, mappings)}
-            </p>
+            <WhatsAppTemplatePreview template={selectedTemplate} mappings={mappings} />
           </div>
         )}
       </aside>
@@ -330,27 +338,118 @@ export function WhatsAppCampaignTemplateEditor({
   );
 }
 
-function renderLocalPreview(
+function WhatsAppTemplatePreview({
+  template,
+  mappings,
+}: {
   template: LiveSupportWhatsAppTemplate,
   mappings: WhatsAppCampaignVariableMapping[],
-) {
-  return template.components
-    .filter((component) => ['HEADER', 'BODY', 'FOOTER'].includes((component.type ?? '').toUpperCase()))
-    .map((component) => {
-      const componentType = (component.type ?? '').toUpperCase();
-      return (component.text ?? '').replace(/\{\{\s*(\d+)\s*\}\}/g, (_, rawPosition: string) => {
-        if (componentType !== 'HEADER' && componentType !== 'BODY') return '…';
-        const position = Number(rawPosition);
-        const mapping = mappings.find((candidate) =>
-          candidate.componentType === componentType && candidate.position === position
-        );
-        if (!mapping) return `{{${position}}}`;
-        if (mapping.source === 'Literal') return mapping.literalValue?.trim() || `{{${position}}}`;
-        return `‹${variableSources.find((source) => source.value === mapping.source)?.label ?? 'قيمة الطالب'}›`;
-      });
-    })
-    .filter(Boolean)
-    .join('\n\n') || 'القالب لا يحتوي نصًا قابلًا للمعاينة.';
+}) {
+  return (
+    <div className="max-h-[30rem] overflow-y-auto rounded-xl bg-[color-mix(in_srgb,var(--admin-primary-contrast)_8%,transparent)] p-3">
+      <div className="overflow-hidden rounded-xl bg-[var(--admin-card)] text-[var(--admin-text)] shadow-sm">
+        {template.components.map((component, componentIndex) => (
+          <TemplatePreviewComponent
+            key={`${component.type ?? 'component'}-${componentIndex}`}
+            component={component}
+            componentIndex={componentIndex}
+            mappings={mappings}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] leading-5 opacity-65">المعاينة توضيحية؛ تُحل القيم النهائية لكل طالب عند تثبيت الجمهور.</p>
+    </div>
+  );
+}
+
+function TemplatePreviewComponent({
+  component,
+  componentIndex,
+  mappings,
+}: {
+  component: LiveSupportWhatsAppTemplate['components'][number];
+  componentIndex: number;
+  mappings: WhatsAppCampaignVariableMapping[];
+}) {
+  const componentType = (component.type ?? '').toUpperCase();
+  if (componentType === 'BUTTONS') {
+    return (
+      <div className="divide-y divide-[var(--admin-border)] border-t border-[var(--admin-border)]">
+        {component.buttons?.map((button, buttonIndex) => (
+          <TemplatePreviewButton
+            key={`${button.type ?? 'button'}-${buttonIndex}`}
+            button={button}
+            buttonIndex={buttonIndex}
+            componentIndex={componentIndex}
+            mappings={mappings}
+          />
+        ))}
+      </div>
+    );
+  }
+  if (!['HEADER', 'BODY', 'FOOTER'].includes(componentType) || !component.text) return null;
+  const renderedText = renderComponentText({ componentIndex, componentType, mappings, text: component.text });
+  return <p className={`${previewTextStyle(componentType)} [overflow-wrap:anywhere]`} dir="auto">{renderedText}</p>;
+}
+
+function previewTextStyle(componentType: string) {
+  if (componentType === 'HEADER') return 'px-4 pt-4 text-sm font-black leading-7';
+  if (componentType === 'FOOTER') return 'px-4 pb-3 pt-1 text-xs leading-5 text-[var(--admin-muted)]';
+  return 'whitespace-pre-wrap px-4 py-3 text-sm leading-7';
+}
+
+function TemplatePreviewButton({
+  button,
+  buttonIndex,
+  componentIndex,
+  mappings,
+}: {
+  button: NonNullable<LiveSupportWhatsAppTemplate['components'][number]['buttons']>[number];
+  buttonIndex: number;
+  componentIndex: number;
+  mappings: WhatsAppCampaignVariableMapping[];
+}) {
+  const type = (button.type ?? '').toUpperCase();
+  const Icon = type === 'PHONE_NUMBER' ? Phone : ExternalLink;
+  const url = type === 'URL'
+    ? renderComponentText({ buttonIndex, componentIndex, componentType: 'BUTTON', mappings, text: button.url ?? '' })
+    : '';
+  return (
+    <div className="flex min-h-12 min-w-0 items-center justify-center gap-2 px-3 py-2 text-center text-sm font-bold text-[var(--admin-accent)]">
+      <Icon aria-hidden="true" size={15} className="shrink-0" />
+      <span className="min-w-0">
+        <span className="block [overflow-wrap:anywhere]" dir="auto">{button.text}</span>
+        {url ? <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--admin-muted)]" dir="ltr" title={url}>{url}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+function renderComponentText({
+  buttonIndex,
+  componentIndex,
+  componentType,
+  mappings,
+  text,
+}: {
+  buttonIndex?: number;
+  componentIndex: number;
+  componentType: string;
+  mappings: WhatsAppCampaignVariableMapping[];
+  text: string;
+}) {
+  return text.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, rawPosition: string) => {
+    const position = Number(rawPosition);
+    const mapping = mappings.find((candidate) =>
+      candidate.componentType === componentType &&
+      candidate.componentIndex === componentIndex &&
+      candidate.position === position &&
+      (componentType !== 'BUTTON' || candidate.buttonIndex === buttonIndex)
+    );
+    if (!mapping) return `{{${position}}}`;
+    if (mapping.source === 'Literal') return mapping.literalValue?.trim() || `{{${position}}}`;
+    return `‹${variableSources.find((source) => source.value === mapping.source)?.label ?? 'قيمة الطالب'}›`;
+  });
 }
 
 function summarizeTemplates(templates: LiveSupportWhatsAppTemplate[]) {

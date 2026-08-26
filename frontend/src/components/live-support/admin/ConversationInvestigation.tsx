@@ -1,9 +1,11 @@
 'use client';
 
 import {
+  Fragment,
   type FormEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,7 +20,15 @@ import { WhatsAppTemplatePicker } from '@/components/live-support/staff/WhatsApp
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 import { useLiveSupportHub } from '@/hooks/useLiveSupportHub';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
+import {
+  advanceLiveSupportThreadHistory,
+  createLiveSupportThreadPagination,
+  mergeOrderedLiveSupportMessages,
+  reconcileLiveSupportThreadHead,
+  type LiveSupportThreadPagination,
+} from '@/lib/live-support-message-pages';
 import {
   getLiveSupportApiError,
   liveSupportService,
@@ -44,6 +54,10 @@ export function ConversationInvestigation({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [olderMessagesCursor, setOlderMessagesCursor] = useState<string>();
+  const [olderMessagesLoading, setOlderMessagesLoading] = useState(false);
+  const [olderMessagesError, setOlderMessagesError] = useState('');
+  const [threadHistoryGap, setThreadHistoryGap] = useState(false);
   const [eventFilter, setEventFilter] = useState('all');
   const [intervening, setIntervening] = useState(false);
   const [participantDraft, setParticipantDraft] = useState<string | null>(null);
@@ -51,13 +65,23 @@ export function ConversationInvestigation({
   const [targetStaffUserId, setTargetStaffUserId] = useState('');
   const [reassignReason, setReassignReason] = useState('');
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const endRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesAbort = useRef<AbortController | null>(null);
+  const olderMessagesAbort = useRef<AbortController | null>(null);
+  const messageViewGeneration = useRef(0);
+  const headRequestGeneration = useRef(0);
+  const threadPagination = useRef(createLiveSupportThreadPagination());
+  const shouldStickToBottom = useRef(true);
+  const prependScrollAnchor = useRef<{
+    messageId: string;
+    viewportOffset: number;
+  } | null>(null);
   const conversation = timeline.conversation;
   const isWhatsApp = conversation.channel === 'WhatsApp';
   const canSend =
     conversation.status !== 'Closed' && conversation.status !== 'Abandoned';
+  const useWhatsAppThread = isWhatsApp;
   const whatsAppWindowOpen =
     isWhatsApp &&
     isWindowOpen(conversation.customerServiceWindowExpiresAt, currentTime);
@@ -67,23 +91,120 @@ export function ConversationInvestigation({
     [staff]
   );
 
+  const updateThreadPagination = useCallback((pagination: LiveSupportThreadPagination) => {
+    threadPagination.current = pagination;
+    setOlderMessagesCursor(pagination.cursor);
+    setThreadHistoryGap(pagination.resumePoints.length > 0);
+  }, []);
+
   const refreshMessages = useCallback(async () => {
+    const viewGeneration = messageViewGeneration.current;
+    const requestGeneration = ++headRequestGeneration.current;
     messagesAbort.current?.abort();
     const controller = new AbortController();
     messagesAbort.current = controller;
     try {
-      const result = await liveSupportService.getStaffMessages(
-        conversation.id,
-        controller.signal
-      );
-      setMessages(result);
+      if (useWhatsAppThread) {
+        const page = await liveSupportService.getStaffWhatsAppThreadMessages(
+          conversation.id,
+          undefined,
+          controller.signal
+        );
+        if (
+          viewGeneration !== messageViewGeneration.current ||
+          requestGeneration !== headRequestGeneration.current ||
+          controller.signal.aborted ||
+          messagesAbort.current !== controller
+        ) return;
+        updateThreadPagination(reconcileLiveSupportThreadHead(
+          threadPagination.current,
+          page,
+        ));
+        setOlderMessagesError('');
+        setMessages((current) =>
+          mergeOrderedLiveSupportMessages(current, page.items)
+        );
+      } else {
+        const result = await liveSupportService.getStaffMessages(
+          conversation.id,
+          controller.signal
+        );
+        if (
+          viewGeneration !== messageViewGeneration.current ||
+          requestGeneration !== headRequestGeneration.current ||
+          controller.signal.aborted ||
+          messagesAbort.current !== controller
+        ) return;
+        setMessages(result);
+      }
       setError('');
     } catch (cause) {
-      if (!isAbortError(cause)) setError('تعذر تحميل رسائل المحادثة.');
+      if (
+        !isAbortError(cause) &&
+        viewGeneration === messageViewGeneration.current &&
+        requestGeneration === headRequestGeneration.current
+      ) {
+        setError('تعذر تحميل رسائل المحادثة.');
+      }
     } finally {
-      if (messagesAbort.current === controller) setLoading(false);
+      if (
+        messagesAbort.current === controller &&
+        viewGeneration === messageViewGeneration.current &&
+        requestGeneration === headRequestGeneration.current
+      ) {
+        messagesAbort.current = null;
+        setLoading(false);
+      }
     }
-  }, [conversation.id]);
+  }, [conversation.id, updateThreadPagination, useWhatsAppThread]);
+
+  const loadOlderMessages = useCallback(async () => {
+    const cursor = threadPagination.current.cursor;
+    if (!useWhatsAppThread || !cursor || olderMessagesAbort.current) return;
+    const viewGeneration = messageViewGeneration.current;
+    const controller = new AbortController();
+    olderMessagesAbort.current = controller;
+    setOlderMessagesLoading(true);
+    setOlderMessagesError('');
+    try {
+      const page = await liveSupportService.getStaffWhatsAppThreadMessages(
+        conversation.id,
+        cursor,
+        controller.signal
+      );
+      if (viewGeneration !== messageViewGeneration.current) return;
+      const advancement = advanceLiveSupportThreadHistory(
+        threadPagination.current,
+        cursor,
+        page,
+      );
+      if (!advancement.stale) {
+        updateThreadPagination(advancement.pagination);
+        setOlderMessagesError(advancement.historyGapUnresolved
+          ? 'لم يكتمل ربط أجزاء السجل بعد. أعد المحاولة لاستكمال الرسائل الناقصة.'
+          : '');
+      }
+      setMessages((current) =>
+        mergeOrderedLiveSupportMessages(current, page.items)
+      );
+    } catch (cause) {
+      if (
+        !isAbortError(cause) &&
+        viewGeneration === messageViewGeneration.current
+      ) {
+        setOlderMessagesError(
+          'تعذر تحميل الرسائل الأقدم. أعد المحاولة.'
+        );
+      }
+    } finally {
+      if (olderMessagesAbort.current === controller) {
+        olderMessagesAbort.current = null;
+        if (viewGeneration === messageViewGeneration.current) {
+          setOlderMessagesLoading(false);
+        }
+      }
+    }
+  }, [conversation.id, updateThreadPagination, useWhatsAppThread]);
 
   const showParticipantDraft = useCallback((preview: string | null) => {
     setParticipantDraft(preview);
@@ -101,13 +222,39 @@ export function ConversationInvestigation({
   );
 
   useEffect(() => {
+    messageViewGeneration.current += 1;
+    headRequestGeneration.current += 1;
+    messagesAbort.current?.abort();
+    olderMessagesAbort.current?.abort();
+    messagesAbort.current = null;
+    olderMessagesAbort.current = null;
+    threadPagination.current = createLiveSupportThreadPagination();
+    shouldStickToBottom.current = true;
+    prependScrollAnchor.current = null;
+    setMessages([]);
+    setOlderMessagesCursor(undefined);
+    setOlderMessagesLoading(false);
+    setOlderMessagesError('');
+    setThreadHistoryGap(false);
+    setError('');
     setLoading(true);
     void refreshMessages();
     return () => {
       messagesAbort.current?.abort();
+      olderMessagesAbort.current?.abort();
       if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
     };
   }, [refreshMessages]);
+
+  useEffect(
+    () =>
+      registerCacheStore(
+        'support:staff',
+        () => {},
+        () => void refreshMessages()
+      ),
+    [refreshMessages]
+  );
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
@@ -115,8 +262,51 @@ export function ConversationInvestigation({
   }, []);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages]);
+    if (!shouldStickToBottom.current) return;
+    const frame = requestAnimationFrame(() => {
+      const viewport = messagesViewportRef.current;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages.length, participantDraft]);
+
+  useLayoutEffect(() => {
+    const anchor = prependScrollAnchor.current;
+    const viewport = messagesViewportRef.current;
+    if (!anchor || olderMessagesLoading || !viewport) return;
+    const anchorMessage = viewport.querySelector<HTMLElement>(
+      `[data-live-support-message-id="${anchor.messageId}"]`
+    );
+    if (anchorMessage) {
+      const nextOffset =
+        anchorMessage.getBoundingClientRect().top -
+        viewport.getBoundingClientRect().top;
+      viewport.scrollTop += nextOffset - anchor.viewportOffset;
+    }
+    prependScrollAnchor.current = null;
+  }, [messages.length, olderMessagesLoading]);
+
+  function requestOlderMessages() {
+    const viewport = messagesViewportRef.current;
+    if (!viewport || olderMessagesLoading || !olderMessagesCursor) return;
+    shouldStickToBottom.current = false;
+    const viewportTop = viewport.getBoundingClientRect().top;
+    const anchorMessage = [
+      ...viewport.querySelectorAll<HTMLElement>(
+        '[data-live-support-message-id]'
+      ),
+    ].find(
+      (element) => element.getBoundingClientRect().bottom > viewportTop
+    );
+    prependScrollAnchor.current = anchorMessage
+      ? {
+          messageId: anchorMessage.dataset.liveSupportMessageId ?? '',
+          viewportOffset:
+            anchorMessage.getBoundingClientRect().top - viewportTop,
+        }
+      : null;
+    void loadOlderMessages();
+  }
 
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
@@ -175,9 +365,7 @@ export function ConversationInvestigation({
 
   function appendMessage(message: LiveSupportMessage) {
     setMessages((current) =>
-      current.some((item) => item.id === message.id)
-        ? current
-        : [...current, message]
+      mergeOrderedLiveSupportMessages(current, [message])
     );
   }
 
@@ -422,8 +610,18 @@ export function ConversationInvestigation({
         <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[1.45fr_.55fr] lg:grid-rows-1">
           <div className="flex min-h-0 flex-col border-[var(--admin-border)] lg:border-l">
             <div
+              ref={messagesViewportRef}
               className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[var(--admin-card-soft)] p-3 sm:p-4"
               aria-live="polite"
+              aria-label="سجل رسائل المحادثة"
+              onScroll={(event) => {
+                const viewport = event.currentTarget;
+                shouldStickToBottom.current =
+                  viewport.scrollHeight -
+                    viewport.scrollTop -
+                    viewport.clientHeight <
+                  80;
+              }}
             >
               {loading ? (
                 <div
@@ -438,31 +636,104 @@ export function ConversationInvestigation({
                   لا توجد رسائل بعد.
                 </p>
               ) : (
-                messages.map((message) => {
-                  const fromTeam = ['Staff', 'Admin', 'System', 'AI'].includes(
-                    message.senderType
-                  );
-                  return (
-                    <article
-                      dir="auto"
-                      key={message.id}
-                      className={`max-w-[86%] break-words [overflow-wrap:anywhere] rounded-2xl px-4 py-3 sm:max-w-[78%] ${fromTeam ? 'mr-auto bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'ml-auto border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'}`}
-                    >
-                      <p className="mb-1 text-xs font-bold opacity-80">
-                        {message.senderDisplayName ||
-                          senderLabel(message.senderType)}
-                      </p>
-                      <LiveSupportMessageContent
-                        message={message}
-                        audience="staff"
-                      />
-                      <LiveSupportMessageMeta
-                        message={message}
-                        audience="staff"
-                      />
-                    </article>
-                  );
-                })
+                <>
+                  {useWhatsAppThread &&
+                  (olderMessagesCursor ||
+                    olderMessagesLoading ||
+                    olderMessagesError) ? (
+                    <div className={`flex flex-col items-center gap-2 pb-2 ${threadHistoryGap ? 'sticky top-2 z-10 mx-auto rounded-2xl bg-[var(--admin-warning-10)] px-2 pt-2 shadow-sm' : ''}`}>
+                      {olderMessagesCursor ? (
+                        <button
+                          type="button"
+                          disabled={olderMessagesLoading}
+                          onClick={requestOlderMessages}
+                          className="min-h-10 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] disabled:opacity-60"
+                        >
+                          {olderMessagesLoading
+                            ? 'جارٍ تحميل الرسائل الأقدم…'
+                            : threadHistoryGap
+                              ? 'استكمال الرسائل الناقصة'
+                              : 'تحميل الرسائل الأقدم'}
+                        </button>
+                      ) : null}
+                      {olderMessagesError ? (
+                        <div
+                          role="alert"
+                          className="text-center text-xs text-[var(--admin-danger)]"
+                        >
+                          <p>{olderMessagesError}</p>
+                          <button
+                            type="button"
+                            onClick={requestOlderMessages}
+                            className="mt-1 font-bold underline"
+                          >
+                            إعادة المحاولة
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {messages.map((message, index) => {
+                    const fromTeam = [
+                      'Staff',
+                      'Admin',
+                      'System',
+                      'AI',
+                    ].includes(message.senderType);
+                    const previousConversationId =
+                      messages[index - 1]?.conversationId;
+                    const showEpisodeBoundary =
+                      useWhatsAppThread &&
+                      message.conversationId !== previousConversationId &&
+                      (index > 0 || message.conversationId !== conversation.id);
+                    return (
+                      <Fragment key={message.id}>
+                        {showEpisodeBoundary ? (
+                          <div
+                            role="separator"
+                            aria-label={
+                              message.conversationId === conversation.id
+                                ? 'بداية المحادثة المحددة'
+                                : 'بداية جلسة واتساب أخرى'
+                            }
+                            className="flex items-center gap-2 py-2 text-xs font-bold text-[var(--admin-muted)]"
+                          >
+                            <span className="h-px flex-1 bg-[var(--admin-border)]" />
+                            <span>
+                              {message.conversationId === conversation.id
+                                ? 'المحادثة المحددة'
+                                : 'جلسة واتساب أخرى'}
+                            </span>
+                            <span className="h-px flex-1 bg-[var(--admin-border)]" />
+                          </div>
+                        ) : null}
+                        <article
+                          dir="auto"
+                          data-live-support-message-id={message.id}
+                          className={`max-w-[86%] break-words [overflow-wrap:anywhere] rounded-2xl px-4 py-3 sm:max-w-[78%] ${fromTeam ? 'mr-auto bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'ml-auto border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'}`}
+                        >
+                          <p className="mb-1 text-xs font-bold opacity-80">
+                            {message.senderDisplayName ||
+                              senderLabel(message.senderType)}
+                          </p>
+                          <LiveSupportMessageContent
+                            message={message}
+                            audience="staff"
+                            staffWhatsAppThreadConversationId={
+                              useWhatsAppThread
+                                ? conversation.id
+                                : undefined
+                            }
+                          />
+                          <LiveSupportMessageMeta
+                            message={message}
+                            audience="staff"
+                          />
+                        </article>
+                      </Fragment>
+                    );
+                  })}
+                </>
               )}
               {!isWhatsApp && participantDraft !== null ? (
                 <article className="ml-auto max-w-[82%] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-primary-15)] px-4 py-3 text-sm text-[var(--admin-text)]">
@@ -474,7 +745,6 @@ export function ConversationInvestigation({
                   </p>
                 </article>
               ) : null}
-              <div ref={endRef} />
             </div>
 
             <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-3 sm:p-4">

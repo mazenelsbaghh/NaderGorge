@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -86,7 +87,12 @@ public sealed class WhatsAppCloudService
         IReadOnlyList<TemplateSnapshot> Templates,
         string? NextCursor);
 
-    public sealed record TemplateComponent(string Type, IReadOnlyList<string> Parameters);
+    public sealed record TemplateComponent(
+        string Type,
+        IReadOnlyList<string> Parameters,
+        string ParameterType = "text",
+        string? SubType = null,
+        int? Index = null);
 
     public sealed record TemplateMessageRequest(
         string RecipientPhoneNumber,
@@ -277,24 +283,99 @@ public sealed class WhatsAppCloudService
         CancellationToken cancellationToken)
     {
         var recipient = NormalizeRecipient(message.RecipientPhoneNumber);
-        var payload = new
+        var providerComponents = ProviderTemplateComponents(message.Components);
+        if (providerComponents is null)
+            return new(false, "Template parameters are invalid.", recipient, null, 422,
+                "WHATSAPP_TEMPLATE_PARAMETERS_INVALID");
+        var template = new Dictionary<string, object>
         {
-            messaging_product = "whatsapp",
-            to = recipient,
-            type = "template",
-            template = new
-            {
-                name = message.TemplateName,
-                language = new { code = message.Language },
-                components = message.Components.Select(component => new
-                {
-                    type = component.Type.ToLowerInvariant(),
-                    parameters = component.Parameters.Select(value => new { type = "text", text = value })
-                })
-            }
+            ["name"] = message.TemplateName,
+            ["language"] = new Dictionary<string, string> { ["code"] = message.Language }
+        };
+        if (providerComponents.Count > 0) template["components"] = providerComponents;
+        var payload = new Dictionary<string, object>
+        {
+            ["messaging_product"] = "whatsapp",
+            ["to"] = recipient,
+            ["type"] = "template",
+            ["template"] = template
         };
         return await PostMessageAsync(payload, recipient, cancellationToken);
     }
+
+    public static bool IsSafeTemplateUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var parsed) &&
+        parsed.Scheme == Uri.UriSchemeHttps &&
+        !string.IsNullOrWhiteSpace(parsed.Host) && string.IsNullOrEmpty(parsed.UserInfo);
+
+    private static IReadOnlyList<IReadOnlyDictionary<string, object>>? ProviderTemplateComponents(
+        IReadOnlyList<TemplateComponent> components)
+    {
+        var providerComponents = new List<IReadOnlyDictionary<string, object>>(components.Count);
+        var identities = new HashSet<(string Type, string? SubType, int? Index)>();
+        foreach (var component in components)
+        {
+            if (component is null) return null;
+            var providerComponent = ProviderTemplateComponent(component);
+            if (providerComponent is null) return null;
+            var identity = (component.Type.Trim().ToUpperInvariant(),
+                component.SubType?.Trim().ToLowerInvariant(), component.Index);
+            if (!identities.Add(identity)) return null;
+            providerComponents.Add(providerComponent);
+        }
+        return providerComponents;
+    }
+
+    private static IReadOnlyDictionary<string, object>? ProviderTemplateComponent(
+        TemplateComponent component)
+    {
+        var type = component.Type?.Trim().ToUpperInvariant();
+        if (component.Parameters is null || component.Parameters.Count == 0 ||
+            component.Parameters.Any(parameter => !ValidTemplateParameter(parameter)))
+            return null;
+        return type is "HEADER" or "BODY"
+            ? ProviderTextTemplateComponent(type, component)
+            : ProviderButtonTemplateComponent(type, component);
+    }
+
+    private static IReadOnlyDictionary<string, object>? ProviderTextTemplateComponent(
+        string type,
+        TemplateComponent component)
+    {
+        if (!string.Equals(component.ParameterType, "text", StringComparison.OrdinalIgnoreCase) ||
+            component.SubType is not null || component.Index is not null)
+            return null;
+        return new Dictionary<string, object>
+        {
+            ["type"] = type.ToLowerInvariant(),
+            ["parameters"] = component.Parameters.Select(TextParameter).ToArray()
+        };
+    }
+
+    private static IReadOnlyDictionary<string, object>? ProviderButtonTemplateComponent(
+        string? type,
+        TemplateComponent component)
+    {
+        if (type != "BUTTON" || component.Index is not int buttonIndex ||
+            buttonIndex is < 0 or > 9 || component.Parameters.Count != 1 ||
+            !string.Equals(component.SubType, "url", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(component.ParameterType, "text", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return new Dictionary<string, object>
+        {
+            ["type"] = "button",
+            ["sub_type"] = "url",
+            ["index"] = buttonIndex.ToString(CultureInfo.InvariantCulture),
+            ["parameters"] = component.Parameters.Select(TextParameter).ToArray()
+        };
+    }
+
+    private static bool ValidTemplateParameter(string parameter) =>
+        !string.IsNullOrWhiteSpace(parameter) && parameter.Length <= 1_024 &&
+        !parameter.Any(char.IsControl);
+
+    private static IReadOnlyDictionary<string, string> TextParameter(string text) =>
+        new Dictionary<string, string> { ["type"] = "text", ["text"] = text };
 
     public async Task<SendTestMessageResult> SendMediaAsync(
         MediaMessageRequest message,
