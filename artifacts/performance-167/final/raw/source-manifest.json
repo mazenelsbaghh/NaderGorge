@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "releaseId": "git-76fb4216d11b561924162cb4430d113aee99070a",
-  "gitCommit": "76fb4216d11b561924162cb4430d113aee99070a",
-  "sourceStateSha256": "d719ddb8c8827ea0d6a3cf72b17a36771414b6e45abbaa9d319db8bea99b8aaa",
+  "releaseId": "git-e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
+  "gitCommit": "e4a2f621d680bd71099afff4d5bcf62fd5a2586e",
+  "sourceStateSha256": "4c2aa1224f45529f653fc0531c2981d51caf5d0dd04fd1b6ddec130f893ff635",
   "dirtySourceSnapshot": false,
   "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
   "sourcePaths": [
@@ -2110,8 +2110,8 @@
       "path": "backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 20833,
-      "sha256": "c4063c4d914de246f1175f643ec89aa14a6974cb470c70c72c54408b6b104ba4"
+      "sizeBytes": 20100,
+      "sha256": "3ca4d25d2e0d36cc53b104fe539b8ceb3162be71580d73dbeda8a34fe807631f"
     },
     {
       "path": "backend/src/NaderGorge.API/Configuration/E2eOnlyAttribute.cs",
@@ -2530,8 +2530,8 @@
       "path": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 12553,
-      "sha256": "8a5ad2a36d390303c69220cb92c868dca79c821876f5108deae2c47502400c4f"
+      "sizeBytes": 13939,
+      "sha256": "74d73502e28faee59ed46c100902bfd031bb984e2f5927da13fad8fee5a33509"
     },
     {
       "path": "backend/src/NaderGorge.API/Controllers/NotificationsController.cs",
@@ -5309,15 +5309,15 @@
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Dtos/LiveSupportDtos.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 10883,
-      "sha256": "f2f093990254bd8d95b4d962b122450a50fa48b77ecaf044b482265ca36f8875"
+      "sizeBytes": 11277,
+      "sha256": "cff8b2e6eedf589d2c9ed840b56e9931ac188111369f8ccb06fcd269b060f875"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Dtos/WhatsAppCampaignDtos.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 8072,
-      "sha256": "b1bd9a4749f01eb188bf8d023cd35f032115fac63de42fa71747fb3c1ea86870"
+      "sizeBytes": 8133,
+      "sha256": "ebc5c42b085955e994f3875ca93a45c0adc79311c986677be3d4c718d5f8c8e5"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/ILiveSupportActionExecutor.cs",
@@ -5365,8 +5365,8 @@
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/ILiveSupportService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 9674,
-      "sha256": "b90bc9e75ff579f9b57007bac837c26580b11345ef17eb6e7106d7c12087f858"
+      "sizeBytes": 9963,
+      "sha256": "06587af48e4852a4cd3395ff75c2c1cf0152331a72e68d22dbcf0f555ae54c66"
     },
     {
       "path": "backend/src/NaderGorge.Application/Features/LiveSupport/Interfaces/IWhatsAppCampaignService.cs",
@@ -6247,8 +6247,8 @@
       "path": "backend/src/NaderGorge.Application/Services/WhatsAppCloudService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 32730,
-      "sha256": "ba3c52f700b3a3a2a381a4b7cd1c32ec3efdd0f4bbc07642dcdb45790fb66f1b"
+      "sizeBytes": 36493,
+      "sha256": "847eba66f2c3a692efad77ea0b87ac84b9f1f0917a5811894eef2bfc4a847804"
     },
     {
       "path": "backend/src/NaderGorge.Application/Services/WhatsAppExamNotificationService.cs",
@@ -10818,8 +10818,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/LiveSupportService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 180760,
-      "sha256": "72888ce5548d16d31e1c3713cb430db835b7cdd2f473fa2458735136e5324aea"
+      "sizeBytes": 184210,
+      "sha256": "4b3723dd4b3b3644a6d2dd1f8c35880c6577db71b18fc4da98e4d9a3a77fbb61"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/PostgresClusterLeaseService.cs",
@@ -10881,8 +10881,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignAudience.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 50134,
-      "sha256": "2041b30e5861e6ca0403759ee622b222017d4a045d09f12a1aac6074575e085b"
+      "sizeBytes": 51346,
+      "sha256": "371bca0a0c93f8d9b26d771ae33bd79bc6fdfad31520bc412c685587458bde2b"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignDataProtector.cs",
@@ -10895,8 +10895,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignDispatcher.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 22721,
-      "sha256": "7de726c5085626c83a638785b11860e6754ea63e2f6cab047526dc0f07315150"
+      "sizeBytes": 22704,
+      "sha256": "f8c3dcce93bb406c2d39af53e02d601d5bdab089e8ff16416e2ced0a5c2fcce4"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignReceipts.cs",
@@ -10916,8 +10916,8 @@
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppCampaignTemplatePolicy.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 10035,
-      "sha256": "f20c32fc48ac57f5ed7078b0f93765e5b820b44291c94129b0d5e53347c62d5a"
+      "sizeBytes": 18428,
+      "sha256": "f759ad17c85eb9d9f713bb83ed5b5c1c2416f759816d5d44f4011d1e61e3146d"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppContactCandidateSearch.cs",
@@ -10927,11 +10927,18 @@
       "sha256": "ecf30ea8419e72b44d4c826e0a064b9bcc574ef9ce965f890071a37d3e02195b"
     },
     {
+      "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppDirectTemplatePolicy.cs",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 9873,
+      "sha256": "69276678265241fd193e790bd0e6a3016cc2c7ccc018dc45e137a296430d61b4"
+    },
+    {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppLiveSupportService.cs",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 39740,
-      "sha256": "1f3792edfe4a9a3d2a5209d94412c9f7864dc2d9617cd89c03a3b70c0e6df2e1"
+      "sizeBytes": 40821,
+      "sha256": "3e90736ffd7bad910fab2cebc7c573c5ba326ba0de27ff23cf299a85c24b0b04"
     },
     {
       "path": "backend/src/NaderGorge.Infrastructure/Services/WhatsAppOutboundMediaNormalizer.cs",
@@ -11840,8 +11847,8 @@
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppLiveSupportTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 54897,
-      "sha256": "a2179f9654b8a957d78263155ba53b840f17a0310d783c3d2c1e94467b884c7e"
+      "sizeBytes": 62629,
+      "sha256": "0d64857a6cffad28f4d0cf08da3a3d59f82ae71ff8a80efe603aec460cf00867"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppOutboundMediaNormalizerTests.cs",
@@ -11849,6 +11856,13 @@
       "classification": "test",
       "sizeBytes": 3883,
       "sha256": "3f4dd0dfab8305b866da8cb086d3cd4fbcfafd20ef3a62c8176f95aa9174d96c"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppThreadHistoryTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 21343,
+      "sha256": "38c83963b5be9054f5f3707d9969b1ed7390d144373238d12ba7e8df08c5ebe8"
     },
     {
       "path": "backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppWebhookControllerTests.cs",
@@ -12589,15 +12603,22 @@
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppCampaignSafetyTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 5312,
-      "sha256": "27c7b865e16335d9076697991264cce554c68377068ada8de89dfa3a09401155"
+      "sizeBytes": 12813,
+      "sha256": "1a476db9d9e310473f323984dba697a1c6d7f264a5d8b14305b45ceaa42a0384"
     },
     {
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppOutboundBackgroundServiceTests.cs",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 31260,
-      "sha256": "97aa3c6b9e9856bfb8a465839d128ac4164ccac6aab7653d0f0dbd3606e91499"
+      "sizeBytes": 40557,
+      "sha256": "6e9e788565a8dec931dc085fdec69fdfa17cbf5981459260242965593703876f"
+    },
+    {
+      "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupport/WhatsAppThreadPostgresTests.cs",
+      "status": "tracked",
+      "classification": "test",
+      "sizeBytes": 7916,
+      "sha256": "c042d5c08ad1618c27b1267c67e4030b52c3e0bf3c93f8e1aa5d80538ee9f65c"
     },
     {
       "path": "backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIActionConcurrencyTests.cs",
@@ -16649,8 +16670,8 @@
       "path": "frontend/src/app/assistant/live-support/AssistantLiveSupportPageClient.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 26231,
-      "sha256": "b1451f1d58ea0b07743ce75125c2d1813779bdabfc4abfc0093fad49edf1fb8a"
+      "sizeBytes": 32260,
+      "sha256": "e6b70644a812cc2144f2c7c41634271c38a164c754a9f7abbfcf3de77638c532"
     },
     {
       "path": "frontend/src/app/assistant/live-support/page.tsx",
@@ -18469,8 +18490,8 @@
       "path": "frontend/src/components/live-support/LiveSupportMessageContent.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7041,
-      "sha256": "5edde1c77709b89d0f41f73ae665d5f4c741fb08d8188eb87ca5045c4937a840"
+      "sizeBytes": 7461,
+      "sha256": "cdd2ae0365290a2aef446894d645beedeb3e69175de87fda889df32abeaa8668"
     },
     {
       "path": "frontend/src/components/live-support/accessibility.test.ts",
@@ -18483,8 +18504,8 @@
       "path": "frontend/src/components/live-support/admin/ConversationInvestigation.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 25717,
-      "sha256": "5893bf3ebef9b7c8157a06c6355f9d3ea257270e225369333eac489eea254b91"
+      "sizeBytes": 36930,
+      "sha256": "224b96ce3d05860d36152a9ab3ff67473cbb85410228e90ebdb9b1dd9b2a2967"
     },
     {
       "path": "frontend/src/components/live-support/admin/LiveOperationsBoard.tsx",
@@ -18539,8 +18560,8 @@
       "path": "frontend/src/components/live-support/admin/WhatsAppCampaignTemplateEditor.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 20998,
-      "sha256": "a0fb621b939e9773a7a34d4a40af7f38e02a142619a949e1c6a20da6c02b5b5c"
+      "sizeBytes": 24941,
+      "sha256": "665cb6168961138d230178b324b9eec14d27568d7e046cef2421e4cd79dc339f"
     },
     {
       "path": "frontend/src/components/live-support/admin/WhatsAppContactPreferencesPanel.tsx",
@@ -18749,8 +18770,8 @@
       "path": "frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 18555,
-      "sha256": "4789566dcc0d22c6f043607e35909b16ef020c753d85fa466feda4bb908d6020"
+      "sizeBytes": 22476,
+      "sha256": "d9acd33f394d575ee086fcb7f4de8fc01c655e3a99eca646bc69193f2712ccb3"
     },
     {
       "path": "frontend/src/components/live-support/staff/StaffStatusHeader.tsx",
@@ -18770,22 +18791,22 @@
       "path": "frontend/src/components/live-support/staff/WhatsAppTemplatePicker.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 5679,
-      "sha256": "cfd30b7189247130e6505f93f691decde4e00fd3349c68fddfd3b8020c818766"
+      "sizeBytes": 6422,
+      "sha256": "1129dd0f38588546e507c2940889e127f74348ddb91b59233e827f7fb0e9679c"
     },
     {
       "path": "frontend/src/components/live-support/staff/whatsapp-template.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1163,
-      "sha256": "3bdc120189c4ebf2a1532925bb68250d53c99aec253e88c0dc488d3b650b701d"
+      "sizeBytes": 4513,
+      "sha256": "047f05b20d16ec0981a17721c6f36a26ab6fda63e2579b103fd3d6132a876339"
     },
     {
       "path": "frontend/src/components/live-support/staff/whatsapp-template.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 629,
-      "sha256": "9870f752aaccc39beb19dece5d9b68c30b716b177752a5f795f7158e2c6b96bf"
+      "sizeBytes": 2467,
+      "sha256": "8bca7da5953990bd0e3bac6da21259b2d0d0c38fb07b11a69466f9a31fab0ddd"
     },
     {
       "path": "frontend/src/components/live-support/student-context/StudentActionsPanel.tsx",
@@ -18798,8 +18819,8 @@
       "path": "frontend/src/components/live-support/student-context/StudentContextPanel.tsx",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 28170,
-      "sha256": "6a0c65c2b7de7cc4b4863690684608204ab4687093c34a420b5337c35e7adbd4"
+      "sizeBytes": 29212,
+      "sha256": "75eaa3e6eb429bb4e313bd8922877ee238a05e7ff617caf9781a2d63a1f14f9c"
     },
     {
       "path": "frontend/src/components/live-support/student-context/student-action-definitions.test.ts",
@@ -20114,8 +20135,8 @@
       "path": "frontend/src/lib/live-support-client-contract.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 1915,
-      "sha256": "af5590809ba673705997d8d8b3d6ccba61355f8a97065616dcc0616668173bce"
+      "sizeBytes": 6550,
+      "sha256": "ab5f8ed73bbf68faa2625e7c8760ea12e5b9dbee55a96593f4353cc969b9c372"
     },
     {
       "path": "frontend/src/lib/live-support-client-contract.ts",
@@ -20123,6 +20144,13 @@
       "classification": "source",
       "sizeBytes": 1354,
       "sha256": "c4bedb7471dd9adf140e0d4ebf504e17772a6506f9e721cab1f3c8d222fee3cb"
+    },
+    {
+      "path": "frontend/src/lib/live-support-message-pages.ts",
+      "status": "tracked",
+      "classification": "source",
+      "sizeBytes": 4167,
+      "sha256": "b85fb58e23a04ef82d8fc33c030c9d660750d9a399ac3e9f8ad946937d9a2bd9"
     },
     {
       "path": "frontend/src/lib/motion.ts",
@@ -20282,15 +20310,15 @@
       "path": "frontend/src/lib/whatsapp-campaign.test.mts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 7183,
-      "sha256": "6e61ac0c14c4c33a5c2a21ae1d04768a4f31df97665634073414f05ea61bea62"
+      "sizeBytes": 11651,
+      "sha256": "4a72d95c01a68e22591155ecd2e37a0cf4a786b5d180d3d3ce13595db1357272"
     },
     {
       "path": "frontend/src/lib/whatsapp-campaign.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 13027,
-      "sha256": "2764d1ad6a4bc0087e653a5c32d5fc5351fdba75dc8c973eeb3a9198255a50d5"
+      "sizeBytes": 21506,
+      "sha256": "5654caf6e3ecdc4addf1c196b3b79c4782ac6799d7e7e9075b654dc449231ce4"
     },
     {
       "path": "frontend/src/packages/admin/index.ts",
@@ -20576,8 +20604,8 @@
       "path": "frontend/src/services/live-support-service.ts",
       "status": "tracked",
       "classification": "source",
-      "sizeBytes": 38545,
-      "sha256": "c8fe186ccbefc8841f063eb491f0caaf0ec7cecc08326b59406678678f328653"
+      "sizeBytes": 39398,
+      "sha256": "7383cb3a14f5449dc9a4273a46f2a74f0df2ecf81dede3b190e971d8a4ac987f"
     },
     {
       "path": "frontend/src/services/media-service.ts",
@@ -21052,8 +21080,8 @@
       "path": "frontend/tests/e2e/live-support.spec.ts",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 28421,
-      "sha256": "1f655581656617721ef1531f7489bc0634f5a1d7514589c8e89ed550d7ad04ba"
+      "sizeBytes": 69452,
+      "sha256": "4b5c8b38801f7654d198c5d7e4973e6ed79f6ddbaf44573c29c627c4d50c9128"
     },
     {
       "path": "frontend/tests/e2e/login-dashboard-performance.spec.ts",
@@ -31272,8 +31300,8 @@
       "path": "tests/admin_ai_frontend_reachable_calls.json",
       "status": "tracked",
       "classification": "test",
-      "sizeBytes": 174526,
-      "sha256": "bd1a4f3c3b5a30b4aeb151078eb22a8de078acbc5934f22095fa305a1dd006b4"
+      "sizeBytes": 175167,
+      "sha256": "8bcb41452012fa412168df7556307fbd3a1a4efc3d6ba46b5902c960404c050e"
     },
     {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
