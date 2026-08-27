@@ -76,7 +76,7 @@ export function WhatsAppCampaignAudienceBuilder({
             <div className="min-w-0">
               <h3 className="font-black text-[var(--admin-text)]">قاعدة الجمهور المؤهل</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
-                يبدأ الحساب من الطلاب النشطين أصحاب وجهة اتصال صالحة وموافقة صريحة على فئة القالب. إلغاء الموافقة يستبعد الوجهة دائمًا، ولا تُستنتج الموافقة من شراء أو محادثة سابقة.
+                يبدأ الحساب من الطلاب النشطين أصحاب وجهة اتصال صالحة. عدم وجود قرار محلي لا يمنع الإرسال تقنيًا، وعلى مسؤول الحملة التأكد من موافقة المستلم؛ الرفض الساري يستبعد الوجهة ويوقف رسائلها غير المحجوزة.
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export function WhatsAppCampaignAudienceBuilder({
 
       <fieldset className="rounded-xl border border-[var(--admin-border)] p-4">
         <legend className="px-2 text-sm font-black text-[var(--admin-text)]">وجهة الرسالة</legend>
-        <p className="mb-3 text-xs leading-5 text-[var(--admin-muted)]">الموافقة منفصلة لكل رقم ودور اتصال. لن يُستخدم رقم آخر بدلًا من الوجهة المحددة.</p>
+        <p className="mb-3 text-xs leading-5 text-[var(--admin-muted)]">قرار التواصل منفصل لكل رقم وفئة قالب، ويُطبق على كل ظهور لهذا الرقم. لن يُستخدم رقم آخر بدلًا من الوجهة المحددة.</p>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {contactRoles.map((role) => {
             const checked = filters.contactRoles.includes(role.value);

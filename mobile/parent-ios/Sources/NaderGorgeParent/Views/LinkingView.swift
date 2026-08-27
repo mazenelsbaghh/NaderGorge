@@ -221,29 +221,6 @@ public struct LinkingView: View {
                                 .disabled(viewModel.isLoading || (viewModel.trackingCode.count != 6 && viewModel.errorMessage == nil))
                                 .opacity((viewModel.trackingCode.count == 6 || viewModel.errorMessage != nil) ? 1.0 : 0.6)
                                 
-                                Text("أو")
-                                    .font(.custom("Tajawal-Bold", size: 13))
-                                    .foregroundColor(.gray)
-                                
-                                // QR Scanner Button
-                                Button(action: { /* Mock scan action */ }) {
-                                    HStack {
-                                        Text("Scan QR Code")
-                                            .font(.custom("Tajawal-Bold", size: 16))
-                                            .fontWeight(.bold)
-                                        
-                                        Image(systemName: "qrcode.viewfinder")
-                                            .font(.system(size: 18))
-                                    }
-                                    .foregroundColor(BrandColors.teal)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.clear)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(BrandColors.teal, lineWidth: 2)
-                                    )
-                                }
                             }
                             .padding(24)
                             .background(isDark ? BrandColors.darkCard : .white)

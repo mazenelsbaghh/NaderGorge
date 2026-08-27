@@ -225,7 +225,6 @@ public static class WhatsAppCampaignErrorCodes
     public const string Conflict = "WHATSAPP_CAMPAIGN_CONFLICT";
     public const string ConfirmationInvalid = "WHATSAPP_CAMPAIGN_CONFIRMATION_INVALID";
     public const string IdempotencyConflict = "WHATSAPP_CAMPAIGN_IDEMPOTENCY_CONFLICT";
-    public const string ConsentRequired = "WHATSAPP_CAMPAIGN_CONSENT_REQUIRED";
 }
 
 public sealed class WhatsAppCampaignException(string code, string message, int statusCode = 400)

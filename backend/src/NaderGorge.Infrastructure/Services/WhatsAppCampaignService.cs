@@ -456,7 +456,7 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
             .Where(item => item.DestinationHash == destinationHash && item.EffectiveAt <= DateTime.UtcNow)
             .ToListAsync(ct);
         var campaignIds = candidateCampaigns
-            .Where(candidate => !IsDestinationConsented(preferenceRows, candidate.Category))
+            .Where(candidate => !DestinationAllowsCampaign(preferenceRows, candidate.Category))
             .Select(candidate => candidate.CampaignId)
             .Distinct()
             .ToArray();
@@ -477,7 +477,7 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
         await CompleteCampaignsIfTerminalAsync(affectedCampaigns, ct);
     }
 
-    internal async Task<bool> IsDestinationConsentedAsync(
+    internal async Task<bool> IsDestinationAllowedAsync(
         string destinationHash,
         string templateCategory,
         CancellationToken ct)
@@ -485,32 +485,32 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
         var category = string.Equals(templateCategory, "MARKETING", StringComparison.OrdinalIgnoreCase)
             ? WhatsAppContactPreferenceCategory.Marketing
             : WhatsAppContactPreferenceCategory.Utility;
-        var rows = await _db.WhatsAppContactPreferences.AsNoTracking()
+        var preferences = await _db.WhatsAppContactPreferences.AsNoTracking()
             .Where(item => item.DestinationHash == destinationHash &&
                 (item.Category == category || item.Category == WhatsAppContactPreferenceCategory.All) &&
                 item.EffectiveAt <= DateTime.UtcNow)
             .ToListAsync(ct);
-        return IsDestinationConsented(rows, templateCategory);
+        return DestinationAllowsCampaign(preferences, templateCategory);
     }
 
-    private static bool IsDestinationConsented(
-        IReadOnlyList<WhatsAppContactPreference> rows,
+    internal static bool DestinationAllowsCampaign(
+        IReadOnlyList<WhatsAppContactPreference> preferences,
         string templateCategory)
     {
         var category = string.Equals(templateCategory, "MARKETING", StringComparison.OrdinalIgnoreCase)
             ? WhatsAppContactPreferenceCategory.Marketing
             : WhatsAppContactPreferenceCategory.Utility;
-        WhatsAppContactPreference? Latest(WhatsAppContactPreferenceCategory target) => rows
-            .Where(item => item.Category == target)
-            .OrderByDescending(item => item.EffectiveAt)
-            .ThenByDescending(item => item.CreatedAt)
-            .ThenByDescending(item => item.State == WhatsAppContactPreferenceState.OptedOut)
-            .ThenByDescending(item => item.Id).FirstOrDefault();
+        WhatsAppContactPreference? Latest(WhatsAppContactPreferenceCategory target) => preferences
+            .Where(preference => preference.Category == target)
+            .OrderByDescending(preference => preference.EffectiveAt)
+            .ThenByDescending(preference => preference.CreatedAt)
+            .ThenByDescending(preference => preference.State == WhatsAppContactPreferenceState.OptedOut)
+            .ThenByDescending(preference => preference.Id).FirstOrDefault();
         var categoryPreference = Latest(category);
-        if (categoryPreference?.State != WhatsAppContactPreferenceState.OptedIn) return false;
+        if (categoryPreference?.State == WhatsAppContactPreferenceState.OptedOut) return false;
         var global = Latest(WhatsAppContactPreferenceCategory.All);
         return global is null || global.State != WhatsAppContactPreferenceState.OptedOut ||
-            !PreferenceAtLeastAsRecent(global, categoryPreference);
+            categoryPreference is not null && !PreferenceAtLeastAsRecent(global, categoryPreference);
     }
 
     internal async Task<bool> CurrentRecipientDestinationMatchesAsync(

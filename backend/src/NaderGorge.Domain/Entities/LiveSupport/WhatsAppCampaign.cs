@@ -112,8 +112,8 @@ public sealed class WhatsAppCampaignRecipient : BaseEntity
 }
 
 /// <summary>
-/// Append-only consent evidence. The latest effective record for a destination hash and
-/// category is authoritative. Consent is never inferred from purchases or inbound support.
+/// Append-only communication preference evidence. The latest effective record for a destination
+/// hash and category controls eligibility and suppression of delivery that is still pending.
 /// </summary>
 public sealed class WhatsAppContactPreference : BaseEntity
 {

@@ -160,7 +160,7 @@ public sealed class WhatsAppCampaignDispatcher(
             await PersistRecipientAndProjectionAsync(db, campaigns, campaign, ct);
             return;
         }
-        if (!await campaigns.IsDestinationConsentedAsync(
+        if (!await campaigns.IsDestinationAllowedAsync(
                 recipient.DestinationHash, campaign.TemplateCategory, ct))
         {
             SetTerminal(recipient, WhatsAppCampaignRecipientStatus.Skipped,
@@ -217,7 +217,7 @@ public sealed class WhatsAppCampaignDispatcher(
             return;
         }
         if (!await campaigns.CurrentRecipientDestinationMatchesAsync(recipient, ct) ||
-            !await campaigns.IsDestinationConsentedAsync(
+            !await campaigns.IsDestinationAllowedAsync(
                 recipient.DestinationHash, campaign.TemplateCategory, ct))
         {
             SetTerminal(recipient, WhatsAppCampaignRecipientStatus.Skipped,

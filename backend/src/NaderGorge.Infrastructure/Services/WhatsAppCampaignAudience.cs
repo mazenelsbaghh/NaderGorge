@@ -129,7 +129,7 @@ public sealed partial class WhatsAppCampaignService
             throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
                 "تغير الجمهور منذ المعاينة؛ اعرض المعاينة من جديد.");
         if (audience.Recipients.Count == 0)
-            throw Invalid("لا توجد جهات اتصال مؤهلة بعد تطبيق الموافقات والاستبعادات.");
+            throw Invalid("لا توجد جهات اتصال قابلة للإرسال بعد فحص الأرقام وقرارات الإيقاف.");
         var maximumRecipients = BoundedConfigurationInt(
             "WhatsAppCampaigns:MaximumRecipients", 25_000, 1, 100_000);
         if (audience.Recipients.Count > maximumRecipients)
@@ -290,52 +290,31 @@ public sealed partial class WhatsAppCampaignService
             normalizedContacts.Add((contact, e164, _protector.DestinationHash(e164)));
         }
 
-        var sharedDestinationHashes = normalizedContacts.GroupBy(item => item.Hash)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToHashSet(StringComparer.Ordinal);
-        foreach (var shared in normalizedContacts.Where(item =>
-                     sharedDestinationHashes.Contains(item.Hash)).GroupBy(item => item.Hash))
-            Add(exclusions, "duplicate_or_ambiguous_phone", shared.Count());
-        if (sharedDestinationHashes.Count > 0)
-            normalizedContacts = normalizedContacts.Where(item =>
-                !sharedDestinationHashes.Contains(item.Hash)).ToList();
-
         var destinationHashes = normalizedContacts.Select(item => item.Hash).Distinct().ToArray();
-        var preferenceRows = destinationHashes.Length == 0
+        var preferenceRecords = destinationHashes.Length == 0
             ? []
             : await _db.WhatsAppContactPreferences.AsNoTracking()
                 .Where(item => destinationHashes.Contains(item.DestinationHash) &&
                     item.EffectiveAt <= DateTime.UtcNow)
                 .ToListAsync(ct);
-        var preferenceAuthority = preferenceRows.GroupBy(item => (item.DestinationHash, item.Category))
-            .ToDictionary(group => group.Key, group => group
-                .OrderByDescending(item => item.EffectiveAt)
-                .ThenByDescending(item => item.CreatedAt)
-                .ThenByDescending(item => item.State == WhatsAppContactPreferenceState.OptedOut)
-                .ThenByDescending(item => item.Id).First());
-        var consentCategory = string.Equals(template.Category, "MARKETING", StringComparison.OrdinalIgnoreCase)
-            ? WhatsAppContactPreferenceCategory.Marketing
-            : WhatsAppContactPreferenceCategory.Utility;
+        var preferencesByDestination = preferenceRecords.GroupBy(preference => preference.DestinationHash)
+            .ToDictionary(
+                destinationGroup => destinationGroup.Key,
+                destinationGroup => destinationGroup.ToArray(),
+                StringComparer.Ordinal);
+        var contactCountByDestination = normalizedContacts.GroupBy(contact => contact.Hash)
+            .ToDictionary(
+                destinationGroup => destinationGroup.Key,
+                destinationGroup => destinationGroup.Count(),
+                StringComparer.Ordinal);
         var referenceValues = await LoadReferenceValuesAsync(variableMappings, ct);
         var purchaseDates = await LoadPurchaseDatesAsync(
             rows.Select(row => row.StudentUserId).ToArray(), variableMappings, normalized, ct);
-        var consented = new List<ResolvedAudienceRecipient>();
+        var sendable = new List<ResolvedAudienceRecipient>();
         foreach (var item in normalizedContacts)
         {
-            if (!preferenceAuthority.TryGetValue((item.Hash, consentCategory), out var preference))
-            {
-                Increment(exclusions, "no_consent");
-                continue;
-            }
-            if (preference.State != WhatsAppContactPreferenceState.OptedIn)
-            {
-                Increment(exclusions, "opted_out");
-                continue;
-            }
-            if (preferenceAuthority.TryGetValue((item.Hash, WhatsAppContactPreferenceCategory.All), out var global) &&
-                global.State == WhatsAppContactPreferenceState.OptedOut &&
-                PreferenceIsAtLeastAsRecent(global, preference))
+            var destinationPreferences = preferencesByDestination.GetValueOrDefault(item.Hash) ?? [];
+            if (!DestinationAllowsCampaign(destinationPreferences, template.Category))
             {
                 Increment(exclusions, "opted_out");
                 continue;
@@ -356,7 +335,7 @@ public sealed partial class WhatsAppCampaignService
             var payloadJson = SerializeFrozenRecipientPayload(
                 new FrozenRecipientPayload(item.E164, components));
             var maskedPreviewValues = MaskPreviewValues(canonicalMappings, resolvedParameters);
-            consented.Add(new ResolvedAudienceRecipient(
+            sendable.Add(new ResolvedAudienceRecipient(
                 item.Contact.Student.StudentUserId,
                 item.Contact.Student.FullName,
                 item.Contact.ContactRole,
@@ -367,17 +346,24 @@ public sealed partial class WhatsAppCampaignService
         }
 
         var deduplicated = new List<ResolvedAudienceRecipient>();
-        foreach (var group in consented.GroupBy(item => item.DestinationHash).OrderBy(group => group.Key))
+        foreach (var destinationGroup in sendable.GroupBy(recipient => recipient.DestinationHash)
+                     .OrderBy(destinationGroup => destinationGroup.Key, StringComparer.Ordinal))
         {
-            var grouped = group.ToArray();
-            if (grouped.Length > 1)
+            var groupedRecipients = destinationGroup.OrderBy(recipient => recipient.StudentUserId)
+                .ThenBy(recipient => ContactRolePriority(recipient.ContactRole))
+                .ToArray();
+            var distinctPayloadCount = groupedRecipients.Select(recipient => recipient.PayloadJson)
+                .Distinct(StringComparer.Ordinal)
+                .Take(2)
+                .Count();
+            if (groupedRecipients.Length < contactCountByDestination[destinationGroup.Key] ||
+                distinctPayloadCount > 1)
             {
-                // A shared destination is not a safe personalization target, even if two
-                // resolved payloads happen to be identical today. Exclude every owner/role.
-                Add(exclusions, "duplicate_or_ambiguous_phone", grouped.Length);
+                Add(exclusions, "ambiguous_personalization", groupedRecipients.Length);
                 continue;
             }
-            deduplicated.Add(grouped[0]);
+            deduplicated.Add(groupedRecipients[0]);
+            Add(exclusions, "duplicate_collapsed", groupedRecipients.Length - 1);
         }
 
         var fingerprintMaterial = new
@@ -398,8 +384,12 @@ public sealed partial class WhatsAppCampaignService
                     entry.Mapping.ReferenceId,
                     entry.Mapping.Format
                 }),
-            recipients = deduplicated.OrderBy(item => item.DestinationHash, StringComparer.Ordinal)
-                .Select(item => new { item.DestinationHash, payload = HashText(item.PayloadJson) })
+            recipients = deduplicated.OrderBy(recipient => recipient.DestinationHash, StringComparer.Ordinal)
+                .Select(recipient => new
+                {
+                    recipient.DestinationHash,
+                    payload = HashText(recipient.PayloadJson)
+                })
         };
         return new AudienceBuildResult(deduplicated, exclusions, HashJson(fingerprintMaterial));
     }
@@ -883,24 +873,23 @@ public sealed partial class WhatsAppCampaignService
         _ => null
     };
 
-    private static bool PreferenceIsAtLeastAsRecent(
-        WhatsAppContactPreference candidate,
-        WhatsAppContactPreference baseline)
+    private static int ContactRolePriority(string role) => role switch
     {
-        if (candidate.EffectiveAt != baseline.EffectiveAt)
-            return candidate.EffectiveAt > baseline.EffectiveAt;
-        if (candidate.CreatedAt != baseline.CreatedAt)
-            return candidate.CreatedAt > baseline.CreatedAt;
-        return candidate.State == WhatsAppContactPreferenceState.OptedOut || candidate.Id.CompareTo(baseline.Id) >= 0;
-    }
+        "StudentPrimary" => 0,
+        "StudentSecondary" => 1,
+        "FatherPrimary" => 2,
+        "FatherSecondary" => 3,
+        "Mother" => 4,
+        _ => int.MaxValue
+    };
 
     private static Dictionary<string, int> NewExclusionCounts() => new(StringComparer.Ordinal)
     {
         ["no_phone"] = 0,
         ["invalid_phone"] = 0,
-        ["duplicate_or_ambiguous_phone"] = 0,
+        ["duplicate_collapsed"] = 0,
+        ["ambiguous_personalization"] = 0,
         ["opted_out"] = 0,
-        ["no_consent"] = 0,
         ["missing_variable"] = 0
     };
 

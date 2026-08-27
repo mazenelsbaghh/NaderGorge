@@ -205,7 +205,7 @@ export function WhatsAppContactPreferencesPanel() {
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--admin-primary-15)] text-[var(--admin-primary)]"><FileLock2 aria-hidden="true" size={17} /></span>
           <span className="min-w-0">
             <strong className="block text-sm font-black text-[var(--admin-text)]">إدارة تفضيلات التواصل الموثقة</strong>
-            <small className="mt-0.5 block truncate text-xs font-semibold text-[var(--admin-muted)]">قرار منفصل لكل وجهة وفئة، وليس اختيارًا وقت الإرسال</small>
+            <small className="mt-0.5 block truncate text-xs font-semibold text-[var(--admin-muted)]">سجل موثق للموافقة أو الإيقاف لكل وجهة وفئة</small>
           </span>
         </span>
         <span aria-hidden="true" className="text-xl text-[var(--admin-muted)] transition-transform group-open:rotate-45">+</span>
@@ -214,7 +214,7 @@ export function WhatsAppContactPreferencesPanel() {
       <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6">
         <div className="flex items-start gap-2 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-sm leading-6 text-[var(--admin-warning)]">
           <AlertTriangle aria-hidden="true" size={18} className="mt-0.5 shrink-0" />
-          لا تسجل «موافق» إلا من دليل صريح قابل للمراجعة. الشراء أو بدء محادثة دعم لا يعنيان موافقة تسويقية، ويمكن تسجيل الرفض دائمًا.
+          لا تسجل «موافق» إلا من دليل صريح قابل للمراجعة. الرفض الساري يمنع الرسائل غير المحجوزة لهذه الوجهة، ويمكن توثيق موافقة أحدث لإعادة الفئة لاحقًا.
         </div>
 
         <div role="tablist" aria-label="أقسام تفضيلات التواصل" className="mt-4 grid min-h-11 grid-cols-2 gap-1 rounded-xl bg-[var(--admin-card-soft)] p-1 sm:max-w-md">
@@ -331,7 +331,7 @@ function CategoryStateCard({ label, category, state, candidate, onRecord }: {
     <div className="flex min-w-0 flex-col gap-3 rounded-xl bg-[var(--admin-card-soft)] p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-[var(--admin-text)]">{label}</strong><EffectiveState state={state.effectiveState} /></div>
-        {state.overriddenByGlobalOptOut ? <p className="mt-1 text-xs font-semibold text-[var(--admin-danger)]">موقوفة بإلغاء شامل أحدث؛ إعادة الموافقة تحتاج دليلًا جديدًا.</p> : state.latestEffectiveAt ? <p className="mt-1 text-xs text-[var(--admin-muted)]">آخر دليل: <time dateTime={state.latestEffectiveAt}>{formatCairoTimestamp(state.latestEffectiveAt)}</time></p> : <p className="mt-1 text-xs text-[var(--admin-muted)]">لا يوجد قرار موثق لهذه الفئة.</p>}
+        {state.overriddenByGlobalOptOut ? <p className="mt-1 text-xs font-semibold text-[var(--admin-danger)]">موقوفة بإلغاء شامل أحدث؛ إعادة الموافقة تحتاج دليلًا جديدًا.</p> : state.latestEffectiveAt ? <p className="mt-1 text-xs text-[var(--admin-muted)]">آخر دليل: <time dateTime={state.latestEffectiveAt}>{formatCairoTimestamp(state.latestEffectiveAt)}</time></p> : <p className="mt-1 text-xs text-[var(--admin-muted)]">لا يوجد قرار مسجل؛ ستظل الوجهة قابلة للإرسال ما لم يوجد رفض شامل.</p>}
       </div>
       <button type="button" onClick={() => onRecord(candidate, category, optedIn ? 'OptedOut' : 'OptedIn')} className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black focus-visible:outline-none focus-visible:ring-2 ${optedIn ? 'border-[var(--admin-danger-20)] text-[var(--admin-danger)] focus-visible:ring-[var(--admin-danger)]' : 'border-[var(--admin-border)] text-[var(--admin-primary)] focus-visible:ring-[var(--admin-accent)]'}`}>
         {optedIn ? <ShieldX aria-hidden="true" size={15} /> : <ShieldCheck aria-hidden="true" size={15} />}
@@ -374,7 +374,7 @@ function EffectiveState({ state }: { state: WhatsAppContactCategoryState['effect
     ? ['موافق فعليًا', 'bg-[var(--admin-success-10)] text-[var(--admin-success)]']
     : state === 'OptedOut'
       ? ['موقوف فعليًا', 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]']
-      : ['بلا موافقة', 'bg-[var(--admin-card-strong)] text-[var(--admin-muted)]'];
+      : ['لا قرار مسجل', 'bg-[var(--admin-card-strong)] text-[var(--admin-muted)]'];
   return <span className={`rounded-full px-2.5 py-1 text-xs font-black ${presentation[1]}`}>{presentation[0]}</span>;
 }
 

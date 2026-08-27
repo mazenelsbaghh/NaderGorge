@@ -121,7 +121,7 @@ export function WhatsAppCampaignHistory({
                       {campaign.templateName} · {campaign.templateLanguage} · {campaign.templateCategory}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-[var(--admin-warning)]">
-                      {new Intl.NumberFormat('ar-EG').format(campaign.excludedCount)} مستبعد قبل الإرسال بسبب الموافقة أو صلاحية البيانات
+                      {new Intl.NumberFormat('ar-EG').format(campaign.excludedCount)} لم يُنشأ له إرسال مستقل بسبب الدمج أو صلاحية البيانات أو رفض التواصل
                     </p>
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--admin-muted)]">
                       <Clock3 aria-hidden="true" size={14} />

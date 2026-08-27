@@ -75,7 +75,7 @@ const emptyFacets: WhatsAppCampaignFacets = {
 
 const steps: ReadonlyArray<{ value: ComposerStep; label: string; hint: string }> = [
   { value: 1, label: 'القالب والمتغيرات', hint: 'قالب نصي معتمد' },
-  { value: 2, label: 'الجمهور', hint: 'نطاق واضح وموافقة' },
+  { value: 2, label: 'الجمهور', hint: 'نطاق واضح ووجهات صالحة' },
   { value: 3, label: 'المعاينة', hint: 'عدد وعينات محجوبة' },
   { value: 4, label: 'التثبيت والإرسال', hint: 'لقطة ثابتة وتأكيد قوي' },
 ];
@@ -411,7 +411,7 @@ export function WhatsAppCampaignStudio({
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--admin-primary-contrast)_12%,transparent)]"><Megaphone aria-hidden="true" size={20} /></span>
             <div className="min-w-0">
               <h2 id="whatsapp-campaigns-heading" className="text-lg font-black">حملات وقوالب واتساب</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 opacity-80">كوّن جمهورًا دقيقًا، عاين الاستبعادات، وثبّت نسخة لا تتغير قبل أي إرسال.</p>
+              <p className="mt-1 max-w-3xl text-sm leading-6 opacity-80">كوّن جمهورًا دقيقًا، راجع الدمج وما تعذر إرساله، وثبّت نسخة لا تتغير قبل أي إرسال.</p>
             </div>
           </div>
           <div role="tablist" aria-label="أقسام مركز حملات واتساب" className="grid min-h-11 grid-cols-2 gap-1 rounded-xl bg-[color-mix(in_srgb,var(--admin-primary-contrast)_10%,transparent)] p-1">
@@ -545,7 +545,7 @@ function CampaignPreview({
   if (loading) {
     return (
       <div className="grid min-h-72 place-items-center rounded-xl bg-[var(--admin-card-soft)] text-center" aria-busy="true">
-        <div><LoaderCircle aria-hidden="true" size={30} className="mx-auto animate-spin text-[var(--admin-accent)]" /><p className="mt-3 font-black text-[var(--admin-text)]">جارٍ حساب الجمهور والموافقات…</p><p className="mt-1 text-sm text-[var(--admin-muted)]">لن تظهر أرقام كاملة في المعاينة.</p></div>
+        <div><LoaderCircle aria-hidden="true" size={30} className="mx-auto animate-spin text-[var(--admin-accent)]" /><p className="mt-3 font-black text-[var(--admin-text)]">جارٍ حساب الجمهور وقرارات التواصل…</p><p className="mt-1 text-sm text-[var(--admin-muted)]">لن تظهر أرقام كاملة في المعاينة.</p></div>
       </div>
     );
   }
@@ -555,26 +555,35 @@ function CampaignPreview({
   if (!preview) return <p className="rounded-xl border border-dashed border-[var(--admin-border)] p-8 text-center text-sm text-[var(--admin-muted)]">تبدأ المعاينة تلقائيًا بعد اكتمال القالب والجمهور.</p>;
 
   const exclusions = Object.entries(preview.excludedByReason).filter(([, count]) => count > 0);
+  const collapsedDuplicateCount = Number(preview.excludedByReason.duplicate_collapsed ?? 0);
+  const ambiguousPersonalizationCount = Number(preview.excludedByReason.ambiguous_personalization ?? 0);
+  const legacySharedDestinationCount = Number(preview.excludedByReason.duplicate_or_ambiguous_phone ?? 0);
   return (
     <div className="space-y-5">
       {!current ? <p role="alert" className="flex items-start gap-2 rounded-xl bg-[var(--admin-warning-10)] p-4 text-sm font-semibold text-[var(--admin-warning)]"><ShieldAlert aria-hidden="true" size={18} className="mt-0.5 shrink-0" /> انتهت صلاحية المعاينة أو تغيّر القالب. أعد الحساب قبل المتابعة.</p> : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <PreviewMetric label="مطابق للفلاتر" value={preview.eligibleCount + preview.excludedCount} icon={UsersRound} />
-        <PreviewMetric label="مؤهل بموافقة صريحة" value={preview.eligibleCount} icon={CheckCircle2} success />
-        <PreviewMetric label="مستبعد بأمان" value={preview.excludedCount} icon={ShieldAlert} warning />
+        <PreviewMetric label={current ? 'جاهز للإرسال' : 'كان مؤهلًا وقت المعاينة'} value={preview.eligibleCount} icon={CheckCircle2} success />
+        <PreviewMetric label="دُمج أو تعذر إرساله" value={preview.excludedCount} icon={ShieldAlert} warning />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
         <section aria-labelledby="campaign-exclusions-heading">
-          <h3 id="campaign-exclusions-heading" className="font-black text-[var(--admin-text)]">أسباب الاستبعاد</h3>
-          <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">لن يُرسل النظام إلى أي وجهة غير مؤهلة.</p>
-          {exclusions.length === 0 ? <p className="mt-3 rounded-xl bg-[var(--admin-success-10)] p-4 text-sm font-bold text-[var(--admin-success)]">لا توجد استبعادات في هذه المعاينة.</p> : (
+          <h3 id="campaign-exclusions-heading" className="font-black text-[var(--admin-text)]">الأسباب والمعالجة</h3>
+          <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">تُدمج التكرارات المتطابقة في رسالة واحدة، ولا يمكن الإرسال إلى رقم مفقود أو غير صالح أو بتخصيص ملتبس.</p>
+          {exclusions.length === 0 ? <p className="mt-3 rounded-xl bg-[var(--admin-success-10)] p-4 text-sm font-bold text-[var(--admin-success)]">لا توجد حالات دمج أو تعذر إرسال في هذه المعاينة.</p> : (
             <dl className="mt-3 divide-y divide-[var(--admin-border)] rounded-xl border border-[var(--admin-border)]">
               {exclusions.map(([reason, count]) => <div key={reason} className="flex items-center justify-between gap-4 px-3 py-3 text-sm"><dt className="min-w-0 font-semibold text-[var(--admin-text)]">{exclusionReasonLabel(reason)}</dt><dd className="shrink-0 font-black text-[var(--admin-warning)]">{formatNumber(count)}</dd></div>)}
             </dl>
           )}
-          {Number(preview.excludedByReason.duplicate_or_ambiguous_phone ?? 0) > 0 ? (
-            <p className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--admin-warning-10)] p-3 text-xs leading-5 text-[var(--admin-warning)]"><AlertTriangle aria-hidden="true" size={16} className="mt-0.5 shrink-0" /> الرقم نفسه مرتبط بأكثر من طالب، لذلك لم يُرسل له شيء، خصوصًا مع الرسائل الشخصية. لا نعرض أسماء الحسابات المشتركة.</p>
+          {collapsedDuplicateCount > 0 ? (
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--admin-success-10)] p-3 text-xs leading-5 text-[var(--admin-success)]"><CheckCircle2 aria-hidden="true" size={16} className="mt-0.5 shrink-0" /> دمجت هذه المعاينة ظهور الرقم المكرر عندما كان المحتوى النهائي متطابقًا، ليكون له إرسال واحد فقط.</p>
+          ) : null}
+          {ambiguousPersonalizationCount > 0 ? (
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--admin-warning-10)] p-3 text-xs leading-5 text-[var(--admin-warning)]"><AlertTriangle aria-hidden="true" size={16} className="mt-0.5 shrink-0" /> الرقم نفسه مرتبط برسائل شخصية مختلفة، لذلك لم يُرسل له شيء حتى لا تصل بيانات طالب إلى جهة خاطئة. لا نعرض أسماء الحسابات المشتركة.</p>
+          ) : null}
+          {legacySharedDestinationCount > 0 ? (
+            <p className="mt-3 flex items-start gap-2 rounded-xl bg-[var(--admin-warning-10)] p-3 text-xs leading-5 text-[var(--admin-warning)]"><AlertTriangle aria-hidden="true" size={16} className="mt-0.5 shrink-0" /> هذه معاينة من إصدار سابق كان يستبعد الرقم المشترك بالكامل. أعد الحساب لتطبيق قاعدة الدمج الجديدة.</p>
           ) : null}
         </section>
 
@@ -636,14 +645,14 @@ function CampaignReview({
             <ReviewItem label="القالب" value={template?.name ?? 'غير متاح'} />
             <ReviewItem label="الفئة واللغة" value={`${template?.category ?? '—'} · ${template?.language ?? '—'}`} />
             <ReviewItem label="الوجهات المؤهلة" value={formatNumber(preview.eligibleCount)} />
-            <ReviewItem label="المستبعدة" value={formatNumber(preview.excludedCount)} />
+            <ReviewItem label="المدمج أو غير المرسل" value={formatNumber(draft?.excludedCount ?? preview.excludedCount)} />
           </dl>
         </div>
 
         {!draft ? (
           <div className="rounded-xl border border-[var(--admin-primary-15)] bg-[var(--admin-primary-15)] p-4">
             <h3 className="flex items-center gap-2 font-black text-[var(--admin-text)]"><FileCheck2 aria-hidden="true" size={18} /> ثبّت لقطة المراجعة أولًا</h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">سيعيد الخادم فحص القالب، المتغيرات، الجمهور والموافقات، ثم يصدر عبارة تأكيد مرتبطة بهذه النسخة فقط.</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">سيعيد الخادم فحص القالب، المتغيرات، الجمهور وقرارات إيقاف التواصل، ثم يصدر عبارة تأكيد مرتبطة بهذه النسخة فقط.</p>
             <button type="button" disabled={!current || freezing || !campaignName.trim()} onClick={onFreeze} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)] disabled:cursor-not-allowed disabled:opacity-50">{freezing ? <LoaderCircle aria-hidden="true" size={17} className="animate-spin" /> : <LockKeyhole aria-hidden="true" size={17} />}{freezing ? 'جارٍ تثبيت اللقطة…' : 'تثبيت المراجعة'}</button>
           </div>
         ) : (
@@ -661,10 +670,11 @@ function CampaignReview({
       <aside className="self-start rounded-xl bg-[var(--admin-card-soft)] p-4 xl:sticky xl:top-24">
         <h3 className="flex items-center gap-2 font-black text-[var(--admin-text)]"><ShieldAlert aria-hidden="true" size={18} /> ضمانات قبل الإرسال</h3>
         <ul className="mt-3 space-y-3 text-sm leading-6 text-[var(--admin-muted)]">
-          <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> موافقة صريحة لكل وجهة وفئة قالب.</li>
+          <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> الرفض الساري يمنع الوجهة ورسائلها غير المحجوزة.</li>
+          <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> عدم وجود سجل محلي لا يلغي مسؤولية التأكد من موافقة المستلم.</li>
           <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> لا أرقام كاملة في المعاينة أو السجل.</li>
           <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> أي تغيّر في القالب أو الجمهور يلغي المراجعة.</li>
-          <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> الرقم المشترك أو الملتبس يُستبعد، ولا نختار طالبًا بالنيابة عنك.</li>
+          <li className="flex gap-2"><Check aria-hidden="true" size={16} className="mt-1 shrink-0 text-[var(--admin-success)]" /> الرقم المكرر بمحتوى متطابق يستقبل رسالة واحدة؛ اختلاف التخصيص يمنع الإرسال.</li>
         </ul>
       </aside>
     </div>
@@ -712,7 +722,9 @@ function exclusionReasonLabel(reason: string) {
     missingvariables: 'متغيرات الرسالة ناقصة',
     duplicateorambiguousphone: 'رقم مشترك أو ملتبس',
     duplicatephone: 'رقم مكرر',
-  } as Record<string, string>)[normalized] ?? 'استبعاد أمان آخر';
+    duplicatecollapsed: 'تكرار دُمج في رسالة واحدة',
+    ambiguouspersonalization: 'رقم مشترك بتخصيص مختلف',
+  } as Record<string, string>)[normalized] ?? 'سبب آخر لعدم الإرسال';
 }
 
 function contactRoleLabel(role: string) {

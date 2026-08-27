@@ -24,6 +24,50 @@ public sealed class WhatsAppCampaignSafetyTests
     public void NormalizeE164_RejectsUnsupportedOrAmbiguousDestinations(string input) =>
         Assert.Null(WhatsAppCampaignService.NormalizeE164(input));
 
+    [Theory]
+    [InlineData("unknown", true)]
+    [InlineData("category_opt_out", false)]
+    [InlineData("global_opt_out", false)]
+    [InlineData("newer_category_opt_in", true)]
+    [InlineData("newer_global_opt_out", false)]
+    public void DestinationPolicy_UsesOptOutOnlyPreferenceAuthority(
+        string preferenceHistory,
+        bool expectedAllowed)
+    {
+        var now = DateTime.UtcNow;
+        WhatsAppContactPreference[] preferences = preferenceHistory switch
+        {
+            "unknown" => [],
+            "category_opt_out" => [Preference(
+                WhatsAppContactPreferenceCategory.Utility,
+                WhatsAppContactPreferenceState.OptedOut,
+                now)],
+            "global_opt_out" => [Preference(
+                WhatsAppContactPreferenceCategory.All,
+                WhatsAppContactPreferenceState.OptedOut,
+                now)],
+            "newer_category_opt_in" =>
+            [
+                Preference(WhatsAppContactPreferenceCategory.All,
+                    WhatsAppContactPreferenceState.OptedOut, now.AddMinutes(-2)),
+                Preference(WhatsAppContactPreferenceCategory.Utility,
+                    WhatsAppContactPreferenceState.OptedIn, now.AddMinutes(-1))
+            ],
+            "newer_global_opt_out" =>
+            [
+                Preference(WhatsAppContactPreferenceCategory.Utility,
+                    WhatsAppContactPreferenceState.OptedIn, now.AddMinutes(-2)),
+                Preference(WhatsAppContactPreferenceCategory.All,
+                    WhatsAppContactPreferenceState.OptedOut, now.AddMinutes(-1))
+            ],
+            _ => throw new ArgumentOutOfRangeException(nameof(preferenceHistory))
+        };
+
+        var allowed = WhatsAppCampaignService.DestinationAllowsCampaign(preferences, "UTILITY");
+
+        Assert.Equal(expectedAllowed, allowed);
+    }
+
     [Fact]
     public void TemplatePolicy_RejectsNamedOrMixedPlaceholders()
     {
@@ -315,5 +359,22 @@ public sealed class WhatsAppCampaignSafetyTests
         Status = status,
         ProviderTimestamp = providerTimestamp,
         Version = 1
+    };
+
+    private static WhatsAppContactPreference Preference(
+        WhatsAppContactPreferenceCategory category,
+        WhatsAppContactPreferenceState state,
+        DateTime effectiveAt) => new()
+    {
+        DestinationHash = new string('a', 64),
+        DestinationLast4 = "5678",
+        Category = category,
+        State = state,
+        Source = "test",
+        EvidenceReference = "destination policy test",
+        EffectiveAt = effectiveAt,
+        CreatedAt = effectiveAt,
+        IdempotencyKey = Guid.NewGuid().ToString("N"),
+        RequestHash = new string('b', 64)
     };
 }
