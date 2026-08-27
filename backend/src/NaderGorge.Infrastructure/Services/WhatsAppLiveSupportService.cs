@@ -316,6 +316,10 @@ public sealed class WhatsAppLiveSupportService(
 
     private async Task IngestAsync(JsonElement envelope, JsonElement message, CancellationToken ct)
     {
+        // Reactions annotate an existing WhatsApp message; they are not new support
+        // requests and must never create or reopen a live-support conversation.
+        if (string.Equals(Text(message, "type"), "reaction", StringComparison.Ordinal)) return;
+
         var metaMessageId = Text(message, "id");
         var whatsAppUserId = Text(message, "from");
         if (metaMessageId is null || whatsAppUserId is null) return;

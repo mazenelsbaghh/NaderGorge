@@ -65,6 +65,24 @@ public sealed class WhatsAppLiveSupportTests
         Assert.Equal("رسالة اختبار", db.LiveSupportMessages.Single().Content);
     }
 
+    [Fact]
+    public async Task ReactionToClosedWhatsAppConversation_DoesNotCreateConversationOrMessage()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (_, conversation) = await SeedConversationAsync(db);
+        conversation.Status = LiveSupportConversationStatus.Closed;
+        conversation.ClosedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        var service = Service(db, Cloud(new StubMetaHandler(_ => throw new InvalidOperationException())));
+        using var webhook = JsonDocument.Parse(ReactionWebhookJson);
+
+        await service.ProcessWebhookAsync(webhook.RootElement, CancellationToken.None);
+
+        Assert.Single(db.LiveSupportConversations);
+        Assert.Empty(db.LiveSupportMessages);
+        Assert.Empty(db.LiveSupportWhatsAppMessages);
+    }
+
     [Theory]
     [InlineData("other-business", "phone-id")]
     [InlineData("business-id", "other-phone")]
@@ -1244,6 +1262,28 @@ public sealed class WhatsAppLiveSupportTests
                   "timestamp": "1787529600",
                   "type": "text",
                   "text": { "body": "رسالة اختبار" }
+                }]
+              }
+            }]
+          }]
+        }
+        """;
+
+    private const string ReactionWebhookJson = """
+        {
+          "object": "whatsapp_business_account",
+          "entry": [{
+            "id": "business-id",
+            "changes": [{
+              "value": {
+                "metadata": { "phone_number_id": "phone-id" },
+                "contacts": [{ "wa_id": "201099999999", "profile": { "name": "عميل واتساب" } }],
+                "messages": [{
+                  "id": "wamid.reaction-1",
+                  "from": "201099999999",
+                  "timestamp": "1787529600",
+                  "type": "reaction",
+                  "reaction": { "message_id": "wamid.original", "emoji": "👍" }
                 }]
               }
             }]
