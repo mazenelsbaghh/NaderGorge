@@ -149,7 +149,7 @@ public sealed class WhatsAppLiveSupportTests
         Assert.Contains("reply.ogg", handler.Requests[0].Body);
         Assert.Contains("media-1", handler.Requests[1].Body);
         Assert.Contains("\"type\":\"audio\"", handler.Requests[1].Body);
-        Assert.Contains("\"voice\":true", handler.Requests[1].Body);
+        Assert.DoesNotContain("\"voice\"", handler.Requests[1].Body);
         Assert.DoesNotContain("caption", handler.Requests[1].Body);
     }
 

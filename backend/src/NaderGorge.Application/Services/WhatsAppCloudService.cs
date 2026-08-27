@@ -390,7 +390,6 @@ public sealed class WhatsAppCloudService
         var media = new Dictionary<string, object?> { ["id"] = uploaded.MetaMessageId };
         if (message.MediaType == "image" && !string.IsNullOrWhiteSpace(message.Caption))
             media["caption"] = message.Caption;
-        if (message.MediaType == "audio") media["voice"] = true;
         var payload = new Dictionary<string, object?>
         {
             ["messaging_product"] = "whatsapp",

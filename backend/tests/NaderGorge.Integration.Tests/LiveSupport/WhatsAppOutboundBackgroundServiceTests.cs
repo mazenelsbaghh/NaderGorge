@@ -232,7 +232,7 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
         Assert.Contains("Content-Type: audio/ogg", handler.Requests[0].Body);
         Assert.Contains("legacy.ogg", handler.Requests[0].Body);
         Assert.DoesNotContain("audio/webm", handler.Requests[0].Body);
-        Assert.Contains("\"voice\":true", handler.Requests[1].Body);
+        Assert.DoesNotContain("\"voice\"", handler.Requests[1].Body);
         Assert.DoesNotContain("caption", handler.Requests[1].Body);
         await using var assertionScope = harness.Services.CreateAsyncScope();
         var attachment = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>()
