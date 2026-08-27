@@ -122,6 +122,7 @@ export function WhatsAppCampaignStudio({
   );
   const facets = bootstrap?.facets ?? emptyFacets;
   const selectedTemplate = availableTemplates.find((template) => template.id === selectedTemplateId);
+  const selectedTemplateFingerprint = selectedTemplate?.fingerprint ?? '';
   const templateSupport = selectedTemplate ? inspectCampaignTemplate(selectedTemplate) : undefined;
   const mappingErrors = templateSupport?.supported
     ? validateWhatsAppVariableMappings(templateSupport.parameters, mappings, filters, selectedTemplate?.category)
@@ -163,7 +164,7 @@ export function WhatsAppCampaignStudio({
   }, [loadBootstrap]);
 
   useEffect(() => {
-    if (step < 3 || !templateStepValid || !audienceStepValid || !selectedTemplate) return;
+    if (step < 3 || !templateStepValid || !audienceStepValid || !selectedTemplateId || !selectedTemplateFingerprint) return;
     let requestController: AbortController | undefined;
     const timer = window.setTimeout(() => {
       previewAbortRef.current?.abort();
@@ -176,13 +177,13 @@ export function WhatsAppCampaignStudio({
       setFrozenDraft(undefined);
       setConfirmationPhrase('');
       void liveSupportService.previewWhatsAppCampaignAudience({
-        templateId: selectedTemplate.id,
+        templateId: selectedTemplateId,
         filters,
         variableMappings: mappings,
       }, controller.signal).then((nextPreview) => {
         if (previewAbortRef.current !== controller) return;
         setPreview(nextPreview);
-        setPreviewTemplateId(selectedTemplate.id);
+        setPreviewTemplateId(selectedTemplateId);
       }).catch((cause) => {
         if (previewAbortRef.current !== controller) return;
         if ((cause as { code?: string })?.code === 'ERR_CANCELED') return;
@@ -196,7 +197,7 @@ export function WhatsAppCampaignStudio({
       requestController?.abort();
       if (previewAbortRef.current === requestController) previewAbortRef.current = undefined;
     };
-  }, [audienceStepValid, filters, mappings, selectedTemplate, step, templateStepValid]);
+  }, [audienceStepValid, filters, mappings, selectedTemplateFingerprint, selectedTemplateId, step, templateStepValid]);
 
   useEffect(() => () => previewAbortRef.current?.abort(), []);
 
