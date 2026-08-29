@@ -32,4 +32,25 @@ public sealed class SharedPackageAllocationPreviewTests
         Assert.Equal(-20m, result.PlatformShareAmount);
         Assert.True(result.RequiresLossAcknowledgement);
     }
+
+    [Fact]
+    public void Calculate_preserves_the_agreement_snapshot_used_for_a_shared_package()
+    {
+        var agreementId = Guid.NewGuid();
+        var result = SharedPackageAllocationPreviewService.Calculate(100m,
+        [
+            new SharedPackageAllocationCandidate(Guid.NewGuid(), "Teacher", null, 100m,
+                TeacherAllocationMode.Percentage, 35m, agreementId,
+                TeacherAgreementScopeType.SharedPackage, null,
+                TeacherAgreementAllocationMode.Percentage, TeacherPriceBasis.NetAfterDiscount)
+        ]);
+
+        var allocation = Assert.Single(result.Allocations);
+        Assert.Equal(35m, allocation.TeacherShareAmount);
+        Assert.Equal(agreementId, allocation.AgreementId);
+        Assert.Equal(TeacherAgreementScopeType.SharedPackage, allocation.AgreementScopeType);
+        Assert.Null(allocation.AgreementScopeId);
+        Assert.Equal(TeacherAgreementAllocationMode.Percentage, allocation.AgreementAllocationMode);
+        Assert.Equal(TeacherPriceBasis.NetAfterDiscount, allocation.PriceBasis);
+    }
 }

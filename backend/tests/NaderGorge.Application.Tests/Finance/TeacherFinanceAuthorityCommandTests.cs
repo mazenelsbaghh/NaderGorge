@@ -8,6 +8,32 @@ namespace NaderGorge.Application.Tests.Finance;
 public sealed class TeacherFinanceAuthorityCommandTests
 {
     [Fact]
+    public async Task Aggregate_and_specific_agreements_for_the_same_kind_can_coexist()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var actor = await TestAppDbContextFactory.SeedUserAsync(db, "Aggregate Admin", "01093000000");
+        var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Aggregate Teacher", "01093000009");
+        var teacher = new TeacherProfile { Id = Guid.NewGuid(), UserId = teacherUser.Id };
+        db.TeacherProfiles.Add(teacher);
+        await db.SaveChangesAsync();
+        var now = DateTime.UtcNow.AddDays(-1);
+        var handler = new CreateTeacherAgreementCommandHandler(db);
+
+        var allCourses = await handler.Handle(new(actor.Id, teacher.Id,
+            new TeacherAgreementTerms(TeacherAgreementScopeType.Package, null,
+                TeacherAgreementTrigger.ContentSale, TeacherAgreementAllocationMode.Percentage, 30m,
+                TeacherPriceBasis.NetAfterDiscount, now, null, "all courses")), CancellationToken.None);
+        var oneCourse = await handler.Handle(new(actor.Id, teacher.Id,
+            new TeacherAgreementTerms(TeacherAgreementScopeType.Package, Guid.NewGuid(),
+                TeacherAgreementTrigger.ContentSale, TeacherAgreementAllocationMode.Percentage, 40m,
+                TeacherPriceBasis.NetAfterDiscount, now, null, "one course")), CancellationToken.None);
+
+        Assert.Equal(TeacherFinanceCommandStatus.Success, allCourses.Status);
+        Assert.Equal(TeacherFinanceCommandStatus.Success, oneCourse.Status);
+        Assert.Equal(2, await db.TeacherFinancialAgreements.CountAsync());
+    }
+
+    [Fact]
     public async Task Overlapping_teacher_agreement_is_rejected_without_second_write()
     {
         await using var db = TestAppDbContextFactory.Create();

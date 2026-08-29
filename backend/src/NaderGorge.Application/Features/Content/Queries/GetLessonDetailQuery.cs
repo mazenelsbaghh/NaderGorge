@@ -122,9 +122,16 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var isPrivilegedUser = await IsPrivilegedUserAsync(request.UserId, ct);
         if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Lesson, request.LessonId, ct))
             return ApiResponse<LessonDetailDto>.Fail("هذا المحتوى مؤرشف وغير متاح لحسابك.", ["CONTENT_ARCHIVED"]);
-        if (lesson.ExamId.HasValue && !await _archiveAccess.CanViewAsync(
-                request.UserId, ContentArchiveTargetType.Exam, lesson.ExamId.Value, ct))
-            lesson.ExamId = null;
+        if (lesson.ExamId.HasValue)
+        {
+            var lessonExamId = lesson.ExamId.Value;
+            if (!await _archiveAccess.CanViewAsync(
+                    request.UserId, ContentArchiveTargetType.Exam, lessonExamId, ct) ||
+                !await _db.Exams.AnyAsync(exam => exam.Id == lessonExamId && exam.IsActive, ct))
+            {
+                lesson.ExamId = null;
+            }
+        }
         if (_academicScope != null &&
             !isPrivilegedUser &&
             !await _academicScope.IsOwnerEligibleForStudentAsync(
@@ -295,7 +302,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             {
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
 
-                if (exam != null && exam.IsMandatory)
+                if (exam != null && exam.IsActive && exam.IsMandatory)
                 {
                     var passedExam = await _db.StudentExamAttempts
                         .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
@@ -323,7 +330,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             if (!isLocked)
             {
                 var prevVideoExams = await _db.Exams
-                    .Where(e => e.IsMandatory && (
+                    .Where(e => e.IsActive && e.IsMandatory && (
                         (e.LessonVideo != null && e.LessonVideo.LessonId == previousLesson.Id) ||
                         _db.LessonVideos.Any(lv => lv.LessonId == previousLesson.Id && lv.ExamId == e.Id)
                     ))
@@ -463,7 +470,10 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .Select(e => new VideoExamDto(e.Id, e.Title, passedExamIds.Contains(e.Id), e.IsMandatory))
                 .ToList();
 
-            bool examPassed = v.ExamId.HasValue && passedExamIds.Contains(v.ExamId.Value);
+            var primaryVideoExamId = v.ExamId.HasValue && allVideoExamIds.Contains(v.ExamId.Value)
+                ? v.ExamId
+                : null;
+            bool examPassed = primaryVideoExamId.HasValue && passedExamIds.Contains(primaryVideoExamId.Value);
             bool isExamLocked = examsForVideo.Any(e => e.IsMandatory && !e.Passed);
 
             videoDtos.Add(new VideoDto(
@@ -484,7 +494,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 v.SubtitleUrl,
                 v.IsProcessingAI,
                 v.IsProcessingMindmaps,
-                v.ExamId,
+                primaryVideoExamId,
                 examPassed,
                 isExamLocked,
                 examsForVideo,
@@ -556,7 +566,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         bool lessonExamLocked = false;
         string? examLockedReason = null;
 
-        if (previousLesson != null)
+        if (lesson.ExamId.HasValue && previousLesson != null)
         {
             var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
             if (prevHomework != null && prevHomework.IsMandatory)
@@ -587,7 +597,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     request.UserId, ContentArchiveTargetType.Exam, previousLesson.ExamId.Value, ct))
             {
                 var prevExam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
-                if (prevExam != null && prevExam.IsMandatory)
+                if (prevExam != null && prevExam.IsActive && prevExam.IsMandatory)
                 {
                     var passedPrevExam = await _db.StudentExamAttempts
                         .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
@@ -673,7 +683,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.Title,
             lesson.Summary,
             lesson.ContentSection!.Term!.PackageId,
-            await _db.Exams.Where(e => e.Id == lesson.ExamId && e.IsActive).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(ct),
+            lesson.ExamId,
             lessonExamPassed,
             homeworkId,
             homeworkPassed,

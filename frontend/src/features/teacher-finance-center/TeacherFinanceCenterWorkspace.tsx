@@ -28,17 +28,73 @@ import { cairoCurrentDate } from '@/lib/cairo-time';
 
 type AgreementDraft = Omit<TeacherAgreement, 'id' | 'teacherId' | 'isActive'>;
 
-const scopeLabels: Record<TeacherAgreementScopeType, string> = {
-  Default: 'اتفاق افتراضي للمدرس',
-  Package: 'باقة / كورس',
-  Term: 'ترم',
-  ContentSection: 'قسم',
-  Lesson: 'حصة',
-  LessonVideo: 'فيديو',
-  PublicExam: 'امتحان',
-  SharedPackage: 'باقة مشتركة',
-  CodeGroup: 'دفعة أكواد',
+type AgreementScopeChoice =
+  | 'Everything'
+  | 'AllPackages' | 'Package'
+  | 'AllTerms' | 'Term'
+  | 'AllContentSections' | 'ContentSection'
+  | 'AllLessons' | 'Lesson'
+  | 'AllLessonVideos' | 'LessonVideo'
+  | 'AllPublicExams' | 'PublicExam'
+  | 'AllSharedPackages' | 'SharedPackage'
+  | 'AllCodeGroups' | 'CodeGroup';
+
+type ScopeOption = {
+  choice: AgreementScopeChoice;
+  scopeType: TeacherAgreementScopeType;
+  label: string;
+  requiresId: boolean;
 };
+
+const aggregateScopeOptions: ScopeOption[] = [
+  { choice: 'Everything', scopeType: 'Default', label: 'كل محتوى المدرس', requiresId: false },
+  { choice: 'AllPackages', scopeType: 'Package', label: 'كل الكورسات والباقات', requiresId: false },
+  { choice: 'AllTerms', scopeType: 'Term', label: 'كل الترمات', requiresId: false },
+  { choice: 'AllContentSections', scopeType: 'ContentSection', label: 'كل الأقسام', requiresId: false },
+  { choice: 'AllLessons', scopeType: 'Lesson', label: 'كل الحصص', requiresId: false },
+  { choice: 'AllLessonVideos', scopeType: 'LessonVideo', label: 'كل الفيديوهات', requiresId: false },
+  { choice: 'AllPublicExams', scopeType: 'PublicExam', label: 'كل الامتحانات', requiresId: false },
+  { choice: 'AllSharedPackages', scopeType: 'SharedPackage', label: 'كل الباقات المشتركة', requiresId: false },
+  { choice: 'AllCodeGroups', scopeType: 'CodeGroup', label: 'كل دفعات الأكواد', requiresId: false },
+];
+
+const specificScopeOptions: ScopeOption[] = [
+  { choice: 'Package', scopeType: 'Package', label: 'كورس أو باقة محددة', requiresId: true },
+  { choice: 'Term', scopeType: 'Term', label: 'ترم محدد', requiresId: true },
+  { choice: 'ContentSection', scopeType: 'ContentSection', label: 'قسم محدد', requiresId: true },
+  { choice: 'Lesson', scopeType: 'Lesson', label: 'حصة محددة', requiresId: true },
+  { choice: 'LessonVideo', scopeType: 'LessonVideo', label: 'فيديو محدد', requiresId: true },
+  { choice: 'PublicExam', scopeType: 'PublicExam', label: 'امتحان محدد', requiresId: true },
+  { choice: 'SharedPackage', scopeType: 'SharedPackage', label: 'باقة مشتركة محددة', requiresId: true },
+  { choice: 'CodeGroup', scopeType: 'CodeGroup', label: 'دفعة أكواد محددة', requiresId: true },
+];
+
+const scopeOptions = [...aggregateScopeOptions, ...specificScopeOptions];
+const aggregateChoiceByScopeType: Record<TeacherAgreementScopeType, AgreementScopeChoice> = {
+  Default: 'Everything',
+  Package: 'AllPackages',
+  Term: 'AllTerms',
+  ContentSection: 'AllContentSections',
+  Lesson: 'AllLessons',
+  LessonVideo: 'AllLessonVideos',
+  PublicExam: 'AllPublicExams',
+  SharedPackage: 'AllSharedPackages',
+  CodeGroup: 'AllCodeGroups',
+};
+
+function findScopeOption(choice: AgreementScopeChoice) {
+  return scopeOptions.find((option) => option.choice === choice) ?? aggregateScopeOptions[0];
+}
+
+function scopeChoiceForAgreement(agreement: Pick<TeacherAgreement, 'scopeType' | 'scopeId'>): AgreementScopeChoice {
+  return agreement.scopeId
+    ? agreement.scopeType as AgreementScopeChoice
+    : aggregateChoiceByScopeType[agreement.scopeType];
+}
+
+function scopeLabel(agreement: Pick<TeacherAgreement, 'scopeType' | 'scopeId'>) {
+  return findScopeOption(scopeChoiceForAgreement(agreement)).label;
+}
 
 const triggerLabels: Record<TeacherAgreementTrigger, string> = {
   ContentSale: 'عند شراء المحتوى',
@@ -91,6 +147,7 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgreement, setEditingAgreement] = useState<TeacherAgreement | null>(null);
   const [draft, setDraft] = useState<AgreementDraft>(freshDraft);
+  const [scopeChoice, setScopeChoice] = useState<AgreementScopeChoice>('Everything');
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedTeacher = useMemo(
@@ -130,11 +187,13 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
     }
     setEditingAgreement(null);
     setDraft(freshDraft());
+    setScopeChoice('Everything');
     setIsModalOpen(true);
   };
 
   const openEdit = (agreement: TeacherAgreement) => {
     setEditingAgreement(agreement);
+    setScopeChoice(scopeChoiceForAgreement(agreement));
     setDraft({
       scopeType: agreement.scopeType,
       scopeId: agreement.scopeId ?? '',
@@ -149,10 +208,21 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
     setIsModalOpen(true);
   };
 
+  const changeScopeChoice = (nextChoice: AgreementScopeChoice) => {
+    const nextOption = findScopeOption(nextChoice);
+    setScopeChoice(nextChoice);
+    setDraft((current) => ({
+      ...current,
+      scopeType: nextOption.scopeType,
+      scopeId: nextOption.requiresId ? '' : undefined,
+    }));
+  };
+
   const saveAgreement = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!teacherId) return;
-    if (draft.scopeType !== 'Default' && !draft.scopeId?.trim()) {
+    const selectedScope = findScopeOption(scopeChoice);
+    if (selectedScope.requiresId && !draft.scopeId?.trim()) {
       toast.error('أدخل معرّف المحتوى أو الباقة التي ينطبق عليها الاتفاق');
       return;
     }
@@ -163,7 +233,8 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
 
     const payload: AgreementDraft = {
       ...draft,
-      scopeId: draft.scopeType === 'Default' ? undefined : draft.scopeId?.trim(),
+      scopeType: selectedScope.scopeType,
+      scopeId: selectedScope.requiresId ? draft.scopeId?.trim() : undefined,
       effectiveTo: draft.effectiveTo || undefined,
       reason: draft.reason.trim(),
     };
@@ -256,7 +327,7 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
                 </tr></thead>
                 <tbody className="divide-y divide-[var(--admin-border)]">
                   {agreements.map((agreement) => <tr key={agreement.id} className={!agreement.isActive ? 'opacity-55' : 'hover:bg-[var(--admin-hover)]'}>
-                    <td className="px-4 py-3"><p className="font-black text-[var(--admin-text)]">{scopeLabels[agreement.scopeType]}</p>{agreement.scopeId && <p className="mt-1 max-w-40 truncate font-mono text-xs text-[var(--admin-muted)]" title={agreement.scopeId}>{agreement.scopeId}</p>}</td>
+                    <td className="px-4 py-3"><p className="font-black text-[var(--admin-text)]">{scopeLabel(agreement)}</p>{agreement.scopeId && <p className="mt-1 max-w-40 truncate font-mono text-xs text-[var(--admin-muted)]" title={agreement.scopeId}>{agreement.scopeId}</p>}</td>
                     <td className="px-4 py-3 text-xs font-bold text-[var(--admin-text)]">{triggerLabels[agreement.trigger]}</td>
                     <td className="px-4 py-3"><p className="font-mono font-black text-[var(--admin-primary)]">{agreement.allocationMode === 'Percentage' ? `%${agreement.allocationValue}` : formatCurrency(agreement.allocationValue)}</p><p className="text-xs text-[var(--admin-muted)]">{allocationLabels[agreement.allocationMode]} · {agreement.priceBasis === 'Gross' ? 'الإجمالي' : 'بعد الخصم'}</p></td>
                     <td className="px-4 py-3 text-xs font-bold text-[var(--admin-muted)]">من {new Date(agreement.effectiveFrom).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}<br />{agreement.effectiveTo ? `حتى ${new Date(agreement.effectiveTo).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}` : 'مستمر'}</td>
@@ -282,10 +353,10 @@ export function TeacherFinanceCenterWorkspace({ teachers }: { teachers: TeacherD
       <AdminModal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingAgreement ? 'استبدال اتفاق مالي' : 'إضافة اتفاق مالي'} subtitle={editingAgreement ? 'يُحفظ الاتفاق السابق في السجل وتبدأ القاعدة الجديدة من تاريخها.' : 'حدد قاعدة واضحة وقابلة للمراجعة قبل تسجيل المبيعات أو الأكواد.'} maxWidth="max-w-2xl">
         <form onSubmit={saveAgreement} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-bold text-[var(--admin-text)]">نطاق الاتفاق<select value={draft.scopeType} onChange={(e) => setDraft((current) => ({ ...current, scopeType: e.target.value as TeacherAgreementScopeType }))} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none">{(Object.keys(scopeLabels) as TeacherAgreementScopeType[]).map((scope) => <option key={scope} value={scope}>{scopeLabels[scope]}</option>)}</select></label>
+            <label className="text-sm font-bold text-[var(--admin-text)]">نطاق الاتفاق<select value={scopeChoice} onChange={(event) => changeScopeChoice(event.target.value as AgreementScopeChoice)} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none focus:border-[var(--admin-primary)]"><optgroup label="نطاقات عامة">{aggregateScopeOptions.map((option) => <option key={option.choice} value={option.choice}>{option.label}</option>)}</optgroup><optgroup label="عنصر محدد">{specificScopeOptions.map((option) => <option key={option.choice} value={option.choice}>{option.label}</option>)}</optgroup></select></label>
             <label className="text-sm font-bold text-[var(--admin-text)]">موعد الاستحقاق<select value={draft.trigger} onChange={(e) => setDraft((current) => ({ ...current, trigger: e.target.value as TeacherAgreementTrigger }))} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none">{(Object.keys(triggerLabels) as TeacherAgreementTrigger[]).map((trigger) => <option key={trigger} value={trigger}>{triggerLabels[trigger]}</option>)}</select></label>
           </div>
-          {draft.scopeType !== 'Default' && <label className="block text-sm font-bold text-[var(--admin-text)]">معرّف العنصر المرتبط<input required value={draft.scopeId ?? ''} onChange={(e) => setDraft((current) => ({ ...current, scopeId: e.target.value }))} placeholder="معرّف الباقة أو الفيديو أو الحصة" className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none" /></label>}
+          {findScopeOption(scopeChoice).requiresId && <label className="block text-sm font-bold text-[var(--admin-text)]">معرّف العنصر المرتبط<input required value={draft.scopeId ?? ''} onChange={(e) => setDraft((current) => ({ ...current, scopeId: e.target.value }))} placeholder="الصق معرّف العنصر المحدد فقط" className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none focus:border-[var(--admin-primary)]" /></label>}
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="text-sm font-bold text-[var(--admin-text)]">طريقة الحساب<select value={draft.allocationMode} onChange={(e) => setDraft((current) => ({ ...current, allocationMode: e.target.value as TeacherAgreementAllocationMode }))} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none">{(Object.keys(allocationLabels) as TeacherAgreementAllocationMode[]).map((mode) => <option key={mode} value={mode}>{allocationLabels[mode]}</option>)}</select></label>
             <label className="text-sm font-bold text-[var(--admin-text)]">القيمة<input required min="0" step="0.01" type="number" value={draft.allocationValue} onChange={(e) => setDraft((current) => ({ ...current, allocationValue: Number(e.target.value) }))} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-sm font-normal outline-none" /></label>

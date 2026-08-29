@@ -48,6 +48,21 @@ public class TeacherAgreementResolver
             }
         }
 
+        // A null ID on a non-default scope means "all items of this kind".
+        // Exact item/parent agreements stay more specific, then the closest
+        // aggregate kind wins before the teacher-wide default is considered.
+        foreach (var scopeType in scopes.Select(x => x.ScopeType).Distinct())
+        {
+            var aggregateMatch = candidates
+                .Where(x => x.ScopeType == scopeType && x.ScopeId == null)
+                .OrderByDescending(x => x.EffectiveFrom)
+                .FirstOrDefault();
+            if (aggregateMatch != null)
+            {
+                return ToResolution(aggregateMatch);
+            }
+        }
+
         var fallback = candidates
             .Where(x => x.ScopeType == TeacherAgreementScopeType.Default && x.ScopeId == null)
             .OrderByDescending(x => x.EffectiveFrom)

@@ -146,7 +146,7 @@ public sealed class WhatsAppLiveSupportTests
     }
 
     [Fact]
-    public async Task AudioSend_UploadsOggThenSendsVoiceWithoutCaption()
+    public async Task AudioSend_UploadsGenericMp3WithoutVoiceFlagOrCaption()
     {
         var handler = new RecordingMetaHandler();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -157,14 +157,14 @@ public sealed class WhatsAppLiveSupportTests
         var cloud = new WhatsAppCloudService(new HttpClient(handler), configuration, NullLogger<WhatsAppCloudService>.Instance);
 
         var response = await cloud.SendMediaAsync(new WhatsAppCloudService.MediaMessageRequest(
-            "01099999999", "audio", "reply.ogg", "audio/ogg", [1, 2, 3], "رد صوتي"), CancellationToken.None);
+            "01099999999", "audio", "reply.mp3", "audio/mpeg", [1, 2, 3], "رد صوتي"), CancellationToken.None);
 
         Assert.True(response.Success);
         Assert.Equal("wamid.sent", response.MetaMessageId);
         Assert.Equal(2, handler.Requests.Count);
         Assert.EndsWith("/phone-id/media", handler.Requests[0].Url);
-        Assert.Contains("Content-Type: audio/ogg", handler.Requests[0].Body);
-        Assert.Contains("reply.ogg", handler.Requests[0].Body);
+        Assert.Contains("Content-Type: audio/mpeg", handler.Requests[0].Body);
+        Assert.Contains("reply.mp3", handler.Requests[0].Body);
         Assert.Contains("media-1", handler.Requests[1].Body);
         Assert.Contains("\"type\":\"audio\"", handler.Requests[1].Body);
         Assert.DoesNotContain("\"voice\"", handler.Requests[1].Body);
@@ -196,7 +196,7 @@ public sealed class WhatsAppLiveSupportTests
     [InlineData("video", "video/mp4", 3, "WHATSAPP_MEDIA_UNSUPPORTED")]
     [InlineData("image", "image/jpeg", 0, "WHATSAPP_MEDIA_EMPTY")]
     [InlineData("image", "image/jpeg", 5 * 1024 * 1024 + 1, "WHATSAPP_MEDIA_TOO_LARGE")]
-    [InlineData("audio", "audio/ogg", 16 * 1024 * 1024 + 1, "WHATSAPP_MEDIA_TOO_LARGE")]
+    [InlineData("audio", "audio/mpeg", 16 * 1024 * 1024 + 1, "WHATSAPP_MEDIA_TOO_LARGE")]
     public async Task UnsupportedOrOversizedOutboundMedia_FailsBeforeProviderUpload(
         string mediaType,
         string contentType,

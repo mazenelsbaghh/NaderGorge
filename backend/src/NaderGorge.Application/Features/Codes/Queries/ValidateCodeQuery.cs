@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using System;
@@ -89,19 +90,19 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
                 targetName = lesson?.Title ?? "حصة دراسية";
                 break;
             case CodeType.Exam:
-                targetId = codeGroup.PublicExamProductId ?? codeGroup.ExamId;
-                if (codeGroup.PublicExamProductId.HasValue)
-                {
-                    targetName = await _db.PublicExamProducts.AsNoTracking()
-                        .Where(product => product.Id == codeGroup.PublicExamProductId.Value)
-                        .Select(product => product.Exam.Title)
-                        .FirstOrDefaultAsync(ct) ?? "امتحان عام";
-                }
-                else
-                {
-                    var exam = await _db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == codeGroup.ExamId, ct);
-                    targetName = exam?.Title ?? "امتحان";
-                }
+                var examTarget = await ExamCodeAvailability.ResolveAsync(
+                    _db,
+                    codeGroup.ExamId,
+                    codeGroup.PublicExamProductId,
+                    now,
+                    ct);
+                if (examTarget == null)
+                    return ApiResponse<ValidateCodeResponseDto>.Fail(
+                        ExamCodeAvailability.UnavailableMessage,
+                        [ExamCodeAvailability.UnavailableErrorCode]);
+
+                targetId = codeGroup.PublicExamProductId ?? examTarget.ExamId;
+                targetName = examTarget.Title;
                 break;
             case CodeType.Video:
                 targetId = codeGroup.VideoTypeId;

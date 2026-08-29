@@ -185,7 +185,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         var exams = await _db.Exams
             .AsNoTracking()
-            .Where(e => examIdsToCheck.Contains(e.Id))
+            .Where(e => examIdsToCheck.Contains(e.Id) && e.IsActive)
             .Select(e => new { e.Id, e.Title })
             .ToDictionaryAsync(e => e.Id, e => e.Title, ct);
 

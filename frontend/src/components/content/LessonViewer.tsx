@@ -198,79 +198,68 @@ export function LessonViewer({
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Exam Card */}
-          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
-            <div className="flex items-center gap-3">
-              <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
-              <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
-              {lesson.examId && (
-                <>
-                  {lesson.examPassed ? (
-                    <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
-                      تم الاجتياز ✓
-                    </span>
-                  ) : lesson.isExamLocked ? (
-                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-black text-gray-500 dark:text-gray-400">
-                      مغلق 🔒
-                    </span>
-                  ) : lesson.examStatus === 'Failed' ? (
-                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-3 py-1 text-xs font-black text-red-700 dark:text-red-400">
-                      لم يتم الاجتياز ✗
-                    </span>
-                  ) : lesson.examStatus === 'InProgress' ? (
-                    <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-black text-amber-700 dark:text-amber-400">
-                      قيد الحل ⏳
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 px-3 py-1 text-xs font-black text-blue-700 dark:text-blue-400">
-                      لم يبدأ 📝
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-            {lesson.examId ? (
-              <>
-                <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
-                  {lesson.examPassed
-                    ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
-                    : lesson.isExamLocked
-                    ? lesson.examLockedReason || 'هذا الاختبار مغلق حالياً.'
-                    : lesson.examStatus === 'Failed'
-                    ? 'لقد حصلت على درجة أقل من درجة النجاح في محاولتك السابقة. يمكنك إعادة المحاولة لتحسين نتيجتك واجتياز الدرس.'
-                    : lesson.examStatus === 'InProgress'
-                    ? 'لديك محاولة نشطة وغير مكتملة في هذا الاختبار. يمكنك استئناف حل الأسئلة الآن.'
-                    : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
-                  }
-                </p>
-                <button
-                  type="button"
-                  disabled={lesson.isExamLocked && !lesson.examPassed}
-                  onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}&lessonId=${lesson.id}`)}
-                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
-                    lesson.examPassed
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
-                      : lesson.isExamLocked
-                      ? 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
-                      : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
-                  }`}
-                >
-                  {lesson.examPassed
-                    ? 'راجع الامتحان'
-                    : lesson.examStatus === 'Failed'
-                    ? 'إعادة الاختبار الآن'
-                    : lesson.examStatus === 'InProgress'
-                    ? 'استئناف الاختبار'
-                    : 'ابدأ الاختبار الآن'}
-                </button>
-              </>
-            ) : (
+        <div className={`grid gap-6 ${lesson.examId ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+          {lesson.examId && (
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+              <div className="flex items-center gap-3">
+                <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
+                <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
+                {lesson.examPassed ? (
+                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
+                    تم الاجتياز ✓
+                  </span>
+                ) : lesson.isExamLocked ? (
+                  <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-black text-gray-500 dark:text-gray-400">
+                    مغلق 🔒
+                  </span>
+                ) : lesson.examStatus === 'Failed' ? (
+                  <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-3 py-1 text-xs font-black text-red-700 dark:text-red-400">
+                    لم يتم الاجتياز ✗
+                  </span>
+                ) : lesson.examStatus === 'InProgress' ? (
+                  <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-black text-amber-700 dark:text-amber-400">
+                    قيد الحل ⏳
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 px-3 py-1 text-xs font-black text-blue-700 dark:text-blue-400">
+                    لم يبدأ 📝
+                  </span>
+                )}
+              </div>
               <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
-                لا يوجد اختبار متاح لهذا الدرس.
+                {lesson.examPassed
+                  ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
+                  : lesson.isExamLocked
+                  ? lesson.examLockedReason || 'هذا الاختبار مغلق حالياً.'
+                  : lesson.examStatus === 'Failed'
+                  ? 'لقد حصلت على درجة أقل من درجة النجاح في محاولتك السابقة. يمكنك إعادة المحاولة لتحسين نتيجتك واجتياز الدرس.'
+                  : lesson.examStatus === 'InProgress'
+                  ? 'لديك محاولة نشطة وغير مكتملة في هذا الاختبار. يمكنك استئناف حل الأسئلة الآن.'
+                  : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
+                }
               </p>
-            )}
-          </div>
+              <button
+                type="button"
+                disabled={lesson.isExamLocked && !lesson.examPassed}
+                onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}&lessonId=${lesson.id}`)}
+                className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                  lesson.examPassed
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
+                    : lesson.isExamLocked
+                    ? 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
+                    : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
+                }`}
+              >
+                {lesson.examPassed
+                  ? 'راجع الامتحان'
+                  : lesson.examStatus === 'Failed'
+                  ? 'إعادة الاختبار الآن'
+                  : lesson.examStatus === 'InProgress'
+                  ? 'استئناف الاختبار'
+                  : 'ابدأ الاختبار الآن'}
+              </button>
+            </div>
+          )}
 
           {/* Homework Card */}
           <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">

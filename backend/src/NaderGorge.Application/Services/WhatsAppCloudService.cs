@@ -410,7 +410,7 @@ public sealed class WhatsAppCloudService
         var expectedContentType = message.MediaType switch
         {
             "image" => "image/jpeg",
-            "audio" => "audio/ogg",
+            "audio" => "audio/mpeg",
             _ => null
         };
         if (expectedContentType is null ||

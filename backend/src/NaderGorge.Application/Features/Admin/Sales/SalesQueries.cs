@@ -109,7 +109,7 @@ public sealed class GetPublicExamProductsQueryHandler : IRequestHandler<GetPubli
             .AsQueryable();
         if (request.PublishedOnly)
         {
-            query = query.Where(x => x.IsPublished && x.DisabledAt == null && (x.AvailableFrom == null || x.AvailableFrom <= now) && (x.AvailableUntil == null || x.AvailableUntil > now));
+            query = query.Where(x => x.Exam.IsActive && x.IsPublished && x.DisabledAt == null && (x.AvailableFrom == null || x.AvailableFrom <= now) && (x.AvailableUntil == null || x.AvailableUntil > now));
         }
 
         var rows = await query.OrderByDescending(x => x.CreatedAt)

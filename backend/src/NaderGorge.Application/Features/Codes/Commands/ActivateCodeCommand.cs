@@ -84,13 +84,28 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 throw new InvalidOperationException("This code group has expired.");
 
             var codeGroup = accessCode.CodeGroup;
+            var availableExamTarget = codeGroup.CodeType == CodeType.Exam
+                ? await ExamCodeAvailability.ResolveAsync(
+                    _db,
+                    codeGroup.ExamId,
+                    codeGroup.PublicExamProductId,
+                    now,
+                    ct)
+                : null;
+            if (codeGroup.CodeType == CodeType.Exam && availableExamTarget == null)
+            {
+                return ApiResponse<ActivateCodeResponse>.Fail(
+                    ExamCodeAvailability.UnavailableMessage,
+                    [ExamCodeAvailability.UnavailableErrorCode]);
+            }
+
             var archiveTarget = codeGroup.CodeType switch
             {
                 CodeType.Package when codeGroup.PackageId.HasValue => (ContentArchiveTargetType.Package, codeGroup.PackageId.Value),
                 CodeType.Term when codeGroup.TermId.HasValue => (ContentArchiveTargetType.Term, codeGroup.TermId.Value),
                 CodeType.Month when codeGroup.ContentSectionId.HasValue => (ContentArchiveTargetType.Section, codeGroup.ContentSectionId.Value),
                 CodeType.Lesson when codeGroup.LessonId.HasValue => (ContentArchiveTargetType.Lesson, codeGroup.LessonId.Value),
-                CodeType.Exam when codeGroup.ExamId.HasValue => (ContentArchiveTargetType.Exam, codeGroup.ExamId.Value),
+                CodeType.Exam when availableExamTarget != null => (ContentArchiveTargetType.Exam, availableExamTarget.ExamId),
                 _ => ((ContentArchiveTargetType TargetType, Guid TargetId)?)null
             };
             if (archiveTarget.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTarget.Value.TargetType, archiveTarget.Value.TargetId, ct))
@@ -367,7 +382,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                         redirectUrl = $"/student/lessons/{codeGroup.LessonId}";
                         break;
                     case CodeType.Exam:
-                        grant.ExamId = codeGroup.ExamId;
+                        grant.ExamId = availableExamTarget!.ExamId;
                         grant.PublicExamProductId = codeGroup.PublicExamProductId;
                         redirectUrl = codeGroup.PublicExamProductId.HasValue
                             ? "/student/public-exams"
@@ -464,8 +479,9 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                                 selected.AllocationMode, selected.AllocationValue, selected.PriceBasis);
                         }
                     }
+                    var contentScopes = await _agreementResolver.BuildScopesAsync(targetType, targetId, ct);
                     agreement ??= await _agreementResolver.ResolveAsync(teacherProfile.Id, TeacherAgreementTrigger.CodeActivation,
-                        await _agreementResolver.BuildScopesAsync(targetType, targetId, ct), occurredAt, ct);
+                        [(TeacherAgreementScopeType.CodeGroup, codeGroup.Id), .. contentScopes], occurredAt, ct);
                 }
                 var (allocationMode, teacherShare, basisAmount) = agreement is null
                     ? (TeacherAllocationMode.CommissionRate, 0m, finalPrice)

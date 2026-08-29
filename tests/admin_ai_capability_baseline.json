@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "bd1a4f3c3b5a30b4aeb151078eb22a8de078acbc5934f22095fa305a1dd006b4"
+      "digest": "69c8b9ae697d3a22a36a5127e1cbbebebdeb98ed816064d82898c15d4fa1aca6"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -13269,7 +13269,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:594",
+      "id": "fe:delete:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:610",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
@@ -13294,12 +13294,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 594
+        "line": 610
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:769",
+      "id": "fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:785",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
@@ -13324,7 +13324,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 769
+        "line": 785
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -17649,7 +17649,7 @@
       }
     },
     {
-      "id": "fe:get:live-support-admin-config:frontend-src-services-live-support-service-ts:790",
+      "id": "fe:get:live-support-admin-config:frontend-src-services-live-support-service-ts:812",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/config",
@@ -17672,11 +17672,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 790
+        "line": 812
       }
     },
     {
-      "id": "fe:get:live-support-admin-conversations-conversationid-timeline:frontend-src-services-live-support-service-ts:799",
+      "id": "fe:get:live-support-admin-conversations-conversationid-timeline:frontend-src-services-live-support-service-ts:821",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/conversations/{conversationId}/timeline",
@@ -17699,11 +17699,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 799
+        "line": 821
       }
     },
     {
-      "id": "fe:get:live-support-admin-dashboard:frontend-src-services-live-support-service-ts:793",
+      "id": "fe:get:live-support-admin-dashboard:frontend-src-services-live-support-service-ts:815",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/dashboard",
@@ -17726,11 +17726,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 793
+        "line": 815
       }
     },
     {
-      "id": "fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:796",
+      "id": "fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:818",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/ratings",
@@ -17753,11 +17753,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 796
+        "line": 818
       }
     },
     {
-      "id": "fe:get:live-support-audience-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:574",
+      "id": "fe:get:live-support-audience-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:582",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId}",
@@ -17780,11 +17780,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 574
+        "line": 582
       }
     },
     {
-      "id": "fe:get:live-support-availability:frontend-src-services-live-support-service-ts:539",
+      "id": "fe:get:live-support-availability:frontend-src-services-live-support-service-ts:547",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/availability",
@@ -17807,11 +17807,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 539
+        "line": 547
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid-ai-pending-action:frontend-src-services-live-support-service-ts:917",
+      "id": "fe:get:live-support-participant-conversations-conversationid-ai-pending-action:frontend-src-services-live-support-service-ts:939",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations/{conversationId}/ai/pending-action",
@@ -17834,11 +17834,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 917
+        "line": 939
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid-ai-snapshot:frontend-src-services-live-support-service-ts:560",
+      "id": "fe:get:live-support-participant-conversations-conversationid-ai-snapshot:frontend-src-services-live-support-service-ts:568",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations/{conversationId}/ai/snapshot",
@@ -17861,11 +17861,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 560
+        "line": 568
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid-ai-verification-session:frontend-src-services-live-support-service-ts:920",
+      "id": "fe:get:live-support-participant-conversations-conversationid-ai-verification-session:frontend-src-services-live-support-service-ts:942",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations/{conversationId}/ai/verification/session",
@@ -17888,11 +17888,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 920
+        "line": 942
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:554",
+      "id": "fe:get:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:562",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations/{conversationId}/messages",
@@ -17915,11 +17915,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 554
+        "line": 562
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations-conversationid:frontend-src-services-live-support-service-ts:551",
+      "id": "fe:get:live-support-participant-conversations-conversationid:frontend-src-services-live-support-service-ts:559",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations/{conversationId}",
@@ -17942,11 +17942,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 551
+        "line": 559
       }
     },
     {
-      "id": "fe:get:live-support-participant-conversations:frontend-src-services-live-support-service-ts:542",
+      "id": "fe:get:live-support-participant-conversations:frontend-src-services-live-support-service-ts:550",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/participant/conversations",
@@ -17969,11 +17969,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 542
+        "line": 550
       }
     },
     {
-      "id": "fe:get:live-support-staff-bootstrap:frontend-src-services-live-support-service-ts:612",
+      "id": "fe:get:live-support-staff-bootstrap:frontend-src-services-live-support-service-ts:628",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/bootstrap",
@@ -17996,11 +17996,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 612
+        "line": 628
       }
     },
     {
-      "id": "fe:get:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:825",
+      "id": "fe:get:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:847",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/canned-replies",
@@ -18023,11 +18023,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 825
+        "line": 847
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-actions-actionkey-draft:frontend-src-services-live-support-service-ts:860",
+      "id": "fe:get:live-support-staff-conversations-conversationid-actions-actionkey-draft:frontend-src-services-live-support-service-ts:882",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}/draft",
@@ -18050,11 +18050,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 860
+        "line": 882
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-actions-context:frontend-src-services-live-support-service-ts:857",
+      "id": "fe:get:live-support-staff-conversations-conversationid-actions-context:frontend-src-services-live-support-service-ts:879",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/actions/context",
@@ -18077,11 +18077,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 857
+        "line": 879
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-actions:frontend-src-services-live-support-service-ts:854",
+      "id": "fe:get:live-support-staff-conversations-conversationid-actions:frontend-src-services-live-support-service-ts:876",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/actions",
@@ -18104,11 +18104,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 854
+        "line": 876
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:775",
+      "id": "fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:791",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/messages",
@@ -18131,11 +18131,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 775
+        "line": 791
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-student-context-section:frontend-src-services-live-support-service-ts:845",
+      "id": "fe:get:live-support-staff-conversations-conversationid-student-context-section:frontend-src-services-live-support-service-ts:867",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/student-context/{section}",
@@ -18158,11 +18158,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 845
+        "line": 867
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-student-context:frontend-src-services-live-support-service-ts:842",
+      "id": "fe:get:live-support-staff-conversations-conversationid-student-context:frontend-src-services-live-support-service-ts:864",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/student-context",
@@ -18185,11 +18185,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 842
+        "line": 864
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-student-history-historyconversationid-messages:frontend-src-services-live-support-service-ts:851",
+      "id": "fe:get:live-support-staff-conversations-conversationid-student-history-historyconversationid-messages:frontend-src-services-live-support-service-ts:873",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/student-history/{historyConversationId}/messages",
@@ -18212,11 +18212,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 851
+        "line": 873
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-student-history:frontend-src-services-live-support-service-ts:848",
+      "id": "fe:get:live-support-staff-conversations-conversationid-student-history:frontend-src-services-live-support-service-ts:870",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/student-history",
@@ -18239,11 +18239,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 848
+        "line": 870
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-students-search:frontend-src-services-live-support-service-ts:833",
+      "id": "fe:get:live-support-staff-conversations-conversationid-students-search:frontend-src-services-live-support-service-ts:855",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/students/search",
@@ -18266,11 +18266,65 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 833
+        "line": 855
       }
     },
     {
-      "id": "fe:get:live-support-whatsapp-campaigns-bootstrap:frontend-src-services-live-support-service-ts:640",
+      "id": "fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-attachments-attachmentid:frontend-src-services-live-support-service-ts:590",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId}",
+      "effect": "read",
+      "domain": "hr",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 590
+      }
+    },
+    {
+      "id": "fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-messages:frontend-src-services-live-support-service-ts:794",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/messages",
+      "effect": "read",
+      "domain": "hr",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 794
+      }
+    },
+    {
+      "id": "fe:get:live-support-whatsapp-campaigns-bootstrap:frontend-src-services-live-support-service-ts:656",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/whatsapp/campaigns/bootstrap",
@@ -18293,11 +18347,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 640
+        "line": 656
       }
     },
     {
-      "id": "fe:get:live-support-whatsapp-campaigns:frontend-src-services-live-support-service-ts:697",
+      "id": "fe:get:live-support-whatsapp-campaigns:frontend-src-services-live-support-service-ts:713",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/whatsapp/campaigns",
@@ -18320,11 +18374,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 697
+        "line": 713
       }
     },
     {
-      "id": "fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:724",
+      "id": "fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:740",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/whatsapp/preferences",
@@ -18347,11 +18401,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 724
+        "line": 740
       }
     },
     {
-      "id": "fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:632",
+      "id": "fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:648",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/whatsapp/templates",
@@ -18374,7 +18428,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 632
+        "line": 648
       }
     },
     {
@@ -19746,7 +19800,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:588",
+      "id": "fe:patch:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:604",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
@@ -19771,12 +19825,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 588
+        "line": 604
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:763",
+      "id": "fe:patch:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:779",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
@@ -19801,7 +19855,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 763
+        "line": 779
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25146,7 +25200,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-admin-conversations-conversationid-intervene:frontend-src-services-live-support-service-ts:802",
+      "id": "fe:post:live-support-admin-conversations-conversationid-intervene:frontend-src-services-live-support-service-ts:824",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/admin/conversations/{conversationId}/intervene",
@@ -25171,12 +25225,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 802
+        "line": 824
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-abandon:frontend-src-services-live-support-service-ts:600",
+      "id": "fe:post:live-support-participant-conversations-conversationid-abandon:frontend-src-services-live-support-service-ts:616",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/abandon",
@@ -25201,12 +25255,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 600
+        "line": 616
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-payloaddecisionid-register:frontend-src-services-live-support-service-ts:911",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-payloaddecisionid-register:frontend-src-services-live-support-service-ts:933",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/decisions/{payloaddecisionId}/register",
@@ -25231,12 +25285,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 911
+        "line": 933
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-cancel:frontend-src-services-live-support-service-ts:875",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-cancel:frontend-src-services-live-support-service-ts:897",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/cancel",
@@ -25261,12 +25315,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 875
+        "line": 897
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-confirm:frontend-src-services-live-support-service-ts:869",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-confirm:frontend-src-services-live-support-service-ts:891",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/confirm",
@@ -25291,12 +25345,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 869
+        "line": 891
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-cancel:frontend-src-services-live-support-service-ts:893",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-cancel:frontend-src-services-live-support-service-ts:915",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/handoff/cancel",
@@ -25321,12 +25375,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 893
+        "line": 915
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-confirm:frontend-src-services-live-support-service-ts:881",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-confirm:frontend-src-services-live-support-service-ts:903",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/handoff/confirm",
@@ -25351,12 +25405,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 881
+        "line": 903
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-request:frontend-src-services-live-support-service-ts:887",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-handoff-request:frontend-src-services-live-support-service-ts:909",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/handoff/request",
@@ -25381,12 +25435,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 887
+        "line": 909
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-verification-lookup:frontend-src-services-live-support-service-ts:899",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-verification-lookup:frontend-src-services-live-support-service-ts:921",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/verification/lookup",
@@ -25411,12 +25465,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 899
+        "line": 921
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-ai-verification-payloadsessionid-answer:frontend-src-services-live-support-service-ts:905",
+      "id": "fe:post:live-support-participant-conversations-conversationid-ai-verification-payloadsessionid-answer:frontend-src-services-live-support-service-ts:927",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/ai/verification/{payloadsessionId}/answer",
@@ -25441,12 +25495,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 905
+        "line": 927
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:564",
+      "id": "fe:post:live-support-participant-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:572",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/attachments",
@@ -25471,12 +25525,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 564
+        "line": 572
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:582",
+      "id": "fe:post:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:598",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/messages",
@@ -25501,12 +25555,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 582
+        "line": 598
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations-conversationid-rating:frontend-src-services-live-support-service-ts:606",
+      "id": "fe:post:live-support-participant-conversations-conversationid-rating:frontend-src-services-live-support-service-ts:622",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations/{conversationId}/rating",
@@ -25531,12 +25585,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 606
+        "line": 622
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-participant-conversations:frontend-src-services-live-support-service-ts:545",
+      "id": "fe:post:live-support-participant-conversations:frontend-src-services-live-support-service-ts:553",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/participant/conversations",
@@ -25561,12 +25615,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 545
+        "line": 553
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-actions-actionkey:frontend-src-services-live-support-service-ts:863",
+      "id": "fe:post:live-support-staff-conversations-conversationid-actions-actionkey:frontend-src-services-live-support-service-ts:885",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}",
@@ -25591,12 +25645,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 863
+        "line": 885
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:617",
+      "id": "fe:post:live-support-staff-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:633",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/attachments",
@@ -25621,12 +25675,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 617
+        "line": 633
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-close:frontend-src-services-live-support-service-ts:778",
+      "id": "fe:post:live-support-staff-conversations-conversationid-close:frontend-src-services-live-support-service-ts:800",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/close",
@@ -25651,12 +25705,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 778
+        "line": 800
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:626",
+      "id": "fe:post:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:642",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/messages",
@@ -25681,12 +25735,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 626
+        "line": 642
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-transfer:frontend-src-services-live-support-service-ts:784",
+      "id": "fe:post:live-support-staff-conversations-conversationid-transfer:frontend-src-services-live-support-service-ts:806",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/transfer",
@@ -25711,12 +25765,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 784
+        "line": 806
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-whatsapp-template:frontend-src-services-live-support-service-ts:757",
+      "id": "fe:post:live-support-staff-conversations-conversationid-whatsapp-template:frontend-src-services-live-support-service-ts:773",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/whatsapp-template",
@@ -25741,12 +25795,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 757
+        "line": 773
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-campaigns-audience-preview:frontend-src-services-live-support-service-ts:649",
+      "id": "fe:post:live-support-whatsapp-campaigns-audience-preview:frontend-src-services-live-support-service-ts:665",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/audience/preview",
@@ -25771,12 +25825,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 649
+        "line": 665
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-launch:frontend-src-services-live-support-service-ts:681",
+      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-launch:frontend-src-services-live-support-service-ts:697",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/{campaignId}/launch",
@@ -25801,12 +25855,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 681
+        "line": 697
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-operation:frontend-src-services-live-support-service-ts:711",
+      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-operation:frontend-src-services-live-support-service-ts:727",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/{campaignId}/{operation}",
@@ -25831,12 +25885,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 711
+        "line": 727
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-campaigns-drafts:frontend-src-services-live-support-service-ts:664",
+      "id": "fe:post:live-support-whatsapp-campaigns-drafts:frontend-src-services-live-support-service-ts:680",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/drafts",
@@ -25861,12 +25915,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 664
+        "line": 680
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:735",
+      "id": "fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:751",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/preferences/contacts/search",
@@ -25891,12 +25945,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 735
+        "line": 751
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:747",
+      "id": "fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:763",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/preferences",
@@ -25921,12 +25975,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 747
+        "line": 763
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:live-support-whatsapp-templates-sync:frontend-src-services-live-support-service-ts:635",
+      "id": "fe:post:live-support-whatsapp-templates-sync:frontend-src-services-live-support-service-ts:651",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/templates/sync",
@@ -25951,7 +26005,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 635
+        "line": 651
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -27816,7 +27870,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:live-support-admin-canned-replies:frontend-src-services-live-support-service-ts:820",
+      "id": "fe:put:live-support-admin-canned-replies:frontend-src-services-live-support-service-ts:842",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/canned-replies",
@@ -27841,12 +27895,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 842
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:808",
+      "id": "fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:830",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/feature",
@@ -27871,12 +27925,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 808
+        "line": 830
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:814",
+      "id": "fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:836",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/staff/{staffUserId}",
@@ -27901,12 +27955,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 814
+        "line": 836
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:828",
+      "id": "fe:put:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:850",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/staff/canned-replies",
@@ -27931,12 +27985,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 828
+        "line": 850
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:live-support-staff-conversations-conversationid-student-link:frontend-src-services-live-support-service-ts:836",
+      "id": "fe:put:live-support-staff-conversations-conversationid-student-link:frontend-src-services-live-support-service-ts:858",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/staff/conversations/{conversationId}/student-link",
@@ -27961,7 +28015,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 836
+        "line": 858
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -28057,5 +28111,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "06aba022df584e9bc8f5913034105ff2623364334809932c2466af5aad79a83f"
+  "digest": "b337140ded9052db2f9c574a8d5ebdd271683b508119f1510265e705e7b050eb"
 }

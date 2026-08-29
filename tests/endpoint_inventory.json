@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 715,
-  "frontendCallCount": 598,
+  "endpointCount": 717,
+  "frontendCallCount": 600,
   "missingFrontendRouteCount": 0,
-  "digest": "3a791b7240fece9d4025bf08773e6b3cce5a03a2c9a713f3bb0b095be2127b17",
+  "digest": "1ffe8a7516c0844673eda3f1bd3f2959c37900d3add49ba876a0534a9ef3b483",
   "endpoints": [
     {
       "controller": "AdminAIAgentController",
@@ -6813,7 +6813,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 165
+        "line": 189
       }
     },
     {
@@ -6825,7 +6825,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 186
+        "line": 210
       }
     },
     {
@@ -6837,7 +6837,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 179
+        "line": 203
       }
     },
     {
@@ -6849,7 +6849,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 172
+        "line": 196
       }
     },
     {
@@ -6885,7 +6885,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 109
+        "line": 133
       }
     },
     {
@@ -6897,7 +6897,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 102
+        "line": 115
       }
     },
     {
@@ -6945,7 +6945,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 137
+        "line": 161
       }
     },
     {
@@ -6957,7 +6957,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 144
+        "line": 168
       }
     },
     {
@@ -6969,7 +6969,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 151
+        "line": 175
       }
     },
     {
@@ -6981,7 +6981,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 158
+        "line": 182
       }
     },
     {
@@ -6993,7 +6993,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 130
+        "line": 154
       }
     },
     {
@@ -7005,7 +7005,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 123
+        "line": 147
       }
     },
     {
@@ -7017,7 +7017,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
-        "line": 116
+        "line": 140
       }
     },
     {
@@ -7030,6 +7030,30 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
         "line": 53
+      }
+    },
+    {
+      "controller": "LiveSupportStaffController",
+      "action": "DownloadWhatsAppThreadAttachment",
+      "method": "GET",
+      "path": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/attachments/{attachmentid}",
+      "routeTemplate": "/api/live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 102
+      }
+    },
+    {
+      "controller": "LiveSupportStaffController",
+      "action": "WhatsAppThreadMessages",
+      "method": "GET",
+      "path": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/messages",
+      "routeTemplate": "/api/live-support/staff/conversations/{conversationId}/whatsapp-thread/messages",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 122
       }
     },
     {
@@ -14428,7 +14452,7 @@
       "rawExpression": "'/live-support/availability'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 539
+        "line": 547
       }
     },
     {
@@ -14442,7 +14466,7 @@
       "rawExpression": "'/live-support/participant/conversations'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 542
+        "line": 550
       }
     },
     {
@@ -14456,7 +14480,7 @@
       "rawExpression": "'/live-support/participant/conversations'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 545
+        "line": 553
       }
     },
     {
@@ -14470,7 +14494,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 551
+        "line": 559
       }
     },
     {
@@ -14488,7 +14512,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 554
+        "line": 562
       }
     },
     {
@@ -14502,7 +14526,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/snapshot`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 560
+        "line": 568
       }
     },
     {
@@ -14516,7 +14540,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/attachments`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 564
+        "line": 572
       }
     },
     {
@@ -14530,7 +14554,21 @@
       "rawExpression": "`/live-support/${audience}/conversations/${conversationId}/attachments/${attachmentId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 574
+        "line": 582
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/attachments/{attachmentid}",
+      "routeTemplate": "/api/live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-thread/attachments/${attachmentId}`",
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 590
       }
     },
     {
@@ -14544,7 +14582,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 582
+        "line": 598
       }
     },
     {
@@ -14560,7 +14598,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 588
+        "line": 604
       }
     },
     {
@@ -14574,7 +14612,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 594
+        "line": 610
       }
     },
     {
@@ -14588,7 +14626,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/abandon`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 600
+        "line": 616
       }
     },
     {
@@ -14602,7 +14640,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/rating`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 606
+        "line": 622
       }
     },
     {
@@ -14616,7 +14654,7 @@
       "rawExpression": "'/live-support/staff/bootstrap'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 612
+        "line": 628
       }
     },
     {
@@ -14630,7 +14668,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/attachments`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 617
+        "line": 633
       }
     },
     {
@@ -14644,7 +14682,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 626
+        "line": 642
       }
     },
     {
@@ -14658,7 +14696,7 @@
       "rawExpression": "'/live-support/whatsapp/templates'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 632
+        "line": 648
       }
     },
     {
@@ -14672,7 +14710,7 @@
       "rawExpression": "'/live-support/whatsapp/templates/sync'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 635
+        "line": 651
       }
     },
     {
@@ -14686,7 +14724,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/bootstrap'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 640
+        "line": 656
       }
     },
     {
@@ -14700,7 +14738,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/audience/preview'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 649
+        "line": 665
       }
     },
     {
@@ -14714,7 +14752,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/drafts'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 664
+        "line": 680
       }
     },
     {
@@ -14734,7 +14772,7 @@
       "rawExpression": "`/live-support/whatsapp/campaigns/${campaignId}/launch`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 681
+        "line": 697
       }
     },
     {
@@ -14751,7 +14789,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 697
+        "line": 713
       }
     },
     {
@@ -14768,7 +14806,7 @@
       "rawExpression": "`/live-support/whatsapp/campaigns/${campaignId}/${operation}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 711
+        "line": 727
       }
     },
     {
@@ -14786,7 +14824,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 724
+        "line": 740
       }
     },
     {
@@ -14804,7 +14842,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences/contacts/search'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 735
+        "line": 751
       }
     },
     {
@@ -14818,7 +14856,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 747
+        "line": 763
       }
     },
     {
@@ -14832,7 +14870,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-template`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 757
+        "line": 773
       }
     },
     {
@@ -14848,7 +14886,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 763
+        "line": 779
       }
     },
     {
@@ -14862,7 +14900,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 769
+        "line": 785
       }
     },
     {
@@ -14878,7 +14916,24 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 775
+        "line": 791
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/messages",
+      "routeTemplate": "/api/live-support/staff/conversations/{conversationId}/whatsapp-thread/messages",
+      "origin": "backend-api",
+      "queryParameters": [
+        "pageSize",
+        "cursor"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages`",
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 794
       }
     },
     {
@@ -14894,7 +14949,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/close`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 778
+        "line": 800
       }
     },
     {
@@ -14911,7 +14966,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/transfer`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 784
+        "line": 806
       }
     },
     {
@@ -14925,7 +14980,7 @@
       "rawExpression": "'/live-support/admin/config'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 790
+        "line": 812
       }
     },
     {
@@ -14939,7 +14994,7 @@
       "rawExpression": "'/live-support/admin/dashboard'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 793
+        "line": 815
       }
     },
     {
@@ -14953,7 +15008,7 @@
       "rawExpression": "'/live-support/admin/ratings'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 796
+        "line": 818
       }
     },
     {
@@ -14967,7 +15022,7 @@
       "rawExpression": "`/live-support/admin/conversations/${conversationId}/timeline`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 799
+        "line": 821
       }
     },
     {
@@ -14985,7 +15040,7 @@
       "rawExpression": "`/live-support/admin/conversations/${conversationId}/intervene`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 802
+        "line": 824
       }
     },
     {
@@ -15001,7 +15056,7 @@
       "rawExpression": "'/live-support/admin/feature'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 808
+        "line": 830
       }
     },
     {
@@ -15015,7 +15070,7 @@
       "rawExpression": "`/live-support/admin/staff/${staffUserId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 814
+        "line": 836
       }
     },
     {
@@ -15031,7 +15086,7 @@
       "rawExpression": "'/live-support/admin/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 842
       }
     },
     {
@@ -15045,7 +15100,7 @@
       "rawExpression": "'/live-support/staff/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 825
+        "line": 847
       }
     },
     {
@@ -15061,7 +15116,7 @@
       "rawExpression": "'/live-support/staff/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 828
+        "line": 850
       }
     },
     {
@@ -15077,7 +15132,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/students/search`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 833
+        "line": 855
       }
     },
     {
@@ -15095,7 +15150,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-link`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 836
+        "line": 858
       }
     },
     {
@@ -15109,7 +15164,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-context`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 842
+        "line": 864
       }
     },
     {
@@ -15123,7 +15178,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-context/${section}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 845
+        "line": 867
       }
     },
     {
@@ -15137,7 +15192,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-history`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 848
+        "line": 870
       }
     },
     {
@@ -15153,7 +15208,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-history/${historyConversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 851
+        "line": 873
       }
     },
     {
@@ -15167,7 +15222,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 854
+        "line": 876
       }
     },
     {
@@ -15181,7 +15236,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/context`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 857
+        "line": 879
       }
     },
     {
@@ -15195,7 +15250,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/${actionKey}/draft`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 860
+        "line": 882
       }
     },
     {
@@ -15212,7 +15267,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/${actionKey}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 863
+        "line": 885
       }
     },
     {
@@ -15228,7 +15283,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/confirm`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 869
+        "line": 891
       }
     },
     {
@@ -15244,7 +15299,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/cancel`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 875
+        "line": 897
       }
     },
     {
@@ -15258,7 +15313,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/confirm`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 881
+        "line": 903
       }
     },
     {
@@ -15272,7 +15327,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/request`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 887
+        "line": 909
       }
     },
     {
@@ -15286,7 +15341,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/cancel`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 893
+        "line": 915
       }
     },
     {
@@ -15302,7 +15357,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/lookup`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 899
+        "line": 921
       }
     },
     {
@@ -15319,7 +15374,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/${payload.sessionId}/answer`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 905
+        "line": 927
       }
     },
     {
@@ -15335,7 +15390,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${payload.decisionId}/register`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 911
+        "line": 933
       }
     },
     {
@@ -15349,7 +15404,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/pending-action`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 917
+        "line": 939
       }
     },
     {
@@ -15363,7 +15418,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/session`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 920
+        "line": 942
       }
     },
     {

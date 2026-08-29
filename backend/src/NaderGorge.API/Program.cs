@@ -211,7 +211,8 @@ builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSuppor
 builder.Services.AddScoped<ILiveSupportGuestSessionService, LiveSupportGuestSessionService>();
 builder.Services.AddScoped<ILiveSupportEventWriter, NaderGorge.Application.Features.LiveSupport.Services.LiveSupportEventWriter>();
 builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachmentStorage>();
-builder.Services.AddSingleton<IWhatsAppAudioProcess, FfmpegWhatsAppAudioProcess>();
+builder.Services.AddSingleton<IWhatsAppAudioProcess>(
+    _ => new FfmpegWhatsAppAudioProcess("/usr/bin/ffmpeg"));
 builder.Services.AddSingleton<IWhatsAppOutboundMediaNormalizer, WhatsAppOutboundMediaNormalizer>();
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();

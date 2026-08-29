@@ -178,11 +178,15 @@ public class AccessCheckService : IAccessCheckService
             return false;
 
         var now = DateTime.UtcNow;
-        var examVisible = await _db.Exams
+        var examVisibility = await _db.Exams
             .Where(exam => exam.Id == examId)
-            .Select(exam => (bool?)exam.CreatedByTeacher.IsContentVisibleToStudents)
+            .Select(exam => new
+            {
+                exam.IsActive,
+                TeacherAllowsStudentVisibility = exam.CreatedByTeacher.IsContentVisibleToStudents
+            })
             .FirstOrDefaultAsync(ct);
-        if (examVisible == false)
+        if (examVisibility == null || !examVisibility.IsActive || !examVisibility.TeacherAllowsStudentVisibility)
             return false;
         var publicProduct = await _db.PublicExamProducts
             .Where(x => x.ExamId == examId)

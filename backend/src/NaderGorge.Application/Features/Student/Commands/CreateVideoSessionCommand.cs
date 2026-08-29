@@ -121,7 +121,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         // 1b. Check if the current video has an unpassed mandatory exam
         var videoExams = await _db.Exams
-            .Where(e => e.IsMandatory && (
+            .Where(e => e.IsActive && e.IsMandatory && (
                 e.LessonVideoId == video.Id ||
                 (video.ExamId == e.Id)
             ))

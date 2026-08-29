@@ -22,7 +22,12 @@ public static class SharedPackageAllocationPreviewService
                 candidate.BasisAmount,
                 candidate.AllocationMode,
                 candidate.AllocationValue,
-                teacherShare);
+                teacherShare,
+                candidate.AgreementId,
+                candidate.AgreementScopeType,
+                candidate.AgreementScopeId,
+                candidate.AgreementAllocationMode,
+                candidate.PriceBasis);
         }).ToList();
 
         var totalTeacherShare = allocations.Sum(x => x.TeacherShareAmount);
@@ -42,7 +47,12 @@ public sealed record SharedPackageAllocationCandidate(
     Guid? SubjectId,
     decimal BasisAmount,
     TeacherAllocationMode AllocationMode,
-    decimal AllocationValue);
+    decimal AllocationValue,
+    Guid? AgreementId = null,
+    TeacherAgreementScopeType? AgreementScopeType = null,
+    Guid? AgreementScopeId = null,
+    TeacherAgreementAllocationMode? AgreementAllocationMode = null,
+    TeacherPriceBasis? PriceBasis = null);
 
 public sealed record SharedPackageTeacherAllocationPreview(
     Guid TeacherId,
@@ -51,7 +61,12 @@ public sealed record SharedPackageTeacherAllocationPreview(
     decimal BasisAmount,
     TeacherAllocationMode AllocationMode,
     decimal AllocationValue,
-    decimal TeacherShareAmount);
+    decimal TeacherShareAmount,
+    Guid? AgreementId = null,
+    TeacherAgreementScopeType? AgreementScopeType = null,
+    Guid? AgreementScopeId = null,
+    TeacherAgreementAllocationMode? AgreementAllocationMode = null,
+    TeacherPriceBasis? PriceBasis = null);
 
 public sealed record SharedPackageAllocationPreview(
     decimal SaleBasisAmount,

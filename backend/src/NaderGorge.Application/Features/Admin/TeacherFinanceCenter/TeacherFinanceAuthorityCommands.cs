@@ -76,6 +76,8 @@ internal static class TeacherAgreementAuthority
         if (string.IsNullOrWhiteSpace(terms.Reason) || terms.AllocationValue < 0m ||
             (terms.AllocationMode == TeacherAgreementAllocationMode.Percentage && terms.AllocationValue > 100m) ||
             (terms.EffectiveTo.HasValue && terms.EffectiveTo < terms.EffectiveFrom) ||
+            !Enum.IsDefined(terms.ScopeType) ||
+            terms.ScopeId == Guid.Empty ||
             (terms.ScopeType == TeacherAgreementScopeType.Default && terms.ScopeId != null))
             return new(TeacherFinanceCommandStatus.Invalid, Message: "بيانات الاتفاق غير صالحة");
         var overlaps = await db.TeacherFinancialAgreements.AnyAsync(x => x.Id != ignoredId && x.TeacherId == teacherId && x.IsActive

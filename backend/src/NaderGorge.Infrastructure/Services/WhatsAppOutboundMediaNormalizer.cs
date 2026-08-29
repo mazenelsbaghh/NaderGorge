@@ -143,7 +143,7 @@ public sealed class WhatsAppOutboundMediaNormalizer(IWhatsAppAudioProcess audioP
         if (!SupportedAudioTypes.Contains(contentType))
             throw Failure("WHATSAPP_MEDIA_UNSUPPORTED", 422,
                 "The stored audio type is not supported by WhatsApp.");
-        var content = await audioProcess.TranscodeToOggOpusMonoAsync(
+        var content = await audioProcess.TranscodeToMp3MonoAsync(
             sourceBytes, MaximumAudioBytes, cancellationToken);
         if (content.Length == 0)
             throw Failure("WHATSAPP_MEDIA_TRANSCODE_FAILED", 422,
@@ -151,8 +151,8 @@ public sealed class WhatsAppOutboundMediaNormalizer(IWhatsAppAudioProcess audioP
         if (content.Length > MaximumAudioBytes)
             throw Failure("WHATSAPP_MEDIA_TOO_LARGE", 413,
                 "The normalized WhatsApp audio exceeds the supported size.");
-        return new("audio", NormalizedFileName(source.FileName, "voice", ".ogg"),
-            "audio/ogg", content);
+        return new("audio", NormalizedFileName(source.FileName, "audio", ".mp3"),
+            "audio/mpeg", content);
     }
 
     private static async Task<byte[]> ReadBoundedAsync(

@@ -178,7 +178,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             if (previousLesson.ExamId.HasValue)
             {
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
-                if (exam != null && exam.IsMandatory)
+                if (exam != null && exam.IsActive && exam.IsMandatory)
                 {
                     var passedExam = await _db.StudentExamAttempts
                         .AnyAsync(a => a.UserId == userId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
@@ -197,7 +197,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
             // 1b. Check if any video in the previous lesson has a mandatory exam and if it is passed
             var prevVideoExams = await _db.Exams
-                .Where(e => e.IsMandatory && (
+                .Where(e => e.IsActive && e.IsMandatory && (
                     (e.LessonVideo != null && e.LessonVideo.LessonId == previousLesson.Id) ||
                     _db.LessonVideos.Any(lv => lv.LessonId == previousLesson.Id && lv.ExamId == e.Id)
                 ))
@@ -250,7 +250,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         if (lesson.ExamId.HasValue)
         {
             var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-            if (exam != null && exam.IsMandatory)
+            if (exam != null && exam.IsActive && exam.IsMandatory)
             {
                 var passedExam = await _db.StudentExamAttempts
                     .AnyAsync(a => a.UserId == userId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);

@@ -87,6 +87,18 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .CountAsync(ct);
 
         var allLessonIds = packages.SelectMany(p => p.Lessons).Select(l => l.Id).ToList();
+        var lessonExamIds = packages
+            .SelectMany(package => package.Lessons)
+            .Where(lesson => lesson.ExamId.HasValue)
+            .Select(lesson => lesson.ExamId!.Value)
+            .Distinct()
+            .ToList();
+        var activeExamIds = (await _db.Exams
+                .AsNoTracking()
+                .Where(exam => lessonExamIds.Contains(exam.Id) && exam.IsActive)
+                .Select(exam => exam.Id)
+                .ToListAsync(ct))
+            .ToHashSet();
 
         var mandatoryHomeworks = await _db.Homeworks
             .AsNoTracking()
@@ -139,7 +151,10 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 .OrderBy(l => l.Order)
                 .ToList();
             var visibleExamIds = new HashSet<Guid>();
-            foreach (var examId in orderedLessons.Where(lesson => lesson.ExamId.HasValue).Select(lesson => lesson.ExamId!.Value).Distinct())
+            foreach (var examId in orderedLessons
+                         .Where(lesson => lesson.ExamId.HasValue && activeExamIds.Contains(lesson.ExamId.Value))
+                         .Select(lesson => lesson.ExamId!.Value)
+                         .Distinct())
             {
                 if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, examId, ct))
                     visibleExamIds.Add(examId);

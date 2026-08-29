@@ -7,6 +7,39 @@ namespace NaderGorge.Application.Tests.Finance;
 public sealed class TeacherAgreementResolverTests
 {
     [Fact]
+    public async Task ResolveAsync_prefers_exact_parent_then_closest_aggregate_before_default()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Aggregate Teacher", "01000000000");
+        var teacher = new TeacherProfile { Id = Guid.NewGuid(), UserId = user.Id, CommissionRate = 10m };
+        var packageId = Guid.NewGuid();
+        var lessonId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        db.TeacherProfiles.Add(teacher);
+        db.TeacherFinancialAgreements.AddRange(
+            new TeacherFinancialAgreement { Id = Guid.NewGuid(), TeacherId = teacher.Id, ScopeType = TeacherAgreementScopeType.Default, ScopeId = null, Trigger = TeacherAgreementTrigger.ContentSale, AllocationMode = TeacherAgreementAllocationMode.Percentage, AllocationValue = 20m, PriceBasis = TeacherPriceBasis.Gross, EffectiveFrom = now.AddDays(-1), Reason = "everything", CreatedByUserId = user.Id },
+            new TeacherFinancialAgreement { Id = Guid.NewGuid(), TeacherId = teacher.Id, ScopeType = TeacherAgreementScopeType.Package, ScopeId = null, Trigger = TeacherAgreementTrigger.ContentSale, AllocationMode = TeacherAgreementAllocationMode.Percentage, AllocationValue = 30m, PriceBasis = TeacherPriceBasis.Gross, EffectiveFrom = now.AddDays(-1), Reason = "all courses", CreatedByUserId = user.Id },
+            new TeacherFinancialAgreement { Id = Guid.NewGuid(), TeacherId = teacher.Id, ScopeType = TeacherAgreementScopeType.Lesson, ScopeId = null, Trigger = TeacherAgreementTrigger.ContentSale, AllocationMode = TeacherAgreementAllocationMode.Percentage, AllocationValue = 40m, PriceBasis = TeacherPriceBasis.Gross, EffectiveFrom = now.AddDays(-1), Reason = "all lessons", CreatedByUserId = user.Id },
+            new TeacherFinancialAgreement { Id = Guid.NewGuid(), TeacherId = teacher.Id, ScopeType = TeacherAgreementScopeType.Package, ScopeId = packageId, Trigger = TeacherAgreementTrigger.ContentSale, AllocationMode = TeacherAgreementAllocationMode.Percentage, AllocationValue = 50m, PriceBasis = TeacherPriceBasis.Gross, EffectiveFrom = now.AddDays(-1), Reason = "one course", CreatedByUserId = user.Id });
+        await db.SaveChangesAsync();
+
+        var resolver = new TeacherAgreementResolver(db);
+        var exactParent = await resolver.ResolveAsync(teacher.Id, TeacherAgreementTrigger.ContentSale,
+            [(TeacherAgreementScopeType.Lesson, lessonId), (TeacherAgreementScopeType.Package, packageId)], now, CancellationToken.None);
+        var aggregateLesson = await resolver.ResolveAsync(teacher.Id, TeacherAgreementTrigger.ContentSale,
+            [(TeacherAgreementScopeType.Lesson, Guid.NewGuid()), (TeacherAgreementScopeType.Package, Guid.NewGuid())], now, CancellationToken.None);
+        var defaultOnly = await resolver.ResolveAsync(teacher.Id, TeacherAgreementTrigger.ContentSale,
+            [(TeacherAgreementScopeType.PublicExam, Guid.NewGuid())], now, CancellationToken.None);
+
+        Assert.Equal(50m, exactParent.AllocationValue);
+        Assert.Equal(packageId, exactParent.ScopeId);
+        Assert.Equal(40m, aggregateLesson.AllocationValue);
+        Assert.Null(aggregateLesson.ScopeId);
+        Assert.Equal(20m, defaultOnly.AllocationValue);
+        Assert.Equal(TeacherAgreementScopeType.Default, defaultOnly.ScopeType);
+    }
+
+    [Fact]
     public async Task ResolveAsync_prefers_lesson_over_package_then_snapshots_the_selected_terms()
     {
         await using var db = TestAppDbContextFactory.Create();

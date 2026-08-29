@@ -27,11 +27,28 @@ public sealed class SalesRedemptionService : ISalesRedemptionService
         if (printable.Status != SalesStatus.Active || printable.Batch.Status != SalesStatus.Active || printable.UsedCount >= printable.UsageLimit)
             return new SalesRedemptionResult(false, "الكود غير صالح أو تم استخدامه.", null, null);
 
+        var now = DateTime.UtcNow;
+        AvailableExamCodeTarget? publicExamTarget = null;
+        if (printable.Batch.TargetType == SalesTargetType.PublicExam)
+        {
+            if (printable.Batch.TargetId is not Guid publicExamProductId)
+                return new SalesRedemptionResult(false, ExamCodeAvailability.UnavailableMessage, null, null);
+
+            publicExamTarget = await ExamCodeAvailability.ResolveAsync(
+                _db,
+                examId: null,
+                publicExamProductId: publicExamProductId,
+                now: now,
+                cancellationToken: cancellationToken);
+            if (publicExamTarget == null)
+                return new SalesRedemptionResult(false, ExamCodeAvailability.UnavailableMessage, null, null);
+        }
+
         var grant = new StudentAccessGrant
         {
             UserId = studentId,
             GrantType = ToCodeType(printable.Batch.TargetType),
-            GrantedAt = DateTime.UtcNow,
+            GrantedAt = now,
             IsActive = true
         };
 
@@ -57,10 +74,7 @@ public sealed class SalesRedemptionService : ISalesRedemptionService
                 break;
             case SalesTargetType.PublicExam:
                 grant.PublicExamProductId = printable.Batch.TargetId;
-                if (printable.Batch.TargetId is Guid publicExamId)
-                {
-                    grant.ExamId = await _db.PublicExamProducts.Where(x => x.Id == publicExamId).Select(x => (Guid?)x.ExamId).FirstOrDefaultAsync(cancellationToken);
-                }
+                grant.ExamId = publicExamTarget!.ExamId;
                 break;
             default:
                 return new SalesRedemptionResult(false, "نوع الهدف غير مدعوم للفتح المباشر.", null, null);
@@ -69,7 +83,7 @@ public sealed class SalesRedemptionService : ISalesRedemptionService
         printable.UsedCount++;
         printable.Status = printable.UsedCount >= printable.UsageLimit ? SalesStatus.Consumed : SalesStatus.Active;
         printable.ConsumedByUserId = studentId;
-        printable.ConsumedAt ??= DateTime.UtcNow;
+        printable.ConsumedAt ??= now;
         printable.Batch.UsedCount++;
 
         _db.StudentAccessGrants.Add(grant);

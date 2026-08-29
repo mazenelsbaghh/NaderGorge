@@ -211,7 +211,7 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
     public async Task ProductionRegression_20260825_StoredWebm_IsNormalizedBeforeProviderUpload()
     {
         byte[] storedBytes = [0x1A, 0x45, 0xDF, 0xA3, 1, 2, 3];
-        byte[] normalizedBytes = [0x4F, 0x67, 0x67, 0x53, 4, 5, 6];
+        byte[] normalizedBytes = [0x49, 0x44, 0x33, 4, 5, 6];
         var handler = new RecordingMediaMetaHandler();
         var storage = new MemoryAttachmentStorage(storedBytes);
         var normalizer = new WhatsAppOutboundMediaNormalizer(
@@ -229,8 +229,8 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
         await harness.Worker.DispatchBatchAsync(CancellationToken.None);
 
         Assert.Equal(2, handler.Requests.Count);
-        Assert.Contains("Content-Type: audio/ogg", handler.Requests[0].Body);
-        Assert.Contains("legacy.ogg", handler.Requests[0].Body);
+        Assert.Contains("Content-Type: audio/mpeg", handler.Requests[0].Body);
+        Assert.Contains("legacy.mp3", handler.Requests[0].Body);
         Assert.DoesNotContain("audio/webm", handler.Requests[0].Body);
         Assert.DoesNotContain("\"voice\"", handler.Requests[1].Body);
         Assert.DoesNotContain("caption", handler.Requests[1].Body);
@@ -713,7 +713,7 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
 
     private sealed class RejectingAudioProcess : IWhatsAppAudioProcess
     {
-        public Task<byte[]> TranscodeToOggOpusMonoAsync(
+        public Task<byte[]> TranscodeToMp3MonoAsync(
             ReadOnlyMemory<byte> source,
             int maximumOutputBytes,
             CancellationToken cancellationToken) =>
@@ -722,7 +722,7 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
 
     private sealed class FixedAudioProcess(byte[] output) : IWhatsAppAudioProcess
     {
-        public Task<byte[]> TranscodeToOggOpusMonoAsync(
+        public Task<byte[]> TranscodeToMp3MonoAsync(
             ReadOnlyMemory<byte> source,
             int maximumOutputBytes,
             CancellationToken cancellationToken) =>

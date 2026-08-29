@@ -88,7 +88,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 if (previousLesson.ExamId.HasValue)
                 {
                     var prevExam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
-                    if (prevExam != null && prevExam.IsMandatory)
+                    if (prevExam != null && prevExam.IsActive && prevExam.IsMandatory)
                     {
                         var passedExam = await _db.StudentExamAttempts
                             .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);

@@ -98,7 +98,7 @@ public sealed class SalesTargetResolver : ISalesTargetResolver
 
             SalesTargetType.PublicExam => await _db.PublicExamProducts
                 .Where(x => x.Id == targetId.Value || x.ExamId == targetId.Value)
-                .Select(x => new SalesTargetContext(targetType, x.Id, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, null, x.IsPublished && x.DisabledAt == null, x.Exam.Title))
+                .Select(x => new SalesTargetContext(targetType, x.Id, x.Price, x.TeacherId, x.SubjectId, x.GradeLevel, null, x.Exam.IsActive && x.IsPublished && x.DisabledAt == null, x.Exam.Title))
                 .FirstOrDefaultAsync(cancellationToken),
 
             SalesTargetType.Teacher => await _db.TeacherProfiles

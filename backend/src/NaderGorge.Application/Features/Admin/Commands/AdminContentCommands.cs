@@ -1407,6 +1407,7 @@ public class SetExamActiveStatusCommandHandler : IRequestHandler<SetExamActiveSt
         if (request.CurrentUserId.HasValue && !await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct))
             return ApiResponse.Fail("Unauthorized access to this exam.");
         exam.IsActive = request.IsActive;
+        exam.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }

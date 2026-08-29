@@ -19,6 +19,7 @@ public class StudentSharedPackagesController : ControllerBase
     private readonly IAppDbContext _db;
     private readonly BalanceService _balanceService;
     private readonly TeacherAccountingService _teacherAccounting;
+    private readonly TeacherAgreementResolver _agreementResolver;
     private readonly IAcademicScopeService _academicScope;
     private readonly IContentArchiveAccessService _archiveAccess;
 
@@ -32,6 +33,7 @@ public class StudentSharedPackagesController : ControllerBase
         _db = db;
         _balanceService = balanceService;
         _teacherAccounting = teacherAccounting;
+        _agreementResolver = new TeacherAgreementResolver(db);
         _academicScope = academicScope;
         _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
@@ -357,6 +359,12 @@ public class StudentSharedPackagesController : ControllerBase
             }
         }
 
+        var selectedPublicExamProductIds = selectedItems
+            .Where(item => item.ContentType == SalesTargetType.PublicExam)
+            .Select(item => item.ContentId)
+            .Distinct()
+            .ToList();
+
         var selectedItemsTotal = selectedItems.Sum(item => item.Price);
         if (Math.Abs(selectedItemsTotal - package.Price) > 0.01m)
         {
@@ -366,7 +374,7 @@ public class StudentSharedPackagesController : ControllerBase
         var selectedTeachers = package.Teachers
             .Where(teacher => selectionResult.SelectedTeacherIds.Contains(teacher.TeacherId))
             .ToList();
-        var allocationPreview = BuildAllocationPreview(package, selectedItems, selectedTeachers);
+        var allocationPreview = await BuildAllocationPreviewAsync(package, selectedItems, selectedTeachers, ct);
         if (allocationPreview.RequiresLossAcknowledgement && dto?.ConfirmLoss != true)
         {
             return Conflict(new
@@ -382,6 +390,16 @@ public class StudentSharedPackagesController : ControllerBase
         // Keeping them in one transaction prevents the wallet from being charged if
         // a later save hits a concurrency or persistence error.
         await using var purchaseTransaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var publicExamIdsByProductId = selectedPublicExamProductIds.Count == 0
+            ? new Dictionary<Guid, Guid>()
+            : await PurchasablePublicExamProducts(DateTime.UtcNow)
+                .Where(product => selectedPublicExamProductIds.Contains(product.Id))
+                .ToDictionaryAsync(product => product.Id, product => product.ExamId, ct);
+        if (publicExamIdsByProductId.Count != selectedPublicExamProductIds.Count)
+        {
+            return BadRequest(new { success = false, message = "تحتوي الاختيارات على امتحان عام غير متاح حالياً" });
+        }
+
         try
         {
             await _balanceService.DeductBalance(studentId, package.Price, $"شراء باكدج مشترك: {package.Name}", package.Id, ct);
@@ -403,7 +421,10 @@ public class StudentSharedPackagesController : ControllerBase
                 continue;
             }
 
-            _db.StudentAccessGrants.Add(CreateGrant(studentId, contentItem));
+            var publicExamId = contentItem.ContentType == SalesTargetType.PublicExam
+                ? publicExamIdsByProductId[contentItem.ContentId]
+                : (Guid?)null;
+            _db.StudentAccessGrants.Add(CreateGrant(studentId, contentItem, publicExamId));
             newlyGrantedItemsCount++;
         }
 
@@ -418,7 +439,12 @@ public class StudentSharedPackagesController : ControllerBase
                 index == 0 ? allocationPreview.PlatformShareAmount : 0m,
                 student?.FullName,
                 student?.PhoneNumber,
-                package.Name))
+                package.Name,
+                AgreementId: allocation.AgreementId,
+                AgreementScopeType: allocation.AgreementScopeType,
+                AgreementScopeId: allocation.AgreementScopeId,
+                AgreementAllocationMode: allocation.AgreementAllocationMode,
+                PriceBasis: allocation.PriceBasis))
             .ToList();
 
         if (allocationPreview.RequiresLossAcknowledgement)
@@ -533,21 +559,70 @@ public class StudentSharedPackagesController : ControllerBase
         return (selectedBySubject, selectedBySubject.Values.ToHashSet(), null);
     }
 
-    private static SharedPackageAllocationPreview BuildAllocationPreview(
+    private async Task<SharedPackageAllocationPreview> BuildAllocationPreviewAsync(
         SharedTeacherPackage package,
         IReadOnlyCollection<SharedTeacherPackageItem> selectedItems,
-        IReadOnlyCollection<SharedTeacherPackageTeacher> selectedTeachers) =>
-        SharedPackageAllocationPreviewService.Calculate(package.Price, selectedTeachers.Select(teacher =>
-            new SharedPackageAllocationCandidate(
-                teacher.TeacherId,
-                teacher.Teacher.User.FullName,
-                teacher.SubjectId,
-                selectedItems.Where(item => item.TeacherId == teacher.TeacherId && item.SubjectId == teacher.SubjectId)
-                    .Sum(item => item.Price),
-                teacher.AllocationMode,
-                teacher.AllocationValue)));
+        IReadOnlyCollection<SharedTeacherPackageTeacher> selectedTeachers,
+        CancellationToken ct)
+    {
+        var context = new SharedPackageAgreementContext(package.Id, selectedItems, DateTime.UtcNow);
+        var candidates = new List<SharedPackageAllocationCandidate>(selectedTeachers.Count);
+        foreach (var teacher in selectedTeachers)
+        {
+            candidates.Add(await BuildAllocationCandidateAsync(teacher, context, ct));
+        }
 
-    private static StudentAccessGrant CreateGrant(Guid studentId, SharedTeacherPackageItem item)
+        return SharedPackageAllocationPreviewService.Calculate(package.Price, candidates);
+    }
+
+    private async Task<SharedPackageAllocationCandidate> BuildAllocationCandidateAsync(
+        SharedTeacherPackageTeacher teacher,
+        SharedPackageAgreementContext context,
+        CancellationToken ct)
+    {
+        var basisAmount = context.SelectedItems
+            .Where(item => item.TeacherId == teacher.TeacherId && item.SubjectId == teacher.SubjectId)
+            .Sum(item => item.Price);
+        var agreement = await _agreementResolver.ResolveAsync(
+            teacher.TeacherId,
+            TeacherAgreementTrigger.ContentSale,
+            [(TeacherAgreementScopeType.SharedPackage, context.PackageId)],
+            context.OccurredAt,
+            ct);
+        return agreement.AgreementId.HasValue
+            ? AgreementAllocationCandidate(teacher, basisAmount, agreement)
+            : ConfiguredAllocationCandidate(teacher, basisAmount);
+    }
+
+    private static SharedPackageAllocationCandidate AgreementAllocationCandidate(
+        SharedTeacherPackageTeacher teacher,
+        decimal basisAmount,
+        TeacherAgreementResolution agreement)
+    {
+        var (allocationMode, _, resolvedBasis) = TeacherAgreementResolver.CalculateAllocation(
+            agreement, basisAmount, basisAmount);
+        return new SharedPackageAllocationCandidate(
+            teacher.TeacherId, teacher.Teacher.User.FullName, teacher.SubjectId,
+            resolvedBasis, allocationMode, agreement.AllocationValue,
+            agreement.AgreementId, agreement.ScopeType, agreement.ScopeId,
+            agreement.AllocationMode, agreement.PriceBasis);
+    }
+
+    private static SharedPackageAllocationCandidate ConfiguredAllocationCandidate(
+        SharedTeacherPackageTeacher teacher,
+        decimal basisAmount) => new(
+            teacher.TeacherId, teacher.Teacher.User.FullName, teacher.SubjectId,
+            basisAmount, teacher.AllocationMode, teacher.AllocationValue);
+
+    private sealed record SharedPackageAgreementContext(
+        Guid PackageId,
+        IReadOnlyCollection<SharedTeacherPackageItem> SelectedItems,
+        DateTime OccurredAt);
+
+    private static StudentAccessGrant CreateGrant(
+        Guid studentId,
+        SharedTeacherPackageItem item,
+        Guid? publicExamId)
     {
         var grant = new StudentAccessGrant
         {
@@ -582,6 +657,7 @@ public class StudentSharedPackagesController : ControllerBase
                 break;
             case SalesTargetType.PublicExam:
                 grant.PublicExamProductId = item.ContentId;
+                grant.ExamId = publicExamId ?? throw new InvalidOperationException("The public exam product must resolve to an active exam before granting access.");
                 break;
         }
 
@@ -710,11 +786,16 @@ public class StudentSharedPackagesController : ControllerBase
         };
         if (item.ContentType == SalesTargetType.PublicExam)
         {
-            var examId = await _db.PublicExamProducts
+            var examId = await PurchasablePublicExamProducts(DateTime.UtcNow)
                 .Where(product => product.Id == item.ContentId)
                 .Select(product => (Guid?)product.ExamId)
                 .FirstOrDefaultAsync(ct);
-            archiveTarget = examId.HasValue ? (ContentArchiveTargetType.Exam, examId.Value) : null;
+            if (!examId.HasValue)
+            {
+                return false;
+            }
+
+            archiveTarget = (ContentArchiveTargetType.Exam, examId.Value);
         }
         if (archiveTarget.HasValue && !await _archiveAccess.CanAcquireAsync(archiveTarget.Value.TargetType, archiveTarget.Value.TargetId, ct))
         {
@@ -743,6 +824,14 @@ public class StudentSharedPackagesController : ControllerBase
         return targetOwnerType == null ||
             await _academicScope.IsOwnerEligibleForStudentAsync(targetOwnerType.Value, item.ContentId, studentId, ct);
     }
+
+    private IQueryable<PublicExamProduct> PurchasablePublicExamProducts(DateTime now) =>
+        _db.PublicExamProducts.Where(product =>
+            product.Exam.IsActive
+            && product.IsPublished
+            && product.DisabledAt == null
+            && (!product.AvailableFrom.HasValue || product.AvailableFrom.Value <= now)
+            && (!product.AvailableUntil.HasValue || product.AvailableUntil.Value > now));
 }
 
 public record PurchaseSharedPackageDto(List<SharedPackageTeacherSelectionDto> Selections, bool ConfirmLoss = false);

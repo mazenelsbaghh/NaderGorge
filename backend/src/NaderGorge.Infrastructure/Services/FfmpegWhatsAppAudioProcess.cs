@@ -6,10 +6,13 @@ namespace NaderGorge.Infrastructure.Services;
 
 public sealed class FfmpegWhatsAppAudioProcess : IWhatsAppAudioProcess
 {
-    private const string FfmpegPath = "/usr/bin/ffmpeg";
     private static readonly TimeSpan TranscodeTimeout = TimeSpan.FromSeconds(45);
+    private readonly string _ffmpegPath;
 
-    public async Task<byte[]> TranscodeToOggOpusMonoAsync(
+    public FfmpegWhatsAppAudioProcess(string ffmpegPath) =>
+        _ffmpegPath = ffmpegPath;
+
+    public async Task<byte[]> TranscodeToMp3MonoAsync(
         ReadOnlyMemory<byte> source,
         int maximumOutputBytes,
         CancellationToken cancellationToken)
@@ -92,11 +95,11 @@ public sealed class FfmpegWhatsAppAudioProcess : IWhatsAppAudioProcess
         return output.Content;
     }
 
-    private static ProcessStartInfo CreateStartInfo()
+    private ProcessStartInfo CreateStartInfo()
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = FfmpegPath,
+            FileName = _ffmpegPath,
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
@@ -106,8 +109,8 @@ public sealed class FfmpegWhatsAppAudioProcess : IWhatsAppAudioProcess
         foreach (var argument in new[]
                  {
                      "-hide_banner", "-loglevel", "error", "-nostdin",
-                     "-i", "pipe:0", "-vn", "-ac", "1", "-c:a", "libopus",
-                     "-ar", "48000", "-b:a", "48k", "-f", "ogg", "pipe:1"
+                     "-i", "pipe:0", "-vn", "-ac", "1", "-c:a", "libmp3lame",
+                     "-ar", "48000", "-b:a", "64k", "-f", "mp3", "pipe:1"
                  })
         {
             startInfo.ArgumentList.Add(argument);

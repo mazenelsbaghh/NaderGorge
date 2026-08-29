@@ -3,7 +3,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
-import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Power } from 'lucide-react';
+import {
+  BarChart3,
+  BookCheck,
+  Eye,
+  EyeOff,
+  FileQuestion,
+  GraduationCap,
+  LayoutList,
+  Plus,
+  Power,
+  Timer,
+} from 'lucide-react';
 import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
@@ -18,6 +29,7 @@ export function AttachedExamViewer({
   const router = useRouter();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const examBasePath = surface === 'teacher' ? '/teacher/packages/exams' : '/admin/content/exams';
 
   const loadData = useCallback(async () => {
@@ -32,13 +44,22 @@ export function AttachedExamViewer({
   }, [examId]);
 
   const toggleStatus = async () => {
-    if (!data) return;
+    if (!data || statusUpdating) return;
+    const nextIsActive = !data.isActive;
+
     try {
-      await adminService.setExamStatus(examId, !data.isActive);
-      setData({ ...data, isActive: !data.isActive });
-      toast.success(data.isActive ? 'تم تعطيل الامتحان، وسيظل محفوظاً.' : 'تم تفعيل الامتحان.');
+      setStatusUpdating(true);
+      await adminService.setExamStatus(examId, nextIsActive);
+      setData((current) => current ? { ...current, isActive: nextIsActive } : current);
+      toast.success(
+        nextIsActive
+          ? 'تم تفعيل الامتحان.'
+          : 'تم إيقاف الامتحان وإخفاؤه عن الطلاب.',
+      );
     } catch {
       toast.error('تعذر تحديث حالة الامتحان.');
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -72,19 +93,51 @@ export function AttachedExamViewer({
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
-          <div>
-            <h3 className="mb-2 text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
-              <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
-              {data.title}
-            </h3>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
+                <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
+                {data.title}
+              </h3>
+              <span
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${
+                  data.isActive
+                    ? 'border-[var(--admin-success-20)] bg-[var(--admin-success-10)] text-[var(--admin-success)]'
+                    : 'border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] text-[var(--admin-danger)]'
+                }`}
+              >
+                {data.isActive ? (
+                  <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {data.isActive ? 'الامتحان مفعّل' : 'متوقف ومخفي عن الطلاب'}
+              </span>
+            </div>
             {data.description && (
-              <p className="text-[var(--admin-muted)] text-sm">{data.description}</p>
+              <p className="mt-2 text-[var(--admin-muted)] text-sm">{data.description}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <ContentArchiveControl targetType="Exam" targetId={examId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
-            <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
-              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الامتحان' : 'تفعيل الامتحان'}
+            <ContentArchiveControl
+              targetType="Exam"
+              targetId={examId}
+              title={data.title}
+              archiveMode={data.archiveMode}
+              onChanged={loadData}
+            />
+            <NeumorphButton
+              type="button"
+              onClick={toggleStatus}
+              loading={statusUpdating}
+              intent={data.isActive ? 'danger' : 'primary'}
+              size="md"
+              pill
+            >
+              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'إيقاف وإخفاء الامتحان' : 'تفعيل الامتحان'}
             </NeumorphButton>
             <NeumorphButton
               type="button"

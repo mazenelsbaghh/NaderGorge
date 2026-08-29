@@ -61,8 +61,9 @@ public sealed class CodeGroupFinancialAccountingService
                 return new(selected.Id, selected.ScopeType, selected.ScopeId, selected.AllocationMode, selected.AllocationValue, selected.PriceBasis);
         }
 
+        var contentScopes = await _agreements.BuildScopesAsync(targetType, targetId, ct);
         return await _agreements.ResolveAsync(group.TeacherId!.Value, TeacherAgreementTrigger.CodeDelivery,
-            await _agreements.BuildScopesAsync(targetType, targetId, ct), occurredAt, ct);
+            [(TeacherAgreementScopeType.CodeGroup, group.Id), .. contentScopes], occurredAt, ct);
     }
 
     private async Task<(decimal Price, SalesTargetType TargetType, Guid TargetId, string Name)> ResolvePricingAsync(CodeGroup group, CancellationToken ct)

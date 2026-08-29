@@ -61,7 +61,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 if (previousLesson.ExamId.HasValue)
                 {
                     var exam = await _dbContext.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, cancellationToken);
-                    if (exam != null && exam.IsMandatory)
+                    if (exam != null && exam.IsActive && exam.IsMandatory)
                     {
                         var passedExam = await _dbContext.StudentExamAttempts
                             .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, cancellationToken);
@@ -97,7 +97,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             if (lesson.ExamId.HasValue)
             {
                 var currentExam = await _dbContext.Exams.FindAsync(new object[] { lesson.ExamId.Value }, cancellationToken);
-                if (currentExam != null && currentExam.IsMandatory)
+                if (currentExam != null && currentExam.IsActive && currentExam.IsMandatory)
                 {
                     var passedCurrentExam = await _dbContext.StudentExamAttempts
                         .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value && a.IsPassed, cancellationToken);
