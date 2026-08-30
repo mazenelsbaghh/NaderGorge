@@ -35,6 +35,7 @@ public sealed class LiveSupportService(
     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? aiVerificationService = null,
     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
+    private const int MaxCannedReplies = 300;
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
     private readonly AppDbContext? _relationalDb = db as AppDbContext;
@@ -686,8 +687,8 @@ public sealed class LiveSupportService(
 
     public async Task UpdateCannedRepliesAsync(IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct)
     {
-        if (replies.Count > 30 || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000))
-            throw new LiveSupportException("VALIDATION_ERROR", "الردود الثابتة غير صالحة. الحد الأقصى 30 ردًا، و4000 حرف للنص.");
+        if (replies.Count > MaxCannedReplies || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000))
+            throw new LiveSupportException("VALIDATION_ERROR", $"الردود الثابتة غير صالحة. الحد الأقصى {MaxCannedReplies} ردًا، و4000 حرف للنص.");
         var safe = replies.Select(x => new LiveSupportCannedReplyDto(x.Id.Trim(), x.Title.Trim(), x.Content.Trim(), x.SendImmediately)).ToList();
         var setting = await _db.PlatformSettings.FirstOrDefaultAsync(x => x.Key == PlatformSettingKeys.LiveSupportCannedReplies, ct);
         var json = System.Text.Json.JsonSerializer.Serialize(safe);
@@ -700,7 +701,7 @@ public sealed class LiveSupportService(
 
     public async Task UpdateStaffCannedRepliesAsync(Guid staffUserId, IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct)
     {
-        if (replies.Count > 30 || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000)) throw new LiveSupportException("VALIDATION_ERROR", "الردود الثابتة غير صالحة.");
+        if (replies.Count > MaxCannedReplies || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000)) throw new LiveSupportException("VALIDATION_ERROR", $"الردود الثابتة غير صالحة. الحد الأقصى {MaxCannedReplies} ردًا، و4000 حرف للنص.");
         var key = $"LiveSupportCannedReplies:{staffUserId:N}";
         var json = System.Text.Json.JsonSerializer.Serialize(replies.Select(x => new LiveSupportCannedReplyDto(x.Id.Trim(), x.Title.Trim(), x.Content.Trim(), x.SendImmediately)));
         var setting = await _db.PlatformSettings.FirstOrDefaultAsync(x => x.Key == key, ct);

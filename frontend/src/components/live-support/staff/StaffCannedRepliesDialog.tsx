@@ -14,6 +14,8 @@ interface StaffCannedRepliesDialogProps {
   onSave: () => void;
 }
 
+const MAX_CANNED_REPLIES = 300;
+
 const createReply = (): LiveSupportCannedReply => ({
   id: createClientId(),
   title: '',
@@ -56,11 +58,11 @@ export function StaffCannedRepliesDialog({ open, replies, saving, error, onClose
               </div>
             </div>
           ))}
-          <button type="button" disabled={replies.length >= 30 || saving} onClick={() => onChange([...replies, createReply()])} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] disabled:opacity-50"><Plus size={17}/>إضافة رد</button>
+          <button type="button" disabled={replies.length >= MAX_CANNED_REPLIES || saving} onClick={() => onChange([...replies, createReply()])} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] disabled:opacity-50"><Plus size={17}/>إضافة رد</button>
         </div>
 
         <footer className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
-          <p className="text-xs text-[var(--admin-muted)]">الحد الأقصى 30 ردًا لكل حساب.</p>
+          <p className="text-xs text-[var(--admin-muted)]">الحد الأقصى {MAX_CANNED_REPLIES} ردًا لكل حساب.</p>
           <div className="flex gap-2"><button type="button" onClick={onClose} disabled={saving} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] disabled:opacity-50">إلغاء</button><button type="button" onClick={onSave} disabled={saving} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-bold text-[var(--admin-primary-contrast)] disabled:opacity-50"><Save size={17}/>{saving ? 'جارٍ الحفظ…' : 'حفظ ردودي'}</button></div>
         </footer>
       </section>
