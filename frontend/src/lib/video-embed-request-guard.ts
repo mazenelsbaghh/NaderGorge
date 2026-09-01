@@ -11,7 +11,9 @@ export function validateVideoEmbedNavigation(
   const referer = headers.get('referer');
 
   if (destination !== 'iframe' || !referer || !fetchSite) return 'missing-context';
-  if (fetchSite !== 'same-origin') return 'unauthorized-origin';
+  if (fetchSite !== 'same-origin' && fetchSite !== 'same-site') {
+    return 'unauthorized-origin';
+  }
 
   try {
     return new URL(referer).origin === new URL(requestUrl).origin

@@ -27,6 +27,34 @@ test('video embed accepts a same-origin iframe navigation', () => {
   assert.equal(result, null);
 });
 
+test('2026-09-02 Safari same-site metadata accepts the exact application origin', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'https://app.massar-academy.net/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://app.massar-academy.net/student/packages/1/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+      }),
+    ),
+    null,
+  );
+});
+
+test('same-site metadata cannot authorize a sibling Massar surface', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'https://app.massar-academy.net/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://admin.massar-academy.net/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+      }),
+    ),
+    'unauthorized-origin',
+  );
+});
+
 test('video embed rejects a copied top-level URL even with a same-origin referrer', () => {
   assert.equal(
     validateVideoEmbedNavigation(
