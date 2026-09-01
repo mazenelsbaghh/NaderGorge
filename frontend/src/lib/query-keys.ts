@@ -5,6 +5,7 @@ export const queryKeys = {
     shell: (userBoundary: string) => ['student', 'shell', userBoundary] as const,
     dashboard: (userBoundary: string) => ['student', 'dashboard', userBoundary] as const,
     quickAccess: (userBoundary: string) => ['student', 'quick-access', userBoundary] as const,
+    lessons: (userBoundary: string) => ['student', 'lessons', userBoundary] as const,
     packages: (userBoundary: string, filters: Record<string, unknown> = {}) =>
       ['student', 'packages', userBoundary, normalizeQueryParameters(filters)] as const,
     teachers: (userBoundary: string, filters: Record<string, unknown> = {}) =>

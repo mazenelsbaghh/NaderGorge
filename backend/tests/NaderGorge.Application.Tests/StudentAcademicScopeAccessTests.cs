@@ -475,6 +475,71 @@ public class StudentAcademicScopeAccessTests
         Assert.True(await db.StudentAccessGrants.AnyAsync(g => g.UserId == student.Id && g.PackageId == package.Id && g.IsActive));
     }
 
+    [Fact]
+    public async Task GetMyLessons_MergesEveryActiveLessonGrantLevelWithoutDuplicates()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, EducationStage.Secondary, GradeLevel.FirstSecondary);
+        var teacher = await SeedTeacherAsync(db);
+        var subject = await SeedSubjectAsync(db, "My lessons subject");
+        var packageGrantPackage = SeedPackage(db, teacher, subject, "Annual package");
+        var termGrantPackage = SeedPackage(db, teacher, subject, "Term package");
+        var monthGrantPackage = SeedPackage(db, teacher, subject, "Month package");
+        var lessonGrantPackage = SeedPackage(db, teacher, subject, "Lesson package");
+        var packageLesson = SeedLessonHierarchy(db, packageGrantPackage);
+        var termLesson = SeedLessonHierarchy(db, termGrantPackage);
+        var monthLesson = SeedLessonHierarchy(db, monthGrantPackage);
+        var directLesson = SeedLessonHierarchy(db, lessonGrantPackage);
+        db.StudentFacingAcademicScopes.AddRange(
+            MatchingScope(StudentFacingScopeOwnerType.Package, packageGrantPackage.Id),
+            MatchingScope(StudentFacingScopeOwnerType.Package, termGrantPackage.Id),
+            MatchingScope(StudentFacingScopeOwnerType.Package, monthGrantPackage.Id),
+            MatchingScope(StudentFacingScopeOwnerType.Package, lessonGrantPackage.Id));
+        await db.SaveChangesAsync();
+
+        db.StudentAccessGrants.AddRange(
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Package, PackageId = packageGrantPackage.Id, IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Lesson, LessonId = packageLesson.Id, IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Term, TermId = termLesson.ContentSection.TermId, IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Month, ContentSectionId = monthLesson.ContentSectionId, IsActive = true },
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Lesson, LessonId = directLesson.Id, IsActive = true });
+        await db.SaveChangesAsync();
+
+        var academicScope = new AcademicScopeService(db);
+        var handler = new GetMyLessonsQueryHandler(db, academicScope);
+        var result = await handler.Handle(new GetMyLessonsQuery(student.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            new[] { packageLesson.Id, termLesson.Id, monthLesson.Id, directLesson.Id }.Order(),
+            result.Data!.Select(lesson => lesson.Id).Order());
+    }
+
+    [Fact]
+    public async Task GetMyLessons_ExcludesExpiredAndAcademicallyIneligibleLessons()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, EducationStage.Secondary, GradeLevel.FirstSecondary);
+        var teacher = await SeedTeacherAsync(db);
+        var subject = await SeedSubjectAsync(db, "Filtered lessons subject");
+        var expiredPackage = SeedPackage(db, teacher, subject, "Expired package");
+        var scopedPackage = SeedPackage(db, teacher, subject, "Wrong grade package");
+        _ = SeedLessonHierarchy(db, expiredPackage);
+        var scopedLesson = SeedLessonHierarchy(db, scopedPackage);
+        db.StudentFacingAcademicScopes.Add(NonMatchingScope(StudentFacingScopeOwnerType.Lesson, scopedLesson.Id));
+        db.StudentAccessGrants.AddRange(
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Package, PackageId = expiredPackage.Id, IsActive = true, ExpiresAt = DateTime.UtcNow.AddMinutes(-1) },
+            new StudentAccessGrant { UserId = student.Id, GrantType = CodeType.Package, PackageId = scopedPackage.Id, IsActive = true });
+        await db.SaveChangesAsync();
+
+        var academicScope = new AcademicScopeService(db);
+        var handler = new GetMyLessonsQueryHandler(db, academicScope);
+        var result = await handler.Handle(new GetMyLessonsQuery(student.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Data!);
+    }
+
     private static async Task<User> SeedStudentAsync(
         NaderGorge.Infrastructure.Data.AppDbContext db,
         EducationStage stage,

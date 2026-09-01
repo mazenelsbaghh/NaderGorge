@@ -74,6 +74,20 @@ export interface ProgressDto {
   examsFailed: number;
 }
 
+export interface MyLessonDto {
+  id: string;
+  title: string;
+  order: number;
+  packageId: string;
+  packageName: string;
+  termTitle: string;
+  sectionTitle: string;
+  teacherName: string;
+  imageUrl?: string | null;
+  isCompleted: boolean;
+  videoCount: number;
+}
+
 export interface QuickAccessItemDto {
   title: string;
   pathBreadcrumb: string;
@@ -326,6 +340,11 @@ export const studentService = {
   getProgress: async (): Promise<ProgressDto> => {
     const res = await apiClient.get('/student/progress');
     return res.data?.data;
+  },
+
+  getMyLessons: async (signal?: AbortSignal): Promise<MyLessonDto[]> => {
+    const res = await apiClient.get('/student/lessons', { signal });
+    return res.data?.data || [];
   },
 
   getMistakes: async (): Promise<StudentMistakesDto> => {

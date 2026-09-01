@@ -49,6 +49,13 @@ public class StudentController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("lessons")]
+    public async Task<IActionResult> GetMyLessons()
+    {
+        var result = await _mediator.Send(new GetMyLessonsQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("dashboard/quick-access")]
     public async Task<IActionResult> GetQuickAccess()
     {

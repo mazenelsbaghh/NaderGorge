@@ -21,6 +21,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell,
   Bug,
+  BookOpen,
   BookMarked,
   ChartNoAxesColumn,
   ChevronLeft,
@@ -61,6 +62,7 @@ import { StudentBottomNav } from '@/components/layout/StudentBottomNav';
 
 type StudentShellRoute =
   | '/student'
+  | '/student/lessons'
   | '/student/packages'
   | '/student/shared-packages'
   | '/student/public-exams'
@@ -97,9 +99,9 @@ const primaryNavItems: Array<{
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
+    { href: '/student/lessons', label: 'دروسي', icon: BookOpen },
     { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
     { href: '/student/public-exams', label: 'امتحانات', icon: ClipboardList },
-    { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
   ];
 
 /** Secondary: visible only inside the drawer on mobile */
@@ -108,6 +110,7 @@ const secondaryNavItems: Array<{
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
+    { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
     { href: '/student/shared-packages', label: 'باكدجات عامة', icon: BookMarked },
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
     { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
@@ -183,7 +186,9 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   /* Which top-level route is active? */
   const activePath: StudentShellRoute =
-    pathname.startsWith('/student/packages')
+    pathname === '/student/lessons'
+      ? '/student/lessons'
+      : pathname.startsWith('/student/packages')
       ? '/student/packages'
       : pathname.startsWith('/student/shared-packages')
         ? '/student/shared-packages'

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronDown } from 'lucide-react';
 
 import {
   StudentDestinationsPanel,
@@ -184,6 +184,21 @@ export default function StudentDashboardClient() {
       )}
 
       <StudentHero data={d} />
+
+      <button
+        type="button"
+        onClick={() => router.push('/student/lessons')}
+        className="flex min-h-16 w-full items-center gap-4 rounded-2xl bg-[var(--admin-primary)] px-5 py-4 text-right text-[var(--admin-primary-contrast)] shadow-sm transition hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <BookOpen className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-black">افتح دروسك مباشرة</span>
+          <span className="mt-0.5 block text-xs font-bold opacity-85">كل الحصص المتاحة من جميع اشتراكاتك</span>
+        </span>
+        <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
+      </button>
 
       <StudentMomentumRail data={d} />
 
