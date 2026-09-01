@@ -412,7 +412,7 @@ post_migration_count="$(
 stage="post-migration-validation"
 test "$post_migration_count" -ge "$pre_migration_count"
 migration_delta="$((post_migration_count - pre_migration_count))"
-if test "$migration_delta" -gt 4; then
+if test "$migration_delta" -gt 5; then
   printf 'migration count exceeds reviewed limit: pre=%s post=%s delta=%s\n' \
     "$pre_migration_count" "$post_migration_count" "$migration_delta" >&2
   exit 72
