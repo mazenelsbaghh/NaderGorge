@@ -315,13 +315,10 @@ migration_hash() {{
     sha256sum | awk '{{print $1}}'
 }}
 schema_hash() {{
-  sudo docker run --pull=never --rm --network host \
-    -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
-    postgres:16-alpine sh -ec \
-    'set -o pipefail; export PGPASSWORD="$(cat /run/secrets/pgsuper)";
-     pg_dump -h 127.0.0.1 -p 6544 -U postgres -d massar_platform \
-       --schema-only --no-owner --no-privileges --quote-all-identifiers |
-       sed -E "/^-- (Dumped from|Dumped by|Started on|Completed on)/d; /^.(un)?restrict[[:space:]]/d"' |
+  runuser -u postgres -- pg_dump -h "$restore_root" -p "$restore_port" \
+    -d massar_platform --schema-only --no-owner --no-privileges \
+    --quote-all-identifiers |
+    sed -E "/^-- (Dumped from|Dumped by|Started on|Completed on)/d; /^.(un)?restrict[[:space:]]/d" |
     sha256sum | awk '{{print $1}}'
 }}
 table_counts_hash() {{
@@ -623,18 +620,18 @@ def prepare(
     )
     if completed.returncode != 0:
         detail = completed.stderr.strip().splitlines()
-        preferred = [
+        diagnostic = [
             line for line in detail
             if re.search(
                 r"(connection refused|failed to connect|permission denied|"
-                r"no frameworks were found|unhandled exception|"
-                r"MASSAR_GATE_FAILURE|\b(?:fatal|blocked)\b)",
+                r"no frameworks were found|unhandled exception|pg_dump:|"
+                r"\b(?:fatal|blocked)\b)",
                 line,
                 flags=re.IGNORECASE,
             )
         ]
         safe_detail = (
-            preferred[-1] if preferred else
+            diagnostic[-1] if diagnostic else
             detail[-1] if detail else
             "remote evidence production failed"
         )
