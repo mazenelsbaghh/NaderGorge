@@ -143,17 +143,18 @@ internal static class BunnyUploadReplacementTargetResolver
         BunnyUploadReplacementTarget replacementTarget,
         CancellationToken cancellationToken)
     {
-        if (!replacementTarget.IsReplacement)
+        if (!replacementTarget.IsReplacement || !replacementTarget.ExpectedSourceRevision.HasValue)
         {
-            return Task.FromResult(true);
+            return Task.FromResult(!replacementTarget.IsReplacement);
         }
+
+        var expectedSourceRevision = replacementTarget.ExpectedSourceRevision.Value;
 
         return db.LessonVideos
             .AsNoTracking()
             .AnyAsync(
                 video => video.Id == replacementTarget.LessonVideo!.Id
-                    && replacementTarget.ExpectedSourceRevision.HasValue
-                    && video.SourceRevision == replacementTarget.ExpectedSourceRevision.Value,
+                    && video.SourceRevision == expectedSourceRevision,
                 cancellationToken);
     }
 }

@@ -610,6 +610,7 @@ public sealed class BunnyStreamLibrariesTests
         Assert.Equal(0, pending.TargetMaxWatchCount);
         Assert.Equal(replacementType.Id, pending.TargetVideoTypeId);
         Assert.True(pending.TargetIsActive);
+        Assert.Equal(beforeReady.SourceRevision, pending.TargetSourceRevision);
 
         client.SetVideoStatus(created.Data.BunnyVideoGuid, 4);
         var refreshed = await new RefreshBunnyVideoStatusCommandHandler(
@@ -763,6 +764,144 @@ public sealed class BunnyStreamLibrariesTests
         Assert.False(afterReady.IsActive);
         Assert.Equal(BunnyVideoAssetSourceState.Current, currentAsset.SourceState);
         Assert.Equal("Ready", currentAsset.Status);
+    }
+
+    [Fact]
+    public async Task TusReplacement_ReadyCandidateDoesNotOverwriteNewerExternalSourceEdit()
+    {
+        // Regression: an external source edit can begin while no candidate exists,
+        // then commit after the delayed Bunny candidate was persisted. The ready
+        // candidate must be retired as superseded rather than take the source back.
+        var connectionString = $"Data Source=bunny-source-revision-race-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        await using var keeper = new SqliteConnection(connectionString);
+        await keeper.OpenAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+
+        Guid adminId;
+        Guid lessonId;
+        Guid videoTypeId;
+        Guid libraryId;
+        Guid lessonVideoId;
+        string internalCode;
+        long libraryExternalId;
+        await using (var setup = new AppDbContext(options))
+        {
+            await setup.Database.EnsureCreatedAsync();
+            var (admin, lesson, videoType) = await SeedUploadGraphAsync(setup);
+            var library = CreateLibrary("مكتبة سباق المصدر", 749997);
+            var video = new LessonVideo
+            {
+                Title = "YouTube original",
+                Provider = VideoProviders.YouTube,
+                ProviderVideoId = "youtube-original-id",
+                LessonId = lesson.Id,
+                VideoTypeId = videoType.Id,
+                Order = 4,
+                MaxWatchCount = 6,
+                IsActive = true
+            };
+            setup.AddRange(library, video);
+            await setup.SaveChangesAsync();
+
+            adminId = admin.Id;
+            lessonId = lesson.Id;
+            videoTypeId = videoType.Id;
+            libraryId = library.Id;
+            lessonVideoId = video.Id;
+            internalCode = video.InternalCode;
+            libraryExternalId = library.ExternalLibraryId;
+        }
+
+        await using var sourceEditor = new AppDbContext(options);
+        var staleEditorVideo = await sourceEditor.LessonVideos
+            .Include(item => item.BunnyVideoAssets)
+            .SingleAsync(item => item.Id == lessonVideoId);
+        Assert.Empty(staleEditorVideo.BunnyVideoAssets);
+
+        var libraries = new FakeLibraryAccessService(
+            new BunnyStreamLibraryAccess(libraryId, "مكتبة سباق المصدر", libraryExternalId, "api-key", true));
+        var client = new FakeBunnyStreamClient(libraryExternalId);
+        BunnyTusUploadSessionDto session;
+        await using (var candidateCreator = new AppDbContext(options))
+        {
+            var created = await new CreateBunnyTusUploadCommandHandler(
+                    candidateCreator,
+                    libraries,
+                    new FakeBunnyStreamClientFactory(client),
+                    new ConfigurationBuilder().AddInMemoryCollection().Build(),
+                    NullLogger<CreateBunnyTusUploadCommandHandler>.Instance)
+                .Handle(
+                    new CreateBunnyTusUploadCommand(
+                        null,
+                        null,
+                        lessonId,
+                        "Delayed Bunny replacement",
+                        8,
+                        0,
+                        videoTypeId,
+                        libraryId,
+                        true,
+                        "replacement.mp4",
+                        2048,
+                        adminId,
+                        lessonVideoId),
+                    CancellationToken.None);
+
+            Assert.True(created.Success, created.Message);
+            session = created.Data!;
+            var pending = await candidateCreator.BunnyVideoAssets.AsNoTracking()
+                .SingleAsync(item => item.Id == session.BunnyVideoAssetId);
+            Assert.Equal(0, pending.TargetSourceRevision);
+        }
+
+        // This context represents UpdateVideo having read no pending candidate before
+        // the upload setup committed. It may therefore save its already-planned
+        // source change after the candidate becomes pending.
+        staleEditorVideo.Title = "VK edit won the race";
+        staleEditorVideo.Provider = VideoProviders.Vk;
+        staleEditorVideo.ProviderVideoId = "vk-new-id";
+        staleEditorVideo.BunnyStreamLibraryId = null;
+        checked
+        {
+            staleEditorVideo.SourceRevision++;
+        }
+        await sourceEditor.SaveChangesAsync();
+
+        client.SetVideoStatus(session.BunnyVideoGuid, 4);
+        await using (var refresher = new AppDbContext(options))
+        {
+            var refreshed = await new RefreshBunnyVideoStatusCommandHandler(
+                    refresher,
+                    libraries,
+                    new FakeBunnyStreamClientFactory(client))
+                .Handle(new RefreshBunnyVideoStatusCommand(session.BunnyVideoAssetId, adminId), CancellationToken.None);
+
+            Assert.True(refreshed.Success, refreshed.Message);
+            Assert.Equal("Failed", refreshed.Data!.Status);
+        }
+
+        await using var verifier = new AppDbContext(options);
+        var videoAfterRace = await verifier.LessonVideos.AsNoTracking()
+            .SingleAsync(item => item.Id == lessonVideoId);
+        var candidateAfterRace = await verifier.BunnyVideoAssets.AsNoTracking()
+            .SingleAsync(item => item.Id == session.BunnyVideoAssetId);
+
+        Assert.Equal(lessonVideoId, videoAfterRace.Id);
+        Assert.Equal(internalCode, videoAfterRace.InternalCode);
+        Assert.Equal(VideoProviders.Vk, videoAfterRace.Provider);
+        Assert.Equal("vk-new-id", videoAfterRace.ProviderVideoId);
+        Assert.Equal("VK edit won the race", videoAfterRace.Title);
+        Assert.Equal(1, videoAfterRace.SourceRevision);
+        Assert.Null(videoAfterRace.BunnyStreamLibraryId);
+        Assert.Equal(BunnyVideoAssetSourceState.Retired, candidateAfterRace.SourceState);
+        Assert.Equal("Failed", candidateAfterRace.Status);
+        Assert.NotNull(candidateAfterRace.OutcomeSupersededAtUtc);
+        Assert.False(await verifier.BunnyVideoAssets.AnyAsync(item =>
+            item.LessonVideoId == lessonVideoId
+            && item.SourceState == BunnyVideoAssetSourceState.Current));
+        Assert.Empty(client.DeletedVideoGuids);
     }
 
     [Fact]
@@ -1054,6 +1193,53 @@ public sealed class BunnyStreamLibrariesTests
         Assert.Equal("vk-new-id", cockpitVideo.Url);
         Assert.NotNull(persistedCandidate.OutcomeSupersededAtUtc);
         Assert.Null(cockpitVideo.LastBunnyReplacementOutcome);
+    }
+
+    [Theory]
+    [InlineData("Failed")]
+    [InlineData("Unknown")]
+    public async Task ExternalSourceChange_SuppressesTerminalCurrentBunnyOutcome(string terminalStatus)
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        seeded.Asset.Status = terminalStatus;
+        seeded.Asset.ErrorMessage = "The managed Bunny source is no longer usable.";
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var updated = await new UpdateVideoCommandHandler(
+                db,
+                Array.Empty<IVideoProvider>(),
+                new TeacherAuthorizationService(db),
+                new FakeLibraryAccessService(),
+                new FakeBunnyStreamClientFactory())
+            .Handle(
+                new UpdateVideoCommand(
+                    seeded.Video.Id,
+                    "VK replacement",
+                    VideoProviders.Vk,
+                    "vk-new-id",
+                    2,
+                    0,
+                    seeded.VideoType.Id,
+                    seeded.Admin.Id,
+                    IsActive: true),
+                CancellationToken.None);
+
+        Assert.True(updated.Success, updated.Message);
+        db.ChangeTracker.Clear();
+
+        var retiredAsset = await db.BunnyVideoAssets.AsNoTracking()
+            .SingleAsync(item => item.Id == seeded.Asset.Id);
+        var cockpit = await new GetLessonCockpitQueryHandler(
+                db,
+                new TeacherAuthorizationService(db))
+            .Handle(new GetLessonCockpitQuery(seeded.Lesson.Id), CancellationToken.None);
+
+        Assert.True(cockpit.Success, cockpit.Message);
+        Assert.Equal(BunnyVideoAssetSourceState.Retired, retiredAsset.SourceState);
+        Assert.NotNull(retiredAsset.OutcomeSupersededAtUtc);
+        Assert.Null(Assert.Single(cockpit.Data!.Videos).LastBunnyReplacementOutcome);
     }
 
     [Fact]
