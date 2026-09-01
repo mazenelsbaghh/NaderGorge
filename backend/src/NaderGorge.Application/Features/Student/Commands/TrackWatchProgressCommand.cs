@@ -54,7 +54,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (!IsSupportedPlaybackRate(request.PlaybackRate))
             return Fail("Invalid playback rate", "PLAYBACK_RATE_INVALID");
 
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await _db.AcquireVideoPlaybackLockAsync(request.UserId, request.LessonVideoId, ct);
 
         var session = await _db.VideoPlaybackSessions.FirstOrDefaultAsync(
             s => s.Id == request.SessionId

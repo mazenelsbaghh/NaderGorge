@@ -50,8 +50,11 @@ public class VideoSessionController : ControllerBase
 
         // Map common errors
         if (result.Errors != null && result.Errors.Contains("VIDEO_NOT_FOUND")) return NotFound(result);
-        if (result.Errors != null && result.Errors.Contains("ACCESS_DENIED")) return Forbid(); // Needs properly handling Result in API
+        if (result.Errors != null && result.Errors.Contains("ACCESS_DENIED"))
+            return StatusCode(StatusCodes.Status403Forbidden, result);
         if (result.Errors != null && result.Errors.Contains("WATCH_LIMIT_REACHED")) return BadRequest(result);
+        if (result.Errors != null && (result.Errors.Contains("EXAM_LOCKED") || result.Errors.Contains("BUNNY_VIDEO_NOT_READY")))
+            return Conflict(result);
 
         return BadRequest(result);
     }

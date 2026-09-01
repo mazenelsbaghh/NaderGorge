@@ -306,5 +306,6 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
     void ClearTrackedChanges();
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
+    Task AcquireVideoPlaybackLockAsync(Guid userId, Guid lessonVideoId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

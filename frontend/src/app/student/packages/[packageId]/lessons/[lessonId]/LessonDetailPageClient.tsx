@@ -24,26 +24,30 @@ export default function LessonDetailPageClient() {
   const [error, setError] = useState("");
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const fetchLessonDetail = useCallback(() => {
+  const fetchLessonDetail = useCallback(async () => {
     if (!lessonId) return;
+    setLoading(true);
+    setError("");
 
-    contentService
-      .getLessonDetail(lessonId)
-      .then((res) => {
-        if (res.data.data) {
-          setLesson(res.data.data);
-        } else {
-          setError("تعذر تحميل الدرس أو لم يتم العثور عليه.");
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 403) {
-          setError("هذا الدرس غير متاح الآن أو ما زال مغلقًا.");
-        } else {
-          setError("تعذر تحميل الدرس أو لم يتم العثور عليه.");
-        }
-      })
-      .finally(() => setLoading(false));
+    try {
+      const response = await contentService.getLessonDetail(lessonId);
+      if (response.data.data) {
+        setLesson(response.data.data);
+        return;
+      }
+      setError("تعذر تحميل بيانات الدرس الآن.");
+    } catch (error: unknown) {
+      const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
+      if (response?.status === 403) {
+        setError(response.data?.message || "هذا الدرس غير متاح لحسابك حاليًا.");
+      } else if (response?.status === 404) {
+        setError("هذا الدرس لم يعد موجودًا في محتوى الباقة.");
+      } else {
+        setError("حدث خلل في تحميل الدرس. تم تسجيله وسيتم إصلاحه.");
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [lessonId]);
 
   useEffect(() => {
@@ -99,17 +103,15 @@ export default function LessonDetailPageClient() {
           <h2 className="mb-4 text-xl font-bold text-red-600">الدرس غير متاح</h2>
           <p className="mb-6 text-sm leading-7 text-red-900 sm:text-base">
             {error}
-            <br />
-            <br />
-            <span className="font-semibold">الإجراء المطلوب:</span> أكمل المتطلبات السابقة
-            أو تواصل مع المدرس إذا كنت تتوقع أن الدرس يجب أن يكون مفتوحًا.
           </p>
-          <button
-            onClick={() => router.back()}
-            className="rounded-xl bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
-          >
-            {backLabel}
-          </button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="rounded-xl border border-red-300 px-6 py-2 font-semibold text-red-700 transition hover:bg-red-100"
+            >
+              {backLabel}
+            </button>
+          </div>
         </div>
       </div>
     );

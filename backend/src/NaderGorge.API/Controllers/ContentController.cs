@@ -81,10 +81,20 @@ public class ContentController : ControllerBase
 
         if (!response.Success)
         {
-            if (response.Errors?.Contains("You do not have access") == true || response.Message?.Contains("You do not have access") == true)
-                return StatusCode(403, response);
+            var errors = response.Errors ?? [];
+            if (errors.Contains("CONTENT_ARCHIVED") ||
+                errors.Contains("ACADEMIC_SCOPE_DENIED") ||
+                errors.Contains("ACADEMIC_SCOPE_TARGET_UNSCOPED") ||
+                errors.Contains("You do not have access") ||
+                response.Message?.Contains("Unauthorized access", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, response);
+            }
 
-            return NotFound(response);
+            if (response.Message?.Contains("Lesson not found", StringComparison.OrdinalIgnoreCase) == true)
+                return NotFound(response);
+
+            return StatusCode(StatusCodes.Status500InternalServerError, response);
         }
 
         return Ok(response);

@@ -60,6 +60,30 @@ export interface SecureVideoPlayerRef {
   pause: () => void;
 }
 
+const SESSION_START_MAX_ATTEMPTS = 3;
+const TRACKING_FLUSH_INTERVAL_SECONDS = 30;
+const TRACKING_RETRY_MAX_ATTEMPTS = 3;
+
+async function createVideoSessionWithRetry(lessonVideoId: string) {
+  let lastFailure: unknown;
+  for (let attempt = 1; attempt <= SESSION_START_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await videoSessionService.createSession(lessonVideoId);
+    } catch (error) {
+      lastFailure = error;
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      const isTransient = status === undefined || status >= 500;
+      if (!isTransient || attempt === SESSION_START_MAX_ATTEMPTS) {
+        throw error;
+      }
+
+      await new Promise<void>((resolve) => window.setTimeout(resolve, attempt * 250));
+    }
+  }
+
+  throw lastFailure;
+}
+
 const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, SecureVideoPlayerProps>(({ 
   lessonVideoId, 
   isExamLocked = false,
@@ -136,6 +160,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [provider, setProvider] = useState<string>('youtube');
+  const [bunnyNativeControlsOpen, setBunnyNativeControlsOpen] = useState(false);
   
   const [showControls, setShowControls] = useState(true);
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
@@ -319,6 +344,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const lastRenderedTimeUpdateAtRef = useRef(0);
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
 
@@ -387,12 +413,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           }
           setStatus('ready');
           setDuration(msg.data.duration || 0);
-          setVolume(msg.data.volume || 100);
-          setIsMuted(msg.data.isMuted || false);
+          setVolume(msg.data.volume ?? 100);
+          setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
           setProvider(embedProvider);
           setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
           showPersistentPlayerShadows();
+
 
           setIsBuffering(true);
           
@@ -444,6 +471,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             break;
           }
           if (msg.data.currentTime !== undefined) {
+            const now = Date.now();
+            if (now - lastRenderedTimeUpdateAtRef.current < 900) {
+              break;
+            }
+            lastRenderedTimeUpdateAtRef.current = now;
             // Since time is confidently updating past the deadzone, we're definitely not buffering anymore!
             setIsBuffering(false);
             
@@ -452,6 +484,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             if (msg.data.duration > 0) {
               setProgress((msg.data.currentTime / msg.data.duration) * 100);
             }
+            if (typeof msg.data.volume === 'number') setVolume(msg.data.volume);
+            if (typeof msg.data.isMuted === 'boolean') setIsMuted(msg.data.isMuted);
             if (onWatchProgressRef.current) {
               onWatchProgressRef.current(msg.data.currentTime);
             }
@@ -575,14 +609,27 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     flushInFlight.current = true;
 
     try {
-      const res = await videoSessionService.trackProgress({
-        lessonVideoId,
-        sessionId,
-        progressSequence: progressRequest.sequence,
-        secondsWatched: progressRequest.seconds,
-        playbackRate: playbackRateRef.current,
-        totalDurationSeconds: Math.round(duration || 0),
-      });
+      let res;
+      for (let attempt = 1; attempt <= TRACKING_RETRY_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          res = await videoSessionService.trackProgress({
+            lessonVideoId,
+            sessionId,
+            progressSequence: progressRequest.sequence,
+            secondsWatched: progressRequest.seconds,
+            playbackRate: playbackRateRef.current,
+            totalDurationSeconds: Math.round(duration || 0),
+          });
+          break;
+        } catch (error) {
+          const status = (error as { response?: { status?: number } }).response?.status;
+          if ((status !== undefined && status < 500) || attempt === TRACKING_RETRY_MAX_ATTEMPTS) {
+            throw error;
+          }
+          await new Promise<void>((resolve) => window.setTimeout(resolve, attempt * 250));
+        }
+      }
+      if (!res) return;
       activeProgressRequestRef.current = null;
       nextProgressSequenceRef.current += 1;
       applyProgressResponse(res.data.data);
@@ -623,7 +670,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           }
         }
 
-        if (pendingTrackedSeconds.current >= 10) {
+        if (pendingTrackedSeconds.current >= TRACKING_FLUSH_INTERVAL_SECONDS) {
           void flushTrackedProgress();
         }
       }
@@ -708,7 +755,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     try {
       setStatus('loading');
       
-      const response = await videoSessionService.createSession(lessonVideoId);
+      const response = await createVideoSessionWithRetry(lessonVideoId);
       const session = response.data.data;
       trackingEnabledRef.current = !session.isPreview;
       activeSessionIdRef.current = session.sessionId;
@@ -748,7 +795,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       embedReadyTimeoutRef.current = setTimeout(() => {
         if (securitySuspendedRef.current) return;
         setStatus('error');
-        setErrorMessage('استغرق تحميل مشغل الفيديو وقتًا أطول من المتوقع. تحقق من الاتصال ثم حاول مرة أخرى.');
+        setErrorMessage('استغرق تحميل مشغل الفيديو وقتًا أطول من المتوقع. تم تسجيل المشكلة وسيتم التعامل معها.');
       }, 30000);
 
       // 2. Render appropriately based on provider
@@ -829,17 +876,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   };
 
   const handleVolumeChange = (vol: number) => {
+    if (vol > 0 && isMuted) {
+      sendCommand('unmute');
+      setIsMuted(false);
+    }
     sendCommand('setVolume', { volume: vol });
     setVolume(vol);
-    if (vol > 0 && isMuted) {
-      setIsMuted(false);
-      sendCommand('unmute');
-    }
   };
 
   const toggleMute = () => {
     if (isMuted) {
       sendCommand('unmute');
+      sendCommand('setVolume', { volume });
       setIsMuted(false);
     } else {
       sendCommand('mute');
@@ -892,6 +940,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const handlePlaybackRateChange = (rate: number) => {
     playbackRateRef.current = rate;
     sendCommand('setPlaybackRate', { rate });
+  };
+
+  const openBunnyQualityControls = () => {
+    setBunnyNativeControlsOpen(true);
+    setShowControls(false);
+    sendCommand('showNativeControls');
+  };
+
+  const closeBunnyQualityControls = () => {
+    setBunnyNativeControlsOpen(false);
+    setShowControls(true);
+    sendCommand('hideNativeControls');
   };
 
   const activeChapterDesktop = React.useMemo(() => {
@@ -964,8 +1024,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         aria-label="تحميل وتشغيل الفيديو"
       >
         <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-30 transition-opacity" style={{ backgroundImage: "url('/images/lesson-placeholder.webp')" }}></div>
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex items-center justify-center transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 pointer-events-auto">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-sm cursor-pointer">
+        <div className="absolute inset-0 bg-black/40 z-30 flex items-center justify-center transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 pointer-events-auto">
+          <div className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full bg-[#0A1D3D] text-white shadow-lg transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
             <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
           </div>
         </div>
@@ -1151,9 +1211,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <AlertCircle className="w-12 h-12 text-red-500 mb-4 drop-shadow-lg" />
         <h3 className="text-xl font-bold text-white mb-2">عذراً، حدث خطأ</h3>
         <p className="text-gray-300">{errorMessage}</p>
-        <button type="button" onClick={loadVideo} className="mt-6 min-h-11 rounded-md bg-red-600 px-6 font-medium text-white shadow-md transition-colors hover:bg-red-500">
-          حاول مرة أخرى
-        </button>
       </div>
     );
   }
@@ -1348,10 +1405,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && !isPlaying && !isBuffering && (
+        {status === 'ready' && !isPlaying && !isBuffering && !bunnyNativeControlsOpen && (
           <button
             type="button"
-            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
+            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
             aria-label="تشغيل الفيديو"
             tabIndex={requiresDirectPlayback ? -1 : 0}
             onClick={(e) => {
@@ -1359,13 +1416,26 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               togglePlay();
             }}
           >
-            <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform hover:scale-110 transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-sm cursor-pointer">
+            <div className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full bg-[#0A1D3D] text-white shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95">
               <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
             </div>
           </button>
         )}
 
-        {status === 'ready' && (
+        {status === 'ready' && provider === 'bunny' && bunnyNativeControlsOpen && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              closeBunnyQualityControls();
+            }}
+            className="absolute right-3 top-3 z-30 min-h-11 rounded-lg bg-[#0A1D3D] px-4 text-sm font-bold text-white shadow-md transition-colors hover:bg-[#0E8F8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            العودة لبلاير مسار
+          </button>
+        )}
+
+        {status === 'ready' && !bunnyNativeControlsOpen && (
           <PlayerControls 
             isPlaying={isPlaying}
             onTogglePlay={togglePlay}
@@ -1384,6 +1454,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             provider={provider}
             onControlHover={setIsHoveringControls}
             chapters={normalizedChapters}
+            onOpenBunnyQualityControls={openBunnyQualityControls}
           />
         )}
       </div>

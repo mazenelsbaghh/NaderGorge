@@ -216,7 +216,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
 
 
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await _db.AcquireVideoPlaybackLockAsync(request.UserId, request.LessonVideoId, ct);
         var now = DateTime.UtcNow;
         var priorActiveSessions = await _db.VideoPlaybackSessions
             .Where(s => s.UserId == request.UserId

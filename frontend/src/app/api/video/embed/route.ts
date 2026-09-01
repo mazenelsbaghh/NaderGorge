@@ -355,7 +355,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
               });
             });
           } catch (e) {}
-        }, 500);
+        }, 1000);
       });
 
       player.on('play', function () {
@@ -422,6 +422,12 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         case 'mute': player.setVolume(0); break;
         case 'unmute': player.setVolume(1); break;
         case 'setPlaybackRate': player.setPlaybackRate(msg.rate); break;
+        case 'showNativeControls':
+          document.getElementById('click-overlay').style.pointerEvents = 'none';
+          break;
+        case 'hideNativeControls':
+          document.getElementById('click-overlay').style.pointerEvents = 'auto';
+          break;
       }
     });
 
@@ -671,7 +677,7 @@ function startProgressUpdates() {
         isMuted: player.isMuted(), state: player.getPlayerState()
       });
     }
-  }, 500);
+  }, 1000);
 }
 
 window.addEventListener('message', function (event) {

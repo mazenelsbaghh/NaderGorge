@@ -21,25 +21,30 @@ export default function DirectLessonPageClient() {
   const [error, setError] = useState("");
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const fetchLessonDetail = useCallback(() => {
+  const fetchLessonDetail = useCallback(async () => {
     if (!lessonId) return;
-    contentService
-      .getLessonDetail(lessonId)
-      .then((res) => {
-        if (res.data.data) {
-          setLesson(res.data.data);
-        } else {
-          setError("تعذر تحميل الحصة أو لم يتم العثور عليها.");
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 403) {
-          setError("هذه الحصة غير متاحة الآن أو ما زالت مغلقة.");
-        } else {
-          setError("تعذر تحميل الحصة أو لم يتم العثور عليها.");
-        }
-      })
-      .finally(() => setLoading(false));
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await contentService.getLessonDetail(lessonId);
+      if (response.data.data) {
+        setLesson(response.data.data);
+        return;
+      }
+      setError("تعذر تحميل بيانات الحصة الآن.");
+    } catch (error: unknown) {
+      const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
+      if (response?.status === 403) {
+        setError(response.data?.message || "هذه الحصة غير متاحة لحسابك حاليًا.");
+      } else if (response?.status === 404) {
+        setError("هذه الحصة لم تعد موجودة في المحتوى.");
+      } else {
+        setError("حدث خلل في تحميل الحصة. تم تسجيله وسيتم إصلاحه.");
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [lessonId]);
 
   useEffect(() => {
@@ -72,13 +77,15 @@ export default function DirectLessonPageClient() {
           <p className="mb-6 text-sm leading-7 text-[var(--admin-text)] sm:text-base">
             {error}
           </p>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[var(--admin-primary)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
-          >
-            {backLabel}
-          </button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--admin-danger-20)] px-6 py-3 font-semibold text-[var(--admin-danger)] transition hover:bg-[var(--admin-danger-10)]"
+            >
+              {backLabel}
+            </button>
+          </div>
         </div>
       </div>
     );
