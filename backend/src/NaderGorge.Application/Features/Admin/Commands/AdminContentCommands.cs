@@ -1037,7 +1037,17 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
         if (BunnyVideoReplacementLifecycle.ExpirePendingReplacements(video.BunnyVideoAssets, DateTime.UtcNow))
         {
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _db.ClearTrackedChanges();
+                return ApiResponse.Fail(
+                    "تغيرت حالة استبدال Bunny أثناء المعالجة. أعد المحاولة.",
+                    ["BUNNY_REPLACEMENT_CONFLICT"]);
+            }
         }
 
         if (video.BunnyVideoAssets.Any(asset => asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement))

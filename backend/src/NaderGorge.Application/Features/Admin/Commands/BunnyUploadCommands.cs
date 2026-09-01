@@ -106,7 +106,18 @@ internal static class BunnyUploadReplacementTargetResolver
                 DateTime.UtcNow);
             if (expiredAny)
             {
-                await db.SaveChangesAsync(cancellationToken);
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    db.ClearTrackedChanges();
+                    return new BunnyUploadReplacementTarget(
+                        null,
+                        "تغيرت حالة استبدال Bunny أثناء المعالجة. أعد المحاولة.",
+                        "BUNNY_REPLACEMENT_CONFLICT");
+                }
             }
 
             if (!existingVideo.BunnyVideoAssets.Any(asset => asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement))
