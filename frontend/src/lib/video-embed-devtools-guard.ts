@@ -15,6 +15,12 @@ var __videoEmbedSuspended = false;
 function __isVideoEmbedInspectionLikely() {
   var topWindow;
   try {
+    var userAgent = typeof navigator === 'undefined' ? '' : String(navigator.userAgent || '');
+    var platform = typeof navigator === 'undefined' ? '' : String(navigator.platform || '');
+    var touchPoints = typeof navigator === 'undefined' ? 0 : Number(navigator.maxTouchPoints || 0);
+    var usesAppleMobileViewport = /iPad|iPhone|iPod/i.test(userAgent)
+      || (platform === 'MacIntel' && touchPoints > 1);
+    if (usesAppleMobileViewport) return false;
     topWindow = window.top || window;
     var widthDifference = Number(topWindow.outerWidth) - Number(topWindow.innerWidth);
     var heightDifference = Number(topWindow.outerHeight) - Number(topWindow.innerHeight);

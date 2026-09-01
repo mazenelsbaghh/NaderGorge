@@ -12,7 +12,11 @@ interface GuardExecution {
   setViewport: (widthDifference: number, heightDifference?: number) => void;
 }
 
-function runGuard(widthDifference: number, heightDifference = 0): GuardExecution {
+function runGuard(
+  widthDifference: number,
+  heightDifference = 0,
+  navigatorLike: { userAgent?: string; platform?: string; maxTouchPoints?: number } = {},
+): GuardExecution {
   const locations: string[] = [];
   const messages: unknown[] = [];
   let poll: (() => void) | null = null;
@@ -42,6 +46,7 @@ function runGuard(widthDifference: number, heightDifference = 0): GuardExecution
   const context = {
     Number,
     isFinite,
+    navigator: navigatorLike,
     window: windowLike,
   };
   vm.runInNewContext(
@@ -75,6 +80,18 @@ test('inspection guard suspends and unloads the embed document when the viewport
       data: { reason: 'devtools-detected' },
     },
   ]);
+});
+
+test('inspection guard ignores iPad desktop viewport differences without suspending playback', () => {
+  const result = runGuard(320, 200, {
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Version/18.6 Mobile/15E148 Safari/604.1',
+    platform: 'MacIntel',
+    maxTouchPoints: 5,
+  });
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+  assert.deepEqual(result.messages, []);
 });
 
 test('inspection guard catches a bottom-docked panel at the threshold', () => {

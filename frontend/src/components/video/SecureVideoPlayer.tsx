@@ -160,7 +160,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [provider, setProvider] = useState<string>('youtube');
-  const [bunnyNativeControlsOpen, setBunnyNativeControlsOpen] = useState(false);
   
   const [showControls, setShowControls] = useState(true);
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
@@ -420,14 +419,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
           showPersistentPlayerShadows();
 
-
-          setIsBuffering(true);
-          
-          // Fallback: If it doesn't play within 5 seconds (e.g. autoplay strictly blocked),
-          // hide the spinner so the user sees the explicit play button if they haven't clicked the spinner yet.
-          (window as any).__playFallbackTimeout = setTimeout(() => {
+          if (embedProvider === 'bunny') {
             setIsBuffering(false);
-          }, 5000);
+            setShowControls(false);
+          } else {
+            setIsBuffering(true);
+            // Browsers may reject autoplay. Stop covering the provider after a
+            // bounded wait so the explicit play affordance remains reachable.
+            (window as any).__playFallbackTimeout = setTimeout(() => {
+              setIsBuffering(false);
+            }, 5000);
+          }
 
           // Debug: Log VK player available methods
           if (msg.data.vkMethods) {
@@ -856,6 +858,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   reloadSessionRef.current = () => { void loadVideo(); };
 
+  useEffect(() => {
+    if (status === 'idle' && !isExamLocked) void loadVideo();
+    // A new video id creates a fresh secured session automatically.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExamLocked, lessonVideoId, status]);
+
   // ── Player controls (send commands to iframe via postMessage) ──
   const togglePlay = () => {
     sendCommand(isPlaying ? 'pause' : 'play');
@@ -940,18 +948,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const handlePlaybackRateChange = (rate: number) => {
     playbackRateRef.current = rate;
     sendCommand('setPlaybackRate', { rate });
-  };
-
-  const openBunnyQualityControls = () => {
-    setBunnyNativeControlsOpen(true);
-    setShowControls(false);
-    sendCommand('showNativeControls');
-  };
-
-  const closeBunnyQualityControls = () => {
-    setBunnyNativeControlsOpen(false);
-    setShowControls(true);
-    sendCommand('hideNativeControls');
   };
 
   const activeChapterDesktop = React.useMemo(() => {
@@ -1405,7 +1401,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && !isPlaying && !isBuffering && !bunnyNativeControlsOpen && (
+        {status === 'ready' && provider !== 'bunny' && !isPlaying && !isBuffering && (
           <button
             type="button"
             className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
@@ -1422,20 +1418,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </button>
         )}
 
-        {status === 'ready' && provider === 'bunny' && bunnyNativeControlsOpen && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              closeBunnyQualityControls();
-            }}
-            className="absolute right-3 top-3 z-30 min-h-11 rounded-lg bg-[#0A1D3D] px-4 text-sm font-bold text-white shadow-md transition-colors hover:bg-[#0E8F8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            العودة لبلاير مسار
-          </button>
-        )}
-
-        {status === 'ready' && !bunnyNativeControlsOpen && (
+        {status === 'ready' && provider !== 'bunny' && (
           <PlayerControls 
             isPlaying={isPlaying}
             onTogglePlay={togglePlay}
@@ -1454,7 +1437,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             provider={provider}
             onControlHover={setIsHoveringControls}
             chapters={normalizedChapters}
-            onOpenBunnyQualityControls={openBunnyQualityControls}
           />
         )}
       </div>

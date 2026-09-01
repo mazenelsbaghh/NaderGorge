@@ -221,11 +221,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     #wrap { position: relative; width: 100%; height: 100%; background: #000; }
     #bunny-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-    .click-overlay {
-      position: absolute; inset: 0; z-index: 10;
-      background: transparent; cursor: pointer; touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
     #video-watermark {
       position: absolute; top: 0; left: 0; z-index: 20; pointer-events: none;
       color: rgba(255,255,255,.18); font-size: 1.4rem; font-family: Tajawal, Montserrat, system-ui, sans-serif;
@@ -238,7 +233,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
   <div id="wrap">
     <iframe id="bunny-frame" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>
-    <div class="click-overlay" id="click-overlay"></div>
     <div id="video-watermark">
       <span style="font-weight:900">${watermarkBrand}</span><br>
       <span style="font-size:.75em;font-weight:700">${watermarkStudentName}</span><br>
@@ -422,20 +416,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         case 'mute': player.setVolume(0); break;
         case 'unmute': player.setVolume(1); break;
         case 'setPlaybackRate': player.setPlaybackRate(msg.rate); break;
-        case 'showNativeControls':
-          document.getElementById('click-overlay').style.pointerEvents = 'none';
-          break;
-        case 'hideNativeControls':
-          document.getElementById('click-overlay').style.pointerEvents = 'auto';
-          break;
       }
-    });
-
-    // Click overlay to toggle play/pause
-    document.getElementById('click-overlay').addEventListener('click', function () {
-      if (__videoEmbedSuspended || !player || !playerReady) return;
-      if (isPlaying) { player.pause(); }
-      else { player.play(); }
     });
 
     // Watermark drift

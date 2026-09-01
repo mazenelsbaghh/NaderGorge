@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Settings2 } from "lucide-react";
+import { Play, Pause, Volume2, Volume1, VolumeX, Maximize } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -230,7 +230,6 @@ interface PlayerControlsProps {
   onControlHover?: (hovering: boolean) => void;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
   durationSeconds?: number;
-  onOpenBunnyQualityControls?: () => void;
 }
 
 export default function PlayerControls({
@@ -252,7 +251,6 @@ export default function PlayerControls({
   onControlHover,
   chapters,
   durationSeconds,
-  onOpenBunnyQualityControls,
 }: PlayerControlsProps) {
 
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -365,22 +363,6 @@ export default function PlayerControls({
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              {provider === 'bunny' && onOpenBunnyQualityControls && (
-                <Button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpenBunnyQualityControls();
-                  }}
-                  variant="ghost"
-                  aria-label="فتح إعدادات جودة فيديو Bunny"
-                  className="h-9 gap-1 rounded-full px-2.5 text-xs font-bold text-white hover:bg-white/15 hover:text-white"
-                >
-                  <Settings2 className="size-4" />
-                  <span className="hidden sm:inline">الجودة</span>
-                </Button>
-              )}
-
               {provider !== 'vk' && (
                 <>
                   <div
