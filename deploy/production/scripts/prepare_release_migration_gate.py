@@ -411,7 +411,12 @@ post_migration_count="$(
 )"
 stage="post-migration-validation"
 test "$post_migration_count" -ge "$pre_migration_count"
-test "$((post_migration_count - pre_migration_count))" -le 4
+migration_delta="$((post_migration_count - pre_migration_count))"
+if test "$migration_delta" -gt 4; then
+  printf 'migration count exceeds reviewed limit: pre=%s post=%s delta=%s\n' \
+    "$pre_migration_count" "$post_migration_count" "$migration_delta" >&2
+  exit 72
+fi
 test "$(
   psql_restore -c \
     'select count(*) - count(distinct "MigrationId")
@@ -625,6 +630,7 @@ def prepare(
             if re.search(
                 r"(connection refused|failed to connect|permission denied|"
                 r"no frameworks were found|unhandled exception|pg_dump:|"
+                r"migration count exceeds|MASSAR_GATE_FAILURE|"
                 r"\b(?:fatal|blocked)\b)",
                 line,
                 flags=re.IGNORECASE,
