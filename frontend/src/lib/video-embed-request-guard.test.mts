@@ -30,14 +30,32 @@ test('video embed accepts a same-origin iframe navigation', () => {
 test('2026-09-02 Safari same-site metadata accepts the exact application origin', () => {
   assert.equal(
     validateVideoEmbedNavigation(
-      'https://app.massar-academy.net/api/video/embed?s=session-id',
+      'http://frontend:3000/api/video/embed?s=session-id',
       requestHeaders({
         referer: 'https://app.massar-academy.net/student/packages/1/lessons/2',
         'sec-fetch-dest': 'iframe',
         'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'app.massar-academy.net',
+        'x-forwarded-proto': 'https',
       }),
     ),
     null,
+  );
+});
+
+test('forwarded headers cannot authorize a non-student host', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://evil.example/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'evil.example',
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    'unauthorized-origin',
   );
 });
 
