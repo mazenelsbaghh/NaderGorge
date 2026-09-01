@@ -361,7 +361,11 @@ public sealed class CompleteBunnyUploadCommandHandler : IRequestHandler<Complete
 
         if (BunnyVideoReplacementLifecycle.ExpireIfNeeded(asset, DateTime.UtcNow))
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            if (!await BunnyVideoReplacementLifecycle.TrySaveAssetStateAsync(_db, asset, cancellationToken))
+            {
+                return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto(null));
+            }
+
             return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto("انتهت مهلة الاستبدال قبل اكتمال Bunny."));
         }
 
@@ -380,7 +384,7 @@ public sealed class CompleteBunnyUploadCommandHandler : IRequestHandler<Complete
             cancellationToken);
         if (!replacementWasApplied)
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            await BunnyVideoReplacementLifecycle.TrySaveAssetStateAsync(_db, asset, cancellationToken);
         }
         return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto(null));
     }
@@ -426,7 +430,18 @@ public sealed class CancelBunnyVideoReplacementCommandHandler
         }
 
         BunnyVideoReplacementLifecycle.Cancel(asset, request.CurrentUserId);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _db.Entry(asset).ReloadAsync(cancellationToken);
+            return ApiResponse<BunnyUploadStatusDto>.Fail(
+                "هذا الأصل ليس استبدال Bunny قيد التجهيز.",
+                ["BUNNY_REPLACEMENT_NOT_PENDING"]);
+        }
+
         return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto("تم إلغاء استبدال Bunny مع الاحتفاظ بالأصل للمراجعة."));
     }
 }
@@ -686,7 +701,11 @@ public sealed class RefreshBunnyVideoStatusCommandHandler : IRequestHandler<Refr
 
         if (BunnyVideoReplacementLifecycle.ExpireIfNeeded(asset, DateTime.UtcNow))
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            if (!await BunnyVideoReplacementLifecycle.TrySaveAssetStateAsync(_db, asset, cancellationToken))
+            {
+                return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto(null));
+            }
+
             return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto("انتهت مهلة الاستبدال قبل اكتمال Bunny."));
         }
 
@@ -705,7 +724,7 @@ public sealed class RefreshBunnyVideoStatusCommandHandler : IRequestHandler<Refr
             cancellationToken);
         if (!replacementWasApplied)
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            await BunnyVideoReplacementLifecycle.TrySaveAssetStateAsync(_db, asset, cancellationToken);
         }
         return ApiResponse<BunnyUploadStatusDto>.Ok(asset.ToStatusDto(null));
     }
@@ -800,10 +819,18 @@ public sealed class RefreshPendingBunnyVideosCommandHandler
                     bunnyResult.Client,
                     asset,
                     cancellationToken);
-                await BunnyVideoReplacementLifecycle.FinalizeIfNeededAsync(
+                var replacementWasApplied = await BunnyVideoReplacementLifecycle.FinalizeIfNeededAsync(
                     _db,
                     asset,
                     cancellationToken);
+                if (!replacementWasApplied)
+                {
+                    await BunnyVideoReplacementLifecycle.TrySaveAssetStateAsync(
+                        _db,
+                        asset,
+                        cancellationToken);
+                }
+
                 refreshed++;
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -819,7 +846,16 @@ public sealed class RefreshPendingBunnyVideosCommandHandler
             }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Every asset was persisted at the end of its own refresh iteration;
+            // discard only a stale tracker snapshot left by a concurrent cancel.
+            _db.ClearTrackedChanges();
+        }
         return new BunnyPendingRefreshResultDto(attempted, refreshed, failed);
     }
 }
@@ -985,6 +1021,28 @@ internal static class BunnyVideoReplacementLifecycle
 {
     internal static readonly TimeSpan PendingReplacementExpiry = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// A cancellation/expiry can legitimately win while a status refresh is in
+    /// flight. SourceState is a concurrency token, so treat that as a benign
+    /// terminal outcome and reload the asset instead of surfacing a 500 response.
+    /// </summary>
+    public static async Task<bool> TrySaveAssetStateAsync(
+        IAppDbContext db,
+        BunnyVideoAsset asset,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await db.Entry(asset).ReloadAsync(cancellationToken);
+            return false;
+        }
+    }
+
     public static async Task<int> ExpirePendingReplacementsAsync(
         IAppDbContext db,
         DateTime now,
@@ -1001,7 +1059,17 @@ internal static class BunnyVideoReplacementLifecycle
 
         if (expiredCandidates.Count > 0)
         {
-            await db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // A refresher/cancel may already have moved one candidate. Do not
+                // overwrite it; the next polling pass will re-evaluate the rest.
+                db.ClearTrackedChanges();
+                return 0;
+            }
         }
 
         return expiredCandidates.Count;
@@ -1079,21 +1147,34 @@ internal static class BunnyVideoReplacementLifecycle
             return false;
         }
 
-        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-
-        var currentAsset = await db.BunnyVideoAssets
-            .SingleOrDefaultAsync(
-                asset => asset.LessonVideoId == candidate.LessonVideoId
-                    && asset.SourceState == BunnyVideoAssetSourceState.Current,
-                cancellationToken);
-        if (currentAsset is not null && currentAsset.Id != candidate.Id)
+        // Persist the status refresh while SourceState is still PendingReplacement.
+        // SourceState is a concurrency token, so a completed cancellation/expiry wins
+        // instead of a stale refresher being able to promote the candidate later.
+        try
         {
-            // Save this state change before promoting the candidate so PostgreSQL's
-            // filtered unique Current-source index is never violated mid-swap.
-            LessonVideoSourceMutation.RetireBunnyAsset(currentAsset, null);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await db.Entry(candidate).ReloadAsync(cancellationToken);
+            return false;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var canStillPromote = await db.BunnyVideoAssets
+            .AsNoTracking()
+            .AnyAsync(
+                asset => asset.Id == candidate.Id
+                    && asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement
+                    && asset.Status == "Ready",
+                cancellationToken);
+        if (!canStillPromote)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            await db.Entry(candidate).ReloadAsync(cancellationToken);
+            return false;
+        }
 
         var target = candidate.LessonVideo;
         if (target is null)
@@ -1108,6 +1189,55 @@ internal static class BunnyVideoReplacementLifecycle
         var targetVideoTypeId = candidate.TargetVideoTypeId ?? target.VideoTypeId;
         var targetIsActive = candidate.TargetIsActive ?? false;
 
+        var now = DateTime.UtcNow;
+        // Avoid a transient filtered-index collision and, crucially, use a compare-
+        // and-set promotion so a cancellation that won the race cannot be resurrected.
+        await db.BunnyVideoAssets
+            .Where(asset => asset.LessonVideoId == candidate.LessonVideoId
+                && asset.SourceState == BunnyVideoAssetSourceState.Current)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(asset => asset.SourceState, BunnyVideoAssetSourceState.Retired)
+                .SetProperty(asset => asset.RetiredAtUtc, now)
+                .SetProperty(asset => asset.RetiredByUserId, (Guid?)null)
+                .SetProperty(asset => asset.ActivateWhenReady, false)
+                .SetProperty(asset => asset.UpdatedAt, now), cancellationToken);
+
+        var promoted = await db.BunnyVideoAssets
+            .Where(asset => asset.Id == candidate.Id
+                && asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement
+                && asset.Status == "Ready")
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(asset => asset.SourceState, BunnyVideoAssetSourceState.Current)
+                .SetProperty(asset => asset.RetiredAtUtc, (DateTime?)null)
+                .SetProperty(asset => asset.RetiredByUserId, (Guid?)null)
+                .SetProperty(asset => asset.ActivateWhenReady, targetIsActive)
+                .SetProperty(asset => asset.TargetOrder, (int?)null)
+                .SetProperty(asset => asset.TargetMaxWatchCount, (int?)null)
+                .SetProperty(asset => asset.TargetVideoTypeId, (Guid?)null)
+                .SetProperty(asset => asset.TargetIsActive, (bool?)null)
+                .SetProperty(asset => asset.UpdatedAt, now), cancellationToken);
+        if (promoted == 0)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            await db.Entry(candidate).ReloadAsync(cancellationToken);
+            return false;
+        }
+
+        await db.Entry(candidate).ReloadAsync(cancellationToken);
+
+        var historicalOutcomes = await db.BunnyVideoAssets
+            .Where(asset => asset.LessonVideoId == candidate.LessonVideoId
+                && asset.SourceState == BunnyVideoAssetSourceState.Retired
+                && asset.OutcomeSupersededAtUtc == null
+                && (asset.Status == "Failed"
+                    || asset.Status == "Expired"
+                    || asset.Status == "Cancelled"
+                    || asset.Status == "Unknown"))
+            .ToListAsync(cancellationToken);
+        LessonVideoSourceMutation.SuppressHistoricalBunnyReplacementOutcomes(
+            historicalOutcomes,
+            now);
+
         await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(db, target, cancellationToken);
 
         target.Title = candidate.Title;
@@ -1118,17 +1248,7 @@ internal static class BunnyVideoReplacementLifecycle
         target.MaxWatchCount = targetMaxWatchCount;
         target.VideoTypeId = targetVideoTypeId;
         target.IsActive = targetIsActive;
-        target.UpdatedAt = DateTime.UtcNow;
-
-        candidate.SourceState = BunnyVideoAssetSourceState.Current;
-        candidate.RetiredAtUtc = null;
-        candidate.RetiredByUserId = null;
-        candidate.ActivateWhenReady = targetIsActive;
-        candidate.TargetOrder = null;
-        candidate.TargetMaxWatchCount = null;
-        candidate.TargetVideoTypeId = null;
-        candidate.TargetIsActive = null;
-        candidate.UpdatedAt = DateTime.UtcNow;
+        target.UpdatedAt = now;
 
         db.OutboxEvents.Add(new OutboxEvent
         {

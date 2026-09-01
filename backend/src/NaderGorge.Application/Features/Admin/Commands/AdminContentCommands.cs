@@ -1179,7 +1179,7 @@ internal static class LessonVideoSourceMutation
         foreach (var asset in assets.Where(asset =>
                      asset.SourceState == BunnyVideoAssetSourceState.Retired
                      && asset.OutcomeSupersededAtUtc is null
-                     && asset.Status is "Failed" or "Expired" or "Cancelled"))
+                     && asset.Status is "Failed" or "Expired" or "Cancelled" or "Unknown"))
         {
             asset.OutcomeSupersededAtUtc = supersededAtUtc;
             asset.UpdatedAt = supersededAtUtc;

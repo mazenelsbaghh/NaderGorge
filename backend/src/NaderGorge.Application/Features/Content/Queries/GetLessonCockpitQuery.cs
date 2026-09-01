@@ -141,7 +141,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                 var currentBunnySourceStartedAt = currentBunnyAsset?.CreatedAt;
                 var lastBunnyReplacementOutcome = v.BunnyVideoAssets
                     .Where(asset => asset.SourceState == BunnyVideoAssetSourceState.Retired
-                        && asset.Status is "Failed" or "Expired" or "Cancelled"
+                        && asset.Status is "Failed" or "Expired" or "Cancelled" or "Unknown"
                         && asset.OutcomeSupersededAtUtc == null
                         && (!currentBunnySourceStartedAt.HasValue
                             || (asset.RetiredAtUtc ?? asset.UpdatedAt ?? asset.CreatedAt)
