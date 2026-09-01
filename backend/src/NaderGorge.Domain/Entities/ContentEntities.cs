@@ -85,6 +85,13 @@ public class LessonVideo : BaseEntity, IArchivableContent
     public string Provider { get; set; } = string.Empty;
     public string ProviderVideoId { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Monotonically advances only when the playable source changes. Pending Bunny
+    /// replacements capture this value so an older candidate cannot overwrite a
+    /// newer admin source edit when it eventually becomes ready.
+    /// </summary>
+    public int SourceRevision { get; set; }
+
     public int Order { get; set; }
 
     public int MaxWatchCount { get; set; } = 3; // Hard-lock limit
@@ -221,6 +228,12 @@ public class BunnyVideoAsset : BaseEntity
     public int? TargetMaxWatchCount { get; set; }
     public Guid? TargetVideoTypeId { get; set; }
     public bool? TargetIsActive { get; set; }
+
+    /// <summary>
+    /// SourceRevision of the logical video when this pending replacement was
+    /// created. A candidate is promoted only if that source is still current.
+    /// </summary>
+    public int? TargetSourceRevision { get; set; }
 
     public ICollection<BunnyUsageSnapshot> UsageSnapshots { get; set; } = new List<BunnyUsageSnapshot>();
 }

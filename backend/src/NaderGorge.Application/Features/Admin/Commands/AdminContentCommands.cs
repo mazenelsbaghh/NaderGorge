@@ -1113,17 +1113,20 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
         if (sourceChanged)
         {
-            LessonVideoSourceMutation.SuppressHistoricalBunnyReplacementOutcomes(
-                video.BunnyVideoAssets,
-                DateTime.UtcNow);
-
             if (currentBunnyAsset is not null)
             {
                 currentBunnyAsset.BunnyStreamLibraryRecordId ??= video.BunnyStreamLibraryId;
                 LessonVideoSourceMutation.RetireBunnyAsset(currentBunnyAsset, request.CurrentUserId);
             }
 
+            LessonVideoSourceMutation.SuppressHistoricalBunnyReplacementOutcomes(
+                video.BunnyVideoAssets,
+                DateTime.UtcNow);
             await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(_db, video, ct);
+            checked
+            {
+                video.SourceRevision++;
+            }
         }
 
         video.Title = title;
@@ -1166,7 +1169,16 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         };
         _db.OutboxEvents.Add(outboxEvent);
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return ApiResponse.Fail(
+                "تم تعديل مصدر الفيديو في عملية أخرى. أعد تحميل الصفحة وحاول مرة أخرى.",
+                ["VIDEO_SOURCE_CONFLICT"]);
+        }
         return ApiResponse.Ok();
     }
 }

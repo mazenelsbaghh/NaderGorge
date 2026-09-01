@@ -1673,7 +1673,8 @@ public sealed class BunnyStreamLibrariesTests
             TargetOrder = 2,
             TargetMaxWatchCount = 3,
             TargetVideoTypeId = seeded.VideoType.Id,
-            TargetIsActive = true
+            TargetIsActive = true,
+            TargetSourceRevision = seeded.Video.SourceRevision
         };
         db.BunnyVideoAssets.Add(candidate);
         await db.SaveChangesAsync();

@@ -68,6 +68,7 @@ public record BunnyUploadStatusDto(Guid AssetId, Guid LessonVideoId, string Stat
 
 internal sealed record BunnyUploadReplacementTarget(
     LessonVideo? LessonVideo,
+    int? ExpectedSourceRevision,
     string? ErrorMessage,
     string? ErrorCode)
 {
@@ -85,7 +86,7 @@ internal static class BunnyUploadReplacementTargetResolver
     {
         if (!existingLessonVideoId.HasValue)
         {
-            return new BunnyUploadReplacementTarget(null, null, null);
+            return new BunnyUploadReplacementTarget(null, null, null, null);
         }
 
         var existingVideo = await db.LessonVideos
@@ -94,6 +95,7 @@ internal static class BunnyUploadReplacementTargetResolver
         if (existingVideo is null || existingVideo.LessonId != lessonId)
         {
             return new BunnyUploadReplacementTarget(
+                null,
                 null,
                 "الفيديو المطلوب استبداله غير موجود ضمن هذا الدرس.",
                 "BUNNY_REPLACEMENT_VIDEO_INVALID");
@@ -115,6 +117,7 @@ internal static class BunnyUploadReplacementTargetResolver
                     db.ClearTrackedChanges();
                     return new BunnyUploadReplacementTarget(
                         null,
+                        null,
                         "تغيرت حالة استبدال Bunny أثناء المعالجة. أعد المحاولة.",
                         "BUNNY_REPLACEMENT_CONFLICT");
                 }
@@ -122,16 +125,36 @@ internal static class BunnyUploadReplacementTargetResolver
 
             if (!existingVideo.BunnyVideoAssets.Any(asset => asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement))
             {
-                return new BunnyUploadReplacementTarget(existingVideo, null, null);
+                return new BunnyUploadReplacementTarget(existingVideo, existingVideo.SourceRevision, null, null);
             }
 
             return new BunnyUploadReplacementTarget(
+                null,
                 null,
                 "يوجد استبدال فيديو Bunny قيد التجهيز لهذا الفيديو.",
                 "BUNNY_REPLACEMENT_PENDING");
         }
 
-        return new BunnyUploadReplacementTarget(existingVideo, null, null);
+        return new BunnyUploadReplacementTarget(existingVideo, existingVideo.SourceRevision, null, null);
+    }
+
+    public static Task<bool> IsSourceRevisionCurrentAsync(
+        IAppDbContext db,
+        BunnyUploadReplacementTarget replacementTarget,
+        CancellationToken cancellationToken)
+    {
+        if (!replacementTarget.IsReplacement)
+        {
+            return Task.FromResult(true);
+        }
+
+        return db.LessonVideos
+            .AsNoTracking()
+            .AnyAsync(
+                video => video.Id == replacementTarget.LessonVideo!.Id
+                    && replacementTarget.ExpectedSourceRevision.HasValue
+                    && video.SourceRevision == replacementTarget.ExpectedSourceRevision.Value,
+                cancellationToken);
     }
 }
 
@@ -242,6 +265,22 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
                 ["BUNNY_CREATE_FAILED"]);
         }
 
+        if (!await BunnyUploadReplacementTargetResolver.IsSourceRevisionCurrentAsync(
+                _db,
+                replacementTarget,
+                cancellationToken))
+        {
+            await BunnyRemoteVideoCompensation.DeleteBestEffortAsync(
+                bunny,
+                libraryResult.Access.ExternalLibraryId,
+                bunnyVideo.Guid,
+                "TUS replacement target changed",
+                _logger);
+            return ApiResponse<BunnyTusUploadSessionDto>.Fail(
+                "تم تغيير مصدر الفيديو أثناء تجهيز استبدال Bunny. أعد المحاولة.",
+                ["BUNNY_REPLACEMENT_SOURCE_CHANGED"]);
+        }
+
         LessonVideo lessonVideo;
         BunnyVideoAsset asset;
         BunnyTusUploadSignatureDto signature;
@@ -292,7 +331,10 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
                 TargetOrder = replacementTarget.IsReplacement ? request.Order : null,
                 TargetMaxWatchCount = replacementTarget.IsReplacement ? request.MaxWatchCount : null,
                 TargetVideoTypeId = replacementTarget.IsReplacement ? request.VideoTypeId : null,
-                TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null
+                TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null,
+                TargetSourceRevision = replacementTarget.IsReplacement
+                    ? replacementTarget.ExpectedSourceRevision
+                    : null
             };
             _db.BunnyVideoAssets.Add(asset);
             await _db.SaveChangesAsync(cancellationToken);
@@ -601,6 +643,22 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
             return ApiResponse<BunnyUploadStatusDto>.Fail(fetchResult.Message ?? "Bunny fetch request failed.");
         }
 
+        if (!await BunnyUploadReplacementTargetResolver.IsSourceRevisionCurrentAsync(
+                _db,
+                replacementTarget,
+                cancellationToken))
+        {
+            await BunnyRemoteVideoCompensation.DeleteBestEffortAsync(
+                bunny,
+                libraryResult.Access.ExternalLibraryId,
+                bunnyVideo.Guid,
+                "URL-fetch replacement target changed",
+                _logger);
+            return ApiResponse<BunnyUploadStatusDto>.Fail(
+                "تم تغيير مصدر الفيديو أثناء تجهيز استبدال Bunny. أعد المحاولة.",
+                ["BUNNY_REPLACEMENT_SOURCE_CHANGED"]);
+        }
+
         LessonVideo lessonVideo;
         BunnyVideoAsset asset;
         try
@@ -644,7 +702,10 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
                 TargetOrder = replacementTarget.IsReplacement ? request.Order : null,
                 TargetMaxWatchCount = replacementTarget.IsReplacement ? request.MaxWatchCount : null,
                 TargetVideoTypeId = replacementTarget.IsReplacement ? request.VideoTypeId : null,
-                TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null
+                TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null,
+                TargetSourceRevision = replacementTarget.IsReplacement
+                    ? replacementTarget.ExpectedSourceRevision
+                    : null
             };
             _db.BunnyVideoAssets.Add(asset);
             await _db.SaveChangesAsync(cancellationToken);
@@ -1158,6 +1219,14 @@ internal static class BunnyVideoReplacementLifecycle
             return false;
         }
 
+        if (!candidate.TargetSourceRevision.HasValue)
+        {
+            candidate.Status = "Failed";
+            candidate.ErrorMessage = "Bunny replacement source revision metadata is missing.";
+            LessonVideoSourceMutation.RetireBunnyAsset(candidate, null);
+            return false;
+        }
+
         // Persist the status refresh while SourceState is still PendingReplacement.
         // SourceState is a concurrency token, so a completed cancellation/expiry wins
         // instead of a stale refresher being able to promote the candidate later.
@@ -1195,6 +1264,36 @@ internal static class BunnyVideoReplacementLifecycle
                 ?? throw new InvalidOperationException("The Bunny replacement target no longer exists.");
         }
 
+        await db.Entry(target).ReloadAsync(cancellationToken);
+        var expectedSourceRevision = candidate.TargetSourceRevision.Value;
+        if (target.SourceRevision != expectedSourceRevision)
+        {
+            var supersededAtUtc = DateTime.UtcNow;
+            var superseded = await db.BunnyVideoAssets
+                .Where(asset => asset.Id == candidate.Id
+                    && asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(asset => asset.Status, "Failed")
+                    .SetProperty(asset => asset.ErrorMessage, "Bunny replacement was superseded by a newer video source edit.")
+                    .SetProperty(asset => asset.SourceState, BunnyVideoAssetSourceState.Retired)
+                    .SetProperty(asset => asset.RetiredAtUtc, supersededAtUtc)
+                    .SetProperty(asset => asset.RetiredByUserId, (Guid?)null)
+                    .SetProperty(asset => asset.ActivateWhenReady, false)
+                    .SetProperty(asset => asset.OutcomeSupersededAtUtc, supersededAtUtc)
+                    .SetProperty(asset => asset.UpdatedAt, supersededAtUtc), cancellationToken);
+            if (superseded == 0)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            else
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            await db.Entry(candidate).ReloadAsync(cancellationToken);
+            return false;
+        }
+
         var targetOrder = candidate.TargetOrder ?? target.Order;
         var targetMaxWatchCount = candidate.TargetMaxWatchCount ?? target.MaxWatchCount;
         var targetVideoTypeId = candidate.TargetVideoTypeId ?? target.VideoTypeId;
@@ -1226,6 +1325,7 @@ internal static class BunnyVideoReplacementLifecycle
                 .SetProperty(asset => asset.TargetMaxWatchCount, (int?)null)
                 .SetProperty(asset => asset.TargetVideoTypeId, (Guid?)null)
                 .SetProperty(asset => asset.TargetIsActive, (bool?)null)
+                .SetProperty(asset => asset.TargetSourceRevision, (int?)null)
                 .SetProperty(asset => asset.UpdatedAt, now), cancellationToken);
         if (promoted == 0)
         {
@@ -1260,6 +1360,10 @@ internal static class BunnyVideoReplacementLifecycle
         target.VideoTypeId = targetVideoTypeId;
         target.IsActive = targetIsActive;
         target.UpdatedAt = now;
+        checked
+        {
+            target.SourceRevision = expectedSourceRevision + 1;
+        }
 
         db.OutboxEvents.Add(new OutboxEvent
         {
@@ -1273,9 +1377,20 @@ internal static class BunnyVideoReplacementLifecycle
             })
         });
 
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return true;
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            db.ClearTrackedChanges();
+            db.BunnyVideoAssets.Attach(candidate);
+            await db.Entry(candidate).ReloadAsync(cancellationToken);
+            return false;
+        }
     }
 }
 
