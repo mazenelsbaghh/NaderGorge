@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
@@ -33,11 +34,12 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
     {
         var homework = await _dbContext.Homeworks
+            .ReadyForStudents()
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);
 
         if (homework == null)
-            return ApiResponse<bool>.Fail("Homework not found");
+            return ApiResponse<bool>.Fail("هذا الواجب غير متاح للطلاب حاليًا.");
         if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, cancellationToken))
             return ApiResponse<bool>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
@@ -74,7 +76,13 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 }
 
                 // 2. Previous homework
-                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, cancellationToken);
+                var prevHomework = await _dbContext.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(
+                        request.StudentId,
+                        _access,
+                        _archiveAccess,
+                        cancellationToken);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _dbContext.HomeworkSubmissions

@@ -30,6 +30,14 @@ object SmsInboxReconciliationPolicy {
     fun latestCursor(current: SmsInboxCursor, candidate: SmsInboxCursor): SmsInboxCursor =
         if (isAfter(candidate.receivedAtMillis, candidate.messageId, current)) candidate else current
 
+    fun earliestCursor(first: SmsInboxCursor, second: SmsInboxCursor): SmsInboxCursor =
+        if (isAfter(first.receivedAtMillis, first.messageId, second)) second else first
+
+    fun replayCursorBefore(candidate: SmsInboxCursor): SmsInboxCursor = SmsInboxCursor(
+        receivedAtMillis = candidate.receivedAtMillis,
+        messageId = (candidate.messageId - 1L).coerceAtLeast(-1L)
+    )
+
     fun isAllowedSender(sender: String?, filters: List<String>): Boolean {
         val normalizedSender = sender?.trim().orEmpty()
         if (normalizedSender.isEmpty()) return false

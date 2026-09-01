@@ -53,6 +53,7 @@ public interface IAppDbContext
     DbSet<Lesson> Lessons { get; }
     DbSet<LessonVideo> LessonVideos { get; }
     DbSet<VideoType> VideoTypes { get; }
+    DbSet<BunnyStreamLibrary> BunnyStreamLibraries { get; }
     DbSet<BunnyVideoAsset> BunnyVideoAssets { get; }
     DbSet<BunnyUsageSnapshot> BunnyUsageSnapshots { get; }
     DbSet<VideoChapter> VideoChapters { get; }
@@ -203,6 +204,11 @@ public interface IAppDbContext
     DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages { get; }
     DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts { get; }
     DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates { get; }
+    DbSet<LiveSupportMessengerBinding> LiveSupportMessengerBindings { get; }
+    DbSet<LiveSupportMessengerMessage> LiveSupportMessengerMessages { get; }
+    DbSet<LiveSupportMessengerWebhookInbox> LiveSupportMessengerWebhookInbox { get; }
+    DbSet<LiveSupportMessengerConfiguration> LiveSupportMessengerConfigurations { get; }
+    DbSet<LiveSupportMessengerPage> LiveSupportMessengerPages { get; }
     DbSet<WhatsAppCampaign> WhatsAppCampaigns { get; }
     DbSet<WhatsAppCampaignRecipient> WhatsAppCampaignRecipients { get; }
     DbSet<WhatsAppContactPreference> WhatsAppContactPreferences { get; }

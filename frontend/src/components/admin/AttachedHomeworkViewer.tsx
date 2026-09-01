@@ -9,17 +9,21 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { normalizeQuestionRichText } from '@/lib/question-text';
+import { getApiErrorSummary } from '@/lib/api-errors';
 
 export function AttachedHomeworkViewer({
   homeworkId,
   surface = 'admin',
+  onStatusChanged,
 }: {
   homeworkId: string;
   surface?: 'admin' | 'teacher';
+  onStatusChanged?: () => void | Promise<void>;
 }) {
   const router = useRouter();
   const [data, setData] = useState<HomeworkDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const homeworkBasePath = surface === 'teacher' ? '/teacher/packages/homework' : '/admin/content/homework';
 
   const loadData = useCallback(async () => {
@@ -34,13 +38,17 @@ export function AttachedHomeworkViewer({
   }, [homeworkId]);
 
   const toggleStatus = async () => {
-    if (!data) return;
+    if (!data || statusUpdating) return;
     try {
+      setStatusUpdating(true);
       await adminService.setHomeworkStatus(homeworkId, !data.isActive);
       setData({ ...data, isActive: !data.isActive });
       toast.success(data.isActive ? 'تم تعطيل الواجب، وسيظل محفوظاً.' : 'تم تفعيل الواجب.');
-    } catch {
-      toast.error('تعذر تحديث حالة الواجب.');
+      await onStatusChanged?.();
+    } catch (error: unknown) {
+      toast.error(getApiErrorSummary(error, 'تعذر تحديث حالة الواجب.'));
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -68,6 +76,13 @@ export function AttachedHomeworkViewer({
     );
   }
 
+  const questionsLockedReason = data.submissions.length > 0
+    ? 'لا يمكن تغيير الأسئلة بعد بدء الطلاب في الواجب؛ ستظل كما هي لحماية نتائجهم.'
+    : data.isActive
+      ? 'عطّل الواجب أولًا قبل تعديل أسئلته.'
+      : null;
+  const activationBlocked = !data.isActive && data.questionCount === 0;
+
   return (
     <div className="space-y-6">
       {/* Homework Overview Summary */}
@@ -85,14 +100,41 @@ export function AttachedHomeworkViewer({
           </div>
           <div className="flex flex-wrap gap-3">
             <ContentArchiveControl targetType="Homework" targetId={homeworkId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
-            <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
-              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'تعطيل الواجب' : 'تفعيل الواجب'}
+            <NeumorphButton
+              type="button"
+              disabled={statusUpdating || activationBlocked}
+              title={activationBlocked ? 'أضف سؤالًا واحدًا على الأقل قبل التفعيل.' : undefined}
+              onClick={toggleStatus}
+              intent={data.isActive ? 'danger' : 'primary'}
+              size="md"
+              pill
+            >
+              <Power className="w-4 h-4 ms-2" />
+              {statusUpdating
+                ? 'جارٍ التحديث...'
+                : data.isActive
+                  ? 'تعطيل الواجب'
+                  : 'تفعيل الواجب'}
             </NeumorphButton>
-            <NeumorphButton type="button" onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)} intent="primary" size="md" pill className="shrink-0">
+            <NeumorphButton
+              type="button"
+              disabled={Boolean(questionsLockedReason)}
+              title={questionsLockedReason || undefined}
+              onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
+              intent="primary"
+              size="md"
+              pill
+              className="shrink-0"
+            >
               <Plus className="w-4 h-4 ms-2" /> إدراج أو تعديل الأسئلة
             </NeumorphButton>
           </div>
         </div>
+        {questionsLockedReason && (
+          <p className="mb-6 rounded-xl bg-[var(--admin-card-soft)] px-4 py-3 text-sm font-bold leading-6 text-[var(--admin-muted)]">
+            {questionsLockedReason}
+          </p>
+        )}
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <AdminStatCard variant="accent" icon={FileQuestion} label="عدد الأسئلة" value={data.questionCount} />
@@ -168,6 +210,8 @@ export function AttachedHomeworkViewer({
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة للواجب حتى الآن.</p>
               <NeumorphButton
                 type="button"
+                disabled={Boolean(questionsLockedReason)}
+                title={questionsLockedReason || undefined}
                 onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
                 intent="primary"
                 size="sm"

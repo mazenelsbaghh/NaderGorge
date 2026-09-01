@@ -1,6 +1,10 @@
 import { Job, UnrecoverableError } from 'bullmq';
 import fs from 'fs';
-import { extractAudioFromVideo } from '../utils/audioExtractor.js';
+import {
+    extractAudioFromInternalBunnyVideo,
+    extractAudioFromVideo,
+    isStoredBunnyVideoSource,
+} from '../utils/audioExtractor.js';
 import { assertChapterOutputLanguage, generateVideoChapters, transcribePublicYouTubeVideo, transcribeVideoAudio } from '../services/geminiService.js';
 import type { VideoAIResult } from '../services/geminiService.js';
 import { throwIfGenerationCancellationRequested } from './generationCancellation.js';
@@ -56,6 +60,7 @@ async function notifyProgress(update: AnalysisProgressUpdate) {
 export interface AnalyzeVideoJobData {
     lessonVideoId: string;
     sourceUrl: string;
+    sourceKind?: 'bunny-internal-original';
     outputLanguage?: 'auto' | 'ar' | 'en';
     generationRunId?: string;
     logicalJobId?: string;
@@ -131,7 +136,15 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
             await throwIfGenerationCancellationRequested(job, cancellationAliases);
 
             if (!publicYoutubeUrl && (!audioPath || !fs.existsSync(audioPath))) {
-                audioPath = await extractAudioFromVideo(sourceUrl, lessonVideoId);
+                const bunnyInternalSource = job.data.sourceKind === 'bunny-internal-original'
+                    || isStoredBunnyVideoSource(sourceUrl);
+                audioPath = bunnyInternalSource
+                    ? await extractAudioFromInternalBunnyVideo(
+                        lessonVideoId,
+                        job.data.generationRunId || '',
+                        lessonVideoId,
+                    )
+                    : await extractAudioFromVideo(sourceUrl, lessonVideoId);
                 await job.updateData({ ...job.data, audioPath });
             }
 

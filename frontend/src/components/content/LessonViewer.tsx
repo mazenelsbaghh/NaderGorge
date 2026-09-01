@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw } from "lucide-react";
+import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw, CalendarClock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
 import toast from 'react-hot-toast';
+import { installLessonPageProtectionGuard } from "@/utils/video-page-guard";
+import { getHomeworkComingSoonLabel } from "@/lib/homework-coming-soon";
 
 import { contentService, type LessonDetailDto, type ResourceDto } from "@/services/content-service";
 
@@ -28,6 +30,17 @@ export function LessonViewer({
     setFocusMode(true);
     return () => setFocusMode(false);
   }, [setFocusMode]);
+
+  const hasViewableLessonVideo = !lesson.isLocked
+    && lesson.videos.some((video) => video.hasAccess !== false);
+
+  useEffect(() => {
+    if (!hasViewableLessonVideo) return;
+
+    // The extension menu is document-wide, so limiting the guard to the
+    // player would leave the same download entry available elsewhere here.
+    return installLessonPageProtectionGuard(document);
+  }, [hasViewableLessonVideo]);
 
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
 
@@ -97,7 +110,9 @@ export function LessonViewer({
     }
   };
 
-
+  const homeworkComingSoonLabel = getHomeworkComingSoonLabel(
+    lesson.homeworkComingSoonOn
+  );
 
   if (lesson.isLocked) {
     return (
@@ -183,6 +198,7 @@ export function LessonViewer({
               activeStep={activeVideoIndex} 
               onStepChange={setActiveVideoIndex}
               homeworkId={lesson.homeworkId}
+              homeworkComingSoonOn={lesson.homeworkComingSoonOn}
               homeworkPassed={lesson.homeworkPassed}
               examId={lesson.examId}
               examPassed={lesson.examPassed}
@@ -291,6 +307,11 @@ export function LessonViewer({
                   )}
                 </>
               )}
+              {!lesson.homeworkId && lesson.homeworkComingSoonOn && (
+                <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
+                  قريبًا
+                </span>
+              )}
             </div>
             {lesson.homeworkId ? (
               <>
@@ -324,6 +345,30 @@ export function LessonViewer({
                     : lesson.homeworkStatus === 'InProgress'
                     ? 'استئناف حل الواجب'
                     : 'ابدأ حل الواجب الآن'}
+                </button>
+              </>
+            ) : homeworkComingSoonLabel ? (
+              <>
+                <p
+                  id="homework-coming-soon-description"
+                  className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]"
+                >
+                  المدرس يجهز الواجب الآن. ستقدر تبدأ الحل فور نشره.
+                </p>
+                <button
+                  type="button"
+                  disabled
+                  aria-describedby="homework-coming-soon-description"
+                  className="mt-6 flex min-h-14 w-full cursor-not-allowed items-center justify-center gap-3 rounded-2xl bg-[var(--admin-card-soft)] px-4 py-3 text-sm font-black text-[var(--admin-muted)] opacity-80"
+                >
+                  <LockKeyhole className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="flex flex-col items-start leading-5">
+                    <span>الذهاب للواجب</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold">
+                      <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                      {homeworkComingSoonLabel}
+                    </span>
+                  </span>
                 </button>
               </>
             ) : (

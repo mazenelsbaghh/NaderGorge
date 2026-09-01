@@ -150,6 +150,16 @@ public sealed class LiveSupportAITurnOrchestrationTests
         fixture.Db.AddRange(policy, conversation);
         await fixture.Db.SaveChangesAsync();
 
+        fixture.Db.LiveSupportAIConversationStates.Add(new LiveSupportAIConversationState
+        {
+            ConversationId = conversation.Id,
+            PolicyVersionId = policy.Id,
+            Mode = LiveSupportAIMode.AiActive,
+            LastParticipantActivityAt = DateTime.UtcNow,
+            Version = 1
+        });
+        await fixture.Db.SaveChangesAsync();
+
         var message = NewMessage(conversation.Id, user.Id, $"claim-{Guid.NewGuid():N}");
         fixture.Db.LiveSupportMessages.Add(message);
         await fixture.Db.SaveChangesAsync();

@@ -1,6 +1,7 @@
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
+import type { LiveSupportChannel } from '@/lib/live-support-channel';
 
 const invalidateSupport = (keys: string[] = ['support:staff', 'support:dashboard']) => invalidateMany(keys);
 
@@ -51,8 +52,10 @@ export interface LiveSupportConversation {
   isAiTyping?: boolean;
   aiSummary?: LiveSupportAISummary | null;
   unreadParticipantMessageCount?: number;
-  channel?: 'Web' | 'WhatsApp';
+  channel?: LiveSupportChannel;
   externalPhoneNumber?: string | null;
+  externalPageId?: string | null;
+  externalPageName?: string | null;
   customerServiceWindowExpiresAt?: string | null;
 }
 
@@ -447,8 +450,10 @@ export interface LiveSupportAdminConversation {
   subject?: string;
   aiTurnStatus?: string;
   aiTurnFailureCode?: string;
-  channel?: 'Web' | 'WhatsApp';
+  channel?: LiveSupportChannel;
   externalPhoneNumber?: string | null;
+  externalPageId?: string | null;
+  externalPageName?: string | null;
   customerServiceWindowExpiresAt?: string | null;
   lastExternalDeliveryStatus?: string | null;
 }

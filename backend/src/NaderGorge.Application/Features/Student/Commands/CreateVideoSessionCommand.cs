@@ -56,6 +56,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         var isAdminPreview = request.Mode == VideoSessionMode.AdminPreview;
         var video = await _db.LessonVideos
             .Include(v => v.Lesson)
+            .Include(v => v.BunnyStreamLibrary)
+            .Include(v => v.BunnyVideoAssets)
             .FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
 
         if (video == null)
@@ -72,6 +74,29 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         var hasAccess = hasLessonAccess || await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct);
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
+
+        var encryptedVideoId = video.ProviderVideoId;
+        if (VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny)
+        {
+            if (video.BunnyStreamLibrary is null)
+            {
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "هذا الفيديو غير مرتبط بمكتبة Bunny.",
+                    new List<string> { "BUNNY_LIBRARY_MISSING" });
+            }
+
+            var currentBunnyAsset = video.BunnyVideoAssets
+                .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
+            if (currentBunnyAsset is not null
+                && !string.Equals(currentBunnyAsset.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+            {
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "فيديو Bunny ما زال قيد الرفع أو المعالجة.",
+                    new List<string> { "BUNNY_VIDEO_NOT_READY" });
+            }
+
+            encryptedVideoId = $"{video.BunnyStreamLibrary.ExternalLibraryId}/{video.ProviderVideoId}";
+        }
 
         var hasNonGiftVideoAccess = false;
         if (!hasLessonAccess)
@@ -226,7 +251,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         string studentPhone = user?.PhoneNumber ?? "Unknown";
         session.SessionToken = _encryption.EncryptVideoInfo(
             video.Provider,
-            video.ProviderVideoId,
+            encryptedVideoId,
             session.EncryptionKey,
             studentName,
             studentPhone);

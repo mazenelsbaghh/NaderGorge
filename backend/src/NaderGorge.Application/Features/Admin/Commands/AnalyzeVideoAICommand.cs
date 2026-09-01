@@ -4,6 +4,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -41,11 +42,38 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
 
         try
         {
-            var video = await _db.LessonVideos.SingleAsync(v => v.Id == request.VideoId, ct);
+            var video = await _db.LessonVideos
+                .Include(v => v.BunnyStreamLibrary)
+                .Include(v => v.BunnyVideoAssets)
+                .SingleAsync(v => v.Id == request.VideoId, ct);
 
             await _cancellations.ClearVideoAnalysisCancellationAsync(video.Id);
 
-            string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4";
+            var sourceUrl = video.ProviderVideoId;
+            string? sourceKind = null;
+            if (VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny)
+            {
+                if (video.BunnyStreamLibrary is null)
+                {
+                    await ReleaseLockAsync(request.VideoId, generationRunId);
+                    return ApiResponse.Fail("هذا الفيديو غير مرتبط بمكتبة Bunny.", ["BUNNY_LIBRARY_MISSING"]);
+                }
+
+                var currentBunnyAsset = video.BunnyVideoAssets
+                    .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
+                if (currentBunnyAsset is not null
+                    && !string.Equals(currentBunnyAsset.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+                {
+                    await ReleaseLockAsync(request.VideoId, generationRunId);
+                    return ApiResponse.Fail("انتظر حتى يكتمل تجهيز فيديو Bunny قبل التحليل.", ["BUNNY_VIDEO_NOT_READY"]);
+                }
+
+                // The worker must never receive a Bunny iframe/CDN URL. It asks the
+                // platform's internal relay for bytes, which revalidates this run
+                // and resolves the owning library credential server-side.
+                sourceUrl = "bunny-internal";
+                sourceKind = "bunny-internal-original";
+            }
 
             var packageContext = await _db.LessonVideos
                 .Where(v => v.Id == video.Id)
@@ -71,6 +99,7 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
             {
                 lessonVideoId = video.Id,
                 sourceUrl = sourceUrl,
+                sourceKind,
                 teacherPhotoUrls = teacherPhotoUrls,
                 outputLanguage = AiOutputLanguageContract.ToWorkerCode(packageContext.AiOutputLanguage),
                 generationRunId
@@ -116,4 +145,11 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
 
         return ApiResponse.Ok("AI Analysis queued successfully");
     }
+
+    private Task<int> ReleaseLockAsync(Guid videoId, Guid generationRunId) =>
+        _db.LessonVideos
+            .Where(v => v.Id == videoId && v.CurrentAiAnalysisRunId == generationRunId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.IsProcessingAI, false)
+                .SetProperty(v => v.CurrentAiAnalysisRunId, (Guid?)null), CancellationToken.None);
 }

@@ -50,7 +50,9 @@ interface SecureVideoPlayerProps {
  * That route decrypts the video ID server-side and returns an HTML page with YouTube
  * embedded. Communication happens via postMessage.
  * 
- * DevTools shows only an opaque session id in the iframe URL.
+ * The outer iframe URL contains only an opaque session id. The nested provider
+ * still receives its playback identifier, so the embed uses a best-effort
+ * inspection guard rather than treating browser DevTools as a security boundary.
  */
 export interface SecureVideoPlayerRef {
   seekTo: (seconds: number) => void;
@@ -92,7 +94,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     pause: () => sendCommand('pause')
   }));
 
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error' | 'locked' | 'superseded'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error' | 'locked' | 'superseded' | 'protected'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [watchInfo, setWatchInfo] = useState<{current: number, max: number, isLocked?: boolean} | null>(null);
   const [extraWatchReqStatus, setExtraWatchReqStatus] = useState<ExtraWatchRequestStatus | null>(null);
@@ -150,6 +152,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [shadowSolid, setShadowSolid] = useState({ top: 10, bottom: 12 });
   const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive']);
   const loadingSessionRef = useRef(false);
+  const securitySuspendedRef = useRef(false);
+  const domShieldsCleanupRef = useRef<(() => void) | null>(null);
   const reloadSessionRef = useRef<(() => void) | null>(null);
   const embedSessionRefreshCountRef = useRef(0);
   const loadingExtraWatchStatusRef = useRef(false);
@@ -209,6 +213,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   useEffect(() => () => {
     if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
+  }, []);
+
+  useEffect(() => () => {
+    domShieldsCleanupRef.current?.();
+    domShieldsCleanupRef.current = null;
   }, []);
 
   const handlePlayerInteraction = useCallback(() => {
@@ -325,10 +334,43 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
       const msg = event.data;
       if (!msg || msg.source !== 'video-embed') return;
+      if (securitySuspendedRef.current && msg.type !== 'securityViolation') return;
 
       switch (msg.type) {
+        case 'securityViolation': {
+          securitySuspendedRef.current = true;
+          domShieldsCleanupRef.current?.();
+          domShieldsCleanupRef.current = null;
+          trackingEnabledRef.current = false;
+          pendingTrackedSeconds.current = 0;
+          if (trackingInterval.current) {
+            clearInterval(trackingInterval.current);
+            trackingInterval.current = null;
+          }
+          if (embedReadyTimeoutRef.current) {
+            clearTimeout(embedReadyTimeoutRef.current);
+            embedReadyTimeoutRef.current = null;
+          }
+          clearTimeout((window as any).__playFallbackTimeout);
+          const playerIframe = iframeRef.current;
+          iframeRef.current = null;
+          if (playerIframe) {
+            playerIframe.removeAttribute('src');
+            playerIframe.src = 'about:blank';
+            playerIframe.remove();
+          }
+          containerRef.current?.replaceChildren();
+          setIsPlaying(false);
+          setIsBuffering(false);
+          setShowControls(true);
+          showPersistentPlayerShadows();
+          setStatus('protected');
+          setErrorMessage('تم إيقاف تشغيل الفيديو لحماية المحتوى. أغلق أدوات المطوّر ثم أعد تحميل الصفحة للمتابعة.');
+          break;
+        }
         case 'ready':
           embedSessionRefreshCountRef.current = 0;
           if (embedReadyTimeoutRef.current) {
@@ -445,6 +487,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Send command to embedded player ──
   const sendCommand = useCallback((type: string, data?: any) => {
+    if (securitySuspendedRef.current) return;
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type, ...data }, window.location.origin);
     }
@@ -656,6 +699,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Load video ──
   const loadVideo = async () => {
+    if (securitySuspendedRef.current) {
+      setStatus('protected');
+      return;
+    }
     if (loadingSessionRef.current) return;
     loadingSessionRef.current = true;
     try {
@@ -690,13 +737,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         return;
       }
 
+      if (securitySuspendedRef.current) {
+        setStatus('protected');
+        return;
+      }
+
       if (embedReadyTimeoutRef.current) {
         clearTimeout(embedReadyTimeoutRef.current);
       }
       embedReadyTimeoutRef.current = setTimeout(() => {
+        if (securitySuspendedRef.current) return;
         setStatus('error');
-        setErrorMessage('تعذر تحميل مشغل الفيديو. تأكد من إعدادات الاتصال الداخلي بين الواجهة والباك اند.');
-      }, 12000);
+        setErrorMessage('استغرق تحميل مشغل الفيديو وقتًا أطول من المتوقع. تحقق من الاتصال ثم حاول مرة أخرى.');
+      }, 30000);
 
       // 2. Render appropriately based on provider
       const providerName = session.provider?.toLowerCase() || 'youtube';
@@ -704,6 +757,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
 
       if (containerRef.current) {
+        domShieldsCleanupRef.current?.();
+        domShieldsCleanupRef.current = null;
         containerRef.current.innerHTML = '';
         
         const iframe = document.createElement('iframe');
@@ -722,7 +777,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         iframeRef.current = iframe;
         containerRef.current.appendChild(iframe);
 
-        applyDomShields(containerRef.current, () => {
+        domShieldsCleanupRef.current = applyDomShields(containerRef.current, () => {
            setStatus('error');
            setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
         });
@@ -1070,6 +1125,23 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           onCancel={() => setShowConfirmRepurchase(false)}
         />
       </>
+    );
+  }
+
+  if (status === 'protected') {
+    return (
+      <div className={`relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-amber-500/30 bg-black p-8 text-center ${className}`} role="alert">
+        <AlertCircle className="mb-4 h-12 w-12 text-amber-400" />
+        <h3 className="mb-2 text-xl font-bold text-white">تم إيقاف تشغيل الفيديو</h3>
+        <p className="max-w-md text-gray-300">{errorMessage}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-6 min-h-11 rounded-md bg-[var(--admin-primary)] px-6 font-bold text-[var(--admin-primary-contrast)] transition-opacity hover:opacity-90"
+        >
+          أعد تحميل الصفحة بعد إغلاق أدوات المطوّر
+        </button>
+      </div>
     );
   }
 

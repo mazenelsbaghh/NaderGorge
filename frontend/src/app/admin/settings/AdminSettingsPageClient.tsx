@@ -26,6 +26,9 @@ import { translateRole } from '@/packages/brand/platform-identity';
 import { adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import { devConsole } from '@/utils/dev-console';
+import { BunnyLibraryManager } from '@/components/admin/BunnyLibraryManager';
+import { FacebookMessengerSettingsPanel } from '@/components/admin/FacebookMessengerSettingsPanel';
+import { parseBunnyVideoReference } from '@/lib/bunny-video-reference';
 
 interface RoleDto {
   id: string;
@@ -401,7 +404,7 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
 ];
 
 export default function AdminSettingsPageClient() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'player' | 'whatsapp' | 'roles'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles'>('settings');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -654,8 +657,8 @@ export default function AdminSettingsPageClient() {
       subtitle="تخصيص عام للمنصة وإدارة أدوار المساعدين وصلاحياتهم الفنية."
     >
       {/* Dynamic Tab Switcher */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-md">
+      <div className="mb-8 w-full overflow-x-auto pb-1">
+        <div className="mx-auto flex w-max min-w-max gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-md">
           <button
             onClick={() => setActiveTab('settings')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'settings'
@@ -664,6 +667,15 @@ export default function AdminSettingsPageClient() {
             }`}
           >
             إعدادات المنصة
+          </button>
+          <button
+            onClick={() => setActiveTab('bunny-libraries')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'bunny-libraries'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            مكتبات Bunny
           </button>
           <button
             onClick={() => setActiveTab('player')}
@@ -691,6 +703,15 @@ export default function AdminSettingsPageClient() {
             }`}
           >
             WhatsApp
+          </button>
+          <button
+            onClick={() => setActiveTab('messenger')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'messenger'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            Facebook Messenger
           </button>
         </div>
       </div>
@@ -1086,6 +1107,16 @@ export default function AdminSettingsPageClient() {
                   </button>
                 </div>
               </motion.div>
+            ) : activeTab === 'bunny-libraries' ? (
+              <motion.div
+                key="bunny-libraries-tab"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.2 }}
+              >
+                <BunnyLibraryManager />
+              </motion.div>
             ) : activeTab === 'player' ? (
               <motion.div
                 key="player-tab"
@@ -1108,7 +1139,7 @@ export default function AdminSettingsPageClient() {
                         <select value={previewProvider} onChange={(event) => { setPreviewProvider(event.target.value as 'youtube' | 'bunny'); setPreviewVideo(''); }} className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-3 font-bold text-[var(--admin-text)]">
                           <option value="youtube">YouTube</option><option value="bunny">Bunny</option>
                         </select>
-                        <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'Bunny Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                        <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'رابط Bunny الكامل أو Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
                       </div>
                       <p className="text-xs text-[var(--admin-muted)]">انسخ رابط أو معرّف أي فيديو موجود. المعاينة لا تُحسب مشاهدة ولا تغيّر رصيد أي طالب.</p>
                       <PlayerPreview provider={previewProvider} value={previewVideo} settings={settings} />
@@ -1177,6 +1208,16 @@ export default function AdminSettingsPageClient() {
               </motion.div>
             ) : activeTab === 'whatsapp' ? (
               <WhatsAppSettingsTab />
+            ) : activeTab === 'messenger' ? (
+              <motion.div
+                key="messenger-tab"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+              >
+                <FacebookMessengerSettingsPanel />
+              </motion.div>
             ) : (
               <motion.div
                 key="roles-tab"
@@ -1681,8 +1722,14 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
     return () => window.clearTimeout(timeout);
   }, [provider, value, shadowDelaySeconds]);
 
-  const videoId = provider === 'youtube' ? extractYouTubeId(value) : value.trim();
-  const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}`;
+  const bunnyReference = provider === 'bunny' ? parseBunnyVideoReference(value) : undefined;
+  const videoId = provider === 'youtube'
+    ? extractYouTubeId(value)
+    : bunnyReference?.videoGuid ?? value.trim();
+  const libraryQuery = bunnyReference?.libraryId
+    ? `&libraryId=${encodeURIComponent(bunnyReference.libraryId)}`
+    : '';
+  const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}${libraryQuery}`;
   const top = Math.min(1, Math.max(0, Number(settings.PlayerShadowTopOpacity || .7)));
   const bottom = Math.min(1, Math.max(0, Number(settings.PlayerShadowBottomOpacity || .98)));
   const topCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowTopCoverage || 40)));

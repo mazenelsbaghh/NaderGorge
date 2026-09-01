@@ -25,6 +25,7 @@ export function requireStrongSecret(name: string, minLength = 32) {
 export function validateWorkerSecurityConfig() {
   requireStrongSecret('API_CALLBACK_SECRET');
   requireStrongSecret('AI_CALLBACK_SECRET');
+  requireStrongSecret('AI_MEDIA_RELAY_SECRET');
   requireStrongSecret('WORKER_ADMIN_TOKEN');
 }
 

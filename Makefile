@@ -230,7 +230,7 @@ verify-backend: ## Restore, build, and test the backend solution
 	fi
 
 verify-frontend: ## Run focused checks, lint, and build the frontend
-	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run lint && npm run build
+	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run check:video-page-protection && npm run lint && npm run build
 
 verify-worker: ## Build the Node.js worker
 	cd worker && npm run build
@@ -242,7 +242,7 @@ verify-e2e: ## Run Phase 1 auth/session browser smoke; requires backend E2e mode
 	cd frontend && \
 		NEXT_PUBLIC_API_URL=http://api.lvh.me:5245/api \
 		NEXT_PUBLIC_BACKEND_URL=http://api.lvh.me:5245 \
-		npx playwright test tests/e2e/auth.spec.ts tests/e2e/admin-users.spec.ts tests/e2e/parent-report.spec.ts --project=chromium -g "Phase 1|Parent report"
+		npx playwright test tests/e2e/auth.spec.ts tests/e2e/admin-users.spec.ts tests/e2e/parent-report.spec.ts tests/e2e/lesson-context-menu-guard.spec.ts --project=chromium -g "Phase 1|Parent report|lesson video context-menu guard"
 
 # =============================================================================
 # LOGS

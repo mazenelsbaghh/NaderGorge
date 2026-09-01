@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -101,6 +102,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .ToHashSet();
 
         var mandatoryHomeworks = await _db.Homeworks
+            .ReadyForStudents()
             .AsNoTracking()
             .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
             .Select(h => new { h.Id, h.LessonId })

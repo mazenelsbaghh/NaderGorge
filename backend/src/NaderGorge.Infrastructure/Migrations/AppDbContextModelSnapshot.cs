@@ -2216,6 +2216,80 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("balance_transactions", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyStreamLibrary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("ApiKeyCiphertext")
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("ExternalLibraryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastValidatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalLibraryId")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("bunny_stream_libraries", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a5d123ac-0b9f-4f69-9d15-740733000001"),
+                            CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ExternalLibraryId = 740733L,
+                            IsActive = true,
+                            Name = "أولى",
+                            NormalizedName = "أولى"
+                        },
+                        new
+                        {
+                            Id = new Guid("a5d123ac-0b9f-4f69-9d15-740737000002"),
+                            CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ExternalLibraryId = 740737L,
+                            IsActive = true,
+                            Name = "ثانية",
+                            NormalizedName = "ثانية"
+                        },
+                        new
+                        {
+                            Id = new Guid("a5d123ac-0b9f-4f69-9d15-740801000003"),
+                            CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ExternalLibraryId = 740801L,
+                            IsActive = true,
+                            Name = "مسار",
+                            NormalizedName = "مسار"
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyUsageSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2313,6 +2387,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ActivateWhenReady")
+                        .HasColumnType("boolean");
+
                     b.Property<long?>("BandwidthBytes")
                         .HasColumnType("bigint");
 
@@ -2325,6 +2402,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<long>("BunnyLibraryId")
                         .HasColumnType("bigint");
+
+                    b.Property<Guid?>("BunnyStreamLibraryRecordId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("BunnyVideoGuid")
                         .IsRequired()
@@ -2363,6 +2443,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("RetiredAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("RetiredByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SourceState")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("SourceUrlHash")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
@@ -2374,6 +2465,18 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<long?>("StorageBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<bool?>("TargetIsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("TargetMaxWatchCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TargetOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TargetVideoTypeId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
@@ -2396,21 +2499,28 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BunnyVideoGuid")
-                        .IsUnique();
+                    b.HasIndex("BunnyStreamLibraryRecordId");
 
                     b.HasIndex("LessonId");
-
-                    b.HasIndex("LessonVideoId")
-                        .IsUnique();
 
                     b.HasIndex("PackageId");
 
                     b.HasIndex("UploadedByUserId");
 
+                    b.HasIndex("BunnyLibraryId", "BunnyVideoGuid")
+                        .IsUnique();
+
                     b.HasIndex("Status", "LastStatusSyncedAtUtc");
 
                     b.HasIndex("TeacherId", "PackageId", "LessonId");
+
+                    b.HasIndex(new[] { "LessonVideoId" }, "IX_bunny_video_assets_CurrentLessonVideoId")
+                        .IsUnique()
+                        .HasFilter("\"SourceState\" = 0");
+
+                    b.HasIndex(new[] { "LessonVideoId" }, "IX_bunny_video_assets_PendingLessonVideoId")
+                        .IsUnique()
+                        .HasFilter("\"SourceState\" = 1");
 
                     b.ToTable("bunny_video_assets", (string)null);
                 });
@@ -6455,6 +6565,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateOnly?>("HomeworkComingSoonOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("InternalCode")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -6632,6 +6745,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("ArchivedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BunnyStreamLibraryId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -6696,6 +6812,8 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BunnyStreamLibraryId");
+
                     b.HasIndex("ExamId");
 
                     b.HasIndex("InternalCode")
@@ -6705,7 +6823,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasIndex("VideoTypeId");
 
-                    b.ToTable("lesson_videos", (string)null);
+                    b.ToTable("lesson_videos", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_lesson_videos_bunny_library", "LOWER(\"Provider\") <> 'bunny' OR \"BunnyStreamLibraryId\" IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportAIConversationState", b =>
@@ -7588,6 +7709,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllowsAI")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<DateTime?>("AssignedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -7753,7 +7879,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("PhoneNumber")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -7854,6 +7979,358 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("ConversationId", "SentAt", "Id");
 
                     b.ToTable("live_support_messages", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("GuestSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastInboundAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PageName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("ReplyWindowExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SenderPsid")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId")
+                        .IsUnique();
+
+                    b.HasIndex("GuestSessionId");
+
+                    b.HasIndex("PageId", "SenderPsid")
+                        .IsUnique()
+                        .HasFilter("\"IsOpen\" = TRUE");
+
+                    b.HasIndex("PageId", "SenderPsid", "LastInboundAt");
+
+                    b.ToTable("live_support_messenger_bindings", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApiVersion")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("AppId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<byte[]>("AppSecretCiphertext")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ConfigurationKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("VerifyTokenCiphertext")
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("VerifyTokenRotatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfigurationKey")
+                        .IsUnique();
+
+                    b.ToTable("live_support_messenger_configurations", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid?>("LiveSupportMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("ProviderTimestamp")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SenderPsid")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveSupportMessageId")
+                        .IsUnique()
+                        .HasFilter("\"LiveSupportMessageId\" IS NOT NULL");
+
+                    b.HasIndex("ConversationId", "CreatedAt");
+
+                    b.HasIndex("PageId", "ProviderMessageId")
+                        .IsUnique()
+                        .HasFilter("\"ProviderMessageId\" IS NOT NULL");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("live_support_messenger_messages", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerPage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConnectionStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("HumanAgentEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsSubscribed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastCredentialCheckAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime?>("LastSubscriptionCheckAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<byte[]>("PageAccessTokenCiphertext")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("PageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool?>("TokenValid")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PageId")
+                        .IsUnique();
+
+                    b.HasIndex("IsEnabled", "ConnectionStatus");
+
+                    b.ToTable("live_support_messenger_pages", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerWebhookInbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasMaxLength(384)
+                        .HasColumnType("character varying(384)");
+
+                    b.Property<string>("EventKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PageId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PageId", "DeduplicationKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("live_support_messenger_webhook_inbox", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportQueueEntry", b =>
@@ -14210,6 +14687,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyVideoAsset", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.BunnyStreamLibrary", null)
+                        .WithMany()
+                        .HasForeignKey("BunnyStreamLibraryRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
                         .WithMany()
                         .HasForeignKey("LessonId")
@@ -14217,8 +14699,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
-                        .WithOne("BunnyVideoAsset")
-                        .HasForeignKey("NaderGorge.Domain.Entities.BunnyVideoAsset", "LessonVideoId")
+                        .WithMany("BunnyVideoAssets")
+                        .HasForeignKey("LessonVideoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -15390,6 +15872,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonVideo", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.BunnyStreamLibrary", "BunnyStreamLibrary")
+                        .WithMany("Videos")
+                        .HasForeignKey("BunnyStreamLibraryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
                         .WithMany()
                         .HasForeignKey("ExamId")
@@ -15406,6 +15893,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("VideoTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("BunnyStreamLibrary");
 
                     b.Navigation("Exam");
 
@@ -15724,6 +16213,35 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ReplyToMessage");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerBinding", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerBinding", "ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportGuestSession", null)
+                        .WithMany()
+                        .HasForeignKey("GuestSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerMessage", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessage", null)
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessengerMessage", "LiveSupportMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportQueueEntry", b =>
@@ -17395,6 +17913,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Breaks");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyStreamLibrary", b =>
+                {
+                    b.Navigation("Videos");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyVideoAsset", b =>
                 {
                     b.Navigation("UsageSnapshots");
@@ -17561,7 +18084,7 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonVideo", b =>
                 {
-                    b.Navigation("BunnyVideoAsset");
+                    b.Navigation("BunnyVideoAssets");
 
                     b.Navigation("VideoChapters");
                 });

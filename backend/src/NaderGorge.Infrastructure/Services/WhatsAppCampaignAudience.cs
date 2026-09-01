@@ -581,7 +581,8 @@ public sealed partial class WhatsAppCampaignService
         if (filters.HomeworkIds.Length > 0)
             query = query.Where(package => _db.Homeworks.Any(homework =>
                 filters.HomeworkIds.Contains(homework.Id) &&
-                homework.IsActive && homework.ArchiveMode != ContentArchiveMode.HiddenFromEveryone &&
+                homework.IsActive && homework.Questions.Any() &&
+                homework.ArchiveMode != ContentArchiveMode.HiddenFromEveryone &&
                 _db.Lessons.Any(lesson => lesson.Id == homework.LessonId &&
                     lesson.ContentSection.Term.PackageId == package.Id)));
         return await query.Select(package => package.Id).ToArrayAsync(ct);

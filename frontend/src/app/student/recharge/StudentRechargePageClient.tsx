@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Wallet,
   ArrowRight,
   Copy,
   Upload,
+  LoaderCircle,
   CheckCircle,
   Clock,
   ChevronLeft
@@ -75,9 +76,14 @@ export default function StudentRechargePageClient() {
   const [senderPhone, setSenderPhone] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [isPreparingScreenshot, setIsPreparingScreenshot] = useState(false);
+  const [proofUploadProgress, setProofUploadProgress] = useState<number | null>(null);
+  const [proofUploadError, setProofUploadError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(3600); // one hour in seconds
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const proofSubmissionInFlightRef = useRef(false);
+  const screenshotPreparationIdRef = useRef(0);
+  const screenshotInputRef = useRef<HTMLInputElement | null>(null);
 
   // Step 3 state
   const [isMatched, setIsMatched] = useState(false);
@@ -86,6 +92,18 @@ export default function StudentRechargePageClient() {
   const [reviewState, setReviewState] = useState<'checking' | 'phone-confirmation' | 'approved' | 'manual' | 'rejected'>('manual');
   const [originalSenderPhone, setOriginalSenderPhone] = useState('');
   const [reviewTimeLeft, setReviewTimeLeft] = useState(RECHARGE_REVIEW_WINDOW_SECONDS);
+
+  const clearScreenshotSelection = useCallback(() => {
+    screenshotPreparationIdRef.current += 1;
+    if (screenshotInputRef.current) {
+      screenshotInputRef.current.value = '';
+    }
+    setScreenshot(null);
+    setScreenshotPreview(null);
+    setIsPreparingScreenshot(false);
+    setProofUploadProgress(null);
+    setProofUploadError(null);
+  }, []);
 
   const fetchRequests = async () => {
     try {
@@ -125,8 +143,11 @@ export default function StudentRechargePageClient() {
       const calculateTimeLeft = () => {
         const diff = Math.max(0, Math.floor((expiry - Date.now()) / 1000));
         setTimeLeft(diff);
-        if (diff === 0 && timerRef.current) {
-          clearInterval(timerRef.current);
+        if (diff === 0 && !proofSubmissionInFlightRef.current) {
+          clearScreenshotSelection();
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
           toast.error('انتهت صلاحية حجز المحفظة، يرجى البدء من جديد.');
           setStep(1);
           setRechargeData(null);
@@ -143,7 +164,7 @@ export default function StudentRechargePageClient() {
         clearInterval(timerRef.current);
       }
     };
-  }, [step, rechargeData]);
+  }, [step, rechargeData, clearScreenshotSelection]);
 
   useEffect(() => {
     if (step !== 3 || reviewState !== 'checking' || !rechargeData) return;
@@ -259,8 +280,16 @@ export default function StudentRechargePageClient() {
       }
       if (file.size > 10 * 1024 * 1024) {
         toast.error('حجم الصورة يجب أن لا يتجاوز 10 ميجابايت.');
+        e.target.value = '';
         return;
       }
+
+      const preparationId = ++screenshotPreparationIdRef.current;
+      setIsPreparingScreenshot(true);
+      setProofUploadProgress(null);
+      setProofUploadError(null);
+      setScreenshot(null);
+      setScreenshotPreview(null);
       try {
         // Normalize browser-supported images to a real WebP file. This prevents files
         // with misleading extensions or MIME types from reaching the server.
@@ -270,13 +299,19 @@ export default function StudentRechargePageClient() {
           renameFileToMatchBase64(file.name, dataUrl),
           { type: `image/${getExtensionFromBase64(dataUrl) === 'jpg' ? 'jpeg' : getExtensionFromBase64(dataUrl)}` }
         );
+        if (preparationId !== screenshotPreparationIdRef.current) return;
         setScreenshot(normalizedFile);
         setScreenshotPreview(dataUrl);
       } catch {
+        if (preparationId !== screenshotPreparationIdRef.current) return;
         setScreenshot(null);
         setScreenshotPreview(null);
         e.target.value = '';
         toast.error('تعذر قراءة هذه الصورة. إذا كانت من iPhone بصيغة HEIC، التقط Screenshot أو حوّلها إلى JPG.');
+      } finally {
+        if (preparationId === screenshotPreparationIdRef.current) {
+          setIsPreparingScreenshot(false);
+        }
       }
     }
   };
@@ -284,6 +319,11 @@ export default function StudentRechargePageClient() {
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rechargeData || proofSubmissionInFlightRef.current) return;
+
+    if (isPreparingScreenshot) {
+      toast('انتظر حتى يكتمل تجهيز الصورة قبل الإرسال.', { icon: '⏳' });
+      return;
+    }
 
     const normalizedSenderPhone = normalizePhoneInput(senderPhone);
 
@@ -305,10 +345,13 @@ export default function StudentRechargePageClient() {
     try {
       proofSubmissionInFlightRef.current = true;
       setLoading(true);
+      setProofUploadError(null);
+      setProofUploadProgress(0);
       const response = await rechargeService.submit(
         rechargeData.rechargeRequestId,
         normalizedSenderPhone,
         screenshot,
+        { onUploadProgress: setProofUploadProgress },
       );
 
       if (response.success && response.data) {
@@ -333,12 +376,17 @@ export default function StudentRechargePageClient() {
           toast.success('تم استلام الإثبات وجاري التأكد من الشحن.');
         }
       } else {
-        toast.error(response.message || 'تعذر تقديم طلب الشحن.');
+        const message = response.message || 'تعذر رفع صورة إثبات التحويل.';
+        setProofUploadError(message);
+        toast.error(message);
       }
-    } catch {
-      // The shared API client displays the server response once for this request.
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        || 'لم نتلقَّ تأكيدًا بحفظ الصورة. تأكد من اتصال الإنترنت ثم أعد المحاولة.';
+      setProofUploadError(message);
     } finally {
       proofSubmissionInFlightRef.current = false;
+      setProofUploadProgress(null);
       setLoading(false);
     }
   };
@@ -355,7 +403,12 @@ export default function StudentRechargePageClient() {
     try {
       proofSubmissionInFlightRef.current = true;
       setLoading(true);
-      const response = await rechargeService.submit(requestId, normalizedSenderPhone, null, true);
+      const response = await rechargeService.submit(
+        requestId,
+        normalizedSenderPhone,
+        null,
+        { confirmSenderPhone: true },
+      );
       if (!response.success || !response.data) {
         toast.error(response.message || 'تعذر تأكيد رقم المحول.');
         return;
@@ -391,8 +444,7 @@ export default function StudentRechargePageClient() {
       setStep(1);
       setRechargeData(null);
       setSenderPhone('');
-      setScreenshot(null);
-      setScreenshotPreview(null);
+      clearScreenshotSelection();
       await fetchRequests();
     } catch (error: unknown) {
       const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -431,8 +483,7 @@ export default function StudentRechargePageClient() {
     setTeacherId(pendingRequest.teacherId ?? '');
     setReviewCode(pendingRequest.reviewCode);
     setSenderPhone(pendingRequest.senderPhoneNumber ?? '');
-    setScreenshot(null);
-    setScreenshotPreview(null);
+    clearScreenshotSelection();
     setShowPendingRequestDialog(false);
     setStep(2);
   };
@@ -448,7 +499,12 @@ export default function StudentRechargePageClient() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const canSubmitProof = Boolean(screenshot) && isValidEgyptianMobile(normalizePhoneInput(senderPhone));
+  const canSubmitProof = Boolean(screenshot)
+    && !isPreparingScreenshot
+    && isValidEgyptianMobile(normalizePhoneInput(senderPhone));
+  const isUploadingProof = proofUploadProgress !== null;
+  const displayedUploadProgress = proofUploadProgress ?? 0;
+  const isConfirmingProofUpload = proofUploadProgress === 100;
   const pendingRequest = requests.find((request) => isPendingRechargeStatus(request.status));
   const hasPendingRequest = Boolean(pendingRequest);
 
@@ -637,8 +693,9 @@ export default function StudentRechargePageClient() {
             {/* Form Inputs */}
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-[var(--admin-text)]">رقم الهاتف الذي قمت بالتحويل منه *</label>
+                <label htmlFor="recharge-sender-phone" className="text-sm font-bold text-[var(--admin-text)]">رقم الهاتف الذي قمت بالتحويل منه *</label>
                 <input
+                  id="recharge-sender-phone"
                   type="tel"
                   required
                   inputMode="numeric"
@@ -647,77 +704,151 @@ export default function StudentRechargePageClient() {
                   placeholder="مثال: 01098765432"
                   value={senderPhone}
                   onChange={(e) => setSenderPhone(normalizePhoneInput(e.target.value))}
+                  aria-describedby="recharge-sender-phone-hint"
                   className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 font-mono text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
                 />
-                <span className="text-sm text-[var(--admin-muted)] font-semibold">
+                <span id="recharge-sender-phone-hint" className="text-sm text-[var(--admin-muted)] font-semibold">
                   اكتب رقم المحفظة المحول منها كامل 11 رقم. الرقم الناقص لن تتم مطابقته.
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" aria-busy={isPreparingScreenshot || isUploadingProof}>
                 <label className="text-sm font-bold text-[var(--admin-text)]">صورة إثبات التحويل (لقطة الشاشة) *</label>
 
-                {screenshotPreview ? (
-                  <div className="relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] overflow-hidden aspect-video flex items-center justify-center">
+                {isPreparingScreenshot ? (
+                  <div
+                    className="flex aspect-video flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-6 text-center"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <LoaderCircle className="h-9 w-9 animate-spin text-[var(--admin-primary)]" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-black text-[var(--admin-text)]">جارٍ تجهيز صورة التحويل…</p>
+                      <p className="mt-1 text-xs font-semibold text-[var(--admin-muted)]">يتم تجهيز الصورة لتقليل حجمها وتسريع رفعها.</p>
+                    </div>
+                  </div>
+                ) : screenshotPreview ? (
+                  <div className="relative flex min-h-56 items-center justify-center overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={screenshotPreview}
-                      alt="Screenshot Preview"
-                      className="max-h-full object-contain"
+                      alt="معاينة صورة إثبات التحويل المختارة"
+                      className="max-h-[28rem] max-w-full object-contain"
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setScreenshot(null);
-                        setScreenshotPreview(null);
-                      }}
-                      className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg px-2.5 py-1 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow]"
+                      onClick={clearScreenshotSelection}
+                      disabled={isUploadingProof}
+                      className="absolute top-2 right-2 min-h-11 rounded-lg bg-red-500/80 px-3 py-1 text-xs font-bold text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      إلغاء الصورة
+                      حذف الصورة المختارة
                     </button>
                   </div>
                 ) : (
-                  <label className="border-2 border-dashed border-[var(--admin-border)] hover:border-[var(--admin-primary)] rounded-2xl p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-[color,background-color,border-color,opacity,transform,box-shadow] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)]">
+                  <label
+                    htmlFor="recharge-screenshot"
+                    className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-8 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:bg-[var(--admin-hover)] focus-within:ring-2 focus-within:ring-[var(--admin-primary)] focus-within:ring-offset-2"
+                  >
                     <Upload className="h-8 w-8 text-[var(--admin-muted)]" />
-                    <span className="font-bold text-sm text-[var(--admin-text)]">اضغط لرفع لقطة الشاشة</span>
-                    <span className="text-xs text-[var(--admin-muted)]">JPG أو PNG أو WEBP، بحد أقصى 10 ميجابايت</span>
+                    <span className="text-sm font-bold text-[var(--admin-text)]">اختر صورة إثبات التحويل</span>
+                    <span id="recharge-screenshot-hint" className="text-xs text-[var(--admin-muted)]">JPG أو PNG أو WEBP، بحد أقصى 10 ميجابايت</span>
                     <input
+                      ref={screenshotInputRef}
+                      id="recharge-screenshot"
                       type="file"
                       accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                       required
                       onChange={handleFileChange}
-                      className="hidden"
+                      aria-describedby="recharge-screenshot-hint"
+                      className="sr-only"
                     />
                   </label>
                 )}
+
+                {screenshot && !isUploadingProof ? (
+                  proofUploadError ? (
+                    <div className="space-y-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-3 text-rose-950" role="alert">
+                      <p className="text-xs font-black">تعذر تأكيد حفظ صورة التحويل.</p>
+                      <p className="text-xs font-semibold leading-5">{proofUploadError}</p>
+                      <p className="text-xs font-semibold leading-5">الصورة ما زالت مختارة. تحقّق من الإنترنت ثم أعد إرسالها إذا كان الطلب ما زال معلقًا.</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-950" role="status">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+                      <p className="text-xs font-black leading-5">
+                        تم اختيار الصورة فقط — اضغط «رفع الصورة وإرسال الطلب» لرفعها وحفظها على النظام.
+                      </p>
+                    </div>
+                  )
+                ) : null}
+
+                {isUploadingProof ? (
+                  <div className="space-y-2 rounded-xl border border-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-3">
+                    <p className="sr-only" role="status">
+                      {isConfirmingProofUpload ? 'تم إرسال الصورة، جارٍ تأكيد حفظها.' : 'جارٍ رفع صورة التحويل.'}
+                    </p>
+                    <div className="flex items-center justify-between gap-3 text-xs font-black text-[var(--admin-text)]">
+                      <span className="flex items-center gap-2">
+                        <LoaderCircle className="h-4 w-4 animate-spin text-[var(--admin-primary)]" aria-hidden="true" />
+                        {isConfirmingProofUpload
+                          ? 'تم إرسال الصورة، جارٍ تأكيد حفظها…'
+                          : 'جارٍ رفع صورة التحويل…'}
+                      </span>
+                      {!isConfirmingProofUpload ? <bdi dir="ltr" className="font-mono text-[var(--admin-primary)]">{displayedUploadProgress}%</bdi> : null}
+                    </div>
+                    {isConfirmingProofUpload ? (
+                      <div className="h-2 overflow-hidden rounded-full bg-[var(--admin-border)]" aria-label="جارٍ تأكيد حفظ صورة التحويل">
+                        <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--admin-primary)]" />
+                      </div>
+                    ) : (
+                      <div
+                        className="h-2 overflow-hidden rounded-full bg-[var(--admin-border)]"
+                        role="progressbar"
+                        aria-label="تقدم رفع صورة التحويل"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={displayedUploadProgress}
+                      >
+                        <div
+                          className="h-full origin-right rounded-full bg-[var(--admin-primary)] transition-transform duration-300 ease-out"
+                          style={{ transform: `scaleX(${displayedUploadProgress / 100})` }}
+                        />
+                      </div>
+                    )}
+                    <p className="text-xs font-semibold text-[var(--admin-muted)]">ابقَ في هذه الصفحة حتى يظهر تأكيد استلام الطلب.</p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <button
                 type="button"
                 onClick={() => void cancelActiveRecharge()}
                 disabled={loading || cancelling}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-3 text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50"
+                className="order-2 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-3 text-sm font-bold text-[var(--admin-muted)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-hover)] active:scale-95 disabled:opacity-50 sm:order-1"
               >
                 {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب والعودة'}
               </button>
               <button
                 type="submit"
-                disabled={loading || !canSubmitProof}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50"
+                disabled={loading || isPreparingScreenshot || !canSubmitProof}
+                className="order-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-95 disabled:opacity-50 sm:order-2"
               >
                 {loading ? (
-                  <span className="h-5 w-5 animate-spin border-2 border-white border-t-transparent rounded-full" />
+                  <>
+                    <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    <span>{isConfirmingProofUpload ? 'جارٍ تأكيد الحفظ…' : 'جارٍ رفع الصورة…'}</span>
+                  </>
                 ) : (
-                  <span>تأكيد التحويل وإرسال</span>
+                  <span>{proofUploadError ? 'إعادة رفع الصورة وإرسال الطلب' : 'رفع الصورة وإرسال الطلب'}</span>
                 )}
               </button>
             </div>
-            {!canSubmitProof && (
+            {!canSubmitProof && !isPreparingScreenshot && !isUploadingProof && (
               <p className="text-center text-xs font-bold text-amber-700 dark:text-amber-300">
-                لن يتم إرسال الطلب للأدمن قبل كتابة رقم المُحوِّل الصحيح ورفع صورة إثبات التحويل.
+                لن يُحفظ إثبات التحويل إلا بعد كتابة رقم المُحوِّل الصحيح والضغط على «رفع الصورة وإرسال الطلب».
               </p>
             )}
           </form>
@@ -800,8 +931,7 @@ export default function StudentRechargePageClient() {
                   setStep(1);
                   setRechargeData(null);
                   setSenderPhone('');
-                  setScreenshot(null);
-                  setScreenshotPreview(null);
+                  clearScreenshotSelection();
                   setReviewState('manual');
                   setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
                 }}

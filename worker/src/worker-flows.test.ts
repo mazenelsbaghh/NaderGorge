@@ -48,6 +48,7 @@ import { extractAudioFromVideo } from './utils/audioExtractor.js';
 process.env.GEMINI_API_KEY = 'mock_gemini_api_key_value_1234567890';
 process.env.BACKEND_API_URL = 'http://localhost:5245/api/v1';
 process.env.AI_CALLBACK_SECRET = 'E2eOnlyAiCallbackSecretValue1234567890';
+process.env.AI_MEDIA_RELAY_SECRET = 'E2eOnlyAiMediaRelaySecretValue1234567890';
 
 test('Job cancellation flow works correctly', async () => {
   const mockStore = new Map<string, string>();
@@ -216,28 +217,55 @@ test('extractAudioFromVideo refuses to route YouTube through third-party downloa
 test('extractAudioFromVideo detects Bunny Stream GUIDs and constructs the correct URL and referer', async () => {
   const oldLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
   process.env.BUNNY_STREAM_LIBRARY_ID = '99999';
+  let outputPath: string | undefined;
 
   bunnyExecCalled = false;
   bunnyCapturedArgs = [];
 
   try {
     const bunnyGuid = '12345678-abcd-1234-abcd-123456789abc';
-    const result = await extractAudioFromVideo(bunnyGuid, 'mock_bunny_test');
+    outputPath = await extractAudioFromVideo(bunnyGuid, 'mock_bunny_test');
 
     assert.ok(bunnyExecCalled, 'execFile should have been intercepted');
-    assert.ok(result.endsWith('mock_bunny_test.mp3'), 'should return expected mp3 path');
-    assert.ok(fs.existsSync(result), 'output file should exist');
+    assert.ok(outputPath.endsWith('mock_bunny_test.mp3'), 'should return expected mp3 path');
+    assert.ok(fs.existsSync(outputPath), 'output file should exist');
 
     assert.strictEqual(bunnyCapturedArgs[0], `https://iframe.mediadelivery.net/embed/99999/${bunnyGuid}`);
     const refererIndex = bunnyCapturedArgs.indexOf('--referer');
     assert.ok(refererIndex !== -1, '--referer arg must be passed');
     assert.strictEqual(bunnyCapturedArgs[refererIndex + 1], 'https://admin.massar-academy.net/');
 
-    try {
-      fs.unlinkSync(result);
-    } catch {}
   } finally {
-    process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
+    if (outputPath) fs.rmSync(outputPath, { force: true });
+    if (oldLibraryId === undefined) delete process.env.BUNNY_STREAM_LIBRARY_ID;
+    else process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
+  }
+});
+
+test('extractAudioFromVideo uses the library scoped in a Bunny source instead of the legacy environment', async () => {
+  const oldLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
+  process.env.BUNNY_STREAM_LIBRARY_ID = '99999';
+  bunnyExecCalled = false;
+  bunnyCapturedArgs = [];
+  let outputPath: string | undefined;
+
+  try {
+    const bunnyGuid = '12345678-abcd-1234-abcd-123456789abc';
+    outputPath = await extractAudioFromVideo(
+      `740801/${bunnyGuid}`,
+      'mock_bunny_scoped_library_test',
+    );
+
+    assert.equal(bunnyExecCalled, true);
+    assert.equal(
+      bunnyCapturedArgs[0],
+      `https://iframe.mediadelivery.net/embed/740801/${bunnyGuid}`,
+    );
+    assert.equal(fs.existsSync(outputPath), true);
+  } finally {
+    if (outputPath) fs.rmSync(outputPath, { force: true });
+    if (oldLibraryId === undefined) delete process.env.BUNNY_STREAM_LIBRARY_ID;
+    else process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
   }
 });
 

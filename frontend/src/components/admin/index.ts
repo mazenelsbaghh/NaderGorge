@@ -41,6 +41,7 @@ export * from './LessonCommentsModerationTab';
 export * from './CommunityPostsModerationTable';
 export * from './CommunityCommentsModerationTable';
 export * from './UnifiedAssessmentBuilder';
+export * from './HomeworkComingSoonSettings';
 export * from './LinkExamForm';
 export * from './SectionListManager';
 export * from './AddSectionForm';

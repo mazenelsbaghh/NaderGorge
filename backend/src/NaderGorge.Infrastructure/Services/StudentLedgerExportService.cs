@@ -116,7 +116,7 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
     {
         var watches = await LoadWatchesAsync(studentIds, packageIds, ct);
         var attempts = await LoadAttemptsAsync(studentIds, packageIds, ct);
-        var homeworks = await LoadHomeworksAsync(packageIds, ct);
+        var homeworks = await LoadHomeworksAsync(studentIds, packageIds, ct);
         var submissions = await LoadSubmissionsAsync(studentIds, homeworks, ct);
         return new ActivityData(watches, attempts, homeworks, submissions);
     }
@@ -138,9 +138,16 @@ public sealed class StudentLedgerExportService : IStudentLedgerExportService
             .Select(attempt => new AttemptRow(attempt.UserId, attempt.ExamId, attempt.ScoreAchieved, attempt.IsPassed, attempt.CreatedAt)).ToListAsync(ct);
     }
 
-    private Task<List<HomeworkRow>> LoadHomeworksAsync(HashSet<Guid> packageIds, CancellationToken ct) =>
+    private Task<List<HomeworkRow>> LoadHomeworksAsync(
+        Guid[] studentIds,
+        HashSet<Guid> packageIds,
+        CancellationToken ct) =>
         _db.Homeworks.AsNoTracking()
-            .Where(homework => _db.Lessons.Any(lesson => lesson.Id == homework.LessonId && packageIds.Contains(lesson.ContentSection.Term.PackageId)))
+            .Where(homework =>
+                _db.Lessons.Any(lesson => lesson.Id == homework.LessonId &&
+                    packageIds.Contains(lesson.ContentSection.Term.PackageId)) &&
+                (homework.IsActive && homework.Questions.Any() ||
+                 homework.Submissions.Any(submission => studentIds.Contains(submission.StudentId))))
             .Select(homework => new HomeworkRow(homework.Id, homework.LessonId, homework.Title)).ToListAsync(ct);
 
     private Task<List<SubmissionRow>> LoadSubmissionsAsync(Guid[] studentIds, IEnumerable<HomeworkRow> homeworks, CancellationToken ct)

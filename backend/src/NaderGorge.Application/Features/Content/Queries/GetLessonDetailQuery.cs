@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -32,7 +33,8 @@ public record LessonDetailDto(
     string? HomeworkStatus = null,
     Guid? TermId = null,
     Guid? SectionId = null,
-    bool IsVideoOnlyAccess = false
+    bool IsVideoOnlyAccess = false,
+    DateOnly? HomeworkComingSoonOn = null
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -367,7 +369,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             // 2. Check if previous lesson's mandatory homework is passed
             if (!isLocked)
             {
-                var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                var prevHomework = await _db.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _db.HomeworkSubmissions
@@ -503,8 +507,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         }
 
         var hw = await _db.Homeworks
+            .ReadyForStudents()
             .Include(h => h.Questions)
-            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId && h.IsActive, ct);
+            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
 
         LessonHomeworkDto? homeworkDto = null;
         if (hw != null)
@@ -568,7 +573,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         if (lesson.ExamId.HasValue && previousLesson != null)
         {
-            var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+            var prevHomework = await _db.Homeworks
+                .Where(h => h.LessonId == previousLesson.Id)
+                .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
             if (prevHomework != null && prevHomework.IsMandatory)
             {
                 var prevHwSubmission = await _db.HomeworkSubmissions
@@ -700,7 +707,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             examStatus,
             homeworkStatus,
             lesson.ContentSection?.TermId,
-            lesson.ContentSectionId
+            lesson.ContentSectionId,
+            false,
+            hw is null ? lesson.HomeworkComingSoonOn : null
         );
         return ApiResponse<LessonDetailDto>.Ok(detail);
     }

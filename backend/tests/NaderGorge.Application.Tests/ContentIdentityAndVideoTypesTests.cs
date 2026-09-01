@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using NaderGorge.API.Controllers;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Admin.Commands;
@@ -257,7 +258,11 @@ public class ContentIdentityAndVideoTypesTests
         await db.SaveChangesAsync();
 
         var auth = new TeacherAuthorizationService(db);
-        var createHandler = new CreateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth);
+        var bunny = new RecordingBunnyClient(740733);
+        var libraries = new StaticBunnyLibraryAccessService(
+            new BunnyStreamLibraryAccess(Guid.NewGuid(), "Default", bunny.LibraryId, "api-key", true));
+        var clients = new RecordingBunnyClientFactory(bunny);
+        var createHandler = new CreateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth, libraries, clients);
         var invalid = await createHandler.Handle(
             new CreateVideoCommand("Video", "youtube", "dQw4w9WgXcQ", 1, 3, lesson.Id, Guid.NewGuid()),
             CancellationToken.None);
@@ -273,7 +278,7 @@ public class ContentIdentityAndVideoTypesTests
 
         activeType.IsActive = false;
         await db.SaveChangesAsync();
-        var updateHandler = new UpdateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth);
+        var updateHandler = new UpdateVideoCommandHandler(db, Array.Empty<IVideoProvider>(), auth, libraries, clients);
         var unchangedInactive = await updateHandler.Handle(
             new UpdateVideoCommand(video.Id, "Renamed", "youtube", "dQw4w9WgXcQ", 2, 4, activeType.Id),
             CancellationToken.None);
@@ -316,29 +321,49 @@ public class ContentIdentityAndVideoTypesTests
         var lesson = new Lesson { Title = "Lesson", Summary = "Summary", ContentSectionId = section.Id };
         var activeType = new VideoType { Name = "شرح", NormalizedName = "شرح", SortOrder = 10, IsActive = true };
         var inactiveType = new VideoType { Name = "قديم", NormalizedName = "قديم", SortOrder = 20, IsActive = false };
-        db.AddRange(adminRole, admin, teacherUser, teacher, subject, package, term, section, lesson, activeType, inactiveType);
+        var library = new BunnyStreamLibrary
+        {
+            Name = "أولى",
+            NormalizedName = "أولى",
+            ExternalLibraryId = 740733,
+            ApiKeyCiphertext = [1, 2, 3],
+            IsActive = true
+        };
+        db.AddRange(adminRole, admin, teacherUser, teacher, subject, package, term, section, lesson, activeType, inactiveType, library);
         db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = adminRole.Id });
         await db.SaveChangesAsync();
 
-        var bunny = new RecordingBunnyClient();
+        var bunny = new RecordingBunnyClient(library.ExternalLibraryId);
+        var libraries = new StaticBunnyLibraryAccessService(
+            new BunnyStreamLibraryAccess(library.Id, library.Name, library.ExternalLibraryId, "api-key", true));
+        var clients = new RecordingBunnyClientFactory(bunny);
         var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
-        var tusHandler = new CreateBunnyTusUploadCommandHandler(db, bunny, configuration);
+        var tusHandler = new CreateBunnyTusUploadCommandHandler(
+            db,
+            libraries,
+            clients,
+            configuration,
+            NullLogger<CreateBunnyTusUploadCommandHandler>.Instance);
         var invalidTus = await tusHandler.Handle(
-            new CreateBunnyTusUploadCommand(null, null, lesson.Id, "Video", 1, 3, inactiveType.Id, "video.mp4", 100, admin.Id),
+            new CreateBunnyTusUploadCommand(null, null, lesson.Id, "Video", 1, 3, inactiveType.Id, library.Id, true, "video.mp4", 100, admin.Id),
             CancellationToken.None);
         Assert.False(invalidTus.Success);
         Assert.Contains("VIDEO_TYPE_INVALID", invalidTus.Errors!);
         Assert.Equal(0, bunny.CreateCalls);
 
-        var fetchHandler = new FetchBunnyVideoCommandHandler(db, bunny);
+        var fetchHandler = new FetchBunnyVideoCommandHandler(
+            db,
+            libraries,
+            clients,
+            NullLogger<FetchBunnyVideoCommandHandler>.Instance);
         var invalidFetch = await fetchHandler.Handle(
-            new FetchBunnyVideoCommand(null, null, lesson.Id, "Video", 1, 3, inactiveType.Id, "https://example.com/video.mp4", admin.Id),
+            new FetchBunnyVideoCommand(null, null, lesson.Id, "Video", 1, 3, inactiveType.Id, library.Id, true, "https://example.com/video.mp4", admin.Id),
             CancellationToken.None);
         Assert.False(invalidFetch.Success);
         Assert.Equal(0, bunny.CreateCalls);
 
         var validTus = await tusHandler.Handle(
-            new CreateBunnyTusUploadCommand(null, null, lesson.Id, "Video", 1, 3, activeType.Id, "video.mp4", 100, admin.Id),
+            new CreateBunnyTusUploadCommand(null, null, lesson.Id, "Video", 1, 3, activeType.Id, library.Id, true, "video.mp4", 100, admin.Id),
             CancellationToken.None);
         Assert.True(validTus.Success);
         Assert.Equal(1, bunny.CreateCalls);
@@ -346,24 +371,64 @@ public class ContentIdentityAndVideoTypesTests
         Assert.Equal(activeType.Id, createdVideo.VideoTypeId);
     }
 
-    private sealed class RecordingBunnyClient : IBunnyStreamClient
+    private sealed class RecordingBunnyClient(long libraryId) : IBunnyStreamClient
     {
+        public long LibraryId { get; } = libraryId;
         public int CreateCalls { get; private set; }
+
+        public Task<BunnyStreamValidationResult> ValidateLibraryAccessAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new BunnyStreamValidationResult(true, null, null));
 
         public Task<BunnyStreamVideoDto> CreateVideoAsync(string title, string? collectionId, CancellationToken cancellationToken)
         {
             CreateCalls++;
-            return Task.FromResult(new BunnyStreamVideoDto(1, Guid.NewGuid().ToString("N"), title, 0, 0, 0, 0, 0, 0, collectionId, false, true));
+            return Task.FromResult(new BunnyStreamVideoDto(LibraryId, Guid.NewGuid().ToString("D"), title, 0, 0, 0, 0, 0, 0, collectionId, false, true));
         }
 
-        public Task<BunnyFetchVideoResultDto> FetchVideoAsync(string url, string title, string? collectionId, CancellationToken cancellationToken) =>
+        public Task<BunnyFetchVideoResultDto> FetchVideoAsync(string videoGuid, string url, CancellationToken cancellationToken) =>
             Task.FromResult(new BunnyFetchVideoResultDto(true, null, 200));
+
+        public Task DeleteVideoAsync(string videoGuid, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<BunnyStreamVideoDto?> GetVideoAsync(string videoGuid, CancellationToken cancellationToken) => Task.FromResult<BunnyStreamVideoDto?>(null);
         public Task<IReadOnlyList<BunnyStreamVideoDto>> ListVideosAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<BunnyStreamVideoDto>>([]);
         public Task<BunnyVideoStorageDto?> GetVideoStorageAsync(string videoGuid, CancellationToken cancellationToken) => Task.FromResult<BunnyVideoStorageDto?>(null);
         public Task<BunnyVideoLibraryDto?> GetVideoLibraryAsync(CancellationToken cancellationToken) => Task.FromResult<BunnyVideoLibraryDto?>(null);
-        public BunnyTusUploadSignatureDto CreateTusUploadSignature(string videoGuid, TimeSpan expiresIn) => new(1, videoGuid, "https://video.bunnycdn.com/tusupload", "signature", 1);
+        public BunnyTusUploadSignatureDto CreateTusUploadSignature(string videoGuid, TimeSpan expiresIn) => new(LibraryId, videoGuid, "https://video.bunnycdn.com/tusupload", "signature", 1);
         public Task TriggerSmartActionsAsync(string videoGuid, BunnySmartActionsRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class RecordingBunnyClientFactory(params RecordingBunnyClient[] clients)
+        : IBunnyStreamClientFactory
+    {
+        private readonly IReadOnlyDictionary<long, RecordingBunnyClient> _clients =
+            clients.ToDictionary(client => client.LibraryId);
+
+        public IBunnyStreamClient Create(long libraryId, string apiKey)
+        {
+            return _clients.TryGetValue(libraryId, out var client)
+                ? client
+                : throw new InvalidOperationException("No recording Bunny client is configured for this library.");
+        }
+    }
+
+    private sealed class StaticBunnyLibraryAccessService(BunnyStreamLibraryAccess access) : IBunnyStreamLibraryAccessService
+    {
+        public Task<BunnyStreamLibraryAccessResult> ResolveAsync(
+            Guid libraryId,
+            bool requireActive,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(Resolve(libraryId == access.Id));
+
+        public Task<BunnyStreamLibraryAccessResult> ResolveByExternalIdAsync(
+            long externalLibraryId,
+            bool requireActive,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(Resolve(externalLibraryId == access.ExternalLibraryId));
+
+        private BunnyStreamLibraryAccessResult Resolve(bool matches) =>
+            matches && access.IsActive
+                ? BunnyStreamLibraryAccessResult.Ok(access)
+                : BunnyStreamLibraryAccessResult.Fail("BUNNY_LIBRARY_UNAVAILABLE", "Bunny library unavailable.");
     }
 }

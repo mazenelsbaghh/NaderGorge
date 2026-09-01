@@ -17,6 +17,8 @@ COPIED_OPTIONAL_KEYS = (
     "BUNNY_STREAM_LIBRARY_ID",
     "BUNNY_STREAM_API_KEY",
     "BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES",
+    "BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON",
+    "BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON",
     "TELEGRAM_API_ID",
     "TELEGRAM_API_HASH",
     "TELEGRAM_STRING_SESSION",
@@ -30,6 +32,21 @@ COPIED_OPTIONAL_KEYS = (
     "WHATSAPP_CLOUD_VERIFY_TOKEN",
     "WHATSAPP_CLOUD_APP_SECRET",
     "WHATSAPP_CLOUD_API_VERSION",
+    "FACEBOOK_MESSENGER_VERIFY_TOKEN",
+    "FACEBOOK_MESSENGER_APP_SECRET",
+    "FACEBOOK_MESSENGER_API_VERSION",
+    "FACEBOOK_MESSENGER_PAGE_1_ID",
+    "FACEBOOK_MESSENGER_PAGE_1_NAME",
+    "FACEBOOK_MESSENGER_PAGE_1_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_1_HUMAN_AGENT_ENABLED",
+    "FACEBOOK_MESSENGER_PAGE_2_ID",
+    "FACEBOOK_MESSENGER_PAGE_2_NAME",
+    "FACEBOOK_MESSENGER_PAGE_2_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_2_HUMAN_AGENT_ENABLED",
+    "FACEBOOK_MESSENGER_PAGE_3_ID",
+    "FACEBOOK_MESSENGER_PAGE_3_NAME",
+    "FACEBOOK_MESSENGER_PAGE_3_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_3_HUMAN_AGENT_ENABLED",
     "APNS_KEY_ID",
     "APNS_TEAM_ID",
     "APNS_BUNDLE_ID",
@@ -68,6 +85,7 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
     postgres_password = read_secret(secrets, "postgres-app")
     redis_password = read_secret(secrets, "redis")
     ai_callback_secret = read_secret(secrets, "ai-callback")
+    ai_media_relay_secret = read_secret(secrets, "ai-media-relay")
     admin_ai_hmac = base64.b64encode(
         hashlib.sha256(b"massar-admin-ai-hmac-v1\0" + ai_callback_secret.encode("utf-8")).digest()
     ).decode("ascii")
@@ -98,6 +116,7 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "JwtSettings__RefreshExpirationDays": "30",
         "API_CALLBACK_SECRET": read_secret(secrets, "api-callback"),
         "AI_CALLBACK_SECRET": ai_callback_secret,
+        "AI_MEDIA_RELAY_SECRET": ai_media_relay_secret,
         "ADMIN_AI_ENABLED": "true",
         "ADMIN_AI_HMAC_KEY": admin_ai_hmac,
         "AdminAI__Enabled": "true",
@@ -129,6 +148,9 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "NEXT_PUBLIC_API_URL": "https://api.massar-academy.net/api",
         "NEXT_PUBLIC_BACKEND_URL": "https://api.massar-academy.net",
         "NEXT_PUBLIC_WS_URL": "https://ws.massar-academy.net",
+        "FacebookMessenger__WebhookPublicUrl": (
+            "https://api.massar-academy.net/api/live-support/messenger/webhook"
+        ),
         "INTERNAL_API_URL": "http://backend:5245/api",
         "INTERNAL_BACKEND_URL": "http://backend:5245",
         "WORKER_URL": "http://worker:3001",
@@ -138,6 +160,14 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
     for key in COPIED_OPTIONAL_KEYS:
         if source.get(key):
             values[key] = source[key]
+    bunny_stream_keys = {
+        "BUNNY_STREAM_LIBRARY_ID": "BunnyStream__LibraryId",
+        "BUNNY_STREAM_API_KEY": "BunnyStream__ApiKey",
+        "BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES": "BunnyStream__TusUploadExpiryMinutes",
+    }
+    for source_key, application_key in bunny_stream_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
     whatsapp_keys = {
         "WHATSAPP_CLOUD_ACCESS_TOKEN": "WhatsAppCloudApi__AccessToken",
         "WHATSAPP_CLOUD_PHONE_NUMBER_ID": "WhatsAppCloudApi__PhoneNumberId",
@@ -147,6 +177,26 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "WHATSAPP_CLOUD_API_VERSION": "WhatsAppCloudApi__ApiVersion",
     }
     for source_key, application_key in whatsapp_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
+    messenger_keys = {
+        "FACEBOOK_MESSENGER_VERIFY_TOKEN": "FacebookMessenger__VerifyToken",
+        "FACEBOOK_MESSENGER_APP_SECRET": "FacebookMessenger__AppSecret",
+        "FACEBOOK_MESSENGER_API_VERSION": "FacebookMessenger__ApiVersion",
+        "FACEBOOK_MESSENGER_PAGE_1_ID": "FacebookMessenger__Pages__0__PageId",
+        "FACEBOOK_MESSENGER_PAGE_1_NAME": "FacebookMessenger__Pages__0__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_1_ACCESS_TOKEN": "FacebookMessenger__Pages__0__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_1_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__0__HumanAgentEnabled",
+        "FACEBOOK_MESSENGER_PAGE_2_ID": "FacebookMessenger__Pages__1__PageId",
+        "FACEBOOK_MESSENGER_PAGE_2_NAME": "FacebookMessenger__Pages__1__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_2_ACCESS_TOKEN": "FacebookMessenger__Pages__1__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_2_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__1__HumanAgentEnabled",
+        "FACEBOOK_MESSENGER_PAGE_3_ID": "FacebookMessenger__Pages__2__PageId",
+        "FACEBOOK_MESSENGER_PAGE_3_NAME": "FacebookMessenger__Pages__2__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_3_ACCESS_TOKEN": "FacebookMessenger__Pages__2__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_3_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__2__HumanAgentEnabled",
+    }
+    for source_key, application_key in messenger_keys.items():
         if source.get(source_key):
             values[application_key] = source[source_key]
     if not values.get("GEMINI_API_KEY"):

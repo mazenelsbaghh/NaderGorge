@@ -35,6 +35,11 @@ export interface StudentRechargeRequestDto {
   reservationExpiresAt?: string;
 }
 
+interface SubmitRechargeOptions {
+  confirmSenderPhone?: boolean;
+  onUploadProgress?: (percent: number) => void;
+}
+
 export const rechargeService = {
   initiate: async (amount: number, teacherId: string) => {
     const { data } = await apiClient.post<{ success: boolean; data: InitiateRechargeResponse; message: string }>('/student/recharge/initiate', { amount, teacherId });
@@ -45,15 +50,33 @@ export const rechargeService = {
     rechargeRequestId: string,
     senderPhoneNumber: string,
     screenshot?: File | null,
-    confirmSenderPhone = false,
+    options: SubmitRechargeOptions = {},
   ) => {
     const formData = new FormData();
     formData.append('rechargeRequestId', rechargeRequestId);
     formData.append('senderPhoneNumber', senderPhoneNumber);
-    formData.append('confirmSenderPhone', String(confirmSenderPhone));
+    formData.append('confirmSenderPhone', String(options.confirmSenderPhone ?? false));
     if (screenshot) formData.append('screenshot', screenshot);
 
-    const { data } = await apiClient.post<{ success: boolean; data: SubmitRechargeResponse; message: string }>('/student/recharge/submit', formData);
+    const { data } = await apiClient.post<{ success: boolean; data: SubmitRechargeResponse; message: string }>(
+      '/student/recharge/submit',
+      formData,
+      {
+        // Compressed proof images can still need longer than the global timeout
+        // on a slow mobile connection.
+        timeout: 120_000,
+        onUploadProgress: (progressEvent) => {
+          if (!options.onUploadProgress) return;
+
+          const uploadRatio = progressEvent.total
+            ? progressEvent.loaded / progressEvent.total
+            : progressEvent.progress;
+          if (uploadRatio === undefined) return;
+
+          options.onUploadProgress(Math.max(0, Math.min(100, Math.round(uploadRatio * 100))));
+        },
+      },
+    );
     return data;
   },
 

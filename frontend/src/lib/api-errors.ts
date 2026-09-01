@@ -229,16 +229,20 @@ export function getApiErrorSummary(
   fallback = NETWORK_FALLBACK,
 ): string {
   const messages = extractApiErrorMessages(error);
-  const detailedMessage = messages.find(
+  const detailedMessages = messages.filter(
     (message) => message.trim().toLowerCase() !== 'validation failed',
   );
+  const localizedMessages = detailedMessages.map(localizeApiErrorMessage);
+  const userFacingMessage = localizedMessages.find(
+    ({ message }) => message !== GENERIC_FALLBACK,
+  );
 
-  if (detailedMessage) {
-    return localizeApiErrorMessage(detailedMessage).message;
+  if (userFacingMessage) {
+    return userFacingMessage.message;
   }
 
-  const topLevelMessage = messages[0];
-  return topLevelMessage
-    ? localizeApiErrorMessage(topLevelMessage).message
+  const firstDetailedMessage = detailedMessages[0] ?? messages[0];
+  return firstDetailedMessage
+    ? localizeApiErrorMessage(firstDetailedMessage).message
     : fallback;
 }

@@ -32,7 +32,14 @@ public sealed class LiveSupportAIContextBuilderTests
             Status = LiveSupportConversationStatus.Waiting,
             Version = 1
         };
-        db.AddRange(policy, conversation);
+        db.AddRange(policy, conversation, new LiveSupportAIConversationState
+        {
+            ConversationId = conversation.Id,
+            PolicyVersionId = policy.Id,
+            Mode = LiveSupportAIMode.AiActive,
+            LastParticipantActivityAt = DateTime.UtcNow,
+            Version = 1
+        });
         await db.SaveChangesAsync();
 
         LiveSupportMessage? source = null;
@@ -154,7 +161,14 @@ public sealed class LiveSupportAIContextBuilderTests
             Status = LiveSupportConversationStatus.Waiting,
             Version = 1
         };
-        db.AddRange(policy, conversation);
+        db.AddRange(policy, conversation, new LiveSupportAIConversationState
+        {
+            ConversationId = conversation.Id,
+            PolicyVersionId = policy.Id,
+            Mode = LiveSupportAIMode.AiActive,
+            LastParticipantActivityAt = DateTime.UtcNow,
+            Version = 1
+        });
         var source = new LiveSupportMessage
         {
             ConversationId = conversation.Id,

@@ -69,6 +69,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
     public DbSet<VideoType> VideoTypes => Set<VideoType>();
+    public DbSet<BunnyStreamLibrary> BunnyStreamLibraries => Set<BunnyStreamLibrary>();
     public DbSet<BunnyVideoAsset> BunnyVideoAssets => Set<BunnyVideoAsset>();
     public DbSet<BunnyUsageSnapshot> BunnyUsageSnapshots => Set<BunnyUsageSnapshot>();
     public DbSet<VideoChapter> VideoChapters => Set<VideoChapter>();
@@ -217,6 +218,11 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages => Set<LiveSupportWhatsAppMessage>();
     public DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts => Set<LiveSupportWhatsAppPendingReceipt>();
     public DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates => Set<LiveSupportWhatsAppTemplate>();
+    public DbSet<LiveSupportMessengerBinding> LiveSupportMessengerBindings => Set<LiveSupportMessengerBinding>();
+    public DbSet<LiveSupportMessengerMessage> LiveSupportMessengerMessages => Set<LiveSupportMessengerMessage>();
+    public DbSet<LiveSupportMessengerWebhookInbox> LiveSupportMessengerWebhookInbox => Set<LiveSupportMessengerWebhookInbox>();
+    public DbSet<LiveSupportMessengerConfiguration> LiveSupportMessengerConfigurations => Set<LiveSupportMessengerConfiguration>();
+    public DbSet<LiveSupportMessengerPage> LiveSupportMessengerPages => Set<LiveSupportMessengerPage>();
     public DbSet<WhatsAppCampaign> WhatsAppCampaigns => Set<WhatsAppCampaign>();
     public DbSet<WhatsAppCampaignRecipient> WhatsAppCampaignRecipients => Set<WhatsAppCampaignRecipient>();
     public DbSet<WhatsAppContactPreference> WhatsAppContactPreferences => Set<WhatsAppContactPreference>();
@@ -998,6 +1004,13 @@ public class AppDbContext : DbContext, IAppDbContext
              .WithMany()
              .HasForeignKey(l => l.ExamId)
              .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(l => l.BunnyStreamLibrary)
+                .WithMany(library => library.Videos)
+                .HasForeignKey(l => l.BunnyStreamLibraryId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(table => table.HasCheckConstraint(
+                "ck_lesson_videos_bunny_library",
+                "LOWER(\"Provider\") <> 'bunny' OR \"BunnyStreamLibraryId\" IS NOT NULL"));
         });
 
         modelBuilder.Entity<VideoType>(e =>
@@ -1010,12 +1023,56 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(type => new { type.SortOrder, type.Name });
         });
 
+        modelBuilder.Entity<BunnyStreamLibrary>(e =>
+        {
+            e.ToTable("bunny_stream_libraries");
+            e.HasKey(library => library.Id);
+            e.Property(library => library.Name).HasMaxLength(100).IsRequired();
+            e.Property(library => library.NormalizedName).HasMaxLength(100).IsRequired();
+            e.Property(library => library.ApiKeyCiphertext).HasColumnType("bytea");
+            e.HasIndex(library => library.NormalizedName).IsUnique();
+            e.HasIndex(library => library.ExternalLibraryId).IsUnique();
+            e.HasData(
+                new BunnyStreamLibrary
+                {
+                    Id = BunnyStreamLibrarySeedIds.First,
+                    Name = "أولى",
+                    NormalizedName = "أولى",
+                    ExternalLibraryId = 740733,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new BunnyStreamLibrary
+                {
+                    Id = BunnyStreamLibrarySeedIds.Second,
+                    Name = "ثانية",
+                    NormalizedName = "ثانية",
+                    ExternalLibraryId = 740737,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new BunnyStreamLibrary
+                {
+                    Id = BunnyStreamLibrarySeedIds.Massar,
+                    Name = "مسار",
+                    NormalizedName = "مسار",
+                    ExternalLibraryId = 740801,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc)
+                });
+        });
+
         modelBuilder.Entity<BunnyVideoAsset>(e =>
         {
             e.ToTable("bunny_video_assets");
             e.HasKey(b => b.Id);
-            e.HasIndex(b => b.LessonVideoId).IsUnique();
-            e.HasIndex(b => b.BunnyVideoGuid).IsUnique();
+            e.HasIndex(b => b.LessonVideoId, "IX_bunny_video_assets_CurrentLessonVideoId")
+                .IsUnique()
+                .HasFilter("\"SourceState\" = 0");
+            e.HasIndex(b => b.LessonVideoId, "IX_bunny_video_assets_PendingLessonVideoId")
+                .IsUnique()
+                .HasFilter("\"SourceState\" = 1");
+            e.HasIndex(b => new { b.BunnyLibraryId, b.BunnyVideoGuid }).IsUnique();
             e.HasIndex(b => new { b.TeacherId, b.PackageId, b.LessonId });
             e.HasIndex(b => new { b.Status, b.LastStatusSyncedAtUtc });
             e.Property(b => b.BunnyVideoGuid).HasMaxLength(100).IsRequired();
@@ -1026,7 +1083,14 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(b => b.OriginalFileName).HasMaxLength(500);
             e.Property(b => b.SourceUrlHash).HasMaxLength(128);
             e.Property(b => b.ErrorMessage).HasMaxLength(2000);
-            e.HasOne(b => b.LessonVideo).WithOne(v => v.BunnyVideoAsset).HasForeignKey<BunnyVideoAsset>(b => b.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(b => b.SourceState)
+                .HasDefaultValue(BunnyVideoAssetSourceState.Current)
+                .IsConcurrencyToken();
+            e.HasOne(b => b.LessonVideo).WithMany(v => v.BunnyVideoAssets).HasForeignKey(b => b.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<BunnyStreamLibrary>()
+                .WithMany()
+                .HasForeignKey(b => b.BunnyStreamLibraryRecordId)
+                .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(b => b.Teacher).WithMany().HasForeignKey(b => b.TeacherId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(b => b.Package).WithMany().HasForeignKey(b => b.PackageId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(b => b.Lesson).WithMany().HasForeignKey(b => b.LessonId).OnDelete(DeleteBehavior.Restrict);
@@ -2739,6 +2803,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.CloseReason).HasMaxLength(500);
             e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.AllowsAI).HasDefaultValue(true).HasSentinel(true);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.StudentUserId).IsUnique().HasFilter("\"StudentUserId\" IS NOT NULL AND \"Status\" IN (0, 1, 2)");
             e.HasIndex(x => x.GuestSessionId).IsUnique().HasFilter("\"GuestSessionId\" IS NOT NULL AND \"Status\" IN (0, 1, 2)");
@@ -2758,7 +2823,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("live_support_guest_sessions");
             e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
-            e.Property(x => x.PhoneNumber).HasMaxLength(20).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(20);
             e.Property(x => x.SecurityStampHash).HasMaxLength(128).IsRequired();
             e.Property(x => x.CreatedIpHash).HasMaxLength(128).IsRequired();
             e.Property(x => x.UserAgentSummary).HasMaxLength(300);
@@ -2826,6 +2891,94 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(x => x.MetaTemplateId).IsUnique();
             e.HasIndex(x => new { x.Name, x.Language }).IsUnique();
             e.HasIndex(x => new { x.Status, x.LastSyncedAt });
+        });
+
+        modelBuilder.Entity<LiveSupportMessengerConfiguration>(e =>
+        {
+            e.ToTable("live_support_messenger_configurations");
+            e.Property(x => x.ConfigurationKey).HasMaxLength(32).IsRequired();
+            e.Property(x => x.AppId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ApiVersion).HasMaxLength(16).IsRequired();
+            e.Property(x => x.AppSecretCiphertext).HasColumnType("bytea");
+            e.Property(x => x.VerifyTokenCiphertext).HasColumnType("bytea");
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.ConfigurationKey).IsUnique();
+        });
+
+        modelBuilder.Entity<LiveSupportMessengerPage>(e =>
+        {
+            e.ToTable("live_support_messenger_pages");
+            e.Property(x => x.PageId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.PageAccessTokenCiphertext).HasColumnType("bytea").IsRequired();
+            e.Property(x => x.ConnectionStatus).HasMaxLength(32).IsRequired();
+            e.Property(x => x.LastErrorCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.PageId).IsUnique();
+            e.HasIndex(x => new { x.IsEnabled, x.ConnectionStatus });
+        });
+
+        modelBuilder.Entity<LiveSupportMessengerBinding>(e =>
+        {
+            e.ToTable("live_support_messenger_bindings");
+            e.Property(x => x.PageId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.PageName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.SenderPsid).HasMaxLength(64).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.ConversationId).IsUnique();
+            e.HasIndex(x => new { x.PageId, x.SenderPsid })
+                .IsUnique()
+                .HasFilter("\"IsOpen\" = TRUE");
+            e.HasIndex(x => new { x.PageId, x.SenderPsid, x.LastInboundAt });
+            e.HasOne<LiveSupportConversation>().WithOne()
+                .HasForeignKey<LiveSupportMessengerBinding>(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany()
+                .HasForeignKey(x => x.GuestSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportMessengerMessage>(e =>
+        {
+            e.ToTable("live_support_messenger_messages");
+            e.Property(x => x.PageId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SenderPsid).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProviderMessageId).HasMaxLength(256);
+            e.Property(x => x.Direction).HasMaxLength(16).IsRequired();
+            e.Property(x => x.MessageType).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.PageId, x.ProviderMessageId })
+                .IsUnique()
+                .HasFilter("\"ProviderMessageId\" IS NOT NULL");
+            e.HasIndex(x => x.LiveSupportMessageId)
+                .IsUnique()
+                .HasFilter("\"LiveSupportMessageId\" IS NOT NULL");
+            e.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
+            e.HasOne<LiveSupportConversation>().WithMany()
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportMessage>().WithOne()
+                .HasForeignKey<LiveSupportMessengerMessage>(x => x.LiveSupportMessageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportMessengerWebhookInbox>(e =>
+        {
+            e.ToTable("live_support_messenger_webhook_inbox");
+            e.Property(x => x.PageId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.EventKind).HasMaxLength(32).IsRequired();
+            e.Property(x => x.DeduplicationKey).HasMaxLength(384).IsRequired();
+            e.Property(x => x.PayloadHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.PageId, x.DeduplicationKey }).IsUnique();
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
         });
 
         modelBuilder.Entity<WhatsAppCampaign>(e =>

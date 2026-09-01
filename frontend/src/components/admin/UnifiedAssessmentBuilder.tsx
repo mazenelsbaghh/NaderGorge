@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, BookOpen, Video, Shuffle } from 'lucide-react';
+import { Save, BookOpen, Video, Shuffle, CalendarClock } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
 import { NumberField } from '@/components/ui/number-field';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import toast from 'react-hot-toast';
+import { cairoCurrentDate } from '@/lib/cairo-time';
+import {
+  getDefaultHomeworkComingSoonDate,
+  getHomeworkComingSoonLabel,
+} from '@/lib/homework-coming-soon';
+import { getApiErrorSummary } from '@/lib/api-errors';
 
 interface UnifiedAssessmentBuilderProps {
   type: 'exam' | 'homework';
@@ -14,6 +20,7 @@ interface UnifiedAssessmentBuilderProps {
   onSuccess?: () => void;
   forceTargetType?: 'Lesson' | 'Video';
   surface?: 'admin' | 'teacher';
+  initialHomeworkComingSoonOn?: string | null;
 }
 
 export function UnifiedAssessmentBuilder({ 
@@ -23,6 +30,7 @@ export function UnifiedAssessmentBuilder({
   onSuccess,
   forceTargetType,
   surface = 'admin',
+  initialHomeworkComingSoonOn,
 }: UnifiedAssessmentBuilderProps) {
   const isExam = type === 'exam';
   const audienceLabel = surface === 'teacher' ? 'لطلابك' : 'للطلاب';
@@ -39,6 +47,12 @@ export function UnifiedAssessmentBuilder({
   // New Toggles
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(
+    !isExam && Boolean(initialHomeworkComingSoonOn)
+  );
+  const [homeworkComingSoonOn, setHomeworkComingSoonOn] = useState(
+    initialHomeworkComingSoonOn || getDefaultHomeworkComingSoonDate()
+  );
   
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +76,11 @@ export function UnifiedAssessmentBuilder({
 
     if (passingScore > totalScore) {
       toast.error('درجة النجاح لا يمكن أن تكون أكبر من الدرجة النهائية');
+      return false;
+    }
+
+    if (!isExam && showComingSoon && !homeworkComingSoonOn) {
+      toast.error('حدد موعد ظهور إعلان الواجب للطلاب');
       return false;
     }
 
@@ -111,10 +130,15 @@ export function UnifiedAssessmentBuilder({
           isRandomized,
           totalScore,
           requiredPointsToPass: passingScore,
+          homeworkComingSoonOn: showComingSoon ? homeworkComingSoonOn : null,
           questions: [],
         };
-        await adminService.attachHomework(lessonId, payload as any);
-        toast.success('تم إنشاء الواجب بنجاح');
+        await adminService.attachHomework(lessonId, payload);
+        toast.success(
+          showComingSoon
+            ? 'تم حفظ الواجب كمسودة، وظهر موعده للطلاب.'
+            : 'تم حفظ الواجب كمسودة.'
+        );
       }
       
       // Reset
@@ -124,10 +148,16 @@ export function UnifiedAssessmentBuilder({
       setDisplayQuestionCount(undefined);
       setIsMandatory(true);
       setIsRandomized(false);
+      setShowComingSoon(false);
+      setHomeworkComingSoonOn(getDefaultHomeworkComingSoonDate());
       onSuccess?.();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || `حدث خطأ أثناء حفظ ${isExam ? 'الامتحان' : 'الواجب'}`;
-      toast.error(msg);
+    } catch (error: unknown) {
+      toast.error(
+        getApiErrorSummary(
+          error,
+          `حدث خطأ أثناء حفظ ${isExam ? 'الامتحان' : 'الواجب'}`
+        )
+      );
     } finally {
       setSaving(false);
     }
@@ -240,6 +270,44 @@ export function UnifiedAssessmentBuilder({
                   </Checkbox.Content>
                 </Checkbox>
               </div>
+
+              {!isExam && (
+                <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">
+                  <Checkbox isSelected={showComingSoon} onChange={setShowComingSoon}>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <Checkbox.Content>
+                      <Label className="font-bold">
+                        أظهر للطلاب أن الواجب قادم
+                        <span className="mt-1 block text-xs font-normal leading-5 opacity-75">
+                          سيظهر زر «الذهاب للواجب» مقفولًا إلى أن تضيف الأسئلة وتفعّل الواجب.
+                        </span>
+                      </Label>
+                    </Checkbox.Content>
+                  </Checkbox>
+
+                  {showComingSoon && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                      <label className="block text-sm font-bold text-[var(--admin-text)]">
+                        الموعد المتوقع
+                        <input
+                          type="date"
+                          required
+                          min={cairoCurrentDate()}
+                          value={homeworkComingSoonOn}
+                          onChange={(event) => setHomeworkComingSoonOn(event.target.value)}
+                          className="admin-input mt-2 w-full"
+                        />
+                      </label>
+                      <div className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-card)] px-4 py-3 text-sm font-black text-[var(--admin-primary)]">
+                        <CalendarClock className="h-4 w-4" aria-hidden="true" />
+                        {getHomeworkComingSoonLabel(homeworkComingSoonOn)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

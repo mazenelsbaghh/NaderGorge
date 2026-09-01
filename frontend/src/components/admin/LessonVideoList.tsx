@@ -4,19 +4,17 @@ import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
 import { ContentArchiveControl } from './ContentArchiveControl';
 import toast from 'react-hot-toast';
-import { adminService, type LessonCockpitVideoDto, type VideoProvider } from '@/services/admin-service';
+import { adminService, type LessonCockpitVideoDto } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
-import NeumorphButton from '@/components/ui/neumorph-button';
-import { Dropdown } from '@/components/ui/dropdown';
-import { NumberField } from '@/components/ui/number-field';
 import { ImageZoomModal } from './ImageZoomModal';
 import { ContentInternalCode } from './ContentInternalCode';
-import { VideoTypeSelect } from './VideoTypeSelect';
 import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 import { aiJobStatusFromProgressEvent } from '@/lib/ai-job-status';
+import { extractApiErrorMessages, getApiErrorSummary } from '@/lib/api-errors';
+import { AddVideoForm } from './AddVideoForm';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
@@ -322,22 +320,37 @@ interface LessonVideoListProps {
   showProviderDetails?: boolean;
 }
 
-export function LessonVideoList({ videos, onRefresh, readOnly = false, showProviderDetails = true }: LessonVideoListProps) {
+function bunnyAssetIsProcessing(status?: string | null) {
+  const normalizedStatus = status?.toLowerCase();
+  return Boolean(
+    normalizedStatus
+    && normalizedStatus !== 'ready'
+    && normalizedStatus !== 'failed'
+    && normalizedStatus !== 'unknown',
+  );
+}
+
+export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false, showProviderDetails = true }: LessonVideoListProps) {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [videoPendingDeletion, setVideoPendingDeletion] = useState<LessonCockpitVideoDto | null>(null);
   const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editProvider, setEditProvider] = useState<VideoProvider>('YouTube');
-  const [editUrlOrEmbedCode, setEditUrlOrEmbedCode] = useState('');
-  const [editOrder, setEditOrder] = useState(1);
-  const [editMaxWatchCount, setEditMaxWatchCount] = useState(3);
-  const [editVideoTypeId, setEditVideoTypeId] = useState('');
-  const [editVideoTypesAvailable, setEditVideoTypesAvailable] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
+  const [bunnyReplacementPendingCancellation, setBunnyReplacementPendingCancellation] = useState<{ assetId: string; videoTitle: string } | null>(null);
+  const [cancellingBunnyReplacementId, setCancellingBunnyReplacementId] = useState<string | null>(null);
+
+  const hasPendingBunnyVideo = videos.some((video) => {
+    return (video.provider.toLowerCase() === 'bunny' && bunnyAssetIsProcessing(video.bunnyStatus))
+      || bunnyAssetIsProcessing(video.pendingBunnyReplacement?.status);
+  });
+
+  useEffect(() => {
+    if (!hasPendingBunnyVideo || !onRefresh) return;
+    const interval = window.setInterval(onRefresh, 15_000);
+    return () => window.clearInterval(interval);
+  }, [hasPendingBunnyVideo, onRefresh]);
 
   const toggleChapters = (videoId: string) =>
     setExpandedChapters(prev => prev === videoId ? null : videoId);
@@ -370,41 +383,6 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
 
   const startEditVideo = (video: LessonCockpitVideoDto) => {
     setEditingVideoId(video.id);
-    setEditTitle(video.title || '');
-    setEditProvider((video.provider || 'YouTube') as VideoProvider);
-    setEditUrlOrEmbedCode(video.url || '');
-    setEditOrder(video.order || 1);
-    setEditMaxWatchCount(video.maxWatchCount || 3);
-    setEditVideoTypeId(video.videoType.id);
-  };
-
-  const handleUpdateVideo = async (videoId: string) => {
-    const trimmedTitle = editTitle.trim();
-    const trimmedUrl = editUrlOrEmbedCode.trim();
-
-    if (!trimmedTitle || !trimmedUrl || !editVideoTypeId || !editVideoTypesAvailable || editOrder < 1 || editMaxWatchCount < 1) {
-      toast.error('بيانات التعديل غير صالحة');
-      return;
-    }
-
-    try {
-      setUpdatingId(videoId);
-      await adminService.updateVideo(videoId, {
-        title: trimmedTitle,
-        provider: editProvider,
-        urlOrEmbedCode: trimmedUrl,
-        order: editOrder,
-        limit: editMaxWatchCount,
-        videoTypeId: editVideoTypeId,
-      });
-      toast.success('تم تعديل الفيديو بنجاح');
-      setEditingVideoId(null);
-      onRefresh?.();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'تعذر تعديل الفيديو');
-    } finally {
-      setUpdatingId(null);
-    }
   };
 
   const handleToggleActive = async (video: LessonCockpitVideoDto) => {
@@ -430,6 +408,26 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
       toast.error(err?.response?.data?.message || 'تعذر حذف الفيديو');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleCancelBunnyReplacement = async (assetId: string) => {
+    try {
+      setCancellingBunnyReplacementId(assetId);
+      await adminService.cancelBunnyVideoReplacement(assetId);
+      toast.success('تم إلغاء استبدال Bunny. ما زال مصدر الفيديو السابق يعمل.');
+      onRefresh?.();
+      return true;
+    } catch (error: unknown) {
+      if (extractApiErrorMessages(error).includes('BUNNY_REPLACEMENT_NOT_PENDING')) {
+        toast.success('تم تحديث حالة استبدال Bunny. تحقق من المصدر الحالي للفيديو.');
+        onRefresh?.();
+        return true;
+      }
+      toast.error(getApiErrorSummary(error, 'تعذر إلغاء استبدال Bunny'));
+      return false;
+    } finally {
+      setCancellingBunnyReplacementId(null);
     }
   };
 
@@ -459,6 +457,12 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
     <div className="space-y-3">
       {videos.map((video) => {
         const isGoogleDrive = video.provider === 'google_drive';
+        const normalizedBunnyStatus = video.bunnyStatus?.toLowerCase();
+        const normalizedPendingReplacementStatus = video.pendingBunnyReplacement?.status.toLowerCase();
+        const normalizedLastReplacementOutcomeStatus = video.lastBunnyReplacementOutcome?.status.toLowerCase();
+        const bunnyManagedNotReady = video.provider.toLowerCase() === 'bunny'
+          && Boolean(normalizedBunnyStatus)
+          && normalizedBunnyStatus !== 'ready';
         const chapterCount = video.chapters?.length ?? 0;
         const hasChapters = !isGoogleDrive && chapterCount > 0;
 
@@ -480,8 +484,9 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                   type="button"
                   aria-label={`معاينة الفيديو ${video.title}`}
                   onClick={() => setPreviewVideoId(video.id)}
-                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90"
-                  title="فتح البلاير"
+                  disabled={bunnyManagedNotReady}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={bunnyManagedNotReady ? 'فيديو Bunny ما زال قيد التجهيز' : 'فتح البلاير'}
                 >
                   <Play className="h-4 w-4" />
                   البلاير
@@ -516,6 +521,58 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                     {showProviderDetails && (
                       <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                         {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
+                      </span>
+                    )}
+                    {video.provider.toLowerCase() === 'bunny' && video.bunnyLibrary && (
+                      <span className="rounded border border-[var(--admin-primary)]/20 bg-[var(--admin-primary-15)] px-1.5 py-0.5 font-sans font-bold text-[var(--admin-primary)]">
+                        مكتبة: {video.bunnyLibrary.name} · {video.bunnyLibrary.libraryId}
+                      </span>
+                    )}
+                    {video.provider.toLowerCase() === 'bunny' && video.bunnyStatus && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedBunnyStatus === 'ready'
+                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : normalizedBunnyStatus === 'failed' || normalizedBunnyStatus === 'unknown'
+                          ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                          : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {normalizedBunnyStatus === 'ready'
+                          ? 'Bunny جاهز'
+                          : normalizedBunnyStatus === 'failed' || normalizedBunnyStatus === 'unknown'
+                            ? 'تعذر تجهيز فيديو Bunny'
+                            : `Bunny قيد التجهيز${video.bunnyEncodeProgress != null ? ` · ${video.bunnyEncodeProgress}%` : ''}`}
+                      </span>
+                    )}
+                    {video.pendingBunnyReplacement && (
+                      <>
+                        <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedPendingReplacementStatus === 'failed' || normalizedPendingReplacementStatus === 'unknown'
+                          ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                          : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                        }`}>
+                          {normalizedPendingReplacementStatus === 'failed' || normalizedPendingReplacementStatus === 'unknown'
+                            ? 'تعذر تجهيز مصدر Bunny الجديد'
+                            : `يتم تجهيز مصدر Bunny جديد${video.pendingBunnyReplacement.encodeProgress != null ? ` · ${video.pendingBunnyReplacement.encodeProgress}%` : ''}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setBunnyReplacementPendingCancellation({
+                            assetId: video.pendingBunnyReplacement!.assetId,
+                            videoTitle: video.title,
+                          })}
+                          disabled={cancellingBunnyReplacementId === video.pendingBunnyReplacement.assetId}
+                          className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-bold text-amber-800 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-200"
+                        >
+                          {cancellingBunnyReplacementId === video.pendingBunnyReplacement.assetId ? 'جارٍ الإلغاء...' : 'إلغاء الاستبدال'}
+                        </button>
+                      </>
+                    )}
+                    {!video.pendingBunnyReplacement && video.lastBunnyReplacementOutcome && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedLastReplacementOutcomeStatus === 'cancelled'
+                        ? 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'
+                        : 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
+                        {normalizedLastReplacementOutcomeStatus === 'cancelled'
+                          ? 'تم إلغاء آخر استبدال Bunny؛ المصدر السابق مستمر'
+                          : 'لم يكتمل آخر استبدال Bunny؛ المصدر السابق مستمر'}
                       </span>
                     )}
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
@@ -613,8 +670,9 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                     type="button"
                     aria-label="معاينة الفيديو"
                     onClick={() => setPreviewVideoId(video.id)}
-                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors"
-                    title="معاينة الفيديو كطالب"
+                    disabled={bunnyManagedNotReady}
+                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                    title={bunnyManagedNotReady ? 'انتظر حتى يكتمل تجهيز فيديو Bunny' : 'معاينة الفيديو كطالب'}
                   >
                     <Play className="h-4 w-4" />
                   </button>
@@ -628,9 +686,9 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                         type="button"
                         aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
                         onClick={() => handleToggleActive(video)}
-                        disabled={togglingActiveId === video.id}
+                        disabled={togglingActiveId === video.id || bunnyManagedNotReady}
                         className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
-                        title={video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
+                        title={bunnyManagedNotReady ? 'يتفعّل تلقائيًا بعد اكتمال تجهيز Bunny' : video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
                       >
                         {togglingActiveId === video.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -647,10 +705,10 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                         type="button"
                         aria-label="تعديل الفيديو"
                         onClick={() => startEditVideo(video)}
-                        disabled={updatingId === video.id || deletingId === video.id}
+                        disabled={deletingId === video.id}
                         className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {updatingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+                        <Edit2 className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="relative group/del">
@@ -658,7 +716,7 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
                         type="button"
                         aria-label="حذف الفيديو"
                         onClick={() => setVideoPendingDeletion(video)}
-                        disabled={deletingId === video.id || updatingId === video.id}
+                        disabled={deletingId === video.id}
                         className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {deletingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -671,107 +729,16 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
 
             {/* Inline Edit Form */}
             {!readOnly && editingVideoId === video.id && (
-              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4 space-y-4" dir="rtl">
-                <div className="text-sm font-bold text-[var(--admin-text)]">تعديل بيانات الفيديو</div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="flex-1 space-y-2 min-w-[200px]">
-                    <label className="text-xs font-bold text-[var(--admin-muted)]">عنوان الفيديو</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="مثال: الدرس الأول - مراجعة"
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
-                      required
-                    />
-                  </div>
-                  <div className="w-40 space-y-2">
-                    <Dropdown
-                      label="المنصة"
-                      value={editProvider}
-                      onChange={(v) => setEditProvider(v as VideoProvider)}
-                      size="sm"
-                      options={[
-                        { value: 'YouTube', label: 'YouTube' },
-                        { value: 'vk', label: 'VK (فيكونتاكتي)' },
-                        { value: 'bunny', label: 'Bunny.net' },
-                      ]}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2 min-w-[200px]">
-                    <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>
-                    <input
-                      type="text"
-                      value={editUrlOrEmbedCode}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
-                          setEditProvider('vk');
-                        } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
-                          setEditProvider('YouTube');
-                        } else if (val.includes('mediadelivery.net')) {
-                          setEditProvider('bunny');
-                        }
-                        setEditUrlOrEmbedCode(val);
-                      }}
-                      placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : editProvider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="w-full md:w-64">
-                    <VideoTypeSelect
-                      value={editVideoTypeId}
-                      onChange={setEditVideoTypeId}
-                      onAvailabilityChange={setEditVideoTypesAvailable}
-                      currentTypeId={video.videoType.id}
-                    />
-                  </div>
-                  <div className="w-32">
-                    <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
-                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">ترتيب العرض</NumberField.Label>
-                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
-                        <NumberField.DecrementButton />
-                        <NumberField.Input className="bg-[var(--admin-bg)]" />
-                        <NumberField.IncrementButton />
-                      </NumberField.Group>
-                    </NumberField>
-                  </div>
-                  <div className="w-40">
-                    <NumberField value={editMaxWatchCount} onChange={setEditMaxWatchCount} minValue={1}>
-                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">الحد الأقصى للمشاهدات</NumberField.Label>
-                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
-                        <NumberField.DecrementButton />
-                        <NumberField.Input className="bg-[var(--admin-bg)]" />
-                        <NumberField.IncrementButton />
-                      </NumberField.Group>
-                    </NumberField>
-                  </div>
-                  <div className="flex items-center gap-2 ms-auto">
-                    <NeumorphButton
-                      type="button"
-                      onClick={() => setEditingVideoId(null)}
-                      intent="ghost"
-                      size="md"
-                      pill
-                    >
-                      إلغاء
-                    </NeumorphButton>
-                    <NeumorphButton
-                      type="button"
-                      onClick={() => handleUpdateVideo(video.id)}
-                      disabled={updatingId === video.id || !editTitle.trim() || !editUrlOrEmbedCode.trim() || !editVideoTypeId || !editVideoTypesAvailable}
-                      loading={updatingId === video.id}
-                      intent="primary"
-                      size="md"
-                      pill
-                    >
-                      حفظ التعديلات
-                    </NeumorphButton>
-                  </div>
-                </div>
+              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4" dir="rtl">
+                <AddVideoForm
+                  lessonId={lessonId}
+                  editingVideo={video}
+                  onCancel={() => setEditingVideoId(null)}
+                  onSuccess={() => {
+                    setEditingVideoId(null);
+                    onRefresh?.();
+                  }}
+                />
               </div>
             )}{/* end row */}
 
@@ -831,6 +798,20 @@ export function LessonVideoList({ videos, onRefresh, readOnly = false, showProvi
         confirmLabel="حذف الفيديو نهائيًا"
         variant="danger"
         isConfirming={deletingId === videoPendingDeletion?.id}
+      />
+      <AdminConfirmationDialog
+        open={bunnyReplacementPendingCancellation !== null}
+        onClose={() => setBunnyReplacementPendingCancellation(null)}
+        onConfirm={async () => {
+          if (!bunnyReplacementPendingCancellation) return;
+          if (await handleCancelBunnyReplacement(bunnyReplacementPendingCancellation.assetId)) {
+            setBunnyReplacementPendingCancellation(null);
+          }
+        }}
+        title="إلغاء استبدال Bunny"
+        consequence={`سيبقى الفيديو «${bunnyReplacementPendingCancellation?.videoTitle ?? ''}» على مصدره السابق. لن يُحذف ملف Bunny الذي بدأ تجهيزه تلقائيًا، وقد تحتاج لمراجعته لاحقًا.`}
+        confirmLabel="إلغاء الاستبدال"
+        isConfirming={cancellingBunnyReplacementId === bunnyReplacementPendingCancellation?.assetId}
       />
     </div>
   );

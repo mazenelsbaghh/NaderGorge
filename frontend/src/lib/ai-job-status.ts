@@ -1,6 +1,9 @@
 export type AiJobState = 'waiting' | 'active' | 'completed' | 'failed' | 'not_found';
 
-export type AiJobFailureCode = 'AI_VIDEO_ANALYSIS_FAILED' | 'AI_MINDMAP_GENERATION_FAILED';
+export type AiJobFailureCode =
+  | 'AI_VIDEO_ANALYSIS_FAILED'
+  | 'AI_MINDMAP_GENERATION_FAILED'
+  | 'BUNNY_ANALYSIS_SOURCE_UNAVAILABLE';
 
 export interface AiJobFailure {
   code: AiJobFailureCode;
@@ -35,6 +38,8 @@ const JOB_STATES = new Set<AiJobState>([
 
 const ANALYSIS_FAILURE_MESSAGE =
   'تعذر إكمال تحليل الفيديو. تحقّق من رابط الفيديو وصلاحية الوصول، ثم أعد المحاولة.';
+const BUNNY_ANALYSIS_ACCESS_MESSAGE =
+  'تعذر تجهيز أصل فيديو Bunny للتحليل. فعّل الاحتفاظ بالملف الأصلي وراجِع إعدادات وصول Bunny ثم أعد المحاولة.';
 const MINDMAP_FAILURE_MESSAGE =
   'تعذر إكمال توليد الخرائط الذهنية. أعد المحاولة بعد قليل.';
 
@@ -58,12 +63,20 @@ function readState(rawState: unknown): AiJobState {
     : 'waiting';
 }
 
-function getPublicAiJobFailure(jobId: string): AiJobFailure {
+function getPublicAiJobFailure(jobId: string, failedReason?: unknown): AiJobFailure {
   if (isMindmapJob(jobId)) {
     return {
       code: 'AI_MINDMAP_GENERATION_FAILED',
       message: MINDMAP_FAILURE_MESSAGE,
       retryable: true,
+    };
+  }
+
+  if (failedReason === BUNNY_ANALYSIS_ACCESS_MESSAGE) {
+    return {
+      code: 'BUNNY_ANALYSIS_SOURCE_UNAVAILABLE',
+      message: BUNNY_ANALYSIS_ACCESS_MESSAGE,
+      retryable: false,
     };
   }
 
@@ -90,8 +103,13 @@ function getMindmapProgressStage(percentage: number, state: AiJobState): string 
   return 'جاري حفظ الخرائط في لوحة التحكم...';
 }
 
-function getPublicProgressStage(jobId: string, percentage: number, state: AiJobState): string {
-  if (state === 'failed') return getPublicAiJobFailure(jobId).message;
+function getPublicProgressStage(
+  jobId: string,
+  percentage: number,
+  state: AiJobState,
+  failedReason?: unknown,
+): string {
+  if (state === 'failed') return getPublicAiJobFailure(jobId, failedReason).message;
   if (state === 'not_found') return 'لا توجد مهمة معالجة نشطة لهذا الفيديو.';
   if (state === 'waiting') return 'جاري التحضير ووضع المهمة في قائمة الانتظار...';
   return isMindmapJob(jobId)
@@ -108,14 +126,14 @@ export function sanitizeAiJobStatus(input: unknown, fallbackJobId = ''): SafeAiJ
   const id = typeof statusPayload.id === 'string' && statusPayload.id ? statusPayload.id : fallbackJobId;
   const state = readState(statusPayload.state);
   const percentage = state === 'completed' ? 100 : readPercentage(statusPayload.progress);
-  const failure = state === 'failed' ? getPublicAiJobFailure(id) : undefined;
+  const failure = state === 'failed' ? getPublicAiJobFailure(id, statusPayload.failedReason) : undefined;
 
   return {
     ...(id ? { id } : {}),
     state,
     progress: {
       percentage,
-      stage: getPublicProgressStage(id, percentage, state),
+      stage: getPublicProgressStage(id, percentage, state, statusPayload.failedReason),
     },
     ...(failure ? { failure } : {}),
   };

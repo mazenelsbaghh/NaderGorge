@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Commands.MindmapOps;
 using NaderGorge.Application.Interfaces;
@@ -31,6 +32,29 @@ public sealed class AiOutputLanguageJobContractTests
             .Where(video => video.Id == fixture.VideoId)
             .Select(video => video.CurrentAiAnalysisRunId)
             .SingleAsync());
+    }
+
+    [Fact]
+    public async Task AnalyzeVideo_BunnyVideoQueuesOnlyInternalSourceDescriptor()
+    {
+        await using var fixture = await SeededVideoFixture.CreateAsync(AiOutputLanguage.Auto);
+        const long libraryId = 918273;
+        const string videoGuid = "12345678-abcd-1234-abcd-123456789abc";
+        await fixture.ConfigureBunnyVideoAsync(libraryId, videoGuid);
+        var jobs = new RecordingJobEnqueuer();
+        var handler = new AnalyzeVideoAICommandHandler(fixture.Db, jobs, new NoOpAiJobCancellationStore());
+
+        // Regression: library ID, video GUID, CDN URL, and Bunny credentials must
+        // remain server-side. The worker receives only a symbolic internal source.
+        var response = await handler.Handle(
+            new AnalyzeVideoAICommand(fixture.VideoId, Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal("bunny-internal", jobs.Payload.GetProperty("sourceUrl").GetString());
+        Assert.Equal("bunny-internal-original", jobs.Payload.GetProperty("sourceKind").GetString());
+        Assert.DoesNotContain(libraryId.ToString(), jobs.Payload.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain(videoGuid, jobs.Payload.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -188,6 +212,23 @@ public sealed class AiOutputLanguageJobContractTests
             await db.SaveChangesAsync();
             db.ChangeTracker.Clear();
             return new SeededVideoFixture(connection, db, video.Id, chapter.Id);
+        }
+
+        public async Task ConfigureBunnyVideoAsync(long externalLibraryId, string videoGuid)
+        {
+            var bunnyLibrary = new BunnyStreamLibrary
+            {
+                Name = "Analysis library",
+                NormalizedName = $"analysis-{externalLibraryId}",
+                ExternalLibraryId = externalLibraryId
+            };
+            var video = await Db.LessonVideos.SingleAsync(item => item.Id == VideoId);
+            video.Provider = VideoProviders.Bunny;
+            video.ProviderVideoId = videoGuid;
+            video.BunnyStreamLibrary = bunnyLibrary;
+            Db.BunnyStreamLibraries.Add(bunnyLibrary);
+            await Db.SaveChangesAsync();
+            Db.ChangeTracker.Clear();
         }
 
         public async ValueTask DisposeAsync()

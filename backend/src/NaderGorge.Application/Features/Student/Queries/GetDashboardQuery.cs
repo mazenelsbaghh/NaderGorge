@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -200,6 +201,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         }
 
         var homeworkRows = await _db.Homeworks
+            .ReadyForStudents()
             .AsNoTracking()
             .Where(h => allLessonIds.Contains(h.LessonId))
             .Select(h => new { h.Id, h.Title, h.LessonId, h.PassingScoreThreshold, h.TotalScore })

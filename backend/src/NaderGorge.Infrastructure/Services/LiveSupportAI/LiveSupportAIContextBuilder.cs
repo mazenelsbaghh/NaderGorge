@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services.LiveSupportAI;
@@ -25,6 +26,18 @@ public sealed partial class LiveSupportAIContextBuilder(
             .SingleAsync(item => item.Id == turn.ConversationId, cancellationToken);
         var policy = await db.LiveSupportAIPolicyVersions.AsNoTracking()
             .SingleAsync(item => item.Id == turn.PolicyVersionId, cancellationToken);
+        var aiStateIsActive = await db.LiveSupportAIConversationStates.AsNoTracking()
+            .AnyAsync(item =>
+                item.ConversationId == conversation.Id &&
+                item.PolicyVersionId == turn.PolicyVersionId &&
+                item.Mode == LiveSupportAIMode.AiActive,
+                cancellationToken);
+        if (!conversation.AllowsAI ||
+            turn.Status != LiveSupportAITurnStatus.Processing ||
+            policy.Status != LiveSupportAIPolicyStatus.Published ||
+            !policy.IsEnabled ||
+            !aiStateIsActive)
+            throw new InvalidOperationException("AI context is not available for this conversation.");
 
         var sourceMessage = await db.LiveSupportMessages.AsNoTracking()
             .SingleAsync(item => item.Id == turn.SourceMessageId, cancellationToken);

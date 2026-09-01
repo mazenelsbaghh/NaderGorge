@@ -33,6 +33,7 @@ public sealed class LiveSupportAITurnOrchestrator(
 
         var conversation = await db.LiveSupportConversations
             .SingleAsync(item => item.Id == conversationId, cancellationToken);
+        if (!conversation.AllowsAI) return;
         var now = DateTime.UtcNow;
         var turn = new LiveSupportAITurn
         {
@@ -69,18 +70,54 @@ public sealed class LiveSupportAITurnOrchestrator(
         var claimed = await db.LiveSupportAITurns
             .Where(item => item.Id == turnId &&
                 (item.Status == LiveSupportAITurnStatus.Queued ||
-                 (item.Status == LiveSupportAITurnStatus.Processing && item.StartedAt != null && item.StartedAt < staleProcessingCutoff)))
+                 (item.Status == LiveSupportAITurnStatus.Processing && item.StartedAt != null && item.StartedAt < staleProcessingCutoff)) &&
+                db.LiveSupportConversations.Any(conversation =>
+                    conversation.Id == item.ConversationId && conversation.AllowsAI) &&
+                db.LiveSupportAIConversationStates.Any(state =>
+                    state.ConversationId == item.ConversationId &&
+                    state.PolicyVersionId == item.PolicyVersionId &&
+                    state.Mode == LiveSupportAIMode.AiActive) &&
+                db.LiveSupportAIPolicyVersions.Any(policy =>
+                    policy.Id == item.PolicyVersionId &&
+                    policy.Status == LiveSupportAIPolicyStatus.Published &&
+                    policy.IsEnabled))
             .ExecuteUpdateAsync(updates => updates
                 .SetProperty(item => item.Status, LiveSupportAITurnStatus.Processing)
                 .SetProperty(item => item.StartedAt, startedAt)
                 .SetProperty(item => item.Version, item => item.Version + 1), cancellationToken);
 
-        if (claimed == 0) return null;
+        if (claimed == 0)
+        {
+            await db.LiveSupportAITurns
+                .Where(item => item.Id == turnId &&
+                    (item.Status == LiveSupportAITurnStatus.Queued ||
+                     item.Status == LiveSupportAITurnStatus.Processing) &&
+                    db.LiveSupportConversations.Any(conversation =>
+                        conversation.Id == item.ConversationId && !conversation.AllowsAI))
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(item => item.Status, LiveSupportAITurnStatus.DiscardedAfterDisable)
+                    .SetProperty(item => item.CallbackStatus, LiveSupportAICallbackStatus.Discarded)
+                    .SetProperty(item => item.LastSafeCallbackErrorCode, "AI_NOT_ALLOWED")
+                    .SetProperty(item => item.CompletedAt, startedAt)
+                    .SetProperty(item => item.Version, item => item.Version + 1), cancellationToken);
+            return null;
+        }
 
         var turn = await db.LiveSupportAITurns
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
         if (turn is null || turn.Status != LiveSupportAITurnStatus.Processing) return null;
+        var remainsEligible = await db.LiveSupportConversations.AnyAsync(conversation =>
+                conversation.Id == turn.ConversationId && conversation.AllowsAI, cancellationToken) &&
+            await db.LiveSupportAIConversationStates.AnyAsync(state =>
+                state.ConversationId == turn.ConversationId &&
+                state.PolicyVersionId == turn.PolicyVersionId &&
+                state.Mode == LiveSupportAIMode.AiActive, cancellationToken) &&
+            await db.LiveSupportAIPolicyVersions.AnyAsync(policy =>
+                policy.Id == turn.PolicyVersionId &&
+                policy.Status == LiveSupportAIPolicyStatus.Published &&
+                policy.IsEnabled, cancellationToken);
+        if (!remainsEligible) return null;
         return await contextBuilder.BuildAsync(turnId, cancellationToken);
     }
 
@@ -96,7 +133,7 @@ public sealed class LiveSupportAITurnOrchestrator(
 
         var conversation = await db.LiveSupportConversations.SingleAsync(item => item.Id == turn.ConversationId, cancellationToken);
         var state = await db.LiveSupportAIConversationStates.SingleOrDefaultAsync(item => item.ConversationId == turn.ConversationId, cancellationToken);
-        if (state is null || state.Mode != LiveSupportAIMode.AiActive)
+        if (!conversation.AllowsAI || state is null || state.Mode != LiveSupportAIMode.AiActive)
         {
             turn.Status = state?.Mode == LiveSupportAIMode.HumanQueued || state?.Mode == LiveSupportAIMode.HumanAssigned
                 ? LiveSupportAITurnStatus.DiscardedAfterHandoff
@@ -262,7 +299,7 @@ public sealed class LiveSupportAITurnOrchestrator(
         turn.CompletedAt = DateTime.UtcNow;
         turn.Version++;
 
-        if (state?.Mode == LiveSupportAIMode.AiActive)
+        if (conversation.AllowsAI && state?.Mode == LiveSupportAIMode.AiActive)
         {
             var now = DateTime.UtcNow;
             state.Mode = LiveSupportAIMode.HumanQueued;

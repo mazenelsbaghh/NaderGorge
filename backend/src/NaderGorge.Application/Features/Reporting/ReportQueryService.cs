@@ -504,7 +504,11 @@ public sealed class ReportQueryService : IReportQueryService
     private async Task<JourneyHomeworkActivity> LoadJourneyHomeworksAsync(Guid[] studentIds, Guid[] packageIds, CancellationToken ct)
     {
         var homeworkRows = await _db.Homeworks.AsNoTracking()
-            .Where(homework => _db.Lessons.Any(lesson => lesson.Id == homework.LessonId && packageIds.Contains(lesson.ContentSection.Term.PackageId)))
+            .Where(homework =>
+                _db.Lessons.Any(lesson => lesson.Id == homework.LessonId &&
+                    packageIds.Contains(lesson.ContentSection.Term.PackageId)) &&
+                (homework.IsActive && homework.Questions.Any() ||
+                 homework.Submissions.Any(submission => studentIds.Contains(submission.StudentId))))
             .Select(homework => new
             {
                 homework.Id,

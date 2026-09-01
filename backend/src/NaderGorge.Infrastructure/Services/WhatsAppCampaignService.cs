@@ -658,7 +658,7 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
             .Select(item => new WhatsAppCampaignFacetItemDto(item.Id.ToString(), item.Title, item.Attempts.Count))
             .ToListAsync(ct);
         var homeworks = await _db.Homeworks.AsNoTracking()
-            .Where(item => item.IsActive &&
+            .Where(item => item.IsActive && item.Questions.Any() &&
                 item.ArchiveMode != NaderGorge.Domain.Enums.ContentArchiveMode.HiddenFromEveryone &&
                 _db.Lessons.Any(lesson => lesson.Id == item.LessonId &&
                     lesson.ContentSection.Term.Package.IsActive &&

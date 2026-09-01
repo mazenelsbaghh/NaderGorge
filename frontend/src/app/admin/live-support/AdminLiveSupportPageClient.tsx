@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Clock3, Headphones, Plus, Save, Search, Trash2 } from 'lucide-react';
 import { AdminPage } from '@/components/admin/AdminShellChrome';
@@ -23,11 +23,16 @@ import { ConversationInvestigation } from '@/components/live-support/admin/Conve
 import { LiveSupportRatingsPanel } from '@/components/live-support/admin/LiveSupportRatingsPanel';
 import { WhatsAppOperationsPanel } from '@/components/live-support/admin/WhatsAppOperationsPanel';
 import { WhatsAppCampaignStudio } from '@/components/live-support/admin/WhatsAppCampaignStudio';
+import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSupportChannelBadge';
 import { devConsole } from '@/utils/dev-console';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
 import { useHasPermission } from '@/hooks/useHasPermission';
+import {
+  isExternalChannel,
+  type LiveSupportChannel,
+} from '@/lib/live-support-channel';
 
 const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const statusLabels: Record<LiveSupportConversationStatus, string> = {
@@ -47,7 +52,8 @@ export default function AdminLiveSupportPageClient() {
   const [templates, setTemplates] = useState<LiveSupportWhatsAppTemplate[]>([]);
   const [timeline, setTimeline] = useState<LiveSupportConversationTimeline>();
   const [conversationFilter, setConversationFilter] = useState<'all' | 'ai' | 'failed'>('all');
-  const [channelFilter, setChannelFilter] = useState<'all' | 'Web' | 'WhatsApp'>('all');
+  const [channelFilter, setChannelFilter] = useState<'all' | LiveSupportChannel>('all');
+  const [pageFilter, setPageFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | LiveSupportConversationStatus>('all');
   const [windowFilter, setWindowFilter] = useState<'all' | 'open' | 'expired'>('all');
   const [conversationSearch, setConversationSearch] = useState('');
@@ -63,6 +69,14 @@ export default function AdminLiveSupportPageClient() {
   const [staffFeedback, setStaffFeedback] = useState<Record<string, string>>({});
   const [savingStaffId, setSavingStaffId] = useState<string>();
   const hasDirtyChanges = Boolean(config && (serializeCannedReplies(config.cannedReplies) !== cannedRepliesBaseline || config.staff.some((staff) => serializeStaff(staff) !== staffBaselines[staff.userId])));
+  const messengerPageOptions = useMemo(
+    () => getMessengerPageOptions(dashboard?.conversations ?? []),
+    [dashboard?.conversations]
+  );
+  const effectivePageFilter =
+    pageFilter === 'all' || messengerPageOptions.some((page) => page.key === pageFilter)
+      ? pageFilter
+      : 'all';
 
   async function load() {
     try {
@@ -158,13 +172,14 @@ export default function AdminLiveSupportPageClient() {
     ? filterConversations(dashboard.conversations, {
         activity: conversationFilter,
         channel: channelFilter,
+        page: effectivePageFilter,
         status: statusFilter,
         window: windowFilter,
         search: conversationSearch,
       })
     : [];
 
-  return <AdminPage activePath="/admin/live-support" sectionLabel="خدمة العملاء" pageTitle="CRM واتساب والدعم المباشر" subtitle="متابعة محادثات الموقع وواتساب، توزيعها على الفريق، ومراجعة نافذة الرد وحالة التسليم والقوالب المعتمدة.">
+  return <AdminPage activePath="/admin/live-support" sectionLabel="خدمة العملاء" pageTitle="الدعم المباشر والقنوات الخارجية" subtitle="متابعة محادثات الموقع وواتساب وصفحات فيسبوك، توزيعها على الفريق، ومراجعة نوافذ الرد وحالة التسليم.">
     {error && <div role="alert" className="mb-4 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-[var(--admin-danger)]">{error}</div>}
     {!config || !dashboard ? <SupportPageSkeleton /> : <div dir="rtl" className="space-y-5">
       <LiveOperationsBoard dashboard={dashboard}/>
@@ -181,21 +196,22 @@ export default function AdminLiveSupportPageClient() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-bold text-[var(--admin-text)]">كل المحادثات والنشاط</h2>
-              <p className="mt-1 text-sm text-[var(--admin-muted)]">تتحدث القائمة تلقائيًا كل 10 ثوانٍ، وتشمل الموقع وواتساب وحالات AI.</p>
+              <p className="mt-1 text-sm text-[var(--admin-muted)]">تتحدث القائمة تلقائيًا كل 10 ثوانٍ، وتشمل الموقع وواتساب وماسنجر وحالات AI.</p>
             </div>
             <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">{filteredConversations.length} نتيجة</span>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_repeat(4,minmax(8.5rem,auto))]">
-            <label className="sm:col-span-2 xl:col-span-1">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <label className="sm:col-span-2 lg:col-span-1">
               <span className="mb-1 block text-xs font-bold text-[var(--admin-muted)]">بحث المحادثات</span>
               <span className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 focus-within:border-[var(--admin-accent)] focus-within:ring-2 focus-within:ring-[var(--admin-accent-soft)]">
                 <Search aria-hidden="true" size={16} className="shrink-0 text-[var(--admin-muted)]" />
-                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="الاسم، الهاتف، الموضوع أو الموظف" className="min-w-0 flex-1 bg-transparent text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)]" dir="auto" />
+                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="الاسم، الهاتف، الصفحة، الموضوع أو الموظف" className="min-w-0 flex-1 bg-transparent text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)]" dir="auto" />
               </span>
             </label>
-            <FilterSelect label="القناة" value={channelFilter} onChange={(value) => setChannelFilter(value as typeof channelFilter)} options={[['all', 'كل القنوات'], ['Web', 'الموقع'], ['WhatsApp', 'واتساب']]} />
+            <FilterSelect label="القناة" value={channelFilter} onChange={(value) => setChannelFilter(value as typeof channelFilter)} options={[['all', 'كل القنوات'], ['Web', 'الموقع'], ['WhatsApp', 'واتساب'], ['Messenger', 'ماسنجر']]} />
+            <FilterSelect label="صفحة فيسبوك" value={effectivePageFilter} onChange={setPageFilter} options={[['all', 'كل الصفحات'], ...messengerPageOptions.map((page) => [page.key, page.label] as const)]} />
             <FilterSelect label="الحالة" value={statusFilter} onChange={(value) => setStatusFilter(value as typeof statusFilter)} options={[['all', 'كل الحالات'], ...Object.entries(statusLabels)]} />
-            <FilterSelect label="نافذة واتساب" value={windowFilter} onChange={(value) => setWindowFilter(value as typeof windowFilter)} options={[['all', 'كل النوافذ'], ['open', 'مفتوحة'], ['expired', 'منتهية']]} />
+            <FilterSelect label="نافذة الرد" value={windowFilter} onChange={(value) => setWindowFilter(value as typeof windowFilter)} options={[['all', 'كل النوافذ'], ['open', 'مفتوحة'], ['expired', 'منتهية']]} />
             <FilterSelect label="نشاط AI" value={conversationFilter} onChange={(value) => setConversationFilter(value as typeof conversationFilter)} options={[['all', 'كل النشاط'], ['ai', 'نشاط AI'], ['failed', 'فشل AI / Worker']]} />
           </div>
         </div>
@@ -205,7 +221,7 @@ export default function AdminLiveSupportPageClient() {
             <thead className="bg-[var(--admin-card-soft)] text-xs text-[var(--admin-muted)]">
               <tr>
                 <th className="p-3">الشخص</th>
-                <th className="p-3">القناة والهاتف</th>
+                <th className="p-3">القناة والحساب</th>
                 <th className="p-3">الحالة</th>
                 <th className="p-3">نافذة الرد</th>
                 <th className="hidden p-3 lg:table-cell">AI / Worker</th>
@@ -218,12 +234,14 @@ export default function AdminLiveSupportPageClient() {
             <tbody>
               {filteredConversations.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-[var(--admin-muted)]">لا توجد محادثات مطابقة للبحث والتصفية الحالية.</td></tr> : filteredConversations.map((item) => {
                 const isWhatsApp = item.channel === 'WhatsApp';
+                const isMessenger = item.channel === 'Messenger';
+                const isExternal = isExternalChannel(item.channel);
                 return <tr key={item.id} className="border-t border-[var(--admin-border)] transition-colors hover:bg-[var(--admin-hover)]">
                   <td className="p-3 font-semibold text-[var(--admin-text)]">{item.participantName}<span className="mr-2 text-xs font-normal text-[var(--admin-muted)]">{item.participantType === 'Guest' ? 'زائر' : 'طالب'}</span>{item.subject ? <span className="mt-1 block max-w-56 truncate text-xs font-normal text-[var(--admin-muted)]" title={item.subject}>{item.subject}</span> : null}</td>
-                  <td className="p-3"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${isWhatsApp ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)]' : 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]'}`}>{isWhatsApp ? 'واتساب' : 'الموقع'}</span>{isWhatsApp && item.externalPhoneNumber ? <bdi dir="ltr" className="mt-1 block text-xs text-[var(--admin-muted)]">{item.externalPhoneNumber}</bdi> : null}{isWhatsApp && item.lastExternalDeliveryStatus ? <span className="mt-1 block text-xs font-semibold text-[var(--admin-muted)]">آخر حالة: {externalStatusLabel(item.lastExternalDeliveryStatus)}</span> : null}</td>
+                  <td className="p-3"><LiveSupportChannelBadge channel={item.channel} externalPageName={item.externalPageName}/>{isWhatsApp && item.externalPhoneNumber ? <bdi dir="ltr" className="mt-1 block text-xs text-[var(--admin-muted)]">{item.externalPhoneNumber}</bdi> : null}{isMessenger ? <span className="mt-1 block text-xs font-semibold text-[var(--admin-muted)]">موظفون فقط</span> : null}{isExternal && item.lastExternalDeliveryStatus ? <span className="mt-1 block text-xs font-semibold text-[var(--admin-muted)]">آخر حالة: {externalStatusLabel(item.lastExternalDeliveryStatus)}</span> : null}</td>
                   <td className="p-3 font-semibold text-[var(--admin-text)]">{statusLabels[item.status]}</td>
-                  <td className="p-3 text-xs font-medium text-[var(--admin-text)]">{formatWhatsAppWindow(item)}</td>
-                  <td className="hidden p-3 text-[var(--admin-text)] lg:table-cell"><span className="font-semibold">{item.aiTurnStatus || 'بشري'}</span>{item.aiTurnFailureCode && <bdi dir="ltr" className="mt-1 block break-all text-xs text-[var(--admin-danger)]">{item.aiTurnFailureCode}</bdi>}</td>
+                  <td className="p-3 text-xs font-medium text-[var(--admin-text)]">{formatExternalWindow(item)}</td>
+                  <td className="hidden p-3 text-[var(--admin-text)] lg:table-cell"><span className="font-semibold">{isMessenger ? 'موظفون فقط' : item.aiTurnStatus || 'بشري'}</span>{!isMessenger && item.aiTurnFailureCode && <bdi dir="ltr" className="mt-1 block break-all text-xs text-[var(--admin-danger)]">{item.aiTurnFailureCode}</bdi>}</td>
                   <td className="p-3 text-[var(--admin-text)]">{item.ownerName || 'الطابور'}</td>
                   <td className="hidden p-3 text-[var(--admin-text)] xl:table-cell"><time dateTime={item.createdAt}>{formatCairoTimestamp(item.createdAt)}</time></td>
                   <td className="hidden p-3 text-[var(--admin-text)] md:table-cell">{formatDuration(item.waitSeconds)}</td>
@@ -281,7 +299,8 @@ function filterConversations(
   conversations: LiveSupportAdminConversation[],
   filters: {
     activity: 'all' | 'ai' | 'failed';
-    channel: 'all' | 'Web' | 'WhatsApp';
+    channel: 'all' | LiveSupportChannel;
+    page: string;
     status: 'all' | LiveSupportConversationStatus;
     window: 'all' | 'open' | 'expired';
     search: string;
@@ -296,15 +315,19 @@ function filterConversations(
     if (filters.activity === 'ai' && !conversation.aiTurnStatus) return false;
     if (filters.activity === 'failed' && conversation.aiTurnStatus !== 'Failed') return false;
     if (filters.channel !== 'all' && channel !== filters.channel) return false;
+    if (
+      filters.page !== 'all' &&
+      (channel !== 'Messenger' || getMessengerPageKey(conversation) !== filters.page)
+    ) return false;
     if (filters.status !== 'all' && conversation.status !== filters.status) return false;
     if (filters.window !== 'all') {
-      if (channel !== 'WhatsApp') return false;
+      if (!isExternalChannel(channel)) return false;
       const expiration = conversation.customerServiceWindowExpiresAt ? new Date(conversation.customerServiceWindowExpiresAt).getTime() : Number.NaN;
       const windowOpen = Number.isFinite(expiration) && expiration > now;
       if ((filters.window === 'open') !== windowOpen) return false;
     }
     if (!search) return true;
-    const text = [conversation.participantName, conversation.externalPhoneNumber, conversation.subject, conversation.ownerName]
+    const text = [conversation.participantName, conversation.externalPhoneNumber, conversation.externalPageName, conversation.subject, conversation.ownerName]
       .filter(Boolean)
       .join(' ')
       .toLocaleLowerCase('ar-EG');
@@ -312,13 +335,44 @@ function filterConversations(
   });
 }
 
-function formatWhatsAppWindow(conversation: LiveSupportAdminConversation) {
-  if (conversation.channel !== 'WhatsApp') return <span className="text-[var(--admin-muted)]">—</span>;
+function formatExternalWindow(conversation: LiveSupportAdminConversation) {
+  if (!isExternalChannel(conversation.channel)) return <span className="text-[var(--admin-muted)]">—</span>;
   const expiration = conversation.customerServiceWindowExpiresAt ? new Date(conversation.customerServiceWindowExpiresAt) : undefined;
   if (!expiration || Number.isNaN(expiration.getTime()) || expiration.getTime() <= Date.now()) {
-    return <span className="text-[var(--admin-warning)]">منتهية · قالب فقط</span>;
+    return <span className="text-[var(--admin-warning)]">{conversation.channel === 'WhatsApp' ? 'منتهية · قالب فقط' : 'منتهية · انتظار رسالة العميل'}</span>;
   }
   return <span className="text-[var(--admin-success)]"><span className="block">مفتوحة</span><time dateTime={conversation.customerServiceWindowExpiresAt ?? undefined} className="mt-0.5 block whitespace-nowrap font-normal text-[var(--admin-muted)]">حتى {formatCairoTimestamp(expiration)}</time></span>;
+}
+
+interface MessengerPageOption {
+  key: string;
+  label: string;
+}
+
+function getMessengerPageOptions(
+  conversations: LiveSupportAdminConversation[]
+): MessengerPageOption[] {
+  const pages = new Map<string, MessengerPageOption>();
+  for (const conversation of conversations) {
+    if (conversation.channel !== 'Messenger') continue;
+    const key = getMessengerPageKey(conversation);
+    if (!key || pages.has(key)) continue;
+    pages.set(key, {
+      key,
+      label: conversation.externalPageName?.trim() || 'صفحة فيسبوك',
+    });
+  }
+  return [...pages.values()].sort((left, right) =>
+    left.label.localeCompare(right.label, 'ar')
+  );
+}
+
+function getMessengerPageKey(conversation: LiveSupportAdminConversation) {
+  return (
+    conversation.externalPageId?.trim() ||
+    conversation.externalPageName?.trim() ||
+    ''
+  );
 }
 
 function externalStatusLabel(status: string) {

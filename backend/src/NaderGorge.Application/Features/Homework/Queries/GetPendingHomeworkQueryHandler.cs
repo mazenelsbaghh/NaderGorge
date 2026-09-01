@@ -29,7 +29,10 @@ public class GetPendingHomeworkQueryHandler : IRequestHandler<GetPendingHomework
         var pendingSubmissions = await _dbContext.HomeworkSubmissions
             .Include(s => s.Homework)
             .ThenInclude(h => h.Questions)
-            .Where(s => s.StudentId == request.StudentId && s.Status == Domain.Entities.Homework.SubmissionStatus.InProgress)
+            .Where(s => s.StudentId == request.StudentId &&
+                        s.Status == Domain.Entities.Homework.SubmissionStatus.InProgress &&
+                        s.Homework.IsActive &&
+                        s.Homework.Questions.Any())
             .ToListAsync(cancellationToken);
 
         var dtos = new List<PendingHomeworkDto>();

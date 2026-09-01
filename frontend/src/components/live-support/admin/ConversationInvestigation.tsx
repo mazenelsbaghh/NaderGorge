@@ -17,11 +17,13 @@ import {
   LiveSupportMessageMeta,
 } from '@/components/live-support/LiveSupportMessageContent';
 import { WhatsAppTemplatePicker } from '@/components/live-support/staff/WhatsAppTemplatePicker';
+import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSupportChannelBadge';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 import { useLiveSupportHub } from '@/hooks/useLiveSupportHub';
 import { formatCairoTimestamp } from '@/lib/cairo-time';
 import { registerCacheStore } from '@/lib/cache-invalidation';
 import { createClientId } from '@/lib/client-id';
+import { resolveLiveSupportChannelCapabilities } from '@/lib/live-support-channel';
 import {
   advanceLiveSupportThreadHistory,
   createLiveSupportThreadPagination,
@@ -79,13 +81,17 @@ export function ConversationInvestigation({
   } | null>(null);
   const conversation = timeline.conversation;
   const isWhatsApp = conversation.channel === 'WhatsApp';
+  const isMessenger = conversation.channel === 'Messenger';
   const canSend =
     conversation.status !== 'Closed' && conversation.status !== 'Abandoned';
+  const channelCapabilities = resolveLiveSupportChannelCapabilities(
+    { ...conversation, canSend },
+    currentTime
+  );
   const useWhatsAppThread = isWhatsApp;
-  const whatsAppWindowOpen =
-    isWhatsApp &&
-    isWindowOpen(conversation.customerServiceWindowExpiresAt, currentTime);
-  const canSendText = canSend && (!isWhatsApp || whatsAppWindowOpen);
+  const externalWindowOpen =
+    channelCapabilities.customerServiceWindowOpen === true;
+  const canSendText = channelCapabilities.canSendFreeform;
   const eligibleStaff = useMemo(
     () => staff.filter((item) => item.isEnabled),
     [staff]
@@ -451,11 +457,15 @@ export function ConversationInvestigation({
               <h2 className="font-bold text-[var(--admin-text)]">
                 محادثة {conversation.participantName}
               </h2>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-bold ${isWhatsApp ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)]' : 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]'}`}
-              >
-                {isWhatsApp ? 'واتساب' : 'الموقع'}
-              </span>
+              <LiveSupportChannelBadge
+                channel={conversation.channel}
+                externalPageName={conversation.externalPageName}
+              />
+              {channelCapabilities.isHumanOnly ? (
+                <span className="rounded-full border border-[var(--admin-border)] px-2 py-0.5 text-xs font-bold text-[var(--admin-muted)]">
+                  موظفون فقط
+                </span>
+              ) : null}
             </div>
             <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
               {conversation.ownerName
@@ -469,11 +479,11 @@ export function ConversationInvestigation({
                 </>
               ) : null}
             </p>
-            {isWhatsApp ? (
+            {channelCapabilities.usesExternalThread ? (
               <p
-                className={`mt-1 text-xs font-bold ${whatsAppWindowOpen ? 'text-[var(--admin-success)]' : 'text-[var(--admin-warning)]'}`}
+                className={`mt-1 text-xs font-bold ${externalWindowOpen ? 'text-[var(--admin-success)]' : 'text-[var(--admin-warning)]'}`}
               >
-                {whatsAppWindowOpen ? (
+                {externalWindowOpen ? (
                   <>
                     نافذة الرد مفتوحة حتى{' '}
                     <time
@@ -487,7 +497,9 @@ export function ConversationInvestigation({
                     </time>
                   </>
                 ) : (
-                  'نافذة 24 ساعة منتهية — الإرسال متاح بالقالب فقط'
+                  isWhatsApp
+                    ? 'نافذة الرد النصي منتهية — الإرسال متاح بالقالب فقط'
+                    : 'نافذة الرد منتهية — انتظر رسالة جديدة من العميل'
                 )}
               </p>
             ) : null}
@@ -735,7 +747,7 @@ export function ConversationInvestigation({
                   })}
                 </>
               )}
-              {!isWhatsApp && participantDraft !== null ? (
+              {channelCapabilities.supportsParticipantTypingPreview && participantDraft !== null ? (
                 <article className="ml-auto max-w-[82%] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-primary-15)] px-4 py-3 text-sm text-[var(--admin-text)]">
                   <p className="mb-1 text-xs font-bold text-[var(--admin-primary)]">
                     الطالب يكتب الآن…
@@ -762,7 +774,7 @@ export function ConversationInvestigation({
                   onSend={sendTemplate}
                 />
               ) : null}
-              {isWhatsApp && !whatsAppWindowOpen && canSend ? (
+              {channelCapabilities.usesExternalThread && !externalWindowOpen && canSend ? (
                 <p
                   role="status"
                   className="mb-3 rounded-lg bg-[var(--admin-warning-10)] px-3 py-2 text-sm font-medium text-[var(--admin-warning)]"
@@ -772,7 +784,9 @@ export function ConversationInvestigation({
                     className="ml-1 inline"
                     size={16}
                   />
-                  انتهت نافذة الرد النصي. اختر قالب واتساب معتمدًا لإعادة فتحها.
+                  {isWhatsApp
+                    ? 'انتهت نافذة الرد النصي. اختر قالب واتساب معتمدًا لإعادة فتحها.'
+                    : 'انتهت نافذة الرد المتاحة لهذه الصفحة. انتظر رسالة جديدة من العميل قبل الرد.'}
                 </p>
               ) : null}
               <form onSubmit={sendMessage}>
@@ -787,10 +801,14 @@ export function ConversationInvestigation({
                     placeholder={
                       !canSend
                         ? 'المحادثة مغلقة'
-                        : isWhatsApp && !whatsAppWindowOpen
-                          ? 'الإرسال النصي متوقف — استخدم قالب واتساب'
+                        : channelCapabilities.usesExternalThread && !externalWindowOpen
+                          ? isWhatsApp
+                            ? 'الإرسال النصي متوقف — استخدم قالب واتساب'
+                            : 'الإرسال متوقف حتى تصل رسالة جديدة من العميل'
                           : isWhatsApp
                             ? 'اكتب ردًا على واتساب'
+                            : isMessenger
+                              ? 'اكتب ردًا على ماسنجر'
                             : 'اكتب رسالة باسم الإدارة'
                     }
                     className="min-h-12 min-w-0 flex-1 resize-none rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)] disabled:bg-[var(--admin-card-soft)]"
@@ -891,12 +909,6 @@ function isStaffAvailable(staff: LiveSupportStaffConfig) {
     staff.isCheckedIn &&
     staff.activeLoad < staff.maxActiveConversations
   );
-}
-
-function isWindowOpen(expiresAt: string | null | undefined, now: number) {
-  if (!expiresAt) return false;
-  const expiration = new Date(expiresAt).getTime();
-  return Number.isFinite(expiration) && expiration > now;
 }
 
 function isAbortError(cause: unknown) {

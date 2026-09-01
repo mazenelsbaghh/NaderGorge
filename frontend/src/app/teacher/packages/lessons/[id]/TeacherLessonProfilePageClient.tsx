@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Users } from "lucide-react";
-import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, ContentSubscribersTab } from "@/components/admin";
+import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, ContentSubscribersTab } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { adminService, type LessonCockpitDto } from "@/services/admin-service";
 import { teacherService } from "@/services/teacher-service";
@@ -71,6 +71,11 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
         </TeacherPage>
      )
   }
+
+  const primaryHomework = lesson.homework?.[0];
+  const homeworkIsStillDraft = Boolean(
+    primaryHomework && (!primaryHomework.isActive || primaryHomework.questionCount === 0)
+  );
 
   return (
     <TeacherPage
@@ -156,12 +161,29 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
 
       {activeTab === "homework" && (
         <div className="space-y-6">
-          {lesson.homework && lesson.homework.length > 0 ? (
-            <AttachedHomeworkViewer homeworkId={lesson.homework[0].id} surface="teacher" />
+          {homeworkIsStillDraft && (
+            <HomeworkComingSoonSettings
+              lessonId={lesson.lessonId}
+              expectedOn={lesson.homeworkComingSoonOn}
+              onSaved={loadData}
+            />
+          )}
+          {primaryHomework ? (
+            <AttachedHomeworkViewer
+              homeworkId={primaryHomework.id}
+              surface="teacher"
+              onStatusChanged={loadData}
+            />
           ) : (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
               <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
-              <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} surface="teacher" />
+              <UnifiedAssessmentBuilder
+                type="homework"
+                lessonId={lesson.lessonId}
+                initialHomeworkComingSoonOn={lesson.homeworkComingSoonOn}
+                onSuccess={loadData}
+                surface="teacher"
+              />
             </div>
           )}
         </div>

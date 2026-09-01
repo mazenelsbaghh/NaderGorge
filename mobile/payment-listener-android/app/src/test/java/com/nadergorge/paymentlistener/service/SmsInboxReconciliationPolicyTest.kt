@@ -35,6 +35,21 @@ class SmsInboxReconciliationPolicyTest {
     }
 
     @Test
+    fun replayCursorIncludesTheUnresolvedMessageAgain() {
+        val unresolved = SmsInboxCursor(receivedAtMillis = 1_000L, messageId = 9L)
+        val replay = SmsInboxReconciliationPolicy.replayCursorBefore(unresolved)
+
+        assertTrue(
+            SmsInboxReconciliationPolicy.isAfter(
+                unresolved.receivedAtMillis,
+                unresolved.messageId,
+                replay
+            )
+        )
+        assertEquals(SmsInboxCursor(1_000L, 8L), replay)
+    }
+
+    @Test
     fun latestCursorNeverRegressesWhenWorkersFinishOutOfOrder() {
         val current = SmsInboxCursor(receivedAtMillis = 2_000L, messageId = 20L)
 

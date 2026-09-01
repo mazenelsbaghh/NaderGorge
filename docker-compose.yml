@@ -20,6 +20,7 @@ x-frontend-environment: &frontend-environment
   INTERNAL_BACKEND_URL: ${INTERNAL_BACKEND_URL:-http://backend:5245}
   API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
   AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
+  AI_MEDIA_RELAY_SECRET: ""
   WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
   WORKER_URL: ${WORKER_URL:-http://worker:3001}
   LANDING_PUBLIC_ORIGIN: ${LANDING_PUBLIC_ORIGIN:-http://localhost:8738}
@@ -29,6 +30,8 @@ x-frontend-environment: &frontend-environment
   ASSISTANT_PUBLIC_ORIGIN: ${ASSISTANT_PUBLIC_ORIGIN:-http://localhost:8742}
   NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-massar-academy.net}
   BUNNY_STREAM_LIBRARY_ID: ${BUNNY_STREAM_LIBRARY_ID:-}
+  BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+  BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
 
 
 
@@ -118,11 +121,28 @@ services:
       WhatsAppCloudApi__ApiVersion: ${WHATSAPP_CLOUD_API_VERSION:-v20.0}
       WhatsAppCloudApi__DefaultTemplateName: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_NAME:-student_result_2}
       WhatsAppCloudApi__DefaultTemplateLanguage: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_LANGUAGE:-ar_EG}
+      FacebookMessenger__VerifyToken: ${FACEBOOK_MESSENGER_VERIFY_TOKEN:-}
+      FacebookMessenger__AppSecret: ${FACEBOOK_MESSENGER_APP_SECRET:-}
+      FacebookMessenger__ApiVersion: ${FACEBOOK_MESSENGER_API_VERSION:-v26.0}
+      FacebookMessenger__WebhookPublicUrl: ${FACEBOOK_MESSENGER_WEBHOOK_PUBLIC_URL:-http://localhost:5245/api/live-support/messenger/webhook}
+      FacebookMessenger__Pages__0__PageId: ${FACEBOOK_MESSENGER_PAGE_1_ID:-}
+      FacebookMessenger__Pages__0__DisplayName: ${FACEBOOK_MESSENGER_PAGE_1_NAME:-}
+      FacebookMessenger__Pages__0__AccessToken: ${FACEBOOK_MESSENGER_PAGE_1_ACCESS_TOKEN:-}
+      FacebookMessenger__Pages__0__HumanAgentEnabled: ${FACEBOOK_MESSENGER_PAGE_1_HUMAN_AGENT_ENABLED:-false}
+      FacebookMessenger__Pages__1__PageId: ${FACEBOOK_MESSENGER_PAGE_2_ID:-}
+      FacebookMessenger__Pages__1__DisplayName: ${FACEBOOK_MESSENGER_PAGE_2_NAME:-}
+      FacebookMessenger__Pages__1__AccessToken: ${FACEBOOK_MESSENGER_PAGE_2_ACCESS_TOKEN:-}
+      FacebookMessenger__Pages__1__HumanAgentEnabled: ${FACEBOOK_MESSENGER_PAGE_2_HUMAN_AGENT_ENABLED:-false}
+      FacebookMessenger__Pages__2__PageId: ${FACEBOOK_MESSENGER_PAGE_3_ID:-}
+      FacebookMessenger__Pages__2__DisplayName: ${FACEBOOK_MESSENGER_PAGE_3_NAME:-}
+      FacebookMessenger__Pages__2__AccessToken: ${FACEBOOK_MESSENGER_PAGE_3_ACCESS_TOKEN:-}
+      FacebookMessenger__Pages__2__HumanAgentEnabled: ${FACEBOOK_MESSENGER_PAGE_3_HUMAN_AGENT_ENABLED:-false}
       GoogleCloud__VisionApiKey: ${GOOGLE_CLOUD_VISION_API_KEY:-}
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://app.localhost:3000,http://admin.localhost:3000,http://staff.localhost:3000,http://assistant.localhost:3000,http://teacher.localhost:3000,http://app.lvh.me:3000,http://admin.lvh.me:3000,http://staff.lvh.me:3000,http://assistant.lvh.me:3000,http://teacher.lvh.me:3000,http://localhost:8738,http://localhost:8739,http://localhost:8740,http://localhost:8741,http://localhost:8742,https://massar-academy.net,https://www.massar-academy.net,https://app.massar-academy.net,https://student.massar-academy.net,https://staff.massar-academy.net,https://super.massar-academy.net,https://teacher.massar-academy.net,https://admin.massar-academy.net}
       CookieSettings__Domain: ${COOKIE_DOMAIN:-}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
+      AiMediaRelay__Secret: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
       AdminAI__Enabled: ${ADMIN_AI_ENABLED:-false}
       AdminAI__CallbackSecret: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       AdminAI__HmacKey: ${ADMIN_AI_HMAC_KEY:-}
@@ -137,11 +157,15 @@ services:
       BunnyStream__LibraryId: ${BUNNY_STREAM_LIBRARY_ID:-}
       BunnyStream__ApiKey: ${BUNNY_STREAM_API_KEY:-}
       BunnyStream__TusUploadExpiryMinutes: ${BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES:-180}
+      BunnyAnalysis__CdnTokenSecurityKeysJson: ${BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON:-}
+      BunnyAnalysis__PlayerTokenSecurityKeysJson: ${BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON:-}
+      DataProtection__KeysPath: /app/App_Data/protected/data-protection-keys
     ports:
       - "127.0.0.1:${MASAR_BACKEND_PORT:-${MASSAR_BACKEND_PORT:-5245}}:5245"
     volumes:
       - massar_assets:/app/wwwroot
       - massar_protected_resources:/app/App_Data/protected/resources
+      - massar_data_protection_keys:/app/App_Data/protected/data-protection-keys
     networks:
       - massar_net
     depends_on:
@@ -182,11 +206,12 @@ services:
       APNS_PRIVATE_KEY_PATH: ${APNS_PRIVATE_KEY_PATH:-}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
+      AI_MEDIA_RELAY_SECRET: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
       WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
       WORKER_ADMIN_ENABLED: ${WORKER_ADMIN_ENABLED:-false}
       WORKER_ADMIN_RATE_LIMIT_PER_MINUTE: ${WORKER_ADMIN_RATE_LIMIT_PER_MINUTE:-30}
       WORKER_FETCH_TIMEOUT_MS: ${WORKER_FETCH_TIMEOUT_MS:-10000}
-      WORKER_DOWNLOAD_TIMEOUT_MS: ${WORKER_DOWNLOAD_TIMEOUT_MS:-120000}
+      WORKER_DOWNLOAD_TIMEOUT_MS: ${WORKER_DOWNLOAD_TIMEOUT_MS:-600000}
       AI_PROVIDER_TIMEOUT_MS: ${AI_PROVIDER_TIMEOUT_MS:-600000}
       ADMIN_AI_ENABLED: ${ADMIN_AI_ENABLED:-false}
       AI_ADMIN_AGENT_CONCURRENCY: ${AI_ADMIN_AGENT_CONCURRENCY:-2}
@@ -198,7 +223,6 @@ services:
       TELEGRAM_DOWNLOADER_BOT: ${TELEGRAM_DOWNLOADER_BOT:-utubebot}
       BACKEND_API_URL: "http://backend:5245"
       BUNNY_STREAM_LIBRARY_ID: ${BUNNY_STREAM_LIBRARY_ID:-}
-      BUNNY_STREAM_API_KEY: ${BUNNY_STREAM_API_KEY:-}
       NODE_ENV: production
       TZ: Africa/Cairo
     volumes:
@@ -419,6 +443,8 @@ volumes:
     name: massar_assets
   massar_protected_resources:
     name: massar_protected_resources
+  massar_data_protection_keys:
+    name: massar_data_protection_keys
 
 secrets:
   firebase_adminsdk:

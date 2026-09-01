@@ -1,11 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Admin.VideoTypes;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -863,19 +865,28 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
     private readonly IEnumerable<IVideoProvider> _providers;
     private readonly TeacherAuthorizationService _auth;
+    private readonly IBunnyStreamLibraryAccessService _bunnyLibraries;
+    private readonly IBunnyStreamClientFactory _bunnyClients;
 
-    public CreateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers, TeacherAuthorizationService auth)
+    public CreateVideoCommandHandler(
+        IAppDbContext db,
+        IEnumerable<IVideoProvider> providers,
+        TeacherAuthorizationService auth,
+        IBunnyStreamLibraryAccessService bunnyLibraries,
+        IBunnyStreamClientFactory bunnyClients)
     {
         _db = db;
         _providers = providers;
         _auth = auth;
+        _bunnyLibraries = bunnyLibraries;
+        _bunnyClients = bunnyClients;
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
@@ -897,11 +908,28 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
         }
 
         var normalizedProvider = VideoProviders.Normalize(request.Provider);
-        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
-        string extractedId = request.UrlOrEmbedCode;
-        if (providerImpl != null)
+        string extractedId;
+        Guid? bunnyStreamLibraryId = null;
+        if (normalizedProvider == VideoProviders.Bunny)
         {
-            extractedId = providerImpl.ExtractVideoId(request.UrlOrEmbedCode);
+            var bunnyReference = await BunnyManualVideoResolver.ResolveAsync(
+                request.UrlOrEmbedCode,
+                request.BunnyStreamLibraryId,
+                _bunnyLibraries,
+                _bunnyClients,
+                ct);
+            if (!bunnyReference.Success)
+            {
+                return ApiResponse<Guid>.Fail(bunnyReference.Message!, [bunnyReference.ErrorCode!]);
+            }
+
+            extractedId = bunnyReference.VideoGuid!;
+            bunnyStreamLibraryId = bunnyReference.LibraryId;
+        }
+        else
+        {
+            var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
+            extractedId = providerImpl?.ExtractVideoId(request.UrlOrEmbedCode) ?? request.UrlOrEmbedCode;
         }
 
         var video = new LessonVideo
@@ -913,7 +941,8 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             MaxWatchCount = request.Limit,
             LessonId = request.LessonId,
             VideoTypeId = request.VideoTypeId,
-            IsActive = request.IsActive
+            IsActive = request.IsActive,
+            BunnyStreamLibraryId = bunnyStreamLibraryId
         };
         _db.LessonVideos.Add(video);
 
@@ -935,25 +964,60 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
     }
 }
 
-public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid VideoTypeId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdateVideoCommand(
+    Guid Id,
+    string Title,
+    string Provider,
+    string UrlOrEmbedCode,
+    int Order,
+    int Limit,
+    Guid VideoTypeId,
+    Guid? CurrentUserId = null,
+    Guid? BunnyStreamLibraryId = null,
+    bool? IsActive = null) : IRequest<ApiResponse>;
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
     private readonly IEnumerable<IVideoProvider> _providers;
     private readonly TeacherAuthorizationService _auth;
+    private readonly IBunnyStreamLibraryAccessService _bunnyLibraries;
+    private readonly IBunnyStreamClientFactory _bunnyClients;
 
-    public UpdateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers, TeacherAuthorizationService auth)
+    public UpdateVideoCommandHandler(
+        IAppDbContext db,
+        IEnumerable<IVideoProvider> providers,
+        TeacherAuthorizationService auth,
+        IBunnyStreamLibraryAccessService bunnyLibraries,
+        IBunnyStreamClientFactory bunnyClients)
     {
         _db = db;
         _providers = providers;
         _auth = auth;
+        _bunnyLibraries = bunnyLibraries;
+        _bunnyClients = bunnyClients;
     }
 
     public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
     {
-        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
+        var video = await _db.LessonVideos
+            .Include(v => v.BunnyStreamLibrary)
+            .Include(v => v.BunnyVideoAssets)
+            .FirstOrDefaultAsync(v => v.Id == request.Id, ct);
         if (video == null) return ApiResponse.Fail("Video not found");
+
+        var title = request.Title?.Trim();
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
+            return ApiResponse.Fail("عنوان الفيديو مطلوب ولا يزيد عن 200 حرف.");
+
+        if (string.IsNullOrWhiteSpace(request.UrlOrEmbedCode))
+            return ApiResponse.Fail("رابط الفيديو أو معرّفه مطلوب.");
+
+        if (request.Order < 1)
+            return ApiResponse.Fail("ترتيب الفيديو يجب أن يكون 1 أو أكبر.");
+
+        if (request.Limit < 0)
+            return ApiResponse.Fail("حد المشاهدة لا يمكن أن يكون سالبًا.");
 
         if (request.CurrentUserId.HasValue)
         {
@@ -971,20 +1035,113 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             return ApiResponse.Fail("اختر نوع فيديو نشطاً.", ["VIDEO_TYPE_INVALID"]);
         }
 
-        var normalizedProvider = VideoProviders.Normalize(request.Provider);
-        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
-        var extractedId = request.UrlOrEmbedCode;
-        if (providerImpl != null)
+        if (BunnyVideoReplacementLifecycle.ExpirePendingReplacements(video.BunnyVideoAssets, DateTime.UtcNow))
         {
-            extractedId = providerImpl.ExtractVideoId(request.UrlOrEmbedCode);
+            await _db.SaveChangesAsync(ct);
         }
 
-        video.Title = request.Title;
+        if (video.BunnyVideoAssets.Any(asset => asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement))
+        {
+            return ApiResponse.Fail(
+                "يوجد استبدال فيديو Bunny قيد التجهيز. انتظر حتى يكتمل أو يفشل قبل إجراء تعديل آخر على المصدر.",
+                ["BUNNY_REPLACEMENT_PENDING"]);
+        }
+
+        var currentBunnyAsset = video.BunnyVideoAssets
+            .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
+
+        var normalizedProvider = VideoProviders.Normalize(request.Provider);
+        string extractedId;
+        Guid? bunnyStreamLibraryId = null;
+        if (normalizedProvider == VideoProviders.Bunny)
+        {
+            var keepsExistingBunnyReference =
+                VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny
+                && video.BunnyStreamLibraryId.HasValue
+                && request.BunnyStreamLibraryId == video.BunnyStreamLibraryId
+                && BunnyVideoReferenceParser.TryParse(request.UrlOrEmbedCode, out var existingReference)
+                && existingReference is not null
+                && string.Equals(existingReference.VideoGuid, video.ProviderVideoId, StringComparison.OrdinalIgnoreCase)
+                && (!existingReference.ExternalLibraryId.HasValue
+                    || existingReference.ExternalLibraryId == video.BunnyStreamLibrary?.ExternalLibraryId);
+
+            if (keepsExistingBunnyReference)
+            {
+                extractedId = video.ProviderVideoId;
+                bunnyStreamLibraryId = video.BunnyStreamLibraryId;
+            }
+            else
+            {
+                var bunnyReference = await BunnyManualVideoResolver.ResolveAsync(
+                    request.UrlOrEmbedCode,
+                    request.BunnyStreamLibraryId,
+                    _bunnyLibraries,
+                    _bunnyClients,
+                    ct);
+                if (!bunnyReference.Success)
+                {
+                    return ApiResponse.Fail(bunnyReference.Message!, [bunnyReference.ErrorCode!]);
+                }
+
+                extractedId = bunnyReference.VideoGuid!;
+                bunnyStreamLibraryId = bunnyReference.LibraryId;
+            }
+
+        }
+        else
+        {
+            var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
+            extractedId = providerImpl?.ExtractVideoId(request.UrlOrEmbedCode) ?? request.UrlOrEmbedCode;
+        }
+
+        var sourceChanged = !string.Equals(
+                                VideoProviders.Normalize(video.Provider),
+                                normalizedProvider,
+                                StringComparison.OrdinalIgnoreCase)
+                            || !string.Equals(video.ProviderVideoId, extractedId, StringComparison.OrdinalIgnoreCase)
+                            || video.BunnyStreamLibraryId != bunnyStreamLibraryId;
+
+        if (sourceChanged)
+        {
+            LessonVideoSourceMutation.SuppressHistoricalBunnyReplacementOutcomes(
+                video.BunnyVideoAssets,
+                DateTime.UtcNow);
+
+            if (currentBunnyAsset is not null)
+            {
+                currentBunnyAsset.BunnyStreamLibraryRecordId ??= video.BunnyStreamLibraryId;
+                LessonVideoSourceMutation.RetireBunnyAsset(currentBunnyAsset, request.CurrentUserId);
+            }
+
+            await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(_db, video, ct);
+        }
+
+        video.Title = title;
         video.Provider = normalizedProvider;
         video.ProviderVideoId = extractedId;
         video.Order = request.Order;
         video.MaxWatchCount = request.Limit;
         video.VideoTypeId = request.VideoTypeId;
+        video.BunnyStreamLibraryId = bunnyStreamLibraryId;
+        video.IsActive = request.IsActive ?? video.IsActive;
+        video.UpdatedAt = DateTime.UtcNow;
+
+        if (!sourceChanged && currentBunnyAsset is not null)
+        {
+            currentBunnyAsset.Title = title;
+            currentBunnyAsset.BunnyStreamLibraryRecordId = video.BunnyStreamLibraryId;
+            if (request.IsActive.HasValue)
+            {
+                currentBunnyAsset.ActivateWhenReady = request.IsActive.Value;
+                if (!string.Equals(currentBunnyAsset.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+                {
+                    // A managed Bunny asset cannot be made playable until Bunny
+                    // reports it ready; remember the requested state instead.
+                    video.IsActive = false;
+                }
+            }
+            currentBunnyAsset.UpdatedAt = DateTime.UtcNow;
+        }
 
         var outboxEvent = new OutboxEvent
         {
@@ -1002,6 +1159,149 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
+}
+
+internal static class LessonVideoSourceMutation
+{
+    public static void RetireBunnyAsset(BunnyVideoAsset asset, Guid? retiredByUserId)
+    {
+        asset.SourceState = BunnyVideoAssetSourceState.Retired;
+        asset.RetiredAtUtc = DateTime.UtcNow;
+        asset.RetiredByUserId = retiredByUserId;
+        asset.ActivateWhenReady = false;
+        asset.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static void SuppressHistoricalBunnyReplacementOutcomes(
+        IEnumerable<BunnyVideoAsset> assets,
+        DateTime supersededAtUtc)
+    {
+        foreach (var asset in assets.Where(asset =>
+                     asset.SourceState == BunnyVideoAssetSourceState.Retired
+                     && asset.OutcomeSupersededAtUtc is null
+                     && asset.Status is "Failed" or "Expired" or "Cancelled"))
+        {
+            asset.OutcomeSupersededAtUtc = supersededAtUtc;
+            asset.UpdatedAt = supersededAtUtc;
+        }
+    }
+
+    public static async Task InvalidateSourceDerivedDataAsync(
+        IAppDbContext db,
+        LessonVideo video,
+        CancellationToken cancellationToken)
+    {
+        video.IsProcessingAI = false;
+        video.IsProcessingMindmaps = false;
+        video.CurrentAiAnalysisRunId = null;
+        video.CurrentMindmapGenerationRunId = null;
+        video.SubtitleUrl = null;
+
+        var chapters = await db.VideoChapters
+            .Where(chapter => chapter.LessonVideoId == video.Id)
+            .ToListAsync(cancellationToken);
+        if (chapters.Count > 0)
+        {
+            db.VideoChapters.RemoveRange(chapters);
+        }
+
+        var activeSessions = await db.VideoPlaybackSessions
+            .Where(session => session.LessonVideoId == video.Id && !session.IsSuperseded)
+            .ToListAsync(cancellationToken);
+        foreach (var session in activeSessions)
+        {
+            session.IsSuperseded = true;
+            session.UpdatedAt = DateTime.UtcNow;
+        }
+    }
+}
+
+internal sealed record BunnyManualVideoResolution(
+    bool Success,
+    Guid? LibraryId,
+    string? VideoGuid,
+    string? ErrorCode,
+    string? Message);
+
+internal static class BunnyManualVideoResolver
+{
+    public static async Task<BunnyManualVideoResolution> ResolveAsync(
+        string rawReference,
+        Guid? selectedLibraryId,
+        IBunnyStreamLibraryAccessService libraries,
+        IBunnyStreamClientFactory clients,
+        CancellationToken cancellationToken)
+    {
+        if (!BunnyVideoReferenceParser.TryParse(rawReference, out var reference) || reference is null)
+        {
+            return Fail("BUNNY_VIDEO_REFERENCE_INVALID", "أدخل رابط Bunny كاملًا أو GUID صحيحًا للفيديو.");
+        }
+
+        BunnyStreamLibraryAccessResult accessResult;
+        if (reference.ExternalLibraryId.HasValue)
+        {
+            accessResult = await libraries.ResolveByExternalIdAsync(
+                reference.ExternalLibraryId.Value,
+                requireActive: true,
+                cancellationToken);
+            if (accessResult.Success
+                && selectedLibraryId.HasValue
+                && accessResult.Access?.Id != selectedLibraryId.Value)
+            {
+                return Fail("BUNNY_LIBRARY_MISMATCH", "المكتبة المختارة لا تطابق Library ID الموجود في رابط Bunny.");
+            }
+        }
+        else if (selectedLibraryId.HasValue)
+        {
+            accessResult = await libraries.ResolveAsync(selectedLibraryId.Value, requireActive: true, cancellationToken);
+        }
+        else
+        {
+            return Fail("BUNNY_LIBRARY_REQUIRED", "اختر مكتبة Bunny لهذا الفيديو.");
+        }
+
+        if (!accessResult.Success || accessResult.Access is null)
+        {
+            return Fail(
+                accessResult.ErrorCode ?? "BUNNY_LIBRARY_UNAVAILABLE",
+                accessResult.Message ?? "مكتبة Bunny المحددة غير متاحة.");
+        }
+
+        try
+        {
+            var client = clients.Create(accessResult.Access.ExternalLibraryId, accessResult.Access.ApiKey);
+            var video = await client.GetVideoAsync(reference.VideoGuid, cancellationToken);
+            if (video is null || video.VideoLibraryId != accessResult.Access.ExternalLibraryId)
+            {
+                return Fail("BUNNY_VIDEO_NOT_FOUND", "الفيديو غير موجود داخل مكتبة Bunny المحددة.");
+            }
+
+            var bunnyStatus = BunnyVideoStatusClassifier.Classify(video.Status);
+            if (bunnyStatus == BunnyVideoLifecycleState.Failed)
+            {
+                return Fail("BUNNY_VIDEO_FAILED", "فشل تجهيز الفيديو داخل Bunny ولا يمكن ربطه بالمنصة.");
+            }
+
+            if (bunnyStatus != BunnyVideoLifecycleState.Ready)
+            {
+                return Fail("BUNNY_VIDEO_NOT_READY", "انتظر حتى يكتمل تجهيز الفيديو داخل Bunny ثم حاول ربطه مرة أخرى.");
+            }
+        }
+        catch (HttpRequestException)
+        {
+            return Fail("BUNNY_VIDEO_VALIDATION_FAILED", "تعذر التحقق من وجود الفيديو في Bunny. راجع المفتاح وحاول مرة أخرى.");
+        }
+
+        return new BunnyManualVideoResolution(
+            true,
+            accessResult.Access.Id,
+            reference.VideoGuid,
+            null,
+            null);
+    }
+
+    private static BunnyManualVideoResolution Fail(string code, string message) =>
+        new(false, null, null, code, message);
 }
 
 public record DeleteVideoCommand(Guid Id, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
@@ -1088,7 +1388,8 @@ public record AttachHomeworkCommand(
     int RequiredPointsToPass,
     decimal TotalScore,
     List<AttachHomeworkQuestionDto> Questions,
-    Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+    Guid? CurrentUserId = null,
+    DateOnly? HomeworkComingSoonOn = null) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
 
@@ -1132,9 +1433,37 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
         if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
 
+        if (request.Questions.Count == 0 &&
+            request.HomeworkComingSoonOn.HasValue &&
+            request.HomeworkComingSoonOn.Value < CairoTime.GetCurrentDate())
+        {
+            return ApiResponse<Guid>.Fail(
+                "اختر اليوم أو تاريخًا قادمًا لظهور إعلان الواجب.",
+                ["HOMEWORK_COMING_SOON_DATE_PAST"]);
+        }
+
         // Load homework WITHOUT including questions to avoid EF tracking issues
         var hw = await _db.Homeworks
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
+
+        if (hw is not null)
+        {
+            var hasStudentWork = await _db.HomeworkSubmissions
+                .AnyAsync(submission => submission.HomeworkId == hw.Id, ct);
+            if (hasStudentWork)
+            {
+                return ApiResponse<Guid>.Fail(
+                    "لا يمكن تغيير أسئلة هذا الواجب بعد بدء الطلاب فيه؛ ستظل الأسئلة كما هي لحماية نتائجهم.",
+                    ["HOMEWORK_HAS_SUBMISSIONS"]);
+            }
+
+            if (hw.IsActive)
+            {
+                return ApiResponse<Guid>.Fail(
+                    "عطّل الواجب أولًا قبل تعديل أسئلته.",
+                    ["HOMEWORK_DEACTIVATE_BEFORE_EDITING"]);
+            }
+        }
 
         if (hw == null)
         {
@@ -1145,11 +1474,11 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 Description = request.Instructions,
                 IsMandatory = request.IsMandatory,
                 IsRandomized = request.IsRandomized,
+                IsActive = request.Questions.Count > 0,
                 PassingScoreThreshold = request.RequiredPointsToPass,
                 TotalScore = request.TotalScore
             };
             _db.Homeworks.Add(hw);
-            await _db.SaveChangesAsync(ct);
         }
         else
         {
@@ -1209,21 +1538,23 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
         // Add all new questions directly via DbSet — clean INSERT, no tracking conflicts
         _db.HomeworkQuestions.AddRange(newQuestions);
 
-        if (lesson.ContentSection?.Term != null)
+        if (newQuestions.Count == 0)
         {
-            var outboxEvent = new OutboxEvent
-            {
-                Type = "HomeworkPublished",
-                TargetGroup = $"Package_{lesson.ContentSection.Term.PackageId}",
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    lessonId = lesson.Id,
-                    homeworkId = hw.Id,
-                    title = hw.Title,
-                    packageId = lesson.ContentSection.Term.PackageId
-                })
-            };
-            _db.OutboxEvents.Add(outboxEvent);
+            hw.IsActive = false;
+            lesson.HomeworkComingSoonOn = request.HomeworkComingSoonOn;
+        }
+        else if (hw.IsActive)
+        {
+            lesson.HomeworkComingSoonOn = null;
+        }
+
+        if (hw.IsActive &&
+            newQuestions.Count > 0 &&
+            lesson.ContentSection?.Term != null)
+        {
+            _db.OutboxEvents.Add(HomeworkPublicationOutbox.Create(
+                hw,
+                lesson.ContentSection.Term.PackageId));
         }
 
         await _db.SaveChangesAsync(ct);
@@ -1424,12 +1755,43 @@ public class SetHomeworkActiveStatusCommandHandler : IRequestHandler<SetHomework
 
     public async Task<ApiResponse> Handle(SetHomeworkActiveStatusCommand request, CancellationToken ct)
     {
-        var homework = await _db.Homeworks.FirstOrDefaultAsync(x => x.Id == request.HomeworkId, ct);
+        var homework = await _db.Homeworks
+            .Include(item => item.Questions)
+            .FirstOrDefaultAsync(x => x.Id == request.HomeworkId, ct);
         if (homework == null) return ApiResponse.Fail("Homework not found");
         if (request.CurrentUserId.HasValue && !await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, homework.LessonId, ct))
             return ApiResponse.Fail("Unauthorized access to this homework.");
+
+        if (request.IsActive && homework.Questions.Count == 0)
+        {
+            return ApiResponse.Fail(
+                "أضف سؤالًا واحدًا على الأقل قبل تفعيل الواجب للطلاب.",
+                ["HOMEWORK_QUESTIONS_REQUIRED"]);
+        }
+
+        var wasActive = homework.IsActive;
         homework.IsActive = request.IsActive;
         homework.UpdatedAt = DateTime.UtcNow;
+
+        if (!wasActive && request.IsActive)
+        {
+            var lesson = await _db.Lessons
+                .Include(item => item.ContentSection)
+                    .ThenInclude(section => section.Term)
+                .FirstOrDefaultAsync(item => item.Id == homework.LessonId, ct);
+
+            if (lesson is not null)
+            {
+                lesson.HomeworkComingSoonOn = null;
+                if (lesson.ContentSection?.Term is not null)
+                {
+                    _db.OutboxEvents.Add(HomeworkPublicationOutbox.Create(
+                        homework,
+                        lesson.ContentSection.Term.PackageId));
+                }
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }

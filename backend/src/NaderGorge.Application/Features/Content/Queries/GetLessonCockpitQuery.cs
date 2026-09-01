@@ -10,9 +10,12 @@ namespace NaderGorge.Application.Features.Content.Queries;
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, bool IsRegeneratingMindmap, int Order);
 public record LessonCockpitVideoExamDto(Guid ExamId, string Title, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
-public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null);
+public record LessonCockpitBunnyLibraryDto(Guid Id, string Name, string LibraryId, bool IsActive, bool ApiKeyConfigured);
+public record LessonCockpitBunnyReplacementDto(Guid AssetId, string Status, int? EncodeProgress);
+public record LessonCockpitBunnyReplacementOutcomeDto(Guid AssetId, string Status, string? ErrorMessage, DateTime? RetiredAtUtc);
+public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, LessonCockpitBunnyLibraryDto? BunnyLibrary = null, string? BunnyStatus = null, int? BunnyEncodeProgress = null, LessonCockpitBunnyReplacementDto? PendingBunnyReplacement = null, LessonCockpitBunnyReplacementOutcomeDto? LastBunnyReplacementOutcome = null);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
-public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
+public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, bool IsActive, int QuestionCount, decimal? PassingScoreThreshold, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
 
 public record LessonCockpitDto(
@@ -30,7 +33,8 @@ public record LessonCockpitDto(
     List<LessonCockpitVideoDto> Videos,
     List<LessonCockpitResourceDto> Resources,
     List<LessonCockpitHomeworkDto> Homework,
-    LessonCockpitCommentSummaryDto CommentsSummary
+    LessonCockpitCommentSummaryDto CommentsSummary,
+    DateOnly? HomeworkComingSoonOn
 );
 
 public record GetLessonCockpitQuery(Guid LessonId, Guid? CurrentUserId = null) : IRequest<ApiResponse<LessonCockpitDto>>;
@@ -62,6 +66,10 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                 .ThenInclude(v => v.VideoChapters)
             .Include(l => l.Videos)
                 .ThenInclude(v => v.VideoType)
+            .Include(l => l.Videos)
+                .ThenInclude(v => v.BunnyStreamLibrary)
+            .Include(l => l.Videos)
+                .ThenInclude(v => v.BunnyVideoAssets)
             .Include(l => l.Resources)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
 
@@ -72,7 +80,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
         // Wait, Homework has LessonId. We can query it.
         var homeworks = await _db.Homeworks
             .Where(h => h.LessonId == request.LessonId)
-            .Select(h => new LessonCockpitHomeworkDto(h.Id, h.Title, h.IsMandatory, h.PassingScoreThreshold, h.ArchiveMode, h.ArchivedAt))
+            .Select(h => new LessonCockpitHomeworkDto(h.Id, h.Title, h.IsMandatory, h.IsActive, h.Questions.Count, h.PassingScoreThreshold, h.ArchiveMode, h.ArchivedAt))
             .ToListAsync(ct);
 
         var commentsSummary = await _db.LessonComments
@@ -122,6 +130,25 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     .Select(e => new LessonCockpitVideoExamDto(e.Id, e.Title, e.ArchiveMode, e.ArchivedAt))
                     .ToList();
 
+                var currentBunnyAsset = v.BunnyVideoAssets
+                    .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
+                var pendingBunnyReplacement = v.BunnyVideoAssets
+                    .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.PendingReplacement);
+                // Candidates are created sequentially (one pending candidate per logical
+                // video). A current asset created after a retired failure therefore
+                // represents a successful later replacement, so that earlier outcome
+                // must not remain as a misleading active warning in the cockpit.
+                var currentBunnySourceStartedAt = currentBunnyAsset?.CreatedAt;
+                var lastBunnyReplacementOutcome = v.BunnyVideoAssets
+                    .Where(asset => asset.SourceState == BunnyVideoAssetSourceState.Retired
+                        && asset.Status is "Failed" or "Expired" or "Cancelled"
+                        && asset.OutcomeSupersededAtUtc == null
+                        && (!currentBunnySourceStartedAt.HasValue
+                            || (asset.RetiredAtUtc ?? asset.UpdatedAt ?? asset.CreatedAt)
+                                > currentBunnySourceStartedAt.Value))
+                    .OrderByDescending(asset => asset.RetiredAtUtc ?? asset.UpdatedAt ?? asset.CreatedAt)
+                    .FirstOrDefault();
+
                 return new LessonCockpitVideoDto(
                     v.Id,
                     v.InternalCode,
@@ -138,12 +165,36 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     examsForVideo,
                     chapters,
                     v.ArchiveMode,
-                    v.ArchivedAt
+                    v.ArchivedAt,
+                    v.BunnyStreamLibrary is null
+                        ? null
+                        : new LessonCockpitBunnyLibraryDto(
+                            v.BunnyStreamLibrary.Id,
+                            v.BunnyStreamLibrary.Name,
+                            v.BunnyStreamLibrary.ExternalLibraryId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            v.BunnyStreamLibrary.IsActive,
+                            v.BunnyStreamLibrary.ApiKeyCiphertext is { Length: > 0 }),
+                    currentBunnyAsset?.Status,
+                    currentBunnyAsset?.BunnyEncodeProgress,
+                    pendingBunnyReplacement is null
+                        ? null
+                        : new LessonCockpitBunnyReplacementDto(
+                            pendingBunnyReplacement.Id,
+                            pendingBunnyReplacement.Status,
+                            pendingBunnyReplacement.BunnyEncodeProgress),
+                    lastBunnyReplacementOutcome is null
+                        ? null
+                        : new LessonCockpitBunnyReplacementOutcomeDto(
+                            lastBunnyReplacementOutcome.Id,
+                            lastBunnyReplacementOutcome.Status,
+                            lastBunnyReplacementOutcome.ErrorMessage,
+                            lastBunnyReplacementOutcome.RetiredAtUtc)
                 );
             }).ToList(),
             lesson.Resources.Select(r => new LessonCockpitResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType, r.ArchiveMode, r.ArchivedAt)).ToList(),
             homeworks,
-            commentsSummary
+            commentsSummary,
+            lesson.HomeworkComingSoonOn
         );
 
         return ApiResponse<LessonCockpitDto>.Ok(dto);

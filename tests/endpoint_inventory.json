@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 717,
-  "frontendCallCount": 600,
+  "endpointCount": 734,
+  "frontendCallCount": 613,
   "missingFrontendRouteCount": 0,
-  "digest": "1ffe8a7516c0844673eda3f1bd3f2959c37900d3add49ba876a0534a9ef3b483",
+  "digest": "0ac8b206865531f655ff5d41ab5cbf49c4cb2e217b73b890ec69f5f8d83ae5f8",
   "endpoints": [
     {
       "controller": "AdminAIAgentController",
@@ -393,7 +393,79 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 756
+        "line": 781
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetBunnyStreamLibraries",
+      "method": "GET",
+      "path": "/api/admin/bunny/libraries",
+      "routeTemplate": "/api/admin/bunny/libraries",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1144
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateBunnyStreamLibrary",
+      "method": "POST",
+      "path": "/api/admin/bunny/libraries",
+      "routeTemplate": "/api/admin/bunny/libraries",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1154
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteBunnyStreamLibrary",
+      "method": "DELETE",
+      "path": "/api/admin/bunny/libraries/{id}",
+      "routeTemplate": "/api/admin/bunny/libraries/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1199
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateBunnyStreamLibrary",
+      "method": "PUT",
+      "path": "/api/admin/bunny/libraries/{id}",
+      "routeTemplate": "/api/admin/bunny/libraries/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1170
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "SetBunnyStreamLibraryStatus",
+      "method": "PATCH",
+      "path": "/api/admin/bunny/libraries/{id}/status",
+      "routeTemplate": "/api/admin/bunny/libraries/{id}/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1188
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetAvailableBunnyStreamLibraries",
+      "method": "GET",
+      "path": "/api/admin/bunny/libraries/available",
+      "routeTemplate": "/api/admin/bunny/libraries/available",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1149
       }
     },
     {
@@ -405,7 +477,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1183
+        "line": 1289
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CancelBunnyVideoReplacement",
+      "method": "POST",
+      "path": "/api/admin/bunny/uploads/{assetid}/cancel-replacement",
+      "routeTemplate": "/api/admin/bunny/uploads/{assetId}/cancel-replacement",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 1239
       }
     },
     {
@@ -417,7 +501,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1136
+        "line": 1231
       }
     },
     {
@@ -429,7 +513,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1144
+        "line": 1247
       }
     },
     {
@@ -441,7 +525,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1118
+        "line": 1210
       }
     },
     {
@@ -453,7 +537,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1169
+        "line": 1275
       }
     },
     {
@@ -465,7 +549,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1161
+        "line": 1267
       }
     },
     {
@@ -477,7 +561,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 691
+        "line": 716
       }
     },
     {
@@ -489,7 +573,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1031
+        "line": 1057
       }
     },
     {
@@ -501,7 +585,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1036
+        "line": 1062
       }
     },
     {
@@ -513,7 +597,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 177
+        "line": 179
       }
     },
     {
@@ -525,7 +609,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 182
+        "line": 184
       }
     },
     {
@@ -537,7 +621,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 190
+        "line": 192
       }
     },
     {
@@ -549,7 +633,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 208
+        "line": 210
       }
     },
     {
@@ -561,7 +645,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 382
+        "line": 384
       }
     },
     {
@@ -573,7 +657,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 368
+        "line": 370
       }
     },
     {
@@ -585,7 +669,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 835
+        "line": 860
       }
     },
     {
@@ -597,7 +681,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 262
+        "line": 264
       }
     },
     {
@@ -609,7 +693,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 273
+        "line": 275
       }
     },
     {
@@ -621,7 +705,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 168
+        "line": 170
       }
     },
     {
@@ -633,7 +717,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 994
+        "line": 1020
       }
     },
     {
@@ -645,7 +729,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1003
+        "line": 1029
       }
     },
     {
@@ -657,7 +741,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 935
+        "line": 961
       }
     },
     {
@@ -669,7 +753,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 911
+        "line": 937
       }
     },
     {
@@ -681,7 +765,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 903
+        "line": 929
       }
     },
     {
@@ -693,7 +777,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 927
+        "line": 953
       }
     },
     {
@@ -705,7 +789,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 943
+        "line": 969
       }
     },
     {
@@ -717,7 +801,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 854
+        "line": 880
       }
     },
     {
@@ -729,7 +813,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 894
+        "line": 920
       }
     },
     {
@@ -741,7 +825,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 919
+        "line": 945
       }
     },
     {
@@ -753,7 +837,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 862
+        "line": 888
       }
     },
     {
@@ -765,7 +849,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 602
+        "line": 604
       }
     },
     {
@@ -777,7 +861,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 610
+        "line": 612
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "SetLessonHomeworkComingSoon",
+      "method": "PUT",
+      "path": "/api/admin/lessons/{id}/homework-coming-soon",
+      "routeTemplate": "/api/admin/lessons/{id}/homework-coming-soon",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 620
       }
     },
     {
@@ -789,7 +885,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 336
+        "line": 338
       }
     },
     {
@@ -801,7 +897,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 341
+        "line": 343
       }
     },
     {
@@ -813,7 +909,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 618
+        "line": 633
       }
     },
     {
@@ -825,7 +921,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 870
+        "line": 896
       }
     },
     {
@@ -837,7 +933,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1014
+        "line": 1040
       }
     },
     {
@@ -849,7 +945,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1022
+        "line": 1048
       }
     },
     {
@@ -861,7 +957,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 278
+        "line": 280
       }
     },
     {
@@ -873,7 +969,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 286
+        "line": 288
       }
     },
     {
@@ -885,7 +981,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 349
+        "line": 351
       }
     },
     {
@@ -897,7 +993,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 534
+        "line": 536
       }
     },
     {
@@ -909,7 +1005,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 504
+        "line": 506
       }
     },
     {
@@ -921,7 +1017,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 512
+        "line": 514
       }
     },
     {
@@ -933,7 +1029,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 291
+        "line": 293
       }
     },
     {
@@ -945,7 +1041,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 297
+        "line": 299
       }
     },
     {
@@ -957,7 +1053,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 302
+        "line": 304
       }
     },
     {
@@ -969,7 +1065,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 257
+        "line": 259
       }
     },
     {
@@ -981,7 +1077,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 470
+        "line": 472
       }
     },
     {
@@ -993,7 +1089,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 955
+        "line": 981
       }
     },
     {
@@ -1005,7 +1101,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 960
+        "line": 986
       }
     },
     {
@@ -1017,7 +1113,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 968
+        "line": 994
       }
     },
     {
@@ -1029,7 +1125,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 436
+        "line": 438
       }
     },
     {
@@ -1041,7 +1137,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 699
+        "line": 724
       }
     },
     {
@@ -1053,7 +1149,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 707
+        "line": 732
       }
     },
     {
@@ -1065,7 +1161,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1199
+        "line": 1305
       }
     },
     {
@@ -1077,7 +1173,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1204
+        "line": 1310
       }
     },
     {
@@ -1089,7 +1185,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1220
+        "line": 1326
       }
     },
     {
@@ -1101,7 +1197,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1212
+        "line": 1318
       }
     },
     {
@@ -1113,7 +1209,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 586
+        "line": 588
       }
     },
     {
@@ -1125,7 +1221,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 576
+        "line": 578
       }
     },
     {
@@ -1137,7 +1233,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 594
+        "line": 596
       }
     },
     {
@@ -1149,7 +1245,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 581
+        "line": 583
       }
     },
     {
@@ -1161,7 +1257,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 323
+        "line": 325
       }
     },
     {
@@ -1173,7 +1269,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 328
+        "line": 330
       }
     },
     {
@@ -1185,7 +1281,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1102
+        "line": 1128
       }
     },
     {
@@ -1197,7 +1293,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1110
+        "line": 1136
       }
     },
     {
@@ -1209,7 +1305,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1229
+        "line": 1335
       }
     },
     {
@@ -1221,7 +1317,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1239
+        "line": 1345
       }
     },
     {
@@ -1233,7 +1329,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1255
+        "line": 1361
       }
     },
     {
@@ -1245,7 +1341,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1234
+        "line": 1340
       }
     },
     {
@@ -1257,7 +1353,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1247
+        "line": 1353
       }
     },
     {
@@ -1269,7 +1365,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 819
+        "line": 844
       }
     },
     {
@@ -1281,7 +1377,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1264
+        "line": 1370
       }
     },
     {
@@ -1293,7 +1389,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1300
+        "line": 1406
       }
     },
     {
@@ -1305,7 +1401,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1269
+        "line": 1375
       }
     },
     {
@@ -1317,7 +1413,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1308
+        "line": 1414
       }
     },
     {
@@ -1329,7 +1425,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1335
+        "line": 1441
       }
     },
     {
@@ -1341,7 +1437,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1274
+        "line": 1380
       }
     },
     {
@@ -1353,7 +1449,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1330
+        "line": 1436
       }
     },
     {
@@ -1365,7 +1461,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1279
+        "line": 1385
       }
     },
     {
@@ -1377,7 +1473,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1292
+        "line": 1398
       }
     },
     {
@@ -1389,7 +1485,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1284
+        "line": 1390
       }
     },
     {
@@ -1401,7 +1497,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1320
+        "line": 1426
       }
     },
     {
@@ -1413,7 +1509,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1325
+        "line": 1431
       }
     },
     {
@@ -1425,7 +1521,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 827
+        "line": 852
       }
     },
     {
@@ -1437,7 +1533,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 542
+        "line": 544
       }
     },
     {
@@ -1449,7 +1545,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 568
+        "line": 570
       }
     },
     {
@@ -1461,7 +1557,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 550
+        "line": 552
       }
     },
     {
@@ -1473,7 +1569,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 560
+        "line": 562
       }
     },
     {
@@ -1485,7 +1581,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 555
+        "line": 557
       }
     },
     {
@@ -1497,7 +1593,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 310
+        "line": 312
       }
     },
     {
@@ -1509,7 +1605,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 315
+        "line": 317
       }
     },
     {
@@ -1521,7 +1617,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 39
+        "line": 41
       }
     },
     {
@@ -1533,7 +1629,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 58
+        "line": 60
       }
     },
     {
@@ -1545,7 +1641,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 147
+        "line": 149
       }
     },
     {
@@ -1557,7 +1653,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 142
+        "line": 144
       }
     },
     {
@@ -1569,7 +1665,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 134
+        "line": 136
       }
     },
     {
@@ -1581,7 +1677,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 118
+        "line": 120
       }
     },
     {
@@ -1593,7 +1689,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 85
+        "line": 87
       }
     },
     {
@@ -1605,7 +1701,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 233
+        "line": 235
       }
     },
     {
@@ -1617,7 +1713,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 160
+        "line": 162
       }
     },
     {
@@ -1629,7 +1725,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 152
+        "line": 154
       }
     },
     {
@@ -1641,7 +1737,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 225
+        "line": 227
       }
     },
     {
@@ -1653,7 +1749,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 102
+        "line": 104
       }
     },
     {
@@ -1665,7 +1761,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 110
+        "line": 112
       }
     },
     {
@@ -1677,7 +1773,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 217
+        "line": 219
       }
     },
     {
@@ -1689,7 +1785,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 248
+        "line": 250
       }
     },
     {
@@ -1701,7 +1797,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 67
+        "line": 69
       }
     },
     {
@@ -1713,7 +1809,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 72
+        "line": 74
       }
     },
     {
@@ -1725,7 +1821,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 94
+        "line": 96
       }
     },
     {
@@ -1737,7 +1833,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 126
+        "line": 128
       }
     },
     {
@@ -1749,7 +1845,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 626
+        "line": 641
       }
     },
     {
@@ -1761,7 +1857,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 642
+        "line": 667
       }
     },
     {
@@ -1773,7 +1869,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 634
+        "line": 649
       }
     },
     {
@@ -1785,7 +1881,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 650
+        "line": 675
       }
     },
     {
@@ -1797,7 +1893,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 658
+        "line": 683
       }
     },
     {
@@ -1809,7 +1905,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 667
+        "line": 692
       }
     },
     {
@@ -1821,7 +1917,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 675
+        "line": 700
       }
     },
     {
@@ -1833,7 +1929,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 878
+        "line": 904
       }
     },
     {
@@ -1845,7 +1941,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 886
+        "line": 912
       }
     },
     {
@@ -1857,7 +1953,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 683
+        "line": 708
       }
     },
     {
@@ -1869,7 +1965,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1071
+        "line": 1097
       }
     },
     {
@@ -1881,7 +1977,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1079
+        "line": 1105
       }
     },
     {
@@ -1893,7 +1989,79 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 1090
+        "line": 1116
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "DeletePage",
+      "method": "DELETE",
+      "path": "/api/admin/live-support/messenger/pages/{pagerecordid}",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/{pageRecordId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 72
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "CheckPage",
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/pages/{pagerecordid}/check",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/{pageRecordId}/check",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 66
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "LinkPage",
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/pages/link",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/link",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 51
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "GetSettings",
+      "method": "GET",
+      "path": "/api/admin/live-support/messenger/settings",
+      "routeTemplate": "/api/admin/live-support/messenger/settings",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 20
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "UpdateSettings",
+      "method": "PUT",
+      "path": "/api/admin/live-support/messenger/settings",
+      "routeTemplate": "/api/admin/live-support/messenger/settings",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 25
+      }
+    },
+    {
+      "controller": "AdminFacebookMessengerController",
+      "action": "RotateVerifyToken",
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/verify-token/rotate",
+      "routeTemplate": "/api/admin/live-support/messenger/verify-token/rotate",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFacebookMessengerController.cs",
+        "line": 40
       }
     },
     {
@@ -4513,6 +4681,30 @@
       }
     },
     {
+      "controller": "FacebookMessengerLiveSupportController",
+      "action": "VerifyWebhook",
+      "method": "GET",
+      "path": "/api/live-support/messenger/webhook",
+      "routeTemplate": "/api/live-support/messenger/webhook",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/FacebookMessengerLiveSupportController.cs",
+        "line": 20
+      }
+    },
+    {
+      "controller": "FacebookMessengerLiveSupportController",
+      "action": "ReceiveWebhook",
+      "method": "POST",
+      "path": "/api/live-support/messenger/webhook",
+      "routeTemplate": "/api/live-support/messenger/webhook",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/FacebookMessengerLiveSupportController.cs",
+        "line": 44
+      }
+    },
+    {
       "controller": "GamificationController",
       "action": "GetStatus",
       "method": "GET",
@@ -5998,6 +6190,18 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrShiftsController.cs",
         "line": 152
+      }
+    },
+    {
+      "controller": "InternalAiMediaController",
+      "action": "GetBunnyOriginal",
+      "method": "GET",
+      "path": "/api/v1/internal/ai-media/bunny/{lessonvideoid}/runs/{generationrunid}/original",
+      "routeTemplate": "/api/v1/internal/ai-media/bunny/{lessonVideoId}/runs/{generationRunId}/original",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalAiMediaController.cs",
+        "line": 40
       }
     },
     {
@@ -7593,7 +7797,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentSharedPackagesController.cs",
-        "line": 39
+        "line": 41
       }
     },
     {
@@ -7605,7 +7809,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentSharedPackagesController.cs",
-        "line": 172
+        "line": 174
       }
     },
     {
@@ -7617,7 +7821,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentSharedPackagesController.cs",
-        "line": 274
+        "line": 276
       }
     },
     {
@@ -7629,7 +7833,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentSharedPackagesController.cs",
-        "line": 84
+        "line": 86
       }
     },
     {
@@ -8643,7 +8847,7 @@
       "rawExpression": "`${API_URL}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material`",
       "source": {
         "file": "frontend/src/app/api/video/embed/route.ts",
-        "line": 74
+        "line": 85
       }
     },
     {
@@ -8731,7 +8935,7 @@
       "rawExpression": "`/content/resources/${resourceId}/sign-download`",
       "source": {
         "file": "frontend/src/components/content/LessonViewer.tsx",
-        "line": 81
+        "line": 94
       }
     },
     {
@@ -8815,7 +9019,7 @@
       "rawExpression": "'/public/settings'",
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 170
+        "line": 174
       }
     },
     {
@@ -9381,6 +9585,23 @@
       }
     },
     {
+      "method": "GET",
+      "path": "/api/admin/users",
+      "routeTemplate": "/api/admin/users",
+      "origin": "backend-api",
+      "queryParameters": [
+        "page",
+        "pageSize"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/users'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1016
+      }
+    },
+    {
       "method": "POST",
       "path": "/api/admin/users",
       "routeTemplate": "/api/admin/users",
@@ -9393,7 +9614,7 @@
       "rawExpression": "'/admin/users'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1029
+        "line": 1076
       }
     },
     {
@@ -9407,7 +9628,7 @@
       "rawExpression": "'/admin/packages/list'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1040
+        "line": 1087
       }
     },
     {
@@ -9423,7 +9644,7 @@
       "rawExpression": "`/admin/users/${id}/status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1047
+        "line": 1094
       }
     },
     {
@@ -9439,7 +9660,7 @@
       "rawExpression": "`/admin/users/${id}/roles`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1052
+        "line": 1099
       }
     },
     {
@@ -9457,7 +9678,7 @@
       "rawExpression": "'/admin/teacher-photos/upload'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1061
+        "line": 1108
       }
     },
     {
@@ -9471,7 +9692,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/active-photo`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1073
+        "line": 1120
       }
     },
     {
@@ -9485,7 +9706,7 @@
       "rawExpression": "'/admin/teachers'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1081
+        "line": 1128
       }
     },
     {
@@ -9499,7 +9720,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/photos`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1088
+        "line": 1135
       }
     },
     {
@@ -9513,7 +9734,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/photos/${photoId}/active`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1097
+        "line": 1144
       }
     },
     {
@@ -9527,7 +9748,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/photos/${photoId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1104
+        "line": 1151
       }
     },
     {
@@ -9545,7 +9766,7 @@
       "rawExpression": "'/admin/teachers/upload-profile-image'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1115
+        "line": 1162
       }
     },
     {
@@ -9562,7 +9783,7 @@
       "rawExpression": "'/admin/forms/cover/upload'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1127
+        "line": 1174
       }
     },
     {
@@ -9576,7 +9797,7 @@
       "rawExpression": "`/admin/users/students/${id}/profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1139
+        "line": 1186
       }
     },
     {
@@ -9590,7 +9811,7 @@
       "rawExpression": "`/admin/users/${id}/devices`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1144
+        "line": 1191
       }
     },
     {
@@ -9604,7 +9825,7 @@
       "rawExpression": "`/admin/users/${id}/audit-logs`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1151
+        "line": 1198
       }
     },
     {
@@ -9618,7 +9839,7 @@
       "rawExpression": "`/admin/users/students/${userId}/devices/${deviceId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1158
+        "line": 1205
       }
     },
     {
@@ -9632,7 +9853,7 @@
       "rawExpression": "`/admin/users/students/${userId}/devices`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1165
+        "line": 1212
       }
     },
     {
@@ -9646,7 +9867,7 @@
       "rawExpression": "`/admin/devices/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1172
+        "line": 1219
       }
     },
     {
@@ -9663,7 +9884,7 @@
       "rawExpression": "`/admin/users/students/${userId}/status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1181
+        "line": 1228
       }
     },
     {
@@ -9681,7 +9902,7 @@
       "rawExpression": "`/admin/users/students/${userId}/overrides`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1194
+        "line": 1241
       }
     },
     {
@@ -9698,7 +9919,7 @@
       "rawExpression": "`/admin/users/students/${userId}/gamification/adjust`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1206
+        "line": 1253
       }
     },
     {
@@ -9712,7 +9933,7 @@
       "rawExpression": "path",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1224
+        "line": 1271
       }
     },
     {
@@ -9726,7 +9947,7 @@
       "rawExpression": "path",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1232
+        "line": 1279
       }
     },
     {
@@ -9740,7 +9961,7 @@
       "rawExpression": "path",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1241
+        "line": 1288
       }
     },
     {
@@ -9754,7 +9975,7 @@
       "rawExpression": "`/admin/codes/groups/${id}/settings`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1249
+        "line": 1296
       }
     },
     {
@@ -9768,7 +9989,7 @@
       "rawExpression": "`/admin/codes/groups/${id}/unused`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1257
+        "line": 1304
       }
     },
     {
@@ -9786,7 +10007,7 @@
       "rawExpression": "'/admin/questions'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1268
+        "line": 1315
       }
     },
     {
@@ -9803,7 +10024,7 @@
       "rawExpression": "'/admin/questions'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1291
+        "line": 1338
       }
     },
     {
@@ -9817,7 +10038,7 @@
       "rawExpression": "`/admin/questions/${questionId}/audio`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1304
+        "line": 1351
       }
     },
     {
@@ -9831,7 +10052,7 @@
       "rawExpression": "'/admin/essays/pending'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1317
+        "line": 1364
       }
     },
     {
@@ -9849,7 +10070,7 @@
       "rawExpression": "`/admin/essays/${essaySubmissionId}/grade`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1328
+        "line": 1375
       }
     },
     {
@@ -9863,7 +10084,7 @@
       "rawExpression": "'/admin/packages'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1341
+        "line": 1388
       }
     },
     {
@@ -9877,7 +10098,7 @@
       "rawExpression": "`/admin/content/${contentType}/${id}/image`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1355
+        "line": 1402
       }
     },
     {
@@ -9891,7 +10112,7 @@
       "rawExpression": "`/admin/packages/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1373
+        "line": 1420
       }
     },
     {
@@ -9905,7 +10126,7 @@
       "rawExpression": "`/admin/packages/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1377
+        "line": 1424
       }
     },
     {
@@ -9919,7 +10140,7 @@
       "rawExpression": "`/admin/packages/${id}/code-profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1384
+        "line": 1431
       }
     },
     {
@@ -9933,7 +10154,7 @@
       "rawExpression": "`/admin/packages/${id}/code-profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1393
+        "line": 1440
       }
     },
     {
@@ -9947,7 +10168,7 @@
       "rawExpression": "`/admin/packages/${id}/code-profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1400
+        "line": 1447
       }
     },
     {
@@ -9961,7 +10182,7 @@
       "rawExpression": "'/admin/terms'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1411
+        "line": 1458
       }
     },
     {
@@ -9975,7 +10196,7 @@
       "rawExpression": "`/admin/terms/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1421
+        "line": 1468
       }
     },
     {
@@ -9989,7 +10210,7 @@
       "rawExpression": "`/admin/terms/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1425
+        "line": 1472
       }
     },
     {
@@ -10003,7 +10224,7 @@
       "rawExpression": "`/admin/terms/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1429
+        "line": 1476
       }
     },
     {
@@ -10017,7 +10238,7 @@
       "rawExpression": "`/admin/sections/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1433
+        "line": 1480
       }
     },
     {
@@ -10031,7 +10252,7 @@
       "rawExpression": "'/admin/sections'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1437
+        "line": 1484
       }
     },
     {
@@ -10045,7 +10266,7 @@
       "rawExpression": "`/admin/sections/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1447
+        "line": 1494
       }
     },
     {
@@ -10059,7 +10280,7 @@
       "rawExpression": "'/admin/lessons'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1454
+        "line": 1501
       }
     },
     {
@@ -10073,7 +10294,23 @@
       "rawExpression": "`/admin/lessons/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1464
+        "line": 1511
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/lessons/{lessonid}/homework-coming-soon",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/homework-coming-soon",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ expectedOn }",
+      "payloadFields": [
+        "expectedOn"
+      ],
+      "rawExpression": "`/admin/lessons/${lessonId}/homework-coming-soon`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1521
       }
     },
     {
@@ -10087,7 +10324,7 @@
       "rawExpression": "`/admin/lessons/${id}/cockpit`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1471
+        "line": 1529
       }
     },
     {
@@ -10103,7 +10340,7 @@
       "rawExpression": "'/admin/video-types'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1477
+        "line": 1535
       }
     },
     {
@@ -10117,7 +10354,7 @@
       "rawExpression": "'/admin/video-types'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1486
+        "line": 1544
       }
     },
     {
@@ -10131,7 +10368,7 @@
       "rawExpression": "`/admin/video-types/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1493
+        "line": 1551
       }
     },
     {
@@ -10147,7 +10384,7 @@
       "rawExpression": "`/admin/video-types/${id}/status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1500
+        "line": 1558
       }
     },
     {
@@ -10161,7 +10398,7 @@
       "rawExpression": "`/admin/video-types/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1507
+        "line": 1565
       }
     },
     {
@@ -10177,7 +10414,7 @@
       "rawExpression": "'/admin/community/posts'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1510
+        "line": 1568
       }
     },
     {
@@ -10191,7 +10428,7 @@
       "rawExpression": "`/admin/community/posts/${postId}/approve`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1519
+        "line": 1577
       }
     },
     {
@@ -10205,7 +10442,7 @@
       "rawExpression": "`/admin/community/posts/${postId}/reject`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1525
+        "line": 1583
       }
     },
     {
@@ -10219,7 +10456,7 @@
       "rawExpression": "'/admin/community/comments/pending'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1531
+        "line": 1589
       }
     },
     {
@@ -10233,7 +10470,7 @@
       "rawExpression": "`/admin/community/comments/${commentId}/approve`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1537
+        "line": 1595
       }
     },
     {
@@ -10249,7 +10486,7 @@
       "rawExpression": "`/admin/community/comments/${commentId}/reject`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1543
+        "line": 1601
       }
     },
     {
@@ -10265,7 +10502,7 @@
       "rawExpression": "`/admin/lessons/${lessonId}/comments`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1549
+        "line": 1607
       }
     },
     {
@@ -10279,7 +10516,7 @@
       "rawExpression": "'/admin/comments'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1558
+        "line": 1616
       }
     },
     {
@@ -10293,7 +10530,7 @@
       "rawExpression": "`/admin/comments/${commentId}/approve`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1570
+        "line": 1628
       }
     },
     {
@@ -10307,7 +10544,7 @@
       "rawExpression": "`/admin/comments/${commentId}/reject`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1576
+        "line": 1634
       }
     },
     {
@@ -10321,7 +10558,7 @@
       "rawExpression": "'/admin/videos'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1582
+        "line": 1640
       }
     },
     {
@@ -10335,7 +10572,7 @@
       "rawExpression": "`/admin/videos/${videoId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1589
+        "line": 1647
       }
     },
     {
@@ -10349,7 +10586,7 @@
       "rawExpression": "`/admin/videos/${videoId}/toggle-active`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1596
+        "line": 1654
       }
     },
     {
@@ -10363,7 +10600,7 @@
       "rawExpression": "`/admin/videos/${videoId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1602
+        "line": 1660
       }
     },
     {
@@ -10377,7 +10614,7 @@
       "rawExpression": "`/admin/videos/${videoId}/analyze-ai`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1606
+        "line": 1664
       }
     },
     {
@@ -10391,7 +10628,7 @@
       "rawExpression": "`/admin/videos/${videoId}/generate-mindmaps`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1615
+        "line": 1673
       }
     },
     {
@@ -10405,7 +10642,7 @@
       "rawExpression": "`/admin/videos/${videoId}/cancel-ai`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1622
+        "line": 1680
       }
     },
     {
@@ -10419,7 +10656,93 @@
       "rawExpression": "`/admin/videos/${videoId}/cancel-mindmap`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1628
+        "line": 1686
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/bunny/libraries",
+      "routeTemplate": "/api/admin/bunny/libraries",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/bunny/libraries'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1692
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/bunny/libraries/available",
+      "routeTemplate": "/api/admin/bunny/libraries/available",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/bunny/libraries/available'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1699
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/bunny/libraries",
+      "routeTemplate": "/api/admin/bunny/libraries",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/bunny/libraries'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1706
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/bunny/libraries/{libraryrecordid}",
+      "routeTemplate": "/api/admin/bunny/libraries/{libraryRecordId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1717
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/bunny/libraries/{libraryrecordid}/status",
+      "routeTemplate": "/api/admin/bunny/libraries/{libraryRecordId}/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ isActive }",
+      "payloadFields": [
+        "isActive"
+      ],
+      "rawExpression": "`/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}/status`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1725
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/bunny/libraries/{libraryrecordid}",
+      "routeTemplate": "/api/admin/bunny/libraries/{libraryRecordId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1733
       }
     },
     {
@@ -10433,7 +10756,7 @@
       "rawExpression": "'/admin/bunny/uploads/tus'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1634
+        "line": 1740
       }
     },
     {
@@ -10447,7 +10770,7 @@
       "rawExpression": "`/admin/bunny/uploads/${assetId}/complete`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1641
+        "line": 1747
       }
     },
     {
@@ -10461,7 +10784,7 @@
       "rawExpression": "'/admin/bunny/uploads/fetch'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1647
+        "line": 1753
       }
     },
     {
@@ -10475,7 +10798,7 @@
       "rawExpression": "`/admin/bunny/videos/${assetId}/refresh-status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1654
+        "line": 1760
       }
     },
     {
@@ -10491,7 +10814,7 @@
       "rawExpression": "'/admin/bunny/usage/sync'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1666
+        "line": 1772
       }
     },
     {
@@ -10505,7 +10828,7 @@
       "rawExpression": "'/admin/bunny/reports/costs'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1677
+        "line": 1783
       }
     },
     {
@@ -10519,7 +10842,7 @@
       "rawExpression": "`/admin/chapters/${chapterId}/regenerate-mindmap`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1687
+        "line": 1793
       }
     },
     {
@@ -10533,7 +10856,7 @@
       "rawExpression": "'/admin/resources'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1699
+        "line": 1805
       }
     },
     {
@@ -10547,7 +10870,7 @@
       "rawExpression": "'/admin/resources/upload'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1708
+        "line": 1814
       }
     },
     {
@@ -10561,7 +10884,7 @@
       "rawExpression": "`/admin/content/lessons/${lessonId}/homework`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1744
+        "line": 1851
       }
     },
     {
@@ -10575,7 +10898,7 @@
       "rawExpression": "'/admin/questions/image'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1756
+        "line": 1863
       }
     },
     {
@@ -10589,7 +10912,7 @@
       "rawExpression": "'/admin/popup/image'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1779
+        "line": 1886
       }
     },
     {
@@ -10605,7 +10928,7 @@
       "rawExpression": "`/admin/lessons/${lessonId}/exam`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1796
+        "line": 1903
       }
     },
     {
@@ -10621,7 +10944,7 @@
       "rawExpression": "`/admin/videos/${videoId}/exam`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1803
+        "line": 1910
       }
     },
     {
@@ -10635,7 +10958,7 @@
       "rawExpression": "`/admin/videos/${videoId}/exams/${examId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1810
+        "line": 1917
       }
     },
     {
@@ -10651,7 +10974,7 @@
       "rawExpression": "`/admin/exams/${examId}/status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1816
+        "line": 1923
       }
     },
     {
@@ -10667,7 +10990,7 @@
       "rawExpression": "`/admin/homework/${homeworkId}/status`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1823
+        "line": 1930
       }
     },
     {
@@ -10681,7 +11004,7 @@
       "rawExpression": "'/admin/exams/inline'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1855
+        "line": 1962
       }
     },
     {
@@ -10695,7 +11018,7 @@
       "rawExpression": "`/admin/exams/${examId}/questions`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1880
+        "line": 1987
       }
     },
     {
@@ -10709,7 +11032,7 @@
       "rawExpression": "`/admin/exams/${examId}/dashboard`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1888
+        "line": 1995
       }
     },
     {
@@ -10723,7 +11046,7 @@
       "rawExpression": "`/admin/homework/${homeworkId}/dashboard`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1894
+        "line": 2001
       }
     },
     {
@@ -10737,7 +11060,7 @@
       "rawExpression": "'/admin/assessments/ocr/questions'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1902
+        "line": 2009
       }
     },
     {
@@ -10751,7 +11074,7 @@
       "rawExpression": "`/admin/exams/${examId}/questions/${examQuestionId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1913
+        "line": 2020
       }
     },
     {
@@ -10765,7 +11088,7 @@
       "rawExpression": "`/admin/exams/${examId}/attempts/${attemptId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1919
+        "line": 2026
       }
     },
     {
@@ -10779,7 +11102,7 @@
       "rawExpression": "`/admin/exams/${examId}/questions/${examQuestionId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1930
+        "line": 2037
       }
     },
     {
@@ -10793,7 +11116,7 @@
       "rawExpression": "`/exams/admin/lessons/${lessonId}/students/${studentId}/unlock`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1939
+        "line": 2046
       }
     },
     {
@@ -10810,7 +11133,7 @@
       "rawExpression": "'/admin/overrides/reset-watch'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1946
+        "line": 2053
       }
     },
     {
@@ -10828,7 +11151,7 @@
       "rawExpression": "'/admin/overrides/set-watch-count'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1958
+        "line": 2065
       }
     },
     {
@@ -10842,7 +11165,7 @@
       "rawExpression": "`/admin/users/students/${studentId}/balance/adjust`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1976
+        "line": 2083
       }
     },
     {
@@ -10856,7 +11179,7 @@
       "rawExpression": "`/admin/users/students/${studentId}/profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1987
+        "line": 2094
       }
     },
     {
@@ -10870,7 +11193,7 @@
       "rawExpression": "`/admin/users/staff/${staffId}/profile`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1998
+        "line": 2105
       }
     },
     {
@@ -10886,7 +11209,7 @@
       "rawExpression": "`/admin/users/students/${studentId}/reset-password`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2006
+        "line": 2113
       }
     },
     {
@@ -10903,7 +11226,7 @@
       "rawExpression": "`/admin/users/students/${studentId}/notes`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2018
+        "line": 2125
       }
     },
     {
@@ -10917,7 +11240,7 @@
       "rawExpression": "`/admin/users/students/${studentId}/notes/${noteId}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2026
+        "line": 2133
       }
     },
     {
@@ -10931,7 +11254,7 @@
       "rawExpression": "'/admin/watch-requests'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2033
+        "line": 2140
       }
     },
     {
@@ -10948,7 +11271,7 @@
       "rawExpression": "`/admin/watch-requests/${id}/approve`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2044
+        "line": 2151
       }
     },
     {
@@ -10964,7 +11287,7 @@
       "rawExpression": "`/admin/watch-requests/${id}/reject`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2052
+        "line": 2159
       }
     },
     {
@@ -10981,7 +11304,7 @@
       "rawExpression": "`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2065
+        "line": 2172
       }
     },
     {
@@ -10995,7 +11318,7 @@
       "rawExpression": "'/admin/settings'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2073
+        "line": 2180
       }
     },
     {
@@ -11011,7 +11334,7 @@
       "rawExpression": "'/admin/settings'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2078
+        "line": 2185
       }
     },
     {
@@ -11025,7 +11348,7 @@
       "rawExpression": "'/admin/roles'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2085
+        "line": 2192
       }
     },
     {
@@ -11039,7 +11362,7 @@
       "rawExpression": "'/admin/roles'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2095
+        "line": 2202
       }
     },
     {
@@ -11053,7 +11376,7 @@
       "rawExpression": "`/admin/roles/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2108
+        "line": 2215
       }
     },
     {
@@ -11067,7 +11390,7 @@
       "rawExpression": "`/admin/roles/${id}`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2116
+        "line": 2223
       }
     },
     {
@@ -11081,7 +11404,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/stats`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2123
+        "line": 2230
       }
     },
     {
@@ -11098,7 +11421,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/students`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2137
+        "line": 2244
       }
     },
     {
@@ -11112,7 +11435,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/essays`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2156
+        "line": 2263
       }
     },
     {
@@ -11126,7 +11449,7 @@
       "rawExpression": "`/admin/teachers/${teacherId}/activations`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2167
+        "line": 2274
       }
     },
     {
@@ -11142,7 +11465,7 @@
       "rawExpression": "'/admin/finance/payouts'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2178
+        "line": 2285
       }
     },
     {
@@ -11156,7 +11479,7 @@
       "rawExpression": "`/admin/assistants/${assistantId}/stats`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2193
+        "line": 2300
       }
     },
     {
@@ -11170,7 +11493,7 @@
       "rawExpression": "`/admin/assistants/${assistantId}/tasks`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2204
+        "line": 2311
       }
     },
     {
@@ -11184,7 +11507,7 @@
       "rawExpression": "`/admin/assistants/${assistantId}/homework-reviews`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2215
+        "line": 2322
       }
     },
     {
@@ -11198,7 +11521,7 @@
       "rawExpression": "`/admin/assistants/${assistantId}/warnings`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2226
+        "line": 2333
       }
     },
     {
@@ -11212,7 +11535,7 @@
       "rawExpression": "`/admin/packages/${id}/stats`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2238
+        "line": 2345
       }
     },
     {
@@ -11226,7 +11549,7 @@
       "rawExpression": "`/admin/terms/${id}/stats`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2249
+        "line": 2356
       }
     },
     {
@@ -11240,7 +11563,7 @@
       "rawExpression": "`/admin/sections/${id}/stats`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2260
+        "line": 2367
       }
     },
     {
@@ -11257,7 +11580,7 @@
       "rawExpression": "`/admin/${contentType}s/${id}/subscribers`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2277
+        "line": 2384
       }
     },
     {
@@ -11271,7 +11594,7 @@
       "rawExpression": "`/admin/${contentType}s/${id}/subscribers/export`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2289
+        "line": 2396
       }
     },
     {
@@ -11287,7 +11610,7 @@
       "rawExpression": "`/admin/content/${targetType}/${id}/archive`",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 930
+        "line": 977
       }
     },
     {
@@ -11301,7 +11624,7 @@
       "rawExpression": "'/whatsapp/admin/test-message'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 939
+        "line": 986
       }
     },
     {
@@ -11315,24 +11638,7 @@
       "rawExpression": "'/whatsapp/admin/exam-result-message'",
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 948
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/users",
-      "routeTemplate": "/api/admin/users",
-      "origin": "backend-api",
-      "queryParameters": [
-        "page",
-        "pageSize"
-      ],
-      "payloadHint": "",
-      "payloadFields": [],
-      "rawExpression": "'/admin/users'",
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 969
+        "line": 995
       }
     },
     {
@@ -12086,7 +12392,7 @@
       "rawExpression": "'/content/packages'",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 373
+        "line": 374
       }
     },
     {
@@ -12102,7 +12408,7 @@
       "rawExpression": "`/content/packages/${packageId}/terms`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 376
+        "line": 377
       }
     },
     {
@@ -12116,7 +12422,7 @@
       "rawExpression": "`/content/packages/${packageId}/code-page`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 379
+        "line": 380
       }
     },
     {
@@ -12130,7 +12436,7 @@
       "rawExpression": "`/content/terms/${termId}/sections`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 380
+        "line": 381
       }
     },
     {
@@ -12144,7 +12450,7 @@
       "rawExpression": "`/content/sections/${sectionId}/lessons`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 381
+        "line": 382
       }
     },
     {
@@ -12158,7 +12464,7 @@
       "rawExpression": "`/content/lessons/${lessonId}`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 382
+        "line": 383
       }
     },
     {
@@ -12175,7 +12481,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments?offset=${offset}&limit=${limit}`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 383
+        "line": 384
       }
     },
     {
@@ -12189,7 +12495,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/resources`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 384
+        "line": 385
       }
     },
     {
@@ -12203,7 +12509,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments/mine`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 385
+        "line": 386
       }
     },
     {
@@ -12219,7 +12525,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 387
+        "line": 388
       }
     },
     {
@@ -12233,7 +12539,7 @@
       "rawExpression": "'/admin/content/summary/teachers'",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 389
+        "line": 390
       }
     },
     {
@@ -12251,7 +12557,7 @@
       "rawExpression": "`/${scope}/content/summary`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 391
+        "line": 392
       }
     },
     {
@@ -12436,6 +12742,92 @@
       "source": {
         "file": "frontend/src/services/exam-service.ts",
         "line": 98
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/pages/{pagerecordid}/check",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/{pageRecordId}/check",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/live-support/messenger/pages/${encodeURIComponent(pageRecordId)}/check`",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 101
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/live-support/messenger/pages/{pagerecordid}",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/{pageRecordId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/live-support/messenger/pages/${encodeURIComponent(pageRecordId)}`",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 112
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/live-support/messenger/settings",
+      "routeTemplate": "/api/admin/live-support/messenger/settings",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/live-support/messenger/settings'",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 62
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/live-support/messenger/settings",
+      "routeTemplate": "/api/admin/live-support/messenger/settings",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/live-support/messenger/settings'",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 72
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/verify-token/rotate",
+      "routeTemplate": "/api/admin/live-support/messenger/verify-token/rotate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ expectedRevision }",
+      "payloadFields": [
+        "expectedRevision"
+      ],
+      "rawExpression": "'/admin/live-support/messenger/verify-token/rotate'",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 81
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/live-support/messenger/pages/link",
+      "routeTemplate": "/api/admin/live-support/messenger/pages/link",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/live-support/messenger/pages/link'",
+      "source": {
+        "file": "frontend/src/services/facebook-messenger-admin-service.ts",
+        "line": 92
       }
     },
     {
@@ -14452,7 +14844,7 @@
       "rawExpression": "'/live-support/availability'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 547
+        "line": 552
       }
     },
     {
@@ -14466,7 +14858,7 @@
       "rawExpression": "'/live-support/participant/conversations'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 550
+        "line": 555
       }
     },
     {
@@ -14480,7 +14872,7 @@
       "rawExpression": "'/live-support/participant/conversations'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 553
+        "line": 558
       }
     },
     {
@@ -14494,7 +14886,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 559
+        "line": 564
       }
     },
     {
@@ -14512,7 +14904,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 562
+        "line": 567
       }
     },
     {
@@ -14526,7 +14918,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/snapshot`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 568
+        "line": 573
       }
     },
     {
@@ -14540,7 +14932,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/attachments`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 572
+        "line": 577
       }
     },
     {
@@ -14554,7 +14946,7 @@
       "rawExpression": "`/live-support/${audience}/conversations/${conversationId}/attachments/${attachmentId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 582
+        "line": 587
       }
     },
     {
@@ -14568,7 +14960,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-thread/attachments/${attachmentId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 590
+        "line": 595
       }
     },
     {
@@ -14582,7 +14974,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 598
+        "line": 603
       }
     },
     {
@@ -14598,7 +14990,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 604
+        "line": 609
       }
     },
     {
@@ -14612,7 +15004,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 610
+        "line": 615
       }
     },
     {
@@ -14626,7 +15018,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/abandon`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 616
+        "line": 621
       }
     },
     {
@@ -14640,7 +15032,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/rating`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 622
+        "line": 627
       }
     },
     {
@@ -14654,7 +15046,7 @@
       "rawExpression": "'/live-support/staff/bootstrap'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 628
+        "line": 633
       }
     },
     {
@@ -14668,7 +15060,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/attachments`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 633
+        "line": 638
       }
     },
     {
@@ -14682,7 +15074,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 642
+        "line": 647
       }
     },
     {
@@ -14696,7 +15088,7 @@
       "rawExpression": "'/live-support/whatsapp/templates'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 648
+        "line": 653
       }
     },
     {
@@ -14710,7 +15102,7 @@
       "rawExpression": "'/live-support/whatsapp/templates/sync'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 651
+        "line": 656
       }
     },
     {
@@ -14724,7 +15116,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/bootstrap'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 656
+        "line": 661
       }
     },
     {
@@ -14738,7 +15130,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/audience/preview'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 665
+        "line": 670
       }
     },
     {
@@ -14752,7 +15144,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns/drafts'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 680
+        "line": 685
       }
     },
     {
@@ -14772,7 +15164,7 @@
       "rawExpression": "`/live-support/whatsapp/campaigns/${campaignId}/launch`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 697
+        "line": 702
       }
     },
     {
@@ -14789,7 +15181,7 @@
       "rawExpression": "'/live-support/whatsapp/campaigns'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 713
+        "line": 718
       }
     },
     {
@@ -14806,7 +15198,7 @@
       "rawExpression": "`/live-support/whatsapp/campaigns/${campaignId}/${operation}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 727
+        "line": 732
       }
     },
     {
@@ -14824,7 +15216,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 740
+        "line": 745
       }
     },
     {
@@ -14842,7 +15234,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences/contacts/search'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 751
+        "line": 756
       }
     },
     {
@@ -14856,7 +15248,7 @@
       "rawExpression": "'/live-support/whatsapp/preferences'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 763
+        "line": 768
       }
     },
     {
@@ -14870,7 +15262,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-template`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 773
+        "line": 778
       }
     },
     {
@@ -14886,7 +15278,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 779
+        "line": 784
       }
     },
     {
@@ -14900,7 +15292,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages/${messageId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 785
+        "line": 790
       }
     },
     {
@@ -14916,7 +15308,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 791
+        "line": 796
       }
     },
     {
@@ -14933,7 +15325,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 794
+        "line": 799
       }
     },
     {
@@ -14949,7 +15341,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/close`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 800
+        "line": 805
       }
     },
     {
@@ -14966,7 +15358,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/transfer`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 806
+        "line": 811
       }
     },
     {
@@ -14980,7 +15372,7 @@
       "rawExpression": "'/live-support/admin/config'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 812
+        "line": 817
       }
     },
     {
@@ -14994,7 +15386,7 @@
       "rawExpression": "'/live-support/admin/dashboard'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 815
+        "line": 820
       }
     },
     {
@@ -15008,7 +15400,7 @@
       "rawExpression": "'/live-support/admin/ratings'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 818
+        "line": 823
       }
     },
     {
@@ -15022,7 +15414,7 @@
       "rawExpression": "`/live-support/admin/conversations/${conversationId}/timeline`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 821
+        "line": 826
       }
     },
     {
@@ -15040,7 +15432,7 @@
       "rawExpression": "`/live-support/admin/conversations/${conversationId}/intervene`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 824
+        "line": 829
       }
     },
     {
@@ -15056,7 +15448,7 @@
       "rawExpression": "'/live-support/admin/feature'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 830
+        "line": 835
       }
     },
     {
@@ -15070,7 +15462,7 @@
       "rawExpression": "`/live-support/admin/staff/${staffUserId}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 836
+        "line": 841
       }
     },
     {
@@ -15086,7 +15478,7 @@
       "rawExpression": "'/live-support/admin/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 842
+        "line": 847
       }
     },
     {
@@ -15100,7 +15492,7 @@
       "rawExpression": "'/live-support/staff/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 847
+        "line": 852
       }
     },
     {
@@ -15116,7 +15508,7 @@
       "rawExpression": "'/live-support/staff/canned-replies'",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 850
+        "line": 855
       }
     },
     {
@@ -15132,7 +15524,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/students/search`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 855
+        "line": 860
       }
     },
     {
@@ -15150,7 +15542,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-link`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 858
+        "line": 863
       }
     },
     {
@@ -15164,7 +15556,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-context`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 864
+        "line": 869
       }
     },
     {
@@ -15178,7 +15570,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-context/${section}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 867
+        "line": 872
       }
     },
     {
@@ -15192,7 +15584,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-history`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 870
+        "line": 875
       }
     },
     {
@@ -15208,7 +15600,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/student-history/${historyConversationId}/messages`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 873
+        "line": 878
       }
     },
     {
@@ -15222,7 +15614,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 876
+        "line": 881
       }
     },
     {
@@ -15236,7 +15628,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/context`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 879
+        "line": 884
       }
     },
     {
@@ -15250,7 +15642,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/${actionKey}/draft`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 882
+        "line": 887
       }
     },
     {
@@ -15267,7 +15659,7 @@
       "rawExpression": "`/live-support/staff/conversations/${conversationId}/actions/${actionKey}`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 885
+        "line": 890
       }
     },
     {
@@ -15283,7 +15675,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/confirm`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 891
+        "line": 896
       }
     },
     {
@@ -15299,7 +15691,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/cancel`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 897
+        "line": 902
       }
     },
     {
@@ -15313,7 +15705,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/confirm`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 903
+        "line": 908
       }
     },
     {
@@ -15327,7 +15719,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/request`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 909
+        "line": 914
       }
     },
     {
@@ -15341,7 +15733,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/handoff/cancel`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 915
+        "line": 920
       }
     },
     {
@@ -15357,7 +15749,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/lookup`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 921
+        "line": 926
       }
     },
     {
@@ -15374,7 +15766,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/${payload.sessionId}/answer`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 927
+        "line": 932
       }
     },
     {
@@ -15390,7 +15782,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/decisions/${payload.decisionId}/register`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 933
+        "line": 938
       }
     },
     {
@@ -15404,7 +15796,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/pending-action`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 939
+        "line": 944
       }
     },
     {
@@ -15418,7 +15810,7 @@
       "rawExpression": "`/live-support/participant/conversations/${conversationId}/ai/verification/session`",
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 942
+        "line": 947
       }
     },
     {
@@ -16020,7 +16412,7 @@
       "rawExpression": "'/student/recharge/initiate'",
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 40
+        "line": 45
       }
     },
     {
@@ -16034,7 +16426,7 @@
       "rawExpression": "'/student/recharge/submit'",
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 56
+        "line": 61
       }
     },
     {
@@ -16048,7 +16440,7 @@
       "rawExpression": "'/student/recharge/requests'",
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 61
+        "line": 84
       }
     },
     {
@@ -16064,7 +16456,7 @@
       "rawExpression": "`/student/recharge/requests/${rechargeRequestId}/cancel`",
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 66
+        "line": 89
       }
     },
     {

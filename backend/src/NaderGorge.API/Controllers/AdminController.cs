@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
@@ -15,6 +16,7 @@ using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
 using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Features.Admin.Ocr;
+using NaderGorge.Application.Features.Admin.BunnyLibraries;
 using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
@@ -615,6 +617,19 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("lessons/{id:guid}/homework-coming-soon")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetLessonHomeworkComingSoon(
+        Guid id,
+        [FromBody] SetLessonHomeworkComingSoonRequest request)
+    {
+        var result = await _mediator.Send(new SetLessonHomeworkComingSoonCommand(
+            id,
+            request.ExpectedOn,
+            GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("lessons/{lessonId:guid}/cockpit")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetLessonCockpit(Guid lessonId)
@@ -635,7 +650,17 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
-        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit, dto.VideoTypeId, GetUserId()));
+        var result = await _mediator.Send(new UpdateVideoCommand(
+            id,
+            dto.Title,
+            dto.Provider,
+            dto.UrlOrEmbedCode,
+            dto.Order,
+            dto.Limit,
+            dto.VideoTypeId,
+            GetUserId(),
+            dto.BunnyStreamLibraryId,
+            dto.IsActive));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -845,7 +870,8 @@ public class AdminController : ControllerBase
             dto.RequiredPointsToPass,
             dto.TotalScore,
             dto.Questions,
-            GetUserId());
+            GetUserId(),
+            dto.HomeworkComingSoonOn);
 
         var result = await _mediator.Send(cmd);
         return result.Success ? Ok(result) : BadRequest(result);
@@ -1115,6 +1141,72 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("bunny/libraries")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> GetBunnyStreamLibraries(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetBunnyStreamLibrariesQuery(), ct));
+
+    [HttpGet("bunny/libraries/available")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetAvailableBunnyStreamLibraries(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAvailableBunnyStreamLibrariesQuery(), ct));
+
+    [HttpPost("bunny/libraries")]
+    [HasPermission("settings.manage")]
+    [HttpLogging(HttpLoggingFields.None)]
+    public async Task<IActionResult> CreateBunnyStreamLibrary(
+        [FromBody] CreateBunnyStreamLibraryRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CreateBunnyStreamLibraryCommand(
+            req.Name,
+            req.LibraryId,
+            req.ApiKey,
+            req.IsActive,
+            GetUserId()), ct);
+        return response.Success ? StatusCode(StatusCodes.Status201Created, response) : BadRequest(response);
+    }
+
+    [HttpPut("bunny/libraries/{id:guid}")]
+    [HasPermission("settings.manage")]
+    [HttpLogging(HttpLoggingFields.None)]
+    public async Task<IActionResult> UpdateBunnyStreamLibrary(
+        Guid id,
+        [FromBody] UpdateBunnyStreamLibraryRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new UpdateBunnyStreamLibraryCommand(
+            id,
+            req.Name,
+            req.LibraryId,
+            req.ApiKey,
+            req.IsActive,
+            GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPatch("bunny/libraries/{id:guid}/status")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> SetBunnyStreamLibraryStatus(
+        Guid id,
+        [FromBody] SetBunnyStreamLibraryStatusRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new SetBunnyStreamLibraryStatusCommand(id, req.IsActive, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpDelete("bunny/libraries/{id:guid}")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> DeleteBunnyStreamLibrary(Guid id, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new DeleteBunnyStreamLibraryCommand(id, GetUserId()), ct);
+        if (response.Success) return Ok(response);
+        return response.Errors?.Contains("BUNNY_LIBRARY_IN_USE") == true
+            ? Conflict(response)
+            : BadRequest(response);
+    }
+
     [HttpPost("bunny/uploads/tus")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateBunnyTusUpload([FromBody] CreateBunnyTusUploadRequest req, CancellationToken ct)
@@ -1127,9 +1219,12 @@ public class AdminController : ControllerBase
             req.Order,
             req.MaxWatchCount,
             req.VideoTypeId,
+            req.BunnyStreamLibraryId,
+            req.IsActive,
             req.FileName,
             req.FileSizeBytes,
-            GetUserId()), ct);
+            GetUserId(),
+            req.ExistingLessonVideoId), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1138,6 +1233,14 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> CompleteBunnyUpload(Guid assetId, CancellationToken ct)
     {
         var response = await _mediator.Send(new CompleteBunnyUploadCommand(assetId, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/uploads/{assetId:guid}/cancel-replacement")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> CancelBunnyVideoReplacement(Guid assetId, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CancelBunnyVideoReplacementCommand(assetId, GetUserId()), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1153,8 +1256,11 @@ public class AdminController : ControllerBase
             req.Order,
             req.MaxWatchCount,
             req.VideoTypeId,
+            req.BunnyStreamLibraryId,
+            req.IsActive,
             req.SourceUrl,
-            GetUserId()), ct);
+            GetUserId(),
+            req.ExistingLessonVideoId), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1414,13 +1520,33 @@ public record UpdateCodeGroupSettingsRequest(
     Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation
 );
 public record RemoveUnusedCodesRequest(bool KeepEmptyGroup = true);
-public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, string? FileName, long? FileSizeBytes);
-public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, string SourceUrl);
+public record CreateBunnyStreamLibraryRequest(string Name, string LibraryId, string ApiKey, bool IsActive = true);
+public record UpdateBunnyStreamLibraryRequest(string Name, string LibraryId, string? ApiKey, bool IsActive);
+public record SetBunnyStreamLibraryStatusRequest(bool IsActive);
+public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string? FileName, long? FileSizeBytes, Guid? ExistingLessonVideoId = null);
+public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string SourceUrl, Guid? ExistingLessonVideoId = null);
 public record SyncBunnyUsageRequest(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh);
-public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid VideoTypeId);
-public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, bool IsRandomized, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
+public record UpdateVideoRequest(
+    string Title,
+    string Provider,
+    string UrlOrEmbedCode,
+    int Order,
+    int Limit,
+    Guid VideoTypeId,
+    Guid? BunnyStreamLibraryId,
+    bool? IsActive = null);
+public record AttachHomeworkRequest(
+    string Title,
+    string Instructions,
+    bool IsMandatory,
+    bool IsRandomized,
+    int RequiredPointsToPass,
+    decimal TotalScore,
+    List<AttachHomeworkQuestionDto> Questions,
+    DateOnly? HomeworkComingSoonOn = null);
 public record LinkLessonExamRequest(Guid? ExamId);
 public record SetContentStatusRequest(bool IsActive);
+public record SetLessonHomeworkComingSoonRequest(DateOnly? ExpectedOn);
 public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdateSectionDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);

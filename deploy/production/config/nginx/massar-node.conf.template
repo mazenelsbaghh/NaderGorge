@@ -145,6 +145,9 @@ server {
 server {
     listen 8080;
     server_name api.massar-academy.net;
+    # The AI-media relay is reachable only over the Docker network by the
+    # worker. Keep its existence and all media bytes off the public API edge.
+    location ^~ /api/v1/internal/ai-media/ { return 404; }
     location / {
         proxy_pass http://backend:5245;
     }

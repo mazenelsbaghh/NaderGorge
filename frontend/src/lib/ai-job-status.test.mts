@@ -53,6 +53,19 @@ test('SignalR status=failed is authoritative even when progress is zero', () => 
   assert.doesNotMatch(JSON.stringify(status), /yt-dlp|video\.example|cookies\.txt/i);
 });
 
+test('reviewed Bunny source failure explains the required platform configuration without diagnostics', () => {
+  const status = sanitizeAiJobStatus({
+    id: 'bunny-video-id',
+    state: 'failed',
+    failedReason: 'تعذر تجهيز أصل فيديو Bunny للتحليل. فعّل الاحتفاظ بالملف الأصلي وراجِع إعدادات وصول Bunny ثم أعد المحاولة.',
+  });
+
+  assert.equal(status.failure?.code, 'BUNNY_ANALYSIS_SOURCE_UNAVAILABLE');
+  assert.equal(status.failure?.retryable, false);
+  assert.match(status.failure?.message ?? '', /الملف الأصلي/);
+  assert.doesNotMatch(JSON.stringify(status), /https?:\/\/|token|AccessKey/i);
+});
+
 test('active progress also ignores arbitrary worker stage text', () => {
   const status = sanitizeAiJobStatus({
     id: 'video-id',

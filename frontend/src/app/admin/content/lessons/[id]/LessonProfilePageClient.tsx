@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles, Users } from 'lucide-react';
-import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentArchiveControl, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
+import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentArchiveControl, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -79,6 +79,10 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
   const homeworkCount = lesson.homework?.length || 0;
   const pendingComments = lesson.commentsSummary?.pending || 0;
   const totalComments = lesson.commentsSummary?.total || 0;
+  const primaryHomework = lesson.homework?.[0];
+  const homeworkIsStillDraft = Boolean(
+    primaryHomework && (!primaryHomework.isActive || primaryHomework.questionCount === 0)
+  );
 
   const overviewStats: OverviewStat[] = [
     { label: 'الفيديوهات', value: videoCount, icon: Video, tone: videoCount > 0 ? 'success' : 'muted' },
@@ -249,12 +253,27 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
       {activeTab === 'homework' && (
         <div className="space-y-6">
-          {lesson.homework && lesson.homework.length > 0 ? (
-            <AttachedHomeworkViewer homeworkId={lesson.homework[0].id} />
+          {homeworkIsStillDraft && (
+            <HomeworkComingSoonSettings
+              lessonId={lesson.lessonId}
+              expectedOn={lesson.homeworkComingSoonOn}
+              onSaved={loadData}
+            />
+          )}
+          {primaryHomework ? (
+            <AttachedHomeworkViewer
+              homeworkId={primaryHomework.id}
+              onStatusChanged={loadData}
+            />
           ) : (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
               <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
-              <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} />
+              <UnifiedAssessmentBuilder
+                type="homework"
+                lessonId={lesson.lessonId}
+                initialHomeworkComingSoonOn={lesson.homeworkComingSoonOn}
+                onSuccess={loadData}
+              />
             </div>
           )}
         </div>

@@ -56,6 +56,11 @@ public class Lesson : BaseEntity, IArchivableContent
     public string Summary { get; set; } = string.Empty;
     public int Order { get; set; }
     public decimal Price { get; set; }
+    /// <summary>
+    /// Optional Cairo calendar date shown to students while the lesson homework is
+    /// still being prepared. This is an announcement only; it never grants access.
+    /// </summary>
+    public DateOnly? HomeworkComingSoonOn { get; set; }
     public ContentArchiveMode ArchiveMode { get; set; }
     public DateTime? ArchivedAt { get; set; }
     public Guid? ArchivedByUserId { get; set; }
@@ -103,12 +108,45 @@ public class LessonVideo : BaseEntity, IArchivableContent
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
 
+    /// <summary>
+    /// The Bunny Stream library that owns this video. This is intentionally stored on
+    /// the lesson video (rather than only on uploaded assets) so manually linked Bunny
+    /// videos also retain an unambiguous playback library.
+    /// </summary>
+    public Guid? BunnyStreamLibraryId { get; set; }
+    public BunnyStreamLibrary? BunnyStreamLibrary { get; set; }
+
     // Optional Exam associated directly with this video specific
     public Guid? ExamId { get; set; }
     public Exam? Exam { get; set; }
 
     public ICollection<VideoChapter> VideoChapters { get; set; } = new List<VideoChapter>();
-    public BunnyVideoAsset? BunnyVideoAsset { get; set; }
+
+    /// <summary>
+    /// Bunny assets ever associated with this logical lesson video. Exactly one
+    /// asset can be the current playback source; completed replacements retain
+    /// their former assets here so historical usage and cost evidence is not lost.
+    /// </summary>
+    public ICollection<BunnyVideoAsset> BunnyVideoAssets { get; set; } = new List<BunnyVideoAsset>();
+}
+
+public class BunnyStreamLibrary : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public string NormalizedName { get; set; } = string.Empty;
+    public long ExternalLibraryId { get; set; }
+    public byte[]? ApiKeyCiphertext { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime? LastValidatedAtUtc { get; set; }
+
+    public ICollection<LessonVideo> Videos { get; set; } = new List<LessonVideo>();
+}
+
+public static class BunnyStreamLibrarySeedIds
+{
+    public static readonly Guid First = Guid.Parse("a5d123ac-0b9f-4f69-9d15-740733000001");
+    public static readonly Guid Second = Guid.Parse("a5d123ac-0b9f-4f69-9d15-740737000002");
+    public static readonly Guid Massar = Guid.Parse("a5d123ac-0b9f-4f69-9d15-740801000003");
 }
 
 public class VideoType : BaseEntity
@@ -154,6 +192,35 @@ public class BunnyVideoAsset : BaseEntity
     public DateTime? LastStatusSyncedAtUtc { get; set; }
     public DateTime? LastUsageSyncedAtUtc { get; set; }
     public string? ErrorMessage { get; set; }
+    public bool ActivateWhenReady { get; set; }
+
+    /// <summary>
+    /// Current assets control Bunny playback readiness. Pending replacements do
+    /// not affect the existing lesson video until Bunny reports them ready;
+    /// retired assets remain for immutable finance history.
+    /// </summary>
+    public BunnyVideoAssetSourceState SourceState { get; set; } = BunnyVideoAssetSourceState.Current;
+
+    /// <summary>
+    /// The configured library record selected for this asset. It is stored on
+    /// pending replacements before the lesson video itself is switched.
+    /// </summary>
+    public Guid? BunnyStreamLibraryRecordId { get; set; }
+    public DateTime? RetiredAtUtc { get; set; }
+    public Guid? RetiredByUserId { get; set; }
+
+    /// <summary>
+    /// Records that a later successful source change superseded this terminal
+    /// replacement outcome. The asset and its financial history remain intact,
+    /// but the cockpit should no longer surface the stale failure as active.
+    /// </summary>
+    public DateTime? OutcomeSupersededAtUtc { get; set; }
+
+    // Target metadata is populated only while SourceState is PendingReplacement.
+    public int? TargetOrder { get; set; }
+    public int? TargetMaxWatchCount { get; set; }
+    public Guid? TargetVideoTypeId { get; set; }
+    public bool? TargetIsActive { get; set; }
 
     public ICollection<BunnyUsageSnapshot> UsageSnapshots { get; set; } = new List<BunnyUsageSnapshot>();
 }

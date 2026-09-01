@@ -61,11 +61,12 @@ export type CreateVideoPayload = {
   limit: number;
   videoTypeId: string;
   isActive?: boolean;
+  bunnyStreamLibraryId?: string | null;
 };
 
 export type UpdateVideoPayload = Omit<
   CreateVideoPayload,
-  'lessonId' | 'isActive'
+  'lessonId'
 >;
 
 export type BunnyTusUploadRequest = {
@@ -78,6 +79,9 @@ export type BunnyTusUploadRequest = {
   videoTypeId: string;
   fileName?: string;
   fileSizeBytes?: number;
+  bunnyStreamLibraryId: string;
+  isActive: boolean;
+  existingLessonVideoId?: string;
 };
 
 export type BunnyTusUploadSession = {
@@ -101,7 +105,39 @@ export type BunnyFetchVideoRequest = {
   maxWatchCount: number;
   videoTypeId: string;
   sourceUrl: string;
+  bunnyStreamLibraryId: string;
+  isActive: boolean;
+  existingLessonVideoId?: string;
 };
+
+export interface BunnyLibraryReferenceDto {
+  id: string;
+  name: string;
+  libraryId: string;
+  isActive: boolean;
+  apiKeyConfigured: boolean;
+}
+
+export interface BunnyLibraryDto extends BunnyLibraryReferenceDto {
+  assignedVideoCount: number;
+  lastValidatedAtUtc?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+interface BunnyLibraryPayloadBase {
+  name: string;
+  libraryId: string;
+  isActive: boolean;
+}
+
+export interface CreateBunnyLibraryPayload extends BunnyLibraryPayloadBase {
+  apiKey: string;
+}
+
+export interface UpdateBunnyLibraryPayload extends BunnyLibraryPayloadBase {
+  apiKey?: string;
+}
 
 export type BunnyUploadStatus = {
   assetId: string;
@@ -773,6 +809,20 @@ export interface LessonCockpitVideoDto {
   isProcessingAI: boolean;
   isProcessingMindmaps: boolean;
   isActive: boolean;
+  bunnyLibrary?: BunnyLibraryReferenceDto | null;
+  bunnyStatus?: string | null;
+  bunnyEncodeProgress?: number | null;
+  pendingBunnyReplacement?: {
+    assetId: string;
+    status: string;
+    encodeProgress?: number | null;
+  } | null;
+  lastBunnyReplacementOutcome?: {
+    assetId: string;
+    status: string;
+    errorMessage?: string | null;
+    retiredAtUtc?: string | null;
+  } | null;
   videoType: LessonCockpitVideoTypeDto;
   examId?: string | null;
   exams?: { examId: string; title: string; archiveMode: ContentArchiveMode; archivedAt?: string | null }[] | null;
@@ -794,6 +844,8 @@ export interface LessonCockpitHomeworkDto {
   id: string;
   title: string;
   isMandatory: boolean;
+  isActive: boolean;
+  questionCount: number;
   passingScoreThreshold?: number | null;
   archiveMode: ContentArchiveMode;
   archivedAt?: string | null;
@@ -815,6 +867,7 @@ export interface LessonCockpitDto {
   resources: LessonCockpitResourceDto[];
   homework: LessonCockpitHomeworkDto[];
   commentsSummary: LessonCockpitCommentSummaryDto;
+  homeworkComingSoonOn?: string | null;
 }
 
 export type PackageCodeProfileStatus = 'Draft' | 'Published' | 'Fallback';
@@ -1467,6 +1520,17 @@ export const adminService = {
     );
     return res.data;
   },
+  setLessonHomeworkComingSoon: async (
+    lessonId: string,
+    expectedOn: string | null
+  ) => {
+    const res = await apiClient.put<ApiResponse>(
+      `/admin/lessons/${lessonId}/homework-coming-soon`,
+      { expectedOn },
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
   getLessonCockpit: async (id: string) => {
     const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(
       `/admin/lessons/${id}/cockpit`
@@ -1630,6 +1694,54 @@ export const adminService = {
     );
     return res.data;
   },
+  listBunnyLibraries: async () => {
+    const res = await apiClient.get<ApiResponse<BunnyLibraryDto[]>>(
+      '/admin/bunny/libraries',
+      { suppressErrorToast: true }
+    );
+    return res.data?.data ?? [];
+  },
+  listAvailableBunnyLibraries: async () => {
+    const res = await apiClient.get<ApiResponse<BunnyLibraryReferenceDto[]>>(
+      '/admin/bunny/libraries/available',
+      { suppressErrorToast: true }
+    );
+    return res.data?.data ?? [];
+  },
+  createBunnyLibrary: async (payload: CreateBunnyLibraryPayload) => {
+    const res = await apiClient.post<ApiResponse<BunnyLibraryDto>>(
+      '/admin/bunny/libraries',
+      payload,
+      { suppressErrorToast: true }
+    );
+    return res.data?.data;
+  },
+  updateBunnyLibrary: async (
+    libraryRecordId: string,
+    payload: UpdateBunnyLibraryPayload
+  ) => {
+    const res = await apiClient.put<ApiResponse<BunnyLibraryDto>>(
+      `/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}`,
+      payload,
+      { suppressErrorToast: true }
+    );
+    return res.data?.data;
+  },
+  setBunnyLibraryStatus: async (libraryRecordId: string, isActive: boolean) => {
+    const res = await apiClient.patch<ApiResponse<BunnyLibraryDto>>(
+      `/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}/status`,
+      { isActive },
+      { suppressErrorToast: true }
+    );
+    return res.data?.data;
+  },
+  deleteBunnyLibrary: async (libraryRecordId: string) => {
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/bunny/libraries/${encodeURIComponent(libraryRecordId)}`,
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
   createBunnyTusUpload: async (payload: BunnyTusUploadRequest) => {
     const res = await apiClient.post<ApiResponse<BunnyTusUploadSession>>(
       '/admin/bunny/uploads/tus',
@@ -1640,6 +1752,14 @@ export const adminService = {
   completeBunnyUpload: async (assetId: string) => {
     const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(
       `/admin/bunny/uploads/${assetId}/complete`
+    );
+    return res.data?.data;
+  },
+  cancelBunnyVideoReplacement: async (assetId: string) => {
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(
+      `/admin/bunny/uploads/${assetId}/cancel-replacement`,
+      undefined,
+      { suppressErrorToast: true }
     );
     return res.data?.data;
   },
@@ -1725,6 +1845,7 @@ export const adminService = {
       isRandomized: boolean;
       totalScore: number;
       requiredPointsToPass: number;
+      homeworkComingSoonOn?: string | null;
       questions: {
         text: string;
         type: string;

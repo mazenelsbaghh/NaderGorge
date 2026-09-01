@@ -21,7 +21,12 @@ object BackgroundSyncScheduler {
     private const val TAG = "BackgroundSyncScheduler"
 
     fun schedule(context: Context) {
-        PreferenceManager(context).ensureSmsReconciliationCursor(System.currentTimeMillis())
+        val preferences = PreferenceManager(context)
+        if (preferences.getServerUrl().isNullOrBlank() || !preferences.hasWalletPairings()) {
+            Log.w(TAG, "Background synchronization was not scheduled because no wallet is paired.")
+            return
+        }
+        preferences.ensureSmsReconciliationCursor(System.currentTimeMillis())
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -57,6 +62,12 @@ object BackgroundSyncScheduler {
     }
 
     fun startRealtimeService(context: Context) {
+        val preferences = PreferenceManager(context)
+        if (preferences.getServerUrl().isNullOrBlank() || !preferences.hasWalletPairings()) {
+            Log.w(TAG, "Realtime synchronization was not started because no wallet is paired.")
+            return
+        }
+
         try {
             ContextCompat.startForegroundService(
                 context,

@@ -10,7 +10,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
 
         val prefManager = PreferenceManager(context)
-        if (!prefManager.getServerUrl().isNullOrBlank() && !prefManager.getPairingToken().isNullOrBlank()) {
+        if (!prefManager.getServerUrl().isNullOrBlank() && prefManager.hasWalletPairings()) {
             BackgroundSyncScheduler.schedule(context)
             BackgroundSyncScheduler.startRealtimeService(context)
         }

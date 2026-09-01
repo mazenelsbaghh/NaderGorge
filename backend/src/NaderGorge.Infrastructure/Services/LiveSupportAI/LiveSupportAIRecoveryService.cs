@@ -17,6 +17,7 @@ public sealed class LiveSupportAIRecoveryService(IAppDbContext db, ILiveSupportA
         var staleTurns = await db.LiveSupportAITurns
             .Where(item => (item.Status == LiveSupportAITurnStatus.Queued || item.Status == LiveSupportAITurnStatus.Processing || item.Status == LiveSupportAITurnStatus.ProviderCompleted) &&
                            db.LiveSupportConversations.Any(conversation => conversation.Id == item.ConversationId &&
+                               conversation.AllowsAI &&
                                conversation.Status != LiveSupportConversationStatus.Closed &&
                                conversation.Status != LiveSupportConversationStatus.Abandoned) &&
                            ((item.Status == LiveSupportAITurnStatus.Queued && item.QueuedAt < utcNow.AddMinutes(-5)) ||
@@ -43,7 +44,10 @@ public sealed class LiveSupportAIRecoveryService(IAppDbContext db, ILiveSupportA
             decision.Version++;
         }
         var expiredVerifications = await db.LiveSupportAIVerificationSessions
-            .Where(item => (item.Status == LiveSupportAIVerificationStatus.AwaitingLookup || item.Status == LiveSupportAIVerificationStatus.Challenging) && item.ExpiresAt <= utcNow)
+            .Where(item => (item.Status == LiveSupportAIVerificationStatus.AwaitingLookup || item.Status == LiveSupportAIVerificationStatus.Challenging) &&
+                           item.ExpiresAt <= utcNow &&
+                           db.LiveSupportConversations.Any(conversation =>
+                               conversation.Id == item.ConversationId && conversation.AllowsAI))
             .OrderBy(item => item.ExpiresAt).Take(batchSize).ToListAsync(cancellationToken);
         foreach (var verification in expiredVerifications)
         {
@@ -56,6 +60,7 @@ public sealed class LiveSupportAIRecoveryService(IAppDbContext db, ILiveSupportA
         var disabledStates = await db.LiveSupportAIConversationStates
             .Where(item => item.Mode == LiveSupportAIMode.AiActive && item.DisableRequestedAt != null &&
                            db.LiveSupportConversations.Any(conversation => conversation.Id == item.ConversationId &&
+                               conversation.AllowsAI &&
                                conversation.Status != LiveSupportConversationStatus.Closed &&
                                conversation.Status != LiveSupportConversationStatus.Abandoned))
             .OrderBy(item => item.DisableRequestedAt).Take(batchSize).Select(item => item.ConversationId).ToListAsync(cancellationToken);
@@ -63,12 +68,13 @@ public sealed class LiveSupportAIRecoveryService(IAppDbContext db, ILiveSupportA
         var inactiveStates = await db.LiveSupportAIConversationStates
             .Where(item => item.Mode == LiveSupportAIMode.AiActive && item.LastParticipantActivityAt < utcNow.AddMinutes(-30) &&
                            db.LiveSupportConversations.Any(conversation => conversation.Id == item.ConversationId &&
+                               conversation.AllowsAI &&
                                conversation.Status != LiveSupportConversationStatus.Closed &&
                                conversation.Status != LiveSupportConversationStatus.Abandoned))
             .OrderBy(item => item.LastParticipantActivityAt).Take(batchSize).ToListAsync(cancellationToken);
         var inactiveConversationIds = inactiveStates.Select(item => item.ConversationId).ToList();
         var inactiveConversations = await db.LiveSupportConversations
-            .Where(item => inactiveConversationIds.Contains(item.Id) && item.Status != LiveSupportConversationStatus.Closed && item.Status != LiveSupportConversationStatus.Abandoned)
+            .Where(item => inactiveConversationIds.Contains(item.Id) && item.AllowsAI && item.Status != LiveSupportConversationStatus.Closed && item.Status != LiveSupportConversationStatus.Abandoned)
             .ToDictionaryAsync(item => item.Id, cancellationToken);
         var activeAssignments = await db.LiveSupportAssignments
             .Where(item => inactiveConversationIds.Contains(item.ConversationId) && item.EndedAt == null)

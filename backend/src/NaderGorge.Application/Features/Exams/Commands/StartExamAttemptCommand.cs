@@ -1,7 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
@@ -29,12 +32,18 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
     private readonly IGiftUsageService? _giftUsage;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public StartExamAttemptCommandHandler(IAppDbContext db, IAccessCheckService access, IGiftUsageService? giftUsage = null)
+    public StartExamAttemptCommandHandler(
+        IAppDbContext db,
+        IAccessCheckService access,
+        IGiftUsageService? giftUsage = null,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
         _access = access;
         _giftUsage = giftUsage;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<ActiveExamAttemptDto>> Handle(StartExamAttemptCommand request, CancellationToken ct)
@@ -108,7 +117,9 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 }
 
                 // 2. Previous homework
-                var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                var prevHomework = await _db.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _db.HomeworkSubmissions

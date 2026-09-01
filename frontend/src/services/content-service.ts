@@ -259,6 +259,7 @@ export interface LessonDetailDto {
   examLockedReason?: string;
   examStatus?: string;
   homeworkStatus?: string;
+  homeworkComingSoonOn?: string | null;
   termId?: string;
   sectionId?: string;
   isVideoOnlyAccess?: boolean;

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -224,7 +225,9 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             }
 
             // 2. Check if previous lesson's mandatory homework is passed
-            var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+            var prevHomework = await _db.Homeworks
+                .Where(h => h.LessonId == previousLesson.Id)
+                .FirstAccessibleToStudentAsync(userId, _access, _archiveAccess, ct);
             if (prevHomework != null && prevHomework.IsMandatory)
             {
                 var prevHwSubmission = await _db.HomeworkSubmissions

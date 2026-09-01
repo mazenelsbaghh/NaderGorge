@@ -87,7 +87,10 @@ public sealed class HomeworkSubmissionTests
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == firstQuestion.Id && answer.ProvidedAnswer == "A");
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == secondQuestion.Id && answer.ProvidedAnswer == "B");
 
-        var resultHandler = new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService());
+        var resultHandler = new GetHomeworkResultQueryHandler(
+            db,
+            new HomeworkAllowAccessService(),
+            new HomeworkAllowArchiveAccessService());
         var result = await resultHandler.Handle(
             new GetHomeworkResultQuery(homework.Id, student.Id),
             CancellationToken.None);

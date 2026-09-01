@@ -12,6 +12,7 @@ import { LessonMindmapDisplay } from "../../../../../../../components/video/Less
 import { useRouter, useParams } from "next/navigation";
 import { Lock, Award, ClipboardCheck, BadgeCheck, ShoppingCart } from "lucide-react";
 import toast from "react-hot-toast";
+import { getHomeworkComingSoonLabel } from "@/lib/homework-coming-soon";
 
 // --- Icons ---
 function IconCheck({ className, ...props }: React.ComponentProps<"svg">) {
@@ -41,6 +42,7 @@ interface LessonCarouselProps {
     activeStep: number;
     onStepChange: (index: number) => void;
     homeworkId?: string;
+    homeworkComingSoonOn?: string | null;
     homeworkPassed?: boolean;
     examId?: string;
     examPassed?: boolean;
@@ -147,6 +149,7 @@ export function LessonCarousel({
     activeStep,
     onStepChange,
     homeworkId,
+    homeworkComingSoonOn,
     homeworkPassed,
     examId,
     examPassed,
@@ -157,6 +160,7 @@ export function LessonCarousel({
     const lessonId = params?.lessonId as string;
     const packageId = params?.packageId as string;
     const precedingVideoExamUnpassed = videos.slice(0, activeStep).some(v => v.examId && !v.examPassed);
+    const homeworkComingSoonLabel = getHomeworkComingSoonLabel(homeworkComingSoonOn);
 
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
@@ -208,7 +212,7 @@ export function LessonCarousel({
                     {/* Left Column (Titles & Animated Progress Steps) */}
                     <div className="flex w-full flex-col xl:w-[35%] shrink-0 pt-2 relative z-30">
                         {/* Exam & Homework buttons right above the steps list */}
-                        {(examId || homeworkId) && (
+                        {(examId || homeworkId || homeworkComingSoonLabel) && (
                             <div className="flex flex-col gap-2 px-4 md:px-10 mb-2 mt-2">
                                 <div className="flex gap-2">
                                     {examId && (
@@ -244,6 +248,20 @@ export function LessonCarousel({
                                         >
                                             <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
                                             <span>{homeworkPassed ? "الواجب مجتاز" : "واجب الدرس"}</span>
+                                        </button>
+                                    )}
+                                    {!homeworkId && homeworkComingSoonLabel && (
+                                        <button
+                                            type="button"
+                                            disabled
+                                            className="flex min-h-12 flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-[var(--admin-card-soft)] px-3 py-2 text-xs font-black text-[var(--admin-muted)] opacity-80"
+                                            title={homeworkComingSoonLabel}
+                                        >
+                                            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                            <span className="flex flex-col items-start leading-4">
+                                                <span>الذهاب للواجب</span>
+                                                <span>{homeworkComingSoonLabel}</span>
+                                            </span>
                                         </button>
                                     )}
                                 </div>

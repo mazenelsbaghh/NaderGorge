@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,9 +76,12 @@ public class GetWatchRequestsQueryHandler : IRequestHandler<GetWatchRequestsQuer
                     .FirstOrDefault(),
                 VideoMaxLimit = r.LessonVideo != null ? r.LessonVideo.MaxWatchCount : 0,
                 VideoDurationSeconds = r.LessonVideo != null
-                    ? (r.LessonVideo.BunnyVideoAsset != null
-                        ? r.LessonVideo.BunnyVideoAsset.DurationSeconds
-                        : r.LessonVideo.VideoChapters.Select(chapter => (int?)chapter.EndTime).Max())
+                    ? (_context.BunnyVideoAssets
+                        .Where(asset => asset.LessonVideoId == r.LessonVideoId
+                            && asset.SourceState == BunnyVideoAssetSourceState.Current)
+                        .Select(asset => asset.DurationSeconds)
+                        .FirstOrDefault()
+                        ?? r.LessonVideo.VideoChapters.Select(chapter => (int?)chapter.EndTime).Max())
                     : null,
                 HasPreviousRequest = _context.ExtraWatchRequests.Any(previous =>
                     previous.UserId == r.UserId

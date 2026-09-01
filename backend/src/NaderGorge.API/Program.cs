@@ -39,10 +39,14 @@ builder.Services.AddPlatformFinanceConfiguration(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Massar");
-if (builder.Environment.IsProduction())
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (string.IsNullOrWhiteSpace(dataProtectionKeysPath) && builder.Environment.IsProduction())
 {
-    dataProtection.PersistKeysToFileSystem(
-        new DirectoryInfo("/app/App_Data/protected/data-protection-keys"));
+    dataProtectionKeysPath = "/app/App_Data/protected/data-protection-keys";
+}
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 }
 builder.Services.Configure<HttpsRedirectionOptions>(options => options.HttpsPort = 443);
 builder.Services.AddScoped<NaderGorge.Application.Common.HR.IHrRequestContext, NaderGorge.API.Services.HttpHrRequestContext>();
@@ -139,7 +143,31 @@ builder.Services.AddScoped<NaderGorge.Application.Features.HR.Reporting.Workforc
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
-builder.Services.AddHttpClient<IBunnyStreamClient, BunnyStreamClient>();
+builder.Services.AddHttpClient("BunnyStream", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    // Bunny API requests carry an AccessKey. A redirect must never receive it
+    // implicitly; callers treat an unexpected redirect as a safe failure.
+    AllowAutoRedirect = false
+});
+builder.Services.AddHttpClient("BunnyAnalysisMedia", client =>
+{
+    // The response is streamed to the worker and is cancelled through the
+    // request token. Redirects must be validated by the reader, never followed
+    // implicitly by HttpClient.
+    client.Timeout = Timeout.InfiniteTimeSpan;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false
+});
+builder.Services.AddSingleton<IBunnyStreamClientFactory, BunnyStreamClientFactory>();
+builder.Services.AddSingleton<IBunnyStreamLibrarySecretProtector, BunnyStreamLibrarySecretProtector>();
+builder.Services.AddScoped<IBunnyStreamLibraryAccessService, BunnyStreamLibraryAccessService>();
+builder.Services.AddScoped<IBunnyOriginalMediaReader, BunnyOriginalMediaReader>();
+builder.Services.AddScoped<BunnyStreamLegacyCredentialImporter>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.BunnyVideoStatusBackgroundService>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
 builder.Services.AddScoped<IContentArchiveAccessService, ContentArchiveAccessService>();
 builder.Services.AddScoped<IAcademicScopeService, AcademicScopeService>();
@@ -208,6 +236,8 @@ builder.Services.AddHttpClient<NaderGorge.Application.Features.LiveSupportAI.Int
 builder.Services.AddScoped<ILiveSupportActionService, LiveSupportActionService>();
 builder.Services.AddScoped<ILiveSupportActionExecutor>(sp => sp.GetRequiredService<ILiveSupportActionService>());
 builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSupportAssignmentCoordinator)sp.GetRequiredService<ILiveSupportService>());
+builder.Services.AddScoped<ILiveSupportHumanConversationFactory>(sp =>
+    (ILiveSupportHumanConversationFactory)sp.GetRequiredService<ILiveSupportService>());
 builder.Services.AddScoped<ILiveSupportGuestSessionService, LiveSupportGuestSessionService>();
 builder.Services.AddScoped<ILiveSupportEventWriter, NaderGorge.Application.Features.LiveSupport.Services.LiveSupportEventWriter>();
 builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachmentStorage>();
@@ -218,6 +248,16 @@ builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStor
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
+builder.Services.AddSingleton(new FacebookMessengerConfiguration(builder.Configuration));
+builder.Services.AddSingleton<IFacebookMessengerSecretProtector, FacebookMessengerSecretProtector>();
+builder.Services.AddScoped<IFacebookMessengerRuntimeConfigurationReader, FacebookMessengerRuntimeConfigurationReader>();
+builder.Services.AddSingleton(new FacebookMessengerWebhookParser());
+builder.Services.AddSingleton<FacebookMessengerSafeMediaDownloader>();
+builder.Services.AddHttpClient<FacebookMessengerGraphClient>(client =>
+    client.Timeout = TimeSpan.FromSeconds(30))
+    .RemoveAllLoggers();
+builder.Services.AddScoped<FacebookMessengerLiveSupportService>();
+builder.Services.AddScoped<FacebookMessengerAdminService>();
 builder.Services.AddSingleton<IWhatsAppCampaignDataProtector, WhatsAppCampaignDataProtector>();
 builder.Services.AddScoped<WhatsAppCampaignService>();
 builder.Services.AddScoped<IWhatsAppCampaignService>(provider =>
@@ -225,6 +265,9 @@ builder.Services.AddScoped<IWhatsAppCampaignService>(provider =>
 builder.Services.AddSingleton<WhatsAppCampaignDispatcher>();
 builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.WhatsAppOutboundBackgroundService>();
 builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.WhatsAppCampaignBackgroundService>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.FacebookMessengerInboundBackgroundService>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.FacebookMessengerOutboundBackgroundService>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.FacebookMessengerAdminRecoveryBackgroundService>();
 builder.Services.AddHttpClient<ThanaweyaResultsService>();
 builder.Services.AddHttpClient<NaderGorge.Application.Features.Admin.Ocr.IAssessmentOcrService, NaderGorge.Infrastructure.Services.GoogleVisionAssessmentOcrService>(client =>
 {
@@ -475,6 +518,9 @@ if (app.Environment.EnvironmentName != "E2e")
     var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") && app.Environment.IsDevelopment();
     await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db, canSeedDefaults);
     await NaderGorge.Infrastructure.Data.PlatformFinanceSeeder.SeedAsync(db);
+    await scope.ServiceProvider
+        .GetRequiredService<BunnyStreamLegacyCredentialImporter>()
+        .ImportAsync();
     if (app.Configuration.GetValue<bool>("SeedDemoCatalog:Enabled"))
         await NaderGorge.Infrastructure.Data.DemoCatalogSeeder.SeedAsync(db);
 }

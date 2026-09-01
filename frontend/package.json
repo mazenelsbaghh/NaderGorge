@@ -15,7 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "check:platform-events": "node scripts/check-platform-event-contracts.mjs",
-    "check:live-support-contracts": "node scripts/check-live-support-client-contracts.mjs",
+    "check:live-support-contracts": "node scripts/check-live-support-client-contracts.mjs && node --no-warnings --experimental-strip-types --test src/lib/live-support-channel.test.mts src/lib/facebook-messenger-settings.test.mts",
     "check:admin-timezone": "node --no-warnings --experimental-strip-types src/components/admin/admin-utils.test.mts",
     "check:cairo-time-contracts": "node scripts/check-cairo-time-contracts.mjs",
     "check:design-tokens": "node scripts/check-design-tokens.mjs",
@@ -33,7 +33,8 @@
     "check:accessibility": "node scripts/check-accessibility.mjs",
     "check:accessibility:browser": "node scripts/check-accessibility.mjs --browser",
     "check:accessible-colors": "node --no-warnings --experimental-strip-types src/lib/accessible-color.test.mts",
-    "check:ui-review-fixes": "node scripts/check-ui-review-fixes.mjs"
+    "check:ui-review-fixes": "node scripts/check-ui-review-fixes.mjs",
+    "check:video-page-protection": "node --no-warnings --experimental-strip-types --test src/utils/video-page-guard.test.mts src/lib/video-embed-request-guard.test.mts src/lib/video-embed-devtools-guard.test.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

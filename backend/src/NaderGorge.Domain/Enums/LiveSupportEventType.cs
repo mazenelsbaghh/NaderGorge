@@ -14,5 +14,6 @@ public enum LiveSupportEventType
     AIVerificationStarted, AIVerificationAttempted, AIVerificationSucceeded,
     AIVerificationFailed, AIHandoffRequested, AIHandoffCompleted,
     AIInactivityWarningSent, AIResolved, AIAutoClosed,
-    MessageEdited, MessageDeleted, WhatsAppDeliveryStatusChanged
+    MessageEdited, MessageDeleted, WhatsAppDeliveryStatusChanged,
+    MessengerDeliveryStatusChanged
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseBunnyPlayerPath } from '@/lib/bunny-video-reference';
 import { generateVideoEmbedHtml } from '../embed/route';
 
 function errorPage(message: string, status = 400) {
@@ -17,7 +18,7 @@ function errorPage(message: string, status = 400) {
 function parseVideoUrl(value: string) {
   let url: URL;
   try { url = new URL(value); } catch { return null; }
-  if (!['http:', 'https:'].includes(url.protocol)) return null;
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
   const host = url.hostname.toLowerCase().replace(/^www\./, '');
 
   if (host === 'youtu.be' || host.endsWith('youtube.com')) {
@@ -31,10 +32,9 @@ function parseVideoUrl(value: string) {
     const id = url.searchParams.get('id');
     return oid && id ? { provider: 'vk', id: `oid=${oid}&id=${id}` } : null;
   }
-  if (host === 'player.mediadelivery.net' || host.endsWith('.bunnycdn.com')) {
-    const parts = url.pathname.split('/').filter(Boolean);
-    const id = parts.at(-1);
-    return id ? { provider: 'bunny', id } : null;
+  if (host === 'player.mediadelivery.net' || host === 'iframe.mediadelivery.net' || host.endsWith('.bunnycdn.com')) {
+    const bunnyReference = parseBunnyPlayerPath(url.pathname);
+    return bunnyReference ? { provider: 'bunny', id: `${bunnyReference.libraryId}/${bunnyReference.videoGuid}` } : null;
   }
   return null;
 }

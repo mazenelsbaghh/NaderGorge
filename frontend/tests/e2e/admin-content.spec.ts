@@ -109,7 +109,7 @@ test.describe('Admin Content Management Flow', () => {
     await expect(page.locator('text=E2E Lesson')).toBeVisible({ timeout: 10000 });
   });
 
-  test('admin manages video types and preserves content codes', async ({ request, page }) => {
+  test('admin preserves a video code while editing its source and metadata', async ({ request, page }) => {
     const seededLessonId = await setupMockPackage(request);
     await login(page);
     await page.goto(`${adminBaseUrl}/admin/content/video-types`);
@@ -158,10 +158,23 @@ test.describe('Admin Content Management Flow', () => {
     videoRow = page.locator('div.rounded-xl').filter({ hasText: title }).first();
     await videoRow.getByRole('button', { name: 'تعديل الفيديو' }).click();
     await expect(videoRow.getByRole('combobox', { name: 'نوع الفيديو' })).toContainText(`${uniqueType} (معطل، مستخدم حالياً)`);
+    await expect(videoRow.getByLabel('تفعيل الفيديو مباشرة للطلاب')).toBeChecked();
+    await videoRow.getByRole('combobox', { name: 'المنصة' }).click();
+    await page.getByRole('option', { name: 'Bunny.net' }).click();
+    await expect(videoRow.getByRole('button', { name: 'رفع ملف' })).toBeVisible();
+    await expect(videoRow.getByRole('button', { name: 'جلب من رابط مباشر' })).toBeVisible();
+    await videoRow.getByRole('combobox', { name: 'المنصة' }).click();
+    await page.getByRole('option', { name: 'VK (فيكونتاكتي)' }).click();
+    await videoRow.getByPlaceholder('مثال: oid=-22822305&id=456241864').fill('oid=-22822305&id=456241864');
     await videoRow.getByPlaceholder('مثال: الدرس الأول - مراجعة').fill(`${title} Updated`);
+    await videoRow.getByLabel('تفعيل الفيديو مباشرة للطلاب').uncheck();
     await videoRow.getByRole('button', { name: 'حفظ التعديلات' }).click();
+    await expect(page.getByText('استبدال مصدر الفيديو')).toBeVisible();
+    await page.getByRole('button', { name: 'استبدال المصدر' }).click();
     videoRow = page.locator('div.rounded-xl').filter({ hasText: `${title} Updated` }).first();
     await expect(videoRow.getByText(originalCode!)).toBeVisible();
+    await expect(videoRow).toContainText('vk');
+    await expect(videoRow).toContainText('غير نشط');
 
   });
 

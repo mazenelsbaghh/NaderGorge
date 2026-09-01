@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Enums;
@@ -60,13 +61,12 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
     public async Task<ApiResponse<StartHomeworkAttemptDto>> Handle(StartHomeworkAttemptQuery request, CancellationToken ct)
     {
         var homework = await _dbContext.Homeworks
+            .ReadyForStudents()
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, ct);
 
         if (homework == null)
-            return ApiResponse<StartHomeworkAttemptDto>.Fail("Homework not found.");
-        if (!homework.IsActive)
-            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب معطل حالياً.");
+            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب غير متاح للطلاب حاليًا.");
         if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, ct))
             return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
@@ -110,7 +110,13 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 }
 
                 // 2. Previous homework
-                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                var prevHomework = await _dbContext.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(
+                        request.StudentId,
+                        _access,
+                        _archiveAccess,
+                        ct);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _dbContext.HomeworkSubmissions

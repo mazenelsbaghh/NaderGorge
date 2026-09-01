@@ -1,7 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Homework.Queries;
@@ -50,21 +53,37 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
 {
     private readonly IAppDbContext _dbContext;
     private readonly IAccessCheckService _access;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetHomeworkResultQueryHandler(IAppDbContext dbContext, IAccessCheckService access)
+    public GetHomeworkResultQueryHandler(
+        IAppDbContext dbContext,
+        IAccessCheckService access,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
         _access = access;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<HomeworkResultDto>> Handle(GetHomeworkResultQuery request, CancellationToken ct)
     {
         var homework = await _dbContext.Homeworks
+            .ReadyForStudents()
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, ct);
 
         if (homework == null)
-            return ApiResponse<HomeworkResultDto>.Fail("Homework not found.");
+            return ApiResponse<HomeworkResultDto>.Fail("هذا الواجب غير متاح للطلاب حاليًا.");
+        if (!await _archiveAccess.CanViewAsync(
+                request.StudentId,
+                ContentArchiveTargetType.Homework,
+                homework.Id,
+                ct))
+        {
+            return ApiResponse<HomeworkResultDto>.Fail(
+                "هذا الواجب مؤرشف وغير متاح لحسابك.",
+                ["CONTENT_ARCHIVED"]);
+        }
 
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, ct);
         if (!hasAccess)

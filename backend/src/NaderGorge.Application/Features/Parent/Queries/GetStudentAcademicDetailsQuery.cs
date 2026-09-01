@@ -445,7 +445,9 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
         // Fetch Homework submissions
         var homeworksRaw = await _db.Homeworks
             .AsNoTracking()
-            .Where(h => lessonIds.Contains(h.LessonId))
+            .Where(h => lessonIds.Contains(h.LessonId) &&
+                        (h.IsActive && h.Questions.Any() ||
+                         h.Submissions.Any(s => s.StudentId == profile.UserId)))
             .Include(h => h.Questions)
             .Include(h => h.Submissions.Where(s => s.StudentId == profile.UserId))
                 .ThenInclude(s => s.Answers)

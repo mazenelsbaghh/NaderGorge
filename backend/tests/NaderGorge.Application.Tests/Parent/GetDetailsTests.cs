@@ -441,11 +441,19 @@ public class GetDetailsTests : IDisposable
         lessonA.ExamId = exam.Id;
         _db.Lessons.Update(lessonA);
 
-        _db.Homeworks.Add(new Homework
+        var purchasedLessonHomework = new Homework
         {
             LessonId = lessonA.Id,
             Title = "Purchased Lesson Homework",
             TotalScore = 10
+        };
+        _db.Homeworks.Add(purchasedLessonHomework);
+        _db.HomeworkQuestions.Add(new HomeworkQuestion
+        {
+            HomeworkId = purchasedLessonHomework.Id,
+            BodyText = "Published homework question",
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay,
+            PointsActive = 10
         });
 
         var balance = new StudentBalance

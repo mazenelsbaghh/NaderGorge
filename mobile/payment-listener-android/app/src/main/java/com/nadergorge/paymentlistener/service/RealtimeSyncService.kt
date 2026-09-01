@@ -12,8 +12,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.nadergorge.paymentlistener.MainActivity
-import com.nadergorge.paymentlistener.data.api.ApiClient
-import com.nadergorge.paymentlistener.data.api.SyncStatusRequest
 import com.nadergorge.paymentlistener.data.preference.PreferenceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +20,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class RealtimeSyncService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -64,36 +61,18 @@ class RealtimeSyncService : Service() {
 
     private suspend fun syncOnce() {
         val prefManager = PreferenceManager(applicationContext)
-        val token = prefManager.getPairingToken()
-        val apiService = ApiClient.getApiService(applicationContext)
-
-        if (token.isNullOrBlank() || apiService == null) {
+        if (!prefManager.hasWalletPairings()) {
             Log.w(TAG, "Stopping realtime sync because device is not paired.")
             stopSelf()
             return
         }
 
-        try {
-            val response = apiService.syncStatus(
-                token,
-                SyncStatusRequest(null)
-            )
-
-            if (response.isSuccessful && response.body()?.success == true) {
-                val data = response.body()?.data
-                if (data != null) {
-                    prefManager.saveSmsFilters(data.smsSenderFilters)
-                    prefManager.saveLastBalance(data.currentBalance.toFloat())
-                    prefManager.saveDevicePhone(data.phoneNumber)
-                    prefManager.saveDeviceLabel(data.label)
-                }
-                Log.i(TAG, "Realtime status sync completed.")
-            } else {
-                Log.e(TAG, "Realtime status sync failed: ${response.code()} ${response.message()}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Realtime status sync exception", e)
-        }
+        val summary = WalletStatusSynchronizer.syncAll(applicationContext)
+        Log.i(
+            TAG,
+            "Realtime status sync completed for ${summary.successfulCount}/${summary.attemptedCount} wallets; " +
+                "retryable=${summary.retryableFailureCount}, configuration=${summary.configurationFailureCount}."
+        )
     }
 
     private fun createNotificationChannel() {

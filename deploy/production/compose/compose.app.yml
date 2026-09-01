@@ -42,6 +42,15 @@ x-frontend-defaults: &frontend-defaults
 x-frontend-internal-api: &frontend-internal-api
   INTERNAL_API_URL: http://backend:5245/api
   INTERNAL_BACKEND_URL: http://backend:5245
+  # Bunny credentials and the raw-media relay secret are meaningful only to
+  # backend services. Do not let a Next.js process inherit them, even though
+  # the common production env file is shared.
+  BUNNY_STREAM_API_KEY: ""
+  BunnyStream__ApiKey: ""
+  BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+  BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+  AI_MEDIA_RELAY_SECRET: ""
+  AiMediaRelay__Secret: ""
 
 services:
   backend:
@@ -50,6 +59,9 @@ services:
     environment:
       Cluster__NodeId: ${MASSAR_NODE_ID}
       Cluster__ReleaseId: ${MASSAR_RELEASE_ID}
+      AiMediaRelay__Secret: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
+      BunnyAnalysis__CdnTokenSecurityKeysJson: ${BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON:-}
+      BunnyAnalysis__PlayerTokenSecurityKeysJson: ${BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON:-}
     volumes:
       - /srv/massar-shared/public:/app/wwwroot
       - /srv/massar-shared/protected:/app/App_Data/protected
@@ -72,6 +84,12 @@ services:
       MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
       NODE_ENV: production
       BACKEND_API_URL: http://backend:5245
+      BUNNY_STREAM_API_KEY: ""
+      BunnyStream__ApiKey: ""
+      BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+      BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+      AI_MEDIA_RELAY_SECRET: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
+      AiMediaRelay__Secret: ""
       MASSAR_SHARED_GID: ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
       SHARED_STORAGE_ROOT: /shared
       SHARED_PUBLIC_ROOT: /shared/public
@@ -132,6 +150,12 @@ services:
     environment:
       MASSAR_NODE_ID: ${MASSAR_NODE_ID}
       MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+      BUNNY_STREAM_API_KEY: ""
+      BunnyStream__ApiKey: ""
+      BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+      BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+      AI_MEDIA_RELAY_SECRET: ""
+      AiMediaRelay__Secret: ""
     ports:
       - ${MASSAR_OVERLAY_IP:?MASSAR_OVERLAY_IP is required}:8080:8080
     volumes:

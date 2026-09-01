@@ -55,6 +55,22 @@ test('generic API validation toast uses the detailed Arabic message', () => {
   assert.equal(summary, 'اختر الشعبة أو التخصص المناسب للصف الدراسي.');
 });
 
+test('production Bunny not-ready response from 2026-09-01 shows its Arabic guidance instead of the machine code', () => {
+  const summary = getApiErrorSummary({
+    response: {
+      data: {
+        message: 'انتظر حتى يكتمل تجهيز الفيديو داخل Bunny ثم حاول ربطه مرة أخرى.',
+        errors: ['BUNNY_VIDEO_NOT_READY'],
+      },
+    },
+  });
+
+  assert.equal(
+    summary,
+    'انتظر حتى يكتمل تجهيز الفيديو داخل Bunny ثم حاول ربطه مرة أخرى.',
+  );
+});
+
 test('unknown English server errors never leak into the Arabic interface', () => {
   const summary = getApiErrorSummary({
     response: {

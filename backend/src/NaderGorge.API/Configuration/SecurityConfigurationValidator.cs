@@ -22,6 +22,7 @@ public static class SecurityConfigurationValidator
         {
             RequireStrongSecret(config, "API_CALLBACK_SECRET", "API callback secret");
             RequireStrongSecret(config, "AI_CALLBACK_SECRET", "AI callback secret", allowMissingIf: "API_CALLBACK_SECRET");
+            RequireStrongSecret(config, "AiMediaRelay:Secret", "AI media relay secret");
             RequireStrongSecret(config, "ParentReports:SigningSecret", "parent report signing secret");
         }
     }
