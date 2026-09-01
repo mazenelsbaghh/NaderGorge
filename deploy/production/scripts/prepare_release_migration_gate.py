@@ -472,7 +472,8 @@ sudo docker run --pull=never -d --name "$smoke_name" --network host \
   -v /srv/massar-shared/private:/app/App_Data/private \
   -v /srv/massar-shared/live-support:/app/App_Data/live-support \
   --entrypoint /bin/sh "massar/backend:$compatibility_release" -ec \
-  'export ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=6544;Database=massar_platform;Username=massar_app;Password=$(cat /run/secrets/pgapp)";
+  'export AiMediaRelay__Secret="$AI_MEDIA_RELAY_SECRET";
+   export ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=6544;Database=massar_platform;Username=massar_app;Password=$(cat /run/secrets/pgapp)";
    exec dotnet NaderGorge.API.dll' >/dev/null
 smoke_created=true
 smoke_ready=false
@@ -629,6 +630,8 @@ def prepare(
             line for line in detail
             if re.search(
                 r"(connection refused|failed to connect|permission denied|"
+                r"password authentication failed|database .* does not exist|"
+                r"n-1 backend readiness failed|\b(?:fail|crit):|"
                 r"no frameworks were found|unhandled exception|pg_dump:|"
                 r"migration count exceeds|MASSAR_GATE_FAILURE|"
                 r"\b(?:fatal|blocked)\b)",
@@ -637,7 +640,7 @@ def prepare(
             )
         ]
         safe_detail = (
-            diagnostic[-1] if diagnostic else
+            " | ".join(diagnostic[-8:]) if diagnostic else
             detail[-1] if detail else
             "remote evidence production failed"
         )

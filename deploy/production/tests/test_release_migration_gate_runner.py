@@ -196,6 +196,7 @@ def test_runner_uses_real_primary_operation_and_emits_consumer_valid_gate(
     assert "/^.(un)?restrict[[:space:]]/d" in remote_script
     assert "massar/backend:$current_release" in remote_script
     assert "massar/backend:$compatibility_release" in remote_script
+    assert 'export AiMediaRelay__Secret="$AI_MEDIA_RELAY_SECRET"' in remote_script
     assert "api/health/ready" in remote_script
     assert remote_script.index('rm -rf --one-file-system "$restore_root"') < (
         remote_script.index(runner.GATE_PREFIX)
