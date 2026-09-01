@@ -106,6 +106,48 @@ public sealed class AiGenerationRunFencingTests
     }
 
     [Fact]
+    public async Task AnalysisCompletion_AfterSourceRevisionIncrement_PersistsArtifacts()
+    {
+        // Regression: the callback attaches a partial LessonVideo. Once source
+        // replacement added SourceRevision as a concurrency token, it must retain
+        // the loaded revision rather than use the CLR default of zero.
+        await using var fixture = await RelationalAiFixture.CreateAsync();
+        var runId = Guid.NewGuid();
+        var video = await fixture.VideoAsync();
+        video.SourceRevision = 1;
+        video.IsProcessingAI = true;
+        video.CurrentAiAnalysisRunId = runId;
+        await fixture.Db.SaveChangesAsync();
+        fixture.Db.ChangeTracker.Clear();
+
+        var response = await new AiAnalysisCompletedCommandHandler(
+                fixture.Db,
+                NullLogger<AiAnalysisCompletedCommandHandler>.Instance)
+            .Handle(
+                new AiAnalysisCompletedCommand(
+                    fixture.VideoId,
+                    "/subtitles/revision-one.srt",
+                    [new ChapterDto { Title = "Revision-one chapter", SummaryText = "Summary", Order = 1 }],
+                    GenerationRunId: runId),
+                CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.True(response.Data!.Accepted);
+        fixture.Db.ChangeTracker.Clear();
+        video = await fixture.VideoAsync();
+        Assert.Equal(1, video.SourceRevision);
+        Assert.False(video.IsProcessingAI);
+        Assert.Null(video.CurrentAiAnalysisRunId);
+        Assert.Equal("/subtitles/revision-one.srt", video.SubtitleUrl);
+        Assert.Equal(
+            "Revision-one chapter",
+            await fixture.Db.VideoChapters
+                .Where(chapter => chapter.LessonVideoId == fixture.VideoId)
+                .Select(chapter => chapter.Title)
+                .SingleAsync());
+    }
+
+    [Fact]
     public async Task MismatchedSingleCompletion_DoesNotReplaceImageOrReleaseLocks()
     {
         await using var fixture = await RelationalAiFixture.CreateAsync();

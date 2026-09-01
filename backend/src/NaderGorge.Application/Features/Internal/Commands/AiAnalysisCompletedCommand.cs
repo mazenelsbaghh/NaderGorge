@@ -104,6 +104,7 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             LessonId = video.LessonId,
             ExamId = video.ExamId,
             CreatedAt = video.CreatedAt,
+            SourceRevision = video.SourceRevision,
             IsProcessingAI = false,
             SubtitleUrl = request.SubtitleUrl,
             UpdatedAt = DateTime.UtcNow,
