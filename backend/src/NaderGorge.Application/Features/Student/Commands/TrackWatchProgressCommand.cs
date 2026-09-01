@@ -4,6 +4,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -37,11 +38,16 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
     private readonly IAppDbContext _db;
     private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
+    private readonly IVideoPlaybackConcurrency? _playbackConcurrency;
 
-    public TrackWatchProgressCommandHandler(IAppDbContext db, ICachedPlatformSettingsReader cachedPlatformSettingsReader)
+    public TrackWatchProgressCommandHandler(
+        IAppDbContext db,
+        ICachedPlatformSettingsReader cachedPlatformSettingsReader,
+        IVideoPlaybackConcurrency? playbackConcurrency = null)
     {
         _db = db;
         _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
+        _playbackConcurrency = playbackConcurrency;
     }
 
     public async Task<ApiResponse<WatchProgressDto>> Handle(TrackWatchProgressCommand request, CancellationToken ct)
@@ -55,7 +61,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             return Fail("Invalid playback rate", "PLAYBACK_RATE_INVALID");
 
         await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        await _db.AcquireVideoPlaybackLockAsync(request.UserId, request.LessonVideoId, ct);
+        if (_playbackConcurrency is not null)
+            await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
 
         var session = await _db.VideoPlaybackSessions.FirstOrDefaultAsync(
             s => s.Id == request.SessionId

@@ -335,19 +335,6 @@ public class AppDbContext : DbContext, IAppDbContext
         return Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     }
 
-    public async Task AcquireVideoPlaybackLockAsync(
-        Guid userId,
-        Guid lessonVideoId,
-        CancellationToken cancellationToken = default)
-    {
-        if (!string.Equals(Database.ProviderName, "Npgsql.EntityFrameworkCore.PostgreSQL", StringComparison.Ordinal))
-            return;
-
-        await Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({userId.ToString("N") + lessonVideoId.ToString("N")}, 169))",
-            cancellationToken);
-    }
-
     public void ClearTrackedChanges() => ChangeTracker.Clear();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

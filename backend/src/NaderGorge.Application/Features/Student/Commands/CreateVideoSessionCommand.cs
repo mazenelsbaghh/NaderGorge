@@ -2,6 +2,7 @@ using MediatR;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -38,17 +39,20 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
     private readonly IAccessCheckService _access;
     private readonly IVideoEncryptionService _encryption;
     private readonly IGiftUsageService? _giftUsage;
+    private readonly IVideoPlaybackConcurrency? _playbackConcurrency;
 
     public CreateVideoSessionCommandHandler(
         IAppDbContext db,
         IAccessCheckService access,
         IVideoEncryptionService encryption,
-        IGiftUsageService? giftUsage = null)
+        IGiftUsageService? giftUsage = null,
+        IVideoPlaybackConcurrency? playbackConcurrency = null)
     {
         _db = db;
         _access = access;
         _encryption = encryption;
         _giftUsage = giftUsage;
+        _playbackConcurrency = playbackConcurrency;
     }
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
@@ -217,7 +221,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
 
         await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        await _db.AcquireVideoPlaybackLockAsync(request.UserId, request.LessonVideoId, ct);
+        if (_playbackConcurrency is not null)
+            await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
         var now = DateTime.UtcNow;
         var priorActiveSessions = await _db.VideoPlaybackSessions
             .Where(s => s.UserId == request.UserId
