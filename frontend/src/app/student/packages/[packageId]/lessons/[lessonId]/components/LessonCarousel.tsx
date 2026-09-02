@@ -213,7 +213,7 @@ export function LessonCarousel({
                 <div className="relative z-20 flex w-full flex-col pb-4 sm:pb-6 xl:flex-row">
 
                     {/* Left Column (Titles & Animated Progress Steps) */}
-                    <div className="relative z-30 flex w-full shrink-0 flex-col pt-1 sm:pt-2 xl:w-[35%]">
+                    <div className="relative z-30 flex w-full shrink-0 flex-col pt-1 sm:pt-2 xl:w-[30%]">
                         {/* Exam & Homework buttons right above the steps list */}
                         {(examId || homeworkId || homeworkComingSoonLabel) && (
                             <div className="flex flex-col gap-2 px-4 md:px-10 mb-2 mt-2">
@@ -337,7 +337,7 @@ export function LessonCarousel({
                     </div>
 
                     {/* Right Column (The Magic Video Area) */}
-                    <div className="relative z-20 mt-5 flex flex-1 items-center justify-center px-2 pb-2 pt-0 sm:mt-8 sm:p-4 md:p-8 xl:mt-0">
+                    <div className="relative z-20 mt-5 flex flex-1 items-center justify-center p-0 sm:mt-6 sm:px-2 sm:pb-2 md:px-3 xl:mt-0 xl:p-4">
                         <AnimatePresence mode="wait">
                             {mounted && (
                                 <motion.div

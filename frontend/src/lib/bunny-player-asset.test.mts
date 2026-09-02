@@ -46,3 +46,37 @@ test('2026-09-02 Bunny retries reuse the active session instead of superseding i
   assert.match(recoverySource, /reloadActiveEmbedRef\.current\?\.\(\)/);
   assert.doesNotMatch(recoverySource, /reloadSessionRef\.current/);
 });
+
+test('2026-09-03 Bunny tablet readiness is not blocked by metadata callbacks', async () => {
+  const routeSource = await readFile(routePath, 'utf8');
+  const readyHandlerStart = routeSource.indexOf("player.on('ready'");
+  const progressHandlerStart = routeSource.indexOf("player.on('play'", readyHandlerStart);
+  const readyHandler = routeSource.slice(readyHandlerStart, progressHandlerStart);
+
+  assert.ok(readyHandlerStart >= 0);
+  assert.ok(progressHandlerStart > readyHandlerStart);
+  assert.ok(readyHandler.indexOf('notifyParentReady();') >= 0);
+  assert.ok(readyHandler.indexOf('notifyParentReady();') < readyHandler.indexOf('player.getDuration'));
+  assert.ok(readyHandler.indexOf('notifyParentReady();') < readyHandler.indexOf('player.getVolume'));
+  assert.doesNotMatch(readyHandler, /player\.getCurrentTime\([\s\S]*player\.getDuration\([\s\S]*player\.getVolume/);
+});
+
+test('2026-09-03 Bunny native surface is uncovered while the tablet bridge connects', async () => {
+  const [routeSource, playerSource] = await Promise.all([
+    readFile(routePath, 'utf8'),
+    readFile(securePlayerPath, 'utf8'),
+  ]);
+
+  assert.match(routeSource, /postToParent\('providerLoaded', \{ provider: 'bunny' \}\)/);
+  assert.match(playerSource, /case 'providerLoaded'/);
+  assert.match(playerSource, /provider === 'bunny' && nativeProviderSurfaceLoaded/);
+});
+
+test('2026-09-03 Bunny fullscreen stays on the protected platform surface', async () => {
+  const routeSource = await readFile(routePath, 'utf8');
+  const bunnyFrame = routeSource.match(/<iframe id="bunny-frame"[^>]*>/)?.[0] ?? '';
+
+  assert.ok(bunnyFrame.length > 0);
+  assert.doesNotMatch(bunnyFrame, /allowfullscreen/i);
+  assert.doesNotMatch(bunnyFrame, /allow="[^"]*fullscreen/);
+});

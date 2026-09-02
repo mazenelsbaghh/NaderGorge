@@ -231,7 +231,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 </head>
 <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
   <div id="wrap">
-    <iframe id="bunny-frame" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>
+    <iframe id="bunny-frame" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture"></iframe>
     <div id="video-watermark">
       <span style="font-weight:900">${watermarkBrand}</span><br>
       <span style="font-size:.75em;font-weight:700">${watermarkStudentName}</span><br>
@@ -256,7 +256,32 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var isPlaying = false;
     var progressInterval = null;
     var playerReady = false;
+    var parentReadySent = false;
+    var lastKnownDuration = 0;
+    var lastKnownVolume = 1;
     var pollTimer = null;
+
+    function notifyParentReady() {
+      if (__videoEmbedSuspended || parentReadySent) return;
+      parentReadySent = true;
+      postToParent('ready', {
+        duration: lastKnownDuration,
+        volume: Math.round(lastKnownVolume * 100),
+        isMuted: lastKnownVolume === 0,
+        provider: 'bunny'
+      });
+    }
+
+    function postBunnyTimeUpdate(time) {
+      if (__videoEmbedSuspended) return;
+      postToParent('timeUpdate', {
+        currentTime: Number(time) || 0,
+        duration: lastKnownDuration,
+        volume: Math.round(lastKnownVolume * 100),
+        isMuted: lastKnownVolume === 0,
+        state: isPlaying ? 1 : 2
+      });
+    }
 
     function suspendBunnyPlayerForInspection() {
       if (progressInterval) {
@@ -268,6 +293,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         pollTimer = null;
       }
       playerReady = false;
+      parentReadySent = false;
       isPlaying = false;
       if (player && typeof player.pause === 'function') {
         try { player.pause(); } catch (e) {}
@@ -284,6 +310,13 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     ${devToolsGuard}
 
     if (!__videoEmbedSuspended && iframe) {
+      iframe.addEventListener('load', function () {
+        if (__videoEmbedSuspended || playerReady) return;
+        // The Bunny document is already usable even when an older Android
+        // WebView delays Player.js readiness. Let the parent uncover the
+        // native player while the bridge continues connecting in background.
+        postToParent('providerLoaded', { provider: 'bunny' });
+      });
       iframe.src = ${safeSrc};
     }
 
@@ -311,17 +344,24 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       player.on('ready', function () {
         if (__videoEmbedSuspended || !player) return;
         playerReady = true;
+        // Do not gate visual readiness on metadata callbacks. Some tablet
+        // WebViews never answer getVolume/getDuration even though Bunny is
+        // ready and its native controls are fully usable.
+        notifyParentReady();
+
         player.getDuration(function (dur) {
           if (__videoEmbedSuspended || !player) return;
-          player.getVolume(function (vol) {
-            if (__videoEmbedSuspended || !player) return;
-            postToParent('ready', {
-              duration: dur || 0,
-              volume: Math.round((vol || 0) * 100),
-              isMuted: (vol || 0) === 0,
-              provider: 'bunny'
-            });
-          });
+          var parsedDuration = Number(dur);
+          if (isFinite(parsedDuration) && parsedDuration > 0) {
+            lastKnownDuration = parsedDuration;
+          }
+        });
+        player.getVolume(function (vol) {
+          if (__videoEmbedSuspended || !player) return;
+          var parsedVolume = Number(vol);
+          if (isFinite(parsedVolume)) {
+            lastKnownVolume = Math.max(0, Math.min(1, parsedVolume));
+          }
         });
 
         // Start periodic time updates
@@ -331,19 +371,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
           try {
             player.getCurrentTime(function (time) {
               if (__videoEmbedSuspended || !player) return;
-              player.getDuration(function (dur) {
-                if (__videoEmbedSuspended || !player) return;
-                player.getVolume(function (vol) {
-                  if (__videoEmbedSuspended || !player) return;
-                  postToParent('timeUpdate', {
-                    currentTime: time,
-                    duration: dur,
-                    volume: Math.round((vol || 0) * 100),
-                    isMuted: (vol || 0) === 0,
-                    state: isPlaying ? 1 : 2
-                  });
-                });
-              });
+              postBunnyTimeUpdate(time);
             });
           } catch (e) {}
         }, 1000);

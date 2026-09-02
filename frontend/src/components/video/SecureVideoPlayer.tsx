@@ -32,6 +32,13 @@ import {
   requestVideoFullscreen,
   unlockVideoOrientation,
 } from '@/lib/video-fullscreen';
+import {
+  DOUBLE_TAP_SEEK_SECONDS,
+  DOUBLE_TAP_WINDOW_MS,
+  isDoubleTapSeek,
+  resolveSeekTarget,
+  type SeekDirection,
+} from '@/lib/video-seek';
 
 export interface WatchStatus {
   current: number;
@@ -187,6 +194,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [nativeProviderSurfaceLoaded, setNativeProviderSurfaceLoaded] = useState(false);
   const [provider, setProvider] = useState<string>('youtube');
   const providerRef = useRef('youtube');
   
@@ -219,6 +227,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
   const approvedLoadAttemptedRef = useRef(false);
+  const lastSeekTapRef = useRef<{ direction: SeekDirection; timestamp: number } | null>(null);
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seekFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [seekFeedback, setSeekFeedback] = useState<SeekDirection | null>(null);
 
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
@@ -278,6 +290,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   useEffect(() => () => {
     domShieldsCleanupRef.current?.();
     domShieldsCleanupRef.current = null;
+    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    if (seekFeedbackTimerRef.current) clearTimeout(seekFeedbackTimerRef.current);
   }, []);
 
   const handlePlayerInteraction = useCallback(() => {
@@ -391,6 +405,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     domShieldsCleanupRef.current?.();
     playerContainer.replaceChildren();
+    setNativeProviderSurfaceLoaded(false);
 
     const iframe = createVideoEmbedIframe(sessionId);
     iframeRef.current = iframe;
@@ -504,6 +519,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setErrorMessage('تم إيقاف تشغيل الفيديو لحماية المحتوى. أغلق أدوات المطوّر ثم أعد تحميل الصفحة للمتابعة.');
           break;
         }
+        case 'providerLoaded': {
+          const loadedProvider = String(msg.data?.provider || '').toLowerCase();
+          if (loadedProvider === 'bunny') {
+            providerRef.current = loadedProvider;
+            setProvider(loadedProvider);
+            setNativeProviderSurfaceLoaded(true);
+            setIsBuffering(false);
+          }
+          break;
+        }
         case 'ready':
           embedSessionRefreshCountRef.current = 0;
           if (embedReadyTimeoutRef.current) {
@@ -534,6 +559,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           providerRef.current = embedProvider;
           bunnyReadyAtRef.current = embedProvider === 'bunny' ? Date.now() : 0;
           setProvider(embedProvider);
+          setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
           setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
           showPersistentPlayerShadows();
 
@@ -1015,6 +1041,59 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
   };
 
+  const showSeekFeedback = (direction: SeekDirection) => {
+    setSeekFeedback(direction);
+    if (seekFeedbackTimerRef.current) clearTimeout(seekFeedbackTimerRef.current);
+    seekFeedbackTimerRef.current = setTimeout(() => {
+      setSeekFeedback(null);
+      seekFeedbackTimerRef.current = null;
+    }, 650);
+  };
+
+  const seekByDoubleTap = (direction: SeekDirection) => {
+    const targetTime = resolveSeekTarget(currentTimeRef.current, durationRef.current, direction);
+    currentTimeRef.current = targetTime;
+    sendCommand('seekTo', { time: targetTime });
+    setCurrentTime(targetTime);
+    if (durationRef.current > 0) setProgress((targetTime / durationRef.current) * 100);
+    showSeekFeedback(direction);
+  };
+
+  const cancelSingleTapAction = () => {
+    if (!singleTapTimerRef.current) return;
+    clearTimeout(singleTapTimerRef.current);
+    singleTapTimerRef.current = null;
+  };
+
+  const queueSingleTapAction = () => {
+    cancelSingleTapAction();
+    singleTapTimerRef.current = setTimeout(() => {
+      lastSeekTapRef.current = null;
+      singleTapTimerRef.current = null;
+      if (usesNativeProviderControls(providerRef.current)) togglePlay();
+    }, DOUBLE_TAP_WINDOW_MS);
+  };
+
+  const handleSeekTap = (
+    direction: SeekDirection,
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.stopPropagation();
+    handlePlayerInteraction();
+
+    const currentTap = { direction, timestamp: Date.now() };
+    if (isDoubleTapSeek(lastSeekTapRef.current, currentTap)) {
+      cancelSingleTapAction();
+      lastSeekTapRef.current = null;
+      seekByDoubleTap(direction);
+      return;
+    }
+
+    lastSeekTapRef.current = currentTap;
+    queueSingleTapAction();
+  };
+
   const handleSeek = (percent: number) => {
     if (duration === 0) return;
     const targetTime = (percent / 100) * duration;
@@ -1437,19 +1516,60 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-        {status === 'ready' && usesNativePlayerChrome && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              void toggleFullscreen();
-            }}
-            className="absolute left-3 top-3 z-[var(--z-modal)] flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:left-4 sm:top-4"
-            aria-label={fullscreenActive ? 'الخروج من ملء الشاشة' : 'عرض الفيديو بملء الشاشة أفقيًا'}
-            title={fullscreenActive ? 'الخروج من ملء الشاشة' : 'ملء الشاشة أفقيًا'}
+        {status === 'ready' && (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-[22%] top-0 z-[var(--z-overlay-content)] flex touch-manipulation"
+            aria-hidden="true"
+            dir="ltr"
           >
-            {fullscreenActive ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
-          </button>
+            <div
+              className="pointer-events-auto h-full w-[38%] touch-manipulation select-none"
+              onPointerUp={(event) => handleSeekTap('backward', event)}
+              onClick={(event) => event.stopPropagation()}
+            />
+            <div className="h-full flex-1" />
+            <div
+              className="pointer-events-auto h-full w-[38%] touch-manipulation select-none"
+              onPointerUp={(event) => handleSeekTap('forward', event)}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        )}
+
+        {seekFeedback && (
+          <div
+            className={`pointer-events-none absolute top-1/2 z-[var(--z-floating)] -translate-y-1/2 rounded-full bg-black/70 px-4 py-3 text-center text-sm font-black text-white ${seekFeedback === 'forward' ? 'right-[12%]' : 'left-[12%]'}`}
+            aria-hidden="true"
+          >
+            {seekFeedback === 'forward' ? '+' : '−'}{DOUBLE_TAP_SEEK_SECONDS} ث
+          </div>
+        )}
+
+        {status === 'ready' && usesNativePlayerChrome && (
+          <>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleFullscreen();
+              }}
+              className="absolute left-3 top-3 z-[var(--z-modal)] flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:left-4 sm:top-4"
+              aria-label={fullscreenActive ? 'الخروج من ملء الشاشة' : 'عرض الفيديو بملء الشاشة أفقيًا'}
+              title={fullscreenActive ? 'الخروج من ملء الشاشة' : 'ملء الشاشة أفقيًا'}
+            >
+              {fullscreenActive ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleFullscreen();
+              }}
+              className="absolute bottom-0 right-0 z-[var(--z-modal)] size-14 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+              aria-label={fullscreenActive ? 'الخروج من ملء الشاشة' : 'عرض الفيديو بملء الشاشة أفقيًا'}
+              title={fullscreenActive ? 'الخروج من ملء الشاشة' : 'ملء الشاشة أفقيًا'}
+            />
+          </>
         )}
 
         {/* Shadow Gradient Overlay */}
@@ -1596,7 +1716,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
         
-        {(status === 'loading' || isBuffering) && (
+        {(status === 'loading' || isBuffering) && !(provider === 'bunny' && nativeProviderSurfaceLoaded) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-20 pointer-events-none rounded-xl">
             <SpinnerLoader />
           </div>
