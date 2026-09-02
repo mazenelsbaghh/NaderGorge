@@ -2,6 +2,7 @@ using MediatR;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Student;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -80,6 +81,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
         var encryptedVideoId = video.ProviderVideoId;
+        int? knownDurationSeconds = null;
         if (VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny)
         {
             if (video.BunnyStreamLibrary is null)
@@ -91,6 +93,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
             var currentBunnyAsset = video.BunnyVideoAssets
                 .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
+            knownDurationSeconds = currentBunnyAsset?.DurationSeconds;
             if (currentBunnyAsset is not null
                 && !string.Equals(currentBunnyAsset.Status, "Ready", StringComparison.OrdinalIgnoreCase))
             {
@@ -245,7 +248,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             LessonVideoId = request.LessonVideoId,
             EncryptionKey = _encryption.GenerateSessionKey(),
             CreatedAt = now,
-            ExpiresAt = now.AddMinutes(5),
+            ExpiresAt = now.Add(VideoPlaybackSessionPolicy.ResolveLifetime(knownDurationSeconds)),
             IsConsumed = false,
             HasRegisteredView = false,
             LastProgressSequence = 0,

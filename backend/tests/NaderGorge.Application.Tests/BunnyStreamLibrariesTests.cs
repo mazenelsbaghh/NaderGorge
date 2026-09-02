@@ -1770,6 +1770,28 @@ public sealed class BunnyStreamLibrariesTests
         LessonVideo Video,
         BunnyVideoAsset Asset);
 
+    [Fact]
+    public async Task ManagedBunnyVideo_SessionCoversKnownVideoDurationAndPlaybackMargin()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        seeded.Asset.DurationSeconds = 4 * 60 * 60;
+        await db.SaveChangesAsync();
+        var beforeCreation = DateTime.UtcNow;
+
+        var sessionResult = await new CreateVideoSessionCommandHandler(
+                db,
+                new AccessCheckService(db),
+                new VideoEncryptionService())
+            .Handle(
+                new CreateVideoSessionCommand(seeded.Video.Id, seeded.Admin.Id),
+                CancellationToken.None);
+
+        Assert.True(sessionResult.Success, sessionResult.Message);
+        Assert.True(sessionResult.Data!.ExpiresAt >= beforeCreation.AddHours(4.5));
+        Assert.True(sessionResult.Data.ExpiresAt <= DateTime.UtcNow.AddHours(4.5));
+    }
+
     private static async Task<ManagedBunnyVideoSeed> SeedManagedBunnyVideoAsync(AppDbContext db)
     {
         var (admin, lesson, videoType) = await SeedUploadGraphAsync(db);

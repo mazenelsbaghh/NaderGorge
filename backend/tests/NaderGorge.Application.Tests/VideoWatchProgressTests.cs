@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Student;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Tracking.Commands;
 using NaderGorge.Domain.Entities;
@@ -143,6 +144,41 @@ public class VideoWatchProgressTests
         Assert.True(session.HasRegisteredView);
         Assert.True(session.ExpiresAt > firstExpiry);
         Assert.Equal(30, heartbeat.Data!.TotalTrackedSeconds);
+    }
+
+    [Fact]
+    public async Task TrackWatchProgress_RenewsSessionForLongVideoPlaybackWindow()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        var session = await db.VideoPlaybackSessions.SingleAsync();
+        session.ExpiresAt = DateTime.UtcNow.AddMinutes(1);
+        await db.SaveChangesAsync();
+        var beforeTracking = DateTime.UtcNow;
+
+        var heartbeat = await CreateHandler(db).Handle(
+            new TrackWatchProgressCommand(
+                fixture.Video.Id,
+                fixture.UserId,
+                fixture.SessionId,
+                ProgressSequence: 1,
+                SecondsWatched: 10,
+                PlaybackRate: 1,
+                TotalDurationSeconds: 4 * 60 * 60),
+            CancellationToken.None);
+
+        Assert.True(heartbeat.Success);
+        Assert.True(session.ExpiresAt >= beforeTracking.AddHours(4.5));
+    }
+
+    [Fact]
+    public void VideoPlaybackSessionPolicy_BoundsUnknownShortAndExtremeDurations()
+    {
+        Assert.Equal(TimeSpan.FromHours(2), VideoPlaybackSessionPolicy.ResolveLifetime(null));
+        Assert.Equal(TimeSpan.FromHours(2), VideoPlaybackSessionPolicy.ResolveLifetime(0));
+        Assert.Equal(TimeSpan.FromMinutes(35), VideoPlaybackSessionPolicy.ResolveLifetime(5 * 60));
+        Assert.Equal(TimeSpan.FromHours(4.5), VideoPlaybackSessionPolicy.ResolveLifetime(4 * 60 * 60));
+        Assert.Equal(TimeSpan.FromHours(8), VideoPlaybackSessionPolicy.ResolveLifetime(int.MaxValue));
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Student;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -34,8 +35,6 @@ public record WatchProgressDto(
 
 public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgressCommand, ApiResponse<WatchProgressDto>>
 {
-    private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(5);
-
     private readonly IAppDbContext _db;
     private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
     private readonly IVideoPlaybackConcurrency? _playbackConcurrency;
@@ -138,7 +137,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             isNewWatchEvent,
             isLocked));
 
-        RenewSession(session, request.ProgressSequence, now);
+        RenewSession(session, request.ProgressSequence, request.TotalDurationSeconds, now);
         watchEvent.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
@@ -226,11 +225,15 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
     private static bool IsSupportedPlaybackRate(double playbackRate) =>
         playbackRate is 0.5 or 1 or 1.5 or 2;
 
-    private static void RenewSession(VideoPlaybackSession session, long progressSequence, DateTime now)
+    private static void RenewSession(
+        VideoPlaybackSession session,
+        long progressSequence,
+        int totalDurationSeconds,
+        DateTime now)
     {
         session.LastProgressSequence = progressSequence;
         session.LastProgressAt = now;
-        session.ExpiresAt = now.Add(SessionLifetime);
+        session.ExpiresAt = now.Add(VideoPlaybackSessionPolicy.ResolveLifetime(totalDurationSeconds));
         session.UpdatedAt = now;
     }
 
