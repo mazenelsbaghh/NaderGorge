@@ -240,6 +240,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     </div>
   </div>
 
+  <script src="/vendor/playerjs/player-0.1.0.min.js"></script>
   <script>
     // ═══════════════════════════════════════════════════════
     // Bunny Player.js → Parent PostMessage Bridge
@@ -428,7 +429,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';
     }, 120000);
   </script>
-  <script src="//assets.mediadelivery.net/playerjs/player-0.1.0.min.js"></script>
 </body>
 </html>`;
 }
