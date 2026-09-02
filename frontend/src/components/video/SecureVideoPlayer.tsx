@@ -18,7 +18,10 @@ import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import apiClient from '@/services/api-client';
 import { resolveTrackableDurationSeconds } from '@/lib/video-tracking-duration';
-import { canRetryBunnyPlayback } from '@/lib/video-playback-recovery';
+import {
+  canRetryBunnyPlayback,
+  isBunnyPlaybackStable,
+} from '@/lib/video-playback-recovery';
 
 export interface WatchStatus {
   current: number;
@@ -173,6 +176,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const bunnyRecoveryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const bunnyRecoveryAttemptsRef = useRef(0);
   const bunnyRecoveryVideoIdRef = useRef(lessonVideoId);
+  const bunnyReadyAtRef = useRef(0);
+  const bunnyRecoveryResumeTimeRef = useRef(0);
   const isIOSDeviceRef = useRef(false);
   const watchThresholdPercentageRef = useRef<number>(30);
   const youtubeShadowDelayMsRef = useRef(5000);
@@ -350,6 +355,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [duration, setDuration] = useState(0);
   const durationRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const currentTimeRef = useRef(0);
   const lastRenderedTimeUpdateAtRef = useRef(0);
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
@@ -361,6 +367,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
 
     bunnyRecoveryAttemptsRef.current += 1;
+    bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
+    bunnyReadyAtRef.current = 0;
     if (embedReadyTimeoutRef.current) {
       clearTimeout(embedReadyTimeoutRef.current);
       embedReadyTimeoutRef.current = null;
@@ -469,11 +477,24 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
           providerRef.current = embedProvider;
+          bunnyReadyAtRef.current = embedProvider === 'bunny' ? Date.now() : 0;
           setProvider(embedProvider);
           setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
           showPersistentPlayerShadows();
 
           if (embedProvider === 'bunny') {
+            const resumeTime = bunnyRecoveryResumeTimeRef.current;
+            if (resumeTime > 0) {
+              iframeRef.current?.contentWindow?.postMessage(
+                { type: 'seekTo', time: resumeTime },
+                window.location.origin,
+              );
+              iframeRef.current?.contentWindow?.postMessage(
+                { type: 'play' },
+                window.location.origin,
+              );
+              bunnyRecoveryResumeTimeRef.current = 0;
+            }
             setIsBuffering(false);
             setShowControls(false);
           } else {
@@ -527,7 +548,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             break;
           }
           if (msg.data.currentTime !== undefined) {
-            if (providerRef.current === 'bunny' && Number(msg.data.currentTime) > 0) {
+            const reportedCurrentTime = Number(msg.data.currentTime);
+            if (Number.isFinite(reportedCurrentTime)) {
+              currentTimeRef.current = Math.max(0, reportedCurrentTime);
+            }
+            if (
+              providerRef.current === 'bunny'
+              && isBunnyPlaybackStable(bunnyReadyAtRef.current, Date.now())
+            ) {
               bunnyRecoveryAttemptsRef.current = 0;
             }
             const now = Date.now();
@@ -822,6 +850,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (bunnyRecoveryVideoIdRef.current !== lessonVideoId) {
       bunnyRecoveryVideoIdRef.current = lessonVideoId;
       bunnyRecoveryAttemptsRef.current = 0;
+      bunnyRecoveryResumeTimeRef.current = 0;
+      currentTimeRef.current = 0;
+      setCurrentTime(0);
+      setProgress(0);
     }
     if (securitySuspendedRef.current) {
       setStatus('protected');
@@ -960,6 +992,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (duration === 0) return;
     const targetTime = (percent / 100) * duration;
     (window as any).__lastSeekTime = Date.now();
+    currentTimeRef.current = targetTime;
     sendCommand('seekTo', { time: targetTime });
     sendCommand('play');
     setCurrentTime(targetTime);
