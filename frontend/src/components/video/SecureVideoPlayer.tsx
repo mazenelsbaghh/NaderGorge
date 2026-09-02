@@ -17,6 +17,7 @@ import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import apiClient from '@/services/api-client';
+import { resolveTrackableDurationSeconds } from '@/lib/video-tracking-duration';
 
 export interface WatchStatus {
   current: number;
@@ -342,6 +343,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [volume, setVolume] = useState(100);
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
+  const durationRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
   const lastRenderedTimeUpdateAtRef = useRef(0);
   const onWatchProgressRef = useRef(onWatchProgress);
@@ -411,7 +413,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             });
           }
           setStatus('ready');
-          setDuration(msg.data.duration || 0);
+          {
+            const readyDuration = Number(msg.data.duration);
+            if (resolveTrackableDurationSeconds(readyDuration) !== null) {
+              durationRef.current = readyDuration;
+              setDuration(readyDuration);
+            }
+          }
           setVolume(msg.data.volume ?? 100);
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
@@ -482,9 +490,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             setIsBuffering(false);
             
             setCurrentTime(msg.data.currentTime);
-            setDuration(msg.data.duration || duration);
-            if (msg.data.duration > 0) {
-              setProgress((msg.data.currentTime / msg.data.duration) * 100);
+            const reportedDuration = Number(msg.data.duration);
+            if (resolveTrackableDurationSeconds(reportedDuration) !== null) {
+              durationRef.current = reportedDuration;
+              setDuration(reportedDuration);
+              setProgress((msg.data.currentTime / reportedDuration) * 100);
             }
             if (typeof msg.data.volume === 'number') setVolume(msg.data.volume);
             if (typeof msg.data.isMuted === 'boolean') setIsMuted(msg.data.isMuted);
@@ -565,7 +575,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const applyProgressResponse = useCallback((progressResponse: WatchProgressResponse) => {
     const newThreshold = progressResponse.thresholdSeconds || 60;
     setThresholdSeconds(newThreshold);
-    const maxCount = progressResponse.maxCount ?? watchInfo?.max ?? 0;
+    const maxCount = progressResponse.maxCount ?? 0;
     const cappedCurrent = capWatchCount(progressResponse.currentCount, maxCount);
     watchCountRef.current = cappedCurrent;
     setWatchInfo(previous => ({
@@ -580,7 +590,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setViewTracked(true);
       viewTrackedRef.current = true;
     }
-  }, [capWatchCount, watchInfo?.max]);
+  }, [capWatchCount]);
 
   useEffect(() => {
     if (duration > 0) {
@@ -595,6 +605,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     const sessionId = activeSessionIdRef.current;
     if (flushInFlight.current || !sessionId) {
+      return;
+    }
+
+    const totalDurationSeconds = resolveTrackableDurationSeconds(durationRef.current);
+    if (totalDurationSeconds === null) {
       return;
     }
 
@@ -620,7 +635,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             progressSequence: progressRequest.sequence,
             secondsWatched: progressRequest.seconds,
             playbackRate: playbackRateRef.current,
-            totalDurationSeconds: Math.round(duration || 0),
+            totalDurationSeconds,
           });
           break;
         } catch (error) {
@@ -643,14 +658,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       } else if (errors.includes('SESSION_EXPIRED') || errors.includes('SESSION_INVALID')) {
         stopSessionTracking('error', 'انتهت جلسة تشغيل الفيديو. أعد تحميل الفيديو للمتابعة.');
       } else if (errors.includes('DURATION_REQUIRED')) {
-        setStatus('error');
-        setErrorMessage('تعذر تتبع المشاهدة لأن مدة الفيديو غير متاحة.');
+        activeProgressRequestRef.current = null;
+        pendingTrackedSeconds.current += progressRequest.seconds;
       }
       devConsole.error("Failed to sync progress:", err);
     } finally {
       flushInFlight.current = false;
     }
-  }, [applyProgressResponse, duration, lessonVideoId, stopSessionTracking]);
+  }, [applyProgressResponse, lessonVideoId, stopSessionTracking]);
 
   useEffect(() => {
     if (status !== 'ready' || !trackingEnabledRef.current) return;
@@ -756,6 +771,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     loadingSessionRef.current = true;
     try {
       setStatus('loading');
+      durationRef.current = 0;
+      setDuration(0);
       
       const response = await createVideoSessionWithRetry(lessonVideoId);
       const session = response.data.data;
