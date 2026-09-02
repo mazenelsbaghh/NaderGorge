@@ -98,7 +98,39 @@ def configure_main_boundaries(
             raise deploy.DeployError(f"cleanup failed for {target.node_id}")
         rollout_state["markers"].discard(target.node_id)
 
+    def prune_artifacts(
+        _transport,
+        target,
+        current_release,
+        rollback_release,
+    ):
+        rollout_state["prune_calls"].append(
+            (target.node_id, current_release, rollback_release)
+        )
+        if (
+            target.node_id == rollout_state["fail_prune_node"]
+            and not rollout_state["prune_failure_consumed"]
+        ):
+            rollout_state["prune_failure_consumed"] = True
+            raise deploy.DeployError(f"prune failed for {target.node_id}")
+        return {
+            "status": "pruned",
+            "nodeId": target.node_id,
+            "currentReleaseId": current_release,
+            "rollbackReleaseId": rollback_release,
+        }
+
+    def preview_cleanup(_transport, target, current_release):
+        rollout_state["preview_calls"].append((target.node_id, current_release))
+        return {
+            "status": "dry-run",
+            "nodeId": target.node_id,
+            "currentReleaseId": current_release,
+            "rollbackReleaseId": current_release,
+        }
+
     migration_gate = SimpleNamespace(
+        current_release_id="prod-20260726-166-r1",
         post_migration_ids_sha256="b" * 64,
         post_migration_schema_sha256="c" * 64,
         database_system_identifier="7586552109940137719",
@@ -140,6 +172,8 @@ def configure_main_boundaries(
     monkeypatch.setattr(deploy, "traffic", write_traffic)
     monkeypatch.setattr(deploy, "deploy_node", deploy_candidate)
     monkeypatch.setattr(deploy, "clear_recovery_marker", clear_marker)
+    monkeypatch.setattr(deploy, "preview_release_artifact_cleanup", preview_cleanup)
+    monkeypatch.setattr(deploy, "prune_release_artifacts", prune_artifacts)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -159,6 +193,7 @@ def configure_main_boundaries(
 def rollout_state(
     *,
     fail_clear_node: str | None = None,
+    fail_prune_node: str | None = None,
     fail_post_drain: bool = False,
 ) -> dict[str, object]:
     return {
@@ -174,9 +209,13 @@ def rollout_state(
         "traffic_actions": [],
         "deploy_calls": [],
         "clear_calls": [],
+        "preview_calls": [],
+        "prune_calls": [],
         "quorum_calls": 0,
         "fail_clear_node": fail_clear_node,
         "clear_failure_consumed": False,
+        "fail_prune_node": fail_prune_node,
+        "prune_failure_consumed": False,
         "fail_post_drain": fail_post_drain,
     }
 
@@ -273,6 +312,29 @@ def test_success_markers_are_retained_until_all_nodes_advance() -> None:
     assert "not path.exists() and not path.is_symlink()" in marker_cleanup
 
 
+def test_success_prunes_all_nodes_after_recovery_markers_are_cleared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_rollout = rollout_state()
+    configure_main_boundaries(monkeypatch, current_rollout)
+
+    assert deploy.main() == 0
+
+    assert current_rollout["clear_calls"] == list(deploy.ROLLING_ORDER)
+    assert current_rollout["preview_calls"] == [
+        (node_id, "prod-20260726-166-r1")
+        for node_id in ("node-1", "node-2", "node-3")
+    ]
+    assert current_rollout["prune_calls"] == [
+        (
+            node_id,
+            current_rollout["candidate_release"],
+            "prod-20260726-166-r1",
+        )
+        for node_id in deploy.ROLLING_ORDER
+    ]
+
+
 @pytest.mark.parametrize("failed_cleanup_node", ["node-3", "node-2"])
 def test_cleanup_failure_retry_finishes_same_release_without_redeploying(
     monkeypatch: pytest.MonkeyPatch,
@@ -292,6 +354,25 @@ def test_cleanup_failure_retry_finishes_same_release_without_redeploying(
     assert set(current_rollout["releases"].values()) == {candidate_release}
     assert current_rollout["deploy_calls"] == ["node-3", "node-2", "node-1"]
     assert current_rollout["markers"] == set()
+
+
+def test_prune_failure_retry_finishes_same_release_without_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_rollout = rollout_state(fail_prune_node="node-2")
+    configure_main_boundaries(monkeypatch, current_rollout)
+
+    with pytest.raises(deploy.DeployError, match="prune failed"):
+        deploy.main()
+
+    candidate_release = current_rollout["candidate_release"]
+    assert set(current_rollout["releases"].values()) == {candidate_release}
+    assert current_rollout["deploy_calls"] == ["node-3", "node-2", "node-1"]
+    assert current_rollout["markers"] == set()
+
+    assert deploy.main() == 0
+    assert current_rollout["deploy_calls"] == ["node-3", "node-2", "node-1"]
+    assert set(current_rollout["releases"].values()) == {candidate_release}
 
 
 def test_interrupted_rollout_resumes_healthy_marked_node_without_redeploying(

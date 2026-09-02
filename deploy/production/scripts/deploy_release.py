@@ -40,6 +40,12 @@ class RetainedSchema(NamedTuple):
     schema_sha256: str
 
 
+class CleanupEvidenceContract(NamedTuple):
+    current_release: str
+    rollback_release: str
+    status: str
+
+
 def retained_schema_from_gate(gate: object) -> RetainedSchema:
     migration_ids = getattr(
         gate,
@@ -708,6 +714,75 @@ PY
     transport.run(target, ("bash", "-lc", script), timeout_seconds=30)
 
 
+def parse_release_cleanup_evidence(
+    stdout: str,
+    target: SshTarget,
+    contract: CleanupEvidenceContract,
+) -> dict[str, object]:
+    try:
+        evidence = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise DeployError(f"invalid release cleanup evidence from {target.node_id}") from exc
+    if (
+        not isinstance(evidence, dict)
+        or evidence.get("status") != contract.status
+        or evidence.get("nodeId") != target.node_id
+        or evidence.get("currentReleaseId") != contract.current_release
+        or evidence.get("rollbackReleaseId") != contract.rollback_release
+    ):
+        raise DeployError(f"release cleanup evidence mismatch on {target.node_id}")
+    return evidence
+
+
+def preview_release_artifact_cleanup(
+    transport: StrictSshTransport,
+    target: SshTarget,
+    current_release: str,
+) -> dict[str, object]:
+    completed = transport.run(
+        target,
+        (
+            "sudo",
+            "/usr/local/sbin/massar-install-immutable-release",
+            "prune-release-artifacts",
+            current_release,
+            current_release,
+            "--dry-run",
+        ),
+        timeout_seconds=120,
+    )
+    return parse_release_cleanup_evidence(
+        completed.stdout,
+        target,
+        CleanupEvidenceContract(current_release, current_release, "dry-run"),
+    )
+
+
+def prune_release_artifacts(
+    transport: StrictSshTransport,
+    target: SshTarget,
+    current_release: str,
+    rollback_release: str,
+) -> dict[str, object]:
+    completed = transport.run(
+        target,
+        (
+            "sudo",
+            "/usr/local/sbin/massar-install-immutable-release",
+            "prune-release-artifacts",
+            current_release,
+            rollback_release,
+            "--yes",
+        ),
+        timeout_seconds=900,
+    )
+    return parse_release_cleanup_evidence(
+        completed.stdout,
+        target,
+        CleanupEvidenceContract(current_release, rollback_release, "pruned"),
+    )
+
+
 def deploy_node(
     transport: StrictSshTransport,
     target: SshTarget,
@@ -924,6 +999,11 @@ def main() -> int:
             manifest=manifest,
             now=dt.datetime.now(dt.timezone.utc),
         )
+    previous_release = (
+        rollback_gate.current_release_id
+        if rollback_gate is not None
+        else migration_gate.current_release_id
+    )
     images = manifest.images
     if args.dry_run:
         print(json.dumps({"release": args.release, "order": ROLLING_ORDER, "status": "dry-run"}))
@@ -942,6 +1022,16 @@ def main() -> int:
             gate=rollback_gate,
         )
     by_id = {node.id: node for node in inventory.nodes}
+    for node in inventory.nodes:
+        preview_release_artifact_cleanup(
+            transport,
+            SshTarget(
+                node.id,
+                node.public_address,
+                inventory.cluster["ssh_user"],
+            ),
+            previous_release,
+        )
     operation_id = str(uuid.uuid4())
     control = inventory.nodes[0]
     lock = RolloutLock(
@@ -954,6 +1044,7 @@ def main() -> int:
         operation_id,
     )
     evidence: dict[str, str] = {}
+    cleanup_evidence: dict[str, dict[str, object]] = {}
     advanced_nodes: list[str] = []
     retained_schema = retained_schema_from_gate(
         rollback_gate if rollback_gate is not None else migration_gate
@@ -1122,6 +1213,18 @@ def main() -> int:
                 ),
                 args.release,
             )
+        for node_id in ROLLING_ORDER:
+            node = by_id[node_id]
+            cleanup_evidence[node_id] = prune_release_artifacts(
+                transport,
+                SshTarget(
+                    node.id,
+                    node.public_address,
+                    inventory.cluster["ssh_user"],
+                ),
+                args.release,
+                previous_release,
+            )
     except Exception as exc:
         rollout_error = exc
         if advanced_nodes and not rollback_attempted and not rollout_complete:
@@ -1184,7 +1287,16 @@ def main() -> int:
             rollout_error = exc
     if rollout_error is not None:
         raise rollout_error
-    print(json.dumps({"release": args.release, "order": ROLLING_ORDER, "status": "success"}))
+    print(
+        json.dumps(
+            {
+                "release": args.release,
+                "order": ROLLING_ORDER,
+                "cleanup": cleanup_evidence,
+                "status": "success",
+            }
+        )
+    )
     return 0
 
 

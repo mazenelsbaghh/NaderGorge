@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
 import sys
 import tarfile
 from pathlib import Path
@@ -61,6 +62,8 @@ def release_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     base.mkdir(parents=True)
     marker = tmp_path / "cluster-id"
     marker.write_text("massar-production\n")
+    node_marker = tmp_path / "node-id"
+    node_marker.write_text("node-1\n")
     incoming = tmp_path / "incoming"
     incoming.mkdir()
     active = base / ("src-" + "b" * 40)
@@ -71,6 +74,8 @@ def release_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     monkeypatch.setattr(installer, "INCOMING", incoming)
     monkeypatch.setattr(installer, "CURRENT", current)
     monkeypatch.setattr(installer, "CLUSTER_MARKER", marker)
+    monkeypatch.setattr(installer, "NODE_ID_MARKER", node_marker)
+    monkeypatch.setattr(installer, "BUILD_ROOT", tmp_path / "var/lib/massar/builds")
     monkeypatch.setattr(installer, "LOCK_FILE", tmp_path / "run/install.lock")
     monkeypatch.setattr(installer.os, "geteuid", lambda: 0)
     monkeypatch.setattr(installer, "operator_uid", os.getuid)
@@ -215,6 +220,144 @@ def test_remove_inactive_release_is_bounded_and_refuses_current(
     active_release = installer.CURRENT.resolve(strict=True)
     with pytest.raises(installer.ReleaseInstallError, match="active release"):
         installer.remove_inactive_release(active_release.name)
+
+
+def test_prune_keeps_current_and_rollback_and_removes_only_old_artifacts(
+    release_environment: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_release = installer.CURRENT.resolve(strict=True).name
+    rollback_release = "src-" + "c" * 40
+    old_release = RELEASE
+    legacy_release = "prod-20260726-166-r1"
+    for release_id in (rollback_release, old_release, legacy_release):
+        (installer.BASE / release_id).mkdir()
+    installer.BUILD_ROOT.mkdir(parents=True)
+    for release_id in (current_release, rollback_release, old_release):
+        (installer.BUILD_ROOT / release_id).mkdir()
+    docker_calls: list[tuple[str, ...]] = []
+
+    def docker(argv, **_kwargs):
+        docker_calls.append(tuple(argv))
+        stdout = ""
+        if argv[1:3] == ["image", "ls"]:
+            stdout = "\n".join(
+                (
+                    f"massar/backend:{current_release}",
+                    f"massar/frontend:{rollback_release}",
+                    f"massar/worker:{old_release}",
+                    "postgres:16-alpine",
+                )
+            )
+        return subprocess.CompletedProcess(argv, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(installer.subprocess, "run", docker)
+
+    evidence = installer.prune_release_artifacts(
+        current_release,
+        rollback_release,
+        confirmed=True,
+    )
+
+    assert evidence["status"] == "pruned"
+    assert set(evidence["releaseIds"]) == {old_release, legacy_release}
+    assert evidence["buildIds"] == [old_release]
+    assert evidence["imageTags"] == [f"massar/worker:{old_release}"]
+    assert (installer.BASE / current_release).is_dir()
+    assert (installer.BASE / rollback_release).is_dir()
+    assert not (installer.BASE / old_release).exists()
+    assert not (installer.BASE / legacy_release).exists()
+    assert (installer.BUILD_ROOT / current_release).is_dir()
+    assert (installer.BUILD_ROOT / rollback_release).is_dir()
+    assert not (installer.BUILD_ROOT / old_release).exists()
+    assert any(call[1:3] == ("image", "rm") for call in docker_calls)
+    assert any(call[1:3] == ("builder", "prune") for call in docker_calls)
+
+
+def test_prune_dry_run_reports_without_deleting(
+    release_environment: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_release = installer.CURRENT.resolve(strict=True).name
+    rollback_release = "src-" + "c" * 40
+    old_release = RELEASE
+    for release_id in (rollback_release, old_release):
+        (installer.BASE / release_id).mkdir()
+    docker_calls: list[tuple[str, ...]] = []
+
+    def docker(argv, **_kwargs):
+        docker_calls.append(tuple(argv))
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout=f"massar/backend:{old_release}\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(installer.subprocess, "run", docker)
+
+    evidence = installer.prune_release_artifacts(
+        current_release,
+        rollback_release,
+        confirmed=False,
+    )
+
+    assert evidence["status"] == "dry-run"
+    assert (installer.BASE / old_release).is_dir()
+    assert len(docker_calls) == 1
+    assert docker_calls[0][1:3] == ("image", "ls")
+
+
+def test_prune_refuses_pointer_mismatch_before_deleting(
+    release_environment: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_release = "src-" + "c" * 40
+    rollback_release = installer.CURRENT.resolve(strict=True).name
+    (installer.BASE / current_release).mkdir()
+    (installer.BASE / RELEASE).mkdir()
+    monkeypatch.setattr(
+        installer.subprocess,
+        "run",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, 0, stdout="", stderr=""
+        ),
+    )
+
+    with pytest.raises(installer.ReleaseInstallError, match="pointer"):
+        installer.prune_release_artifacts(
+            current_release,
+            rollback_release,
+            confirmed=True,
+        )
+
+    assert (installer.BASE / RELEASE).is_dir()
+
+
+def test_prune_refuses_unsafe_recognized_release_before_deleting(
+    release_environment: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current_release = installer.CURRENT.resolve(strict=True).name
+    rollback_release = "src-" + "c" * 40
+    (installer.BASE / rollback_release).mkdir()
+    (installer.BASE / RELEASE).symlink_to(installer.BASE / current_release)
+    monkeypatch.setattr(
+        installer.subprocess,
+        "run",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, 0, stdout="", stderr=""
+        ),
+    )
+
+    with pytest.raises(installer.ReleaseInstallError, match="not a real directory"):
+        installer.prune_release_artifacts(
+            current_release,
+            rollback_release,
+            confirmed=True,
+        )
+
+    assert (installer.BASE / rollback_release).is_dir()
 
 
 def test_release_workflow_uses_narrow_helper_without_broad_root_file_commands() -> None:

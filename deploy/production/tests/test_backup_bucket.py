@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -135,3 +137,42 @@ def test_schedule_activation_is_guarded_and_primary_owned() -> None:
     assert "massar-db-restore-scheduled.service" in source
     assert '"--property=Unit"' in source
     assert '"restart"' in source
+
+
+def test_release_tool_sync_dry_run_is_read_only_and_reports_all_nodes(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    nodes = tuple(
+        SimpleNamespace(id=f"node-{index}", public_address=f"192.0.2.{index}")
+        for index in (1, 2, 3)
+    )
+    inventory = SimpleNamespace(nodes=nodes, cluster={"ssh_user": "massar-ops"})
+
+    class Transport:
+        def __init__(self) -> None:
+            self.copies: list[tuple[object, ...]] = []
+
+        def run(self, _target, argv, **_kwargs):
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                stdout="",
+                stderr="missing",
+            )
+
+        def copy(self, *args, **_kwargs) -> None:
+            self.copies.append(args)
+
+    transport = Transport()
+    bucket.sync_release_tools(
+        transport,
+        inventory,
+        nodes,
+        confirmed=False,
+    )
+
+    evidence = json.loads(capsys.readouterr().out)
+    assert evidence["status"] == "dry-run"
+    assert set(evidence["nodes"]) == {"node-1", "node-2", "node-3"}
+    assert all(node["action"] == "update" for node in evidence["nodes"].values())
+    assert transport.copies == []

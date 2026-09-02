@@ -12,6 +12,7 @@ import pwd
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 from pathlib import Path, PurePosixPath
@@ -22,8 +23,16 @@ INCOMING = Path("/tmp")
 CURRENT = Path("/opt/massar/current")
 CLUSTER_MARKER = Path("/etc/massar/cluster-id")
 LOCK_FILE = Path("/run/massar-install-immutable-release.lock")
+BUILD_ROOT = Path("/var/lib/massar/builds")
+NODE_ID_MARKER = Path("/etc/massar/node-id")
 OPERATOR = "massar-ops"
 RELEASE_RE = re.compile(r"^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40})$")
+RELEASE_ARTIFACT_RE = re.compile(
+    r"^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40}|prod-[0-9]{8}-[a-z0-9-]+)$"
+)
+MASSAR_IMAGE_RE = re.compile(
+    r"^massar/(?:backend|frontend|worker|migrator):(?P<release>.+)$"
+)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 MAXIMUM_MANIFEST_BYTES = 4 * 1024 * 1024
 MAXIMUM_BUNDLE_BYTES = 64 * 1024 * 1024
@@ -374,6 +383,135 @@ def remove_inactive_release(release_id: str) -> dict[str, object]:
     return {"schemaVersion": 1, "status": "removed", "releaseId": release_id}
 
 
+def validate_real_directory(path: Path, label: str) -> None:
+    info = os.lstat(path)
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+        raise ReleaseInstallError(f"{label} is not a real directory")
+    if info.st_uid not in (0, operator_uid()) or info.st_mode & 0o022:
+        raise ReleaseInstallError(f"{label} ownership or mode is unsafe")
+
+
+def release_directories(root: Path) -> dict[str, Path]:
+    if not os.path.lexists(root):
+        return {}
+    validate_real_directory(root, "release artifact root")
+    candidates: dict[str, Path] = {}
+    for path in root.iterdir():
+        if not RELEASE_ARTIFACT_RE.fullmatch(path.name):
+            continue
+        validate_real_directory(path, f"release artifact {path.name}")
+        candidates[path.name] = path
+    return candidates
+
+
+def massar_image_tags() -> tuple[str, ...]:
+    completed = subprocess.run(
+        [
+            "/usr/bin/docker",
+            "image",
+            "ls",
+            "--format",
+            "{{.Repository}}:{{.Tag}}",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    tags: list[str] = []
+    for line in completed.stdout.splitlines():
+        tag = line.strip()
+        match = MASSAR_IMAGE_RE.fullmatch(tag)
+        if match and RELEASE_ARTIFACT_RE.fullmatch(match.group("release")):
+            tags.append(tag)
+    return tuple(sorted(set(tags)))
+
+
+def prune_release_artifacts(
+    current_release: str,
+    previous_release: str,
+    *,
+    confirmed: bool,
+) -> dict[str, object]:
+    if os.geteuid() != 0:
+        raise ReleaseInstallError("helper must run as root")
+    if not all(
+        RELEASE_ARTIFACT_RE.fullmatch(release_id)
+        for release_id in (current_release, previous_release)
+    ):
+        raise ReleaseInstallError("retained release identity is invalid")
+    if CLUSTER_MARKER.read_text(encoding="ascii").strip() != "massar-production":
+        raise ReleaseInstallError("cluster marker does not identify Massar Production")
+    node_id = NODE_ID_MARKER.read_text(encoding="ascii").strip()
+    if node_id not in {"node-1", "node-2", "node-3"}:
+        raise ReleaseInstallError("node marker does not identify a production node")
+    validate_real_directory(BASE.parent.parent, "fixed release parent")
+    validate_real_directory(BASE.parent, "fixed release parent")
+    release_roots = release_directories(BASE)
+    current_root = BASE / current_release
+    current_info = os.lstat(CURRENT)
+    if (
+        not stat.S_ISLNK(current_info.st_mode)
+        or CURRENT.resolve(strict=True) != current_root
+        or current_release not in release_roots
+    ):
+        raise ReleaseInstallError("current release pointer does not match retained release")
+    if previous_release not in release_roots:
+        raise ReleaseInstallError("rollback release root is missing")
+
+    protected = {current_release, previous_release}
+    removable_releases = tuple(sorted(set(release_roots) - protected))
+    build_roots = release_directories(BUILD_ROOT)
+    removable_builds = tuple(sorted(set(build_roots) - protected))
+    image_tags = massar_image_tags()
+    removable_images = tuple(
+        tag
+        for tag in image_tags
+        if MASSAR_IMAGE_RE.fullmatch(tag).group("release") not in protected
+    )
+    before_available = shutil.disk_usage(BASE).free
+
+    if confirmed:
+        with lock():
+            if CURRENT.resolve(strict=True) != current_root:
+                raise ReleaseInstallError("current release pointer changed during cleanup")
+            for release_id in removable_releases:
+                shutil.rmtree(release_roots[release_id])
+            for release_id in removable_builds:
+                shutil.rmtree(build_roots[release_id])
+            if removable_images:
+                subprocess.run(
+                    ["/usr/bin/docker", "image", "rm", *removable_images],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            subprocess.run(
+                ["/usr/bin/docker", "image", "prune", "--force"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                ["/usr/bin/docker", "builder", "prune", "--force"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+    after_available = shutil.disk_usage(BASE).free
+    return {
+        "schemaVersion": 1,
+        "status": "pruned" if confirmed else "dry-run",
+        "nodeId": node_id,
+        "currentReleaseId": current_release,
+        "rollbackReleaseId": previous_release,
+        "releaseIds": list(removable_releases),
+        "buildIds": list(removable_builds),
+        "imageTags": list(removable_images),
+        "reclaimedBytes": max(0, after_available - before_available),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -386,6 +524,12 @@ def main(argv: list[str] | None = None) -> int:
     publish.add_argument("manifest_sha256")
     remove = commands.add_parser("remove-inactive-release")
     remove.add_argument("release")
+    prune = commands.add_parser("prune-release-artifacts")
+    prune.add_argument("current_release")
+    prune.add_argument("previous_release")
+    prune_mode = prune.add_mutually_exclusive_group(required=True)
+    prune_mode.add_argument("--dry-run", action="store_true")
+    prune_mode.add_argument("--yes", action="store_true")
     args = parser.parse_args(argv)
     try:
         if args.command == "install-release":
@@ -394,11 +538,23 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "publish-final-manifest":
             result = publish_final_manifest(args.release, args.manifest_sha256)
-        else:
+        elif args.command == "remove-inactive-release":
             result = remove_inactive_release(args.release)
+        else:
+            result = prune_release_artifacts(
+                args.current_release,
+                args.previous_release,
+                confirmed=args.yes,
+            )
         print(json.dumps(result, separators=(",", ":")))
         return 0
-    except (ReleaseInstallError, OSError, ValueError, tarfile.TarError) as exc:
+    except (
+        ReleaseInstallError,
+        OSError,
+        ValueError,
+        tarfile.TarError,
+        subprocess.SubprocessError,
+    ) as exc:
         print(f"immutable release installation blocked: {exc}", file=sys.stderr)
         return 7
 
