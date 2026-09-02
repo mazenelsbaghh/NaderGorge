@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
+const securePlayerPath = new URL('../components/video/SecureVideoPlayer.tsx', import.meta.url);
 const playerBridgePath = new URL('../../public/vendor/playerjs/player-0.1.0.min.js', import.meta.url);
 
 test('Bunny playback loads its Player.js bridge locally before bridge initialization', async () => {
@@ -32,4 +33,16 @@ test('2026-09-02 Bunny playback waits for a student gesture in Google in-app bro
   assert.ok(readyHandlerStart >= 0);
   assert.ok(playHandlerStart > readyHandlerStart);
   assert.doesNotMatch(routeSource.slice(readyHandlerStart, playHandlerStart), /player\.play\(\)/);
+});
+
+test('2026-09-02 Bunny retries reuse the active session instead of superseding it', async () => {
+  const playerSource = await readFile(securePlayerPath, 'utf8');
+  const recoveryStart = playerSource.indexOf('const scheduleBunnyPlaybackRecovery');
+  const recoveryEnd = playerSource.indexOf('const loadActiveEmbed', recoveryStart);
+  const recoverySource = playerSource.slice(recoveryStart, recoveryEnd);
+
+  assert.ok(recoveryStart >= 0);
+  assert.ok(recoveryEnd > recoveryStart);
+  assert.match(recoverySource, /reloadActiveEmbedRef\.current\?\.\(\)/);
+  assert.doesNotMatch(recoverySource, /reloadSessionRef\.current/);
 });

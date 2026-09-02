@@ -7,6 +7,7 @@ import {
   canRetryBunnyPlayback,
   isBunnyPlaybackError,
   isBunnyPlaybackStable,
+  isCurrentVideoSession,
 } from './video-playback-recovery.ts';
 
 test('2026-09-02 transient Bunny playback failure retries twice and then stops', () => {
@@ -37,4 +38,10 @@ test('2026-09-02 Bunny recovery budget resets only after stable playback', () =>
     true,
   );
   assert.equal(isBunnyPlaybackStable(0, Number.MAX_SAFE_INTEGER), false);
+});
+
+test('2026-09-02 a late progress response cannot replace the active playback session', () => {
+  assert.equal(isCurrentVideoSession('current-session', 'current-session'), true);
+  assert.equal(isCurrentVideoSession('old-session', 'current-session'), false);
+  assert.equal(isCurrentVideoSession('old-session', null), false);
 });

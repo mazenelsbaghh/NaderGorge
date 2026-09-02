@@ -13,3 +13,7 @@ export function isBunnyPlaybackError(provider: unknown): boolean {
 export function isBunnyPlaybackStable(readyAtMs: number, nowMs: number): boolean {
   return readyAtMs > 0 && nowMs - readyAtMs >= BUNNY_PLAYBACK_STABILITY_WINDOW_MS;
 }
+
+export function isCurrentVideoSession(responseSessionId: string, activeSessionId: string | null): boolean {
+  return responseSessionId === activeSessionId;
+}

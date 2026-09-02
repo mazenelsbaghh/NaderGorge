@@ -22,6 +22,7 @@ import {
   canRetryBunnyPlayback,
   isBunnyPlaybackError,
   isBunnyPlaybackStable,
+  isCurrentVideoSession,
 } from '@/lib/video-playback-recovery';
 import { usesNativeProviderControls } from '@/lib/video-player-provider';
 import {
@@ -96,6 +97,19 @@ async function createVideoSessionWithRetry(lessonVideoId: string) {
   }
 
   throw lastFailure;
+}
+
+function createVideoEmbedIframe(sessionId: string): HTMLIFrameElement {
+  const iframe = document.createElement('iframe');
+  iframe.src = `/api/video/embed?s=${encodeURIComponent(sessionId)}`;
+  Object.assign(iframe.style, {
+    position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', border: 'none',
+  });
+  iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.setAttribute('playsinline', '');
+  iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+  return iframe;
 }
 
 const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, SecureVideoPlayerProps>(({ 
@@ -199,6 +213,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const securitySuspendedRef = useRef(false);
   const domShieldsCleanupRef = useRef<(() => void) | null>(null);
   const reloadSessionRef = useRef<(() => void) | null>(null);
+  const reloadActiveEmbedRef = useRef<(() => void) | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
   const embedSessionRefreshCountRef = useRef(0);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
@@ -369,6 +385,22 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
 
+  const mountVideoEmbed = useCallback((sessionId: string) => {
+    const playerContainer = containerRef.current;
+    if (!playerContainer) return;
+
+    domShieldsCleanupRef.current?.();
+    playerContainer.replaceChildren();
+
+    const iframe = createVideoEmbedIframe(sessionId);
+    iframeRef.current = iframe;
+    playerContainer.appendChild(iframe);
+    domShieldsCleanupRef.current = applyDomShields(playerContainer, () => {
+      setStatus('error');
+      setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
+    });
+  }, []);
+
   const scheduleBunnyPlaybackRecovery = useCallback(() => {
     if (bunnyRecoveryTimerRef.current) return true;
     if (!canRetryBunnyPlayback(providerRef.current, bunnyRecoveryAttemptsRef.current)) {
@@ -401,10 +433,22 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     const retryDelayMs = bunnyRecoveryAttemptsRef.current * 750;
     bunnyRecoveryTimerRef.current = setTimeout(() => {
       bunnyRecoveryTimerRef.current = null;
-      reloadSessionRef.current?.();
+      reloadActiveEmbedRef.current?.();
     }, retryDelayMs);
     return true;
   }, []);
+
+  const loadActiveEmbed = useCallback((sessionId: string) => {
+    if (embedReadyTimeoutRef.current) clearTimeout(embedReadyTimeoutRef.current);
+    embedReadyTimeoutRef.current = setTimeout(() => {
+      embedReadyTimeoutRef.current = null;
+      if (securitySuspendedRef.current) return;
+      if (scheduleBunnyPlaybackRecovery()) return;
+      setStatus('error');
+      setErrorMessage('تعذر تحميل مشغل الفيديو بعد عدة محاولات. تحقق من الاتصال ثم اضغط «حاول مرة أخرى».');
+    }, 30000);
+    mountVideoEmbed(sessionId);
+  }, [mountVideoEmbed, scheduleBunnyPlaybackRecovery]);
 
   useEffect(() => () => {
     if (embedReadyTimeoutRef.current) clearTimeout(embedReadyTimeoutRef.current);
@@ -470,7 +514,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             const sessionId = activeSessionIdRef.current;
             consumedSessionIdRef.current = sessionId;
             void videoSessionService.consumeSession(sessionId).catch((err) => {
-              consumedSessionIdRef.current = null;
+              if (isCurrentVideoSession(sessionId, activeSessionIdRef.current)) {
+                consumedSessionIdRef.current = null;
+              }
               devConsole.error('Failed to consume video session after player ready:', err);
             });
           }
@@ -643,7 +689,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const pendingTrackedSeconds = useRef(0);
   const playbackRateRef = useRef(1);
   const flushInFlight = useRef(false);
-  const activeSessionIdRef = useRef<string | null>(null);
   const trackingEnabledRef = useRef(true);
   const consumedSessionIdRef = useRef<string | null>(null);
   const nextProgressSequenceRef = useRef(1);
@@ -740,10 +785,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         }
       }
       if (!res) return;
+      if (!isCurrentVideoSession(sessionId, activeSessionIdRef.current)) return;
       activeProgressRequestRef.current = null;
       nextProgressSequenceRef.current += 1;
       applyProgressResponse(res.data.data);
     } catch (err) {
+      if (!isCurrentVideoSession(sessionId, activeSessionIdRef.current)) return;
       const apiError = err as { response?: { data?: { errors?: string[] } } };
       const errors = apiError.response?.data?.errors ?? [];
       if (errors.includes('SESSION_SUPERSEDED')) {
@@ -874,7 +921,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setStatus('loading');
       durationRef.current = 0;
       setDuration(0);
-      
+
+      activeSessionIdRef.current = null;
       const response = await createVideoSessionWithRetry(lessonVideoId);
       const session = response.data.data;
       trackingEnabledRef.current = !session.isPreview;
@@ -909,49 +957,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         return;
       }
 
-      if (embedReadyTimeoutRef.current) {
-        clearTimeout(embedReadyTimeoutRef.current);
-      }
-      embedReadyTimeoutRef.current = setTimeout(() => {
-        embedReadyTimeoutRef.current = null;
-        if (securitySuspendedRef.current) return;
-        if (scheduleBunnyPlaybackRecovery()) return;
-        setStatus('error');
-        setErrorMessage('تعذر تحميل مشغل الفيديو بعد عدة محاولات. تحقق من الاتصال ثم اضغط «حاول مرة أخرى».');
-      }, 30000);
-
-      // 2. Render appropriately based on provider
       const providerName = session.provider?.toLowerCase() || 'youtube';
       providerRef.current = providerName;
       setProvider(providerName);
-      const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
-
-      if (containerRef.current) {
-        domShieldsCleanupRef.current?.();
-        domShieldsCleanupRef.current = null;
-        containerRef.current.innerHTML = '';
-        
-        const iframe = document.createElement('iframe');
-        iframe.src = embedUrl;
-        iframe.style.position = 'absolute';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.border = 'none';
-        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
-        iframe.setAttribute('allowfullscreen', '');
-        iframe.setAttribute('playsinline', '');
-        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-        
-        iframeRef.current = iframe;
-        containerRef.current.appendChild(iframe);
-
-        domShieldsCleanupRef.current = applyDomShields(containerRef.current, () => {
-           setStatus('error');
-           setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
-        });
-      }
+      loadActiveEmbed(session.sessionId);
 
     } catch (err: any) {
       const errors = err.response?.data?.errors || [];
@@ -982,6 +991,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   };
 
   reloadSessionRef.current = () => { void loadVideo(); };
+  reloadActiveEmbedRef.current = () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) {
+      reloadSessionRef.current?.();
+      return;
+    }
+    setStatus('loading');
+    loadActiveEmbed(sessionId);
+  };
 
   useEffect(() => {
     if (status === 'idle' && !isExamLocked) void loadVideo();
