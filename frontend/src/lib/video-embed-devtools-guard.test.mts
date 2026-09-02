@@ -9,6 +9,7 @@ interface GuardExecution {
   locations: string[];
   messages: unknown[];
   poll: (() => void) | null;
+  resize: (() => void) | null;
   setViewport: (widthDifference: number, heightDifference?: number) => void;
 }
 
@@ -26,12 +27,16 @@ function runGuard(
   const locations: string[] = [];
   const messages: unknown[] = [];
   let poll: (() => void) | null = null;
+  let resize: (() => void) | null = null;
   const windowLike = {
     outerWidth: 1600,
     innerWidth: 1600 - widthDifference,
     outerHeight: 1000,
     innerHeight: 1000 - heightDifference,
-    addEventListener: () => undefined,
+    addEventListener: (eventName: string, callback: () => void) => {
+      if (eventName === 'resize') resize = callback;
+    },
+    matchMedia: () => ({ matches: false }),
     setInterval: (callback: () => void) => {
       poll = callback;
       return 1;
@@ -49,6 +54,7 @@ function runGuard(
     document: {
       fullscreenElement: fullscreen ? {} : null,
       webkitFullscreenElement: null,
+      visibilityState: 'visible',
     },
   };
   Object.assign(windowLike, { top: windowLike });
@@ -71,6 +77,7 @@ function runGuard(
     locations,
     messages,
     poll,
+    resize,
     setViewport: (nextWidthDifference, nextHeightDifference = 0) => {
       windowLike.innerWidth = windowLike.outerWidth - nextWidthDifference;
       windowLike.innerHeight = windowLike.outerHeight - nextHeightDifference;
@@ -78,8 +85,10 @@ function runGuard(
   };
 }
 
-test('inspection guard suspends and unloads the embed document when the viewport indicates DevTools', () => {
+test('inspection guard suspends only after a stable desktop DevTools-sized viewport difference', () => {
   const result = runGuard(320);
+
+  for (let sample = 1; sample < 8; sample += 1) result.poll?.();
 
   assert.equal(result.hookCalls, 1);
   assert.deepEqual(result.locations, ['about:blank']);
@@ -117,6 +126,28 @@ test('inspection guard ignores Android landscape viewport changes', () => {
   assert.deepEqual(result.messages, []);
 });
 
+test('2026-09-02 inspection guard ignores Google app custom tabs', () => {
+  const result = runGuard(420, 260, {
+    userAgent: 'Mozilla/5.0 (iPad; CPU OS 16_7_12 like Mac OS X) AppleWebKit/605.1.15 GSA/436.4 Mobile/15E148 Safari/604.1',
+    platform: 'iPad',
+    maxTouchPoints: 5,
+  });
+
+  for (let sample = 0; sample < 12; sample += 1) result.poll?.();
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+});
+
+test('inspection guard ignores narrow desktop side panels', () => {
+  const result = runGuard(700);
+  result.setViewport(700);
+  for (let sample = 0; sample < 12; sample += 1) result.poll?.();
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+});
+
 test('inspection guard ignores dimension changes while the player is fullscreen', () => {
   const result = runGuard(320, 200, {
     userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
@@ -130,11 +161,13 @@ test('inspection guard ignores dimension changes while the player is fullscreen'
 test('inspection guard catches a bottom-docked panel at the threshold', () => {
   const result = runGuard(0, 160);
 
+  for (let sample = 1; sample < 8; sample += 1) result.poll?.();
+
   assert.equal(result.hookCalls, 1);
   assert.deepEqual(result.locations, ['about:blank']);
 });
 
-test('inspection guard continues monitoring a normal viewport and suspends only once', () => {
+test('inspection guard resets suspicious samples when the viewport legitimately resizes', () => {
   const result = runGuard(0, 0);
 
   assert.equal(result.hookCalls, 0);
@@ -142,7 +175,12 @@ test('inspection guard continues monitoring a normal viewport and suspends only 
   assert.ok(result.poll);
 
   result.setViewport(320);
-  result.poll?.();
+  for (let sample = 0; sample < 6; sample += 1) result.poll?.();
+  result.resize?.();
+  for (let sample = 0; sample < 7; sample += 1) result.poll?.();
+
+  assert.equal(result.hookCalls, 0);
+
   result.poll?.();
 
   assert.equal(result.hookCalls, 1);

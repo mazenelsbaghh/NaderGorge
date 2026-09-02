@@ -34,7 +34,7 @@
     "check:accessibility:browser": "node scripts/check-accessibility.mjs --browser",
     "check:accessible-colors": "node --no-warnings --experimental-strip-types src/lib/accessible-color.test.mts",
     "check:ui-review-fixes": "node scripts/check-ui-review-fixes.mjs",
-    "check:video-page-protection": "node --no-warnings --experimental-strip-types --test src/utils/video-page-guard.test.mts src/lib/bunny-player-asset.test.mts src/lib/video-embed-request-guard.test.mts src/lib/video-embed-devtools-guard.test.mts src/lib/video-tracking-duration.test.mts src/lib/video-playback-recovery.test.mts src/lib/video-player-provider.test.mts src/lib/watch-duration.test.mts"
+    "check:video-page-protection": "node --no-warnings --experimental-strip-types --test src/utils/video-page-guard.test.mts src/lib/bunny-player-asset.test.mts src/lib/video-embed-request-guard.test.mts src/lib/video-embed-devtools-guard.test.mts src/lib/video-fullscreen.test.mts src/lib/video-tracking-duration.test.mts src/lib/video-playback-recovery.test.mts src/lib/video-player-provider.test.mts src/lib/watch-duration.test.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

@@ -549,6 +549,32 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
   border-radius: 0 !important;
 }
 
+/* Google/Facebook in-app browsers may reject both the Fullscreen and
+   Screen Orientation APIs. Rotate only while the viewport remains portrait;
+   a real device rotation must not rotate the player a second time. */
+@media (orientation: portrait) {
+  .secure-video-pseudo-fullscreen.secure-video-force-landscape {
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100dvh !important;
+    height: 100dvw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+    transform-origin: center;
+  }
+
+  .secure-video-fullscreen-surface.secure-video-force-landscape:fullscreen,
+  .secure-video-fullscreen-surface.secure-video-force-landscape:-webkit-full-screen {
+    width: 100dvh !important;
+    height: 100dvw !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+    transform-origin: center;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

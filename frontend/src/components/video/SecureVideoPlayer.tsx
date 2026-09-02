@@ -4,7 +4,7 @@ import { devConsole } from '@/utils/dev-console';
 import Image from 'next/image';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
-import { AlertCircle, Play, Info, X, Map } from 'lucide-react';
+import { AlertCircle, Play, Info, X, Map, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerLoader } from '@/components/ui/loading-indicator';
 import dynamic from 'next/dynamic';
@@ -24,6 +24,13 @@ import {
   isBunnyPlaybackStable,
 } from '@/lib/video-playback-recovery';
 import { usesNativeProviderControls } from '@/lib/video-player-provider';
+import {
+  exitVideoFullscreen,
+  getFullscreenElement,
+  lockVideoToLandscape,
+  requestVideoFullscreen,
+  unlockVideoOrientation,
+} from '@/lib/video-fullscreen';
 
 export interface WatchStatus {
   current: number;
@@ -1023,46 +1030,76 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   };
 
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
+  const [rotateLandscapeFallback, setRotateLandscapeFallback] = useState(false);
+
+  const resetFullscreenState = useCallback(() => {
+    setIsPseudoFullscreen(false);
+    setIsNativeFullscreen(false);
+    setRotateLandscapeFallback(false);
+    unlockVideoOrientation(window.screen);
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(getFullscreenElement(document));
+      setIsNativeFullscreen(active);
+      if (!active && !isPseudoFullscreen) {
+        setRotateLandscapeFallback(false);
+        unlockVideoOrientation(window.screen);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isPseudoFullscreen) resetFullscreenState();
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+      unlockVideoOrientation(window.screen);
+    };
+  }, [isPseudoFullscreen, resetFullscreenState]);
+
+  const enterFullscreen = useCallback(async (element: HTMLElement) => {
+    const enteredNativeFullscreen = await requestVideoFullscreen(element);
+    if (!enteredNativeFullscreen) setIsPseudoFullscreen(true);
+
+    const landscapeLocked = enteredNativeFullscreen
+      ? await lockVideoToLandscape(window.screen)
+      : false;
+    const viewportIsPortrait = window.matchMedia('(orientation: portrait)').matches;
+    setRotateLandscapeFallback(viewportIsPortrait && !landscapeLocked);
+  }, []);
 
   const toggleFullscreen = async () => {
     const el = containerRef.current?.parentElement;
     if (!el) return;
 
-    const webkitDocument = document as Document & {
-      webkitFullscreenElement?: Element;
-      webkitExitFullscreen?: () => Promise<void> | void;
-    };
-    const webkitElement = el as HTMLElement & {
-      webkitRequestFullscreen?: () => Promise<void> | void;
-    };
-    const useNativeIPhonePlayer = /iPhone|iPod/i.test(navigator.userAgent)
-      && (provider === 'youtube' || provider === 'bunny');
+    if (isPseudoFullscreen) {
+      resetFullscreenState();
+      return;
+    }
 
-    if (!document.fullscreenElement && !webkitDocument.webkitFullscreenElement) {
+    if (!getFullscreenElement(document)) {
+      const useNativeIPhonePlayer = /iPhone|iPod/i.test(navigator.userAgent)
+        && provider === 'youtube';
       if (useNativeIPhonePlayer) {
         sendCommand('play');
         return;
       }
-      try {
-        if (el.requestFullscreen) {
-          await el.requestFullscreen();
-        } else if (webkitElement.webkitRequestFullscreen) {
-          await webkitElement.webkitRequestFullscreen();
-        } else {
-          setIsPseudoFullscreen(true);
-        }
-      } catch {
-        setIsPseudoFullscreen(true);
-      }
+
+      await enterFullscreen(el);
     } else {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (webkitDocument.webkitExitFullscreen) {
-        await webkitDocument.webkitExitFullscreen();
-      }
-      setIsPseudoFullscreen(false);
+      const exitedFullscreen = await exitVideoFullscreen(document);
+      if (exitedFullscreen) resetFullscreenState();
     }
   };
+
+  const fullscreenActive = isPseudoFullscreen || isNativeFullscreen;
 
   const handlePlaybackRateChange = (rate: number) => {
     playbackRateRef.current = rate;
@@ -1360,11 +1397,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }
 
   return (
-    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[var(--z-modal)] !rounded-none' : ''}`}>
+    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[var(--z-modal)] !rounded-none' : ''} ${rotateLandscapeFallback ? 'secure-video-force-landscape' : ''}`}>
       
       {/* Video Container */}
       <div 
-        className="secure-video-fullscreen-surface relative min-h-[200px] w-full aspect-video cursor-pointer overflow-hidden rounded-xl bg-black sm:min-h-0"
+        className={`secure-video-fullscreen-surface relative min-h-[200px] w-full aspect-video cursor-pointer overflow-hidden rounded-xl bg-black sm:min-h-0 ${rotateLandscapeFallback ? 'secure-video-force-landscape' : ''}`}
         role="region"
         aria-label="مشغل الفيديو"
         tabIndex={0}
@@ -1381,6 +1418,21 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+
+        {status === 'ready' && usesNativePlayerChrome && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void toggleFullscreen();
+            }}
+            className="absolute left-3 top-3 z-[var(--z-modal)] flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:left-4 sm:top-4"
+            aria-label={fullscreenActive ? 'الخروج من ملء الشاشة' : 'عرض الفيديو بملء الشاشة أفقيًا'}
+            title={fullscreenActive ? 'الخروج من ملء الشاشة' : 'ملء الشاشة أفقيًا'}
+          >
+            {fullscreenActive ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+          </button>
+        )}
 
         {/* Shadow Gradient Overlay */}
         <AnimatePresence>

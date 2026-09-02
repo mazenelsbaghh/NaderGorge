@@ -199,8 +199,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   const reference = resolveBunnyVideoReference(videoId);
   if (typeof reference === 'string') return embedErrorHtml(reference);
 
-  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=true`);
-  const safeIosSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=false&playsinline=false&disableIosPlayer=false`);
+  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=false&playsinline=true&disableIosPlayer=false`);
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -285,8 +284,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     ${devToolsGuard}
 
     if (!__videoEmbedSuspended && iframe) {
-      var isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
-      iframe.src = isIPhone ? ${safeIosSrc} : ${safeSrc};
+      iframe.src = ${safeSrc};
     }
 
     function initPlayer() {
@@ -325,8 +323,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
             });
           });
         });
-
-        player.play();
 
         // Start periodic time updates
         if (progressInterval) clearInterval(progressInterval);

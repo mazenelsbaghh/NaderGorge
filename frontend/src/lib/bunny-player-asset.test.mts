@@ -21,3 +21,15 @@ test('Bunny playback loads its Player.js bridge locally before bridge initializa
   assert.match(playerBridgeSource, /playerjs/);
   assert.doesNotMatch(playerBridgeSource, /=>/);
 });
+
+test('2026-09-02 Bunny playback waits for a student gesture in Google in-app browsers', async () => {
+  const routeSource = await readFile(routePath, 'utf8');
+  const readyHandlerStart = routeSource.indexOf("player.on('ready'");
+  const playHandlerStart = routeSource.indexOf("player.on('play'", readyHandlerStart);
+
+  assert.match(routeSource, /autoplay=false&playsinline=true&disableIosPlayer=false/);
+  assert.doesNotMatch(routeSource, /autoplay=true/);
+  assert.ok(readyHandlerStart >= 0);
+  assert.ok(playHandlerStart > readyHandlerStart);
+  assert.doesNotMatch(routeSource.slice(readyHandlerStart, playHandlerStart), /player\.play\(\)/);
+});

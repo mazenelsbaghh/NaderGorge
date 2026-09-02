@@ -1,5 +1,7 @@
 const DEVTOOLS_DIMENSION_THRESHOLD_PX = 160;
 const DEVTOOLS_POLL_INTERVAL_MS = 250;
+const DEVTOOLS_REQUIRED_SUSPICIOUS_SAMPLES = 8;
+const DEVTOOLS_MIN_DESKTOP_VIEWPORT_WIDTH_PX = 1024;
 
 /**
  * Builds a best-effort inspection guard for the isolated embed document.
@@ -12,6 +14,7 @@ const DEVTOOLS_POLL_INTERVAL_MS = 250;
 export function createDevToolsSuspensionScript(suspendFunctionName: string): string {
   return `
 var __videoEmbedSuspended = false;
+var __videoEmbedSuspiciousSamples = 0;
 function __isVideoEmbedInspectionLikely() {
   var topWindow;
   try {
@@ -21,14 +24,17 @@ function __isVideoEmbedInspectionLikely() {
     var reportsMobileViewport = typeof navigator !== 'undefined'
       && Boolean(navigator.userAgentData && navigator.userAgentData.mobile);
     var usesMobileViewport = reportsMobileViewport
-      || /Android|Mobile|iPad|iPhone|iPod/i.test(userAgent)
-      || (platform === 'MacIntel' && touchPoints > 1);
+      || /Android|Mobile|iPad|iPhone|iPod|GSA\\/|FB_IAB|Instagram|; wv\\)/i.test(userAgent)
+      || (platform === 'MacIntel' && touchPoints > 1)
+      || (touchPoints > 0 && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches);
     if (usesMobileViewport) return false;
     topWindow = window.top || window;
     var topDocument = topWindow.document;
     if (topDocument && (topDocument.fullscreenElement || topDocument.webkitFullscreenElement)) {
       return false;
     }
+    if (topDocument && topDocument.visibilityState === 'hidden') return false;
+    if (Number(topWindow.innerWidth) < ${DEVTOOLS_MIN_DESKTOP_VIEWPORT_WIDTH_PX}) return false;
     var widthDifference = Number(topWindow.outerWidth) - Number(topWindow.innerWidth);
     var heightDifference = Number(topWindow.outerHeight) - Number(topWindow.innerHeight);
     return isFinite(widthDifference) && isFinite(heightDifference)
@@ -50,10 +56,18 @@ function __suspendVideoEmbed() {
   } catch (error) {}
 }
 function __enforceVideoEmbedProtection() {
-  if (__isVideoEmbedInspectionLikely()) __suspendVideoEmbed();
+  if (__isVideoEmbedInspectionLikely()) {
+    __videoEmbedSuspiciousSamples += 1;
+    if (__videoEmbedSuspiciousSamples >= ${DEVTOOLS_REQUIRED_SUSPICIOUS_SAMPLES}) {
+      __suspendVideoEmbed();
+    }
+  } else {
+    __videoEmbedSuspiciousSamples = 0;
+  }
 }
 __enforceVideoEmbedProtection();
-window.addEventListener('resize', __enforceVideoEmbedProtection);
+window.addEventListener('resize', function () { __videoEmbedSuspiciousSamples = 0; });
+window.addEventListener('orientationchange', function () { __videoEmbedSuspiciousSamples = 0; });
 window.setInterval(__enforceVideoEmbedProtection, ${DEVTOOLS_POLL_INTERVAL_MS});
 `;
 }
