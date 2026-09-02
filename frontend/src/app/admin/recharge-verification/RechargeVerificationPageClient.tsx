@@ -157,10 +157,6 @@ export function RechargeVerificationWorkspace() {
 
   useEffect(() => {
     void fetchData();
-    const refreshTimer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void fetchData(true);
-    }, 15_000);
-    return () => window.clearInterval(refreshTimer);
   }, []);
 
   const fetchData = async (silent = false) => {
@@ -708,10 +704,8 @@ export function RechargeVerificationWorkspace() {
           </div>
         </div>
 
-        {/* Main Content Area - Split layout */}
-        <div className="grid min-h-0 gap-6 lg:grid-cols-3 lg:items-start">
-          {/* Requests Table */}
-          <div className="min-w-0 lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-sm">
+        <div className="flex min-h-0 flex-col gap-6">
+          <div className="admin-panel min-w-0 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[var(--admin-text)]">قائمة طلبات الشحن</h2>
               <NeumorphButton type="button" onClick={() => void fetchData()} intent="ghost" size="sm">
@@ -730,8 +724,7 @@ export function RechargeVerificationWorkspace() {
             />
           </div>
 
-          {/* Unmatched SMS Panel */}
-          <div className="admin-panel flex min-h-0 min-w-0 flex-col overflow-visible rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:max-h-[52rem] lg:overflow-hidden">
+          <div className="admin-panel flex min-w-0 flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm sm:p-6">
             <h2 className="mb-2 flex shrink-0 items-center gap-2 text-lg font-black text-[var(--admin-text)]">
               <Smartphone className="h-5 w-5 text-[var(--admin-primary)]" />
               الرسائل غير المطابقة ({unmatchedSmsCount})
@@ -773,20 +766,20 @@ export function RechargeVerificationWorkspace() {
               role="region"
               aria-label="الرسائل غير المطابقة"
               tabIndex={0}
-              className="flex min-h-0 flex-none touch-pan-y flex-col gap-2 overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pe-2 lg:[scrollbar-gutter:stable] lg:[-webkit-overflow-scrolling:touch]"
+              className="grid grid-cols-1 gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] md:grid-cols-2 xl:grid-cols-3"
             >
               {loading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="h-20 animate-pulse bg-[var(--admin-card-strong)] rounded-xl border border-[var(--admin-border)]" />
                 ))
               ) : unmatchedSms.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-[var(--admin-border)] rounded-xl bg-[var(--admin-card-strong)]">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-8 text-center md:col-span-2 xl:col-span-3">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" />
                   <span className="text-xs font-bold text-[var(--admin-text)]">كل الرسائل مطابقة!</span>
                   <span className="text-sm text-[var(--admin-muted)] mt-1">لا توجد رسائل معلقة في النظام.</span>
                 </div>
               ) : filteredUnmatchedSms.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-[var(--admin-border)] rounded-xl bg-[var(--admin-card-strong)]">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-8 text-center md:col-span-2 xl:col-span-3">
                   <Search className="h-8 w-8 text-[var(--admin-muted)] mb-2" />
                   <span className="text-xs font-bold text-[var(--admin-text)]">لا توجد رسائل بهذا الرقم</span>
                   <span className="mt-1 text-sm text-[var(--admin-muted)]">جرّب كتابة رقم الهاتف بصيغة أخرى أو امسح البحث.</span>
@@ -800,7 +793,7 @@ export function RechargeVerificationWorkspace() {
                 </div>
               ) : unmatchedSmsByWallet.map((wallet) => {
                 const isWalletOpen = expandedWalletId === wallet.id;
-                return <div key={wallet.id} className="overflow-hidden rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
+                return <div key={wallet.id} className={`overflow-hidden rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] ${isWalletOpen ? 'md:col-span-2 xl:col-span-3' : ''}`}>
                   <button
                     type="button"
                     aria-expanded={isWalletOpen}
