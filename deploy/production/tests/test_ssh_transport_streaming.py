@@ -153,6 +153,8 @@ def test_stream_remote_file_relays_two_strict_ssh_processes_without_local_output
 
     assert len(calls) == 2
     assert all("StrictHostKeyChecking=yes" in argv for argv, _ in calls)
+    assert all("ServerAliveInterval=15" in argv for argv, _ in calls)
+    assert all("ServerAliveCountMax=12" in argv for argv, _ in calls)
     assert "massar-ops@192.0.2.3" in calls[0][0]
     assert "massar-ops@192.0.2.1" in calls[1][0]
     assert "exec cat" in calls[0][0][-1]

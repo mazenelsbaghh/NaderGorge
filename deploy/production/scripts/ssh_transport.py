@@ -46,6 +46,11 @@ class StrictSshTransport:
             "-o", "StrictHostKeyChecking=yes",
             "-o", f"UserKnownHostsFile={self.known_hosts}",
             "-o", f"ConnectTimeout={self.connect_timeout_seconds}",
+            # Remote image relays can legitimately pause while the paired
+            # sender reads a multi-gigabyte archive. Keep the otherwise idle
+            # receiving SSH channel alive through NAT/firewall idle windows.
+            "-o", "ServerAliveInterval=15",
+            "-o", "ServerAliveCountMax=12",
             "-i", str(self.identity_file),
         ]
 
@@ -238,6 +243,8 @@ test ! -L {shlex.quote(str(remote_destination))}
                 "-o", "StrictHostKeyChecking=yes",
                 "-o", f"UserKnownHostsFile={self.known_hosts}",
                 "-o", f"ConnectTimeout={self.connect_timeout_seconds}",
+                "-o", "ServerAliveInterval=15",
+                "-o", "ServerAliveCountMax=12",
                 "-i", str(self.identity_file),
                 str(source),
                 f"{target.user}@{target.address}:{destination}",
@@ -304,6 +311,8 @@ test ! -L {shlex.quote(str(remote_destination))}
                     "-o", "StrictHostKeyChecking=yes",
                     "-o", f"UserKnownHostsFile={self.known_hosts}",
                     "-o", f"ConnectTimeout={self.connect_timeout_seconds}",
+                    "-o", "ServerAliveInterval=15",
+                    "-o", "ServerAliveCountMax=12",
                     "-i", str(self.identity_file),
                     f"{target.user}@{target.address}:{source}",
                     str(temporary),
