@@ -372,7 +372,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 
       player.on('error', function (err) {
         if (__videoEmbedSuspended) return;
-        postToParent('error', { message: err || 'Bunny playback error' });
+        postToParent('error', { message: err || 'Bunny playback error', provider: 'bunny' });
       });
     }
 

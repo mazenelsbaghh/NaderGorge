@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import apiClient from '@/services/api-client';
 import { resolveTrackableDurationSeconds } from '@/lib/video-tracking-duration';
+import { canRetryBunnyPlayback } from '@/lib/video-playback-recovery';
 
 export interface WatchStatus {
   current: number;
@@ -161,6 +162,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [provider, setProvider] = useState<string>('youtube');
+  const providerRef = useRef('youtube');
   
   const [showControls, setShowControls] = useState(true);
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
@@ -168,6 +170,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shadowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const embedReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const bunnyRecoveryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const bunnyRecoveryAttemptsRef = useRef(0);
+  const bunnyRecoveryVideoIdRef = useRef(lessonVideoId);
   const isIOSDeviceRef = useRef(false);
   const watchThresholdPercentageRef = useRef<number>(30);
   const youtubeShadowDelayMsRef = useRef(5000);
@@ -349,6 +354,46 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
 
+  const scheduleBunnyPlaybackRecovery = useCallback(() => {
+    if (bunnyRecoveryTimerRef.current) return true;
+    if (!canRetryBunnyPlayback(providerRef.current, bunnyRecoveryAttemptsRef.current)) {
+      return false;
+    }
+
+    bunnyRecoveryAttemptsRef.current += 1;
+    if (embedReadyTimeoutRef.current) {
+      clearTimeout(embedReadyTimeoutRef.current);
+      embedReadyTimeoutRef.current = null;
+    }
+
+    const failedIframe = iframeRef.current;
+    iframeRef.current = null;
+    domShieldsCleanupRef.current?.();
+    domShieldsCleanupRef.current = null;
+    if (failedIframe) {
+      failedIframe.removeAttribute('src');
+      failedIframe.src = 'about:blank';
+      failedIframe.remove();
+    }
+
+    setErrorMessage('');
+    setIsPlaying(false);
+    setIsBuffering(true);
+    setStatus('loading');
+
+    const retryDelayMs = bunnyRecoveryAttemptsRef.current * 750;
+    bunnyRecoveryTimerRef.current = setTimeout(() => {
+      bunnyRecoveryTimerRef.current = null;
+      reloadSessionRef.current?.();
+    }, retryDelayMs);
+    return true;
+  }, []);
+
+  useEffect(() => () => {
+    if (embedReadyTimeoutRef.current) clearTimeout(embedReadyTimeoutRef.current);
+    if (bunnyRecoveryTimerRef.current) clearTimeout(bunnyRecoveryTimerRef.current);
+  }, []);
+
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return '0:00';
     const m = Math.floor(seconds / 60);
@@ -423,6 +468,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setVolume(msg.data.volume ?? 100);
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
+          providerRef.current = embedProvider;
           setProvider(embedProvider);
           setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
           showPersistentPlayerShadows();
@@ -481,6 +527,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             break;
           }
           if (msg.data.currentTime !== undefined) {
+            if (providerRef.current === 'bunny' && Number(msg.data.currentTime) > 0) {
+              bunnyRecoveryAttemptsRef.current = 0;
+            }
             const now = Date.now();
             if (now - lastRenderedTimeUpdateAtRef.current < 900) {
               break;
@@ -513,8 +562,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             reloadSessionRef.current?.();
             break;
           }
+          if ((msg.data?.provider || providerRef.current).toLowerCase() === 'bunny') {
+            providerRef.current = 'bunny';
+            if (scheduleBunnyPlaybackRecovery()) break;
+            setStatus('error');
+            setErrorMessage('تعذر تشغيل فيديو Bunny بعد عدة محاولات. تحقق من الاتصال ثم اضغط «حاول مرة أخرى».');
+            break;
+          }
           setStatus('error');
-          setErrorMessage(msg.data?.message || 'حدث خطأ أثناء تشغيل الفيديو');
+          setErrorMessage(msg.data?.message || 'تعذر تشغيل الفيديو. اضغط «حاول مرة أخرى» للمتابعة.');
           break;
         case 'overlayClick':
           if (status === 'ready') {
@@ -763,6 +819,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Load video ──
   const loadVideo = async () => {
+    if (bunnyRecoveryVideoIdRef.current !== lessonVideoId) {
+      bunnyRecoveryVideoIdRef.current = lessonVideoId;
+      bunnyRecoveryAttemptsRef.current = 0;
+    }
     if (securitySuspendedRef.current) {
       setStatus('protected');
       return;
@@ -812,13 +872,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         clearTimeout(embedReadyTimeoutRef.current);
       }
       embedReadyTimeoutRef.current = setTimeout(() => {
+        embedReadyTimeoutRef.current = null;
         if (securitySuspendedRef.current) return;
+        if (scheduleBunnyPlaybackRecovery()) return;
         setStatus('error');
-        setErrorMessage('استغرق تحميل مشغل الفيديو وقتًا أطول من المتوقع. تم تسجيل المشكلة وسيتم التعامل معها.');
+        setErrorMessage('تعذر تحميل مشغل الفيديو بعد عدة محاولات. تحقق من الاتصال ثم اضغط «حاول مرة أخرى».');
       }, 30000);
 
       // 2. Render appropriately based on provider
       const providerName = session.provider?.toLowerCase() || 'youtube';
+      providerRef.current = providerName;
       setProvider(providerName);
       const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
 
@@ -861,6 +924,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           isLocked: true
         }));
         return;
+      }
+      if (errors.includes('BUNNY_VIDEO_NOT_READY')) {
+        providerRef.current = 'bunny';
+        if (scheduleBunnyPlaybackRecovery()) return;
       }
       
       devConsole.error(err);
@@ -1220,10 +1287,20 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   if (status === 'error') {
     return (
-      <div className={`relative w-full aspect-video bg-black rounded-lg overflow-hidden flex flex-col items-center justify-center border border-red-500/30 p-8 text-center ${className}`}>
+      <div className={`relative w-full aspect-video bg-black rounded-lg overflow-hidden flex flex-col items-center justify-center border border-red-500/30 p-8 text-center ${className}`} role="alert">
         <AlertCircle className="w-12 h-12 text-red-500 mb-4 drop-shadow-lg" />
         <h3 className="text-xl font-bold text-white mb-2">عذراً، حدث خطأ</h3>
         <p className="text-gray-300">{errorMessage}</p>
+        <button
+          type="button"
+          onClick={() => {
+            bunnyRecoveryAttemptsRef.current = 0;
+            void loadVideo();
+          }}
+          className="mt-6 min-h-11 rounded-md bg-[var(--admin-primary)] px-6 font-bold text-[var(--admin-primary-contrast)] transition-opacity hover:opacity-90"
+        >
+          حاول مرة أخرى
+        </button>
       </div>
     );
   }
