@@ -68,30 +68,35 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
             .Select(p => p.Id)
             .ToListAsync(ct);
 
-        // 2. Fetch Active Students (recently watched a video belonging to the teacher's packages)
-        var activeStudents = await _db.VideoWatchEvents
+        var scopedWatchEvents = _db.VideoWatchEvents
             .AsNoTracking()
-            .Include(v => v.User)
-            .Include(v => v.LessonVideo)
-                .ThenInclude(lv => lv.Lesson)
-                    .ThenInclude(l => l.ContentSection)
-                        .ThenInclude(cs => cs.Term)
-            .Where(v => packageIds.Contains(v.LessonVideo.Lesson.ContentSection.Term.PackageId))
-            .OrderByDescending(v => v.UpdatedAt ?? v.CreatedAt)
-            .Take(10)
-            .Select(v => new TeacherActiveStudentDto(
-                v.UserId,
-                v.User.FullName,
-                v.UpdatedAt ?? v.CreatedAt,
-                v.LessonVideo.Title,
-                _db.Packages.Where(p => p.Id == v.LessonVideo.Lesson.ContentSection.Term.PackageId).Select(p => p.Name).FirstOrDefault() ?? ""
-            ))
+            .Where(v => packageIds.Contains(v.LessonVideo.Lesson.ContentSection.Term.PackageId));
+
+        // A watch event is unique per student/video. Use a correlated anti-join
+        // to keep only each student's latest event without EF's unsupported
+        // GroupBy + navigation projection shape.
+        var latestActivityCandidates = await scopedWatchEvents
+            .Where(watchEvent => !scopedWatchEvents.Any(other =>
+                other.UserId == watchEvent.UserId
+                && (other.UpdatedAt ?? other.CreatedAt) > (watchEvent.UpdatedAt ?? watchEvent.CreatedAt)))
+            .OrderByDescending(watchEvent => watchEvent.UpdatedAt ?? watchEvent.CreatedAt)
+            .Select(watchEvent => new TeacherActiveStudentDto(
+                watchEvent.UserId,
+                watchEvent.User.FullName,
+                watchEvent.UpdatedAt ?? watchEvent.CreatedAt,
+                watchEvent.LessonVideo.Title,
+                watchEvent.LessonVideo.Lesson.ContentSection.Term.Package.Name))
+            .Take(20)
             .ToListAsync(ct);
 
+        var activeStudents = latestActivityCandidates
+            .GroupBy(activity => activity.StudentId)
+            .Select(group => group.First())
+            .Take(10)
+            .ToList();
+
         // 3. Fetch Most Watched Videos
-        var mostWatchedData = await _db.VideoWatchEvents
-            .AsNoTracking()
-            .Where(v => packageIds.Contains(v.LessonVideo.Lesson.ContentSection.Term.PackageId))
+        var mostWatchedData = await scopedWatchEvents
             .GroupBy(v => v.LessonVideoId)
             .Select(g => new
             {
@@ -130,42 +135,50 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
         // 4. Fetch Inactive Student Alerts
         var studentGrants = await _db.StudentAccessGrants
             .AsNoTracking()
-            .Include(s => s.User)
             .Where(s => s.GrantType == Domain.Enums.CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
             .Where(s => s.PackageId.HasValue && packageIds.Contains(s.PackageId.Value))
+            .Select(grant => new
+            {
+                grant.UserId,
+                StudentName = grant.User.FullName,
+                PackageName = _db.Packages
+                    .Where(package => package.Id == grant.PackageId)
+                    .Select(package => package.Name)
+                    .FirstOrDefault() ?? string.Empty
+            })
             .ToListAsync(ct);
 
         var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
-        var alerts = new List<TeacherInactiveStudentAlertDto>();
-
-        foreach (var grant in studentGrants)
-        {
-            var latestEvent = await _db.VideoWatchEvents
-                .AsNoTracking()
-                .Where(v => v.UserId == grant.UserId && _db.LessonVideos.Any(lv => lv.Id == v.LessonVideoId && _db.Lessons.Any(l => l.Id == lv.LessonId && l.ContentSection.Term.PackageId == grant.PackageId)))
-                .OrderByDescending(v => v.UpdatedAt ?? v.CreatedAt)
-                .FirstOrDefaultAsync(ct);
-
-            var lastActivity = latestEvent?.UpdatedAt ?? latestEvent?.CreatedAt;
-
-            if (lastActivity == null || lastActivity < sevenDaysAgo)
+        var latestActivityByStudent = await scopedWatchEvents
+            .GroupBy(watchEvent => watchEvent.UserId)
+            .Select(group => new
             {
-                var daysInactive = lastActivity == null ? 30 : (DateTime.UtcNow - lastActivity.Value).Days;
-                var packageName = await _db.Packages.Where(p => p.Id == grant.PackageId).Select(p => p.Name).FirstOrDefaultAsync(ct) ?? "";
-                
-                // Add unique student alert
-                if (!alerts.Any(a => a.StudentId == grant.UserId))
+                StudentId = group.Key,
+                LastActivityAt = group.Max(watchEvent => watchEvent.UpdatedAt ?? watchEvent.CreatedAt)
+            })
+            .ToDictionaryAsync(activity => activity.StudentId, activity => activity.LastActivityAt, ct);
+
+        var now = DateTime.UtcNow;
+        var alerts = studentGrants
+            .GroupBy(grant => grant.UserId)
+            .Select(group => group.First())
+            .Select(grant =>
+            {
+                latestActivityByStudent.TryGetValue(grant.UserId, out var lastActivity);
+                return new
                 {
-                    alerts.Add(new TeacherInactiveStudentAlertDto(
-                        grant.UserId,
-                        grant.User.FullName,
-                        lastActivity,
-                        packageName,
-                        daysInactive
-                    ));
-                }
-            }
-        }
+                    Grant = grant,
+                    LastActivity = lastActivity == default ? (DateTime?)null : lastActivity
+                };
+            })
+            .Where(candidate => candidate.LastActivity is null || candidate.LastActivity < sevenDaysAgo)
+            .Select(candidate => new TeacherInactiveStudentAlertDto(
+                candidate.Grant.UserId,
+                candidate.Grant.StudentName,
+                candidate.LastActivity,
+                candidate.Grant.PackageName,
+                candidate.LastActivity is null ? 30 : (now - candidate.LastActivity.Value).Days))
+            .ToList();
 
         var dto = new TeacherActivityDto(
             activeStudents,

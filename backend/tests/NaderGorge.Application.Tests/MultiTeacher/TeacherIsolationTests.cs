@@ -294,10 +294,11 @@ public class TeacherIsolationTests
         var sectionA = new ContentSection { Id = Guid.NewGuid(), Title = "Sec A", TermId = termA.Id };
         var lessonA = new Lesson { Id = Guid.NewGuid(), Title = "Lesson A", ContentSectionId = sectionA.Id };
         var videoA = new LessonVideo { Id = Guid.NewGuid(), Title = "Video A", LessonId = lessonA.Id, Provider = "vk", ProviderVideoId = "vA" };
+        var latestVideoA = new LessonVideo { Id = Guid.NewGuid(), Title = "Latest Video A", LessonId = lessonA.Id, Provider = "vk", ProviderVideoId = "vA-latest" };
         db.Terms.Add(termA);
         db.ContentSections.Add(sectionA);
         db.Lessons.Add(lessonA);
-        db.LessonVideos.Add(videoA);
+        db.LessonVideos.AddRange(videoA, latestVideoA);
 
         // 4. Create content items for Package B
         var termB = new Term { Id = Guid.NewGuid(), Title = "Term B", PackageId = packageB.Id };
@@ -318,6 +319,16 @@ public class TeacherIsolationTests
             WatchCount = 3,
             TimeWatchedInSeconds = 300,
             CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow.AddMinutes(-10)
+        };
+        var latestWatchEventA = new VideoWatchEvent
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            LessonVideoId = latestVideoA.Id,
+            WatchCount = 1,
+            TimeWatchedInSeconds = 60,
+            CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         var watchEventB = new VideoWatchEvent
@@ -330,7 +341,7 @@ public class TeacherIsolationTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        db.VideoWatchEvents.AddRange(watchEventA, watchEventB);
+        db.VideoWatchEvents.AddRange(watchEventA, latestWatchEventA, watchEventB);
 
         // 6. Grant Student Access to Package A & B
         db.StudentAccessGrants.Add(new StudentAccessGrant
@@ -360,11 +371,11 @@ public class TeacherIsolationTests
 
         // Active students should only include watch events on Package A (belonging to Teacher A)
         Assert.Single(result.Data.ActiveStudents);
-        Assert.Equal("Video A", result.Data.ActiveStudents.First().LastWatchedVideoTitle);
+        Assert.Equal("Latest Video A", result.Data.ActiveStudents.First().LastWatchedVideoTitle);
         Assert.Equal("Package A", result.Data.ActiveStudents.First().PackageName);
 
         // Most watched videos should only include Package A video
-        Assert.Single(result.Data.MostWatchedVideos);
+        Assert.Equal(2, result.Data.MostWatchedVideos.Count);
         Assert.Equal("Video A", result.Data.MostWatchedVideos.First().VideoTitle);
         Assert.Equal(3, result.Data.MostWatchedVideos.First().TotalWatchCount);
     }
