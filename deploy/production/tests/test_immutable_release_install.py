@@ -62,8 +62,6 @@ def release_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     base.mkdir(parents=True)
     marker = tmp_path / "cluster-id"
     marker.write_text("massar-production\n")
-    node_marker = tmp_path / "node-id"
-    node_marker.write_text("node-1\n")
     incoming = tmp_path / "incoming"
     incoming.mkdir()
     active = base / ("src-" + "b" * 40)
@@ -74,7 +72,6 @@ def release_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     monkeypatch.setattr(installer, "INCOMING", incoming)
     monkeypatch.setattr(installer, "CURRENT", current)
     monkeypatch.setattr(installer, "CLUSTER_MARKER", marker)
-    monkeypatch.setattr(installer, "NODE_ID_MARKER", node_marker)
     monkeypatch.setattr(installer, "BUILD_ROOT", tmp_path / "var/lib/massar/builds")
     monkeypatch.setattr(installer, "LOCK_FILE", tmp_path / "run/install.lock")
     monkeypatch.setattr(installer.os, "geteuid", lambda: 0)
@@ -256,6 +253,7 @@ def test_prune_keeps_current_and_rollback_and_removes_only_old_artifacts(
     evidence = installer.prune_release_artifacts(
         current_release,
         rollback_release,
+        "node-1",
         confirmed=True,
     )
 
@@ -299,6 +297,7 @@ def test_prune_dry_run_reports_without_deleting(
     evidence = installer.prune_release_artifacts(
         current_release,
         rollback_release,
+        "node-1",
         confirmed=False,
     )
 
@@ -328,6 +327,7 @@ def test_prune_refuses_pointer_mismatch_before_deleting(
         installer.prune_release_artifacts(
             current_release,
             rollback_release,
+            "node-1",
             confirmed=True,
         )
 
@@ -354,6 +354,7 @@ def test_prune_refuses_unsafe_recognized_release_before_deleting(
         installer.prune_release_artifacts(
             current_release,
             rollback_release,
+            "node-1",
             confirmed=True,
         )
 

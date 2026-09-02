@@ -24,7 +24,6 @@ CURRENT = Path("/opt/massar/current")
 CLUSTER_MARKER = Path("/etc/massar/cluster-id")
 LOCK_FILE = Path("/run/massar-install-immutable-release.lock")
 BUILD_ROOT = Path("/var/lib/massar/builds")
-NODE_ID_MARKER = Path("/etc/massar/node-id")
 OPERATOR = "massar-ops"
 RELEASE_RE = re.compile(r"^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40})$")
 RELEASE_ARTIFACT_RE = re.compile(
@@ -429,6 +428,7 @@ def massar_image_tags() -> tuple[str, ...]:
 def prune_release_artifacts(
     current_release: str,
     previous_release: str,
+    node_id: str,
     *,
     confirmed: bool,
 ) -> dict[str, object]:
@@ -441,9 +441,8 @@ def prune_release_artifacts(
         raise ReleaseInstallError("retained release identity is invalid")
     if CLUSTER_MARKER.read_text(encoding="ascii").strip() != "massar-production":
         raise ReleaseInstallError("cluster marker does not identify Massar Production")
-    node_id = NODE_ID_MARKER.read_text(encoding="ascii").strip()
     if node_id not in {"node-1", "node-2", "node-3"}:
-        raise ReleaseInstallError("node marker does not identify a production node")
+        raise ReleaseInstallError("node identity is invalid")
     validate_real_directory(BASE.parent.parent, "fixed release parent")
     validate_real_directory(BASE.parent, "fixed release parent")
     release_roots = release_directories(BASE)
@@ -527,6 +526,7 @@ def main(argv: list[str] | None = None) -> int:
     prune = commands.add_parser("prune-release-artifacts")
     prune.add_argument("current_release")
     prune.add_argument("previous_release")
+    prune.add_argument("node_id")
     prune_mode = prune.add_mutually_exclusive_group(required=True)
     prune_mode.add_argument("--dry-run", action="store_true")
     prune_mode.add_argument("--yes", action="store_true")
@@ -544,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
             result = prune_release_artifacts(
                 args.current_release,
                 args.previous_release,
+                args.node_id,
                 confirmed=args.yes,
             )
         print(json.dumps(result, separators=(",", ":")))
