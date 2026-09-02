@@ -22,6 +22,7 @@ import {
   canRetryBunnyPlayback,
   isBunnyPlaybackStable,
 } from '@/lib/video-playback-recovery';
+import { usesNativeProviderControls } from '@/lib/video-player-provider';
 
 export interface WatchStatus {
   current: number;
@@ -1089,6 +1090,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       : normalizedChapters.find((chapter) => Boolean(chapter.mindmapImageUrl)) ?? null;
   }, [activeChapterDesktop, normalizedChapters]);
 
+  const usesNativePlayerChrome = usesNativeProviderControls(provider);
+
   // ── Render States ──
   if (isExamLocked) {
     const isSelfLocked = blockingExamId && videoExamId && blockingExamId.toLowerCase() === videoExamId.toLowerCase();
@@ -1380,7 +1383,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
         {/* Shadow Gradient Overlay */}
         <AnimatePresence>
-          {status === 'ready' && showPlayerShadows && enabledShadowProviders.includes(provider.toLowerCase()) && (
+          {status === 'ready' && !usesNativePlayerChrome && showPlayerShadows && enabledShadowProviders.includes(provider.toLowerCase()) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1395,7 +1398,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         </AnimatePresence>
         
         {/* Floating Chapter Info Overlay */}
-        {activeChapterDesktop && activeChapterDesktop.summaryText && status === 'ready' && (showControls || isChapterInfoOpen) && (
+        {activeChapterDesktop && activeChapterDesktop.summaryText && status === 'ready' && !usesNativePlayerChrome && (showControls || isChapterInfoOpen) && (
           <div 
             className="absolute top-4 right-4 bottom-16 z-[var(--z-floating)] flex flex-col items-end pointer-events-none"
             onMouseEnter={() => setIsHoveringControls(true)}
@@ -1462,7 +1465,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         {/* Floating Mindmap Overlay */}
         {/* Keep the lesson aid reachable while the video is playing. Player controls
             intentionally auto-hide, but that must not hide the mind-map trigger. */}
-        {activeMindmapChapter && status === 'ready' && (
+        {activeMindmapChapter && status === 'ready' && !usesNativePlayerChrome && (
           <div 
             className="pointer-events-none absolute left-3 top-3 z-[var(--z-floating)] flex flex-col items-start sm:left-4 sm:top-4"
             onMouseEnter={() => setIsHoveringControls(true)}
@@ -1528,7 +1531,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && provider !== 'bunny' && !isPlaying && !isBuffering && (
+        {status === 'ready' && !usesNativePlayerChrome && !isPlaying && !isBuffering && (
           <button
             type="button"
             className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
@@ -1545,7 +1548,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </button>
         )}
 
-        {status === 'ready' && provider !== 'bunny' && (
+        {status === 'ready' && !usesNativePlayerChrome && (
           <PlayerControls 
             isPlaying={isPlaying}
             onTogglePlay={togglePlay}
