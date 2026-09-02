@@ -152,6 +152,61 @@ public sealed class GetStudentProfileDetailQueryTests
         Assert.Equal(financialTeacherUser.FullName, enrolledContent.TeacherName);
     }
 
+    [Fact]
+    public async Task WatchTracking_IncludesEveryActivePartInAStartedLesson()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+
+        var teacherUser = UserFor("مدرس الأجزاء", "01094000001");
+        var student = UserFor("طالب الأجزاء", "01094000002");
+        var teacher = new TeacherProfile { User = teacherUser };
+        var subject = new Subject { Name = "الجيولوجيا", NormalizedName = "GEOLOGY" };
+        var package = new Package { Name = "باقة الجيولوجيا", Teacher = teacher, Subject = subject };
+        var term = new Term { Title = "الترم الأول", Package = package };
+        var section = new ContentSection { Title = "الشهر الأول", Term = term };
+        var lesson = new Lesson { Title = "الحصة الأولى", ContentSection = section };
+        var videoType = new VideoType { Name = "شرح", NormalizedName = "EXPLANATION" };
+        var videos = Enumerable.Range(1, 4)
+            .Select(order => new LessonVideo
+            {
+                Title = $"الجزء {order}",
+                Order = order,
+                Provider = "youtube",
+                ProviderVideoId = Guid.NewGuid().ToString("N"),
+                Lesson = lesson,
+                VideoType = videoType,
+                MaxWatchCount = 5
+            })
+            .ToArray();
+
+        db.AddRange(teacher, subject, package, term, section, lesson, videoType, student);
+        db.LessonVideos.AddRange(videos);
+        db.VideoWatchEvents.AddRange(
+            new VideoWatchEvent { User = student, LessonVideo = videos[0], WatchCount = 1 },
+            new VideoWatchEvent { User = student, LessonVideo = videos[1], WatchCount = 2 });
+        await db.SaveChangesAsync();
+
+        var studentProfile = await new GetStudentProfileDetailQueryHandler(db)
+            .Handle(new GetStudentProfileDetailQuery(student.Id), CancellationToken.None);
+
+        Assert.Equal(2, studentProfile.WatchTracking.WatchedVideosCount);
+        Assert.Equal(4, studentProfile.WatchTracking.Activities.Count);
+        Assert.Equal(
+            ["الجزء 1", "الجزء 2", "الجزء 3", "الجزء 4"],
+            studentProfile.WatchTracking.Activities.Select(activity => activity.VideoTitle));
+        Assert.All(
+            studentProfile.WatchTracking.Activities.Skip(2),
+            activity =>
+            {
+                Assert.Equal(0, activity.WatchCount);
+                Assert.Null(activity.LastWatchedAt);
+            });
+    }
+
     private static User UserFor(string name, string phone) => new()
     {
         FullName = name,

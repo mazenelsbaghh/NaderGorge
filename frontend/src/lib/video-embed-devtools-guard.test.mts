@@ -15,7 +15,13 @@ interface GuardExecution {
 function runGuard(
   widthDifference: number,
   heightDifference = 0,
-  navigatorLike: { userAgent?: string; platform?: string; maxTouchPoints?: number } = {},
+  navigatorLike: {
+    userAgent?: string;
+    platform?: string;
+    maxTouchPoints?: number;
+    userAgentData?: { mobile?: boolean };
+  } = {},
+  fullscreen = false,
 ): GuardExecution {
   const locations: string[] = [];
   const messages: unknown[] = [];
@@ -39,6 +45,10 @@ function runGuard(
     },
     parent: {
       postMessage: (message: unknown) => messages.push(message),
+    },
+    document: {
+      fullscreenElement: fullscreen ? {} : null,
+      webkitFullscreenElement: null,
     },
   };
   Object.assign(windowLike, { top: windowLike });
@@ -88,6 +98,29 @@ test('inspection guard ignores iPad desktop viewport differences without suspend
     platform: 'MacIntel',
     maxTouchPoints: 5,
   });
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+  assert.deepEqual(result.messages, []);
+});
+
+test('inspection guard ignores Android landscape viewport changes', () => {
+  const result = runGuard(420, 260, {
+    userAgent: 'Mozilla/5.0 (Linux; Android 15; Mobile) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36',
+    platform: 'Linux armv8l',
+    maxTouchPoints: 5,
+    userAgentData: { mobile: true },
+  });
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+  assert.deepEqual(result.messages, []);
+});
+
+test('inspection guard ignores dimension changes while the player is fullscreen', () => {
+  const result = runGuard(320, 200, {
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
+  }, true);
 
   assert.equal(result.hookCalls, 0);
   assert.deepEqual(result.locations, []);

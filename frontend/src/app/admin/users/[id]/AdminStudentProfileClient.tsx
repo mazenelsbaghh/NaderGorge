@@ -1367,11 +1367,11 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                      {isLessonExpanded && (
                                                        <div className="p-3 bg-[var(--admin-bg)] space-y-2 border-t border-[var(--admin-border)]/10">
                                                          {lesson.activities.map((activity) => (
-                                                           <div key={activity.lessonVideoId} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 p-3 bg-[var(--admin-card-soft)]/40 hover:bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/20 rounded-xl transition-[color,background-color,border-color,opacity,transform,box-shadow] mr-4">
+                                                           <div key={activity.lessonVideoId} className="flex flex-col items-stretch justify-between gap-4 rounded-xl border border-[var(--admin-border)]/20 bg-[var(--admin-card-soft)]/40 p-3 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-card-soft)] sm:flex-row sm:items-center mr-4">
                                                              {/* Video Details */}
-                                                             <div className="flex items-center gap-2 min-w-0">
+                                                             <div className="flex min-w-0 flex-1 items-start gap-2 sm:max-w-sm">
                                                                <MonitorPlay size={14} className="text-[var(--admin-primary)] shrink-0" />
-                                                               <span className="font-medium text-xs text-[var(--admin-text)] truncate">{activity.videoTitle}</span>
+                                                               <span className="whitespace-normal break-words text-xs font-medium leading-5 text-[var(--admin-text)]" title={activity.videoTitle}>{activity.videoTitle}</span>
                                                              </div>
 
                                                              {/* Metrics */}

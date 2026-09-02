@@ -189,10 +189,10 @@ export default function LessonDetailPageClient() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl pb-12 pt-6 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-2 pb-12 pt-4 sm:px-6 sm:pt-6 lg:px-8">
       <button
         onClick={() => router.back()}
-        className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 px-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
       >
         <ArrowRight className="h-4 w-4" />
         <span>{backLabel}</span>

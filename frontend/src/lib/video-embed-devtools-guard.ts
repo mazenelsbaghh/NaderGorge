@@ -18,10 +18,17 @@ function __isVideoEmbedInspectionLikely() {
     var userAgent = typeof navigator === 'undefined' ? '' : String(navigator.userAgent || '');
     var platform = typeof navigator === 'undefined' ? '' : String(navigator.platform || '');
     var touchPoints = typeof navigator === 'undefined' ? 0 : Number(navigator.maxTouchPoints || 0);
-    var usesAppleMobileViewport = /iPad|iPhone|iPod/i.test(userAgent)
+    var reportsMobileViewport = typeof navigator !== 'undefined'
+      && Boolean(navigator.userAgentData && navigator.userAgentData.mobile);
+    var usesMobileViewport = reportsMobileViewport
+      || /Android|Mobile|iPad|iPhone|iPod/i.test(userAgent)
       || (platform === 'MacIntel' && touchPoints > 1);
-    if (usesAppleMobileViewport) return false;
+    if (usesMobileViewport) return false;
     topWindow = window.top || window;
+    var topDocument = topWindow.document;
+    if (topDocument && (topDocument.fullscreenElement || topDocument.webkitFullscreenElement)) {
+      return false;
+    }
     var widthDifference = Number(topWindow.outerWidth) - Number(topWindow.innerWidth);
     var heightDifference = Number(topWindow.outerHeight) - Number(topWindow.innerHeight);
     return isFinite(widthDifference) && isFinite(heightDifference)

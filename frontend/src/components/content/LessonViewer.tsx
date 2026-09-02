@@ -158,14 +158,14 @@ export function LessonViewer({
   }
 
   return (
-    <div className="space-y-8 sm:space-y-12 pb-10">
-      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/95 p-5 shadow-sm sm:p-8">
+    <div className="space-y-5 pb-10 sm:space-y-12">
+      <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/95 p-4 shadow-sm sm:rounded-2xl sm:p-8">
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <span className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-4 py-1.5 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
               محتوى الدرس
             </span>
-            <h1 className="text-3xl font-black text-[var(--admin-text)] sm:text-4xl tracking-tight leading-tight">
+            <h1 className="break-words text-2xl font-black leading-tight tracking-tight text-[var(--admin-text)] sm:text-4xl">
               {lesson.title}
             </h1>
             {lesson.summary && (
@@ -190,7 +190,7 @@ export function LessonViewer({
         </div>
       </div>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-5 sm:gap-8">
         <div className="w-full">
           {lesson.videos.length > 0 ? (
             <LessonCarousel 

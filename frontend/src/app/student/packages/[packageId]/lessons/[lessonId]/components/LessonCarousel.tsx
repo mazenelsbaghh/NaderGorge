@@ -57,8 +57,11 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
     if (videos.length <= 1) return null;
 
     return (
-        <nav aria-label="فيديوهات الدرس" className="flex justify-start overflow-x-auto px-4 py-4 md:px-10 md:py-6">
-            <ol className="flex w-max min-w-full flex-nowrap items-start justify-start gap-3 sm:w-full sm:flex-row sm:flex-wrap" role="list">
+        <nav
+            aria-label="فيديوهات الدرس"
+            className="flex snap-x snap-mandatory justify-start overflow-x-auto px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-10 md:py-6"
+        >
+            <ol className="flex w-max min-w-full flex-nowrap items-stretch justify-start gap-2 sm:w-full sm:flex-row sm:flex-wrap sm:gap-3" role="list">
                 {videos.map((video, stepIdx) => {
                     const isCompleted = current > stepIdx;
                     const isCurrent = current === stepIdx;
@@ -73,7 +76,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: stepIdx * 0.1 }}
                             className={cn(
-                                "relative z-50 rounded-full px-4 py-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-in-out flex items-center gap-2",
+                                "relative z-50 flex max-w-[calc(100vw-4rem)] shrink-0 snap-start items-stretch rounded-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-in-out sm:max-w-none sm:rounded-full",
                                 isCompleted ? "bg-[var(--admin-success-10)]" : "",
                                 isCurrent ? "bg-[var(--admin-primary-10)] border border-[var(--admin-primary)]/20" : "",
                                 isFuture ? "bg-[var(--admin-card-soft)]" : "",
@@ -84,14 +87,14 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                             <button
                                 type="button"
                                 className={cn(
-                                    "group flex items-center focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]",
+                                    "group flex min-h-11 w-full items-center rounded-[inherit] px-3 py-2 text-right focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:px-4",
                                     isCurrent && "pointer-events-none"
                                 )}
                                 onClick={() => onChange(stepIdx)}
                                 disabled={isCurrent}
                                 aria-current={isCurrent ? "step" : undefined}
                             >
-                                <span className="flex items-center gap-3 text-sm font-bold">
+                                <span className="flex min-w-0 items-center gap-2.5 text-sm font-bold sm:gap-3">
                                     <motion.span
                                         initial={false}
                                         animate={{ scale: isCurrent ? 1.15 : 1 }}
@@ -115,7 +118,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                     </motion.span>
                                     <motion.span
                                         className={clsx(
-                                            "max-w-[11rem] truncate text-sm tracking-tight duration-300 sm:max-w-[13rem]",
+                                            "max-w-[13.5rem] whitespace-normal break-words text-right text-[13px] leading-5 tracking-tight duration-300 sm:max-w-[13rem] sm:text-sm",
                                             isCompleted && "text-[var(--admin-muted)]",
                                             isCurrent && "text-[var(--admin-primary)] font-black",
                                             isFuture && "text-[var(--admin-muted)] opacity-60 group-hover:opacity-100",
@@ -207,10 +210,10 @@ export function LessonCarousel({
                     "hover:border-[var(--admin-primary)]/30"
                 )}
             >
-                <div className="relative z-20 w-full flex flex-col xl:flex-row pb-6">
+                <div className="relative z-20 flex w-full flex-col pb-4 sm:pb-6 xl:flex-row">
 
                     {/* Left Column (Titles & Animated Progress Steps) */}
-                    <div className="flex w-full flex-col xl:w-[35%] shrink-0 pt-2 relative z-30">
+                    <div className="relative z-30 flex w-full shrink-0 flex-col pt-1 sm:pt-2 xl:w-[35%]">
                         {/* Exam & Homework buttons right above the steps list */}
                         {(examId || homeworkId || homeworkComingSoonLabel) && (
                             <div className="flex flex-col gap-2 px-4 md:px-10 mb-2 mt-2">
@@ -270,7 +273,7 @@ export function LessonCarousel({
 
                         <Steps current={activeStep} onChange={onStepChange} videos={videos} />
 
-                        <div className="mt-4 flex flex-col gap-4 px-6 md:px-10 xl:mt-12">
+                        <div className="mt-2 flex flex-col gap-3 px-4 sm:mt-4 sm:gap-4 sm:px-6 md:px-10 xl:mt-12">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={activeStep}
@@ -278,13 +281,13 @@ export function LessonCarousel({
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -15 }}
                                     transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-                                    className="space-y-4"
+                                    className="space-y-3 sm:space-y-4"
                                 >
                                     <motion.div
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1, duration: 0.4 }}
-                                        className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-primary)]/10 px-3 py-1 text-xs font-bold text-[var(--admin-primary)] sm:text-sm"
+                                        className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl bg-[var(--admin-primary)]/10 px-2.5 py-1 text-xs font-bold text-[var(--admin-primary)] sm:w-fit sm:rounded-full sm:px-3 sm:text-sm"
                                     >
                                         <span>الفيديو {activeStep + 1} من {videos.length}</span>
                                         {activeVideo.videoTypeName ? <span className="text-[var(--admin-muted)]">· {activeVideo.videoTypeName}</span> : null}
@@ -294,7 +297,7 @@ export function LessonCarousel({
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.15, duration: 0.4 }}
-                                        className="text-2xl sm:text-3xl font-black text-[var(--admin-text)] leading-tight tracking-tight"
+                                        className="break-words text-[clamp(1.375rem,6vw,1.875rem)] font-black leading-[1.35] tracking-tight text-[var(--admin-text)]"
                                     >
                                         {activeVideo.title}
                                     </motion.h2>
@@ -334,7 +337,7 @@ export function LessonCarousel({
                     </div>
 
                     {/* Right Column (The Magic Video Area) */}
-                    <div className="flex-1 mt-8 xl:mt-0 p-4 md:p-8 flex items-center justify-center relative z-20">
+                    <div className="relative z-20 mt-5 flex flex-1 items-center justify-center px-2 pb-2 pt-0 sm:mt-8 sm:p-4 md:p-8 xl:mt-0">
                         <AnimatePresence mode="wait">
                             {mounted && (
                                 <motion.div
@@ -346,7 +349,7 @@ export function LessonCarousel({
                                     className="w-full relative z-30"
                                 >
                                     {activeVideoHasAccess ? (
-                                        <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--admin-primary)]/20 bg-black">
+                                        <div className="relative aspect-video overflow-hidden rounded-lg border border-[var(--admin-primary)]/20 bg-black sm:rounded-xl">
                                             <SecureVideoPlayer
                                                 ref={playerRef}
                                                 className="absolute inset-0 h-full w-full object-cover"
@@ -390,7 +393,7 @@ export function LessonCarousel({
                                     )}
 
                                     {activeVideoHasAccess && (
-                                        <div className="mt-4">
+                                        <div className="mt-3 sm:mt-4">
                                             <WatchStatusBar
                                                 status={watchStatus}
                                                 title={activeVideo.title}

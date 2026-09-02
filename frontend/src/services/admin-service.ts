@@ -537,6 +537,7 @@ export interface StudentProfileExtendedDto {
     activities: Array<{
       lessonVideoId: string;
       videoTitle: string;
+      videoOrder: number;
       lessonId: string;
       lessonTitle: string;
       packageName?: string;
@@ -549,7 +550,7 @@ export interface StudentProfileExtendedDto {
       averagePlaybackRate: number;
       playbackRateSeconds?: Record<string, number>;
       isLocked: boolean;
-      lastWatchedAt: string;
+      lastWatchedAt: string | null;
     }>;
   };
   currentBalance: number;

@@ -164,6 +164,7 @@ public class StudentVideoWatchActivityDto
 {
     public Guid LessonVideoId { get; set; }
     public string VideoTitle { get; set; } = string.Empty;
+    public int VideoOrder { get; set; }
     public Guid LessonId { get; set; }
     public string LessonTitle { get; set; } = string.Empty;
     public string? PackageName { get; set; }
@@ -178,7 +179,7 @@ public class StudentVideoWatchActivityDto
     [JsonIgnore]
     public string PlaybackRateBreakdownJson { get; set; } = "{}";
     public bool IsLocked { get; set; }
-    public DateTime LastWatchedAt { get; set; }
+    public DateTime? LastWatchedAt { get; set; }
 }
 
 public class AuditLogDto

@@ -296,6 +296,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             {
                 LessonVideoId = v.LessonVideoId,
                 VideoTitle = v.LessonVideo.Title,
+                VideoOrder = v.LessonVideo.Order,
                 LessonId = v.LessonVideo.LessonId,
                 LessonTitle = v.LessonVideo.Lesson.Title,
                 PackageName = v.LessonVideo.Lesson.ContentSection.Term.Package.Name,
@@ -311,6 +312,42 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             })
             .ToListAsync(cancellationToken);
 
+        var watchedVideosCount = watchActivities.Count;
+        var watchedLessonIds = watchActivities
+            .Select(activity => activity.LessonId)
+            .Distinct()
+            .ToList();
+        if (watchedLessonIds.Count > 0)
+        {
+            var unwatchedActivities = await _context.LessonVideos
+                .AsNoTracking()
+                .Where(video => video.IsActive
+                    && watchedLessonIds.Contains(video.LessonId)
+                    && !_context.VideoWatchEvents.Any(watchEvent =>
+                        watchEvent.UserId == request.UserId
+                        && watchEvent.LessonVideoId == video.Id))
+                .Select(video => new StudentVideoWatchActivityDto
+                {
+                    LessonVideoId = video.Id,
+                    VideoTitle = video.Title,
+                    VideoOrder = video.Order,
+                    LessonId = video.LessonId,
+                    LessonTitle = video.Lesson.Title,
+                    PackageName = video.Lesson.ContentSection.Term.Package.Name,
+                    TermTitle = video.Lesson.ContentSection.Term.Title,
+                    WatchCount = 0,
+                    MaxWatchCount = video.MaxWatchCount,
+                    WatchedSeconds = 0,
+                    ActualWatchedSeconds = 0m,
+                    LastPlaybackRate = 1m,
+                    AveragePlaybackRate = 1m,
+                    IsLocked = false,
+                    LastWatchedAt = null
+                })
+                .ToListAsync(cancellationToken);
+            watchActivities.AddRange(unwatchedActivities);
+        }
+
         foreach (var activity in watchActivities)
         {
             activity.PlaybackRateSeconds = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(activity.PlaybackRateBreakdownJson) ?? new();
@@ -318,6 +355,14 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 ? decimal.Round(activity.WatchedSeconds / (decimal)activity.ActualWatchedSeconds, 2)
                 : activity.LastPlaybackRate;
         }
+
+        watchActivities = watchActivities
+            .OrderBy(activity => activity.PackageName)
+            .ThenBy(activity => activity.TermTitle)
+            .ThenBy(activity => activity.LessonTitle)
+            .ThenBy(activity => activity.VideoOrder)
+            .ThenBy(activity => activity.VideoTitle)
+            .ToList();
 
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
@@ -522,7 +567,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 TotalWatchedSeconds = watchActivities.Sum(activity => activity.WatchedSeconds),
                 TotalActualWatchedSeconds = watchActivities.Sum(activity => activity.ActualWatchedSeconds),
                 AveragePlaybackRate = CalculateAveragePlaybackRate(watchActivities),
-                WatchedVideosCount = watchActivities.Count,
+                WatchedVideosCount = watchedVideosCount,
                 Activities = watchActivities
             },
             CurrentBalance = balance?.CurrentBalance ?? 0m,

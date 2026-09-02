@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { Headphones, LoaderCircle, MessageCircle, Paperclip, Send, X } from 'lucide-react';
 import { liveSupportService, type LiveSupportAIPendingDecision, type LiveSupportAITurnState, type LiveSupportAIVerificationSession, type LiveSupportAvailability, type LiveSupportConversation, type LiveSupportMessage } from '@/services/live-support-service';
 import { LiveSupportWidget } from './LiveSupportWidget';
@@ -47,7 +46,6 @@ type SupportVisibilitySettings = {
 };
 
 export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSupportLauncherProps) {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availability, setAvailability] = useState<LiveSupportAvailability>();
@@ -342,10 +340,8 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   if (!isAuthenticated) {
     const whatsappNumber = supportVisibility.guestSupportWhatsAppNumber.replace(/\D/g, '');
     if (!supportVisibility.showSupportOutsideAccount || !whatsappNumber) return null;
-    const compactOnRegistration = pathname === '/register';
-
-    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] inline-flex items-center justify-center gap-2 bg-[#25D366] text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6 ${compactOnRegistration ? 'size-12 rounded-full p-0 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3' : 'rounded-2xl px-4 py-3'}`}>
-      <MessageCircle size={22}/><span className={compactOnRegistration ? 'sr-only sm:not-sr-only' : undefined}>واتساب الدعم</span>
+    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-2 z-[var(--z-floating)] inline-flex size-12 items-center justify-center gap-2 rounded-full bg-[#25D366] p-0 text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3`}>
+      <MessageCircle size={22}/><span className="sr-only sm:not-sr-only">واتساب الدعم</span>
     </a>;
   }
 
@@ -354,7 +350,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     return <SupportContactLink launcherPositionClass={launcherPositionClass} whatsappNumber={whatsappNumber} contactNumber={contactNumber}/>;
   }
 
-  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] sm:left-6`}>
+  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-2 z-[var(--z-floating)] sm:left-6`}>
     {open && <section role="dialog" aria-modal="true" aria-label="الدعم المباشر" className="mb-3 flex h-[min(680px,calc(100dvh-7rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <div className="flex items-center gap-2"><span className="grid size-9 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><Headphones size={19}/></span><div><h2 className="font-bold text-slate-900">الدعم المباشر</h2><p className="text-xs text-slate-500">فريق مسار</p></div></div>
@@ -409,10 +405,10 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
       </LiveSupportWidget></div>
     </section>}
     <div className="flex items-center gap-2">
-      <span className="inline-flex max-w-[8rem] items-center justify-center rounded-xl border border-[#DCE1E6] bg-white px-3 py-2 text-xs font-black text-[#0A1D3D] shadow-lg sm:max-w-none sm:text-sm">
+      <span className="hidden max-w-[8rem] items-center justify-center rounded-xl border border-[#DCE1E6] bg-white px-3 py-2 text-xs font-black text-[#0A1D3D] shadow-lg sm:inline-flex sm:max-w-none sm:text-sm">
         تواصل معنا
       </span>
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'إغلاق الدعم المباشر' : 'فتح الدعم المباشر'} className="grid size-14 place-items-center rounded-2xl bg-[#0A1D3D] text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D]"><MessageCircle size={24}/></button>
+      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'إغلاق الدعم المباشر' : 'فتح الدعم المباشر'} className="grid size-12 place-items-center rounded-full bg-[#0A1D3D] text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D] sm:size-14 sm:rounded-2xl"><MessageCircle size={24}/></button>
     </div>
   </div>;
 }
@@ -447,7 +443,7 @@ function SupportSettingsRecovery({ launcherPositionClass, retry }: { launcherPos
     setRetrying(false);
   }
 
-  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] sm:left-6`}>
+  return <div dir="rtl" className={`fixed ${launcherPositionClass} left-2 z-[var(--z-floating)] sm:left-6`}>
     {open && <section role="dialog" aria-modal="true" aria-label="مساعدة الدعم" className="mb-3 w-[min(360px,calc(100vw-2rem))] rounded-3xl border border-amber-200 bg-white p-5 shadow-2xl">
       <h2 className="text-lg font-black text-[#0A1D3D]">تعذر الوصول إلى الدعم الآن</h2>
       <p className="mt-2 text-sm font-bold leading-6 text-slate-600">تحقق من اتصالك بالإنترنت، ثم أعد تحميل وسيلة التواصل. لا نريد أن نعرض لك قناة دعم غير مؤكدة.</p>
@@ -464,8 +460,8 @@ function SupportContactLink({ launcherPositionClass, whatsappNumber, contactNumb
   const href = whatsappNumber ? `https://wa.me/${whatsappNumber}` : `tel:${contactNumber.replace(/\s/g, '')}`;
   const label = whatsappNumber ? 'التواصل مع الدعم عبر واتساب' : 'الاتصال بالدعم';
 
-  return <a href={href} target={whatsappNumber ? '_blank' : undefined} rel={whatsappNumber ? 'noopener noreferrer' : undefined} dir="rtl" aria-label={label} className={`fixed ${launcherPositionClass} left-4 z-[var(--z-floating)] inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0A1D3D] px-4 py-3 text-sm font-black text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D] sm:left-6`}>
-    <Headphones size={22}/><span>{whatsappNumber ? 'واتساب الدعم' : 'اتصل بالدعم'}</span>
+  return <a href={href} target={whatsappNumber ? '_blank' : undefined} rel={whatsappNumber ? 'noopener noreferrer' : undefined} dir="rtl" aria-label={label} className={`fixed ${launcherPositionClass} left-2 z-[var(--z-floating)] inline-flex size-12 items-center justify-center gap-2 rounded-full bg-[#0A1D3D] p-0 text-sm font-black text-white shadow-xl transition-colors hover:bg-[#0E8F8F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A1D3D] sm:left-6 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3`}>
+    <Headphones size={22}/><span className="sr-only sm:not-sr-only">{whatsappNumber ? 'واتساب الدعم' : 'اتصل بالدعم'}</span>
   </a>;
 }
 
