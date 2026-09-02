@@ -20,6 +20,7 @@ import apiClient from '@/services/api-client';
 import { resolveTrackableDurationSeconds } from '@/lib/video-tracking-duration';
 import {
   canRetryBunnyPlayback,
+  isBunnyPlaybackError,
   isBunnyPlaybackStable,
 } from '@/lib/video-playback-recovery';
 import { usesNativeProviderControls } from '@/lib/video-player-provider';
@@ -591,7 +592,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             reloadSessionRef.current?.();
             break;
           }
-          if ((msg.data?.provider || providerRef.current).toLowerCase() === 'bunny') {
+          if (isBunnyPlaybackError(msg.data?.provider)) {
             providerRef.current = 'bunny';
             if (scheduleBunnyPlaybackRecovery()) break;
             setStatus('error');

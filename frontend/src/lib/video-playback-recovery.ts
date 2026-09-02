@@ -6,6 +6,10 @@ export function canRetryBunnyPlayback(provider: string, attempts: number): boole
     && attempts < MAX_BUNNY_PLAYBACK_RECOVERY_ATTEMPTS;
 }
 
+export function isBunnyPlaybackError(provider: unknown): boolean {
+  return typeof provider === 'string' && provider.toLowerCase() === 'bunny';
+}
+
 export function isBunnyPlaybackStable(readyAtMs: number, nowMs: number): boolean {
   return readyAtMs > 0 && nowMs - readyAtMs >= BUNNY_PLAYBACK_STABILITY_WINDOW_MS;
 }

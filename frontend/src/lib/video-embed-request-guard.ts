@@ -2,7 +2,10 @@ export type VideoEmbedNavigationError = 'missing-context' | 'unauthorized-origin
 
 type HeaderReader = Pick<Headers, 'get'>;
 
-const STUDENT_APP_ORIGIN = 'https://app.massar-academy.net';
+const APPROVED_FORWARDED_APP_ORIGINS = new Set([
+  'https://app.massar-academy.net',
+  'https://admin.massar-academy.net',
+]);
 
 function requestOrigins(requestUrl: string, headers: HeaderReader) {
   const origins = new Set([new URL(requestUrl).origin]);
@@ -11,7 +14,7 @@ function requestOrigins(requestUrl: string, headers: HeaderReader) {
 
   if (forwardedHost && forwardedProto) {
     const forwardedOrigin = new URL(`${forwardedProto}://${forwardedHost}`).origin;
-    if (forwardedOrigin === STUDENT_APP_ORIGIN) origins.add(forwardedOrigin);
+    if (APPROVED_FORWARDED_APP_ORIGINS.has(forwardedOrigin)) origins.add(forwardedOrigin);
   }
 
   return origins;

@@ -5,6 +5,7 @@ import {
   BUNNY_PLAYBACK_STABILITY_WINDOW_MS,
   MAX_BUNNY_PLAYBACK_RECOVERY_ATTEMPTS,
   canRetryBunnyPlayback,
+  isBunnyPlaybackError,
   isBunnyPlaybackStable,
 } from './video-playback-recovery.ts';
 
@@ -16,6 +17,13 @@ test('2026-09-02 transient Bunny playback failure retries twice and then stops',
     false,
   );
   assert.equal(canRetryBunnyPlayback('youtube', 0), false);
+});
+
+test('only an explicit Bunny provider error consumes the Bunny recovery budget', () => {
+  assert.equal(isBunnyPlaybackError('bunny'), true);
+  assert.equal(isBunnyPlaybackError('Bunny'), true);
+  assert.equal(isBunnyPlaybackError(undefined), false);
+  assert.equal(isBunnyPlaybackError('youtube'), false);
 });
 
 test('2026-09-02 Bunny recovery budget resets only after stable playback', () => {

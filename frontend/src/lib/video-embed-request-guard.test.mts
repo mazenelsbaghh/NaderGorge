@@ -59,14 +59,32 @@ test('forwarded headers cannot authorize a non-student host', () => {
   );
 });
 
-test('same-site metadata cannot authorize a sibling Massar surface', () => {
+test('admin video preview accepts the exact admin application origin', () => {
   assert.equal(
     validateVideoEmbedNavigation(
-      'https://app.massar-academy.net/api/video/embed?s=session-id',
+      'http://frontend:3000/api/video/embed?s=session-id',
       requestHeaders({
         referer: 'https://admin.massar-academy.net/lessons/2',
         'sec-fetch-dest': 'iframe',
         'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'admin.massar-academy.net',
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    null,
+  );
+});
+
+test('same-site metadata cannot authorize an unapproved Massar sibling surface', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://staff.massar-academy.net/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'staff.massar-academy.net',
+        'x-forwarded-proto': 'https',
       }),
     ),
     'unauthorized-origin',
