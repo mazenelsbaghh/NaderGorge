@@ -1877,7 +1877,8 @@ public sealed class BunnyStreamLibrariesTests
                 new AccessCheckService(db),
                 encryption,
                 bunnyHlsSecretProtector: protector,
-                bunnyHlsUrlSigner: new BunnyHlsUrlSigner())
+                bunnyHlsUrlSigner: new BunnyHlsUrlSigner(),
+                bunnyHlsValidator: FakeHlsPlaybackValidator.Valid)
             .Handle(
                 new CreateVideoSessionCommand(seeded.Video.Id, seeded.Admin.Id),
                 CancellationToken.None);
@@ -1890,6 +1891,181 @@ public sealed class BunnyStreamLibrariesTests
         Assert.StartsWith("https://vz-example.b-cdn.net/bcdn_token=HS256-", material.ProviderVideoId);
         Assert.EndsWith($"/{VideoGuid}/playlist.m3u8", material.ProviderVideoId);
         Assert.DoesNotContain(tokenKey, material.ProviderVideoId, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Production20260903_PlatformHlsRejectionDoesNotFallBackOrCreateSession()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        seeded.Video.BunnyPlaybackMode = BunnyPlaybackMode.PlatformHls;
+        await db.SaveChangesAsync();
+
+        var result = await new CreateVideoSessionCommandHandler(
+                db,
+                new AccessCheckService(db),
+                new VideoEncryptionService(),
+                bunnyHlsValidator: FakeHlsPlaybackValidator.Rejected)
+            .Handle(
+                new CreateVideoSessionCommand(seeded.Video.Id, seeded.Admin.Id),
+                CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("BUNNY_HLS_AUTH_REJECTED", result.Errors!);
+        Assert.Empty(await db.VideoPlaybackSessions.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task Production20260903_InvalidHlsSecretDoesNotFallBackToBunnyPlayer()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        seeded.Library.HlsCdnHostname = "vz-example.b-cdn.net";
+        seeded.Library.HlsTokenKeyCiphertext = [0x01, 0x02, 0x03];
+        seeded.Video.BunnyPlaybackMode = BunnyPlaybackMode.PlatformHls;
+        await db.SaveChangesAsync();
+
+        var result = await new CreateVideoSessionCommandHandler(
+                db,
+                new AccessCheckService(db),
+                new VideoEncryptionService(),
+                bunnyHlsSecretProtector: new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider()),
+                bunnyHlsUrlSigner: new BunnyHlsUrlSigner(),
+                bunnyHlsValidator: FakeHlsPlaybackValidator.Valid)
+            .Handle(
+                new CreateVideoSessionCommand(seeded.Video.Id, seeded.Admin.Id),
+                CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("BUNNY_HLS_SIGNING_FAILED", result.Errors!);
+        Assert.Empty(await db.VideoPlaybackSessions.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task Production20260903_UpdateVideoHlsRejectionKeepsExistingPlayerSelection()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+
+        var result = await new UpdateVideoCommandHandler(
+                db,
+                Array.Empty<IVideoProvider>(),
+                new TeacherAuthorizationService(db),
+                new FakeLibraryAccessService(),
+                new FakeBunnyStreamClientFactory(),
+                FakeHlsPlaybackValidator.Rejected)
+            .Handle(
+                new UpdateVideoCommand(
+                    seeded.Video.Id,
+                    seeded.Video.Title,
+                    VideoProviders.Bunny,
+                    seeded.Video.ProviderVideoId,
+                    seeded.Video.Order,
+                    seeded.Video.MaxWatchCount,
+                    seeded.VideoType.Id,
+                    seeded.Admin.Id,
+                    seeded.Library.Id,
+                    seeded.Video.IsActive,
+                    BunnyPlaybackMode.PlatformHls),
+                CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("BUNNY_HLS_AUTH_REJECTED", result.Errors!);
+        db.ChangeTracker.Clear();
+        Assert.Equal(
+            BunnyPlaybackMode.BunnyPlayer,
+            await db.LessonVideos.Where(item => item.Id == seeded.Video.Id).Select(item => item.BunnyPlaybackMode).SingleAsync());
+    }
+
+    [Fact]
+    public async Task Production20260903_HlsValidationUsesStudentReferrerAndAcceptsManifest()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("HLS validation", 749998);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        library.HlsCdnHostname = "vz-example.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, "private-token-key");
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        var validResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("#EXTM3U\n#EXT-X-VERSION:3\n")
+        };
+        validResponse.Headers.TryAddWithoutValidation("Access-Control-Allow-Origin", "*");
+        var httpHandler = new StaticHttpMessageHandler(validResponse);
+        using var httpClient = new HttpClient(httpHandler);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(
+            httpClient,
+            db,
+            protector,
+            cache);
+
+        var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        Assert.NotNull(httpHandler.LastRequest);
+        Assert.Equal("https://app.massar-academy.net/", httpHandler.LastRequest!.Headers.Referrer?.ToString());
+        Assert.Contains("https://app.massar-academy.net", httpHandler.LastRequest.Headers.GetValues("Origin"));
+        Assert.Equal("vz-example.b-cdn.net", httpHandler.LastRequest.RequestUri?.Host);
+        Assert.Contains($"/{VideoGuid}/playlist.m3u8", httpHandler.LastRequest.RequestUri?.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task Production20260903_HlsValidationReports403WithoutExposingSignedUrl()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("Rejected HLS", 749999);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        const string tokenKey = "secret-that-must-not-appear";
+        library.HlsCdnHostname = "vz-rejected.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, tokenKey);
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+            new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(
+            httpClient,
+            db,
+            protector,
+            cache);
+
+        var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("BUNNY_HLS_AUTH_REJECTED", result.ErrorCode);
+        Assert.Contains("403", result.Message);
+        Assert.DoesNotContain(tokenKey, result.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("bcdn_token", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Production20260903_HlsValidationRejectsManifestWithoutBrowserCors()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("Missing HLS CORS", 750000);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        library.HlsCdnHostname = "vz-no-cors.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, "private-token-key");
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("#EXTM3U\n#EXT-X-VERSION:3\n")
+            }));
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(httpClient, db, protector, cache);
+
+        var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("BUNNY_HLS_CORS_REJECTED", result.ErrorCode);
+        Assert.Contains("Allowed Domains", result.Message);
     }
 
     [Fact]
@@ -2337,5 +2513,33 @@ public sealed class BunnyStreamLibrariesTests
                 collectionId,
                 false,
                 true);
+    }
+
+    private sealed class FakeHlsPlaybackValidator(BunnyHlsPlaybackValidationResult result)
+        : IBunnyHlsPlaybackValidator
+    {
+        public static readonly FakeHlsPlaybackValidator Valid = new(BunnyHlsPlaybackValidationResult.Ok());
+        public static readonly FakeHlsPlaybackValidator Rejected = new(
+            BunnyHlsPlaybackValidationResult.Fail(
+                "BUNNY_HLS_AUTH_REJECTED",
+                "Bunny rejected the HLS request."));
+
+        public Task<BunnyHlsPlaybackValidationResult> ValidateVideoAsync(
+            Guid libraryId,
+            string videoGuid,
+            CancellationToken cancellationToken) => Task.FromResult(result);
+    }
+
+    private sealed class StaticHttpMessageHandler(HttpResponseMessage response) : HttpMessageHandler
+    {
+        public HttpRequestMessage? LastRequest { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult(response);
+        }
     }
 }

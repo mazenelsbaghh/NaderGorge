@@ -49,6 +49,26 @@ public interface IBunnyHlsUrlSigner
     string SignPlaylist(string hostname, string videoGuid, string tokenKey, DateTime expiresAtUtc);
 }
 
+public interface IBunnyHlsPlaybackValidator
+{
+    Task<BunnyHlsPlaybackValidationResult> ValidateVideoAsync(
+        Guid libraryId,
+        string videoGuid,
+        CancellationToken cancellationToken);
+}
+
+public sealed record BunnyHlsPlaybackValidationResult(
+    bool Success,
+    string ErrorCode,
+    string Message)
+{
+    public static BunnyHlsPlaybackValidationResult Ok() =>
+        new(true, string.Empty, string.Empty);
+
+    public static BunnyHlsPlaybackValidationResult Fail(string errorCode, string message) =>
+        new(false, errorCode, message);
+}
+
 public interface IBunnyStreamLibraryAccessService
 {
     Task<BunnyStreamLibraryAccessResult> ResolveAsync(

@@ -46,6 +46,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
     private readonly IBunnyVideoDurationResolver? _bunnyVideoDurationResolver;
     private readonly IBunnyHlsSecretProtector? _bunnyHlsSecretProtector;
     private readonly IBunnyHlsUrlSigner? _bunnyHlsUrlSigner;
+    private readonly IBunnyHlsPlaybackValidator? _bunnyHlsValidator;
 
     public CreateVideoSessionCommandHandler(
         IAppDbContext db,
@@ -55,7 +56,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         IVideoPlaybackConcurrency? playbackConcurrency = null,
         IBunnyVideoDurationResolver? bunnyVideoDurationResolver = null,
         IBunnyHlsSecretProtector? bunnyHlsSecretProtector = null,
-        IBunnyHlsUrlSigner? bunnyHlsUrlSigner = null)
+        IBunnyHlsUrlSigner? bunnyHlsUrlSigner = null,
+        IBunnyHlsPlaybackValidator? bunnyHlsValidator = null)
     {
         _db = db;
         _access = access;
@@ -65,6 +67,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         _bunnyVideoDurationResolver = bunnyVideoDurationResolver;
         _bunnyHlsSecretProtector = bunnyHlsSecretProtector;
         _bunnyHlsUrlSigner = bunnyHlsUrlSigner;
+        _bunnyHlsValidator = bunnyHlsValidator;
     }
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
@@ -203,6 +206,27 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             }
         }
 
+        if (normalizedProvider == VideoProviders.Bunny && video.BunnyPlaybackMode == BunnyPlaybackMode.PlatformHls)
+        {
+            if (video.BunnyStreamLibraryId is not Guid hlsLibraryId || _bunnyHlsValidator is null)
+            {
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "تعذر التحقق من إعدادات Bunny HLS. لم يتم تحويل الفيديو إلى مشغل آخر.",
+                    new List<string> { "BUNNY_HLS_VALIDATION_UNAVAILABLE" });
+            }
+
+            var hlsValidation = await _bunnyHlsValidator.ValidateVideoAsync(
+                hlsLibraryId,
+                video.ProviderVideoId,
+                ct);
+            if (!hlsValidation.Success)
+            {
+                return ApiResponse<VideoSessionDto>.Fail(
+                    hlsValidation.Message,
+                    new List<string> { hlsValidation.ErrorCode });
+            }
+        }
+
         await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         if (_playbackConcurrency is not null)
             await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
@@ -297,12 +321,18 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         string studentName = user?.FullName ?? "Unknown";
         string studentPhone = user?.PhoneNumber ?? "Unknown";
         if (normalizedProvider == VideoProviders.Bunny
-            && video.BunnyPlaybackMode == BunnyPlaybackMode.PlatformHls
-            && video.BunnyStreamLibrary?.HlsTokenKeyCiphertext is { Length: > 0 } tokenCiphertext
-            && !string.IsNullOrWhiteSpace(video.BunnyStreamLibrary.HlsCdnHostname)
-            && _bunnyHlsSecretProtector is not null
-            && _bunnyHlsUrlSigner is not null)
+            && video.BunnyPlaybackMode == BunnyPlaybackMode.PlatformHls)
         {
+            if (video.BunnyStreamLibrary?.HlsTokenKeyCiphertext is not { Length: > 0 } tokenCiphertext
+                || string.IsNullOrWhiteSpace(video.BunnyStreamLibrary.HlsCdnHostname)
+                || _bunnyHlsSecretProtector is null
+                || _bunnyHlsUrlSigner is null)
+            {
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "إعدادات Bunny HLS غير مكتملة. لم يتم تحويل الفيديو إلى مشغل آخر.",
+                    new List<string> { "BUNNY_HLS_CONFIG_INCOMPLETE" });
+            }
+
             try
             {
                 var tokenKey = _bunnyHlsSecretProtector.Unprotect(video.BunnyStreamLibrary.Id, tokenCiphertext);
@@ -315,9 +345,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             }
             catch (Exception exception) when (exception is CryptographicException or InvalidOperationException or ArgumentException)
             {
-                // Preserve playback for existing content if a library HLS secret
-                // was rotated or is incomplete; the standard Bunny player remains available.
-                sessionProvider = video.Provider;
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "تعذر توقيع رابط Bunny HLS. لم يتم تحويل الفيديو إلى مشغل آخر.",
+                    new List<string> { "BUNNY_HLS_SIGNING_FAILED" });
             }
         }
         session.SessionToken = _encryption.EncryptVideoInfo(

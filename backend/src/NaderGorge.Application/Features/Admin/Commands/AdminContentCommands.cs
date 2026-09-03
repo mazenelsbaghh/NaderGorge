@@ -874,19 +874,22 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
     private readonly TeacherAuthorizationService _auth;
     private readonly IBunnyStreamLibraryAccessService _bunnyLibraries;
     private readonly IBunnyStreamClientFactory _bunnyClients;
+    private readonly IBunnyHlsPlaybackValidator? _bunnyHlsValidator;
 
     public CreateVideoCommandHandler(
         IAppDbContext db,
         IEnumerable<IVideoProvider> providers,
         TeacherAuthorizationService auth,
         IBunnyStreamLibraryAccessService bunnyLibraries,
-        IBunnyStreamClientFactory bunnyClients)
+        IBunnyStreamClientFactory bunnyClients,
+        IBunnyHlsPlaybackValidator? bunnyHlsValidator = null)
     {
         _db = db;
         _providers = providers;
         _auth = auth;
         _bunnyLibraries = bunnyLibraries;
         _bunnyClients = bunnyClients;
+        _bunnyHlsValidator = bunnyHlsValidator;
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
@@ -926,6 +929,15 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
 
             extractedId = bunnyReference.VideoGuid!;
             bunnyStreamLibraryId = bunnyReference.LibraryId;
+
+            var hlsFailure = await BunnyHlsPlaybackSelectionValidator.ValidateAsync(
+                new BunnyHlsPlaybackSelection(
+                    request.BunnyPlaybackMode,
+                    bunnyStreamLibraryId,
+                    extractedId),
+                _bunnyHlsValidator,
+                ct);
+            if (hlsFailure is not null) return ApiResponse<Guid>.Fail(hlsFailure.Message, [hlsFailure.ErrorCode]);
         }
         else
         {
@@ -986,19 +998,22 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
     private readonly TeacherAuthorizationService _auth;
     private readonly IBunnyStreamLibraryAccessService _bunnyLibraries;
     private readonly IBunnyStreamClientFactory _bunnyClients;
+    private readonly IBunnyHlsPlaybackValidator? _bunnyHlsValidator;
 
     public UpdateVideoCommandHandler(
         IAppDbContext db,
         IEnumerable<IVideoProvider> providers,
         TeacherAuthorizationService auth,
         IBunnyStreamLibraryAccessService bunnyLibraries,
-        IBunnyStreamClientFactory bunnyClients)
+        IBunnyStreamClientFactory bunnyClients,
+        IBunnyHlsPlaybackValidator? bunnyHlsValidator = null)
     {
         _db = db;
         _providers = providers;
         _auth = auth;
         _bunnyLibraries = bunnyLibraries;
         _bunnyClients = bunnyClients;
+        _bunnyHlsValidator = bunnyHlsValidator;
     }
 
     public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
@@ -1108,6 +1123,18 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             extractedId = providerImpl?.ExtractVideoId(request.UrlOrEmbedCode) ?? request.UrlOrEmbedCode;
         }
 
+        if (normalizedProvider == VideoProviders.Bunny && request.BunnyPlaybackMode == BunnyPlaybackMode.PlatformHls)
+        {
+            var hlsFailure = await BunnyHlsPlaybackSelectionValidator.ValidateAsync(
+                new BunnyHlsPlaybackSelection(
+                    request.BunnyPlaybackMode,
+                    bunnyStreamLibraryId,
+                    extractedId),
+                _bunnyHlsValidator,
+                ct);
+            if (hlsFailure is not null) return ApiResponse.Fail(hlsFailure.Message, [hlsFailure.ErrorCode]);
+        }
+
         var sourceChanged = !string.Equals(
                                 VideoProviders.Normalize(video.Provider),
                                 normalizedProvider,
@@ -1185,6 +1212,34 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
                 ["VIDEO_SOURCE_CONFLICT"]);
         }
         return ApiResponse.Ok();
+    }
+}
+
+internal sealed record BunnyHlsPlaybackSelection(
+    BunnyPlaybackMode PlaybackMode,
+    Guid? LibraryId,
+    string VideoGuid);
+
+internal static class BunnyHlsPlaybackSelectionValidator
+{
+    public static async Task<BunnyHlsPlaybackValidationResult?> ValidateAsync(
+        BunnyHlsPlaybackSelection selection,
+        IBunnyHlsPlaybackValidator? validator,
+        CancellationToken cancellationToken)
+    {
+        if (selection.PlaybackMode != BunnyPlaybackMode.PlatformHls) return null;
+        if (!selection.LibraryId.HasValue || validator is null)
+        {
+            return BunnyHlsPlaybackValidationResult.Fail(
+                "BUNNY_HLS_VALIDATION_UNAVAILABLE",
+                "تعذر اختبار HLS الآن، لذلك لم يتم حفظ تغيير المشغل.");
+        }
+
+        var validation = await validator.ValidateVideoAsync(
+            selection.LibraryId.Value,
+            selection.VideoGuid,
+            cancellationToken);
+        return validation.Success ? null : validation;
     }
 }
 

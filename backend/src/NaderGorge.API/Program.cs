@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.API.Configuration;
 using NaderGorge.API.Middleware;
@@ -167,6 +168,18 @@ builder.Services.AddSingleton<IBunnyStreamLibrarySecretProtector, BunnyStreamLib
 builder.Services.AddSingleton<IBunnyHlsSecretProtector>(sp =>
     (BunnyStreamLibrarySecretProtector)sp.GetRequiredService<IBunnyStreamLibrarySecretProtector>());
 builder.Services.AddSingleton<IBunnyHlsUrlSigner, BunnyHlsUrlSigner>();
+builder.Services.AddHttpClient("BunnyHlsValidation", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(8);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false
+});
+builder.Services.AddScoped<IBunnyHlsPlaybackValidator>(services => new BunnyHlsPlaybackValidator(
+    services.GetRequiredService<IHttpClientFactory>().CreateClient("BunnyHlsValidation"),
+    services.GetRequiredService<IAppDbContext>(),
+    services.GetRequiredService<IBunnyHlsSecretProtector>(),
+    services.GetRequiredService<IMemoryCache>()));
 builder.Services.AddScoped<IBunnyStreamLibraryAccessService, BunnyStreamLibraryAccessService>();
 builder.Services.AddScoped<IBunnyVideoDurationResolver, BunnyVideoDurationResolver>();
 builder.Services.AddScoped<IBunnyOriginalMediaReader, BunnyOriginalMediaReader>();

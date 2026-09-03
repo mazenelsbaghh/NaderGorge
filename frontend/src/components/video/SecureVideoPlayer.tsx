@@ -635,6 +635,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             providerRef.current = loadedProvider;
             serverCanResolveDurationRef.current = true;
             setProvider(loadedProvider);
+          } else if (loadedProvider === 'bunny-hls') {
+            providerRef.current = loadedProvider;
+            serverCanResolveDurationRef.current = true;
+            setProvider(loadedProvider);
           }
           break;
         }
