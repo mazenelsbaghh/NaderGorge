@@ -37,6 +37,7 @@ interface BunnyBridgeHarness {
   providerCommands: () => Record<string, unknown>[];
   player: {
     emit: (eventName: string, value?: unknown) => void;
+    origin: string;
     rawReadyCalls: unknown[];
   } | null;
   resizeViewport: (width: number, height: number) => void;
@@ -75,7 +76,8 @@ async function runBunnyBridge(options: {
   const bridgeScript = routeSource
     .slice(bridgeStart, bridgeEnd)
     .replace('${devToolsGuard}', 'var __videoEmbedSuspended = false;')
-    .replace('${safeSrc}', JSON.stringify('https://player.example/embed/library/video'));
+    .replace('${safeSrc}', JSON.stringify('https://player.mediadelivery.net/embed/library/video'))
+    .replace('${safeAlternateSrc}', JSON.stringify('https://iframe.mediadelivery.net/embed/library/video'));
   assert.doesNotMatch(bridgeScript, /\$\{/);
 
   const messages: BridgeMessage[] = [];
@@ -99,6 +101,7 @@ async function runBunnyBridge(options: {
 
   class FakePlayer {
     isReady = false;
+    origin = 'https://player.mediadelivery.net';
     rawReadyCalls: unknown[] = [];
     private readonly handlers = new Map<string, BridgeCallback[]>();
 
@@ -343,6 +346,20 @@ test('2026-09-03 raw Bunny Player.js ready messages recover the tablet handshake
   assert.equal(harness.messages.filter((message) => message.type === 'ready').length, 1);
 });
 
+test('2026-09-03 Bunny accepts the verified alternate iframe bridge origin', async () => {
+  const harness = await runBunnyBridge();
+
+  harness.dispatchProviderMessage(
+    bunnyReadyMessage(),
+    undefined,
+    'https://iframe.mediadelivery.net',
+  );
+
+  assert.equal(harness.player?.rawReadyCalls.length, 1);
+  assert.equal(harness.player?.origin, 'https://iframe.mediadelivery.net');
+  assert.equal(harness.messages.filter((message) => message.type === 'ready').length, 1);
+});
+
 test('Bunny does not become tracking-ready from a bridge without a media clock', async () => {
   const harness = await runBunnyBridge();
   const message = bunnyReadyMessage();
@@ -437,9 +454,12 @@ test('all Bunny bridge failures identify the provider for bounded recovery', asy
   });
 });
 
-test('2026-09-03 Bunny surface load stays visual-only and bridge retry preserves the iframe', async () => {
+test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails over without removing the iframe', async () => {
   const harness = await runBunnyBridge();
-  const initialIframeState = harness.iframeState();
+  assert.equal(
+    harness.iframeState().src,
+    'https://player.mediadelivery.net/embed/library/video',
+  );
 
   harness.fireProviderLoad();
   assert.deepEqual(normalizedMessages(harness.messages), [{
@@ -450,7 +470,10 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry preserves
 
   harness.dispatchParentMessage({ type: 'retryBridge' });
   assert.equal(harness.playerCount(), 2);
-  assert.deepEqual(harness.iframeState(), initialIframeState);
+  assert.deepEqual(harness.iframeState(), {
+    removeCalls: 0,
+    src: 'https://iframe.mediadelivery.net/embed/library/video',
+  });
   assert.equal(harness.messages.some((message) => message.type === 'ready'), false);
   assert.deepEqual(harness.providerCommands().at(-1), {
     context: 'player.js',

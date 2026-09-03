@@ -199,7 +199,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   const reference = resolveBunnyVideoReference(videoId);
   if (typeof reference === 'string') return embedErrorHtml(reference);
 
-  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=false&playsinline=true&disableIosPlayer=true`);
+  const playerQuery = 'autoplay=false&playsinline=true&disableIosPlayer=true';
+  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
+  const safeAlternateSrc = JSON.stringify(`https://iframe.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -265,6 +267,10 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var advancingTimeSamples = 0;
     var pollTimer = null;
     var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
+    var bunnyBridgeOrigins = ['https://player.mediadelivery.net', 'https://iframe.mediadelivery.net'];
+    var bunnyBridgeOrigin = null;
+    var bunnyEmbedSources = [${safeSrc}, ${safeAlternateSrc}];
+    var bunnyEmbedSourceIndex = 0;
     var supportedPlaybackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
     function isSupportedPlaybackRate(playbackRate) {
@@ -292,26 +298,60 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       return data && typeof data === 'object' ? data : null;
     }
 
+    function isTrustedBunnyBridgeOrigin(origin) {
+      return bunnyBridgeOrigins.indexOf(origin) !== -1;
+    }
+
+    function sendBunnyBridgeMessage(message) {
+      if (!iframe || !iframe.contentWindow) return false;
+      var serialized = JSON.stringify(message);
+      var targetOrigins = bunnyBridgeOrigin ? [bunnyBridgeOrigin] : bunnyBridgeOrigins;
+      var sent = false;
+      targetOrigins.forEach(function (targetOrigin) {
+        try {
+          iframe.contentWindow.postMessage(serialized, targetOrigin);
+          sent = true;
+        } catch (e) {}
+      });
+      return sent;
+    }
+
+    function requestBunnyReadyProbe() {
+      return sendBunnyBridgeMessage({
+        context: 'player.js',
+        version: '0.0.11',
+        method: 'addEventListener',
+        value: 'ready',
+        listener: bridgeReadyProbeListener
+      });
+    }
+
     // Some Android WebViews normalize the iframe URL differently from the src
     // echoed by Bunny's Player.js ready event. The vendored bridge then rejects
     // an otherwise valid ready message. Validate the source window and repair
     // that specific handshake without weakening the origin boundary.
     function recoverBunnyPlayerReady(event) {
-      if (__videoEmbedSuspended || !iframe || event.origin !== 'https://player.mediadelivery.net' || event.source !== iframe.contentWindow || !player || player.isReady) return;
+      if (__videoEmbedSuspended || !iframe || !isTrustedBunnyBridgeOrigin(event.origin) || event.source !== iframe.contentWindow || !player || player.isReady) return;
       var message = parsePlayerJsMessage(event.data);
       if (!message || message.context !== 'player.js' || message.event !== 'ready') return;
       if (!message.value || typeof message.value.src !== 'string' || !readyPayloadSupportsTime(message.value)) return;
-      try { player.ready(message); } catch (e) {}
+      bunnyBridgeOrigin = event.origin;
+      try {
+        // Player.js derives its target from the requested iframe URL. Bunny can
+        // serve the same trusted embed from its alternate iframe hostname, so
+        // keep subsequent commands on the verified origin that actually
+        // produced this ready event.
+        player.origin = bunnyBridgeOrigin;
+        player.ready(message);
+      } catch (e) {}
       if (message.listener === bridgeReadyProbeListener) {
-        try {
-          iframe.contentWindow.postMessage(JSON.stringify({
-            context: 'player.js',
-            version: '0.0.11',
-            method: 'removeEventListener',
-            value: 'ready',
-            listener: bridgeReadyProbeListener
-          }), 'https://player.mediadelivery.net');
-        } catch (e) {}
+        sendBunnyBridgeMessage({
+          context: 'player.js',
+          version: '0.0.11',
+          method: 'removeEventListener',
+          value: 'ready',
+          listener: bridgeReadyProbeListener
+        });
       }
     }
     window.addEventListener('message', recoverBunnyPlayerReady);
@@ -389,8 +429,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         // WebView delays Player.js readiness. Let the parent uncover the
         // native player while the bridge continues connecting in background.
         postToParent('providerLoaded', { provider: 'bunny' });
+        requestBunnyReadyProbe();
       });
-      iframe.src = ${safeSrc};
+      iframe.src = bunnyEmbedSources[bunnyEmbedSourceIndex];
     }
 
     function detachPlayerCallbacks(candidate) {
@@ -412,19 +453,22 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       parentReadySent = false;
       lastObservedTime = null;
       advancingTimeSamples = 0;
+      // A browser-level failure at player.mediadelivery.net still fires the
+      // iframe load event for its internal error document. The next bounded
+      // bridge retry therefore fails over to Bunny's alternate embed hostname
+      // instead of navigating to the same unreachable URL again.
+      if (bunnyEmbedSourceIndex + 1 < bunnyEmbedSources.length) {
+        bunnyEmbedSourceIndex += 1;
+        bunnyBridgeOrigin = null;
+        iframe.src = bunnyEmbedSources[bunnyEmbedSourceIndex];
+      }
       initPlayer();
-      try {
-        // Player.js queues its own subscriptions until it sees the ready event. Ask an
-        // already-ready Bunny receiver to replay that handshake without
-        // navigating or pausing the provider iframe.
-        iframe.contentWindow.postMessage(JSON.stringify({
-          context: 'player.js',
-          version: '0.0.11',
-          method: 'addEventListener',
-          value: 'ready',
-          listener: bridgeReadyProbeListener
-        }), 'https://player.mediadelivery.net');
-      } catch (e) {
+      // Player.js queues its own subscriptions until it sees the ready event. Ask an
+      // already-ready Bunny receiver to replay that handshake without
+      // navigating or pausing the provider iframe. Until Bunny answers, probe
+      // both of its documented embed hostnames because redirects are opaque to
+      // the parent page.
+      if (!requestBunnyReadyProbe()) {
         postToParent('error', { message: 'Failed to retry Bunny player bridge', provider: 'bunny' });
       }
     }

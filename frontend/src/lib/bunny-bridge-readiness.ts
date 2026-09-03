@@ -1,4 +1,5 @@
 export const BUNNY_BRIDGE_INITIAL_DEADLINE_MS = 30_000;
+export const BUNNY_BRIDGE_AFTER_SURFACE_DEADLINE_MS = 8_000;
 export const BUNNY_BRIDGE_RETRY_DEADLINE_MS = 15_000;
 
 export interface BunnyBridgeReadinessWatchdog {
@@ -14,6 +15,7 @@ interface BunnyBridgeReadinessWatchdogOptions<THandle> {
   retryBridgeInPlace: () => boolean;
   recoverEmbed: () => void;
   initialDeadlineMs?: number;
+  surfaceDeadlineMs?: number;
   retryDeadlineMs?: number;
 }
 
@@ -26,6 +28,7 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
   options: BunnyBridgeReadinessWatchdogOptions<THandle>,
 ): BunnyBridgeReadinessWatchdog {
   const initialDeadlineMs = options.initialDeadlineMs ?? BUNNY_BRIDGE_INITIAL_DEADLINE_MS;
+  const surfaceDeadlineMs = options.surfaceDeadlineMs ?? BUNNY_BRIDGE_AFTER_SURFACE_DEADLINE_MS;
   const retryDeadlineMs = options.retryDeadlineMs ?? BUNNY_BRIDGE_RETRY_DEADLINE_MS;
   let scheduledHandle: THandle | null = null;
   let running = false;
@@ -69,7 +72,13 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
       scheduledHandle = options.schedule(handleInitialDeadline, initialDeadlineMs);
     },
     markSurfaceLoaded() {
-      if (running) bunnySurfaceLoaded = true;
+      if (!running || bunnySurfaceLoaded) return;
+      bunnySurfaceLoaded = true;
+      // Once the iframe document has loaded, a missing bridge no longer needs
+      // the full network allowance. Fail over promptly if the loaded document
+      // is a browser error page or a stalled Bunny host.
+      clearScheduled();
+      scheduledHandle = options.schedule(handleInitialDeadline, surfaceDeadlineMs);
     },
     markReady() {
       running = false;
