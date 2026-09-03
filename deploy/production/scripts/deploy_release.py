@@ -1025,14 +1025,19 @@ def main() -> int:
         )
     by_id = {node.id: node for node in inventory.nodes}
     for node in inventory.nodes:
+        target = SshTarget(
+            node.id,
+            node.public_address,
+            inventory.cluster["ssh_user"],
+        )
+        cleanup_current_release = previous_release
+        if matching_recovery_marker(transport, target, args.release):
+            if node_ready(transport, target, node.overlay_address) == args.release:
+                cleanup_current_release = args.release
         preview_release_artifact_cleanup(
             transport,
-            SshTarget(
-                node.id,
-                node.public_address,
-                inventory.cluster["ssh_user"],
-            ),
-            previous_release,
+            target,
+            cleanup_current_release,
         )
     operation_id = str(uuid.uuid4())
     control = inventory.nodes[0]

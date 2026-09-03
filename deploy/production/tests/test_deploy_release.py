@@ -388,6 +388,11 @@ def test_interrupted_rollout_resumes_healthy_marked_node_without_redeploying(
     assert current_rollout["deploy_calls"] == ["node-2", "node-1"]
     assert set(current_rollout["releases"].values()) == {candidate_release}
     assert current_rollout["markers"] == set()
+    assert current_rollout["preview_calls"] == [
+        ("node-1", "prod-20260726-166-r1"),
+        ("node-2", "prod-20260726-166-r1"),
+        ("node-3", candidate_release),
+    ]
 
 
 def test_post_drain_predeploy_failure_returns_unchanged_node_to_service(
