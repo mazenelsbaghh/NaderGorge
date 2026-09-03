@@ -129,4 +129,6 @@ test('2026-09-03 Bunny browser error documents stay covered until the media brid
   assert.doesNotMatch(surfaceHandler, /setIsBuffering\(false\)/);
   assert.match(readyHandler, /setNativeProviderSurfaceLoaded\(embedProvider === 'bunny'\)/);
   assert.match(readyHandler, /setIsBuffering\(false\)/);
+  assert.match(playerSource, /status === 'loading' \? 'pointer-events-auto' : 'pointer-events-none'/);
+  assert.match(playerSource, /aria-busy=\{status === 'loading'\}/);
 });

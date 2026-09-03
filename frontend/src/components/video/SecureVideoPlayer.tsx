@@ -2247,7 +2247,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
         
         {(status === 'loading' || isBuffering) && !(provider === 'bunny' && nativeProviderSurfaceLoaded) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-20 pointer-events-none rounded-xl">
+          <div
+            className={`absolute inset-0 z-20 flex flex-col items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm ${
+              status === 'loading' ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+            aria-busy={status === 'loading'}
+          >
             <SpinnerLoader />
           </div>
         )}
