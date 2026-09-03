@@ -82,3 +82,11 @@ test('video seek controls keep a full touch target and cancel without committing
   assert.doesNotMatch(cancelHandler, /onChange\(/);
   assert.match(controlsSource, /onPointerCancel=\{handlePointerCancel\}/);
 });
+
+test('2026-09-03 Bunny playback menu keeps a wide click-through area between seek zones', async () => {
+  const playerSource = await readFile(playerPath, 'utf8');
+  const narrowSeekZones = playerSource.match(/w-\[12\.5%\] min-w-11 max-w-16/g) ?? [];
+
+  assert.equal(narrowSeekZones.length, 2);
+  assert.doesNotMatch(playerSource, /pointer-events-auto h-full w-\[38%\]/);
+});

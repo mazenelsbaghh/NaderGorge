@@ -305,7 +305,10 @@ public class VideoWatchProgressTests
 
     [Theory]
     [InlineData(0.5, 2)]
+    [InlineData(0.75, 3)]
+    [InlineData(1.25, 5)]
     [InlineData(1.5, 6)]
+    [InlineData(1.75, 7)]
     public async Task TrackWatchProgress_AccumulatesFractionalPlaybackRateWithoutPerChunkCeiling(
         double playbackRate,
         int expectedTrackedSeconds)
@@ -479,7 +482,7 @@ public class VideoWatchProgressTests
                     new WatchProgressSegment(1, 1, 1)),
                 "PROGRESS_SEQUENCE_GAP"),
             (BatchCommand(fixture, new WatchProgressSegment(1, 30.01, 1)), "PROGRESS_SECONDS_INVALID"),
-            (BatchCommand(fixture, new WatchProgressSegment(1, 1, 1.25)), "PLAYBACK_RATE_INVALID"),
+            (BatchCommand(fixture, new WatchProgressSegment(1, 1, 1.1)), "PLAYBACK_RATE_INVALID"),
             (BatchCommand(fixture, new WatchProgressSegment(1, double.NaN, 1)), "PROGRESS_SECONDS_INVALID"),
             (BatchCommand(
                     fixture,

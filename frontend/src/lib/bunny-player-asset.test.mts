@@ -386,13 +386,13 @@ test('2026-09-03 Bunny infers a missed play event from consecutive media-clock m
   });
 });
 
-test('Bunny bridge forwards delayed metadata and the effective playback rate', async () => {
+test('2026-09-03 Bunny bridge forwards delayed metadata and quarter-step playback rates', async () => {
   const harness = await runBunnyBridge();
   harness.dispatchProviderMessage(bunnyReadyMessage());
 
   harness.callbacks.duration[0]?.(120);
   harness.callbacks.volume[0]?.(0.4);
-  harness.callbacks.playbackRate[0]?.(1.5);
+  harness.callbacks.playbackRate[0]?.(1.25);
   harness.tickIntervals(1000);
 
   const timeUpdate = normalizedMessages(harness.messages)
@@ -406,15 +406,15 @@ test('Bunny bridge forwards delayed metadata and the effective playback rate', a
       volume: 40,
       isMuted: false,
       state: 2,
-      playbackRate: 1.5,
+      playbackRate: 1.25,
     },
   });
 
-  harness.player?.emit('playbackratechange', { playbackRate: 2 });
+  harness.player?.emit('playbackratechange', { playbackRate: 1.75 });
   assert.deepEqual(normalizedMessages(harness.messages).at(-1), {
     source: 'video-embed',
     type: 'playbackRateChange',
-    data: { playbackRate: 2, provider: 'bunny' },
+    data: { playbackRate: 1.75, provider: 'bunny' },
   });
 });
 

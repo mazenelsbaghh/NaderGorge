@@ -411,7 +411,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
     }
 
     private static bool IsSupportedPlaybackRate(double playbackRate) =>
-        playbackRate is 0.5 or 1 or 1.5 or 2;
+        playbackRate is 0.5 or 0.75 or 1 or 1.25 or 1.5 or 1.75 or 2;
 
     private static void RenewSession(
         VideoPlaybackSession session,

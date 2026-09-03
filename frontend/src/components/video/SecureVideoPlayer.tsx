@@ -59,6 +59,12 @@ import {
   type BunnyBridgeReadinessWatchdog,
 } from '@/lib/bunny-bridge-readiness';
 
+const SUPPORTED_PLAYBACK_RATES = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
+
+function isSupportedVideoPlaybackRate(playbackRate: number): boolean {
+  return SUPPORTED_PLAYBACK_RATES.has(playbackRate);
+}
+
 export interface WatchStatus {
   current: number;
   max: number;
@@ -759,7 +765,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               currentTimeRef.current = nextMediaTime;
             }
             const reportedPlaybackRate = Number(msg.data.playbackRate);
-            if ([0.5, 1, 1.5, 2].includes(reportedPlaybackRate)) {
+            if (isSupportedVideoPlaybackRate(reportedPlaybackRate)) {
               if (reportedPlaybackRate !== playbackRateRef.current) {
                 accrueTrackedPlaybackRef.current();
                 void flushTrackedProgressRef.current();
@@ -794,7 +800,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           break;
         case 'playbackRateChange': {
           const nextPlaybackRate = Number(msg.data?.playbackRate);
-          if ([0.5, 1, 1.5, 2].includes(nextPlaybackRate) && nextPlaybackRate !== playbackRateRef.current) {
+          if (isSupportedVideoPlaybackRate(nextPlaybackRate) && nextPlaybackRate !== playbackRateRef.current) {
             accrueTrackedPlaybackRef.current();
             void flushTrackedProgressRef.current();
             playbackRateRef.current = nextPlaybackRate;
@@ -957,7 +963,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       viewTrackedRef.current
       || !Number.isFinite(wallSeconds)
       || wallSeconds <= 0
-      || ![0.5, 1, 1.5, 2].includes(playbackRate)
+      || !isSupportedVideoPlaybackRate(playbackRate)
     ) {
       return;
     }
@@ -2014,7 +2020,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             dir="ltr"
           >
             <div
-              className="pointer-events-auto h-full w-[38%] touch-manipulation select-none"
+              className="pointer-events-auto h-full w-[12.5%] min-w-11 max-w-16 touch-manipulation select-none"
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -2026,7 +2032,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             />
             <div className="h-full flex-1" />
             <div
-              className="pointer-events-auto h-full w-[38%] touch-manipulation select-none"
+              className="pointer-events-auto h-full w-[12.5%] min-w-11 max-w-16 touch-manipulation select-none"
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 event.currentTarget.setPointerCapture(event.pointerId);

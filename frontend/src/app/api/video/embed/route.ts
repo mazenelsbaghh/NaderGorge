@@ -265,6 +265,11 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var advancingTimeSamples = 0;
     var pollTimer = null;
     var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
+    var supportedPlaybackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+    function isSupportedPlaybackRate(playbackRate) {
+      return supportedPlaybackRates.indexOf(playbackRate) !== -1;
+    }
 
     function readyPayloadSupportsTime(value) {
       if (!value || !Array.isArray(value.events) || !Array.isArray(value.methods)) return false;
@@ -477,7 +482,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         activePlayer.getPlaybackRate(function (rate) {
           if (__videoEmbedSuspended || player !== activePlayer) return;
           var parsedRate = Number(rate);
-          if ([0.5, 1, 1.5, 2].indexOf(parsedRate) !== -1) {
+          if (isSupportedPlaybackRate(parsedRate)) {
             lastKnownPlaybackRate = parsedRate;
           }
         });
@@ -498,7 +503,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
             });
             activePlayer.getPlaybackRate(function (rate) {
               var parsedRate = Number(rate);
-              if ([0.5, 1, 1.5, 2].indexOf(parsedRate) !== -1) {
+              if (isSupportedPlaybackRate(parsedRate)) {
                 lastKnownPlaybackRate = parsedRate;
               }
             });
@@ -517,7 +522,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       activePlayer.on('playbackratechange', function (value) {
         if (__videoEmbedSuspended || player !== activePlayer) return;
         var rate = Number(value && value.playbackRate !== undefined ? value.playbackRate : value);
-        if ([0.5, 1, 1.5, 2].indexOf(rate) !== -1) {
+        if (isSupportedPlaybackRate(rate)) {
           lastKnownPlaybackRate = rate;
           postToParent('playbackRateChange', { playbackRate: rate, provider: 'bunny' });
         }
