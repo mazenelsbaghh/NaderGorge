@@ -8,7 +8,7 @@ const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
 type PlayerMessage = {
   source?: string;
   type?: string;
-  data?: { code?: number; message?: string; provider?: string };
+  data?: { code?: number; message?: string; phase?: string; provider?: string };
 };
 
 async function runHlsPlayer() {
@@ -54,6 +54,8 @@ async function runHlsPlayer() {
     nextLevel = -1;
     startLoadCalls = 0;
     destroyCalls = 0;
+    config: Record<string, unknown>;
+    constructor(config: Record<string, unknown>) { this.config = config; }
     loadSource() {}
     attachMedia() {}
     recoverMediaError() {}
@@ -75,8 +77,8 @@ async function runHlsPlayer() {
   };
   const hlsInstances: FakeHls[] = [];
   const InstrumentedHls = class extends FakeHls {
-    constructor() {
-      super();
+    constructor(config: Record<string, unknown>) {
+      super(config);
       hlsInstances.push(this);
     }
   };
@@ -111,6 +113,7 @@ async function runHlsPlayer() {
       hlsListeners.get('error')?.(null, {
         fatal: true,
         type: 'networkError',
+        details: 'manifestLoadError',
         response: { code: status },
       });
     },
@@ -126,17 +129,29 @@ test('2026-09-03 Bunny HLS 403 stops loading with its real cause and never falls
   const player = await runHlsPlayer();
 
   player.emitFatalNetworkError(403);
-  player.emitFatalNetworkError(403);
-  player.emitFatalNetworkError(403);
 
   assert.equal(player.messages[0]?.type, 'providerLoaded');
   const errorMessage = player.messages.find((message) => message.type === 'error');
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
   assert.equal(errorMessage?.data?.code, 403);
+  assert.equal(errorMessage?.data?.phase, 'manifestLoadError');
   assert.match(errorMessage?.data?.message ?? '', /Token Authentication Key/);
-  assert.equal(player.hls()?.startLoadCalls, 2);
+  assert.equal(player.hls()?.startLoadCalls, 0);
   assert.equal(player.hls()?.destroyCalls, 1);
   assert.equal(player.messages.some((message) => message.data?.provider === 'bunny'), false);
+});
+
+test('2026-09-03 Bunny HLS disables hidden manifest and segment reload loops', async () => {
+  const player = await runHlsPlayer();
+  const config = player.hls()?.config as {
+    manifestLoadPolicy?: { default?: { timeoutRetry?: { maxNumRetry?: number }; errorRetry?: { maxNumRetry?: number } } };
+    fragLoadPolicy?: { default?: { timeoutRetry?: { maxNumRetry?: number }; errorRetry?: { maxNumRetry?: number } } };
+  } | undefined;
+
+  assert.equal(config?.manifestLoadPolicy?.default?.timeoutRetry?.maxNumRetry, 0);
+  assert.equal(config?.manifestLoadPolicy?.default?.errorRetry?.maxNumRetry, 0);
+  assert.equal(config?.fragLoadPolicy?.default?.timeoutRetry?.maxNumRetry, 0);
+  assert.equal(config?.fragLoadPolicy?.default?.errorRetry?.maxNumRetry, 0);
 });
 
 test('2026-09-03 stalled Bunny HLS exits the tablet spinner on its deadline', async () => {

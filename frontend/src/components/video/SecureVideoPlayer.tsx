@@ -824,6 +824,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'error':
           embedReadinessWatchdogRef.current?.cancel();
           embedReadinessWatchdogRef.current = null;
+          if (msg.data?.provider === 'bunny-hls' && activeSessionIdRef.current) {
+            const phase = String(msg.data?.phase || 'unknown').slice(0, 80);
+            const statusCode = Number(msg.data?.code || 0);
+            void videoSessionService.reportClientEvent(activeSessionIdRef.current, {
+              provider: 'bunny-hls',
+              event: 'playback-error',
+              phase,
+              statusCode: Number.isInteger(statusCode) && statusCode >= 0 && statusCode <= 599 ? statusCode : 0,
+            }).catch(() => {
+              // Playback errors must remain visible even if diagnostic delivery fails.
+            });
+          }
           if (msg.data?.message === 'Session expired or invalid' && embedSessionRefreshCountRef.current < 1) {
             embedSessionRefreshCountRef.current += 1;
             reloadSessionRef.current?.();

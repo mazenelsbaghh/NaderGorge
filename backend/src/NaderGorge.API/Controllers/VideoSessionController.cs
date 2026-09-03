@@ -9,6 +9,7 @@ using NaderGorge.Application.Features.Student.Queries;
 using NaderGorge.API.Filters;
 
 using Microsoft.AspNetCore.RateLimiting;
+using System.Text.RegularExpressions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -20,11 +21,16 @@ public class VideoSessionController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IAppDbContext _db;
+    private readonly ILogger<VideoSessionController> _logger;
 
-    public VideoSessionController(IMediator mediator, IAppDbContext db)
+    public VideoSessionController(
+        IMediator mediator,
+        IAppDbContext db,
+        ILogger<VideoSessionController> logger)
     {
         _mediator = mediator;
         _db = db;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -129,6 +135,39 @@ public class VideoSessionController : ControllerBase
         return BadRequest(result);
     }
 
+    [HttpPost("{sessionId:guid}/client-event")]
+    public async Task<IActionResult> ReportClientEvent(
+        Guid sessionId,
+        [FromBody] VideoPlaybackClientEventRequest request,
+        CancellationToken ct)
+    {
+        if (User.IsInRole("Admin")) return NoContent();
+
+        var userIdString = User.FindFirst("id")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+        if (!request.IsValid()) return BadRequest();
+
+        var session = await _db.VideoPlaybackSessions
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == sessionId && candidate.UserId == userId)
+            .Select(candidate => new { candidate.Id, candidate.LessonVideoId })
+            .SingleOrDefaultAsync(ct);
+        if (session is null) return NotFound();
+
+        _logger.LogWarning(
+            "Video client playback error. Provider={Provider} Event={Event} Phase={Phase} StatusCode={StatusCode} LessonVideoId={LessonVideoId} SessionId={SessionId}",
+            request.Provider,
+            request.Event,
+            request.Phase,
+            request.StatusCode,
+            session.LessonVideoId,
+            session.Id);
+
+        return NoContent();
+    }
+
     [HttpPost("{lessonVideoId}/request-extra")]
     [Idempotent]
     public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, [FromBody] CreateExtraWatchRequest request, CancellationToken ct)
@@ -188,6 +227,25 @@ public class CreateVideoSessionRequest
 public class CreateExtraWatchRequest
 {
     public string Reason { get; set; } = string.Empty;
+}
+
+public sealed partial class VideoPlaybackClientEventRequest
+{
+    public string Provider { get; set; } = string.Empty;
+    public string Event { get; set; } = string.Empty;
+    public string Phase { get; set; } = string.Empty;
+    public int StatusCode { get; set; }
+
+    public bool IsValid() =>
+        string.Equals(Provider, "bunny-hls", StringComparison.Ordinal)
+        && string.Equals(Event, "playback-error", StringComparison.Ordinal)
+        && StatusCode is >= 0 and <= 599
+        && !string.IsNullOrWhiteSpace(Phase)
+        && Phase.Length <= 80
+        && SafePhasePattern().IsMatch(Phase);
+
+    [GeneratedRegex("^[A-Za-z0-9_.:-]+$", RegexOptions.CultureInvariant)]
+    private static partial Regex SafePhasePattern();
 }
 
 public record VideoEmbedMaterialResponse(string Token, string Key);

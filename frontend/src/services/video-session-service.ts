@@ -57,6 +57,13 @@ export interface WatchProgressResponse {
   duplicate: boolean;
 }
 
+export interface VideoPlaybackClientEvent {
+  provider: 'bunny-hls';
+  event: 'playback-error';
+  phase: string;
+  statusCode: number;
+}
+
 export type ExtraWatchRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface ExtraWatchStatusDto {
@@ -134,6 +141,10 @@ export const videoSessionService = {
 
   consumeSession: (sessionId: string) => {
     return apiClient.post(`/student/video-session/${sessionId}/consume`, {});
+  },
+
+  reportClientEvent: (sessionId: string, event: VideoPlaybackClientEvent) => {
+    return apiClient.post(`/student/video-session/${sessionId}/client-event`, event);
   },
 
   requestExtraWatch: (lessonVideoId: string, reason: string) => {
