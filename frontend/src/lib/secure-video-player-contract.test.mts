@@ -70,6 +70,29 @@ test('portrait pseudo-fullscreen gives the rotated video child the complete surf
   assert.match(rule, /min-height: 0 !important/);
 });
 
+test('2026-09-03 fullscreen isolates the video from animated page opacity', async () => {
+  const globalStyles = await readFile(globalStylesPath, 'utf8');
+  const pseudoRootStart = globalStyles.indexOf('.secure-video-pseudo-fullscreen {');
+  const pseudoRootEnd = globalStyles.indexOf('\n}', pseudoRootStart);
+  const ancestorStart = globalStyles.indexOf('.secure-video-fullscreen-ancestor,');
+  const ancestorEnd = globalStyles.indexOf('\n}', ancestorStart);
+  const surfaceStart = globalStyles.indexOf('.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface {');
+  const surfaceEnd = globalStyles.indexOf('\n}', surfaceStart);
+  const pseudoRoot = globalStyles.slice(pseudoRootStart, pseudoRootEnd);
+  const ancestors = globalStyles.slice(ancestorStart, ancestorEnd);
+  const surface = globalStyles.slice(surfaceStart, surfaceEnd);
+
+  assert.ok(pseudoRootStart >= 0 && ancestorStart >= 0 && surfaceStart >= 0);
+  for (const rule of [pseudoRoot, ancestors, surface]) {
+    assert.match(rule, /opacity: 1 !important/);
+    assert.match(rule, /mix-blend-mode: normal !important/);
+  }
+  assert.match(pseudoRoot, /background: #000 !important/);
+  assert.match(pseudoRoot, /isolation: isolate/);
+  assert.match(surface, /background: #000 !important/);
+  assert.match(surface, /isolation: isolate/);
+});
+
 test('video seek controls keep a full touch target and cancel without committing', async () => {
   const controlsSource = await readFile(controlsPath, 'utf8');
   const cancelStart = controlsSource.indexOf('const handlePointerCancel');

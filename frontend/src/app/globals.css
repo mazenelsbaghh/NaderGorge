@@ -519,13 +519,20 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
   min-height: 100dvh !important;
   aspect-ratio: auto !important;
   border-radius: 0 !important;
-  background: #000;
+  background: #000 !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate;
 }
 
 .secure-video-pseudo-fullscreen {
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
+  background: #000 !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate;
 }
 
 body.secure-video-fullscreen-open,
@@ -542,6 +549,8 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
   filter: none !important;
   perspective: none !important;
   contain: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
 }
 
 .secure-video-pseudo-fullscreen .secure-video-fullscreen-surface {
@@ -551,6 +560,10 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
   min-height: 100dvh !important;
   aspect-ratio: auto !important;
   border-radius: 0 !important;
+  background: #000 !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate;
 }
 
 /* Google/Facebook in-app browsers may reject both the Fullscreen and
