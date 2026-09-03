@@ -76,8 +76,8 @@ async function runBunnyBridge(options: {
   const bridgeScript = routeSource
     .slice(bridgeStart, bridgeEnd)
     .replace('${devToolsGuard}', 'var __videoEmbedSuspended = false;')
-    .replace('${safeSrc}', JSON.stringify('https://player.mediadelivery.net/embed/library/video'))
-    .replace('${safeAlternateSrc}', JSON.stringify('https://iframe.mediadelivery.net/embed/library/video'));
+    .replace('${safeLegacySrc}', JSON.stringify('https://iframe.mediadelivery.net/embed/library/video'))
+    .replace('${safeModernSrc}', JSON.stringify('https://player.mediadelivery.net/embed/library/video'));
   assert.doesNotMatch(bridgeScript, /\$\{/);
 
   const messages: BridgeMessage[] = [];
@@ -458,7 +458,7 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails ove
   const harness = await runBunnyBridge();
   assert.equal(
     harness.iframeState().src,
-    'https://player.mediadelivery.net/embed/library/video',
+    'https://iframe.mediadelivery.net/embed/library/video',
   );
 
   harness.fireProviderLoad();
@@ -472,7 +472,7 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails ove
   assert.equal(harness.playerCount(), 2);
   assert.deepEqual(harness.iframeState(), {
     removeCalls: 0,
-    src: 'https://iframe.mediadelivery.net/embed/library/video',
+    src: 'https://player.mediadelivery.net/embed/library/video',
   });
   assert.equal(harness.messages.some((message) => message.type === 'ready'), false);
   assert.deepEqual(harness.providerCommands().at(-1), {

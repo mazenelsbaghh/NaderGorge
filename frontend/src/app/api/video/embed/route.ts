@@ -200,8 +200,8 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   if (typeof reference === 'string') return embedErrorHtml(reference);
 
   const playerQuery = 'autoplay=false&playsinline=true&disableIosPlayer=true';
-  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
-  const safeAlternateSrc = JSON.stringify(`https://iframe.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
+  const safeLegacySrc = JSON.stringify(`https://iframe.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
+  const safeModernSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?${playerQuery}`);
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -269,7 +269,10 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
     var bunnyBridgeOrigins = ['https://player.mediadelivery.net', 'https://iframe.mediadelivery.net'];
     var bunnyBridgeOrigin = null;
-    var bunnyEmbedSources = [${safeSrc}, ${safeAlternateSrc}];
+    // Existing libraries can still require Bunny's legacy iframe endpoint,
+    // while PlayerVersion 2 libraries use the modern player endpoint. Try the
+    // backward-compatible endpoint first and retain the modern one as failover.
+    var bunnyEmbedSources = [${safeLegacySrc}, ${safeModernSrc}];
     var bunnyEmbedSourceIndex = 0;
     var supportedPlaybackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
@@ -453,10 +456,10 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       parentReadySent = false;
       lastObservedTime = null;
       advancingTimeSamples = 0;
-      // A browser-level failure at player.mediadelivery.net still fires the
-      // iframe load event for its internal error document. The next bounded
-      // bridge retry therefore fails over to Bunny's alternate embed hostname
-      // instead of navigating to the same unreachable URL again.
+      // A browser-level 404 or network failure still fires the iframe load
+      // event for its internal error document. The next bounded bridge retry
+      // therefore tries Bunny's other supported player generation instead of
+      // navigating to the same unavailable URL again.
       if (bunnyEmbedSourceIndex + 1 < bunnyEmbedSources.length) {
         bunnyEmbedSourceIndex += 1;
         bunnyBridgeOrigin = null;
