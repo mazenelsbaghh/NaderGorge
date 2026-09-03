@@ -69,27 +69,39 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         var isPrivileged = await IsPrivilegedUserAsync(request.UserId, ct);
         if (!isPrivileged)
         {
-            var eligibleLessons = new List<Lesson>();
-            foreach (var lesson in lessons)
-            {
-                if (await _academicScope.IsOwnerEligibleForStudentAsync(
-                        StudentFacingScopeOwnerType.Lesson,
-                        lesson.Id,
-                        request.UserId,
-                        ct) && await _archiveAccess.CanViewAsync(
-                        request.UserId, ContentArchiveTargetType.Lesson, lesson.Id, ct))
-                {
-                    eligibleLessons.Add(lesson);
-                }
-            }
-
-            lessons = eligibleLessons;
+            var academicallyEligibleLessonIds = await _academicScope.GetEligibleLessonIdsForStudentAsync(
+                lessons.Select(lesson => lesson.Id).ToList(),
+                request.UserId,
+                ct);
+            var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
+                request.UserId,
+                academicallyEligibleLessonIds,
+                ct);
+            lessons = lessons
+                .Where(lesson => visibleLessonIds.Contains(lesson.Id))
+                .ToList();
         }
 
         var lessonIds = lessons.Select(l => l.Id).ToList();
-        var progresses = await _db.LessonProgresses
-            .Where(lp => lp.UserId == request.UserId && lessonIds.Contains(lp.LessonId))
-            .ToListAsync(ct);
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            lessonIds);
+        var visibleActiveVideoIds = isPrivileged
+            ? null
+            : await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+                completionContext,
+                _academicScope,
+                _archiveAccess,
+                ct);
+        var completedLessonIds = visibleActiveVideoIds is null
+            ? await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+                completionContext,
+                ct)
+            : await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+                completionContext,
+                visibleActiveVideoIds,
+                ct);
 
         var passedExamIds = await _db.StudentExamAttempts
             .Where(a => a.UserId == request.UserId && a.IsPassed)
@@ -101,27 +113,15 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         foreach (var lesson in lessons)
         {
             var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
-            var isCompleted = progresses.Any(p => p.LessonId == lesson.Id && p.IsCompleted);
+            var isCompleted = completedLessonIds.Contains(lesson.Id);
             var blockingState = await GetBlockingStateAsync(lesson, section, request.UserId, passedExamIds, ct);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
-            if (!isPrivileged)
+            if (visibleActiveVideoIds is not null)
             {
-                var eligibleVideos = new List<LessonVideo>();
-                foreach (var video in videos)
-                {
-                    if (await _academicScope.IsOwnerEligibleForStudentAsync(
-                            StudentFacingScopeOwnerType.LessonVideo,
-                            video.Id,
-                            request.UserId,
-                            ct) && await _archiveAccess.CanViewAsync(
-                            request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
-                    {
-                        eligibleVideos.Add(video);
-                    }
-                }
-
-                videos = eligibleVideos;
+                videos = videos
+                    .Where(video => visibleActiveVideoIds.Contains(video.Id))
+                    .ToList();
             }
 
             foreach (var video in videos)

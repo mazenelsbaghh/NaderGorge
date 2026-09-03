@@ -165,6 +165,7 @@ builder.Services.AddHttpClient("BunnyAnalysisMedia", client =>
 builder.Services.AddSingleton<IBunnyStreamClientFactory, BunnyStreamClientFactory>();
 builder.Services.AddSingleton<IBunnyStreamLibrarySecretProtector, BunnyStreamLibrarySecretProtector>();
 builder.Services.AddScoped<IBunnyStreamLibraryAccessService, BunnyStreamLibraryAccessService>();
+builder.Services.AddScoped<IBunnyVideoDurationResolver, BunnyVideoDurationResolver>();
 builder.Services.AddScoped<IBunnyOriginalMediaReader, BunnyOriginalMediaReader>();
 builder.Services.AddScoped<BunnyStreamLegacyCredentialImporter>();
 builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.BunnyVideoStatusBackgroundService>();

@@ -104,20 +104,32 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
                 TermTitle = lesson.ContentSection.Term.Title,
                 SectionTitle = lesson.ContentSection.Title,
                 TeacherName = lesson.ContentSection.Term.Package.Teacher.User.FullName,
-                ImageUrl = lesson.ContentSection.ImageUrl ?? lesson.ContentSection.Term.Package.ImageUrl,
-                VideoCount = lesson.Videos.Count(video => video.IsActive)
+                ImageUrl = lesson.ContentSection.ImageUrl ?? lesson.ContentSection.Term.Package.ImageUrl
             })
             .ToListAsync(ct);
 
         var accessibleLessonIds = lessons.Select(lesson => lesson.Id).ToList();
-        var completedLessonIds = (await _db.LessonProgresses
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            accessibleLessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
+        var visibleVideoCountByLesson = visibleActiveVideoIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await _db.LessonVideos
                 .AsNoTracking()
-                .Where(progress => progress.UserId == request.UserId &&
-                                   progress.IsCompleted &&
-                                   accessibleLessonIds.Contains(progress.LessonId))
-                .Select(progress => progress.LessonId)
-                .ToListAsync(ct))
-            .ToHashSet();
+                .Where(video => visibleActiveVideoIds.Contains(video.Id))
+                .GroupBy(video => video.LessonId)
+                .Select(group => new { LessonId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(row => row.LessonId, row => row.Count, ct);
 
         var result = new List<MyLessonDto>(lessons.Count);
         foreach (var lesson in lessons)
@@ -147,7 +159,7 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
                 lesson.TeacherName,
                 lesson.ImageUrl,
                 completedLessonIds.Contains(lesson.Id),
-                lesson.VideoCount));
+                visibleVideoCountByLesson.GetValueOrDefault(lesson.Id)));
         }
 
         return ApiResponse<List<MyLessonDto>>.Ok(result);

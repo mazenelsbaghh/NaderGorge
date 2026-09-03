@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
@@ -149,6 +150,8 @@ public record BalanceTransactionDetailDto(
 public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentAcademicDetailsQuery, ApiResponse<StudentAcademicDetailsDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     private sealed record PurchasedLessonRow(
         Guid LessonId,
@@ -165,9 +168,14 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
 
     private sealed record ExamLessonLink(Guid ExamId, Guid LessonId);
 
-    public GetStudentAcademicDetailsQueryHandler(IAppDbContext db)
+    public GetStudentAcademicDetailsQueryHandler(
+        IAppDbContext db,
+        IAcademicScopeService academicScope,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _db = db;
+        _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
     }
 
     public async Task<ApiResponse<StudentAcademicDetailsDto>> Handle(GetStudentAcademicDetailsQuery request, CancellationToken ct)
@@ -281,12 +289,32 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             .Select(g => g.First())
             .ToList();
 
-        var lessonIds = lessonRows.Select(l => l.LessonId).ToList();
+        var candidateLessonIds = lessonRows.Select(l => l.LessonId).ToList();
+        var academicallyEligibleLessonIds = await _academicScope.GetEligibleLessonIdsForStudentAsync(
+            candidateLessonIds,
+            profile.UserId,
+            ct);
+        var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
+            profile.UserId,
+            academicallyEligibleLessonIds,
+            ct);
+        lessonRows = lessonRows
+            .Where(lesson => visibleLessonIds.Contains(lesson.LessonId))
+            .ToList();
+
+        var lessonIds = lessonRows.Select(lesson => lesson.LessonId).ToList();
         var totalLessons = lessonIds.Count;
-        var watchedLessons = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == profile.UserId && lp.IsCompleted && lessonIds.Contains(lp.LessonId))
-            .CountAsync(ct);
+        var completionContext = new StudentLessonCompletionContext(_db, profile.UserId, lessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
+        var watchedLessons = completedLessonIds.Count;
 
         var completionRate = totalLessons > 0 ? Math.Round((double)watchedLessons / totalLessons * 100, 2) : 0.0;
 
@@ -302,7 +330,11 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
 
         var watchEvents = await _db.VideoWatchEvents
             .AsNoTracking()
-            .Where(w => w.UserId == profile.UserId && lessonIds.Contains(w.LessonVideo.LessonId))
+            .Where(w =>
+                w.UserId == profile.UserId
+                && w.WatchCount > 0
+                && w.LessonVideo.IsActive
+                && visibleActiveVideoIds.Contains(w.LessonVideoId))
             .Select(w => new
             {
                 w.LessonVideo.LessonId,
@@ -315,15 +347,13 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
 
         var videoCounts = await _db.LessonVideos
             .AsNoTracking()
-            .Where(v => lessonIds.Contains(v.LessonId) && v.IsActive)
+            .Where(v =>
+                lessonIds.Contains(v.LessonId)
+                && v.IsActive
+                && visibleActiveVideoIds.Contains(v.Id))
             .GroupBy(v => v.LessonId)
             .Select(g => new { LessonId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.LessonId, x => x.Count, ct);
-
-        var progressByLesson = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == profile.UserId && lessonIds.Contains(lp.LessonId))
-            .ToDictionaryAsync(lp => lp.LessonId, lp => lp.IsCompleted, ct);
 
         var watchLessons = lessonRows
             .Select(lesson =>
@@ -342,7 +372,7 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     lessonWatchEvents.Select(w => w.LessonVideoId).Distinct().Count(),
                     lessonWatchEvents.Sum(w => w.WatchCount),
                     lessonWatchEvents.Sum(w => w.TimeWatchedInSeconds),
-                    progressByLesson.GetValueOrDefault(lesson.LessonId),
+                    completedLessonIds.Contains(lesson.LessonId),
                     lessonWatchEvents.Count == 0 ? null : lessonWatchEvents.Max(w => w.LastWatchedAt)
                 );
             })

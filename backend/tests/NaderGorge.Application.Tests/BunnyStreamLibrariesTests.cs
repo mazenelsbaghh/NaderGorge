@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using NaderGorge.API.Controllers;
 using NaderGorge.API.Extensions;
@@ -358,6 +359,71 @@ public sealed class BunnyStreamLibrariesTests
         var token = encryption.DecryptVideoInfo(session.SessionToken, session.EncryptionKey);
         Assert.Equal(VideoProviders.Bunny, token.ProviderName);
         Assert.Equal($"{library.ExternalLibraryId}/{VideoGuid}", token.ProviderVideoId);
+    }
+
+    [Fact]
+    public async Task ManualBunnyVideo_SessionFetchesAndCachesAuthoritativeDurationWithoutAsset()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var (admin, lesson, videoType) = await SeedUploadGraphAsync(db);
+        var library = CreateLibrary("Legacy manual", 740733);
+        library.IsActive = false;
+        var video = new LessonVideo
+        {
+            Title = "Manual Bunny video",
+            Provider = VideoProviders.Bunny,
+            ProviderVideoId = VideoGuid,
+            LessonId = lesson.Id,
+            VideoTypeId = videoType.Id,
+            BunnyStreamLibraryId = library.Id,
+            IsActive = true
+        };
+        db.AddRange(library, video);
+        await db.SaveChangesAsync();
+
+        var access = new FakeLibraryAccessService(new BunnyStreamLibraryAccess(
+            library.Id,
+            library.Name,
+            library.ExternalLibraryId,
+            "api-key",
+            IsActive: false));
+        var client = new FakeBunnyStreamClient(library.ExternalLibraryId)
+        {
+            VideoLength = 3_671,
+            VideoStatus = 4
+        };
+        var factory = new FakeBunnyStreamClientFactory(client);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var durationResolver = new BunnyVideoDurationResolver(
+            cache,
+            access,
+            factory,
+            NullLogger<BunnyVideoDurationResolver>.Instance);
+        var handler = new CreateVideoSessionCommandHandler(
+            db,
+            new AccessCheckService(db),
+            new VideoEncryptionService(),
+            bunnyVideoDurationResolver: durationResolver);
+
+        var first = await handler.Handle(
+            new CreateVideoSessionCommand(video.Id, admin.Id),
+            CancellationToken.None);
+        var second = await handler.Handle(
+            new CreateVideoSessionCommand(video.Id, admin.Id),
+            CancellationToken.None);
+        var newestSession = await db.VideoPlaybackSessions
+            .OrderByDescending(session => session.CreatedAt)
+            .FirstAsync();
+
+        Assert.True(first.Success, first.Message);
+        Assert.True(second.Success, second.Message);
+        Assert.Equal(3_671, first.Data!.DurationSeconds);
+        Assert.Equal(3_671, second.Data!.DurationSeconds);
+        Assert.Equal(3_671, newestSession.TrackingDurationSeconds);
+        Assert.Equal(
+            VideoWatchProgressCalculator.ResolveThresholdSeconds(3_671, second.Data.ThresholdPercentage),
+            newestSession.TrackingThresholdSeconds);
+        Assert.Equal(1, client.GetVideoCallCount);
     }
 
     [Fact]
@@ -1771,7 +1837,7 @@ public sealed class BunnyStreamLibrariesTests
         BunnyVideoAsset Asset);
 
     [Fact]
-    public async Task ManagedBunnyVideo_SessionCoversKnownVideoDurationAndPlaybackMargin()
+    public async Task ManagedBunnyVideo_SessionReturnsKnownDurationAndCoversPlaybackMargin()
     {
         await using var db = TestAppDbContextFactory.Create();
         var seeded = await SeedManagedBunnyVideoAsync(db);
@@ -1788,8 +1854,54 @@ public sealed class BunnyStreamLibrariesTests
                 CancellationToken.None);
 
         Assert.True(sessionResult.Success, sessionResult.Message);
+        Assert.Equal(4 * 60 * 60, sessionResult.Data!.DurationSeconds);
         Assert.True(sessionResult.Data!.ExpiresAt >= beforeCreation.AddHours(4.5));
         Assert.True(sessionResult.Data.ExpiresAt <= DateTime.UtcNow.AddHours(4.5));
+    }
+
+    [Fact]
+    public async Task ManagedBunnyVideo_WatchLimitResponsePreservesKnownDuration()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        const int durationSeconds = 3_671;
+        seeded.Asset.DurationSeconds = durationSeconds;
+        var student = new User
+        {
+            FullName = "Bunny duration student",
+            PhoneNumber = $"bunny-duration-{Guid.NewGuid():N}",
+            PasswordHash = "hash"
+        };
+        db.Users.Add(student);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            PackageId = seeded.Asset.PackageId,
+            GrantType = CodeType.Package,
+            IsActive = true,
+            GrantedAt = DateTime.UtcNow
+        });
+        db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = student.Id,
+            LessonVideoId = seeded.Video.Id,
+            WatchCount = seeded.Video.MaxWatchCount,
+            IsLocked = true
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new CreateVideoSessionCommandHandler(
+                db,
+                new AccessCheckService(db),
+                new VideoEncryptionService())
+            .Handle(
+                new CreateVideoSessionCommand(seeded.Video.Id, student.Id),
+                CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("WATCH_LIMIT_REACHED", result.Errors!);
+        Assert.NotNull(result.Data);
+        Assert.Equal(durationSeconds, result.Data.DurationSeconds);
     }
 
     private static async Task<ManagedBunnyVideoSeed> SeedManagedBunnyVideoAsync(AppDbContext db)
@@ -2075,6 +2187,8 @@ public sealed class BunnyStreamLibrariesTests
         public long LibraryId { get; } = libraryId;
         public string ApiKey { get; } = apiKey;
         public int VideoStatus { get; set; }
+        public int VideoLength { get; set; } = 60;
+        public int GetVideoCallCount { get; private set; }
         public bool RequireFetchBeforeStatusLookup { get; init; }
         public BunnyFetchVideoResultDto FetchResult { get; set; } = new(true, null, 200);
         public IReadOnlyCollection<string> DeletedVideoGuids => _deletedVideoGuids;
@@ -2134,6 +2248,7 @@ public sealed class BunnyStreamLibrariesTests
 
         public Task<BunnyStreamVideoDto?> GetVideoAsync(string videoGuid, CancellationToken cancellationToken)
         {
+            GetVideoCallCount++;
             if (_failedStatusLookups.Contains(videoGuid))
             {
                 throw new HttpRequestException("Simulated Bunny status failure.");
@@ -2183,7 +2298,7 @@ public sealed class BunnyStreamLibrariesTests
                 statusOverride ?? VideoStatus,
                 (statusOverride ?? VideoStatus) == 4 ? 100 : 50,
                 2048,
-                60,
+                VideoLength,
                 0,
                 0,
                 collectionId,

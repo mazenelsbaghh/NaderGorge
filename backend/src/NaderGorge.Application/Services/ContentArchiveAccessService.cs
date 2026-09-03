@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -12,6 +13,15 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
         Guid targetId,
         CancellationToken cancellationToken = default)
     {
+        if (targetType == ContentArchiveTargetType.Video)
+        {
+            var viewableVideoIds = await GetViewableLessonVideoIdsAsync(
+                userId,
+                [targetId],
+                cancellationToken);
+            return viewableVideoIds.Contains(targetId);
+        }
+
         if (await IsPrivilegedAsync(userId, cancellationToken)) return true;
 
         var path = await ArchivePathAsync(targetType, targetId, cancellationToken);
@@ -19,6 +29,119 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
         if (!path.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly)) return true;
 
         return await HasActiveGrantAsync(userId, path, cancellationToken);
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetViewableLessonVideoIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> lessonVideoIds,
+        CancellationToken cancellationToken = default)
+    {
+        var distinctVideoIds = lessonVideoIds.Distinct().ToArray();
+        if (distinctVideoIds.Length == 0)
+            return new HashSet<Guid>();
+        if (await IsPrivilegedAsync(userId, cancellationToken))
+            return distinctVideoIds.ToHashSet();
+
+        var paths = await db.LessonVideos
+            .AsNoTracking()
+            .Where(video => distinctVideoIds.Contains(video.Id))
+            .Select(video => new LessonVideoArchivePath(
+                video.Lesson.ContentSection.Term.PackageId,
+                video.Lesson.ContentSection.TermId,
+                video.Lesson.ContentSectionId,
+                video.LessonId,
+                video.Id,
+                video.VideoTypeId,
+                video.Lesson.ContentSection.Term.Package.ArchiveMode,
+                video.Lesson.ContentSection.Term.ArchiveMode,
+                video.Lesson.ContentSection.ArchiveMode,
+                video.Lesson.ArchiveMode,
+                video.ArchiveMode))
+            .ToListAsync(cancellationToken);
+
+        var viewableVideoIds = paths
+            .Where(path => !path.Modes.Contains(ContentArchiveMode.HiddenFromEveryone)
+                           && !path.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly))
+            .Select(path => path.VideoId)
+            .ToHashSet();
+        var subscriberOnlyPaths = paths
+            .Where(path => !path.Modes.Contains(ContentArchiveMode.HiddenFromEveryone)
+                           && path.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly))
+            .ToList();
+        if (subscriberOnlyPaths.Count == 0)
+            return viewableVideoIds;
+
+        var now = DateTime.UtcNow;
+        var grants = await db.StudentAccessGrants
+            .AsNoTracking()
+            .Where(grant =>
+                grant.UserId == userId
+                && grant.IsActive
+                && (grant.ExpiresAt == null || grant.ExpiresAt > now)
+                && (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses))
+            .ToListAsync(cancellationToken);
+        foreach (var path in subscriberOnlyPaths)
+        {
+            if (grants.Any(grant => GrantsVideoAccess(grant, path)))
+                viewableVideoIds.Add(path.VideoId);
+        }
+
+        return viewableVideoIds;
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetViewableLessonIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> lessonIds,
+        CancellationToken cancellationToken = default)
+    {
+        var distinctLessonIds = lessonIds.Distinct().ToArray();
+        if (distinctLessonIds.Length == 0)
+            return new HashSet<Guid>();
+        if (await IsPrivilegedAsync(userId, cancellationToken))
+            return distinctLessonIds.ToHashSet();
+
+        var paths = await db.Lessons
+            .AsNoTracking()
+            .Where(lesson => distinctLessonIds.Contains(lesson.Id))
+            .Select(lesson => new LessonArchivePath(
+                lesson.ContentSection.Term.PackageId,
+                lesson.ContentSection.TermId,
+                lesson.ContentSectionId,
+                lesson.Id,
+                lesson.ContentSection.Term.Package.ArchiveMode,
+                lesson.ContentSection.Term.ArchiveMode,
+                lesson.ContentSection.ArchiveMode,
+                lesson.ArchiveMode))
+            .ToListAsync(cancellationToken);
+
+        var viewableLessonIds = paths
+            .Where(path => !path.Modes.Contains(ContentArchiveMode.HiddenFromEveryone)
+                           && !path.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly))
+            .Select(path => path.LessonId)
+            .ToHashSet();
+        var subscriberOnlyPaths = paths
+            .Where(path => !path.Modes.Contains(ContentArchiveMode.HiddenFromEveryone)
+                           && path.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly))
+            .ToList();
+        if (subscriberOnlyPaths.Count == 0)
+            return viewableLessonIds;
+
+        var now = DateTime.UtcNow;
+        var grants = await db.StudentAccessGrants
+            .AsNoTracking()
+            .Where(grant =>
+                grant.UserId == userId
+                && grant.IsActive
+                && (grant.ExpiresAt == null || grant.ExpiresAt > now)
+                && (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses))
+            .ToListAsync(cancellationToken);
+        foreach (var path in subscriberOnlyPaths)
+        {
+            if (grants.Any(grant => GrantsLessonAccess(grant, path)))
+                viewableLessonIds.Add(path.LessonId);
+        }
+
+        return viewableLessonIds;
     }
 
     public async Task<bool> CanAcquireAsync(
@@ -155,6 +278,29 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
                    product.Id == grant.PublicExamProductId && product.ExamId == path.ExamId))))), ct);
     }
 
+    private static bool GrantsVideoAccess(
+        StudentAccessGrant grant,
+        LessonVideoArchivePath path) =>
+        (grant.GrantType == CodeType.Lesson && grant.LessonId == path.LessonId)
+        || (grant.GrantType == CodeType.Month && grant.ContentSectionId == path.SectionId)
+        || (grant.GrantType == CodeType.Term && grant.TermId == path.TermId)
+        || (grant.GrantType == CodeType.Package && grant.PackageId == path.PackageId)
+        || (grant.GrantType == CodeType.Video && grant.LessonVideoId == path.VideoId)
+        || (grant.GrantType == CodeType.Video
+            && grant.VideoTypeId == path.VideoTypeId
+            && (grant.LessonId == null || grant.LessonId == path.LessonId)
+            && (grant.ContentSectionId == null || grant.ContentSectionId == path.SectionId)
+            && (grant.TermId == null || grant.TermId == path.TermId)
+            && (grant.PackageId == null || grant.PackageId == path.PackageId));
+
+    private static bool GrantsLessonAccess(
+        StudentAccessGrant grant,
+        LessonArchivePath path) =>
+        (grant.GrantType == CodeType.Lesson && grant.LessonId == path.LessonId)
+        || (grant.GrantType == CodeType.Month && grant.ContentSectionId == path.SectionId)
+        || (grant.GrantType == CodeType.Term && grant.TermId == path.TermId)
+        || (grant.GrantType == CodeType.Package && grant.PackageId == path.PackageId);
+
     private sealed record ArchivePath(
         Guid? PackageId,
         Guid? TermId,
@@ -164,4 +310,35 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
         Guid? VideoTypeId,
         Guid? ExamId,
         IReadOnlyList<ContentArchiveMode> Modes);
+
+    private sealed record LessonVideoArchivePath(
+        Guid PackageId,
+        Guid TermId,
+        Guid SectionId,
+        Guid LessonId,
+        Guid VideoId,
+        Guid VideoTypeId,
+        ContentArchiveMode PackageMode,
+        ContentArchiveMode TermMode,
+        ContentArchiveMode SectionMode,
+        ContentArchiveMode LessonMode,
+        ContentArchiveMode VideoMode)
+    {
+        public IReadOnlyList<ContentArchiveMode> Modes =>
+            [PackageMode, TermMode, SectionMode, LessonMode, VideoMode];
+    }
+
+    private sealed record LessonArchivePath(
+        Guid PackageId,
+        Guid TermId,
+        Guid SectionId,
+        Guid LessonId,
+        ContentArchiveMode PackageMode,
+        ContentArchiveMode TermMode,
+        ContentArchiveMode SectionMode,
+        ContentArchiveMode LessonMode)
+    {
+        public IReadOnlyList<ContentArchiveMode> Modes =>
+            [PackageMode, TermMode, SectionMode, LessonMode];
+    }
 }

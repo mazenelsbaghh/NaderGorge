@@ -270,6 +270,12 @@ public class StudentAcademicScopeAccessTests
         db.Exams.AddRange(inheritedExam, deniedExam);
         db.VideoTypes.Add(videoType);
         db.LessonVideos.AddRange(allowedVideo, deniedVideo);
+        db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = student.Id,
+            LessonVideoId = allowedVideo.Id,
+            WatchCount = 1
+        });
         db.StudentFacingAcademicScopes.AddRange(
             MatchingScope(StudentFacingScopeOwnerType.Package, package.Id),
             NonMatchingScope(StudentFacingScopeOwnerType.Term, deniedTerm.Id),
@@ -295,6 +301,7 @@ public class StudentAcademicScopeAccessTests
         var lesson = Assert.Single(lessons.Data ?? []);
         Assert.Equal("Allowed lesson", lesson.Title);
         Assert.Equal(["Allowed video"], lesson.Videos?.Select(x => x.Title).ToList());
+        Assert.True(lesson.IsCompleted);
         Assert.True(await academicScope.IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType.Exam, inheritedExam.Id, student.Id));
         Assert.False(await academicScope.IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType.Exam, deniedExam.Id, student.Id));
         Assert.False(detail.Success);
@@ -513,6 +520,90 @@ public class StudentAcademicScopeAccessTests
         Assert.Equal(
             new[] { packageLesson.Id, termLesson.Id, monthLesson.Id, directLesson.Id }.Order(),
             result.Data!.Select(lesson => lesson.Id).Order());
+    }
+
+    [Fact]
+    public async Task GetMyLessons_CompletesFromEveryVisiblePartAndExcludesHiddenPartsFromCount()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, EducationStage.Secondary, GradeLevel.FirstSecondary);
+        var teacher = await SeedTeacherAsync(db);
+        var subject = await SeedSubjectAsync(db, "Visible video completion subject");
+        var package = SeedPackage(db, teacher, subject, "Visible video completion package");
+        var lesson = SeedLessonHierarchy(db, package);
+        var videoType = new VideoType
+        {
+            Name = "Main",
+            NormalizedName = $"VISIBLE_VIDEO_{Guid.NewGuid():N}",
+            IsActive = true
+        };
+        var visibleVideo = new LessonVideo
+        {
+            Title = "Visible part",
+            Provider = "youtube",
+            ProviderVideoId = $"visible-{Guid.NewGuid():N}",
+            LessonId = lesson.Id,
+            Lesson = lesson,
+            VideoTypeId = videoType.Id,
+            VideoType = videoType,
+            Order = 1,
+            IsActive = true
+        };
+        var academicallyHiddenVideo = new LessonVideo
+        {
+            Title = "Wrong grade part",
+            Provider = "youtube",
+            ProviderVideoId = $"academic-hidden-{Guid.NewGuid():N}",
+            LessonId = lesson.Id,
+            Lesson = lesson,
+            VideoTypeId = videoType.Id,
+            VideoType = videoType,
+            Order = 2,
+            IsActive = true
+        };
+        var archiveHiddenVideo = new LessonVideo
+        {
+            Title = "Archived part",
+            Provider = "youtube",
+            ProviderVideoId = $"archive-hidden-{Guid.NewGuid():N}",
+            LessonId = lesson.Id,
+            Lesson = lesson,
+            VideoTypeId = videoType.Id,
+            VideoType = videoType,
+            Order = 3,
+            IsActive = true,
+            ArchiveMode = ContentArchiveMode.HiddenFromEveryone
+        };
+        db.VideoTypes.Add(videoType);
+        db.LessonVideos.AddRange(visibleVideo, academicallyHiddenVideo, archiveHiddenVideo);
+        db.StudentFacingAcademicScopes.AddRange(
+            MatchingScope(StudentFacingScopeOwnerType.Package, package.Id),
+            NonMatchingScope(StudentFacingScopeOwnerType.LessonVideo, academicallyHiddenVideo.Id));
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            GrantType = CodeType.Package,
+            PackageId = package.Id,
+            IsActive = true
+        });
+        db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = student.Id,
+            LessonVideoId = visibleVideo.Id,
+            WatchCount = 1
+        });
+        await db.SaveChangesAsync();
+
+        var result = await new GetMyLessonsQueryHandler(
+                db,
+                new AcademicScopeService(db),
+                new ContentArchiveAccessService(db))
+            .Handle(new GetMyLessonsQuery(student.Id), CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        var dto = Assert.Single(result.Data!);
+        Assert.True(dto.IsCompleted);
+        Assert.Equal(1, dto.VideoCount);
     }
 
     [Fact]

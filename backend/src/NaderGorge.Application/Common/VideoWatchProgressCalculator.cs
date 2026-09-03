@@ -13,14 +13,22 @@ public static class VideoWatchProgressCalculator
         return Math.Max(1, threshold);
     }
 
-    public static int ResolveAcceptedSeconds(double reportedSeconds, DateTime now, VideoWatchEvent watchEvent, bool isNewWatchEvent)
+    public static decimal ResolveAcceptedSeconds(double reportedSeconds, DateTime now, VideoWatchEvent watchEvent, bool isNewWatchEvent)
     {
-        var sanitizedReportedSeconds = (int)Math.Max(0, Math.Round(reportedSeconds, MidpointRounding.AwayFromZero));
+        var sanitizedReportedSeconds = SanitizeReportedSeconds(reportedSeconds);
         var maxByElapsedTime = isNewWatchEvent
             ? MaxAcceptedSecondsPerSync
             : Math.Max(0, (int)Math.Ceiling((now - (watchEvent.UpdatedAt ?? watchEvent.CreatedAt)).TotalSeconds) + TrackingClockGraceSeconds);
 
         return Math.Min(sanitizedReportedSeconds, Math.Min(maxByElapsedTime, MaxAcceptedSecondsPerSync));
+    }
+
+    public static decimal SanitizeReportedSeconds(double reportedSeconds)
+    {
+        if (!double.IsFinite(reportedSeconds) || reportedSeconds <= 0)
+            return 0m;
+
+        return (decimal)Math.Min(reportedSeconds, MaxAcceptedSecondsPerSync);
     }
 
     public static VideoWatchProgressCalculationResult ApplyProgress(

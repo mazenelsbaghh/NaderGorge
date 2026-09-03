@@ -58,8 +58,141 @@ public sealed class AcademicScopeService : IAcademicScopeService
             .ToHashSet();
     }
 
+    public async Task<IReadOnlySet<Guid>> GetEligibleLessonVideoIdsForStudentAsync(
+        IReadOnlyCollection<Guid> lessonVideoIds,
+        Guid studentId,
+        CancellationToken ct = default)
+    {
+        var distinctVideoIds = lessonVideoIds.Distinct().ToArray();
+        if (distinctVideoIds.Length == 0)
+            return new HashSet<Guid>();
+
+        var profile = await GetStudentProfileAsync(studentId, ct);
+        if (profile is null
+            || !AcademicValidationService.IsGradeValidForStage(
+                profile.EducationStage,
+                profile.GradeLevel))
+        {
+            return new HashSet<Guid>();
+        }
+
+        var paths = await _db.LessonVideos
+            .AsNoTracking()
+            .Where(video => distinctVideoIds.Contains(video.Id))
+            .Select(video => new LessonVideoAcademicPath(
+                video.Id,
+                video.LessonId,
+                video.Lesson.ContentSectionId,
+                video.Lesson.ContentSection.TermId,
+                video.Lesson.ContentSection.Term.PackageId))
+            .ToListAsync(ct);
+        if (paths.Count == 0)
+            return new HashSet<Guid>();
+
+        var videoIds = paths.Select(path => path.VideoId).Distinct().ToArray();
+        var lessonIds = paths.Select(path => path.LessonId).Distinct().ToArray();
+        var sectionIds = paths.Select(path => path.SectionId).Distinct().ToArray();
+        var termIds = paths.Select(path => path.TermId).Distinct().ToArray();
+        var packageIds = paths.Select(path => path.PackageId).Distinct().ToArray();
+        var scopes = await _db.StudentFacingAcademicScopes
+            .AsNoTracking()
+            .Where(scope =>
+                (scope.OwnerType == StudentFacingScopeOwnerType.LessonVideo
+                    && videoIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.Lesson
+                    && lessonIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.ContentSection
+                    && sectionIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.Term
+                    && termIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.Package
+                    && packageIds.Contains(scope.OwnerId)))
+            .ToListAsync(ct);
+
+        IReadOnlySet<Guid> allowedSubjects = scopes.Any(scope => scope.ScopeLevel == AcademicScopeLevel.Exact)
+            ? await GetAllowedSubjectIdsAsync(profile.EducationStage, profile.GradeLevel, ct)
+            : new HashSet<Guid>();
+        var scopeLookup = scopes.ToLookup(scope => new AcademicScopeOwner(scope.OwnerType, scope.OwnerId));
+        var eligibleVideoIds = new HashSet<Guid>();
+        foreach (var path in paths)
+        {
+            var effectiveScopes = GetEffectiveScopes(path, scopeLookup);
+            if (effectiveScopes.Any(scope => Matches(scope, profile, allowedSubjects)))
+                eligibleVideoIds.Add(path.VideoId);
+        }
+
+        return eligibleVideoIds;
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetEligibleLessonIdsForStudentAsync(
+        IReadOnlyCollection<Guid> lessonIds,
+        Guid studentId,
+        CancellationToken ct = default)
+    {
+        var distinctLessonIds = lessonIds.Distinct().ToArray();
+        if (distinctLessonIds.Length == 0)
+            return new HashSet<Guid>();
+
+        var profile = await GetStudentProfileAsync(studentId, ct);
+        if (profile is null
+            || !AcademicValidationService.IsGradeValidForStage(
+                profile.EducationStage,
+                profile.GradeLevel))
+        {
+            return new HashSet<Guid>();
+        }
+
+        var paths = await _db.Lessons
+            .AsNoTracking()
+            .Where(lesson => distinctLessonIds.Contains(lesson.Id))
+            .Select(lesson => new LessonAcademicPath(
+                lesson.Id,
+                lesson.ContentSectionId,
+                lesson.ContentSection.TermId,
+                lesson.ContentSection.Term.PackageId))
+            .ToListAsync(ct);
+        if (paths.Count == 0)
+            return new HashSet<Guid>();
+
+        var resolvedLessonIds = paths.Select(path => path.LessonId).Distinct().ToArray();
+        var sectionIds = paths.Select(path => path.SectionId).Distinct().ToArray();
+        var termIds = paths.Select(path => path.TermId).Distinct().ToArray();
+        var packageIds = paths.Select(path => path.PackageId).Distinct().ToArray();
+        var scopes = await _db.StudentFacingAcademicScopes
+            .AsNoTracking()
+            .Where(scope =>
+                (scope.OwnerType == StudentFacingScopeOwnerType.Lesson
+                    && resolvedLessonIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.ContentSection
+                    && sectionIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.Term
+                    && termIds.Contains(scope.OwnerId))
+                || (scope.OwnerType == StudentFacingScopeOwnerType.Package
+                    && packageIds.Contains(scope.OwnerId)))
+            .ToListAsync(ct);
+
+        IReadOnlySet<Guid> allowedSubjects = scopes.Any(scope => scope.ScopeLevel == AcademicScopeLevel.Exact)
+            ? await GetAllowedSubjectIdsAsync(profile.EducationStage, profile.GradeLevel, ct)
+            : new HashSet<Guid>();
+        var scopeLookup = scopes.ToLookup(scope => new AcademicScopeOwner(scope.OwnerType, scope.OwnerId));
+        return paths
+            .Where(path => GetEffectiveScopes(path, scopeLookup)
+                .Any(scope => Matches(scope, profile, allowedSubjects)))
+            .Select(path => path.LessonId)
+            .ToHashSet();
+    }
+
     public async Task<bool> IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, Guid studentId, CancellationToken ct = default)
     {
+        if (ownerType == StudentFacingScopeOwnerType.LessonVideo)
+        {
+            var eligibleVideoIds = await GetEligibleLessonVideoIdsForStudentAsync(
+                [ownerId],
+                studentId,
+                ct);
+            return eligibleVideoIds.Contains(ownerId);
+        }
+
         var result = await ValidateStudentCanUseTargetAsync(ownerType, ownerId, studentId, ct);
         return result.IsEligible;
     }
@@ -292,6 +425,51 @@ public sealed class AcademicScopeService : IAcademicScopeService
         };
     }
 
+    private static IEnumerable<StudentFacingAcademicScope> GetEffectiveScopes(
+        LessonVideoAcademicPath path,
+        ILookup<AcademicScopeOwner, StudentFacingAcademicScope> scopeLookup)
+    {
+        var owners = new[]
+        {
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.LessonVideo, path.VideoId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Lesson, path.LessonId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.ContentSection, path.SectionId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Term, path.TermId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Package, path.PackageId)
+        };
+
+        foreach (var owner in owners)
+        {
+            var scopes = scopeLookup[owner];
+            if (scopes.Any())
+                return scopes;
+        }
+
+        return [];
+    }
+
+    private static IEnumerable<StudentFacingAcademicScope> GetEffectiveScopes(
+        LessonAcademicPath path,
+        ILookup<AcademicScopeOwner, StudentFacingAcademicScope> scopeLookup)
+    {
+        var owners = new[]
+        {
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Lesson, path.LessonId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.ContentSection, path.SectionId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Term, path.TermId),
+            new AcademicScopeOwner(StudentFacingScopeOwnerType.Package, path.PackageId)
+        };
+
+        foreach (var owner in owners)
+        {
+            var scopes = scopeLookup[owner];
+            if (scopes.Any())
+                return scopes;
+        }
+
+        return [];
+    }
+
     private async Task<(StudentFacingScopeOwnerType OwnerType, Guid OwnerId)?> ResolveParentAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, CancellationToken ct)
     {
         Guid? parentId;
@@ -379,4 +557,21 @@ public sealed class AcademicScopeService : IAcademicScopeService
             .FirstOrDefaultAsync(ct);
         return linkedVideoId.HasValue ? (StudentFacingScopeOwnerType.LessonVideo, linkedVideoId.Value) : null;
     }
+
+    private sealed record LessonVideoAcademicPath(
+        Guid VideoId,
+        Guid LessonId,
+        Guid SectionId,
+        Guid TermId,
+        Guid PackageId);
+
+    private sealed record LessonAcademicPath(
+        Guid LessonId,
+        Guid SectionId,
+        Guid TermId,
+        Guid PackageId);
+
+    private sealed record AcademicScopeOwner(
+        StudentFacingScopeOwnerType OwnerType,
+        Guid OwnerId);
 }

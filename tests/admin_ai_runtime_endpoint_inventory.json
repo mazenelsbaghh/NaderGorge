@@ -1,5 +1,260 @@
 [
   {
+    "route": "api/admin/ai-agent/action-evidence",
+    "controller": "AdminAIAgent",
+    "action": "ActionEvidence",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/capability-baseline",
+    "controller": "AdminAIAgent",
+    "action": "CapabilityBaseline",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations",
+    "controller": "AdminAIAgent",
+    "action": "Create",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations",
+    "controller": "AdminAIAgent",
+    "action": "List",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}",
+    "controller": "AdminAIAgent",
+    "action": "Rename",
+    "methods": [
+      "PATCH"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}/archive",
+    "controller": "AdminAIAgent",
+    "action": "Archive",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}/restore",
+    "controller": "AdminAIAgent",
+    "action": "Restore",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}/snapshot",
+    "controller": "AdminAIAgent",
+    "action": "Snapshot",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}/turns",
+    "controller": "AdminAIAgent",
+    "action": "Queue",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/conversations/{conversationId:guid}/turns/{turnId:guid}/cancel",
+    "controller": "AdminAIAgent",
+    "action": "Cancel",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/proposals/{proposalId:guid}",
+    "controller": "AdminAIAgent",
+    "action": "Proposal",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/proposals/{proposalId:guid}/cancel",
+    "controller": "AdminAIAgent",
+    "action": "CancelProposal",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/proposals/{proposalId:guid}/confirm",
+    "controller": "AdminAIAgent",
+    "action": "Confirm",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/proposals/{proposalId:guid}/secure-input-grants",
+    "controller": "AdminAIAgent",
+    "action": "IssueSecureInput",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/ai-agent/secure-input-grants/{grantId:guid}/submit",
+    "controller": "AdminAIAgent",
+    "action": "SubmitSecureInput",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/Admin/assessments/ocr/questions",
     "controller": "Admin",
     "action": "ExtractAssessmentQuestionsFromImages",
@@ -88,6 +343,126 @@
     "permissions": []
   },
   {
+    "route": "api/Admin/bunny/libraries",
+    "controller": "Admin",
+    "action": "CreateBunnyStreamLibrary",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/libraries",
+    "controller": "Admin",
+    "action": "GetBunnyStreamLibraries",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/libraries/{id:guid}",
+    "controller": "Admin",
+    "action": "DeleteBunnyStreamLibrary",
+    "methods": [
+      "DELETE"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/libraries/{id:guid}",
+    "controller": "Admin",
+    "action": "UpdateBunnyStreamLibrary",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/libraries/{id:guid}/status",
+    "controller": "Admin",
+    "action": "SetBunnyStreamLibraryStatus",
+    "methods": [
+      "PATCH"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/libraries/available",
+    "controller": "Admin",
+    "action": "GetAvailableBunnyStreamLibraries",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
     "route": "api/Admin/bunny/reports/costs",
     "controller": "Admin",
     "action": "GetBunnyCostReport",
@@ -105,6 +480,26 @@
     "permissions": [
       "settings.manage",
       "settings.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/bunny/uploads/{assetId:guid}/cancel-replacement",
+    "controller": "Admin",
+    "action": "CancelBunnyVideoReplacement",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
     ]
   },
   {
@@ -533,6 +928,26 @@
     "action": "UploadContentImage",
     "methods": [
       "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/content/{targetType}/{id:guid}/archive",
+    "controller": "Admin",
+    "action": "SetContentArchiveState",
+    "methods": [
+      "PUT"
     ],
     "authorization": [
       {
@@ -1488,6 +1903,26 @@
     ]
   },
   {
+    "route": "api/Admin/lessons/{id:guid}/homework-coming-soon",
+    "controller": "Admin",
+    "action": "SetLessonHomeworkComingSoon",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
     "route": "api/Admin/lessons/{id:guid}/subscribers",
     "controller": "Admin",
     "action": "GetLessonSubscribers",
@@ -1586,6 +2021,108 @@
       "content.manage",
       "content.manage"
     ]
+  },
+  {
+    "route": "api/admin/live-support/messenger/pages/{pageRecordId:guid}",
+    "controller": "AdminFacebookMessenger",
+    "action": "DeletePage",
+    "methods": [
+      "DELETE"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/live-support/messenger/pages/{pageRecordId:guid}/check",
+    "controller": "AdminFacebookMessenger",
+    "action": "CheckPage",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/live-support/messenger/pages/link",
+    "controller": "AdminFacebookMessenger",
+    "action": "LinkPage",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/live-support/messenger/settings",
+    "controller": "AdminFacebookMessenger",
+    "action": "GetSettings",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/live-support/messenger/settings",
+    "controller": "AdminFacebookMessenger",
+    "action": "UpdateSettings",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/live-support/messenger/verify-token/rotate",
+    "controller": "AdminFacebookMessenger",
+    "action": "RotateVerifyToken",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
   },
   {
     "route": "api/admin/media/pipelines",
@@ -6708,6 +7245,17 @@
     "permissions": []
   },
   {
+    "route": "api/Health/ready/admin-ai",
+    "controller": "Health",
+    "action": "GetAdminAIReady",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/Health/ready/ai-live-support",
     "controller": "Health",
     "action": "GetAILiveSupportReady",
@@ -9396,6 +9944,28 @@
     "permissions": []
   },
   {
+    "route": "api/live-support/messenger/webhook",
+    "controller": "FacebookMessengerLiveSupport",
+    "action": "ReceiveWebhook",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/messenger/webhook",
+    "controller": "FacebookMessengerLiveSupport",
+    "action": "VerifyWebhook",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
     "route": "api/live-support/participant/conversations",
     "controller": "LiveSupportParticipant",
     "action": "Create",
@@ -10039,6 +10609,264 @@
     "permissions": []
   },
   {
+    "route": "api/live-support/staff/conversations/{conversationId:guid}/whatsapp-template",
+    "controller": "LiveSupportStaff",
+    "action": "SendWhatsAppTemplate",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/staff/conversations/{conversationId:guid}/whatsapp-thread/attachments/{attachmentId:guid}",
+    "controller": "LiveSupportStaff",
+    "action": "DownloadWhatsAppThreadAttachment",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/staff/conversations/{conversationId:guid}/whatsapp-thread/messages",
+    "controller": "LiveSupportStaff",
+    "action": "WhatsAppThreadMessages",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns",
+    "controller": "WhatsAppCampaign",
+    "action": "List",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/{campaignId:guid}/cancel",
+    "controller": "WhatsAppCampaign",
+    "action": "Cancel",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/{campaignId:guid}/launch",
+    "controller": "WhatsAppCampaign",
+    "action": "Launch",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/{campaignId:guid}/pause",
+    "controller": "WhatsAppCampaign",
+    "action": "Pause",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/{campaignId:guid}/resume",
+    "controller": "WhatsAppCampaign",
+    "action": "Resume",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/audience/preview",
+    "controller": "WhatsAppCampaign",
+    "action": "Preview",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/bootstrap",
+    "controller": "WhatsAppCampaign",
+    "action": "Bootstrap",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/drafts",
+    "controller": "WhatsAppCampaign",
+    "action": "CreateDraft",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/preferences",
+    "controller": "WhatsAppCampaign",
+    "action": "Preferences",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/preferences",
+    "controller": "WhatsAppCampaign",
+    "action": "RecordPreference",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/preferences/contacts/search",
+    "controller": "WhatsAppCampaign",
+    "action": "ContactCandidates",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/templates",
+    "controller": "WhatsAppLiveSupport",
+    "action": "Templates",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/whatsapp/templates/sync",
+    "controller": "WhatsAppLiveSupport",
+    "action": "SyncTemplates",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/webhook",
+    "controller": "WhatsAppLiveSupport",
+    "action": "ReceiveWebhook",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/whatsapp/webhook",
+    "controller": "WhatsAppLiveSupport",
+    "action": "VerifyWebhook",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
     "route": "api/notifications",
     "controller": "Notifications",
     "action": "List",
@@ -10473,6 +11301,23 @@
     "route": "api/Student/dashboard/quick-access",
     "controller": "Student",
     "action": "GetQuickAccess",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/Student/lessons",
+    "controller": "Student",
+    "action": "GetMyLessons",
     "methods": [
       "GET"
     ],
@@ -11953,6 +12798,83 @@
       "tasks.manage",
       "tasks.manage"
     ]
+  },
+  {
+    "route": "api/v1/internal/admin-ai/readiness",
+    "controller": "AdminAIInternal",
+    "action": "Ready",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/admin-ai/turns/{turnId:guid}/claim",
+    "controller": "AdminAIInternal",
+    "action": "Claim",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/admin-ai/turns/{turnId:guid}/complete",
+    "controller": "AdminAIInternal",
+    "action": "Complete",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/admin-ai/turns/{turnId:guid}/fail",
+    "controller": "AdminAIInternal",
+    "action": "Fail",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/admin-ai/turns/{turnId:guid}/lease/renew",
+    "controller": "AdminAIInternal",
+    "action": "Renew",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/admin-ai/turns/{turnId:guid}/steps/{stepNumber:int}/reads",
+    "controller": "AdminAIInternal",
+    "action": "ReadBatch",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/ai-media/bunny/{lessonVideoId:guid}/runs/{generationRunId:guid}/original",
+    "controller": "InternalAiMedia",
+    "action": "GetBunnyOriginal",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
   },
   {
     "route": "api/v1/internal/callbacks/ai-analysis-completed",

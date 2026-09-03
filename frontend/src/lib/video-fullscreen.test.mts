@@ -7,6 +7,7 @@ import {
   lockVideoToLandscape,
   requestVideoFullscreen,
   unlockVideoOrientation,
+  waitForVideoFullscreen,
 } from './video-fullscreen.ts';
 
 test('fullscreen uses the standard browser API when available', async () => {
@@ -46,6 +47,21 @@ test('webkit fullscreen and exit APIs remain supported', async () => {
   assert.equal(await exitVideoFullscreen(documentLike), true);
   assert.equal(requested, 1);
   assert.equal(exited, 1);
+});
+
+test('late WebKit fullscreenchange wins before the pseudo-fullscreen fallback', async () => {
+  const documentLike = new EventTarget() as EventTarget & {
+    fullscreenElement: Element | null;
+    webkitFullscreenElement: Element | null;
+  };
+  documentLike.fullscreenElement = null;
+  documentLike.webkitFullscreenElement = null;
+
+  const waiting = waitForVideoFullscreen(documentLike as unknown as Document, 100);
+  documentLike.webkitFullscreenElement = {} as Element;
+  documentLike.dispatchEvent(new Event('webkitfullscreenchange'));
+
+  assert.equal(await waiting, true);
 });
 
 test('2026-09-02 landscape lock reports rejection from an embedded browser', async () => {

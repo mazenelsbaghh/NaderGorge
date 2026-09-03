@@ -176,6 +176,14 @@ export function LessonCarousel({
         setMounted(true);
     }, []);
 
+    const activeVideoId = videos?.[activeStep]?.id;
+    const activeVideoIdRef = useRef(activeVideoId);
+    activeVideoIdRef.current = activeVideoId;
+    useEffect(() => {
+        setWatchStatus(null);
+        setCurrentTime(0);
+    }, [activeVideoId]);
+
     if (!videos || videos.length === 0) return null;
 
     const activeVideo = videos[activeStep];
@@ -352,16 +360,20 @@ export function LessonCarousel({
                                         <div className="relative aspect-video overflow-hidden rounded-lg border border-[var(--admin-primary)]/20 bg-black sm:rounded-xl">
                                             <SecureVideoPlayer
                                                 ref={playerRef}
-                                                className="absolute inset-0 h-full w-full object-cover"
+                                                className="h-full w-full !rounded-none !border-0 !shadow-none"
                                                 lessonVideoId={activeVideo.id}
                                                 isExamLocked={activeVideo.isExamLocked}
                                                 blockingExamId={activeVideo.isExamLocked ? videos.find(v => v.examId && !v.examPassed)?.examId : undefined}
                                                 videoExamId={activeVideo.examId}
                                                 chapters={activeVideo.chapters}
-                                                onWatchStatusChange={(s: WatchStatus) => setWatchStatus(s)}
-                                                onWatchProgress={(time) => setCurrentTime(time)}
+                                                onWatchStatusChange={(s: WatchStatus) => {
+                                                    if (activeVideoIdRef.current === activeVideo.id) setWatchStatus(s);
+                                                }}
+                                                onWatchProgress={(time) => {
+                                                    if (activeVideoIdRef.current === activeVideo.id) setCurrentTime(time);
+                                                }}
                                                 onEnded={() => {
-                                                    if (activeStep < videos.length - 1) {
+                                                    if (activeVideoIdRef.current === activeVideo.id && activeStep < videos.length - 1) {
                                                         onStepChange(activeStep + 1);
                                                     }
                                                 }}

@@ -528,10 +528,14 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
   height: 100dvh !important;
 }
 
+body.secure-video-fullscreen-open,
 body:has(.secure-video-pseudo-fullscreen) {
   overflow: hidden !important;
 }
 
+/* JS applies this compatibility class because older Android WebViews do not
+   support :has(), and transformed ancestors otherwise trap position: fixed. */
+.secure-video-fullscreen-ancestor,
 body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen) {
   overflow: visible !important;
   transform: none !important;
@@ -558,15 +562,25 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     left: 50% !important;
     right: auto !important;
     bottom: auto !important;
+    width: 100vh !important;
     width: 100dvh !important;
+    height: 100vw !important;
     height: 100dvw !important;
     transform: translate(-50%, -50%) rotate(90deg) !important;
     transform-origin: center;
   }
 
+  .secure-video-pseudo-fullscreen.secure-video-force-landscape .secure-video-fullscreen-surface {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
   .secure-video-fullscreen-surface.secure-video-force-landscape:fullscreen,
   .secure-video-fullscreen-surface.secure-video-force-landscape:-webkit-full-screen {
+    width: 100vh !important;
     width: 100dvh !important;
+    height: 100vw !important;
     height: 100dvw !important;
     top: 50% !important;
     left: 50% !important;

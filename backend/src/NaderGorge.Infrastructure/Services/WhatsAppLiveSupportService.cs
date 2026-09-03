@@ -482,7 +482,20 @@ public sealed class WhatsAppLiveSupportService(
             if (type == "document" && !string.Equals(downloaded.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
                 return (UnsupportedDocumentMessage, LiveSupportMessageType.Text, null);
             await using var content = new MemoryStream(downloaded.Content, writable: false);
-            var stored = await attachmentStorage.SaveAsync(content, downloaded.FileName, downloaded.ContentType, downloaded.Content.LongLength, ct);
+            LiveSupportStoredAttachment stored;
+            try
+            {
+                stored = await attachmentStorage.SaveAsync(
+                    content,
+                    downloaded.FileName,
+                    downloaded.ContentType,
+                    downloaded.Content.LongLength,
+                    ct);
+            }
+            catch (InvalidUploadContentException)
+            {
+                return (UnavailableMediaMessage, LiveSupportMessageType.Text, null);
+            }
             var attachment = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = "whatsapp" };
             db.LiveSupportAttachments.Add(attachment);
             await db.SaveChangesAsync(ct);

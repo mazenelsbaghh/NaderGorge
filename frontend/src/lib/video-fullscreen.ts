@@ -34,6 +34,30 @@ export async function requestVideoFullscreen(element: HTMLElement): Promise<bool
   return false;
 }
 
+export async function waitForVideoFullscreen(
+  documentLike: Document,
+  timeoutMs = 300,
+): Promise<boolean> {
+  if (getFullscreenElement(documentLike)) return true;
+
+  return new Promise<boolean>((resolve) => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const finish = (entered: boolean) => {
+      documentLike.removeEventListener('fullscreenchange', handleChange);
+      documentLike.removeEventListener('webkitfullscreenchange', handleChange);
+      if (timeout) clearTimeout(timeout);
+      resolve(entered);
+    };
+    const handleChange = () => {
+      if (getFullscreenElement(documentLike)) finish(true);
+    };
+
+    documentLike.addEventListener('fullscreenchange', handleChange);
+    documentLike.addEventListener('webkitfullscreenchange', handleChange);
+    timeout = setTimeout(() => finish(Boolean(getFullscreenElement(documentLike))), timeoutMs);
+  });
+}
+
 export async function exitVideoFullscreen(documentLike: Document): Promise<boolean> {
   const vendorDocument = documentLike as FullscreenDocument;
   try {

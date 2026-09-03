@@ -189,6 +189,80 @@ public class AcademicScopeServiceTests
         Assert.True(await service.IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType.Lesson, lesson.Id, student.Id));
     }
 
+    [Fact]
+    public async Task LessonVideoBatch_UsesNearestScopeAndChildOverrideFailsClosed()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, EducationStage.Secondary, GradeLevel.FirstSecondary);
+        var subject = await SeedSubjectAsync(db);
+        var teacher = await SeedTeacherAsync(db);
+        var package = new Package
+        {
+            Name = "Batch scoped package",
+            Description = "Scoped",
+            Subject = subject,
+            Teacher = teacher,
+            TargetGrade = "FirstSecondary"
+        };
+        var term = new Term { Title = "Term", Package = package };
+        var section = new ContentSection { Title = "Section", Term = term };
+        var lesson = new Lesson { Title = "Lesson", ContentSection = section };
+        var videoType = new VideoType
+        {
+            Name = "شرح",
+            NormalizedName = $"EXPLANATION_{Guid.NewGuid():N}"
+        };
+        var inheritedVideo = new LessonVideo
+        {
+            Title = "Inherited",
+            Provider = "youtube",
+            ProviderVideoId = "inherited",
+            Lesson = lesson,
+            VideoType = videoType
+        };
+        var overriddenVideo = new LessonVideo
+        {
+            Title = "Overridden",
+            Provider = "youtube",
+            ProviderVideoId = "overridden",
+            Lesson = lesson,
+            VideoType = videoType
+        };
+        db.AddRange(package, term, section, lesson, videoType, inheritedVideo, overriddenVideo);
+        db.StudentFacingAcademicScopes.AddRange(
+            new StudentFacingAcademicScope
+            {
+                OwnerType = StudentFacingScopeOwnerType.Package,
+                OwnerId = package.Id,
+                ScopeLevel = AcademicScopeLevel.PlatformWide
+            },
+            new StudentFacingAcademicScope
+            {
+                OwnerType = StudentFacingScopeOwnerType.LessonVideo,
+                OwnerId = overriddenVideo.Id,
+                ScopeLevel = AcademicScopeLevel.StageWide,
+                EducationStage = EducationStage.Primary
+            });
+        await db.SaveChangesAsync();
+
+        var service = new AcademicScopeService(db);
+        var eligibleIds = await service.GetEligibleLessonVideoIdsForStudentAsync(
+            [inheritedVideo.Id, overriddenVideo.Id, inheritedVideo.Id, Guid.NewGuid()],
+            student.Id);
+
+        Assert.Contains(inheritedVideo.Id, eligibleIds);
+        Assert.DoesNotContain(overriddenVideo.Id, eligibleIds);
+        Assert.Single(eligibleIds);
+        Assert.True(await service.IsOwnerEligibleForStudentAsync(
+            StudentFacingScopeOwnerType.LessonVideo,
+            inheritedVideo.Id,
+            student.Id));
+        Assert.False(await service.IsOwnerEligibleForStudentAsync(
+            StudentFacingScopeOwnerType.LessonVideo,
+            overriddenVideo.Id,
+            student.Id));
+    }
+
     [Theory]
     [InlineData("FirstSecondary", GradeLevel.FirstSecondary)]
     [InlineData("1st Secondary", GradeLevel.FirstSecondary)]

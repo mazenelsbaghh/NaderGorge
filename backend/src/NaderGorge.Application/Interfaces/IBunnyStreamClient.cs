@@ -20,6 +20,18 @@ public interface IBunnyStreamClientFactory
     IBunnyStreamClient Create(long libraryId, string apiKey);
 }
 
+public interface IBunnyVideoDurationResolver
+{
+    /// <summary>
+    /// Returns null when Bunny metadata is missing or temporarily unavailable so
+    /// session creation can fall back to player-reported metadata.
+    /// </summary>
+    Task<int?> ResolveAsync(
+        Guid libraryId,
+        string videoGuid,
+        CancellationToken cancellationToken);
+}
+
 public interface IBunnyStreamLibrarySecretProtector
 {
     byte[] Protect(Guid libraryId, string apiKey);

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using NaderGorge.API.Controllers;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Parent.Queries;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Student;
@@ -183,6 +184,12 @@ public class GetDetailsTests : IDisposable
             TargetGrade = "SecondSecondary"
         };
         _db.Packages.Add(package);
+        _db.StudentFacingAcademicScopes.Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.Package,
+            OwnerId = package.Id,
+            ScopeLevel = AcademicScopeLevel.PlatformWide
+        });
         await _db.SaveChangesAsync();
 
         var term = new Term { Title = "Term 1", PackageId = package.Id };
@@ -328,6 +335,7 @@ public class GetDetailsTests : IDisposable
         var profile = new StudentProfile
         {
             UserId = student.Id,
+            EducationStage = EducationStage.Secondary,
             GradeLevel = GradeLevel.SecondSecondary,
             SchoolName = "مدرسة الاختبار",
             ParentTrackingCode = "111222"
@@ -368,6 +376,13 @@ public class GetDetailsTests : IDisposable
         };
         _db.Packages.AddRange(packageA, packageB);
         await _db.SaveChangesAsync();
+        _db.StudentFacingAcademicScopes.Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.Package,
+            OwnerId = packageA.Id,
+            ScopeLevel = AcademicScopeLevel.PlatformWide
+        });
+        await _db.SaveChangesAsync();
 
         var termA = new Term { Title = "Term A", PackageId = packageA.Id };
         var termB = new Term { Title = "Term B", PackageId = packageB.Id };
@@ -381,7 +396,20 @@ public class GetDetailsTests : IDisposable
 
         var lessonA = new Lesson { Title = "Purchased Lesson", ContentSectionId = sectionA.Id, Order = 1 };
         var lessonB = new Lesson { Title = "Hidden Lesson", ContentSectionId = sectionB.Id, Order = 1 };
-        _db.Lessons.AddRange(lessonA, lessonB);
+        var academicallyHiddenLesson = new Lesson
+        {
+            Title = "Academically hidden purchased lesson",
+            ContentSectionId = sectionA.Id,
+            Order = 2
+        };
+        var archivedLesson = new Lesson
+        {
+            Title = "Archived purchased lesson",
+            ContentSectionId = sectionA.Id,
+            Order = 3,
+            ArchiveMode = ContentArchiveMode.HiddenFromEveryone
+        };
+        _db.Lessons.AddRange(lessonA, lessonB, academicallyHiddenLesson, archivedLesson);
         await _db.SaveChangesAsync();
 
         var videoA = new LessonVideo
@@ -392,7 +420,77 @@ public class GetDetailsTests : IDisposable
             ProviderVideoId = "video-a",
             IsActive = true
         };
-        _db.LessonVideos.Add(videoA);
+        var visibleUnwatchedVideo = new LessonVideo
+        {
+            Title = "Visible unwatched video",
+            LessonId = lessonA.Id,
+            Provider = "youtube",
+            ProviderVideoId = "visible-unwatched",
+            IsActive = true
+        };
+        var academicallyHiddenVideo = new LessonVideo
+        {
+            Title = "Academically hidden video",
+            LessonId = lessonA.Id,
+            Provider = "youtube",
+            ProviderVideoId = "academic-hidden",
+            IsActive = true
+        };
+        var archivedVideo = new LessonVideo
+        {
+            Title = "Archived video",
+            LessonId = lessonA.Id,
+            Provider = "youtube",
+            ProviderVideoId = "archive-hidden",
+            IsActive = true,
+            ArchiveMode = ContentArchiveMode.HiddenFromEveryone
+        };
+        var inactiveVideo = new LessonVideo
+        {
+            Title = "Inactive video",
+            LessonId = lessonA.Id,
+            Provider = "youtube",
+            ProviderVideoId = "inactive",
+            IsActive = false
+        };
+        var academicallyHiddenLessonVideo = new LessonVideo
+        {
+            Title = "Academically hidden lesson video",
+            LessonId = academicallyHiddenLesson.Id,
+            Provider = "youtube",
+            ProviderVideoId = "academic-hidden-lesson",
+            IsActive = true
+        };
+        var archivedLessonVideo = new LessonVideo
+        {
+            Title = "Archived lesson video",
+            LessonId = archivedLesson.Id,
+            Provider = "youtube",
+            ProviderVideoId = "archived-lesson",
+            IsActive = true
+        };
+        _db.LessonVideos.AddRange(
+            videoA,
+            visibleUnwatchedVideo,
+            academicallyHiddenVideo,
+            archivedVideo,
+            inactiveVideo,
+            academicallyHiddenLessonVideo,
+            archivedLessonVideo);
+        _db.StudentFacingAcademicScopes.Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.LessonVideo,
+            OwnerId = academicallyHiddenVideo.Id,
+            ScopeLevel = AcademicScopeLevel.StageWide,
+            EducationStage = EducationStage.Primary
+        });
+        _db.StudentFacingAcademicScopes.Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.Lesson,
+            OwnerId = academicallyHiddenLesson.Id,
+            ScopeLevel = AcademicScopeLevel.StageWide,
+            EducationStage = EducationStage.Primary
+        });
         await _db.SaveChangesAsync();
 
         _db.StudentAccessGrants.AddRange(
@@ -400,6 +498,22 @@ public class GetDetailsTests : IDisposable
             {
                 UserId = student.Id,
                 LessonVideoId = videoA.Id,
+                GrantType = CodeType.Video,
+                IsActive = true,
+                GrantedAt = DateTime.UtcNow
+            },
+            new StudentAccessGrant
+            {
+                UserId = student.Id,
+                LessonVideoId = academicallyHiddenLessonVideo.Id,
+                GrantType = CodeType.Video,
+                IsActive = true,
+                GrantedAt = DateTime.UtcNow
+            },
+            new StudentAccessGrant
+            {
+                UserId = student.Id,
+                LessonVideoId = archivedLessonVideo.Id,
                 GrantType = CodeType.Video,
                 IsActive = true,
                 GrantedAt = DateTime.UtcNow
@@ -421,6 +535,35 @@ public class GetDetailsTests : IDisposable
             TimeWatchedInSeconds = 180,
             WatchCount = 2
         });
+        _db.VideoWatchEvents.AddRange(
+            new VideoWatchEvent
+            {
+                UserId = student.Id,
+                LessonVideoId = visibleUnwatchedVideo.Id,
+                TimeWatchedInSeconds = 90,
+                WatchCount = 0
+            },
+            new VideoWatchEvent
+            {
+                UserId = student.Id,
+                LessonVideoId = academicallyHiddenVideo.Id,
+                TimeWatchedInSeconds = 900,
+                WatchCount = 9
+            },
+            new VideoWatchEvent
+            {
+                UserId = student.Id,
+                LessonVideoId = archivedVideo.Id,
+                TimeWatchedInSeconds = 800,
+                WatchCount = 8
+            },
+            new VideoWatchEvent
+            {
+                UserId = student.Id,
+                LessonVideoId = inactiveVideo.Id,
+                TimeWatchedInSeconds = 700,
+                WatchCount = 7
+            });
         _db.LessonProgresses.Add(new LessonProgress
         {
             UserId = student.Id,
@@ -485,7 +628,7 @@ public class GetDetailsTests : IDisposable
             });
         await _db.SaveChangesAsync();
 
-        var handler = new GetStudentAcademicDetailsQueryHandler(_db);
+        var handler = new GetStudentAcademicDetailsQueryHandler(_db, new AcademicScopeService(_db));
 
         var result = await handler.Handle(new GetStudentAcademicDetailsQuery(profile.Id), CancellationToken.None);
 
@@ -493,12 +636,16 @@ public class GetDetailsTests : IDisposable
         Assert.NotNull(result.Data);
 
         var details = result.Data;
+        Assert.Equal(1, details.Attendance.TotalLessons);
+        Assert.Equal(1, details.Attendance.WatchedLessons);
+        Assert.Equal(100, details.Attendance.CompletionRate);
         var teacher = Assert.Single(details.Teachers);
         Assert.Equal(teacherA.Id, teacher.TeacherId);
 
         var watchLesson = Assert.Single(details.WatchLessons);
         Assert.Equal(teacherA.Id, watchLesson.TeacherId);
         Assert.Equal(lessonA.Id, watchLesson.LessonId);
+        Assert.Equal(2, watchLesson.TotalVideos);
         Assert.Equal(1, watchLesson.WatchedVideos);
         Assert.Equal(2, watchLesson.WatchCount);
         Assert.Equal(180, watchLesson.WatchedSeconds);
@@ -538,7 +685,7 @@ public class GetDetailsTests : IDisposable
         _db.StudentProfiles.Add(profile);
         await _db.SaveChangesAsync();
 
-        var handler = new GetStudentAcademicDetailsQueryHandler(_db);
+        var handler = new GetStudentAcademicDetailsQueryHandler(_db, new AcademicScopeService(_db));
 
         var result = await handler.Handle(new GetStudentAcademicDetailsQuery(profile.Id), CancellationToken.None);
 
@@ -565,7 +712,7 @@ public class GetDetailsTests : IDisposable
         {
             if (request is GetStudentAcademicDetailsQuery query)
             {
-                var handler = new GetStudentAcademicDetailsQueryHandler(_db);
+                var handler = new GetStudentAcademicDetailsQueryHandler(_db, new AcademicScopeService(_db));
                 var result = await handler.Handle(query, cancellationToken);
                 return (TResponse)(object)result;
             }

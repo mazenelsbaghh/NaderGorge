@@ -76,7 +76,14 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Distinct()
             .ToList();
 
-        packageIds = await FilterEligibleOwnerIdsAsync(StudentFacingScopeOwnerType.Package, packageIds, request.UserId, ct);
+        var academicallyEligiblePackageIds = await _academicScope.GetEligiblePackageIdsForStudentAsync(
+            packageIds,
+            request.UserId,
+            ct);
+        packageIds = await GetViewablePackageIdsAsync(
+            academicallyEligiblePackageIds,
+            request.UserId,
+            ct);
 
         // Get packages with flat lesson list projected
         var packages = await _db.Packages
@@ -96,12 +103,32 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             })
             .ToListAsync(ct);
 
-        // Get completed lessons count
-        var completedLessonIds = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
-            .Select(lp => lp.LessonId)
-            .ToListAsync(ct);
+        var packageLessonIds = packages
+            .SelectMany(package => package.Lessons)
+            .Select(lesson => lesson.Id)
+            .Distinct()
+            .ToList();
+        var academicallyEligibleLessonIds = await _academicScope.GetEligibleLessonIdsForStudentAsync(
+            packageLessonIds,
+            request.UserId,
+            ct);
+        var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
+            request.UserId,
+            academicallyEligibleLessonIds,
+            ct);
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            visibleLessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
 
         var activePackages = new List<ActivePackageDto>();
         Guid? resumePackageId = null;
@@ -115,15 +142,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
-            if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Package, pkg.Id, ct))
-                continue;
-
-            var eligibleLessonIds = await FilterEligibleOwnerIdsAsync(
-                StudentFacingScopeOwnerType.Lesson,
-                pkg.Lessons.Select(l => l.Id).ToList(),
-                request.UserId,
-                ct);
-            var allLessons = pkg.Lessons.Where(l => eligibleLessonIds.Contains(l.Id)).ToList();
+            var allLessons = pkg.Lessons
+                .Where(lesson => visibleLessonIds.Contains(lesson.Id))
+                .ToList();
             var completed = allLessons.Count(l => completedLessonIds.Contains(l.Id));
             var total = allLessons.Count;
             totalLessonsAll += total;
@@ -163,7 +184,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         // Upcoming exams: lessons with exams that haven't been passed yet
         var upcomingExams = new List<UpcomingExamDto>();
-        var allLessonIds = packages.SelectMany(p => p.Lessons.Select(l => l.Id)).ToList();
+        var allLessonIds = visibleLessonIds.ToList();
         
         var lessonsWithExams = await _db.Lessons
             .AsNoTracking()
@@ -252,19 +273,24 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         ));
     }
 
-    private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(
-        StudentFacingScopeOwnerType ownerType,
-        List<Guid> ownerIds,
+    private async Task<List<Guid>> GetViewablePackageIdsAsync(
+        IReadOnlyCollection<Guid> packageIds,
         Guid userId,
         CancellationToken ct)
     {
-        var eligible = new List<Guid>();
-        foreach (var ownerId in ownerIds)
+        var viewablePackageIds = new List<Guid>(packageIds.Count);
+        foreach (var packageId in packageIds)
         {
-            if (await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct))
-                eligible.Add(ownerId);
+            if (await _archiveAccess.CanViewAsync(
+                    userId,
+                    ContentArchiveTargetType.Package,
+                    packageId,
+                    ct))
+            {
+                viewablePackageIds.Add(packageId);
+            }
         }
 
-        return eligible;
+        return viewablePackageIds;
     }
 }

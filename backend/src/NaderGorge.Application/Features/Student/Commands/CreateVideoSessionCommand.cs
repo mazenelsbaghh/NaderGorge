@@ -29,6 +29,7 @@ public record VideoSessionDto(
     WatchInfoDto WatchInfo,
     string VideoTitle,
     int ThresholdPercentage,
+    int? DurationSeconds,
     bool IsPreview
 );
 
@@ -41,19 +42,22 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
     private readonly IVideoEncryptionService _encryption;
     private readonly IGiftUsageService? _giftUsage;
     private readonly IVideoPlaybackConcurrency? _playbackConcurrency;
+    private readonly IBunnyVideoDurationResolver? _bunnyVideoDurationResolver;
 
     public CreateVideoSessionCommandHandler(
         IAppDbContext db,
         IAccessCheckService access,
         IVideoEncryptionService encryption,
         IGiftUsageService? giftUsage = null,
-        IVideoPlaybackConcurrency? playbackConcurrency = null)
+        IVideoPlaybackConcurrency? playbackConcurrency = null,
+        IBunnyVideoDurationResolver? bunnyVideoDurationResolver = null)
     {
         _db = db;
         _access = access;
         _encryption = encryption;
         _giftUsage = giftUsage;
         _playbackConcurrency = playbackConcurrency;
+        _bunnyVideoDurationResolver = bunnyVideoDurationResolver;
     }
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
@@ -80,9 +84,10 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
+        var normalizedProvider = VideoProviders.Normalize(video.Provider);
         var encryptedVideoId = video.ProviderVideoId;
         int? knownDurationSeconds = null;
-        if (VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny)
+        if (normalizedProvider == VideoProviders.Bunny)
         {
             if (video.BunnyStreamLibrary is null)
             {
@@ -93,7 +98,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
             var currentBunnyAsset = video.BunnyVideoAssets
                 .SingleOrDefault(asset => asset.SourceState == BunnyVideoAssetSourceState.Current);
-            knownDurationSeconds = currentBunnyAsset?.DurationSeconds;
+            knownDurationSeconds = currentBunnyAsset?.DurationSeconds is > 0
+                ? currentBunnyAsset.DurationSeconds
+                : null;
             if (currentBunnyAsset is not null
                 && !string.Equals(currentBunnyAsset.Status, "Ready", StringComparison.OrdinalIgnoreCase))
             {
@@ -102,8 +109,23 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     new List<string> { "BUNNY_VIDEO_NOT_READY" });
             }
 
+            if (knownDurationSeconds is null && _bunnyVideoDurationResolver is not null)
+            {
+                knownDurationSeconds = await _bunnyVideoDurationResolver.ResolveAsync(
+                    video.BunnyStreamLibrary.Id,
+                    video.ProviderVideoId,
+                    ct);
+            }
+
             encryptedVideoId = $"{video.BunnyStreamLibrary.ExternalLibraryId}/{video.ProviderVideoId}";
         }
+
+        var thresholdPercentage = await ResolveThresholdPercentageAsync(normalizedProvider, ct);
+        var thresholdSeconds = knownDurationSeconds is > 0
+            ? VideoWatchProgressCalculator.ResolveThresholdSeconds(
+                knownDurationSeconds.Value,
+                thresholdPercentage)
+            : (int?)null;
 
         var hasNonGiftVideoAccess = false;
         if (!hasLessonAccess)
@@ -173,7 +195,14 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             }
         }
 
-        // 2. Check watch limits
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        if (_playbackConcurrency is not null)
+            await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
+        var now = DateTime.UtcNow;
+
+        // 2. Check watch limits under the same per-student/video lock used by
+        // progress tracking, so a just-registered final view cannot race a new
+        // playback session into existence.
         var watchEvent = await _db.VideoWatchEvents
             .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);
 
@@ -193,8 +222,10 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             if (watchEvent != null && !watchEvent.IsLocked)
             {
                 watchEvent.IsLocked = true;
-                await _db.SaveChangesAsync(ct);
             }
+
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
             // Return real watch info so the player can display accurate counts (e.g. 5 من أصل 5, not a hardcoded fallback)
             var lockedDto = new VideoSessionDto(
@@ -207,7 +238,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     IsLocked: true,
                     TotalTrackedSeconds: Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
                 video.Title,
-                30,
+                thresholdPercentage,
+                knownDurationSeconds,
                 IsPreview: false);
             return ApiResponse<VideoSessionDto>.Fail("Watch limit reached for this video", new List<string> { "WATCH_LIMIT_REACHED" }, lockedDto);
         }
@@ -217,16 +249,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             if (!isAdminPreview && watchEvent != null && watchEvent.IsLocked)
             {
                 watchEvent.IsLocked = false;
-                await _db.SaveChangesAsync(ct);
             }
         }
 
-
-
-        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-        if (_playbackConcurrency is not null)
-            await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
-        var now = DateTime.UtcNow;
         var priorActiveSessions = await _db.VideoPlaybackSessions
             .Where(s => s.UserId == request.UserId
                         && s.LessonVideoId == request.LessonVideoId
@@ -253,7 +278,12 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             HasRegisteredView = false,
             LastProgressSequence = 0,
             IsSuperseded = false,
-            IpAddress = request.IpAddress
+            IpAddress = request.IpAddress,
+            TrackingDurationSeconds = knownDurationSeconds,
+            TrackingThresholdPercentage = thresholdPercentage,
+            TrackingThresholdSeconds = thresholdSeconds,
+            SpeedAdjustedSecondsRemainder = 0m,
+            AcceptedWallSeconds = 0m
         };
 
         string studentName = user?.FullName ?? "Unknown";
@@ -284,15 +314,6 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         await _db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        // 4. Fetch the global threshold percentage (default 30%)
-        var thresholdKey = VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny ? PlatformSettingKeys.BunnyWatchThresholdPercentage : VideoProviders.Normalize(video.Provider) == VideoProviders.YouTube ? PlatformSettingKeys.YouTubeWatchThresholdPercentage : PlatformSettingKeys.VideoWatchThresholdPercentage;
-        var thresholdSetting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == thresholdKey, ct);
-        int thresholdPercentage = 30; // default
-        if (thresholdSetting != null && int.TryParse(thresholdSetting.Value, out int parsed))
-        {
-            thresholdPercentage = parsed;
-        }
-
         var sessionWatchInfo = isAdminPreview
             ? new WatchInfoDto(0, 0, IsLocked: false, TotalTrackedSeconds: 0)
             : new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0));
@@ -303,9 +324,39 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             sessionWatchInfo,
             video.Title,
             thresholdPercentage,
+            knownDurationSeconds,
             isAdminPreview
         );
 
         return ApiResponse<VideoSessionDto>.Ok(dto);
+    }
+
+    private async Task<int> ResolveThresholdPercentageAsync(
+        string normalizedProvider,
+        CancellationToken ct)
+    {
+        var providerKey = normalizedProvider == VideoProviders.Bunny
+            ? PlatformSettingKeys.BunnyWatchThresholdPercentage
+            : normalizedProvider == VideoProviders.YouTube
+                ? PlatformSettingKeys.YouTubeWatchThresholdPercentage
+                : PlatformSettingKeys.VideoWatchThresholdPercentage;
+        var globalKey = PlatformSettingKeys.VideoWatchThresholdPercentage;
+        var keys = new[] { providerKey, globalKey }.Distinct().ToList();
+        var configuredThresholds = await _db.PlatformSettings
+            .AsNoTracking()
+            .Where(setting => keys.Contains(setting.Key))
+            .Select(setting => new { setting.Key, setting.Value })
+            .ToListAsync(ct);
+
+        var providerValue = configuredThresholds
+            .FirstOrDefault(setting => setting.Key == providerKey)?.Value;
+        if (int.TryParse(providerValue, out var providerThreshold))
+            return Math.Clamp(providerThreshold, 1, 100);
+
+        var globalValue = configuredThresholds
+            .FirstOrDefault(setting => setting.Key == globalKey)?.Value;
+        return int.TryParse(globalValue, out var globalThreshold)
+            ? Math.Clamp(globalThreshold, 1, 100)
+            : CachedPlatformSettings.Default.VideoWatchThresholdPercentage;
     }
 }

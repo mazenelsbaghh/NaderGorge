@@ -112,6 +112,10 @@ public sealed class HomeworkSubmissionTests
     private sealed class HomeworkAllowArchiveAccessService : IContentArchiveAccessService
     {
         public Task<bool> CanViewAsync(Guid userId, NaderGorge.Domain.Enums.ContentArchiveTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<IReadOnlySet<Guid>> GetViewableLessonIdsAsync(Guid userId, IReadOnlyCollection<Guid> lessonIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlySet<Guid>>(lessonIds.ToHashSet());
+        public Task<IReadOnlySet<Guid>> GetViewableLessonVideoIdsAsync(Guid userId, IReadOnlyCollection<Guid> lessonVideoIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlySet<Guid>>(lessonVideoIds.ToHashSet());
         public Task<bool> CanAcquireAsync(NaderGorge.Domain.Enums.ContentArchiveTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 

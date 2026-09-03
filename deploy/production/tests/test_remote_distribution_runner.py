@@ -9,6 +9,8 @@ def load(name):
     spec=importlib.util.spec_from_file_location(name,SCRIPTS/f"{name}.py"); module=importlib.util.module_from_spec(spec); sys.modules[name]=module; spec.loader.exec_module(module); return module
 load("ssh_transport"); load("release_images"); load("remote_build_release"); planner=load("remote_distribution_plan"); runner_module=load("remote_distribution_runner")
 RELEASE="src-"+"a"*40
+STAGE=f"/tmp/massar-{RELEASE}"
+CLEANUP=f"set -euo pipefail; rm -rf -- {STAGE}"
 def inventory():
     return SimpleNamespace(cluster={"ssh_user":"massar-ops"},nodes=tuple(SimpleNamespace(id=node,public_address=f"192.0.2.{i}",roles=("builder",) if node=="node-3" else ()) for i,node in enumerate(planner.NODE_IDS,1)))
 def plan():
@@ -47,6 +49,7 @@ def test_verifies_all_images_before_install(tmp_path):
         rows=[text for seen,text in transport.calls if seen==node]; install=next(i for i,text in enumerate(rows) if "install-release" in text); verified=[text for text in rows[:install] if "sha256sum -c -" in text]; assert len(verified)==4
         if node=="node-3": assert all("docker load" not in text for text in verified)
         else: assert all("docker load" in text for text in verified)
+        assert rows[-1] == CLEANUP
 
 def test_builder_verifies_its_cached_images_in_place_without_self_ssh_relay(tmp_path):
     transport=Transport(); runner(tmp_path,transport).run()
@@ -78,8 +81,9 @@ def test_20260809_partial_distribution_resumes_matching_release_node(tmp_path):
 
     assert final["digestParity"] is True
     node1_rows = [text for node, text in transport.calls if node == "node-1"]
-    assert len(node1_rows) == 1
+    assert len(node1_rows) == 2
     assert ".release-files.sha256" in node1_rows[0]
+    assert node1_rows[1] == CLEANUP
     assert not any(
         node == "node-1" and text in {"copy", "stream"}
         for node, text in transport.calls
@@ -88,9 +92,11 @@ def test_20260809_partial_distribution_resumes_matching_release_node(tmp_path):
         node == "node-1" and "install-release" in text
         for node, text in transport.calls
     )
-def test_tamper_stops_partial_run_before_install(tmp_path):
+def test_20260903_tampered_distribution_cleans_started_node_before_stopping(tmp_path):
     transport=Transport("worker.tar")
     with pytest.raises(RuntimeError,match="tampered"): runner(tmp_path,transport).run()
-    assert not any("install-release" in text for _,text in transport.calls); assert not any(node=="node-2" for node,_ in transport.calls)
+    assert not any("install-release" in text for _,text in transport.calls)
+    assert transport.calls[-1] == ("node-1", CLEANUP)
+    assert not any(node=="node-2" for node,_ in transport.calls)
 def test_executor_command_is_node3_cache_pinned():
     command=runner_module.builder_executor_command(plan()); assert command[:2]==("sudo","/usr/local/sbin/massar-remote-builder"); assert f"/var/lib/massar/builds/{RELEASE}" in command; assert command[-1]=="--yes"

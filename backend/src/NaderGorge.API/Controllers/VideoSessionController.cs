@@ -106,7 +106,6 @@ public class VideoSessionController : ControllerBase
 
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
-        if (request.TotalDurationSeconds <= 0) return BadRequest(new { success = false, errors = new[] { "DURATION_REQUIRED" } });
 
         var command = new TrackWatchProgressCommand(
             lessonVideoId,
@@ -115,7 +114,11 @@ public class VideoSessionController : ControllerBase
             request.ProgressSequence,
             request.SecondsWatched,
             request.PlaybackRate,
-            request.TotalDurationSeconds
+            request.TotalDurationSeconds,
+            request.ProgressSegments?.Select(segment => new WatchProgressSegment(
+                segment.ProgressSequence,
+                segment.SecondsWatched,
+                segment.PlaybackRate)).ToList()
         );
         var result = await _mediator.Send(command, ct);
 
@@ -166,6 +169,15 @@ public class TrackProgressRequest
     public double SecondsWatched { get; set; }
     public double PlaybackRate { get; set; } = 1;
     public int TotalDurationSeconds { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(30)]
+    public List<TrackProgressSegmentRequest>? ProgressSegments { get; set; }
+}
+
+public class TrackProgressSegmentRequest
+{
+    public long ProgressSequence { get; set; }
+    public double SecondsWatched { get; set; }
+    public double PlaybackRate { get; set; } = 1;
 }
 
 public class CreateVideoSessionRequest

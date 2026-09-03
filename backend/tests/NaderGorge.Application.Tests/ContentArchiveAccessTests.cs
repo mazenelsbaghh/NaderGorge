@@ -151,7 +151,17 @@ public sealed class ContentArchiveAccessTests
             ProviderVideoId = "video-id",
             ArchiveMode = ContentArchiveMode.ActiveSubscribersOnly
         };
-        db.LessonVideos.Add(video);
+        var hiddenVideo = new LessonVideo
+        {
+            Lesson = lesson,
+            VideoType = videoType,
+            VideoTypeId = videoType.Id,
+            Title = "فيديو مخفي",
+            Provider = "youtube",
+            ProviderVideoId = "hidden-video-id",
+            ArchiveMode = ContentArchiveMode.HiddenFromEveryone
+        };
+        db.LessonVideos.AddRange(video, hiddenVideo);
         db.StudentAccessGrants.Add(new StudentAccessGrant
         {
             UserId = student.Id,
@@ -162,8 +172,16 @@ public sealed class ContentArchiveAccessTests
         });
         await db.SaveChangesAsync();
 
-        Assert.True(await new ContentArchiveAccessService(db).CanViewAsync(
+        var service = new ContentArchiveAccessService(db);
+        var viewableVideoIds = await service.GetViewableLessonVideoIdsAsync(
+            student.Id,
+            [video.Id, hiddenVideo.Id, video.Id, Guid.NewGuid()]);
+
+        Assert.Equal(video.Id, Assert.Single(viewableVideoIds));
+        Assert.True(await service.CanViewAsync(
             student.Id, ContentArchiveTargetType.Video, video.Id));
+        Assert.False(await service.CanViewAsync(
+            student.Id, ContentArchiveTargetType.Video, hiddenVideo.Id));
     }
 
     private static async Task<Package> SeedHierarchyAsync(NaderGorge.Infrastructure.Data.AppDbContext db)

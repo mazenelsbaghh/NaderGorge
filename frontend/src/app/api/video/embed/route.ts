@@ -199,7 +199,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   const reference = resolveBunnyVideoReference(videoId);
   if (typeof reference === 'string') return embedErrorHtml(reference);
 
-  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=false&playsinline=true&disableIosPlayer=false`);
+  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${reference.libraryId}/${reference.videoGuid}?autoplay=false&playsinline=true&disableIosPlayer=true`);
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -222,8 +222,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     #bunny-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
     #video-watermark {
       position: absolute; top: 0; left: 0; z-index: 20; pointer-events: none;
-      color: rgba(255,255,255,.18); font-size: 1.4rem; font-family: Tajawal, Montserrat, system-ui, sans-serif;
+      color: rgba(255,255,255,.18); font-size: .9rem; font-size: clamp(.9rem, 4vw, 1.4rem); font-family: Tajawal, Montserrat, system-ui, sans-serif;
       text-shadow: 1px 1px 2px rgba(0,0,0,.5); user-select: none; white-space: pre-wrap;
+      width: 42vw; max-width: 18rem; overflow-wrap: anywhere;
       transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3;
       transition: transform 1.5s ease-in-out;
     }
@@ -259,7 +260,56 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var parentReadySent = false;
     var lastKnownDuration = 0;
     var lastKnownVolume = 1;
+    var lastKnownPlaybackRate = 1;
+    var lastObservedTime = null;
+    var advancingTimeSamples = 0;
     var pollTimer = null;
+    var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
+
+    function readyPayloadSupportsTime(value) {
+      if (!value || !Array.isArray(value.events) || !Array.isArray(value.methods)) return false;
+      return value.methods.indexOf('getCurrentTime') !== -1 || value.events.indexOf('timeupdate') !== -1;
+    }
+
+    function bridgeSupportsTime(candidate) {
+      if (!candidate || !candidate.isReady || typeof candidate.supports !== 'function') return false;
+      try {
+        return candidate.supports('method', 'getCurrentTime') || candidate.supports('event', 'timeupdate');
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function parsePlayerJsMessage(data) {
+      if (typeof data === 'string') {
+        try { return JSON.parse(data); } catch (e) { return null; }
+      }
+      return data && typeof data === 'object' ? data : null;
+    }
+
+    // Some Android WebViews normalize the iframe URL differently from the src
+    // echoed by Bunny's Player.js ready event. The vendored bridge then rejects
+    // an otherwise valid ready message. Validate the source window and repair
+    // that specific handshake without weakening the origin boundary.
+    function recoverBunnyPlayerReady(event) {
+      if (__videoEmbedSuspended || !iframe || event.origin !== 'https://player.mediadelivery.net' || event.source !== iframe.contentWindow || !player || player.isReady) return;
+      var message = parsePlayerJsMessage(event.data);
+      if (!message || message.context !== 'player.js' || message.event !== 'ready') return;
+      if (!message.value || typeof message.value.src !== 'string' || !readyPayloadSupportsTime(message.value)) return;
+      try { player.ready(message); } catch (e) {}
+      if (message.listener === bridgeReadyProbeListener) {
+        try {
+          iframe.contentWindow.postMessage(JSON.stringify({
+            context: 'player.js',
+            version: '0.0.11',
+            method: 'removeEventListener',
+            value: 'ready',
+            listener: bridgeReadyProbeListener
+          }), 'https://player.mediadelivery.net');
+        } catch (e) {}
+      }
+    }
+    window.addEventListener('message', recoverBunnyPlayerReady);
 
     function notifyParentReady() {
       if (__videoEmbedSuspended || parentReadySent) return;
@@ -268,18 +318,35 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         duration: lastKnownDuration,
         volume: Math.round(lastKnownVolume * 100),
         isMuted: lastKnownVolume === 0,
-        provider: 'bunny'
+        provider: 'bunny',
+        playbackRate: lastKnownPlaybackRate
       });
     }
 
     function postBunnyTimeUpdate(time) {
       if (__videoEmbedSuspended) return;
+      var parsedTime = Number(time);
+      if (!isFinite(parsedTime)) parsedTime = 0;
+      if (lastObservedTime !== null && parsedTime > lastObservedTime + 0.01) {
+        advancingTimeSamples++;
+        // A native Play tap can occur before Player.js flushes its queued play
+        // listener on older WebViews. Consecutive clock movement repairs that
+        // missed event without treating one seek sample as active playback.
+        if (!isPlaying && advancingTimeSamples >= 2) {
+          isPlaying = true;
+          postToParent('stateChange', { state: 1, isPlaying: true, recoveredFromClock: true });
+        }
+      } else if (lastObservedTime !== null && parsedTime < lastObservedTime - 0.5) {
+        advancingTimeSamples = 0;
+      }
+      lastObservedTime = parsedTime;
       postToParent('timeUpdate', {
-        currentTime: Number(time) || 0,
+        currentTime: parsedTime,
         duration: lastKnownDuration,
         volume: Math.round(lastKnownVolume * 100),
         isMuted: lastKnownVolume === 0,
-        state: isPlaying ? 1 : 2
+        state: isPlaying ? 1 : 2,
+        playbackRate: lastKnownPlaybackRate
       });
     }
 
@@ -299,6 +366,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         try { player.pause(); } catch (e) {}
       }
       player = null;
+      window.removeEventListener('message', recoverBunnyPlayerReady);
       if (iframe) {
         iframe.removeAttribute('src');
         iframe.src = 'about:blank';
@@ -320,8 +388,45 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       iframe.src = ${safeSrc};
     }
 
+    function detachPlayerCallbacks(candidate) {
+      if (!candidate || typeof candidate.off !== 'function') return;
+      ['ready', 'timeupdate', 'playbackratechange', 'play', 'pause', 'ended', 'error'].forEach(function (eventName) {
+        try { candidate.off(eventName); } catch (e) {}
+      });
+    }
+
+    function retryPlayerBridgeInPlace() {
+      if (__videoEmbedSuspended || !iframe || playerReady) return;
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+      var previousPlayer = player;
+      player = null;
+      detachPlayerCallbacks(previousPlayer);
+      parentReadySent = false;
+      lastObservedTime = null;
+      advancingTimeSamples = 0;
+      initPlayer();
+      try {
+        // Player.js queues its own subscriptions until it sees the ready event. Ask an
+        // already-ready Bunny receiver to replay that handshake without
+        // navigating or pausing the provider iframe.
+        iframe.contentWindow.postMessage(JSON.stringify({
+          context: 'player.js',
+          version: '0.0.11',
+          method: 'addEventListener',
+          value: 'ready',
+          listener: bridgeReadyProbeListener
+        }), 'https://player.mediadelivery.net');
+      } catch (e) {
+        postToParent('error', { message: 'Failed to retry Bunny player bridge', provider: 'bunny' });
+      }
+    }
+
     function initPlayer() {
       if (__videoEmbedSuspended || !iframe) return;
+      var activePlayer;
       try {
         if (typeof playerjs !== 'undefined' && playerjs.Player) {
           if (!playerjs.Player.prototype.setPlaybackRate) {
@@ -335,68 +440,112 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
             };
           }
         }
-        player = new playerjs.Player(iframe);
+        activePlayer = new playerjs.Player(iframe);
+        player = activePlayer;
       } catch (e) {
-        postToParent('error', { message: 'Failed to initialize Bunny player: ' + e.message });
+        postToParent('error', { message: 'Failed to initialize Bunny player: ' + e.message, provider: 'bunny' });
         return;
       }
 
-      player.on('ready', function () {
-        if (__videoEmbedSuspended || !player) return;
+      activePlayer.on('ready', function () {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
+        if (!bridgeSupportsTime(activePlayer)) {
+          postToParent('error', { message: 'Bunny player bridge cannot report playback time', provider: 'bunny' });
+          return;
+        }
         playerReady = true;
         // Do not gate visual readiness on metadata callbacks. Some tablet
         // WebViews never answer getVolume/getDuration even though Bunny is
         // ready and its native controls are fully usable.
         notifyParentReady();
 
-        player.getDuration(function (dur) {
-          if (__videoEmbedSuspended || !player) return;
+        activePlayer.getDuration(function (dur) {
+          if (__videoEmbedSuspended || player !== activePlayer) return;
           var parsedDuration = Number(dur);
           if (isFinite(parsedDuration) && parsedDuration > 0) {
             lastKnownDuration = parsedDuration;
           }
         });
-        player.getVolume(function (vol) {
-          if (__videoEmbedSuspended || !player) return;
+        activePlayer.getVolume(function (vol) {
+          if (__videoEmbedSuspended || player !== activePlayer) return;
           var parsedVolume = Number(vol);
           if (isFinite(parsedVolume)) {
             lastKnownVolume = Math.max(0, Math.min(1, parsedVolume));
           }
         });
 
+        activePlayer.getPlaybackRate(function (rate) {
+          if (__videoEmbedSuspended || player !== activePlayer) return;
+          var parsedRate = Number(rate);
+          if ([0.5, 1, 1.5, 2].indexOf(parsedRate) !== -1) {
+            lastKnownPlaybackRate = parsedRate;
+          }
+        });
+        activePlayer.getPaused(function (paused) {
+          if (__videoEmbedSuspended || player !== activePlayer || typeof paused !== 'boolean') return;
+          isPlaying = !paused;
+          postToParent('stateChange', { state: paused ? 2 : 1, isPlaying: !paused, recoveredFromPlayer: true });
+        });
+
         // Start periodic time updates
         if (progressInterval) clearInterval(progressInterval);
         progressInterval = setInterval(function () {
-          if (__videoEmbedSuspended || !playerReady || !player) return;
+          if (__videoEmbedSuspended || !playerReady || player !== activePlayer) return;
           try {
-            player.getCurrentTime(function (time) {
-              if (__videoEmbedSuspended || !player) return;
+            activePlayer.getCurrentTime(function (time) {
+              if (__videoEmbedSuspended || player !== activePlayer) return;
               postBunnyTimeUpdate(time);
+            });
+            activePlayer.getPlaybackRate(function (rate) {
+              var parsedRate = Number(rate);
+              if ([0.5, 1, 1.5, 2].indexOf(parsedRate) !== -1) {
+                lastKnownPlaybackRate = parsedRate;
+              }
             });
           } catch (e) {}
         }, 1000);
       });
 
-      player.on('play', function () {
-        if (__videoEmbedSuspended) return;
+      activePlayer.on('timeupdate', function (value) {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
+        var time = typeof value === 'number'
+          ? value
+          : Number(value && (value.seconds !== undefined ? value.seconds : value.currentTime));
+        if (isFinite(time)) postBunnyTimeUpdate(time);
+      });
+
+      activePlayer.on('playbackratechange', function (value) {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
+        var rate = Number(value && value.playbackRate !== undefined ? value.playbackRate : value);
+        if ([0.5, 1, 1.5, 2].indexOf(rate) !== -1) {
+          lastKnownPlaybackRate = rate;
+          postToParent('playbackRateChange', { playbackRate: rate, provider: 'bunny' });
+        }
+      });
+
+      activePlayer.on('play', function () {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
         isPlaying = true;
+        advancingTimeSamples = 0;
         postToParent('stateChange', { state: 1, isPlaying: true });
       });
 
-      player.on('pause', function () {
-        if (__videoEmbedSuspended) return;
+      activePlayer.on('pause', function () {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
         isPlaying = false;
+        advancingTimeSamples = 0;
         postToParent('stateChange', { state: 2, isPlaying: false });
       });
 
-      player.on('ended', function () {
-        if (__videoEmbedSuspended) return;
+      activePlayer.on('ended', function () {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
         isPlaying = false;
+        advancingTimeSamples = 0;
         postToParent('stateChange', { state: 0, isPlaying: false });
       });
 
-      player.on('error', function (err) {
-        if (__videoEmbedSuspended) return;
+      activePlayer.on('error', function (err) {
+        if (__videoEmbedSuspended || player !== activePlayer) return;
         postToParent('error', { message: err || 'Bunny playback error', provider: 'bunny' });
       });
     }
@@ -420,7 +569,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         } else if (pollCount > 100) {
           // Allow slow mobile connections before reporting a missing player library.
           clearInterval(pollTimer);
-          postToParent('error', { message: 'Failed to load Bunny player library' });
+          postToParent('error', { message: 'Failed to load Bunny player library', provider: 'bunny' });
         }
       }, 250);
     }
@@ -429,10 +578,15 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     // Listen for commands from parent SecureVideoPlayer
     // ═══════════════════════════════════════════════════════
     window.addEventListener('message', function (event) {
-      if (event.origin !== window.location.origin) return;
-      if (__videoEmbedSuspended || !player || !playerReady) return;
+      if (event.origin !== window.location.origin || event.source !== window.parent) return;
       var msg = event.data;
       if (!msg || !msg.type || msg.source === 'video-embed') return;
+      if (__videoEmbedSuspended) return;
+      if (msg.type === 'retryBridge') {
+        retryPlayerBridgeInPlace();
+        return;
+      }
+      if (!player || !playerReady) return;
       switch (msg.type) {
         case 'play': player.play(); break;
         case 'pause': player.pause(); break;
@@ -444,14 +598,21 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       }
     });
 
-    // Watermark drift
+    // Keep the watermark fully inside the embedded player and the
+    // platform-owned fullscreen surface, including after device rotation.
     var watermark = document.getElementById('video-watermark');
-    setInterval(function () {
+    function moveWatermark() {
       if (!watermark) return;
-      var x = 10 + Math.random() * 70;
-      var y = 10 + Math.random() * 70;
-      watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';
-    }, 120000);
+      var edge = 8;
+      var maxX = Math.max(edge, window.innerWidth - watermark.offsetWidth - edge);
+      var maxY = Math.max(edge, window.innerHeight - watermark.offsetHeight - edge);
+      var x = edge + Math.random() * Math.max(0, maxX - edge);
+      var y = edge + Math.random() * Math.max(0, maxY - edge);
+      watermark.style.transform = 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,0)';
+    }
+    moveWatermark();
+    window.addEventListener('resize', moveWatermark);
+    setInterval(moveWatermark, 120000);
   </script>
 </body>
 </html>`;
@@ -534,7 +695,7 @@ ytDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;poi
 
 var watermark = document.createElement('div');
 watermark.id = 'video-watermark';
-watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap;';
+watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap; width: 42vw; max-width: 18rem; overflow-wrap: anywhere;';
 [
   { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
   { text: ${watermarkStudentName}, css: 'font-size: 0.75em; font-weight: bold; opacity: 0.85;' },
@@ -549,8 +710,8 @@ watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; poi
 
 setInterval(function() {
   if (!watermark) return;
-  var topPos = Math.random() * 80 + 10;
-  var leftPos = Math.random() * 80 + 10;
+  var topPos = Math.random() * 58 + 8;
+  var leftPos = Math.random() * 52 + 4;
   watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
 }, 120000);
 
@@ -626,9 +787,9 @@ function onYouTubeIframeAPIReady() {
     playerVars: {
       autoplay: _useNativeIPhonePlayer ? 0 : 1,
       controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3,
-      // YouTube has no programmatic fullscreen API. On iPhone, disabling inline
-      // playback hands the video to the native iOS fullscreen player.
-      playsinline: _useNativeIPhonePlayer ? 0 : 1,
+      // Keep playback inside the protected platform surface. Native iPhone
+      // fullscreen detaches the video from the student watermark.
+      playsinline: 1,
       // Explicit client identity is required by YouTube when an embed is nested in our secure player.
       origin: window.location.origin,
       widget_referrer: window.location.origin,
@@ -806,7 +967,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
 
     var watermark = document.createElement('div');
     watermark.id = 'video-watermark';
-    watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2147483646; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap;';
+    watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2147483646; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap; width: 42vw; max-width: 18rem; overflow-wrap: anywhere;';
     [
       { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
       { text: ${watermarkStudentName}, css: 'font-size: 0.75em; font-weight: bold; opacity: 0.85;' },
@@ -873,8 +1034,8 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     // Watermark roaming
     setInterval(function() {
       if (!watermark) return;
-      var topPos = Math.random() * 80 + 10;
-      var leftPos = Math.random() * 80 + 10;
+      var topPos = Math.random() * 58 + 8;
+      var leftPos = Math.random() * 52 + 4;
       watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
     }, 120000);
 

@@ -61,11 +61,24 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             })
             .ToListAsync(ct);
 
-        var completedLessonIds = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
-            .Select(lp => lp.LessonId)
-            .ToListAsync(ct);
+        var packageLessonIds = packages
+            .SelectMany(package => package.Lessons)
+            .Select(lesson => lesson.Id)
+            .Distinct()
+            .ToList();
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            packageLessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
 
         var manuallyUnlockedIds = await _db.LessonProgresses
             .AsNoTracking()

@@ -76,13 +76,21 @@ const CustomSlider = ({
   const handlePointerLeave = () => setHoverPercent(null);
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (!containerRef.current?.hasPointerCapture(e.pointerId)) return;
     setIsDragging(false);
-    if (containerRef.current && containerRef.current.hasPointerCapture(e.pointerId)) {
-      containerRef.current.releasePointerCapture(e.pointerId);
-    }
+    containerRef.current.releasePointerCapture(e.pointerId);
     const finalPercent = updateProgressLocally(e.clientX);
     if (finalPercent !== undefined) {
       onChange(finalPercent);
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    setHoverPercent(null);
+    setLocalValue(value);
+    if (containerRef.current?.hasPointerCapture(e.pointerId)) {
+      containerRef.current.releasePointerCapture(e.pointerId);
     }
   };
 
@@ -150,14 +158,14 @@ const CustomSlider = ({
       aria-valuenow={Math.round(localValue)}
       aria-valuetext={`${Math.round(localValue)}%`}
       className={cn(
-        "relative flex h-2 w-full cursor-pointer touch-none items-center rounded-full bg-transparent focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+        "relative flex h-11 w-full cursor-pointer touch-none items-center rounded-full bg-transparent focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
         className
       )}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onKeyDown={handleKeyDown}
     >
       {/* Tooltip */}
@@ -171,7 +179,7 @@ const CustomSlider = ({
       )}
 
       {/* Background Track with Chapter Gaps */}
-      <div className="absolute inset-0 flex gap-[3px] overflow-hidden rounded-full">
+      <div className="absolute inset-x-0 top-1/2 flex h-2 -translate-y-1/2 gap-[3px] overflow-hidden rounded-full">
         {displayChapters.map((ch, i) => {
           const widthPercent = ch.endPercent - ch.startPercent;
 
@@ -309,7 +317,7 @@ export default function PlayerControls({
                   size="icon"
                   aria-label={isPlaying ? "إيقاف الفيديو مؤقتًا" : "تشغيل الفيديو"}
                   aria-pressed={isPlaying}
-                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                 >
                   {isPlaying ? (
                     <Pause className={cn(compact ? "size-4" : "h-5 w-5")} fill="currentColor" />
@@ -327,7 +335,7 @@ export default function PlayerControls({
                     size="icon"
                     aria-label={isMuted || volume === 0 ? "تشغيل الصوت" : "كتم الصوت"}
                     aria-pressed={isMuted || volume === 0}
-                    className={cn("shrink-0 rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
+                    className={cn("shrink-0 rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                   >
                     {isMuted || volume === 0 ? (
                       <VolumeX className={cn(compact ? "size-4" : "h-5 w-5")} />
@@ -402,7 +410,7 @@ export default function PlayerControls({
                       }}
                       variant="ghost"
                       aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
-                      className={cn("rounded-full text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact ? "h-7 px-1.5 text-sm" : "h-8 px-2")}
+                      className={cn("min-h-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact && "text-sm")}
                     >
                       {playbackSpeed}x
                     </Button>
@@ -418,7 +426,7 @@ export default function PlayerControls({
                   variant="ghost"
                   size="icon"
                   aria-label="تبديل وضع ملء الشاشة"
-                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                 >
                   <Maximize className={cn(compact ? "size-4" : "h-5 w-5")} />
                 </Button>

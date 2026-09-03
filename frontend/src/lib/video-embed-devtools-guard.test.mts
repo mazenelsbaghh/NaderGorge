@@ -128,8 +128,8 @@ test('inspection guard ignores Android landscape viewport changes', () => {
 
 test('2026-09-02 inspection guard ignores Google app custom tabs', () => {
   const result = runGuard(420, 260, {
-    userAgent: 'Mozilla/5.0 (iPad; CPU OS 16_7_12 like Mac OS X) AppleWebKit/605.1.15 GSA/436.4 Mobile/15E148 Safari/604.1',
-    platform: 'iPad',
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel Tablet Build/UP1A.231105.003; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Safari/537.36 GSA/15.48.33.28.arm64',
+    platform: 'Linux armv8l',
     maxTouchPoints: 5,
   });
 
@@ -137,6 +137,22 @@ test('2026-09-02 inspection guard ignores Google app custom tabs', () => {
 
   assert.equal(result.hookCalls, 0);
   assert.deepEqual(result.locations, []);
+});
+
+test('inspection guard recognizes the GSA custom-tab marker without generic mobile tokens', () => {
+  // Deliberately desktop-shaped to prove GSA itself prevents the false positive;
+  // Android, Mobile, touch points, and userAgentData are absent from this fixture.
+  const result = runGuard(420, 260, {
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 GSA/436.0.904123456',
+    platform: 'Linux x86_64',
+    maxTouchPoints: 0,
+  });
+
+  for (let sample = 0; sample < 12; sample += 1) result.poll?.();
+
+  assert.equal(result.hookCalls, 0);
+  assert.deepEqual(result.locations, []);
+  assert.deepEqual(result.messages, []);
 });
 
 test('inspection guard ignores narrow desktop side panels', () => {
