@@ -16,6 +16,7 @@ interface BunnyLibrarySelectProps {
   detectedLibraryId?: string | null;
   currentLibrary?: BunnyLibraryReferenceDto | null;
   onAvailabilityChange?: (available: boolean) => void;
+  onSelectedLibraryChange?: (library: BunnyLibraryReferenceDto | null) => void;
   label?: string;
   disabled?: boolean;
 }
@@ -36,6 +37,7 @@ export function BunnyLibrarySelect({
   detectedLibraryId = null,
   currentLibrary,
   onAvailabilityChange,
+  onSelectedLibraryChange,
   label = 'مكتبة Bunny (مطلوب)',
   disabled = false,
 }: BunnyLibrarySelectProps) {
@@ -92,6 +94,10 @@ export function BunnyLibrarySelect({
   useEffect(() => {
     onAvailabilityChange?.(selectionAvailable);
   }, [onAvailabilityChange, selectionAvailable]);
+
+  useEffect(() => {
+    onSelectedLibraryChange?.(selectedLibrary ?? null);
+  }, [onSelectedLibraryChange, selectedLibrary]);
 
   if (loading) {
     return (

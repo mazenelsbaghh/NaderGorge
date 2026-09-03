@@ -660,7 +660,8 @@ public class AdminController : ControllerBase
             dto.VideoTypeId,
             GetUserId(),
             dto.BunnyStreamLibraryId,
-            dto.IsActive));
+            dto.IsActive,
+            dto.BunnyPlaybackMode));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1163,7 +1164,9 @@ public class AdminController : ControllerBase
             req.LibraryId,
             req.ApiKey,
             req.IsActive,
-            GetUserId()), ct);
+            GetUserId(),
+            req.HlsCdnHostname,
+            req.HlsTokenKey), ct);
         return response.Success ? StatusCode(StatusCodes.Status201Created, response) : BadRequest(response);
     }
 
@@ -1181,7 +1184,9 @@ public class AdminController : ControllerBase
             req.LibraryId,
             req.ApiKey,
             req.IsActive,
-            GetUserId()), ct);
+            GetUserId(),
+            req.HlsCdnHostname,
+            req.HlsTokenKey), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1224,7 +1229,8 @@ public class AdminController : ControllerBase
             req.FileName,
             req.FileSizeBytes,
             GetUserId(),
-            req.ExistingLessonVideoId), ct);
+            req.ExistingLessonVideoId,
+            req.BunnyPlaybackMode), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1260,7 +1266,8 @@ public class AdminController : ControllerBase
             req.IsActive,
             req.SourceUrl,
             GetUserId(),
-            req.ExistingLessonVideoId), ct);
+            req.ExistingLessonVideoId,
+            req.BunnyPlaybackMode), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1520,11 +1527,11 @@ public record UpdateCodeGroupSettingsRequest(
     Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation
 );
 public record RemoveUnusedCodesRequest(bool KeepEmptyGroup = true);
-public record CreateBunnyStreamLibraryRequest(string Name, string LibraryId, string ApiKey, bool IsActive = true);
-public record UpdateBunnyStreamLibraryRequest(string Name, string LibraryId, string? ApiKey, bool IsActive);
+public record CreateBunnyStreamLibraryRequest(string Name, string LibraryId, string ApiKey, bool IsActive = true, string? HlsCdnHostname = null, string? HlsTokenKey = null);
+public record UpdateBunnyStreamLibraryRequest(string Name, string LibraryId, string? ApiKey, bool IsActive, string? HlsCdnHostname = null, string? HlsTokenKey = null);
 public record SetBunnyStreamLibraryStatusRequest(bool IsActive);
-public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string? FileName, long? FileSizeBytes, Guid? ExistingLessonVideoId = null);
-public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string SourceUrl, Guid? ExistingLessonVideoId = null);
+public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string? FileName, long? FileSizeBytes, Guid? ExistingLessonVideoId = null, Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
+public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string SourceUrl, Guid? ExistingLessonVideoId = null, Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
 public record SyncBunnyUsageRequest(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh);
 public record UpdateVideoRequest(
     string Title,
@@ -1534,7 +1541,8 @@ public record UpdateVideoRequest(
     int Limit,
     Guid VideoTypeId,
     Guid? BunnyStreamLibraryId,
-    bool? IsActive = null);
+    bool? IsActive = null,
+    Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
 public record AttachHomeworkRequest(
     string Title,
     string Instructions,

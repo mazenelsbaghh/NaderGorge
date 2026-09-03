@@ -27,7 +27,8 @@ public record CreateBunnyTusUploadCommand(
     string? FileName,
     long? FileSizeBytes,
     Guid CurrentUserId,
-    Guid? ExistingLessonVideoId = null) : IRequest<ApiResponse<BunnyTusUploadSessionDto>>;
+    Guid? ExistingLessonVideoId = null,
+    BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse<BunnyTusUploadSessionDto>>;
 
 public record BunnyTusUploadSessionDto(
     Guid LessonVideoId,
@@ -56,7 +57,8 @@ public record FetchBunnyVideoCommand(
     bool IsActive,
     string SourceUrl,
     Guid CurrentUserId,
-    Guid? ExistingLessonVideoId = null) : IRequest<ApiResponse<BunnyUploadStatusDto>>;
+    Guid? ExistingLessonVideoId = null,
+    BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse<BunnyUploadStatusDto>>;
 
 public record RefreshBunnyVideoStatusCommand(Guid AssetId, Guid CurrentUserId) : IRequest<ApiResponse<BunnyUploadStatusDto>>;
 
@@ -198,6 +200,7 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
 
     public async Task<ApiResponse<BunnyTusUploadSessionDto>> Handle(CreateBunnyTusUploadCommand request, CancellationToken cancellationToken)
     {
+        if (!Enum.IsDefined(request.BunnyPlaybackMode)) return ApiResponse<BunnyTusUploadSessionDto>.Fail("اختيار مشغل Bunny غير صالح.", ["BUNNY_PLAYBACK_MODE_INVALID"]);
         var title = request.Title?.Trim();
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
         {
@@ -300,7 +303,8 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
                 LessonId = request.LessonId,
                 VideoTypeId = request.VideoTypeId,
                 IsActive = false,
-                BunnyStreamLibraryId = libraryResult.Access.Id
+                BunnyStreamLibraryId = libraryResult.Access.Id,
+                BunnyPlaybackMode = request.BunnyPlaybackMode
             };
             if (!replacementTarget.IsReplacement)
             {
@@ -333,6 +337,7 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
                 TargetMaxWatchCount = replacementTarget.IsReplacement ? request.MaxWatchCount : null,
                 TargetVideoTypeId = replacementTarget.IsReplacement ? request.VideoTypeId : null,
                 TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null,
+                TargetBunnyPlaybackMode = replacementTarget.IsReplacement ? request.BunnyPlaybackMode : null,
                 TargetSourceRevision = replacementTarget.IsReplacement
                     ? replacementTarget.ExpectedSourceRevision
                     : null
@@ -521,6 +526,7 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
 
     public async Task<ApiResponse<BunnyUploadStatusDto>> Handle(FetchBunnyVideoCommand request, CancellationToken cancellationToken)
     {
+        if (!Enum.IsDefined(request.BunnyPlaybackMode)) return ApiResponse<BunnyUploadStatusDto>.Fail("اختيار مشغل Bunny غير صالح.", ["BUNNY_PLAYBACK_MODE_INVALID"]);
         var title = request.Title?.Trim();
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
         {
@@ -674,7 +680,8 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
                 LessonId = request.LessonId,
                 VideoTypeId = request.VideoTypeId,
                 IsActive = false,
-                BunnyStreamLibraryId = libraryResult.Access.Id
+                BunnyStreamLibraryId = libraryResult.Access.Id,
+                BunnyPlaybackMode = request.BunnyPlaybackMode
             };
             if (!replacementTarget.IsReplacement)
             {
@@ -704,6 +711,7 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
                 TargetMaxWatchCount = replacementTarget.IsReplacement ? request.MaxWatchCount : null,
                 TargetVideoTypeId = replacementTarget.IsReplacement ? request.VideoTypeId : null,
                 TargetIsActive = replacementTarget.IsReplacement ? request.IsActive : null,
+                TargetBunnyPlaybackMode = replacementTarget.IsReplacement ? request.BunnyPlaybackMode : null,
                 TargetSourceRevision = replacementTarget.IsReplacement
                     ? replacementTarget.ExpectedSourceRevision
                     : null
@@ -1299,6 +1307,7 @@ internal static class BunnyVideoReplacementLifecycle
         var targetMaxWatchCount = candidate.TargetMaxWatchCount ?? target.MaxWatchCount;
         var targetVideoTypeId = candidate.TargetVideoTypeId ?? target.VideoTypeId;
         var targetIsActive = candidate.TargetIsActive ?? false;
+        var targetBunnyPlaybackMode = candidate.TargetBunnyPlaybackMode ?? BunnyPlaybackMode.BunnyPlayer;
 
         var now = DateTime.UtcNow;
         // Avoid a transient filtered-index collision and, crucially, use a compare-
@@ -1326,6 +1335,7 @@ internal static class BunnyVideoReplacementLifecycle
                 .SetProperty(asset => asset.TargetMaxWatchCount, (int?)null)
                 .SetProperty(asset => asset.TargetVideoTypeId, (Guid?)null)
                 .SetProperty(asset => asset.TargetIsActive, (bool?)null)
+                .SetProperty(asset => asset.TargetBunnyPlaybackMode, (BunnyPlaybackMode?)null)
                 .SetProperty(asset => asset.TargetSourceRevision, (int?)null)
                 .SetProperty(asset => asset.UpdatedAt, now), cancellationToken);
         if (promoted == 0)
@@ -1360,6 +1370,7 @@ internal static class BunnyVideoReplacementLifecycle
         target.MaxWatchCount = targetMaxWatchCount;
         target.VideoTypeId = targetVideoTypeId;
         target.IsActive = targetIsActive;
+        target.BunnyPlaybackMode = targetBunnyPlaybackMode;
         target.UpdatedAt = now;
         checked
         {

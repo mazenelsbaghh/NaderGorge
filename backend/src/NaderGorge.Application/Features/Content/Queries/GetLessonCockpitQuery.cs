@@ -10,10 +10,10 @@ namespace NaderGorge.Application.Features.Content.Queries;
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, bool IsRegeneratingMindmap, int Order);
 public record LessonCockpitVideoExamDto(Guid ExamId, string Title, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
-public record LessonCockpitBunnyLibraryDto(Guid Id, string Name, string LibraryId, bool IsActive, bool ApiKeyConfigured);
+public record LessonCockpitBunnyLibraryDto(Guid Id, string Name, string LibraryId, bool IsActive, bool ApiKeyConfigured, bool HlsConfigured);
 public record LessonCockpitBunnyReplacementDto(Guid AssetId, string Status, int? EncodeProgress);
 public record LessonCockpitBunnyReplacementOutcomeDto(Guid AssetId, string Status, string? ErrorMessage, DateTime? RetiredAtUtc);
-public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, LessonCockpitBunnyLibraryDto? BunnyLibrary = null, string? BunnyStatus = null, int? BunnyEncodeProgress = null, LessonCockpitBunnyReplacementDto? PendingBunnyReplacement = null, LessonCockpitBunnyReplacementOutcomeDto? LastBunnyReplacementOutcome = null);
+public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, LessonCockpitBunnyLibraryDto? BunnyLibrary = null, string? BunnyStatus = null, int? BunnyEncodeProgress = null, LessonCockpitBunnyReplacementDto? PendingBunnyReplacement = null, LessonCockpitBunnyReplacementOutcomeDto? LastBunnyReplacementOutcome = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, bool IsActive, int QuestionCount, decimal? PassingScoreThreshold, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
@@ -173,7 +173,8 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                             v.BunnyStreamLibrary.Name,
                             v.BunnyStreamLibrary.ExternalLibraryId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                             v.BunnyStreamLibrary.IsActive,
-                            v.BunnyStreamLibrary.ApiKeyCiphertext is { Length: > 0 }),
+                            v.BunnyStreamLibrary.ApiKeyCiphertext is { Length: > 0 },
+                            v.BunnyStreamLibrary.HlsTokenKeyCiphertext is { Length: > 0 } && v.BunnyStreamLibrary.HlsCdnHostname != null),
                     currentBunnyAsset?.Status,
                     currentBunnyAsset?.BunnyEncodeProgress,
                     pendingBunnyReplacement is null
@@ -188,7 +189,8 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                             lastBunnyReplacementOutcome.Id,
                             lastBunnyReplacementOutcome.Status,
                             lastBunnyReplacementOutcome.ErrorMessage,
-                            lastBunnyReplacementOutcome.RetiredAtUtc)
+                            lastBunnyReplacementOutcome.RetiredAtUtc),
+                    v.BunnyPlaybackMode
                 );
             }).ToList(),
             lesson.Resources.Select(r => new LessonCockpitResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType, r.ArchiveMode, r.ArchivedAt)).ToList(),

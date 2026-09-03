@@ -16,6 +16,8 @@ public sealed record BunnyStreamLibraryDto(
     string LibraryId,
     bool IsActive,
     bool ApiKeyConfigured,
+    bool HlsConfigured,
+    string? HlsCdnHostname,
     int AssignedVideoCount,
     DateTime? LastValidatedAtUtc,
     DateTime CreatedAt,
@@ -26,12 +28,14 @@ public sealed record BunnyStreamLibraryOptionDto(
     string Name,
     string LibraryId,
     bool IsActive,
-    bool ApiKeyConfigured);
+    bool ApiKeyConfigured,
+    bool HlsConfigured);
 
 internal sealed record AvailableBunnyStreamLibraryRow(
     Guid Id,
     string Name,
-    long ExternalLibraryId);
+    long ExternalLibraryId,
+    bool HlsConfigured);
 
 internal sealed record BunnyStreamLibraryListRow(
     Guid Id,
@@ -39,6 +43,8 @@ internal sealed record BunnyStreamLibraryListRow(
     long ExternalLibraryId,
     bool IsActive,
     bool ApiKeyConfigured,
+    bool HlsConfigured,
+    string? HlsCdnHostname,
     int AssignedVideoCount,
     DateTime? LastValidatedAtUtc,
     DateTime CreatedAt,
@@ -53,7 +59,9 @@ public sealed record CreateBunnyStreamLibraryCommand(
     string LibraryId,
     string ApiKey,
     bool IsActive,
-    Guid CurrentUserId) : IRequest<ApiResponse<BunnyStreamLibraryDto>>;
+    Guid CurrentUserId,
+    string? HlsCdnHostname = null,
+    string? HlsTokenKey = null) : IRequest<ApiResponse<BunnyStreamLibraryDto>>;
 
 public sealed record UpdateBunnyStreamLibraryCommand(
     Guid Id,
@@ -61,7 +69,9 @@ public sealed record UpdateBunnyStreamLibraryCommand(
     string LibraryId,
     string? ApiKey,
     bool IsActive,
-    Guid CurrentUserId) : IRequest<ApiResponse<BunnyStreamLibraryDto>>;
+    Guid CurrentUserId,
+    string? HlsCdnHostname = null,
+    string? HlsTokenKey = null) : IRequest<ApiResponse<BunnyStreamLibraryDto>>;
 
 public sealed record SetBunnyStreamLibraryStatusCommand(
     Guid Id,
@@ -93,6 +103,8 @@ public sealed class GetBunnyStreamLibrariesQueryHandler
                 library.ExternalLibraryId.ToString(CultureInfo.InvariantCulture),
                 library.IsActive,
                 library.ApiKeyConfigured,
+                library.HlsConfigured,
+                library.HlsCdnHostname,
                 library.AssignedVideoCount,
                 library.LastValidatedAtUtc,
                 library.CreatedAt,
@@ -112,6 +124,8 @@ public sealed class GetBunnyStreamLibrariesQueryHandler
                 library.ExternalLibraryId,
                 library.IsActive,
                 library.ApiKeyCiphertext != null,
+                library.HlsTokenKeyCiphertext != null && library.HlsCdnHostname != null,
+                library.HlsCdnHostname,
                 library.Videos.Select(video => video.Id)
                     .Concat(_db.BunnyVideoAssets
                         .Where(asset => asset.BunnyStreamLibraryRecordId == library.Id)
@@ -145,7 +159,8 @@ public sealed class GetAvailableBunnyStreamLibrariesQueryHandler
                 library.Name,
                 library.ExternalLibraryId.ToString(CultureInfo.InvariantCulture),
                 true,
-                true))
+                true,
+                library.HlsConfigured))
             .ToList();
 
         return ApiResponse<IReadOnlyList<BunnyStreamLibraryOptionDto>>.Ok(libraries);
@@ -160,7 +175,8 @@ public sealed class GetAvailableBunnyStreamLibrariesQueryHandler
             .Select(library => new AvailableBunnyStreamLibraryRow(
                 library.Id,
                 library.Name,
-                library.ExternalLibraryId));
+                library.ExternalLibraryId,
+                library.HlsTokenKeyCiphertext != null && library.HlsCdnHostname != null));
 }
 
 public sealed class CreateBunnyStreamLibraryCommandHandler
@@ -169,15 +185,18 @@ public sealed class CreateBunnyStreamLibraryCommandHandler
     private readonly IAppDbContext _db;
     private readonly IBunnyStreamClientFactory _clients;
     private readonly IBunnyStreamLibrarySecretProtector _protector;
+    private readonly IBunnyHlsSecretProtector? _hlsProtector;
 
     public CreateBunnyStreamLibraryCommandHandler(
         IAppDbContext db,
         IBunnyStreamClientFactory clients,
-        IBunnyStreamLibrarySecretProtector protector)
+        IBunnyStreamLibrarySecretProtector protector,
+        IBunnyHlsSecretProtector? hlsProtector = null)
     {
         _db = db;
         _clients = clients;
         _protector = protector;
+        _hlsProtector = hlsProtector;
     }
 
     public async Task<ApiResponse<BunnyStreamLibraryDto>> Handle(
@@ -189,6 +208,10 @@ public sealed class CreateBunnyStreamLibraryCommandHandler
         {
             return ApiResponse<BunnyStreamLibraryDto>.Fail(input.Message!, [input.ErrorCode!]);
         }
+        var hlsInput = BunnyStreamLibraryRules.ValidateHls(request.HlsCdnHostname, request.HlsTokenKey, requirePair: true);
+        if (!hlsInput.Success) return ApiResponse<BunnyStreamLibraryDto>.Fail(hlsInput.Message!, [hlsInput.ErrorCode!]);
+        if (hlsInput.TokenKey is not null && _hlsProtector is null)
+            return ApiResponse<BunnyStreamLibraryDto>.Fail("تعذر تشفير إعدادات HLS.", ["BUNNY_HLS_PROTECTION_UNAVAILABLE"]);
 
         var duplicate = await BunnyStreamLibraryRules.FindDuplicateAsync(
             _db,
@@ -220,6 +243,11 @@ public sealed class CreateBunnyStreamLibraryCommandHandler
             CreatedAt = now
         };
         library.ApiKeyCiphertext = _protector.Protect(library.Id, input.ApiKey!);
+        if (hlsInput.Hostname is not null && hlsInput.TokenKey is not null && _hlsProtector is not null)
+        {
+            library.HlsCdnHostname = hlsInput.Hostname;
+            library.HlsTokenKeyCiphertext = _hlsProtector.Protect(library.Id, hlsInput.TokenKey);
+        }
         _db.BunnyStreamLibraries.Add(library);
         BunnyStreamLibraryRules.AddAudit(_db, "Create", library, request.CurrentUserId, apiKeyChanged: true);
         await _db.SaveChangesAsync(cancellationToken);
@@ -235,17 +263,20 @@ public sealed class UpdateBunnyStreamLibraryCommandHandler
     private readonly IBunnyStreamClientFactory _clients;
     private readonly IBunnyStreamLibrarySecretProtector _protector;
     private readonly IBunnyStreamLibraryAccessService _access;
+    private readonly IBunnyHlsSecretProtector? _hlsProtector;
 
     public UpdateBunnyStreamLibraryCommandHandler(
         IAppDbContext db,
         IBunnyStreamClientFactory clients,
         IBunnyStreamLibrarySecretProtector protector,
-        IBunnyStreamLibraryAccessService access)
+        IBunnyStreamLibraryAccessService access,
+        IBunnyHlsSecretProtector? hlsProtector = null)
     {
         _db = db;
         _clients = clients;
         _protector = protector;
         _access = access;
+        _hlsProtector = hlsProtector;
     }
 
     public async Task<ApiResponse<BunnyStreamLibraryDto>> Handle(
@@ -264,6 +295,14 @@ public sealed class UpdateBunnyStreamLibraryCommandHandler
         {
             return ApiResponse<BunnyStreamLibraryDto>.Fail(input.Message!, [input.ErrorCode!]);
         }
+        var hlsInput = BunnyStreamLibraryRules.ValidateHls(request.HlsCdnHostname, request.HlsTokenKey, requirePair: false);
+        if (!hlsInput.Success) return ApiResponse<BunnyStreamLibraryDto>.Fail(hlsInput.Message!, [hlsInput.ErrorCode!]);
+        if (hlsInput.TokenKey is not null && _hlsProtector is null)
+            return ApiResponse<BunnyStreamLibraryDto>.Fail("تعذر تشفير إعدادات HLS.", ["BUNNY_HLS_PROTECTION_UNAVAILABLE"]);
+        var resultingHlsHost = hlsInput.Hostname ?? library.HlsCdnHostname;
+        var resultingHlsKeyConfigured = hlsInput.TokenKey is not null || library.HlsTokenKeyCiphertext is { Length: > 0 };
+        if ((resultingHlsHost is not null) != resultingHlsKeyConfigured)
+            return ApiResponse<BunnyStreamLibraryDto>.Fail("اسم CDN ومفتاح Token Authentication مطلوبان معًا.", ["BUNNY_HLS_CONFIG_INCOMPLETE"]);
 
         var assignedVideoCount = await BunnyStreamLibraryReferenceCounter.CountAsync(
             _db,
@@ -326,6 +365,9 @@ public sealed class UpdateBunnyStreamLibraryCommandHandler
         library.Name = input.Name!;
         library.NormalizedName = input.NormalizedName!;
         library.ExternalLibraryId = input.ExternalLibraryId;
+        if (hlsInput.Hostname is not null) library.HlsCdnHostname = hlsInput.Hostname;
+        if (hlsInput.TokenKey is not null && _hlsProtector is not null)
+            library.HlsTokenKeyCiphertext = _hlsProtector.Protect(library.Id, hlsInput.TokenKey);
         library.IsActive = request.IsActive;
         library.UpdatedAt = DateTime.UtcNow;
         BunnyStreamLibraryRules.AddAudit(_db, "Update", library, request.CurrentUserId, apiKeyChanged);
@@ -447,6 +489,18 @@ internal static class BunnyStreamLibraryRules
         string? ApiKey,
         string? ErrorCode,
         string? Message);
+    internal sealed record ValidatedHlsInput(bool Success, string? Hostname, string? TokenKey, string? ErrorCode, string? Message);
+
+    public static ValidatedHlsInput ValidateHls(string? hostname, string? tokenKey, bool requirePair)
+    {
+        var host = string.IsNullOrWhiteSpace(hostname) ? null : hostname.Trim().TrimEnd('/').ToLowerInvariant();
+        var key = string.IsNullOrWhiteSpace(tokenKey) ? null : tokenKey.Trim();
+        if (host is not null && (host.StartsWith("http", StringComparison.OrdinalIgnoreCase) || host.Length > 253 || !host.EndsWith(".b-cdn.net", StringComparison.Ordinal)))
+            return new(false, null, null, "BUNNY_HLS_HOST_INVALID", "اكتب اسم Bunny CDN فقط مثل vz-xxxx.b-cdn.net بدون https أو مسار.");
+        if (key is { Length: > 512 }) return new(false, null, null, "BUNNY_HLS_KEY_INVALID", "مفتاح CDN Token Authentication غير صالح.");
+        if (requirePair && ((host is null) != (key is null))) return new(false, null, null, "BUNNY_HLS_CONFIG_INCOMPLETE", "اسم CDN ومفتاح Token Authentication مطلوبان معًا.");
+        return new(true, host, key, null, null);
+    }
 
     public static ValidatedInput Validate(string name, string libraryId, string? apiKey, bool requireApiKey)
     {
@@ -531,6 +585,8 @@ internal static class BunnyStreamLibraryRules
             library.ExternalLibraryId.ToString(CultureInfo.InvariantCulture),
             library.IsActive,
             library.ApiKeyCiphertext is { Length: > 0 },
+            library.HlsTokenKeyCiphertext is { Length: > 0 } && !string.IsNullOrWhiteSpace(library.HlsCdnHostname),
+            library.HlsCdnHostname,
             assignedVideoCount,
             library.LastValidatedAtUtc,
             library.CreatedAt,
@@ -554,7 +610,8 @@ internal static class BunnyStreamLibraryRules
                 library.Name,
                 LibraryId = library.ExternalLibraryId,
                 library.IsActive,
-                ApiKeyChanged = apiKeyChanged
+                ApiKeyChanged = apiKeyChanged,
+                HlsConfigured = library.HlsTokenKeyCiphertext is { Length: > 0 } && !string.IsNullOrWhiteSpace(library.HlsCdnHostname)
             })
         });
     }

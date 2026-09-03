@@ -62,6 +62,7 @@ export type CreateVideoPayload = {
   videoTypeId: string;
   isActive?: boolean;
   bunnyStreamLibraryId?: string | null;
+  bunnyPlaybackMode?: 0 | 1;
 };
 
 export type UpdateVideoPayload = Omit<
@@ -82,6 +83,7 @@ export type BunnyTusUploadRequest = {
   bunnyStreamLibraryId: string;
   isActive: boolean;
   existingLessonVideoId?: string;
+  bunnyPlaybackMode?: 0 | 1;
 };
 
 export type BunnyTusUploadSession = {
@@ -108,6 +110,7 @@ export type BunnyFetchVideoRequest = {
   bunnyStreamLibraryId: string;
   isActive: boolean;
   existingLessonVideoId?: string;
+  bunnyPlaybackMode?: 0 | 1;
 };
 
 export interface BunnyLibraryReferenceDto {
@@ -116,9 +119,11 @@ export interface BunnyLibraryReferenceDto {
   libraryId: string;
   isActive: boolean;
   apiKeyConfigured: boolean;
+  hlsConfigured: boolean;
 }
 
 export interface BunnyLibraryDto extends BunnyLibraryReferenceDto {
+  hlsCdnHostname?: string | null;
   assignedVideoCount: number;
   lastValidatedAtUtc?: string | null;
   createdAt: string;
@@ -129,6 +134,8 @@ interface BunnyLibraryPayloadBase {
   name: string;
   libraryId: string;
   isActive: boolean;
+  hlsCdnHostname?: string;
+  hlsTokenKey?: string;
 }
 
 export interface CreateBunnyLibraryPayload extends BunnyLibraryPayloadBase {
@@ -810,6 +817,7 @@ export interface LessonCockpitVideoDto {
   isProcessingAI: boolean;
   isProcessingMindmaps: boolean;
   isActive: boolean;
+  bunnyPlaybackMode?: 0 | 1;
   bunnyLibrary?: BunnyLibraryReferenceDto | null;
   bunnyStatus?: string | null;
   bunnyEncodeProgress?: number | null;

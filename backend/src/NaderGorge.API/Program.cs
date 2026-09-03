@@ -164,6 +164,9 @@ builder.Services.AddHttpClient("BunnyAnalysisMedia", client =>
 });
 builder.Services.AddSingleton<IBunnyStreamClientFactory, BunnyStreamClientFactory>();
 builder.Services.AddSingleton<IBunnyStreamLibrarySecretProtector, BunnyStreamLibrarySecretProtector>();
+builder.Services.AddSingleton<IBunnyHlsSecretProtector>(sp =>
+    (BunnyStreamLibrarySecretProtector)sp.GetRequiredService<IBunnyStreamLibrarySecretProtector>());
+builder.Services.AddSingleton<IBunnyHlsUrlSigner, BunnyHlsUrlSigner>();
 builder.Services.AddScoped<IBunnyStreamLibraryAccessService, BunnyStreamLibraryAccessService>();
 builder.Services.AddScoped<IBunnyVideoDurationResolver, BunnyVideoDurationResolver>();
 builder.Services.AddScoped<IBunnyOriginalMediaReader, BunnyOriginalMediaReader>();

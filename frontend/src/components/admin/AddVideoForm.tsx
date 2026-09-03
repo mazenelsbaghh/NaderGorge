@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   adminService,
   type LessonCockpitVideoDto,
+  type BunnyLibraryReferenceDto,
   type VideoProvider,
 } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -26,6 +27,7 @@ interface AddVideoFormProps {
 }
 
 type BunnySourceMode = 'manual' | 'file' | 'fetch';
+type BunnyPlaybackSelection = 0 | 1;
 
 class BunnyTusTransferError extends Error {
   constructor(error: Error) {
@@ -87,6 +89,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [bunnySourceUrl, setBunnySourceUrl] = useState('');
   const [bunnyStreamLibraryId, setBunnyStreamLibraryId] = useState(() => editingVideo?.bunnyLibrary?.id ?? '');
   const [bunnyLibraryAvailable, setBunnyLibraryAvailable] = useState(false);
+  const [bunnyHlsAvailable, setBunnyHlsAvailable] = useState(Boolean(editingVideo?.bunnyLibrary?.hlsConfigured));
+  const [bunnyPlaybackMode, setBunnyPlaybackMode] = useState<BunnyPlaybackSelection>(() => editingVideo?.bunnyPlaybackMode ?? 0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sourceChangeConfirmationOpen, setSourceChangeConfirmationOpen] = useState(false);
 
@@ -118,6 +122,15 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     )
   );
 
+  const handleSelectedBunnyLibraryChange = useCallback((library: BunnyLibraryReferenceDto | null) => {
+    const hlsReady = Boolean(library?.hlsConfigured);
+    setBunnyHlsAvailable(hlsReady);
+    setBunnyPlaybackMode((current) => {
+      if (!hlsReady) return 0;
+      return editingVideo ? current : 1;
+    });
+  }, [editingVideo]);
+
   function selectProvider(nextProvider: VideoProvider) {
     if (nextProvider === provider) return;
 
@@ -130,6 +143,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     setBunnySourceUrl('');
     setBunnyStreamLibraryId('');
     setBunnyLibraryAvailable(false);
+    setBunnyHlsAvailable(false);
+    setBunnyPlaybackMode(0);
     setUploadProgress(0);
   }
 
@@ -160,6 +175,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           bunnyStreamLibraryId,
           isActive,
           existingLessonVideoId: editingVideo?.id,
+          bunnyPlaybackMode,
         });
 
         if (!session) throw new Error('Missing Bunny upload session');
@@ -176,6 +192,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           bunnyStreamLibraryId,
           isActive,
           existingLessonVideoId: editingVideo?.id,
+          bunnyPlaybackMode,
         });
       } else if (editingVideo) {
         await adminService.updateVideo(editingVideo.id, {
@@ -187,6 +204,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           videoTypeId,
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : null,
+          bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
         });
       } else {
         await adminService.createVideo({
@@ -199,6 +217,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           videoTypeId,
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : undefined,
+          bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
         });
       }
       toast.success(isBunny && bunnyMode !== 'manual'
@@ -213,6 +232,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
         setBunnySourceUrl('');
         setBunnyStreamLibraryId('');
         setBunnyLibraryAvailable(false);
+        setBunnyHlsAvailable(false);
+        setBunnyPlaybackMode(0);
         setUploadProgress(0);
         setOrder((prev) => prev + 1);
       }
@@ -328,7 +349,23 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
             detectedLibraryId={bunnyReference?.libraryId}
             currentLibrary={bunnyMode === 'manual' ? editingVideo?.bunnyLibrary : undefined}
             onAvailabilityChange={setBunnyLibraryAvailable}
+            onSelectedLibraryChange={handleSelectedBunnyLibraryChange}
           />
+
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-bold text-[var(--admin-muted)]">مشغل الفيديو</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button type="button" onClick={() => setBunnyPlaybackMode(1)} disabled={!bunnyHlsAvailable} aria-pressed={bunnyPlaybackMode === 1} className={`min-h-14 rounded-xl border px-4 py-3 text-right transition-colors ${bunnyPlaybackMode === 1 ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'} disabled:cursor-not-allowed disabled:opacity-45`}>
+                <span className="block text-sm font-black">مشغل المنصة HLS</span>
+                <span className="mt-1 block text-xs font-semibold">تحكم المنصة + اختيار الجودة</span>
+              </button>
+              <button type="button" onClick={() => setBunnyPlaybackMode(0)} aria-pressed={bunnyPlaybackMode === 0} className={`min-h-14 rounded-xl border px-4 py-3 text-right transition-colors ${bunnyPlaybackMode === 0 ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'}`}>
+                <span className="block text-sm font-black">مشغل Bunny</span>
+                <span className="mt-1 block text-xs font-semibold">المشغل الحالي كما هو</span>
+              </button>
+            </div>
+            {!bunnyHlsAvailable && <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">جهّز CDN hostname وToken Key للمكتبة من إعدادات Bunny لتفعيل مشغل المنصة.</p>}
+          </fieldset>
 
           {bunnyMode === 'manual' && (
             <div className="space-y-2">

@@ -1860,6 +1860,39 @@ public sealed class BunnyStreamLibrariesTests
     }
 
     [Fact]
+    public async Task ManagedBunnyVideo_PlatformHlsSessionUsesSignedCdnPlaylistWithoutExposingTokenKey()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        const string tokenKey = "private-cdn-token-key";
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        seeded.Library.HlsCdnHostname = "vz-example.b-cdn.net";
+        seeded.Library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(seeded.Library.Id, tokenKey);
+        seeded.Video.BunnyPlaybackMode = BunnyPlaybackMode.PlatformHls;
+        await db.SaveChangesAsync();
+
+        var encryption = new VideoEncryptionService();
+        var result = await new CreateVideoSessionCommandHandler(
+                db,
+                new AccessCheckService(db),
+                encryption,
+                bunnyHlsSecretProtector: protector,
+                bunnyHlsUrlSigner: new BunnyHlsUrlSigner())
+            .Handle(
+                new CreateVideoSessionCommand(seeded.Video.Id, seeded.Admin.Id),
+                CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal("bunny-hls", result.Data!.Provider);
+        var session = await db.VideoPlaybackSessions.AsNoTracking().SingleAsync();
+        var material = encryption.DecryptVideoInfo(session.SessionToken, session.EncryptionKey);
+        Assert.Equal("bunny-hls", material.ProviderName);
+        Assert.StartsWith("https://vz-example.b-cdn.net/bcdn_token=HS256-", material.ProviderVideoId);
+        Assert.EndsWith($"/{VideoGuid}/playlist.m3u8", material.ProviderVideoId);
+        Assert.DoesNotContain(tokenKey, material.ProviderVideoId, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ManagedBunnyVideo_WatchLimitResponsePreservesKnownDuration()
     {
         await using var db = TestAppDbContextFactory.Create();

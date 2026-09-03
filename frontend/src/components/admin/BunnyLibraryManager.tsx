@@ -31,9 +31,11 @@ type BunnyLibraryFormState = {
   name: string;
   libraryId: string;
   apiKey: string;
+  hlsCdnHostname: string;
+  hlsTokenKey: string;
 };
 
-const EMPTY_FORM: BunnyLibraryFormState = { name: '', libraryId: '', apiKey: '' };
+const EMPTY_FORM: BunnyLibraryFormState = { name: '', libraryId: '', apiKey: '', hlsCdnHostname: '', hlsTokenKey: '' };
 
 function validationMessage(
   form: BunnyLibraryFormState,
@@ -44,6 +46,10 @@ function validationMessage(
     return 'Library ID يجب أن يكون رقمًا موجبًا.';
   }
   if (!editingLibrary?.apiKeyConfigured && !form.apiKey.trim()) return 'أدخل API Key صالحًا لهذه المكتبة.';
+  const hasHost = Boolean(form.hlsCdnHostname.trim());
+  const hasKey = Boolean(form.hlsTokenKey.trim());
+  if (!editingLibrary?.hlsConfigured && hasHost !== hasKey) return 'اسم CDN ومفتاح Token Authentication مطلوبان معًا.';
+  if (hasHost && !/^[a-z0-9.-]+\.b-cdn\.net$/i.test(form.hlsCdnHostname.trim())) return 'اكتب اسم Bunny CDN مثل vz-xxxx.b-cdn.net بدون https.';
   return null;
 }
 
@@ -53,6 +59,8 @@ function createPayload(form: BunnyLibraryFormState): CreateBunnyLibraryPayload {
     libraryId: form.libraryId,
     apiKey: form.apiKey.trim(),
     isActive: true,
+    hlsCdnHostname: form.hlsCdnHostname.trim() || undefined,
+    hlsTokenKey: form.hlsTokenKey.trim() || undefined,
   };
 }
 
@@ -66,6 +74,8 @@ function updatePayload(
     libraryId: form.libraryId,
     isActive: editingLibrary.isActive,
     ...(apiKey ? { apiKey } : {}),
+    ...(form.hlsCdnHostname.trim() ? { hlsCdnHostname: form.hlsCdnHostname.trim() } : {}),
+    ...(form.hlsTokenKey.trim() ? { hlsTokenKey: form.hlsTokenKey.trim() } : {}),
   };
 }
 
@@ -113,7 +123,7 @@ export function BunnyLibraryManager() {
 
   const openEditForm = (library: BunnyLibraryDto) => {
     setEditingLibrary(library);
-    setForm({ name: library.name, libraryId: library.libraryId, apiKey: '' });
+    setForm({ name: library.name, libraryId: library.libraryId, apiKey: '', hlsCdnHostname: library.hlsCdnHostname ?? '', hlsTokenKey: '' });
     setFormError(null);
     setFormOpen(true);
   };
@@ -241,6 +251,9 @@ export function BunnyLibraryManager() {
                         <KeyRound className="h-3.5 w-3.5" />
                         {library.apiKeyConfigured ? 'المفتاح محفوظ' : 'مفتاح مطلوب'}
                       </span>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${library.hlsConfigured ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>
+                        {library.hlsConfigured ? 'HLS جاهز' : 'HLS غير مُعد'}
+                      </span>
                     </div>
                     <p className="mt-2 font-mono text-sm font-bold text-[var(--admin-muted)]" dir="ltr">Library ID: {library.libraryId}</p>
                     <p className="mt-1 text-xs font-semibold text-[var(--admin-muted)]">آخر تحقق: {formattedValidationDate(library.lastValidatedAtUtc)}</p>
@@ -278,6 +291,22 @@ export function BunnyLibraryManager() {
             اسم المكتبة
             <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} disabled={formSaving} maxLength={80} placeholder="مثال: أولى" className="admin-input mt-2" autoFocus />
           </label>
+
+          <div className="space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <div>
+              <p className="text-sm font-black text-[var(--admin-text)]">مشغل المنصة HLS</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-[var(--admin-muted)]">من Bunny: Security → CDN token authentication. اترك Embed view token authentication مغلقًا.</p>
+            </div>
+            <label className="block space-y-2 text-sm font-bold text-[var(--admin-text)]">
+              CDN hostname
+              <input value={form.hlsCdnHostname} onChange={(event) => setForm((current) => ({ ...current, hlsCdnHostname: event.target.value }))} disabled={formSaving} dir="ltr" placeholder="vz-xxxx.b-cdn.net" className="admin-input mt-2 text-left font-mono" />
+            </label>
+            <label className="block space-y-2 text-sm font-bold text-[var(--admin-text)]">
+              {editingLibrary?.hlsConfigured ? 'Token Authentication Key جديد (اختياري)' : 'Token Authentication Key'}
+              <input type="password" value={form.hlsTokenKey} onChange={(event) => setForm((current) => ({ ...current, hlsTokenKey: event.target.value }))} disabled={formSaving} autoComplete="new-password" spellCheck={false} dir="ltr" placeholder={editingLibrary?.hlsConfigured ? 'اتركه فارغًا للاحتفاظ بالمفتاح الحالي' : 'ألصق مفتاح CDN'} className="admin-input mt-2 text-left font-mono" />
+              <span className="block text-xs font-semibold text-[var(--admin-muted)]">المفتاح يُخزن مشفرًا ولن يظهر مرة أخرى.</span>
+            </label>
+          </div>
           <label className="block space-y-2 text-sm font-bold text-[var(--admin-text)]">
             Library ID
             <input value={form.libraryId} onChange={(event) => setForm((current) => ({ ...current, libraryId: event.target.value.replace(/\D/g, '') }))} disabled={formSaving || Boolean(editingLibrary?.assignedVideoCount)} inputMode="numeric" dir="ltr" placeholder="740733" className="admin-input mt-2 text-left font-mono" />

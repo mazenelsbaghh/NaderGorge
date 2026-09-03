@@ -38,6 +38,17 @@ public interface IBunnyStreamLibrarySecretProtector
     string Unprotect(Guid libraryId, ReadOnlySpan<byte> ciphertext);
 }
 
+public interface IBunnyHlsSecretProtector
+{
+    byte[] Protect(Guid libraryId, string tokenKey);
+    string Unprotect(Guid libraryId, ReadOnlySpan<byte> ciphertext);
+}
+
+public interface IBunnyHlsUrlSigner
+{
+    string SignPlaylist(string hostname, string videoGuid, string tokenKey, DateTime expiresAtUtc);
+}
+
 public interface IBunnyStreamLibraryAccessService
 {
     Task<BunnyStreamLibraryAccessResult> ResolveAsync(

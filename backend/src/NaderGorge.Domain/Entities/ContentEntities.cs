@@ -122,6 +122,7 @@ public class LessonVideo : BaseEntity, IArchivableContent
     /// </summary>
     public Guid? BunnyStreamLibraryId { get; set; }
     public BunnyStreamLibrary? BunnyStreamLibrary { get; set; }
+    public BunnyPlaybackMode BunnyPlaybackMode { get; set; } = BunnyPlaybackMode.BunnyPlayer;
 
     // Optional Exam associated directly with this video specific
     public Guid? ExamId { get; set; }
@@ -143,6 +144,8 @@ public class BunnyStreamLibrary : BaseEntity
     public string NormalizedName { get; set; } = string.Empty;
     public long ExternalLibraryId { get; set; }
     public byte[]? ApiKeyCiphertext { get; set; }
+    public string? HlsCdnHostname { get; set; }
+    public byte[]? HlsTokenKeyCiphertext { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastValidatedAtUtc { get; set; }
 
@@ -228,6 +231,7 @@ public class BunnyVideoAsset : BaseEntity
     public int? TargetMaxWatchCount { get; set; }
     public Guid? TargetVideoTypeId { get; set; }
     public bool? TargetIsActive { get; set; }
+    public BunnyPlaybackMode? TargetBunnyPlaybackMode { get; set; }
 
     /// <summary>
     /// SourceRevision of the logical video when this pending replacement was

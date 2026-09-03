@@ -60,6 +60,7 @@ import {
 } from '@/lib/bunny-bridge-readiness';
 
 const SUPPORTED_PLAYBACK_RATES = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
+export type VideoQualityLevel = { id: string; label: string; height?: number; bitrate?: number };
 
 function isSupportedVideoPlaybackRate(playbackRate: number): boolean {
   return SUPPORTED_PLAYBACK_RATES.has(playbackRate);
@@ -234,6 +235,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isBuffering, setIsBuffering] = useState(false);
   const [nativeProviderSurfaceLoaded, setNativeProviderSurfaceLoaded] = useState(false);
   const [provider, setProvider] = useState<string>('youtube');
+  const [qualityLevels, setQualityLevels] = useState<VideoQualityLevel[]>([]);
+  const [currentQuality, setCurrentQuality] = useState('auto');
   const providerRef = useRef('youtube');
   const serverCanResolveDurationRef = useRef(false);
   
@@ -646,7 +649,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
           providerRef.current = embedProvider;
-          serverCanResolveDurationRef.current = embedProvider === 'bunny';
+          serverCanResolveDurationRef.current = embedProvider === 'bunny' || embedProvider === 'bunny-hls';
           bunnyReadyAtRef.current = embedProvider === 'bunny' ? Date.now() : 0;
           setProvider(embedProvider);
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
@@ -684,6 +687,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             devConsole.log('[SecureVideoPlayer] VK Player methods:', msg.data.vkMethods);
           }
           break;
+        case 'qualityLevels': {
+          const levels = Array.isArray(msg.data?.levels)
+            ? msg.data.levels.filter((level: VideoQualityLevel) => level && typeof level.id === 'string' && typeof level.label === 'string')
+            : [];
+          setQualityLevels(levels);
+          setCurrentQuality(typeof msg.data?.currentQuality === 'string' ? msg.data.currentQuality : 'auto');
+          break;
+        }
         case 'stateChange':
           if (msg.data.isPlaying) {
             isPlayingRef.current = true;
@@ -1427,8 +1438,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
       const providerName = session.provider?.toLowerCase() || 'youtube';
       providerRef.current = providerName;
-      serverCanResolveDurationRef.current = providerName === 'bunny';
+      serverCanResolveDurationRef.current = providerName === 'bunny' || providerName === 'bunny-hls';
       setProvider(providerName);
+      setQualityLevels([]);
+      setCurrentQuality('auto');
       loadActiveEmbed(session.sessionId);
 
     } catch (err: any) {
@@ -1697,6 +1710,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     void flushTrackedProgress();
     playbackRateRef.current = rate;
     sendCommand('setPlaybackRate', { rate });
+  };
+
+  const handleQualityChange = (quality: string) => {
+    setCurrentQuality(quality);
+    sendCommand('setQuality', { quality });
   };
 
   const activeChapterDesktop = React.useMemo(() => {
@@ -2262,6 +2280,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             durationSeconds={duration}
             currentTimeFormatted={formatTime(currentTime)}
             onPlaybackRateChange={handlePlaybackRateChange}
+            qualityLevels={qualityLevels}
+            currentQuality={currentQuality}
+            onQualityChange={handleQualityChange}
             visible={showControls}
             provider={provider}
             onControlHover={setIsHoveringControls}

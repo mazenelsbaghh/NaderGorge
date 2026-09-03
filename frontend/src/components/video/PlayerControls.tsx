@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Play, Pause, Volume2, Volume1, VolumeX, Maximize } from "lucide-react";
+import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -238,6 +238,9 @@ interface PlayerControlsProps {
   onControlHover?: (hovering: boolean) => void;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
   durationSeconds?: number;
+  qualityLevels?: { id: string; label: string; height?: number; bitrate?: number }[];
+  currentQuality?: string;
+  onQualityChange?: (quality: string) => void;
 }
 
 export default function PlayerControls({
@@ -259,9 +262,13 @@ export default function PlayerControls({
   onControlHover,
   chapters,
   durationSeconds,
+  qualityLevels = [],
+  currentQuality = 'auto',
+  onQualityChange,
 }: PlayerControlsProps) {
 
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const setSpeed = (speed: number) => {
     setPlaybackSpeed(speed);
     if (onPlaybackRateChange) onPlaybackRateChange(speed);
@@ -370,7 +377,32 @@ export default function PlayerControls({
               )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="relative flex items-center gap-1 shrink-0">
+              {qualityLevels.length > 0 && onQualityChange && (
+                <div className="relative">
+                  <Button
+                    type="button"
+                    onClick={(event) => { event.stopPropagation(); setQualityMenuOpen((open) => !open); }}
+                    variant="ghost"
+                    aria-label="اختيار جودة الفيديو"
+                    aria-haspopup="listbox"
+                    aria-expanded={qualityMenuOpen}
+                    className="min-h-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white"
+                  >
+                    <Settings2 className="size-4 sm:me-1" />
+                    <span className="hidden sm:inline">{currentQuality === 'auto' ? 'تلقائي' : qualityLevels.find((level) => level.id === currentQuality)?.label ?? 'الجودة'}</span>
+                  </Button>
+                  {qualityMenuOpen && (
+                    <div role="listbox" aria-label="جودة الفيديو" className="absolute bottom-full right-0 z-50 mb-2 min-w-32 overflow-hidden rounded-xl border border-white/15 bg-[#111]/95 p-1.5 text-right shadow-2xl backdrop-blur-xl">
+                      {[{ id: 'auto', label: 'تلقائي' }, ...qualityLevels].map((level) => (
+                        <button key={level.id} type="button" role="option" aria-selected={currentQuality === level.id} onClick={(event) => { event.stopPropagation(); onQualityChange(level.id); setQualityMenuOpen(false); }} className={cn("flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-sm font-bold text-white hover:bg-white/10", currentQuality === level.id && "bg-white/15 text-[#57d4d4]")}>
+                          <span>{level.label}</span><span aria-hidden>{currentQuality === level.id ? '✓' : ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {provider !== 'vk' && (
                 <>
                   <div

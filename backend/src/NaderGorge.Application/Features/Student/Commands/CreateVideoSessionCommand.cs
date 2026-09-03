@@ -1,5 +1,6 @@
 using MediatR;
 using System.Data;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Student;
@@ -43,6 +44,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
     private readonly IGiftUsageService? _giftUsage;
     private readonly IVideoPlaybackConcurrency? _playbackConcurrency;
     private readonly IBunnyVideoDurationResolver? _bunnyVideoDurationResolver;
+    private readonly IBunnyHlsSecretProtector? _bunnyHlsSecretProtector;
+    private readonly IBunnyHlsUrlSigner? _bunnyHlsUrlSigner;
 
     public CreateVideoSessionCommandHandler(
         IAppDbContext db,
@@ -50,7 +53,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         IVideoEncryptionService encryption,
         IGiftUsageService? giftUsage = null,
         IVideoPlaybackConcurrency? playbackConcurrency = null,
-        IBunnyVideoDurationResolver? bunnyVideoDurationResolver = null)
+        IBunnyVideoDurationResolver? bunnyVideoDurationResolver = null,
+        IBunnyHlsSecretProtector? bunnyHlsSecretProtector = null,
+        IBunnyHlsUrlSigner? bunnyHlsUrlSigner = null)
     {
         _db = db;
         _access = access;
@@ -58,6 +63,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         _giftUsage = giftUsage;
         _playbackConcurrency = playbackConcurrency;
         _bunnyVideoDurationResolver = bunnyVideoDurationResolver;
+        _bunnyHlsSecretProtector = bunnyHlsSecretProtector;
+        _bunnyHlsUrlSigner = bunnyHlsUrlSigner;
     }
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
@@ -85,6 +92,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
         var normalizedProvider = VideoProviders.Normalize(video.Provider);
+        var sessionProvider = video.Provider;
         var encryptedVideoId = video.ProviderVideoId;
         int? knownDurationSeconds = null;
         if (normalizedProvider == VideoProviders.Bunny)
@@ -288,8 +296,32 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         string studentName = user?.FullName ?? "Unknown";
         string studentPhone = user?.PhoneNumber ?? "Unknown";
+        if (normalizedProvider == VideoProviders.Bunny
+            && video.BunnyPlaybackMode == BunnyPlaybackMode.PlatformHls
+            && video.BunnyStreamLibrary?.HlsTokenKeyCiphertext is { Length: > 0 } tokenCiphertext
+            && !string.IsNullOrWhiteSpace(video.BunnyStreamLibrary.HlsCdnHostname)
+            && _bunnyHlsSecretProtector is not null
+            && _bunnyHlsUrlSigner is not null)
+        {
+            try
+            {
+                var tokenKey = _bunnyHlsSecretProtector.Unprotect(video.BunnyStreamLibrary.Id, tokenCiphertext);
+                encryptedVideoId = _bunnyHlsUrlSigner.SignPlaylist(
+                    video.BunnyStreamLibrary.HlsCdnHostname,
+                    video.ProviderVideoId,
+                    tokenKey,
+                    session.ExpiresAt);
+                sessionProvider = "bunny-hls";
+            }
+            catch (Exception exception) when (exception is CryptographicException or InvalidOperationException or ArgumentException)
+            {
+                // Preserve playback for existing content if a library HLS secret
+                // was rotated or is incomplete; the standard Bunny player remains available.
+                sessionProvider = video.Provider;
+            }
+        }
         session.SessionToken = _encryption.EncryptVideoInfo(
-            video.Provider,
+            sessionProvider,
             encryptedVideoId,
             session.EncryptionKey,
             studentName,
@@ -320,7 +352,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         var dto = new VideoSessionDto(
             session.Id,
             session.ExpiresAt,
-            video.Provider,
+            sessionProvider,
             sessionWatchInfo,
             video.Title,
             thresholdPercentage,

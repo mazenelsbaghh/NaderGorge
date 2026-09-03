@@ -865,7 +865,7 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
@@ -891,6 +891,7 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
     {
+        if (!Enum.IsDefined(request.BunnyPlaybackMode)) return ApiResponse<Guid>.Fail("اختيار مشغل Bunny غير صالح.", ["BUNNY_PLAYBACK_MODE_INVALID"]);
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
@@ -942,7 +943,8 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             LessonId = request.LessonId,
             VideoTypeId = request.VideoTypeId,
             IsActive = request.IsActive,
-            BunnyStreamLibraryId = bunnyStreamLibraryId
+            BunnyStreamLibraryId = bunnyStreamLibraryId,
+            BunnyPlaybackMode = normalizedProvider == VideoProviders.Bunny ? request.BunnyPlaybackMode : BunnyPlaybackMode.BunnyPlayer
         };
         _db.LessonVideos.Add(video);
 
@@ -974,7 +976,8 @@ public record UpdateVideoCommand(
     Guid VideoTypeId,
     Guid? CurrentUserId = null,
     Guid? BunnyStreamLibraryId = null,
-    bool? IsActive = null) : IRequest<ApiResponse>;
+    bool? IsActive = null,
+    BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse>;
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
 {
@@ -1000,6 +1003,7 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
     public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
     {
+        if (!Enum.IsDefined(request.BunnyPlaybackMode)) return ApiResponse.Fail("اختيار مشغل Bunny غير صالح.", ["BUNNY_PLAYBACK_MODE_INVALID"]);
         var video = await _db.LessonVideos
             .Include(v => v.BunnyStreamLibrary)
             .Include(v => v.BunnyVideoAssets)
@@ -1136,6 +1140,7 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         video.MaxWatchCount = request.Limit;
         video.VideoTypeId = request.VideoTypeId;
         video.BunnyStreamLibraryId = bunnyStreamLibraryId;
+        video.BunnyPlaybackMode = normalizedProvider == VideoProviders.Bunny ? request.BunnyPlaybackMode : BunnyPlaybackMode.BunnyPlayer;
         video.IsActive = request.IsActive ?? video.IsActive;
         video.UpdatedAt = DateTime.UtcNow;
 
