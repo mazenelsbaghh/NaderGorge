@@ -458,7 +458,7 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails ove
   const harness = await runBunnyBridge();
   assert.equal(
     harness.iframeState().src,
-    'https://iframe.mediadelivery.net/embed/library/video',
+    'https://player.mediadelivery.net/embed/library/video',
   );
 
   harness.fireProviderLoad();
@@ -472,7 +472,7 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails ove
   assert.equal(harness.playerCount(), 2);
   assert.deepEqual(harness.iframeState(), {
     removeCalls: 0,
-    src: 'https://player.mediadelivery.net/embed/library/video',
+    src: 'https://iframe.mediadelivery.net/embed/library/video',
   });
   assert.equal(harness.messages.some((message) => message.type === 'ready'), false);
   assert.deepEqual(harness.providerCommands().at(-1), {

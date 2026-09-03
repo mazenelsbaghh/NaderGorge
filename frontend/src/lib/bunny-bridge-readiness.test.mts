@@ -123,21 +123,26 @@ test('bridge retry has a bounded deadline and readiness cannot consume a cancell
   assert.deepEqual(events, ['retry-same-iframe', 'replace-embed']);
 });
 
-test('an embed with no loaded Bunny surface uses the original bounded recovery', () => {
+test('2026-09-03 an unloaded Bunny surface tries the alternate hostname before recovery', () => {
   const clock = new FakeClock();
   const events: string[] = [];
   const watchdog = createBunnyBridgeReadinessWatchdog({
     schedule: clock.schedule,
     cancelScheduled: clock.cancel,
     retryBridgeInPlace: () => {
-      events.push('unexpected-retry');
+      events.push('fail-over-hostname');
       return true;
     },
     recoverEmbed: () => events.push('replace-embed'),
     initialDeadlineMs: 100,
+    retryDeadlineMs: 50,
   });
 
   watchdog.start();
   clock.advance(100);
-  assert.deepEqual(events, ['replace-embed']);
+  assert.deepEqual(events, ['fail-over-hostname']);
+  clock.advance(49);
+  assert.deepEqual(events, ['fail-over-hostname']);
+  clock.advance(1);
+  assert.deepEqual(events, ['fail-over-hostname', 'replace-embed']);
 });

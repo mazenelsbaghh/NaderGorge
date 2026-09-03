@@ -269,10 +269,10 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
     var bunnyBridgeOrigins = ['https://player.mediadelivery.net', 'https://iframe.mediadelivery.net'];
     var bunnyBridgeOrigin = null;
-    // Existing libraries can still require Bunny's legacy iframe endpoint,
-    // while PlayerVersion 2 libraries use the modern player endpoint. Try the
-    // backward-compatible endpoint first and retain the modern one as failover.
-    var bunnyEmbedSources = [${safeLegacySrc}, ${safeModernSrc}];
+    // Prefer Bunny's current player endpoint and retain its legacy iframe
+    // endpoint as a compatibility/network failover. Some managed Android
+    // devices can reach only one of the two Bunny hostnames.
+    var bunnyEmbedSources = [${safeModernSrc}, ${safeLegacySrc}];
     var bunnyEmbedSourceIndex = 0;
     var supportedPlaybackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 

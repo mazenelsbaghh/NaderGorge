@@ -52,7 +52,10 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
     scheduledHandle = null;
     if (!running) return;
 
-    if (bunnySurfaceLoaded && !retriedInPlace) {
+    // A browser/DNS failure can prevent the iframe load event altogether.
+    // Still give Bunny's alternate trusted hostname one chance before
+    // replacing the platform embed/session.
+    if (!retriedInPlace) {
       retriedInPlace = true;
       if (options.retryBridgeInPlace()) {
         scheduledHandle = options.schedule(requireRecovery, retryDeadlineMs);
