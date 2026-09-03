@@ -624,15 +624,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'providerLoaded': {
           const loadedProvider = String(msg.data?.provider || '').toLowerCase();
           if (loadedProvider === 'bunny') {
-            // The native Bunny surface can already be usable on old Android
-            // WebViews even while Player.js metadata is still connecting. Do
-            // not destroy a playing iframe just because the bridge is late.
+            // Treat iframe load only as a watchdog signal. A browser-generated
+            // network error document can also fire load, so keep the platform
+            // loader covering the nested frame until Bunny proves that its
+            // media-clock bridge is ready.
             embedReadinessWatchdogRef.current?.markSurfaceLoaded();
             providerRef.current = loadedProvider;
             serverCanResolveDurationRef.current = true;
             setProvider(loadedProvider);
-            setNativeProviderSurfaceLoaded(true);
-            setIsBuffering(false);
           }
           break;
         }

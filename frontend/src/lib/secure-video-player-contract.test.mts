@@ -90,3 +90,20 @@ test('2026-09-03 Bunny playback menu keeps a wide click-through area between see
   assert.equal(narrowSeekZones.length, 2);
   assert.doesNotMatch(playerSource, /pointer-events-auto h-full w-\[38%\]/);
 });
+
+test('2026-09-03 Bunny browser error documents stay covered until the media bridge is ready', async () => {
+  const playerSource = await readFile(playerPath, 'utf8');
+  const surfaceStart = playerSource.indexOf("case 'providerLoaded':");
+  const surfaceEnd = playerSource.indexOf("case 'ready':", surfaceStart);
+  const surfaceHandler = playerSource.slice(surfaceStart, surfaceEnd);
+  const readyStart = surfaceEnd;
+  const readyEnd = playerSource.indexOf("case 'stateChange':", readyStart);
+  const readyHandler = playerSource.slice(readyStart, readyEnd);
+
+  assert.ok(surfaceStart >= 0 && surfaceEnd > surfaceStart && readyEnd > readyStart);
+  assert.match(surfaceHandler, /markSurfaceLoaded\(\)/);
+  assert.doesNotMatch(surfaceHandler, /setNativeProviderSurfaceLoaded\(true\)/);
+  assert.doesNotMatch(surfaceHandler, /setIsBuffering\(false\)/);
+  assert.match(readyHandler, /setNativeProviderSurfaceLoaded\(embedProvider === 'bunny'\)/);
+  assert.match(readyHandler, /setIsBuffering\(false\)/);
+});
