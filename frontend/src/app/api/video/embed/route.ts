@@ -503,9 +503,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     if (!__videoEmbedSuspended && iframe) {
       iframe.addEventListener('load', function () {
         if (__videoEmbedSuspended || playerReady) return;
-        // The Bunny document is already usable even when an older Android
-        // WebView delays Player.js readiness. Let the parent uncover the
-        // native player while the bridge continues connecting in background.
+        // Report only that the nested document loaded. The parent keeps its
+        // interaction shield in place until Player.js proves that tracking is
+        // ready, preventing uncounted playback on delayed Android WebViews.
         postToParent('providerLoaded', { provider: 'bunny' });
         requestBunnyReadyProbe();
       });
