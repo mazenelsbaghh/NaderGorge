@@ -11,7 +11,9 @@ type PlayerMessage = {
   data?: { code?: number; message?: string; phase?: string; provider?: string };
 };
 
-async function runHlsPlayer() {
+type HlsRuntime = 'hlsjs' | 'native-apple';
+
+async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
   const routeSource = await readFile(routePath, 'utf8');
   const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
   const scriptStart = routeSource.indexOf("(function(){\n  'use strict';", generatorStart);
@@ -38,7 +40,7 @@ async function runHlsPlayer() {
     addEventListener(eventName: string, callback: () => void) {
       videoListeners.set(eventName, callback);
     },
-    canPlayType() { return ''; },
+    canPlayType() { return runtime === 'native-apple' ? 'probably' : ''; },
     load() {},
     pause() { this.paused = true; },
     play() { this.paused = false; return Promise.resolve(); },
@@ -69,8 +71,13 @@ async function runHlsPlayer() {
   const parentWindow = {
     postMessage(message: PlayerMessage) { messages.push(message); },
   };
-  const windowLike = {
-    Hls: FakeHls,
+  const windowLike: {
+    Hls: typeof FakeHls | undefined;
+    addEventListener: () => void;
+    location: { origin: string };
+    parent: typeof parentWindow;
+  } = {
+    Hls: runtime === 'hlsjs' ? FakeHls : undefined,
     addEventListener() {},
     location: { origin: 'https://app.massar-academy.net' },
     parent: parentWindow,
@@ -82,7 +89,7 @@ async function runHlsPlayer() {
       hlsInstances.push(this);
     }
   };
-  windowLike.Hls = InstrumentedHls;
+  if (runtime === 'hlsjs') windowLike.Hls = InstrumentedHls;
 
   vm.runInNewContext(playerScript, {
     URL,
@@ -92,7 +99,14 @@ async function runHlsPlayer() {
         return id === 'video' ? video : { style: { transform: '' } };
       },
     },
-    fetch() { throw new Error('Native HLS fetch must not run when Hls.js is supported.'); },
+    fetch() {
+      if (runtime === 'hlsjs') throw new Error('Native HLS fetch must not run when Hls.js is supported.');
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\n720p/video.m3u8\n'),
+      });
+    },
     isFinite,
     location: windowLike.location,
     Math,
@@ -160,6 +174,7 @@ test('2026-09-03 Bunny HLS disables hidden manifest and segment reload loops', a
   assert.equal(config?.manifestLoadPolicy?.default?.errorRetry?.maxNumRetry, 0);
   assert.equal(config?.fragLoadPolicy?.default?.timeoutRetry?.maxNumRetry, 0);
   assert.equal(config?.fragLoadPolicy?.default?.errorRetry?.maxNumRetry, 0);
+  assert.equal(player.hls()?.config.preferManagedMediaSource, true);
 });
 
 test('2026-09-03 stalled Bunny HLS exits the tablet spinner on its deadline', async () => {
@@ -196,4 +211,17 @@ test('2026-09-04 playback stall reports its exact phase instead of spinning fore
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
   assert.equal(errorMessage?.data?.phase, 'playback_timeout_waiting');
   assert.match(errorMessage?.data?.message ?? '', /لم تصل بيانات الفيديو/);
+});
+
+test('2026-09-04 Apple native media rejection explains the Bunny pull-zone fix', async () => {
+  const player = await runHlsPlayer('native-apple');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  player.triggerVideoEvent('error');
+
+  const errorMessage = player.messages.find((message) => message.type === 'error');
+  assert.equal(errorMessage?.data?.provider, 'bunny-hls');
+  assert.equal(errorMessage?.data?.phase, 'native_media_error');
+  assert.match(errorMessage?.data?.message ?? '', /Allowed Domains\/Hotlink Protection/);
+  assert.equal(player.messages.some((message) => message.type === 'ready'), false);
 });

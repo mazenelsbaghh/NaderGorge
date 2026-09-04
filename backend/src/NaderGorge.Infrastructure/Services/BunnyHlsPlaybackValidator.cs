@@ -52,7 +52,7 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
         var configuredLibrary = library!;
         var tokenCiphertext = configuredLibrary.HlsTokenKeyCiphertext!;
 
-        var cacheKey = $"bunny-hls-validation:v2:{libraryId:N}:{normalizedVideoGuid}:{configuredLibrary.UpdatedAt?.Ticks ?? 0}";
+        var cacheKey = $"bunny-hls-validation:v3:{libraryId:N}:{normalizedVideoGuid}:{configuredLibrary.UpdatedAt?.Ticks ?? 0}";
         if (_cache.TryGetValue(cacheKey, out BunnyHlsPlaybackValidationResult? cached) && cached is not null)
         {
             return cached;
@@ -97,7 +97,19 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
                 validationRequest.VideoGuid,
                 tokenKey,
                 DateTime.UtcNow.AddMinutes(3));
-            return await FetchManifestAsync(playlistUrl, cancellationToken);
+            var browserValidation = await FetchManifestAsync(
+                playlistUrl,
+                HlsRequestProfile.Browser,
+                cancellationToken);
+            if (!browserValidation.Success) return browserValidation;
+
+            var nativeValidation = await FetchManifestAsync(
+                playlistUrl,
+                HlsRequestProfile.NativeApple,
+                cancellationToken);
+            return nativeValidation.ErrorCode == "BUNNY_HLS_AUTH_REJECTED"
+                ? NativeAppleAccessRejected()
+                : nativeValidation;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -121,9 +133,13 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
 
     private async Task<BunnyHlsPlaybackValidationResult> FetchManifestAsync(
         string playlistUrl,
+        HlsRequestProfile requestProfile,
         CancellationToken cancellationToken)
     {
-        var master = await FetchManifestDocumentAsync(new Uri(playlistUrl), cancellationToken);
+        var master = await FetchManifestDocumentAsync(
+            new Uri(playlistUrl),
+            requestProfile,
+            cancellationToken);
         if (!master.Validation.Success || master.Document is null) return master.Validation;
 
         var variantUri = ResolveFirstPlaylistUri(master.Document.RequestUri, master.Document.Body);
@@ -136,23 +152,24 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
             var directSegmentUri = ResolveFirstMediaUri(master.Document.RequestUri, master.Document.Body);
             return directSegmentUri is null
                 ? InvalidManifest()
-                : await ValidateMediaResourceAsync(directSegmentUri, cancellationToken);
+                : await ValidateMediaResourceAsync(directSegmentUri, requestProfile, cancellationToken);
         }
 
-        var variant = await FetchManifestDocumentAsync(variantUri, cancellationToken);
+        var variant = await FetchManifestDocumentAsync(variantUri, requestProfile, cancellationToken);
         if (!variant.Validation.Success || variant.Document is null) return variant.Validation;
 
         var segmentUri = ResolveFirstMediaUri(variant.Document.RequestUri, variant.Document.Body);
         if (segmentUri is null) return InvalidManifest();
 
-        return await ValidateMediaResourceAsync(segmentUri, cancellationToken);
+        return await ValidateMediaResourceAsync(segmentUri, requestProfile, cancellationToken);
     }
 
     private async Task<ManifestFetchResult> FetchManifestDocumentAsync(
         Uri manifestUri,
+        HlsRequestProfile requestProfile,
         CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(HttpMethod.Get, manifestUri);
+        using var request = CreateRequest(HttpMethod.Get, manifestUri, requestProfile);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.apple.mpegurl"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-mpegURL"));
         using var response = await _httpClient.SendAsync(
@@ -161,7 +178,7 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
             cancellationToken);
         var statusFailure = FailureForStatus(response);
         if (statusFailure is not null) return ManifestFetchResult.Fail(statusFailure);
-        if (!AllowsStudentOrigin(response))
+        if (requestProfile == HlsRequestProfile.Browser && !AllowsStudentOrigin(response))
         {
             return ManifestFetchResult.Fail(BunnyHlsPlaybackValidationResult.Fail(
                 "BUNNY_HLS_CORS_REJECTED",
@@ -196,9 +213,10 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
 
     private async Task<BunnyHlsPlaybackValidationResult> ValidateMediaResourceAsync(
         Uri mediaUri,
+        HlsRequestProfile requestProfile,
         CancellationToken cancellationToken)
     {
-        using var request = CreateRequest(HttpMethod.Get, mediaUri);
+        using var request = CreateRequest(HttpMethod.Get, mediaUri, requestProfile);
         request.Headers.Range = new RangeHeaderValue(0, 0);
         using var response = await _httpClient.SendAsync(
             request,
@@ -206,18 +224,24 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
             cancellationToken);
         var statusFailure = FailureForStatus(response);
         if (statusFailure is not null) return statusFailure;
-        return AllowsStudentOrigin(response)
+        return requestProfile == HlsRequestProfile.NativeApple || AllowsStudentOrigin(response)
             ? BunnyHlsPlaybackValidationResult.Ok()
             : BunnyHlsPlaybackValidationResult.Fail(
                 "BUNNY_HLS_CORS_REJECTED",
                 "Bunny لم يسمح للمتصفح بتحميل أجزاء الفيديو من نطاق الطلاب. راجع Allowed Domains وإعدادات CDN.");
     }
 
-    private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri)
+    private static HttpRequestMessage CreateRequest(
+        HttpMethod method,
+        Uri uri,
+        HlsRequestProfile requestProfile)
     {
         var request = new HttpRequestMessage(method, uri);
-        request.Headers.Referrer = StudentApplicationReferrer;
-        request.Headers.TryAddWithoutValidation("Origin", StudentApplicationOrigin);
+        if (requestProfile == HlsRequestProfile.Browser)
+        {
+            request.Headers.Referrer = StudentApplicationReferrer;
+            request.Headers.TryAddWithoutValidation("Origin", StudentApplicationOrigin);
+        }
         return request;
     }
 
@@ -294,6 +318,11 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
             "BUNNY_HLS_MANIFEST_INVALID",
             "استجابة Bunny ليست ملف HLS صالحًا. تأكد من CDN hostname والمفتاح الخاصين بنفس المكتبة.");
 
+    private static BunnyHlsPlaybackValidationResult NativeAppleAccessRejected() =>
+        BunnyHlsPlaybackValidationResult.Fail(
+            "BUNNY_HLS_NATIVE_AUTH_REJECTED",
+            "Bunny يسمح بطلبات المتصفح لكنه يرفض مشغل Apple الأصلي (403). أزل Allowed Domains/Hotlink Protection من Pull Zone واعتمد على CDN Token Authentication، ثم أعد اختيار HLS.");
+
     private static BunnyHlsPlaybackValidationResult Unreachable() =>
         BunnyHlsPlaybackValidationResult.Fail(
             "BUNNY_HLS_UNREACHABLE",
@@ -309,6 +338,12 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
         string VideoGuid,
         string Hostname,
         byte[] TokenCiphertext);
+
+    private enum HlsRequestProfile
+    {
+        Browser,
+        NativeApple
+    }
 
     private sealed record ManifestDocument(Uri RequestUri, string Body);
 

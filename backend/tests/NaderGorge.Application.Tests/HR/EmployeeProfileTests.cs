@@ -44,6 +44,27 @@ public class EmployeeProfileTests
     }
 
     [Fact]
+    public async Task GetEmployees_HidesInactiveHistoricalProfiles()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var active = await TestAppDbContextFactory.SeedUserAsync(db, "Active Worker", "01234567886");
+        var inactive = await TestAppDbContextFactory.SeedUserAsync(db, "Inactive Historical Worker", "01234567887");
+        inactive.IsActive = false;
+
+        db.EmployeeProfiles.AddRange(
+            new EmployeeProfile { UserId = active.Id, BasicSalary = 5000 },
+            new EmployeeProfile { UserId = inactive.Id, BasicSalary = 5000 });
+        await db.SaveChangesAsync();
+
+        var result = await new AdminGetEmployeesQueryHandler(db)
+            .Handle(new AdminGetEmployeesQuery(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var employee = Assert.Single(result.Data!);
+        Assert.Equal(active.Id, employee.UserId);
+    }
+
+    [Fact]
     public async Task SaveProfile_CreatesProfileForNonStudentUser()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();

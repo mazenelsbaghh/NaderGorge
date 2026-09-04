@@ -43,27 +43,30 @@ public sealed class DeleteEmployeeProfileCommandHandler(IAppDbContext db, IHrAud
         return ApiResponse<Guid>.Ok(employee.Id);
     }
 
-    private Task<bool> HasEmploymentHistoryAsync(Guid employeeId, CancellationToken ct) => Task.WhenAll(
-        db.EmploymentAssignments.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmploymentContracts.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.AttendanceSessions.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.AttendanceAttempts.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.AttendancePolicyExceptions.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.WorkdayClassifications.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.AttendanceCorrections.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.LeaveBalances.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.HrLeaveRequests.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmployeeCompensations.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmployeePayrolls.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.HrFinancialRequests.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmployeeDocuments.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.AssetCustodies.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.PerformanceReviews.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmployeeCases.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.EmployeeLifecycleTasks.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.OffboardingProcesses.AnyAsync(item => item.EmployeeId == employeeId, ct),
-        db.OrganizationUnits.AnyAsync(item => item.ManagerEmployeeId == employeeId, ct),
-        db.Candidates.AnyAsync(item => item.EmployeeProfileId == employeeId, ct),
-        db.AttendanceLogs.AnyAsync(item => item.EmployeeId == employeeId, ct))
-        .ContinueWith(checks => checks.Result.Any(value => value), ct);
+    private async Task<bool> HasEmploymentHistoryAsync(Guid employeeId, CancellationToken ct)
+    {
+        // IAppDbContext is a single EF unit of work. These checks must remain
+        // sequential because concurrent operations on one DbContext are invalid.
+        return await db.EmploymentAssignments.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmploymentContracts.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.AttendanceSessions.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.AttendanceAttempts.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.AttendancePolicyExceptions.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.WorkdayClassifications.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.AttendanceCorrections.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.LeaveBalances.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.HrLeaveRequests.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmployeeCompensations.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmployeePayrolls.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.HrFinancialRequests.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmployeeDocuments.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.AssetCustodies.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.PerformanceReviews.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmployeeCases.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.EmployeeLifecycleTasks.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.OffboardingProcesses.AnyAsync(item => item.EmployeeId == employeeId, ct)
+            || await db.OrganizationUnits.AnyAsync(item => item.ManagerEmployeeId == employeeId, ct)
+            || await db.Candidates.AnyAsync(item => item.EmployeeProfileId == employeeId, ct)
+            || await db.AttendanceLogs.AnyAsync(item => item.EmployeeId == employeeId, ct);
+    }
 }

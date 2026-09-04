@@ -3104,7 +3104,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("live_support_schedule_windows", table =>
             {
                 table.HasCheckConstraint("CK_live_support_schedule_day", "\"DayOfWeek\" BETWEEN 0 AND 6");
-                table.HasCheckConstraint("CK_live_support_schedule_time", "\"StartLocalTime\" < \"EndLocalTime\"");
+                table.HasCheckConstraint("CK_live_support_schedule_time", "\"StartLocalTime\" <> \"EndLocalTime\"");
             });
             e.HasIndex(x => new { x.StaffConfigId, x.DayOfWeek, x.StartLocalTime, x.EndLocalTime }).IsUnique();
             e.HasOne<LiveSupportStaffConfig>().WithMany().HasForeignKey(x => x.StaffConfigId).OnDelete(DeleteBehavior.Cascade);

@@ -736,7 +736,11 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAdminConfigDto> GetAdminConfigAsync(CancellationToken ct)
     {
-        var employees = await _db.EmployeeProfiles.AsNoTracking().Select(x => x.UserId).Distinct().ToListAsync(ct);
+        var employees = await _db.EmployeeProfiles.AsNoTracking()
+            .Where(x => x.User != null && x.User.IsActive)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync(ct);
         var configs = await _db.LiveSupportStaffConfigs.AsNoTracking().Where(x => employees.Contains(x.UserId)).ToDictionaryAsync(x => x.UserId, ct);
         var result = new List<LiveSupportStaffConfigDto>(employees.Count);
         foreach (var userId in employees)

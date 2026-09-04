@@ -1988,12 +1988,9 @@ public sealed class BunnyStreamLibrariesTests
         db.BunnyStreamLibraries.Add(library);
         await db.SaveChangesAsync();
 
-        var validResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-        {
-            Content = new StringContent("#EXTM3U\n#EXT-X-VERSION:3\n")
-        };
-        validResponse.Headers.TryAddWithoutValidation("Access-Control-Allow-Origin", "*");
-        var httpHandler = new StaticHttpMessageHandler(validResponse);
+        var httpHandler = new SequenceHttpMessageHandler(
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-VERSION:3\n"),
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-VERSION:3\n"));
         using var httpClient = new HttpClient(httpHandler);
         using var cache = new MemoryCache(new MemoryCacheOptions());
         var validator = new BunnyHlsPlaybackValidator(
@@ -2005,11 +2002,16 @@ public sealed class BunnyStreamLibrariesTests
         var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
 
         Assert.True(result.Success, result.Message);
-        Assert.NotNull(httpHandler.LastRequest);
-        Assert.Equal("https://app.massar-academy.net/", httpHandler.LastRequest!.Headers.Referrer?.ToString());
-        Assert.Contains("https://app.massar-academy.net", httpHandler.LastRequest.Headers.GetValues("Origin"));
-        Assert.Equal("vz-example.b-cdn.net", httpHandler.LastRequest.RequestUri?.Host);
-        Assert.Contains($"/{VideoGuid}/playlist.m3u8", httpHandler.LastRequest.RequestUri?.AbsolutePath);
+        Assert.Equal(2, httpHandler.Requests.Count);
+        Assert.Equal("https://app.massar-academy.net/", httpHandler.Requests[0].Headers.Referrer?.ToString());
+        Assert.Contains("https://app.massar-academy.net", httpHandler.Requests[0].Headers.GetValues("Origin"));
+        Assert.Null(httpHandler.Requests[1].Headers.Referrer);
+        Assert.False(httpHandler.Requests[1].Headers.Contains("Origin"));
+        Assert.All(httpHandler.Requests, request =>
+        {
+            Assert.Equal("vz-example.b-cdn.net", request.RequestUri?.Host);
+            Assert.Contains($"/{VideoGuid}/playlist.m3u8", request.RequestUri?.AbsolutePath);
+        });
     }
 
     [Fact]
@@ -2082,6 +2084,9 @@ public sealed class BunnyStreamLibrariesTests
         var httpHandler = new SequenceHttpMessageHandler(
             CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1200000\n720p/video.m3u8\n"),
             CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXTINF:4,\nsegment-000.ts\n"),
+            CorsResponse(System.Net.HttpStatusCode.PartialContent, "x"),
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1200000\n720p/video.m3u8\n"),
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXTINF:4,\nsegment-000.ts\n"),
             CorsResponse(System.Net.HttpStatusCode.PartialContent, "x"));
         using var httpClient = new HttpClient(httpHandler);
         using var cache = new MemoryCache(new MemoryCacheOptions());
@@ -2090,17 +2095,52 @@ public sealed class BunnyStreamLibrariesTests
         var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
 
         Assert.True(result.Success, result.Message);
-        Assert.Equal(3, httpHandler.Requests.Count);
+        Assert.Equal(6, httpHandler.Requests.Count);
         Assert.EndsWith("/playlist.m3u8", httpHandler.Requests[0].RequestUri?.AbsolutePath);
         Assert.EndsWith("/720p/video.m3u8", httpHandler.Requests[1].RequestUri?.AbsolutePath);
         Assert.EndsWith("/720p/segment-000.ts", httpHandler.Requests[2].RequestUri?.AbsolutePath);
         Assert.Equal(0, httpHandler.Requests[2].Headers.Range?.Ranges.Single().From);
         Assert.Equal(0, httpHandler.Requests[2].Headers.Range?.Ranges.Single().To);
-        Assert.All(httpHandler.Requests, request =>
+        Assert.All(httpHandler.Requests.Take(3), request =>
         {
             Assert.Equal("https://app.massar-academy.net/", request.Headers.Referrer?.ToString());
             Assert.Contains("https://app.massar-academy.net", request.Headers.GetValues("Origin"));
         });
+        Assert.All(httpHandler.Requests.Skip(3), request =>
+        {
+            Assert.Null(request.Headers.Referrer);
+            Assert.False(request.Headers.Contains("Origin"));
+        });
+    }
+
+    [Fact]
+    public async Task Production20260904_AppleNativeHls403RejectsPlayerSelectionBeforeStudentsCanOpenIt()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("Apple native HLS rejection", 750003);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        library.HlsCdnHostname = "vz-native-rejected.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, "private-token-key");
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        var httpHandler = new SequenceHttpMessageHandler(
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-VERSION:3\n"),
+            new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden));
+        using var httpClient = new HttpClient(httpHandler);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(httpClient, db, protector, cache);
+
+        var validation = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.False(validation.Success);
+        Assert.Equal("BUNNY_HLS_NATIVE_AUTH_REJECTED", validation.ErrorCode);
+        Assert.Contains("Apple", validation.Message);
+        Assert.Contains("Allowed Domains", validation.Message);
+        Assert.Equal(2, httpHandler.Requests.Count);
+        Assert.NotNull(httpHandler.Requests[0].Headers.Referrer);
+        Assert.Null(httpHandler.Requests[1].Headers.Referrer);
+        Assert.False(httpHandler.Requests[1].Headers.Contains("Origin"));
     }
 
     [Fact]

@@ -16,6 +16,7 @@
     "test:e2e:ui": "playwright test --ui",
     "check:platform-events": "node scripts/check-platform-event-contracts.mjs",
     "check:live-support-contracts": "node scripts/check-live-support-client-contracts.mjs && node --no-warnings --experimental-strip-types --test src/lib/live-support-channel.test.mts src/lib/facebook-messenger-settings.test.mts src/lib/live-support-schedule.test.mts",
+    "check:hr-shift-contracts": "node --no-warnings --experimental-strip-types --test src/lib/hr-shift-time.test.mts",
     "check:admin-timezone": "node --no-warnings --experimental-strip-types src/components/admin/admin-utils.test.mts",
     "check:cairo-time-contracts": "node scripts/check-cairo-time-contracts.mjs",
     "check:design-tokens": "node scripts/check-design-tokens.mjs",

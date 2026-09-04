@@ -1,5 +1,6 @@
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
@@ -50,5 +51,22 @@ public sealed class AdminStaffConfigTests
         var error = Assert.Throws<LiveSupportException>(() => LiveSupportScheduleRules.Validate(windows));
 
         Assert.Equal("VALIDATION_ERROR", error.Code);
+    }
+
+    [Fact]
+    public async Task AdminConfig_HidesInactiveHistoricalEmployees()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var inactive = LiveSupportTestData.User(Guid.NewGuid(), "Inactive Historical Worker", "01000000146");
+        inactive.IsActive = false;
+        fixture.Db.Users.Add(inactive);
+        fixture.Db.EmployeeProfiles.Add(new EmployeeProfile { UserId = inactive.Id, BasicSalary = 1 });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var result = await service.GetAdminConfigAsync(CancellationToken.None);
+
+        Assert.DoesNotContain(result.Staff, staff => staff.UserId == inactive.Id);
+        Assert.Contains(result.Staff, staff => staff.UserId == LiveSupportTestData.StaffAId);
     }
 }

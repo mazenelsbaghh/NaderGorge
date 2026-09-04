@@ -121,6 +121,7 @@ export interface WorkCalendarDto { id: string; code: string; name: string; timeZ
 export interface ShiftSegmentDto { id?: string; sequence: number; dayOfWeek?: number | null; startsAt: string; endsAt: string; unpaidBreakMinutes: number; workDateRule: string; }
 export interface ShiftTemplateDto { id: string; code: string; name: string; mode: string; workCalendarId: string; graceMinutes: number; minimumBreakMinutes: number; overtimeAfterMinutes: number; version: number; segments: ShiftSegmentDto[]; }
 export interface ShiftAssignmentDto { id: string; employeeId: string; employee: string; shiftTemplateId: string; shift: string; effectiveFrom: string; effectiveTo?: string | null; status: string; reason: string; segments: ShiftSegmentDto[]; }
+export interface ShiftAssignmentConflictDto { employeeId: string; existingAssignmentId: string; effectiveFrom: string; effectiveTo?: string | null; }
 export interface ShiftAssignmentPayload { employeeId: string; shiftTemplateId: string; effectiveFrom: string; effectiveTo?: string | null; reason: string; }
 export type AttendancePolicyKind = 'Unrestricted' | 'Geofence' | 'TrustedDevice';
 export interface AttendancePolicyDto {
@@ -272,8 +273,8 @@ export const hrService = {
     const res = await apiClient.get<ShiftAssignmentDto[]>('/hr/admin/shifts/assignments');
     return res.data ?? [];
   },
-  validateShiftAssignments: async (payload: ShiftAssignmentPayload[]): Promise<{ valid: boolean; conflicts: unknown[] }> => {
-    const res = await apiClient.post<{ valid: boolean; conflicts: unknown[] }>('/hr/admin/shifts/assignments/validate', payload);
+  validateShiftAssignments: async (payload: ShiftAssignmentPayload[]): Promise<{ valid: boolean; conflicts: ShiftAssignmentConflictDto[] }> => {
+    const res = await apiClient.post<{ valid: boolean; conflicts: ShiftAssignmentConflictDto[] }>('/hr/admin/shifts/assignments/validate', payload);
     return res.data;
   },
   publishShiftAssignments: async (payload: ShiftAssignmentPayload[]): Promise<ApiResponse<string[]>> => {

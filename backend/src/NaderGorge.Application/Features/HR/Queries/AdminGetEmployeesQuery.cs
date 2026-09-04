@@ -53,21 +53,20 @@ public class AdminGetEmployeesQueryHandler : IRequestHandler<AdminGetEmployeesQu
             .Include(profile => profile.User)!
                 .ThenInclude(user => user!.UserRoles)
                     .ThenInclude(userRole => userRole.Role)
+            .Where(profile => profile.User != null && profile.User.IsActive)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var searchLower = request.Search.ToLower();
             profilesQuery = profilesQuery.Where(profile =>
-                profile.User != null &&
-                (profile.User.FullName.ToLower().Contains(searchLower) ||
-                 profile.User.PhoneNumber.Contains(searchLower)));
+                profile.User!.FullName.ToLower().Contains(searchLower) ||
+                profile.User.PhoneNumber.Contains(searchLower));
         }
 
         var profiles = await profilesQuery.ToListAsync(ct);
 
         var dtos = profiles
-            .Where(profile => profile.User != null)
             .Select(profile => new EmployeeDto(
                 profile.Id,
                 profile.UserId,
