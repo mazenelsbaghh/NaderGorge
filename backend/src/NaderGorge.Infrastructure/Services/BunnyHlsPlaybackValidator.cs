@@ -52,7 +52,7 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
         var configuredLibrary = library!;
         var tokenCiphertext = configuredLibrary.HlsTokenKeyCiphertext!;
 
-        var cacheKey = $"bunny-hls-validation:v1:{libraryId:N}:{normalizedVideoGuid}:{configuredLibrary.UpdatedAt?.Ticks ?? 0}";
+        var cacheKey = $"bunny-hls-validation:v2:{libraryId:N}:{normalizedVideoGuid}:{configuredLibrary.UpdatedAt?.Ticks ?? 0}";
         if (_cache.TryGetValue(cacheKey, out BunnyHlsPlaybackValidationResult? cached) && cached is not null)
         {
             return cached;
@@ -123,38 +123,62 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
         string playlistUrl,
         CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, playlistUrl);
-        request.Headers.Referrer = StudentApplicationReferrer;
-        request.Headers.TryAddWithoutValidation("Origin", StudentApplicationOrigin);
+        var master = await FetchManifestDocumentAsync(new Uri(playlistUrl), cancellationToken);
+        if (!master.Validation.Success || master.Document is null) return master.Validation;
+
+        var variantUri = ResolveFirstPlaylistUri(master.Document.RequestUri, master.Document.Body);
+        if (variantUri is null)
+        {
+            if (master.Document.Body.Contains("#EXT-X-STREAM-INF:", StringComparison.Ordinal))
+                return InvalidManifest();
+            if (!master.Document.Body.Contains("#EXTINF:", StringComparison.Ordinal))
+                return BunnyHlsPlaybackValidationResult.Ok();
+            var directSegmentUri = ResolveFirstMediaUri(master.Document.RequestUri, master.Document.Body);
+            return directSegmentUri is null
+                ? InvalidManifest()
+                : await ValidateMediaResourceAsync(directSegmentUri, cancellationToken);
+        }
+
+        var variant = await FetchManifestDocumentAsync(variantUri, cancellationToken);
+        if (!variant.Validation.Success || variant.Document is null) return variant.Validation;
+
+        var segmentUri = ResolveFirstMediaUri(variant.Document.RequestUri, variant.Document.Body);
+        if (segmentUri is null) return InvalidManifest();
+
+        return await ValidateMediaResourceAsync(segmentUri, cancellationToken);
+    }
+
+    private async Task<ManifestFetchResult> FetchManifestDocumentAsync(
+        Uri manifestUri,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(HttpMethod.Get, manifestUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.apple.mpegurl"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-mpegURL"));
         using var response = await _httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
-        return await ValidateResponseAsync(response, cancellationToken);
-    }
-
-    private static async Task<BunnyHlsPlaybackValidationResult> ValidateResponseAsync(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
-    {
         var statusFailure = FailureForStatus(response);
-        if (statusFailure is not null) return statusFailure;
+        if (statusFailure is not null) return ManifestFetchResult.Fail(statusFailure);
         if (!AllowsStudentOrigin(response))
         {
-            return BunnyHlsPlaybackValidationResult.Fail(
+            return ManifestFetchResult.Fail(BunnyHlsPlaybackValidationResult.Fail(
                 "BUNNY_HLS_CORS_REJECTED",
-                "Bunny لم يسمح للمتصفح بقراءة HLS من نطاق الطلاب. راجع Allowed Domains وإعدادات CDN.");
+                "Bunny لم يسمح للمتصفح بقراءة HLS من نطاق الطلاب. راجع Allowed Domains وإعدادات CDN."));
         }
-        return await ValidateManifestBodyAsync(response.Content, cancellationToken);
+
+        var body = await ReadManifestBodyAsync(response.Content, cancellationToken);
+        if (body is null) return ManifestFetchResult.Fail(InvalidManifest());
+        var effectiveUri = response.RequestMessage?.RequestUri ?? manifestUri;
+        return ManifestFetchResult.Ok(new ManifestDocument(effectiveUri, body));
     }
 
-    private static async Task<BunnyHlsPlaybackValidationResult> ValidateManifestBodyAsync(
+    private static async Task<string?> ReadManifestBodyAsync(
         HttpContent content,
         CancellationToken cancellationToken)
     {
-        if (content.Headers.ContentLength is > MaximumManifestBytes) return InvalidManifest();
+        if (content.Headers.ContentLength is > MaximumManifestBytes) return null;
         await using var stream = await content.ReadAsStreamAsync(cancellationToken);
         using var buffer = new MemoryStream();
         var chunk = new byte[4096];
@@ -165,11 +189,75 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
             await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
         }
 
-        if (buffer.Length > MaximumManifestBytes) return InvalidManifest();
+        if (buffer.Length > MaximumManifestBytes) return null;
         var manifest = System.Text.Encoding.UTF8.GetString(buffer.ToArray()).TrimStart('\uFEFF', ' ', '\t', '\r', '\n');
-        return manifest.StartsWith("#EXTM3U", StringComparison.Ordinal)
+        return manifest.StartsWith("#EXTM3U", StringComparison.Ordinal) ? manifest : null;
+    }
+
+    private async Task<BunnyHlsPlaybackValidationResult> ValidateMediaResourceAsync(
+        Uri mediaUri,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(HttpMethod.Get, mediaUri);
+        request.Headers.Range = new RangeHeaderValue(0, 0);
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        var statusFailure = FailureForStatus(response);
+        if (statusFailure is not null) return statusFailure;
+        return AllowsStudentOrigin(response)
             ? BunnyHlsPlaybackValidationResult.Ok()
-            : InvalidManifest();
+            : BunnyHlsPlaybackValidationResult.Fail(
+                "BUNNY_HLS_CORS_REJECTED",
+                "Bunny لم يسمح للمتصفح بتحميل أجزاء الفيديو من نطاق الطلاب. راجع Allowed Domains وإعدادات CDN.");
+    }
+
+    private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri)
+    {
+        var request = new HttpRequestMessage(method, uri);
+        request.Headers.Referrer = StudentApplicationReferrer;
+        request.Headers.TryAddWithoutValidation("Origin", StudentApplicationOrigin);
+        return request;
+    }
+
+    private static Uri? ResolveFirstPlaylistUri(Uri baseUri, string manifest)
+    {
+        var expectVariant = false;
+        foreach (var rawLine in manifest.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal))
+            {
+                expectVariant = true;
+                continue;
+            }
+            if (!expectVariant || line.Length == 0 || line.StartsWith('#')) continue;
+            return ResolveTrustedUri(baseUri, line);
+        }
+        return null;
+    }
+
+    private static Uri? ResolveFirstMediaUri(Uri baseUri, string manifest)
+    {
+        foreach (var rawLine in manifest.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+            return ResolveTrustedUri(baseUri, line);
+        }
+        return null;
+    }
+
+    private static Uri? ResolveTrustedUri(Uri baseUri, string reference)
+    {
+        if (!Uri.TryCreate(baseUri, reference, out var resolved)
+            || resolved.Scheme != Uri.UriSchemeHttps
+            || !string.Equals(resolved.Host, baseUri.Host, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+        return resolved;
     }
 
     private static BunnyHlsPlaybackValidationResult? FailureForStatus(HttpResponseMessage response)
@@ -221,4 +309,17 @@ public sealed class BunnyHlsPlaybackValidator : IBunnyHlsPlaybackValidator
         string VideoGuid,
         string Hostname,
         byte[] TokenCiphertext);
+
+    private sealed record ManifestDocument(Uri RequestUri, string Body);
+
+    private sealed record ManifestFetchResult(
+        BunnyHlsPlaybackValidationResult Validation,
+        ManifestDocument? Document)
+    {
+        public static ManifestFetchResult Ok(ManifestDocument document) =>
+            new(BunnyHlsPlaybackValidationResult.Ok(), document);
+
+        public static ManifestFetchResult Fail(BunnyHlsPlaybackValidationResult result) =>
+            new(result, null);
+    }
 }

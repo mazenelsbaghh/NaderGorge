@@ -11723,6 +11723,23 @@
     "permissions": []
   },
   {
+    "route": "api/student/video-session/{sessionId:guid}/client-event",
+    "controller": "VideoSession",
+    "action": "ReportClientEvent",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Student,Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/student/video-session/{sessionId:guid}/embed-material",
     "controller": "VideoSession",
     "action": "GetEmbedMaterial",

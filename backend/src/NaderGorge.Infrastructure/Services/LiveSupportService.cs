@@ -56,10 +56,10 @@ public sealed class LiveSupportService(
     {
         if (!(await _settings.GetAsync(ct)).LiveSupportEnabled)
             return new LiveSupportAvailabilityDto(false, 0, null, LiveSupportErrorCodes.SupportUnavailable, "الدعم المباشر غير مفعّل حاليًا.");
-        var businessHours = await GetCurrentBusinessHoursAsync(ct);
         var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
-        var localTime = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo));
-        var isOutsideBusinessHours = businessHours.Count == 0 || !businessHours.Any(window => IsWithinBusinessHours(localTime, window));
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo);
+        var businessHours = await GetCurrentBusinessHoursAsync(localNow, ct);
+        var isOutsideBusinessHours = businessHours.Count == 0 || !businessHours.Any(window => LiveSupportScheduleRules.Contains(localNow, window));
         var staffIds = await EligibleStaffQuery().Select(x => x.UserId).ToListAsync(ct);
         var staff = 0;
         foreach (var id in staffIds) if (_presence is null || await _presence.IsConnectedAsync(id)) staff++;
@@ -813,7 +813,7 @@ public sealed class LiveSupportService(
     {
         if (capacity is < 1 or > 50) throw new LiveSupportException("VALIDATION_ERROR", "الحد الأقصى يجب أن يكون من 1 إلى 50.");
         if (!await _db.EmployeeProfiles.AnyAsync(x => x.UserId == staffUserId, ct)) throw new LiveSupportException("NOT_FOUND", "الموظف غير موجود.");
-        ValidateSchedule(schedule);
+        LiveSupportScheduleRules.Validate(schedule);
         var config = await _db.LiveSupportStaffConfigs.FirstOrDefaultAsync(x => x.UserId == staffUserId, ct);
         if (config is null)
         {
@@ -1273,24 +1273,22 @@ public sealed class LiveSupportService(
             .Where(x => x > DateTime.UtcNow).OrderBy(x => x).Cast<DateTime?>().FirstOrDefault();
     }
 
-    private async Task<IReadOnlyList<LiveSupportScheduleWindowDto>> GetCurrentBusinessHoursAsync(CancellationToken ct)
+    private async Task<IReadOnlyList<LiveSupportScheduleWindowDto>> GetCurrentBusinessHoursAsync(DateTime localNow, CancellationToken ct)
     {
-        var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
-        var dayOfWeek = (int)TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo).DayOfWeek;
+        var dayOfWeek = (int)localNow.DayOfWeek;
+        var previousDay = (dayOfWeek + 6) % 7;
         var windows = await _db.LiveSupportScheduleWindows.AsNoTracking()
-            .Where(x => x.IsActive && x.DayOfWeek == dayOfWeek && _db.LiveSupportStaffConfigs.Any(c => c.Id == x.StaffConfigId && c.IsEnabled))
+            .Where(x => x.IsActive && (x.DayOfWeek == dayOfWeek || x.DayOfWeek == previousDay) &&
+                _db.LiveSupportStaffConfigs.Any(c => c.Id == x.StaffConfigId && c.IsEnabled))
             .Select(x => new LiveSupportScheduleWindowDto(x.DayOfWeek, x.StartLocalTime, x.EndLocalTime))
             .ToListAsync(ct);
         return windows
-            .DistinctBy(x => (x.StartLocalTime, x.EndLocalTime))
-            .OrderBy(x => x.StartLocalTime)
+            .Where(window => window.DayOfWeek == dayOfWeek || window.EndLocalTime < window.StartLocalTime)
+            .DistinctBy(x => (x.DayOfWeek, x.StartLocalTime, x.EndLocalTime))
+            .OrderBy(x => x.DayOfWeek == dayOfWeek ? 1 : 0)
+            .ThenBy(x => x.StartLocalTime)
             .ToArray();
     }
-
-    private static bool IsWithinBusinessHours(TimeOnly localTime, LiveSupportScheduleWindowDto window) =>
-        window.EndLocalTime >= window.StartLocalTime
-            ? localTime >= window.StartLocalTime && localTime < window.EndLocalTime
-            : localTime >= window.StartLocalTime || localTime < window.EndLocalTime;
 
     private async Task SendAfterHoursReplyAsync(LiveSupportConversation conversation, IReadOnlyList<LiveSupportScheduleWindowDto> businessHours, CancellationToken ct)
     {
@@ -2402,16 +2400,6 @@ public sealed class LiveSupportService(
         LiveSupportEventType.MessengerDeliveryStatusChanged => "تحديث حالة رسالة ماسنجر",
         _ => type.ToString()
     };
-
-    private static void ValidateSchedule(IReadOnlyList<LiveSupportScheduleWindowDto> schedule)
-    {
-        if (schedule.Any(x => x.DayOfWeek is < 0 or > 6 || x.EndLocalTime <= x.StartLocalTime)) throw new LiveSupportException("VALIDATION_ERROR", "فترة الدعم غير صحيحة.");
-        foreach (var day in schedule.GroupBy(x => x.DayOfWeek))
-        {
-            var sorted = day.OrderBy(x => x.StartLocalTime).ToArray();
-            for (var i = 1; i < sorted.Length; i++) if (sorted[i].StartLocalTime < sorted[i - 1].EndLocalTime) throw new LiveSupportException("VALIDATION_ERROR", "فترات الدعم متداخلة.");
-        }
-    }
 
     private void AddEvent(Guid conversationId, LiveSupportEventType type, Guid? actor, Guid? guest, Guid? relatedId = null, string? senderType = null, Guid? staffUserId = null)
     {

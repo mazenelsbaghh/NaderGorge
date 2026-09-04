@@ -117,8 +117,16 @@ async function runHlsPlayer() {
         response: { code: status },
       });
     },
+    emitManifestParsed() {
+      hlsListeners.get('manifestParsed')?.(null, {});
+    },
     hls: () => hlsInstances[0] ?? null,
     messages,
+    triggerVideoEvent(eventName: string) {
+      if (eventName === 'play' || eventName === 'playing') video.paused = false;
+      if (eventName === 'pause') video.paused = true;
+      videoListeners.get(eventName)?.();
+    },
     triggerLoadDeadline() {
       for (const timer of timers) if (timer.active) timer.callback();
     },
@@ -161,6 +169,31 @@ test('2026-09-03 stalled Bunny HLS exits the tablet spinner on its deadline', as
 
   const errorMessage = player.messages.find((message) => message.type === 'error');
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
-  assert.match(errorMessage?.data?.message ?? '', /انتهت مهلة تحميل Bunny HLS/);
+  assert.match(errorMessage?.data?.message ?? '', /انتهت مهلة تجهيز فيديو Bunny HLS/);
+  assert.equal(errorMessage?.data?.phase, 'load_timeout_bootstrap');
   assert.equal(player.hls()?.destroyCalls, 1);
+});
+
+test('2026-09-04 parsed master playlist is not treated as playable video', async () => {
+  const player = await runHlsPlayer();
+
+  player.emitManifestParsed();
+
+  assert.equal(player.messages.some((message) => message.type === 'ready'), false);
+  player.triggerVideoEvent('loadedmetadata');
+  assert.equal(player.messages.filter((message) => message.type === 'ready').length, 1);
+});
+
+test('2026-09-04 playback stall reports its exact phase instead of spinning forever', async () => {
+  const player = await runHlsPlayer();
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.triggerVideoEvent('waiting');
+
+  player.triggerLoadDeadline();
+
+  const errorMessage = player.messages.find((message) => message.type === 'error');
+  assert.equal(errorMessage?.data?.provider, 'bunny-hls');
+  assert.equal(errorMessage?.data?.phase, 'playback_timeout_waiting');
+  assert.match(errorMessage?.data?.message ?? '', /لم تصل بيانات الفيديو/);
 });

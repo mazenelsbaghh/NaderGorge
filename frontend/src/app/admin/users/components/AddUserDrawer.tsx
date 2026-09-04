@@ -18,6 +18,7 @@ import {
   type WorkCalendarDto,
 } from '@/services/hr-service';
 import { cairoCurrentDate } from '@/lib/cairo-time';
+import { isValidSupportScheduleWindow } from '@/lib/live-support-schedule';
 
 type Role = string;
 
@@ -266,8 +267,8 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
     if (role === 'Assistant' && enableLiveSupport && (!Number.isInteger(Number(supportCapacity)) || Number(supportCapacity) < 1 || Number(supportCapacity) > 50)) {
       newErrors.general = 'سعة الدعم المباشر يجب أن تكون بين محادثة واحدة و50 محادثة';
     }
-    if (role === 'Assistant' && enableLiveSupport && supportSchedule.some((window) => window.startLocalTime >= window.endLocalTime)) {
-      newErrors.general = 'وقت نهاية كل فترة دعم يجب أن يكون بعد وقت البداية';
+    if (role === 'Assistant' && enableLiveSupport && supportSchedule.some((window) => !isValidSupportScheduleWindow(window))) {
+      newErrors.general = 'فترة الدعم غير صالحة؛ يمكن أن تعبر منتصف الليل لكن لا يمكن أن يتساوى وقت البداية والنهاية';
     }
     if (role === 'Assistant' && enableLiveSupport && supportSchedule.length === 0) {
       newErrors.general = 'أضف يومًا وفترة واحدة على الأقل لموظف الدعم';

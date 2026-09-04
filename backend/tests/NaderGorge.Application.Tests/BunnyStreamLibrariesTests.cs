@@ -2069,6 +2069,74 @@ public sealed class BunnyStreamLibrariesTests
     }
 
     [Fact]
+    public async Task Production20260904_HlsValidationChecksVariantAndFirstMediaSegment()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("Full HLS validation", 750001);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        library.HlsCdnHostname = "vz-chain.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, "private-token-key");
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        var httpHandler = new SequenceHttpMessageHandler(
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1200000\n720p/video.m3u8\n"),
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXTINF:4,\nsegment-000.ts\n"),
+            CorsResponse(System.Net.HttpStatusCode.PartialContent, "x"));
+        using var httpClient = new HttpClient(httpHandler);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(httpClient, db, protector, cache);
+
+        var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(3, httpHandler.Requests.Count);
+        Assert.EndsWith("/playlist.m3u8", httpHandler.Requests[0].RequestUri?.AbsolutePath);
+        Assert.EndsWith("/720p/video.m3u8", httpHandler.Requests[1].RequestUri?.AbsolutePath);
+        Assert.EndsWith("/720p/segment-000.ts", httpHandler.Requests[2].RequestUri?.AbsolutePath);
+        Assert.Equal(0, httpHandler.Requests[2].Headers.Range?.Ranges.Single().From);
+        Assert.Equal(0, httpHandler.Requests[2].Headers.Range?.Ranges.Single().To);
+        Assert.All(httpHandler.Requests, request =>
+        {
+            Assert.Equal("https://app.massar-academy.net/", request.Headers.Referrer?.ToString());
+            Assert.Contains("https://app.massar-academy.net", request.Headers.GetValues("Origin"));
+        });
+    }
+
+    [Fact]
+    public async Task Production20260904_HlsValidationRejectsUnavailableMediaSegment()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var library = CreateLibrary("Rejected HLS segment", 750002);
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        library.HlsCdnHostname = "vz-segment-rejected.b-cdn.net";
+        library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(library.Id, "private-token-key");
+        db.BunnyStreamLibraries.Add(library);
+        await db.SaveChangesAsync();
+
+        var httpHandler = new SequenceHttpMessageHandler(
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1200000\n720p/video.m3u8\n"),
+            CorsResponse(System.Net.HttpStatusCode.OK, "#EXTM3U\n#EXTINF:4,\nsegment-000.ts\n"),
+            new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden));
+        using var httpClient = new HttpClient(httpHandler);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var validator = new BunnyHlsPlaybackValidator(httpClient, db, protector, cache);
+
+        var result = await validator.ValidateVideoAsync(library.Id, VideoGuid, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("BUNNY_HLS_AUTH_REJECTED", result.ErrorCode);
+        Assert.Equal(3, httpHandler.Requests.Count);
+    }
+
+    private static HttpResponseMessage CorsResponse(System.Net.HttpStatusCode statusCode, string body)
+    {
+        var response = new HttpResponseMessage(statusCode) { Content = new StringContent(body) };
+        response.Headers.TryAddWithoutValidation("Access-Control-Allow-Origin", "*");
+        return response;
+    }
+
+    [Fact]
     public async Task ManagedBunnyVideo_WatchLimitResponsePreservesKnownDuration()
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -2539,6 +2607,23 @@ public sealed class BunnyStreamLibrariesTests
             CancellationToken cancellationToken)
         {
             LastRequest = request;
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class SequenceHttpMessageHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
+    {
+        private readonly Queue<HttpResponseMessage> _responses = new(responses);
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            if (!_responses.TryDequeue(out var response))
+                throw new InvalidOperationException("Unexpected HLS validation request.");
+            response.RequestMessage = request;
             return Task.FromResult(response);
         }
     }

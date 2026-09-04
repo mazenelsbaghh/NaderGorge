@@ -302,7 +302,7 @@ const HR_NAV_ITEMS = [
   },
   {
     href: '/admin/hr/reports',
-    label: 'تقارير قوة العمل',
+    label: 'أداء فريق الدعم',
     icon: FileCheck2,
     permission: 'hr.manage',
   },

@@ -2,7 +2,28 @@ import apiClient from './api-client';
 export interface MigrationRowInput { sourceType: string; sourceId: string; targetId: string; amount: number; sourceHash: string; }
 export interface MigrationBatchDto { id: string; module: string; sourceSystem: string; state: string; sourceCount: number; targetCount: number; sourceTotal: number; targetTotal: number; sourceHash: string; targetHash?: string | null; reportJson: string; createdAt: string; }
 export interface RolloutDto { id: string; module: string; state: string; readTarget: string; writeTarget: string; reconciliationBatchId?: string | null; reason?: string | null; }
-export interface WorkforceRowDto { employeeId: string; employeeNumber: string; fullName: string; status: string; hireDate: string; organizationUnit?: string | null; shiftName?: string | null; attendanceDays: number; lateMinutes: number; approvedLeaveDays: number; lastNetPayroll?: number | null; supportConversations: number; averageStudentRating?: number | null; }
+export interface WorkforceRowDto {
+  employeeId: string;
+  employeeNumber: string;
+  fullName: string;
+  status: string;
+  hireDate: string;
+  organizationUnit?: string | null;
+  shiftName?: string | null;
+  attendanceDays: number;
+  completedAttendanceDays: number;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  workedMinutes: number;
+  approvedLeaveDays: number;
+  lastNetPayroll?: number | null;
+  supportConversations: number;
+  closedSupportConversations: number;
+  respondedSupportConversations: number;
+  averageFirstResponseMinutes?: number | null;
+  ratingCount: number;
+  averageStudentRating?: number | null;
+}
 export const hrGovernanceService = {
   status: async (): Promise<{ rollouts: RolloutDto[]; batches: MigrationBatchDto[]; conflicts: unknown[] }> => (await apiClient.get('/hr/governance/migration')).data,
   dryRun: async (module: string, rows: MigrationRowInput[]) => (await apiClient.post('/hr/governance/migration/dry-run', { module, sourceSystem: 'legacy', rows })).data,
