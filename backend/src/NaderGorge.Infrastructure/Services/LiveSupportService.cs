@@ -1240,23 +1240,22 @@ public sealed class LiveSupportService(
 
     private IQueryable<LiveSupportStaffConfig> EligibleStaffQuery()
     {
-        var today = CurrentCairoDate();
-        return _db.LiveSupportStaffConfigs.Where(c => c.IsEnabled && _db.EmployeeProfiles.Any(e =>
-            e.UserId == c.UserId &&
-            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today && session.State == AttendanceSessionState.Open && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
-             (!_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today) && _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null)))));
+        var checkedInUserIds = CheckedInEmployeeQuery().Select(employee => employee.UserId);
+        return _db.LiveSupportStaffConfigs.Where(config => config.IsEnabled && checkedInUserIds.Contains(config.UserId));
     }
 
     // AttendanceSessions is the authoritative current model. A legacy open log is honored only
     // when no session exists today, so an employee who clocked out cannot remain eligible by accident.
-    private IQueryable<EmployeeProfile> CheckedInEmployeeQuery(Guid userId)
+    private IQueryable<EmployeeProfile> CheckedInEmployeeQuery()
     {
         var today = CurrentCairoDate();
         return _db.EmployeeProfiles.Where(e =>
-            e.UserId == userId &&
-            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today && session.State == AttendanceSessionState.Open && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
+            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.State == AttendanceSessionState.Open && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
              (!_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today) && _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null))));
     }
+
+    private IQueryable<EmployeeProfile> CheckedInEmployeeQuery(Guid userId) =>
+        CheckedInEmployeeQuery().Where(employee => employee.UserId == userId);
 
     private static DateOnly CurrentCairoDate()
     {

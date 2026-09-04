@@ -75,6 +75,30 @@ public sealed class LiveSupportSecurityTests
     }
 
     [Fact]
+    public async Task OvernightAttendanceSession_RemainsCheckedInAfterCairoMidnight_20260905Regression()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var employee = await fixture.Db.EmployeeProfiles.SingleAsync(x => x.UserId == LiveSupportTestData.StaffAId);
+        fixture.Db.AttendanceLogs.RemoveRange(fixture.Db.AttendanceLogs);
+        fixture.Db.AttendanceSessions.Add(new AttendanceSession
+        {
+            EmployeeId = employee.Id,
+            ShiftAssignmentId = Guid.NewGuid(),
+            WorkDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"))).AddDays(-1),
+            ClockedInAt = DateTime.UtcNow.AddHours(-2),
+            State = AttendanceSessionState.Open,
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var bootstrap = await service.GetStaffBootstrapAsync(LiveSupportTestData.StaffAId, false, CancellationToken.None);
+        var availability = await service.GetAvailabilityAsync(CancellationToken.None);
+
+        Assert.True(bootstrap.IsCheckedIn);
+        Assert.Equal(1, availability.AvailableStaffCount);
+    }
+
+    [Fact]
     public void PublicMutationsAndSensitiveActionsHaveDedicatedRateLimits()
     {
         static string? Policy(Type controller, string method) => controller.GetMethod(method)!.GetCustomAttributes(typeof(EnableRateLimitingAttribute), true).Cast<EnableRateLimitingAttribute>().Single().PolicyName;
