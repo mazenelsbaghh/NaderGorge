@@ -157,7 +157,7 @@ public class VideoSessionController : ControllerBase
         if (session is null) return NotFound();
 
         _logger.LogWarning(
-            "Video client playback error. Provider={Provider} Event={Event} Phase={Phase} StatusCode={StatusCode} LessonVideoId={LessonVideoId} SessionId={SessionId}",
+            "Video client player event. Provider={Provider} Event={Event} Phase={Phase} StatusCode={StatusCode} LessonVideoId={LessonVideoId} SessionId={SessionId}",
             request.Provider,
             request.Event,
             request.Phase,
@@ -237,8 +237,10 @@ public sealed partial class VideoPlaybackClientEventRequest
     public int StatusCode { get; set; }
 
     public bool IsValid() =>
-        string.Equals(Provider, "bunny-hls", StringComparison.Ordinal)
-        && string.Equals(Event, "playback-error", StringComparison.Ordinal)
+        ((string.Equals(Provider, "bunny-hls", StringComparison.Ordinal)
+          && string.Equals(Event, "playback-error", StringComparison.Ordinal))
+         || (string.Equals(Provider, "bunny", StringComparison.Ordinal)
+          && string.Equals(Event, "bridge-timeout", StringComparison.Ordinal)))
         && StatusCode is >= 0 and <= 599
         && !string.IsNullOrWhiteSpace(Phase)
         && Phase.Length <= 80

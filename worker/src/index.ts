@@ -1,4 +1,3 @@
-import { Pool } from 'pg';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { Worker, Queue } from 'bullmq';
@@ -23,7 +22,7 @@ import { fetchWithTimeout } from './services/workerFetch.js';
 import { createRedisConnection, redisConnectionOptions } from './config/redis.js';
 import { monitorRedisSentinelAvailability } from './config/redisAvailabilityMonitor.js';
 import { scheduleClusterCron } from './scheduling/clusterCron.js';
-import { databaseUrl } from './config/database.js';
+import { databasePool } from './config/database.js';
 import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
 import { delayUntilNextCairoMidnight } from './scheduling/cairoTime.js';
 import { publicJobFailureReason } from './server/jobStatus.js';
@@ -55,9 +54,7 @@ const JOB_RETENTION_OPTIONS = {
 const redis = createRedisConnection();
 installSystemLogCapture(redis);
 monitorRedisSentinelAvailability(redis);
-const pool = new Pool({
-  connectionString: databaseUrl()
-});
+const pool = databasePool();
 
 // BullMQ Connection Shared config
 const connection = redisConnectionOptions();

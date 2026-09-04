@@ -58,8 +58,8 @@ export interface WatchProgressResponse {
 }
 
 export interface VideoPlaybackClientEvent {
-  provider: 'bunny-hls';
-  event: 'playback-error';
+  provider: 'bunny-hls' | 'bunny';
+  event: 'playback-error' | 'bridge-timeout';
   phase: string;
   statusCode: number;
 }

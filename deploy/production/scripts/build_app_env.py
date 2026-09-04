@@ -95,8 +95,12 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "ConnectionStrings__DefaultConnection": (
             "Host=host.docker.internal;Port=6432;Database=massar_platform;"
             f"Username=massar_app;Password={postgres_password};"
-            "Pooling=true;Minimum Pool Size=0;Maximum Pool Size=50;"
-            "Connection Idle Lifetime=300;Keepalive=30;Tcp Keepalive=true;"
+            # Six pools can overlap briefly during a three-node rollout while
+            # live lesson traffic is reconnecting. Keep that worst case well
+            # below PostgreSQL's 300-connection ceiling and prune burst
+            # capacity promptly after traffic subsides.
+            "Pooling=true;Minimum Pool Size=0;Maximum Pool Size=30;"
+            "Connection Idle Lifetime=60;Connection Pruning Interval=10;Keepalive=30;Tcp Keepalive=true;"
             "Timeout=15;Command Timeout=60"
         ),
         "Redis__Sentinels": "10.77.0.11:26379,10.77.0.12:26379,10.77.0.13:26379",

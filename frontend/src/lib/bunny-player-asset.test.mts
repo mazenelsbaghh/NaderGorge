@@ -454,7 +454,7 @@ test('all Bunny bridge failures identify the provider for bounded recovery', asy
   });
 });
 
-test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails over without removing the iframe', async () => {
+test('2026-09-04 Bunny surface load re-probes before a bounded hostname failover', async () => {
   const harness = await runBunnyBridge();
   assert.equal(
     harness.iframeState().src,
@@ -468,8 +468,22 @@ test('2026-09-03 Bunny surface load stays visual-only and bridge retry fails ove
     data: { provider: 'bunny' },
   }]);
 
-  harness.dispatchParentMessage({ type: 'retryBridge' });
+  const probesBeforeRetry = harness.providerCommands()
+    .filter((command) => command.listener === 'massar-bunny-ready-probe-v1').length;
+  harness.tickIntervals(1000, 3);
+  const probesAfterRetry = harness.providerCommands()
+    .filter((command) => command.listener === 'massar-bunny-ready-probe-v1').length;
+  assert.ok(probesAfterRetry > probesBeforeRetry);
+
+  harness.dispatchParentMessage({ type: 'retryBridge', bridgeSource: 'current' });
   assert.equal(harness.playerCount(), 2);
+  assert.deepEqual(harness.iframeState(), {
+    removeCalls: 0,
+    src: 'https://player.mediadelivery.net/embed/library/video',
+  });
+
+  harness.dispatchParentMessage({ type: 'retryBridge', bridgeSource: 'alternate' });
+  assert.equal(harness.playerCount(), 3);
   assert.deepEqual(harness.iframeState(), {
     removeCalls: 0,
     src: 'https://iframe.mediadelivery.net/embed/library/video',

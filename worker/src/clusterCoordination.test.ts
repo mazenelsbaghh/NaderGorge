@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { databaseUrl } from './config/database.js';
+import { databasePool, databasePoolConfig, databaseUrl } from './config/database.js';
 import { redisConnectionOptions } from './config/redis.js';
 
 function withEnvironment(
@@ -32,6 +32,37 @@ test('production database refuses a local fallback', () => {
   }, () => {
     assert.throws(() => databaseUrl(), /required in production/);
   });
+});
+
+test('worker database pool budget leaves production connection headroom', () => {
+  withEnvironment({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://massar_app:test@database/massar_platform',
+    DB_CONNECTION_STRING: undefined,
+    MASSAR_NODE_ID: 'node-2',
+  }, () => {
+    const config = databasePoolConfig();
+    assert.equal(config.max, 10);
+    assert.equal(config.idleTimeoutMillis, 60_000);
+    assert.equal(config.connectionTimeoutMillis, 15_000);
+    assert.equal(config.application_name, 'massar-worker-node-2');
+  });
+});
+
+test('2026-09-04 every worker job module receives the same database pool', async () => {
+  let firstPool!: ReturnType<typeof databasePool>;
+  let secondPool!: ReturnType<typeof databasePool>;
+  withEnvironment({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://massar_app:test@database/massar_platform',
+    DB_CONNECTION_STRING: undefined,
+  }, () => {
+    firstPool = databasePool();
+    secondPool = databasePool();
+  });
+
+  assert.strictEqual(firstPool, secondPool);
+  await firstPool.end();
 });
 
 test('production Redis discovers one master through all three Sentinels', () => {

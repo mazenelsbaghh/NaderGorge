@@ -349,6 +349,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var lastObservedTime = null;
     var advancingTimeSamples = 0;
     var pollTimer = null;
+    var readyProbeTimer = null;
     var bridgeReadyProbeListener = 'massar-bunny-ready-probe-v1';
     var bunnyBridgeOrigins = ['https://player.mediadelivery.net', 'https://iframe.mediadelivery.net'];
     var bunnyBridgeOrigin = null;
@@ -410,6 +411,28 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         value: 'ready',
         listener: bridgeReadyProbeListener
       });
+    }
+
+    function stopBunnyReadyProbes() {
+      if (!readyProbeTimer) return;
+      clearInterval(readyProbeTimer);
+      readyProbeTimer = null;
+    }
+
+    function startBunnyReadyProbes() {
+      if (__videoEmbedSuspended || playerReady) return;
+      requestBunnyReadyProbe();
+      if (readyProbeTimer) return;
+      // A cached iOS/WebKit frame can finish loading before Player.js has
+      // installed its ready listener. Repeat the idempotent probe so one lost
+      // handshake cannot leave the platform spinner visible indefinitely.
+      readyProbeTimer = setInterval(function () {
+        if (__videoEmbedSuspended || playerReady) {
+          stopBunnyReadyProbes();
+          return;
+        }
+        requestBunnyReadyProbe();
+      }, 1000);
     }
 
     // Some Android WebViews normalize the iframe URL differently from the src
@@ -490,6 +513,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         clearInterval(pollTimer);
         pollTimer = null;
       }
+      stopBunnyReadyProbes();
       playerReady = false;
       parentReadySent = false;
       isPlaying = false;
@@ -515,7 +539,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         // interaction shield in place until Player.js proves that tracking is
         // ready, preventing uncounted playback on delayed Android WebViews.
         postToParent('providerLoaded', { provider: 'bunny' });
-        requestBunnyReadyProbe();
+        startBunnyReadyProbes();
       });
       iframe.src = bunnyEmbedSources[bunnyEmbedSourceIndex];
     }
@@ -527,7 +551,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       });
     }
 
-    function retryPlayerBridgeInPlace() {
+    function retryPlayerBridgeInPlace(bridgeSource) {
       if (__videoEmbedSuspended || !iframe || playerReady) return;
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -543,7 +567,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       // event for its internal error document. The next bounded bridge retry
       // therefore tries Bunny's other supported player generation instead of
       // navigating to the same unavailable URL again.
-      if (bunnyEmbedSourceIndex + 1 < bunnyEmbedSources.length) {
+      if (bridgeSource === 'alternate' && bunnyEmbedSourceIndex + 1 < bunnyEmbedSources.length) {
         bunnyEmbedSourceIndex += 1;
         bunnyBridgeOrigin = null;
         iframe.src = bunnyEmbedSources[bunnyEmbedSourceIndex];
@@ -554,9 +578,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       // navigating or pausing the provider iframe. Until Bunny answers, probe
       // both of its documented embed hostnames because redirects are opaque to
       // the parent page.
-      if (!requestBunnyReadyProbe()) {
-        postToParent('error', { message: 'Failed to retry Bunny player bridge', provider: 'bunny' });
-      }
+      startBunnyReadyProbes();
     }
 
     function initPlayer() {
@@ -589,6 +611,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
           return;
         }
         playerReady = true;
+        stopBunnyReadyProbes();
         // Do not gate visual readiness on metadata callbacks. Some tablet
         // WebViews never answer getVolume/getDuration even though Bunny is
         // ready and its native controls are fully usable.
@@ -683,6 +706,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         if (__videoEmbedSuspended || player !== activePlayer) return;
         postToParent('error', { message: err || 'Bunny playback error', provider: 'bunny' });
       });
+      startBunnyReadyProbes();
     }
 
     // Wait for playerjs script to load, then init
@@ -718,7 +742,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       if (!msg || !msg.type || msg.source === 'video-embed') return;
       if (__videoEmbedSuspended) return;
       if (msg.type === 'retryBridge') {
-        retryPlayerBridgeInPlace();
+        retryPlayerBridgeInPlace(msg.bridgeSource === 'alternate' ? 'alternate' : 'current');
         return;
       }
       if (!player || !playerReady) return;

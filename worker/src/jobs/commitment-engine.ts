@@ -1,12 +1,9 @@
-import { Pool } from 'pg';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { databaseUrl } from '../config/database.js';
+import { databasePool } from '../config/database.js';
 dotenv.config();
 
-const pool = new Pool({
-  connectionString: databaseUrl()
-});
+const pool = databasePool();
 
 const cairoDateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Africa/Cairo',

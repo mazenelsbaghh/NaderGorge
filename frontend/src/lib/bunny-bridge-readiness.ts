@@ -1,6 +1,6 @@
 export const BUNNY_BRIDGE_INITIAL_DEADLINE_MS = 30_000;
-export const BUNNY_BRIDGE_AFTER_SURFACE_DEADLINE_MS = 8_000;
-export const BUNNY_BRIDGE_RETRY_DEADLINE_MS = 15_000;
+export const BUNNY_BRIDGE_AFTER_SURFACE_DEADLINE_MS = 20_000;
+export const BUNNY_BRIDGE_RETRY_DEADLINE_MS = 20_000;
 
 export interface BunnyBridgeReadinessWatchdog {
   start: () => void;
@@ -12,7 +12,7 @@ export interface BunnyBridgeReadinessWatchdog {
 interface BunnyBridgeReadinessWatchdogOptions<THandle> {
   schedule: (callback: () => void, delayMs: number) => THandle;
   cancelScheduled: (handle: THandle) => void;
-  retryBridgeInPlace: () => boolean;
+  retryBridgeInPlace: (options: { source: 'current' | 'alternate' }) => boolean;
   recoverEmbed: () => void;
   initialDeadlineMs?: number;
   surfaceDeadlineMs?: number;
@@ -33,7 +33,8 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
   let scheduledHandle: THandle | null = null;
   let running = false;
   let bunnySurfaceLoaded = false;
-  let retriedInPlace = false;
+  let retriedCurrentSource = false;
+  let triedAlternateSource = false;
 
   const clearScheduled = () => {
     if (scheduledHandle === null) return;
@@ -48,16 +49,26 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
     options.recoverEmbed();
   };
 
-  const handleInitialDeadline = () => {
+  const handleDeadline = () => {
     scheduledHandle = null;
     if (!running) return;
 
-    // A browser/DNS failure can prevent the iframe load event altogether.
-    // Still give Bunny's alternate trusted hostname one chance before
-    // replacing the platform embed/session.
-    if (!retriedInPlace) {
-      retriedInPlace = true;
-      if (options.retryBridgeInPlace()) {
+    // A loaded Bunny document can be usable while its Player.js handshake is
+    // delayed on a congested mobile connection. Re-probe the same document
+    // first so we do not throw away downloaded media or create a reload loop.
+    if (bunnySurfaceLoaded && !retriedCurrentSource) {
+      retriedCurrentSource = true;
+      if (options.retryBridgeInPlace({ source: 'current' })) {
+        scheduledHandle = options.schedule(handleDeadline, retryDeadlineMs);
+        return;
+      }
+    }
+
+    // If the document never loaded, or repeated probes could not establish a
+    // media-clock bridge, try Bunny's alternate supported hostname once.
+    if (!triedAlternateSource) {
+      triedAlternateSource = true;
+      if (options.retryBridgeInPlace({ source: 'alternate' })) {
         scheduledHandle = options.schedule(requireRecovery, retryDeadlineMs);
         return;
       }
@@ -71,17 +82,18 @@ export function createBunnyBridgeReadinessWatchdog<THandle>(
       clearScheduled();
       running = true;
       bunnySurfaceLoaded = false;
-      retriedInPlace = false;
-      scheduledHandle = options.schedule(handleInitialDeadline, initialDeadlineMs);
+      retriedCurrentSource = false;
+      triedAlternateSource = false;
+      scheduledHandle = options.schedule(handleDeadline, initialDeadlineMs);
     },
     markSurfaceLoaded() {
       if (!running || bunnySurfaceLoaded) return;
       bunnySurfaceLoaded = true;
       // Once the iframe document has loaded, a missing bridge no longer needs
-      // the full network allowance. Fail over promptly if the loaded document
-      // is a browser error page or a stalled Bunny host.
+      // the full network allowance, but still allow enough time for mobile 4G
+      // to finish Bunny's scripts before re-probing the same document.
       clearScheduled();
-      scheduledHandle = options.schedule(handleInitialDeadline, surfaceDeadlineMs);
+      scheduledHandle = options.schedule(handleDeadline, surfaceDeadlineMs);
     },
     markReady() {
       running = false;

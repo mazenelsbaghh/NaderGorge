@@ -1,20 +1,17 @@
 import { Job } from 'bullmq';
 import { maskId } from '../logging.js';
-import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import fs from 'node:fs';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { randomUUID } from 'node:crypto';
-import { databaseUrl } from '../config/database.js';
+import { databasePool } from '../config/database.js';
 import { apnsProvider } from '../services/apns.js';
 
 dotenv.config();
 
-const pool = new Pool({
-  connectionString: databaseUrl()
-});
+const pool = databasePool();
 
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {

@@ -45,8 +45,8 @@ test('loaded Bunny surface retries its bridge in place before recovering the emb
   const watchdog = createBunnyBridgeReadinessWatchdog({
     schedule: clock.schedule,
     cancelScheduled: clock.cancel,
-    retryBridgeInPlace: () => {
-      events.push('retry-same-iframe');
+    retryBridgeInPlace: ({ source }) => {
+      events.push(source === 'alternate' ? 'fail-over-hostname' : 'retry-same-iframe');
       return true;
     },
     recoverEmbed: () => events.push('replace-embed'),
@@ -70,14 +70,14 @@ test('loaded Bunny surface retries its bridge in place before recovering the emb
   assert.deepEqual(events, ['retry-same-iframe']);
 });
 
-test('2026-09-03 a loaded Bunny error document triggers prompt hostname failover', () => {
+test('2026-09-04 a loaded Bunny surface is re-probed before hostname failover', () => {
   const clock = new FakeClock();
   const events: string[] = [];
   const watchdog = createBunnyBridgeReadinessWatchdog({
     schedule: clock.schedule,
     cancelScheduled: clock.cancel,
-    retryBridgeInPlace: () => {
-      events.push('fail-over-hostname');
+    retryBridgeInPlace: ({ source }) => {
+      events.push(source === 'alternate' ? 'fail-over-hostname' : 'retry-same-iframe');
       return true;
     },
     recoverEmbed: () => events.push('replace-embed'),
@@ -93,7 +93,11 @@ test('2026-09-03 a loaded Bunny error document triggers prompt hostname failover
   assert.deepEqual(events, []);
 
   clock.advance(1);
-  assert.deepEqual(events, ['fail-over-hostname']);
+  assert.deepEqual(events, ['retry-same-iframe']);
+  clock.advance(14_999);
+  assert.deepEqual(events, ['retry-same-iframe']);
+  clock.advance(1);
+  assert.deepEqual(events, ['retry-same-iframe', 'fail-over-hostname']);
 });
 
 test('bridge retry has a bounded deadline and readiness cannot consume a cancelled timer', () => {
@@ -102,8 +106,8 @@ test('bridge retry has a bounded deadline and readiness cannot consume a cancell
   const watchdog = createBunnyBridgeReadinessWatchdog({
     schedule: clock.schedule,
     cancelScheduled: clock.cancel,
-    retryBridgeInPlace: () => {
-      events.push('retry-same-iframe');
+    retryBridgeInPlace: ({ source }) => {
+      events.push(source === 'alternate' ? 'fail-over-hostname' : 'retry-same-iframe');
       return true;
     },
     recoverEmbed: () => events.push('replace-embed'),
@@ -116,11 +120,13 @@ test('bridge retry has a bounded deadline and readiness cannot consume a cancell
   watchdog.markSurfaceLoaded();
   clock.advance(100);
   clock.advance(50);
-  assert.deepEqual(events, ['retry-same-iframe', 'replace-embed']);
+  assert.deepEqual(events, ['retry-same-iframe', 'fail-over-hostname']);
+  clock.advance(50);
+  assert.deepEqual(events, ['retry-same-iframe', 'fail-over-hostname', 'replace-embed']);
 
   watchdog.markReady();
   clock.advance(1_000);
-  assert.deepEqual(events, ['retry-same-iframe', 'replace-embed']);
+  assert.deepEqual(events, ['retry-same-iframe', 'fail-over-hostname', 'replace-embed']);
 });
 
 test('2026-09-03 an unloaded Bunny surface tries the alternate hostname before recovery', () => {
@@ -129,8 +135,8 @@ test('2026-09-03 an unloaded Bunny surface tries the alternate hostname before r
   const watchdog = createBunnyBridgeReadinessWatchdog({
     schedule: clock.schedule,
     cancelScheduled: clock.cancel,
-    retryBridgeInPlace: () => {
-      events.push('fail-over-hostname');
+    retryBridgeInPlace: ({ source }) => {
+      events.push(source === 'alternate' ? 'fail-over-hostname' : 'retry-same-iframe');
       return true;
     },
     recoverEmbed: () => events.push('replace-embed'),

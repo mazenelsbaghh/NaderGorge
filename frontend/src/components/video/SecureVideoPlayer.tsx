@@ -541,14 +541,25 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     const watchdog = createBunnyBridgeReadinessWatchdog({
       schedule: (callback, delayMs) => window.setTimeout(callback, delayMs),
       cancelScheduled: (handle) => window.clearTimeout(handle),
-      retryBridgeInPlace: () => {
+      retryBridgeInPlace: ({ source }) => {
         const embedWindow = iframeRef.current?.contentWindow;
         if (!embedWindow) return false;
-        embedWindow.postMessage({ type: 'retryBridge' }, window.location.origin);
+        embedWindow.postMessage({ type: 'retryBridge', bridgeSource: source }, window.location.origin);
         return true;
       },
       recoverEmbed: () => {
         if (securitySuspendedRef.current) return;
+        const sessionId = activeSessionIdRef.current;
+        if (sessionId) {
+          void videoSessionService.reportClientEvent(sessionId, {
+            provider: 'bunny',
+            event: 'bridge-timeout',
+            phase: 'readiness_deadline',
+            statusCode: 0,
+          }).catch(() => {
+            // Recovery must continue even when diagnostic delivery fails.
+          });
+        }
         if (scheduleBunnyPlaybackRecovery()) return;
         setStatus('error');
         setErrorMessage('تعذر تحميل مشغل الفيديو بعد عدة محاولات. تحقق من الاتصال ثم اضغط «حاول مرة أخرى».');

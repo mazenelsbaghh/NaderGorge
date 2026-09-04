@@ -123,6 +123,33 @@ public sealed class VideoSessionControllerTests
     }
 
     [Fact]
+    public async Task Incident20260904_OwnedBunnyBridgeTimeout_LogsBoundedDiagnostic()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var session = ActiveSession();
+        db.VideoPlaybackSessions.Add(session);
+        await db.SaveChangesAsync();
+        var logger = new CapturingLogger();
+        var controller = StudentController(session.UserId, db, logger);
+
+        var response = await controller.ReportClientEvent(
+            session.Id,
+            new VideoPlaybackClientEventRequest
+            {
+                Provider = "bunny",
+                Event = "bridge-timeout",
+                Phase = "readiness_deadline",
+                StatusCode = 0
+            },
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(response);
+        var diagnostic = Assert.Single(logger.Messages);
+        Assert.Contains("bridge-timeout", diagnostic, StringComparison.Ordinal);
+        Assert.Contains("readiness_deadline", diagnostic, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Incident20260903_DifferentStudentHlsSession_IsNotDisclosedOrLogged()
     {
         await using var db = TestAppDbContextFactory.Create();
