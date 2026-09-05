@@ -68,7 +68,8 @@ public sealed record WhatsAppCampaignPreviewRequest(
     Guid TemplateId,
     WhatsAppCampaignAudienceFilterDto Filters,
     IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings,
-    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null);
+    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null,
+    string? HeaderMediaId = null);
 
 public sealed record WhatsAppCampaignMaskedRecipientDto(
     string MaskedName,
@@ -92,7 +93,10 @@ public sealed record CreateWhatsAppCampaignDraftRequest(
     string AudienceFingerprint,
     WhatsAppCampaignAudienceFilterDto Filters,
     IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings,
-    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null);
+    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null,
+    string? HeaderMediaId = null);
+
+public sealed record WhatsAppCampaignMediaUploadDto(string MediaId, string FileName);
 
 public sealed record WhatsAppCampaignTemplateSnapshotDto(
     Guid Id,

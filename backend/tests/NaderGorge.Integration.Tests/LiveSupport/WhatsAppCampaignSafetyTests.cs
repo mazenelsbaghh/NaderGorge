@@ -209,7 +209,6 @@ public sealed class WhatsAppCampaignSafetyTests
     }
 
     [Theory]
-    [InlineData("{\"type\":\"HEADER\",\"format\":\"IMAGE\"}")]
     [InlineData("{\"type\":\"BUTTONS\",\"buttons\":[{\"type\":\"QUICK_REPLY\",\"text\":\"Reply\"}]}")]
     public void TemplatePolicy_UnsafeRuntimeComponent_IsRejected(string unsafeComponent)
     {
@@ -217,6 +216,24 @@ public sealed class WhatsAppCampaignSafetyTests
 
         Assert.Throws<WhatsAppCampaignException>(() =>
             WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(template));
+    }
+
+    [Fact]
+    public void TemplatePolicy_ImageHeader_RequiresAndFreezesUploadedMediaId()
+    {
+        var parsed = WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(Template("UTILITY", """
+            [{"type":"HEADER","format":"IMAGE"},{"type":"BODY","text":"Hello"}]
+            """));
+
+        Assert.Throws<WhatsAppCampaignException>(() =>
+            WhatsAppCampaignTemplatePolicy.ProviderComponents(parsed,
+                new Dictionary<WhatsAppTemplateParameterKey, string>()));
+
+        var component = Assert.Single(WhatsAppCampaignTemplatePolicy.ProviderComponents(parsed,
+            new Dictionary<WhatsAppTemplateParameterKey, string>(), "media-123"));
+        Assert.Equal("HEADER", component.Type);
+        Assert.Equal("image", component.ParameterType);
+        Assert.Equal("media-123", Assert.Single(component.Parameters));
     }
 
     [Fact]

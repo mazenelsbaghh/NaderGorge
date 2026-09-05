@@ -3001,6 +3001,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.TemplateCategory).HasMaxLength(64).IsRequired();
             e.Property(x => x.TemplateComponentsJson).HasColumnType("jsonb").IsRequired();
             e.Property(x => x.TemplateFingerprint).HasMaxLength(64).IsRequired();
+            e.Property(x => x.HeaderMediaId).HasMaxLength(200);
             e.Property(x => x.AudienceFilterJson).HasColumnType("jsonb").IsRequired();
             e.Property(x => x.VariableMappingsJson).HasColumnType("jsonb").IsRequired();
             e.Property(x => x.AudienceFingerprint).HasMaxLength(64).IsRequired();

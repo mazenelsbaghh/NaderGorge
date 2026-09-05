@@ -687,11 +687,22 @@ export const liveSupportService = {
     return response.data.data;
   },
 
+  uploadWhatsAppCampaignHeaderImage: async (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    const response = await apiClient.post<ApiResponse<{ mediaId: string; fileName: string }>>(
+      '/live-support/whatsapp/campaigns/media/header-image', body,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data.data;
+  },
+
   previewWhatsAppCampaignAudience: async (payload: {
     templateId: string;
     filters: WhatsAppCampaignAudienceFilters;
     variableMappings: WhatsAppCampaignVariableMapping[];
     spreadsheetRows?: WhatsAppCampaignSpreadsheetRow[];
+    headerMediaId?: string;
   }, signal?: AbortSignal) => {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignAudiencePreview>>(
       '/live-support/whatsapp/campaigns/audience/preview',
@@ -708,6 +719,7 @@ export const liveSupportService = {
     filters: WhatsAppCampaignAudienceFilters;
     variableMappings: WhatsAppCampaignVariableMapping[];
     spreadsheetRows?: WhatsAppCampaignSpreadsheetRow[];
+    headerMediaId?: string;
   }, idempotencyKey = createClientId()) => {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignDraft>>(
       '/live-support/whatsapp/campaigns/drafts',

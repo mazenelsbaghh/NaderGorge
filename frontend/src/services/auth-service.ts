@@ -79,7 +79,10 @@ export interface CurrentSessionSnapshot {
 
 export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
-  login: (data: LoginData) => apiClient.post('/auth/login', data),
+  // LoginForm renders the server's authentication error beside the fields.
+  // Suppress the global interceptor toast so an expected 401 is not also
+  // presented as a misleading network failure.
+  login: (data: LoginData) => apiClient.post('/auth/login', data, { suppressErrorToast: true }),
   refresh: () => apiClient.post('/auth/refresh', {}),
   getCurrentSession: () => apiClient.get<{ data: CurrentSessionSnapshot }>('/auth/session'),
   logout: () => apiClient.post('/auth/logout', {}),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   adminService,
   type LessonCockpitVideoDto,
@@ -93,6 +93,11 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [bunnyPlaybackMode, setBunnyPlaybackMode] = useState<BunnyPlaybackSelection>(() => editingVideo?.bunnyPlaybackMode ?? 0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sourceChangeConfirmationOpen, setSourceChangeConfirmationOpen] = useState(false);
+
+  useEffect(() => {
+    if (!editingVideo) return;
+    setBunnyPlaybackMode(editingVideo.bunnyPlaybackMode ?? 0);
+  }, [editingVideo, editingVideo?.bunnyPlaybackMode]);
 
   const isBunny = provider === 'bunny';
   const bunnyReference = isBunny && bunnyMode === 'manual'

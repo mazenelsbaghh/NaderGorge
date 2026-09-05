@@ -9,6 +9,9 @@ using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -67,6 +70,42 @@ public sealed partial class WhatsAppCampaignService
         public int ExcludedCount => Exclusions.Values.Sum();
     }
 
+    public async Task<WhatsAppCampaignMediaUploadDto> UploadHeaderImageAsync(
+        Stream stream, string fileName, string contentType, long sizeBytes, CancellationToken ct)
+    {
+        if (_cloud is null) throw Invalid("خدمة واتساب غير متاحة لرفع الصورة.");
+        if (sizeBytes is <= 0 or > 5 * 1024 * 1024)
+            throw Invalid("حجم الصورة يجب ألا يتجاوز 5 ميجابايت.");
+        await using var input = new MemoryStream();
+        await stream.CopyToAsync(input, ct);
+        try
+        {
+            var validation = UploadFileSafety.Validate(input.ToArray(), fileName, contentType, SafeUploadKind.PublicImage);
+            using var image = Image.Load(input.ToArray());
+            if (image.Width > 2048 || image.Height > 2048)
+                image.Mutate(operation => operation.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(2048, 2048) }));
+            await using var jpeg = new MemoryStream();
+            await image.SaveAsJpegAsync(jpeg, new JpegEncoder { Quality = 88 }, ct);
+            var mediaId = await _cloud.UploadTemplateHeaderImageAsync(jpeg.ToArray(),
+                Path.GetFileNameWithoutExtension(validation.DisplayFileName) + ".jpg", ct);
+            return new WhatsAppCampaignMediaUploadDto(mediaId, validation.DisplayFileName);
+        }
+        catch (ImageFormatException)
+        {
+            throw Invalid("ملف الصورة غير صالح.");
+        }
+        catch (InvalidUploadContentException)
+        {
+            throw Invalid("ارفع صورة JPG أو PNG أو WebP صالحة.");
+        }
+        catch (WhatsAppCloudService.WhatsAppCloudException)
+        {
+            throw new WhatsAppCampaignException(
+                WhatsAppCampaignErrorCodes.InvalidRequest,
+                "تعذر رفع الصورة إلى واتساب. أعد المحاولة.", 502);
+        }
+    }
+
     public async Task<WhatsAppCampaignPreviewDto> PreviewAsync(
         WhatsAppCampaignPreviewRequest request,
         CancellationToken ct)
@@ -77,7 +116,7 @@ public sealed partial class WhatsAppCampaignService
             ?? throw new WhatsAppCampaignException(
                 WhatsAppCampaignErrorCodes.TemplateInvalid, "قالب واتساب غير موجود.", 404);
         var audience = await BuildRequestedAudienceAsync(
-            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, ct);
+            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, request.HeaderMediaId, ct);
         var samples = audience.Recipients.Take(5).Select(recipient =>
             new WhatsAppCampaignMaskedRecipientDto(
                 MaskName(recipient.StudentName),
@@ -126,7 +165,7 @@ public sealed partial class WhatsAppCampaignService
                 WhatsAppCampaignErrorCodes.TemplateInvalid, "قالب واتساب غير موجود.", 404);
         WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(template);
         var audience = await BuildRequestedAudienceAsync(
-            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, ct);
+            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, request.HeaderMediaId, ct);
         if (!string.Equals(audience.Fingerprint, request.AudienceFingerprint, StringComparison.Ordinal))
             throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
                 "تغير الجمهور منذ المعاينة؛ اعرض المعاينة من جديد.");
@@ -154,6 +193,7 @@ public sealed partial class WhatsAppCampaignService
             TemplateCategory = template.Category,
             TemplateComponentsJson = template.ComponentsJson,
             TemplateFingerprint = template.Fingerprint,
+            HeaderMediaId = request.HeaderMediaId,
             AudienceFilterJson = request.SpreadsheetRows is { Count: > 0 }
                 ? JsonSerializer.Serialize(new WhatsAppCampaignAudienceFilterDto(ContactRoles: ["Spreadsheet"]), JsonOptions)
                 : JsonSerializer.Serialize(request.Filters, JsonOptions),
@@ -236,6 +276,7 @@ public sealed partial class WhatsAppCampaignService
         LiveSupportWhatsAppTemplate template,
         WhatsAppCampaignAudienceFilterDto filters,
         IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
+        string? headerMediaId,
         CancellationToken ct)
     {
         if (filters is null || mappings is null)
@@ -335,7 +376,7 @@ public sealed partial class WhatsAppCampaignService
                 continue;
             }
             var components = WhatsAppCampaignTemplatePolicy.ProviderComponents(
-                campaignTemplate, resolvedParameters);
+                campaignTemplate, resolvedParameters, headerMediaId);
             var payloadJson = SerializeFrozenRecipientPayload(
                 new FrozenRecipientPayload(item.E164, components));
             var maskedPreviewValues = MaskPreviewValues(canonicalMappings, resolvedParameters);

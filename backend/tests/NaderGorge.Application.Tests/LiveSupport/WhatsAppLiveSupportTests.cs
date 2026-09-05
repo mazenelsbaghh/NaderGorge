@@ -401,6 +401,7 @@ public sealed class WhatsAppLiveSupportTests
             "progress_template",
             "ar",
             [
+                new WhatsAppCloudService.TemplateComponent("HEADER", ["media-123"], "image"),
                 new WhatsAppCloudService.TemplateComponent("BODY", ["Mazen", "95%"]),
                 new WhatsAppCloudService.TemplateComponent("BUTTON", ["student-token"], "text", "url", 0)
             ]), CancellationToken.None);
@@ -408,14 +409,18 @@ public sealed class WhatsAppLiveSupportTests
         Assert.True(response.Success);
         using var request = JsonDocument.Parse(Assert.IsType<string>(handler.Body));
         var components = request.RootElement.GetProperty("template").GetProperty("components");
-        var body = components[0];
+        var header = components[0];
+        Assert.Equal("header", header.GetProperty("type").GetString());
+        Assert.Equal("image", header.GetProperty("parameters")[0].GetProperty("type").GetString());
+        Assert.Equal("media-123", header.GetProperty("parameters")[0].GetProperty("image").GetProperty("id").GetString());
+        var body = components[1];
         Assert.Equal("body", body.GetProperty("type").GetString());
         Assert.False(body.TryGetProperty("sub_type", out _));
         Assert.False(body.TryGetProperty("index", out _));
         Assert.Equal("text", body.GetProperty("parameters")[0].GetProperty("type").GetString());
         Assert.Equal("Mazen", body.GetProperty("parameters")[0].GetProperty("text").GetString());
         Assert.Equal("95%", body.GetProperty("parameters")[1].GetProperty("text").GetString());
-        var button = components[1];
+        var button = components[2];
         Assert.Equal("button", button.GetProperty("type").GetString());
         Assert.Equal("url", button.GetProperty("sub_type").GetString());
         Assert.Equal("0", button.GetProperty("index").GetString());

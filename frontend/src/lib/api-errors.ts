@@ -16,6 +16,10 @@ const REGISTRATION_ERROR_RULES: ReadonlyArray<{
   message: string;
 }> = [
   {
+    matches: (message) => message.includes('invalid phone number or password'),
+    message: 'رقم الهاتف أو كلمة المرور غير صحيحة.',
+  },
+  {
     matches: (message) =>
       message.includes('phone number already registered') ||
       message.includes('رقم الهاتف الأساسي مسجل بالفعل') ||

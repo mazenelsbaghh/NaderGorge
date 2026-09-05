@@ -25,7 +25,8 @@ internal sealed record WhatsAppCampaignTemplateComponent(
     string PreviewText,
     IReadOnlyList<WhatsAppTemplateParameterRequirement> Parameters,
     string? ButtonSubType = null,
-    int? ButtonIndex = null);
+    int? ButtonIndex = null,
+    string? MediaFormat = null);
 
 internal sealed record WhatsAppCampaignTemplate(
     IReadOnlyList<WhatsAppCampaignTemplateComponent> Components)
@@ -104,9 +105,18 @@ internal static partial class WhatsAppCampaignTemplatePolicy
 
     public static IReadOnlyList<WhatsAppCloudService.TemplateComponent> ProviderComponents(
         WhatsAppCampaignTemplate template,
-        IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> resolvedParameters) =>
-        template.Components.Where(component => component.Parameters.Count > 0)
-            .Select(component => ProviderComponent(component, resolvedParameters)).ToArray();
+        IReadOnlyDictionary<WhatsAppTemplateParameterKey, string> resolvedParameters,
+        string? headerMediaId = null)
+    {
+        if (template.Components.Any(component => component.MediaFormat is not null) &&
+            (string.IsNullOrWhiteSpace(headerMediaId) || headerMediaId.Length > 200 || headerMediaId.Any(char.IsControl)))
+            throw InvalidTemplate("ارفع صورة رأس القالب قبل المعاينة.");
+        return template.Components
+            .Where(component => component.Parameters.Count > 0 || component.MediaFormat is not null)
+            .Select(component => component.MediaFormat is not null
+                ? new WhatsAppCloudService.TemplateComponent("HEADER", [headerMediaId!], component.MediaFormat.ToLowerInvariant())
+                : ProviderComponent(component, resolvedParameters)).ToArray();
+    }
 
     public static string RenderPreview(
         WhatsAppCampaignTemplate template,
@@ -166,8 +176,10 @@ internal static partial class WhatsAppCampaignTemplatePolicy
         int componentIndex)
     {
         var format = (OptionalString(component, "format") ?? "TEXT").ToUpperInvariant();
+        if (format == "IMAGE")
+            return new WhatsAppCampaignTemplateComponent("HEADER", componentIndex, "صورة رأس الرسالة", [], MediaFormat: "IMAGE");
         if (format != "TEXT")
-            throw InvalidTemplate("رأس القالب الإعلامي يحتاج مصدر وسائط معتمدًا قبل استخدامه في حملة.");
+            throw InvalidTemplate("الحملات تدعم رأس القالب النصي أو صورة فقط.");
         return ParseText(component, "HEADER", componentIndex);
     }
 

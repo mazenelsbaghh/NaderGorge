@@ -55,6 +55,19 @@ test('generic API validation toast uses the detailed Arabic message', () => {
   assert.equal(summary, 'اختر الشعبة أو التخصص المناسب للصف الدراسي.');
 });
 
+test('production login rejection from 2026-09-05 identifies invalid credentials', () => {
+  const summary = getApiErrorSummary({
+    response: {
+      status: 401,
+      data: {
+        message: 'Invalid phone number or password',
+      },
+    },
+  });
+
+  assert.equal(summary, 'رقم الهاتف أو كلمة المرور غير صحيحة.');
+});
+
 test('production Bunny not-ready response from 2026-09-01 shows its Arabic guidance instead of the machine code', () => {
   const summary = getApiErrorSummary({
     response: {

@@ -33,6 +33,19 @@ public sealed class WhatsAppCampaignController(IWhatsAppCampaignService campaign
             return await campaigns.InspectSpreadsheetAsync(stream, file.FileName, ct);
         });
 
+    [HttpPost("campaigns/media/header-image")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public Task<IActionResult> UploadHeaderImage(IFormFile file, CancellationToken ct) =>
+        ExecuteAsync(async () =>
+        {
+            if (file is null || file.Length == 0)
+                throw new WhatsAppCampaignException(
+                    WhatsAppCampaignErrorCodes.InvalidRequest, "اختر صورة غير فارغة.");
+            await using var stream = file.OpenReadStream();
+            return await campaigns.UploadHeaderImageAsync(
+                stream, file.FileName, file.ContentType, file.Length, ct);
+        });
+
     [HttpPost("campaigns/audience/preview")]
     public Task<IActionResult> Preview(WhatsAppCampaignPreviewRequest request, CancellationToken ct) =>
         ExecuteAsync(async () => await campaigns.PreviewAsync(request, ct));

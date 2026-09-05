@@ -69,11 +69,14 @@ test('a static phone button needs no mapping', () => {
   assert.deepEqual(support.parameters, []);
 });
 
-test('media headers and button types without a safe send contract fail closed', () => {
+test('image headers use the campaign media upload contract', () => {
   assert.equal(inspectCampaignTemplate({
     ...approvedTextTemplate,
     components: [{ type: 'HEADER', format: 'IMAGE' }, { type: 'BODY', text: 'خبر جديد' }],
-  }).supported, false);
+  }).supported, true);
+});
+
+test('button types without a safe send contract fail closed', () => {
   for (const buttonType of ['QUICK_REPLY', 'FLOW', 'COPY_CODE']) {
     assert.equal(inspectCampaignTemplate({
       ...approvedTextTemplate,

@@ -12,17 +12,19 @@ public sealed partial class WhatsAppCampaignService
         WhatsAppCampaignAudienceFilterDto filters,
         IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
         IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? spreadsheetRows,
+        string? headerMediaId,
         CancellationToken ct)
     {
         return spreadsheetRows is { Count: > 0 }
-            ? await BuildSpreadsheetAudienceAsync(template, mappings, spreadsheetRows, ct)
-            : await BuildAudienceAsync(template, filters, mappings, ct);
+            ? await BuildSpreadsheetAudienceAsync(template, mappings, spreadsheetRows, headerMediaId, ct)
+            : await BuildAudienceAsync(template, filters, mappings, headerMediaId, ct);
     }
 
     private async Task<AudienceBuildResult> BuildSpreadsheetAudienceAsync(
         LiveSupportWhatsAppTemplate template,
         IReadOnlyList<WhatsAppCampaignVariableMappingDto> mappings,
         IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto> rows,
+        string? headerMediaId,
         CancellationToken ct)
     {
         if (rows.Count > MaximumAudienceRows)
@@ -35,7 +37,7 @@ public sealed partial class WhatsAppCampaignService
         var normalizedRows = NormalizeSpreadsheetRows(rows, exclusions);
         var preferences = await SpreadsheetPreferencesAsync(normalizedRows, ct);
         var sendable = ResolveSpreadsheetRecipients(
-            campaignTemplate, canonicalMappings, normalizedRows, preferences, template.Category, exclusions);
+            campaignTemplate, canonicalMappings, normalizedRows, preferences, template.Category, headerMediaId, exclusions);
         var recipients = DeduplicateSpreadsheetRecipients(sendable, exclusions);
         var fingerprint = SpreadsheetAudienceFingerprint(template, canonicalMappings, recipients);
         return new AudienceBuildResult(recipients, exclusions, fingerprint);
@@ -116,6 +118,7 @@ public sealed partial class WhatsAppCampaignService
         IReadOnlyList<SpreadsheetContact> rows,
         IReadOnlyDictionary<string, WhatsAppContactPreference[]> preferences,
         string templateCategory,
+        string? headerMediaId,
         Dictionary<string, int> exclusions)
     {
         var recipients = new List<ResolvedAudienceRecipient>(rows.Count);
@@ -130,7 +133,7 @@ public sealed partial class WhatsAppCampaignService
             try
             {
                 var parameters = ResolveSpreadsheetValues(row.Columns, mappings);
-                var components = WhatsAppCampaignTemplatePolicy.ProviderComponents(template, parameters);
+                var components = WhatsAppCampaignTemplatePolicy.ProviderComponents(template, parameters, headerMediaId);
                 recipients.Add(new ResolvedAudienceRecipient(
                     null, $"صف {row.RowNumber}", "Spreadsheet", row.DestinationHash, row.Phone[^4..],
                     SerializeFrozenRecipientPayload(new FrozenRecipientPayload(row.Phone, components)),

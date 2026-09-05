@@ -13,12 +13,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 
 import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 import { getSurfaceOrigins, getSurfaceName } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
+import { getApiErrorSummary } from '@/lib/api-errors';
 
 export function LoginForm() {
   const { setAuth } = useAuthStore();
@@ -128,11 +128,7 @@ export function LoginForm() {
         window.location.replace(navigation.href);
       }
     } catch (error: unknown) {
-      const message = axios.isAxiosError<{ message?: string }>(error)
-        ? error.response?.data?.message
-        : undefined;
-
-      setError(message || 'فشل تسجيل الدخول. تأكد من البيانات.');
+      setError(getApiErrorSummary(error));
     } finally {
       setLoading(false);
     }

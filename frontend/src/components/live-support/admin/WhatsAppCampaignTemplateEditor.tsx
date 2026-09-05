@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Phone, RefreshCw, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, ImagePlus, LoaderCircle, Phone, RefreshCw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { formatCairoTimestamp } from '@/lib/cairo-time';
@@ -13,14 +13,15 @@ import {
   whatsAppCampaignVariableSourceLabel,
   type WhatsAppTemplateParameterRequirement,
 } from '@/lib/whatsapp-campaign';
-import type {
-  LiveSupportWhatsAppTemplate,
-  WhatsAppCampaignAudienceFilters,
-  WhatsAppCampaignFacets,
-  WhatsAppCampaignVariableMapping,
-  WhatsAppCampaignVariableSource,
+import {
+  getLiveSupportApiError,
+  liveSupportService,
+  type LiveSupportWhatsAppTemplate,
+  type WhatsAppCampaignAudienceFilters,
+  type WhatsAppCampaignFacets,
+  type WhatsAppCampaignVariableMapping,
+  type WhatsAppCampaignVariableSource,
 } from '@/services/live-support-service';
-
 interface WhatsAppCampaignTemplateEditorProps {
   templates: LiveSupportWhatsAppTemplate[];
   facets: WhatsAppCampaignFacets;
@@ -35,6 +36,8 @@ interface WhatsAppCampaignTemplateEditorProps {
   onTemplateChange: (templateId: string) => void;
   onMappingsChange: (mappings: WhatsAppCampaignVariableMapping[]) => void;
   onSync: () => void;
+  headerMediaId: string;
+  onHeaderMediaUploaded: (mediaId: string) => void;
 }
 
 export function WhatsAppCampaignTemplateEditor({
@@ -51,14 +54,36 @@ export function WhatsAppCampaignTemplateEditor({
   onTemplateChange,
   onMappingsChange,
   onSync,
+  headerMediaId,
+  onHeaderMediaUploaded,
 }: WhatsAppCampaignTemplateEditorProps) {
   const [search, setSearch] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFeedback, setImageFeedback] = useState('');
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
   const selectedSupport = selectedTemplate ? inspectCampaignTemplate(selectedTemplate) : undefined;
   const mappingErrors = selectedSupport?.supported
     ? validateWhatsAppVariableMappings(selectedSupport.parameters, mappings, audienceFilters, selectedTemplate?.category)
     : [];
   const templateSummary = useMemo(() => summarizeTemplates(templates), [templates]);
+  const needsHeaderImage = selectedTemplate?.components.some(component =>
+    (component.type ?? '').toUpperCase() === 'HEADER' &&
+    (component.format ?? 'TEXT').toUpperCase() === 'IMAGE') ?? false;
+
+  async function uploadHeaderImage(file: File | undefined) {
+    if (!file || uploadingImage) return;
+    setUploadingImage(true);
+    setImageFeedback('');
+    try {
+      const uploaded = await liveSupportService.uploadWhatsAppCampaignHeaderImage(file);
+      onHeaderMediaUploaded(uploaded.mediaId);
+      setImageFeedback(`تم تجهيز الصورة: ${uploaded.fileName}`);
+    } catch (cause) {
+      setImageFeedback(getLiveSupportApiError(cause, 'تعذر رفع الصورة إلى واتساب.'));
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   const visibleTemplates = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('ar-EG');
@@ -185,6 +210,24 @@ export function WhatsAppCampaignTemplateEditor({
             </div>
           )}
         </fieldset>
+
+        {selectedTemplate && selectedSupport?.supported && needsHeaderImage ? (
+          <section aria-labelledby="campaign-header-image-heading" className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 id="campaign-header-image-heading" className="text-sm font-black text-[var(--admin-text)]">صورة رأس الرسالة</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">ارفع JPG أو PNG حتى 5 ميجابايت. ستُرسل الصورة داخل القالب الرسمي.</p>
+              </div>
+              <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-black text-[var(--admin-primary-contrast)] focus-within:ring-2 focus-within:ring-[var(--admin-accent)]">
+                {uploadingImage ? <LoaderCircle aria-hidden="true" size={17} className="animate-spin" /> : <ImagePlus aria-hidden="true" size={17} />}
+                {uploadingImage ? 'جارٍ تجهيز الصورة…' : headerMediaId ? 'تغيير الصورة' : 'رفع صورة'}
+                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingImage} className="sr-only" onChange={(event) => void uploadHeaderImage(event.target.files?.[0])} />
+              </label>
+            </div>
+            {imageFeedback ? <p role="status" className={`mt-3 text-xs font-bold ${headerMediaId ? 'text-[var(--admin-success)]' : 'text-[var(--admin-danger)]'}`}>{imageFeedback}</p> : null}
+            {!headerMediaId ? <p className="mt-3 text-xs font-bold text-[var(--admin-warning)]">الصورة مطلوبة قبل الانتقال إلى المعاينة.</p> : null}
+          </section>
+        ) : null}
 
         {selectedTemplate && selectedSupport?.supported ? (
           <section aria-labelledby="campaign-variables-heading">
@@ -339,7 +382,7 @@ export function WhatsAppCampaignTemplateEditor({
               <span aria-hidden="true">·</span>
               <span>{selectedTemplate.category}</span>
             </div>
-            <WhatsAppTemplatePreview template={selectedTemplate} mappings={mappings} />
+            <WhatsAppTemplatePreview template={selectedTemplate} mappings={mappings} headerMediaReady={Boolean(headerMediaId)} />
           </div>
         )}
       </aside>
@@ -350,9 +393,11 @@ export function WhatsAppCampaignTemplateEditor({
 function WhatsAppTemplatePreview({
   template,
   mappings,
+  headerMediaReady,
 }: {
   template: LiveSupportWhatsAppTemplate,
   mappings: WhatsAppCampaignVariableMapping[],
+  headerMediaReady: boolean,
 }) {
   return (
     <div className="max-h-[30rem] overflow-y-auto rounded-xl bg-[color-mix(in_srgb,var(--admin-primary-contrast)_8%,transparent)] p-3">
@@ -363,6 +408,7 @@ function WhatsAppTemplatePreview({
             component={component}
             componentIndex={componentIndex}
             mappings={mappings}
+            headerMediaReady={headerMediaReady}
           />
         ))}
       </div>
@@ -375,12 +421,21 @@ function TemplatePreviewComponent({
   component,
   componentIndex,
   mappings,
+  headerMediaReady,
 }: {
   component: LiveSupportWhatsAppTemplate['components'][number];
   componentIndex: number;
   mappings: WhatsAppCampaignVariableMapping[];
+  headerMediaReady: boolean;
 }) {
   const componentType = (component.type ?? '').toUpperCase();
+  if (componentType === 'HEADER' && (component.format ?? 'TEXT').toUpperCase() === 'IMAGE') {
+    return (
+      <div className="grid min-h-28 place-items-center bg-[var(--admin-card-soft)] px-4 text-center text-xs font-bold text-[var(--admin-muted)]">
+        <span><ImagePlus aria-hidden="true" className="mx-auto mb-2" size={24} />{headerMediaReady ? 'صورة رأس الرسالة جاهزة للإرسال' : 'ارفع صورة رأس الرسالة'}</span>
+      </div>
+    );
+  }
   if (componentType === 'BUTTONS') {
     return (
       <div className="divide-y divide-[var(--admin-border)] border-t border-[var(--admin-border)]">

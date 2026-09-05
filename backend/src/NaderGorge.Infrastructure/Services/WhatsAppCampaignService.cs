@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Npgsql;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Interfaces;
 
@@ -18,15 +19,18 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
     private readonly IAppDbContext _db;
     private readonly IWhatsAppCampaignDataProtector _protector;
     private readonly IConfiguration _configuration;
+    private readonly WhatsAppCloudService? _cloud;
 
     public WhatsAppCampaignService(
         IAppDbContext db,
         IWhatsAppCampaignDataProtector protector,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        WhatsAppCloudService? cloud = null)
     {
         _db = db;
         _protector = protector;
         _configuration = configuration;
+        _cloud = cloud;
     }
 
     public async Task<WhatsAppCampaignBootstrapDto> GetBootstrapAsync(
@@ -126,7 +130,7 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
             ?? throw Conflict(WhatsAppCampaignErrorCodes.Conflict, "تعذر استعادة متغيرات الحملة.");
         if (!IsSpreadsheetAudience(filters))
         {
-            var rebuilt = await BuildAudienceAsync(template, filters, mappings, ct);
+            var rebuilt = await BuildAudienceAsync(template, filters, mappings, campaign.HeaderMediaId, ct);
             if (!string.Equals(rebuilt.Fingerprint, campaign.AudienceFingerprint, StringComparison.Ordinal))
                 throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
                     "تغير الجمهور أو بيانات الرسالة بعد المراجعة؛ أنشئ حملة جديدة.");

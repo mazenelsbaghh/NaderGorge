@@ -7,6 +7,7 @@ public interface IWhatsAppCampaignService
     Task<WhatsAppCampaignBootstrapDto> GetBootstrapAsync(int page, int pageSize, CancellationToken ct);
     Task<WhatsAppCampaignPageDto> ListAsync(int page, int pageSize, CancellationToken ct);
     Task<WhatsAppCampaignSpreadsheetInspectionDto> InspectSpreadsheetAsync(Stream stream, string fileName, CancellationToken ct);
+    Task<WhatsAppCampaignMediaUploadDto> UploadHeaderImageAsync(Stream stream, string fileName, string contentType, long sizeBytes, CancellationToken ct);
     Task<WhatsAppCampaignPreviewDto> PreviewAsync(WhatsAppCampaignPreviewRequest request, CancellationToken ct);
     Task<WhatsAppCampaignDraftDto> CreateDraftAsync(Guid actorUserId, string idempotencyKey, CreateWhatsAppCampaignDraftRequest request, CancellationToken ct);
     Task<WhatsAppCampaignStateDto> LaunchAsync(Guid actorUserId, Guid campaignId, LaunchWhatsAppCampaignRequest request, CancellationToken ct);

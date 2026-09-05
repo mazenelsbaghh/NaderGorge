@@ -528,6 +528,14 @@ export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false,
                         مكتبة: {video.bunnyLibrary.name} · {video.bunnyLibrary.libraryId}
                       </span>
                     )}
+                    {video.provider.toLowerCase() === 'bunny' && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-black ${video.bunnyPlaybackMode === 1
+                        ? 'border-teal-500/25 bg-teal-500/10 text-teal-700 dark:text-teal-300'
+                        : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'
+                      }`}>
+                        المشغل: {video.bunnyPlaybackMode === 1 ? 'المنصة HLS' : 'Bunny الأصلي'}
+                      </span>
+                    )}
                     {video.provider.toLowerCase() === 'bunny' && video.bunnyStatus && (
                       <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedBunnyStatus === 'ready'
                         ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'

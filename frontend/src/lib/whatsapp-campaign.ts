@@ -28,6 +28,12 @@ interface WhatsAppTemplateInspectionSuccess {
   parameters: WhatsAppTemplateParameterRequirement[];
 }
 
+export function whatsAppTemplateNeedsHeaderImage(template: LiveSupportWhatsAppTemplate | undefined) {
+  return template?.components.some(component =>
+    (component.type ?? '').toUpperCase() === 'HEADER' &&
+    (component.format ?? 'TEXT').toUpperCase() === 'IMAGE') ?? false;
+}
+
 export type WhatsAppCampaignTemplateSupport =
   | WhatsAppTemplateInspectionFailure
   | WhatsAppTemplateInspectionSuccess;
@@ -175,8 +181,11 @@ function inspectTemplateComponent(
   if (!['HEADER', 'BODY', 'FOOTER', 'BUTTONS'].includes(componentType)) {
     return unsupportedTemplate('القالب يحتوي مكوّنًا لا يمكن إرساله بأمان من مركز الحملات.');
   }
+  if (componentType === 'HEADER' && (component.format ?? 'TEXT').toUpperCase() === 'IMAGE') {
+    return { supported: true, parameters: [], componentType };
+  }
   if (componentType === 'HEADER' && (component.format ?? 'TEXT').toUpperCase() !== 'TEXT') {
-    return unsupportedTemplate('رأس القالب يحتوي وسائط ولا يوجد له مصدر وسائط معتمد داخل الحملات.');
+    return unsupportedTemplate('الحملات تدعم رأس القالب النصي أو صورة فقط.');
   }
   const inspection = componentType === 'BUTTONS'
     ? inspectTemplateButtons(component.buttons, componentIndex)

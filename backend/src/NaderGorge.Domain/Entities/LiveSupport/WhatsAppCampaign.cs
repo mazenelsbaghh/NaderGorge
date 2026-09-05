@@ -55,6 +55,7 @@ public sealed class WhatsAppCampaign : BaseEntity
     public string TemplateCategory { get; set; } = string.Empty;
     public string TemplateComponentsJson { get; set; } = "[]";
     public string TemplateFingerprint { get; set; } = string.Empty;
+    public string? HeaderMediaId { get; set; }
     public string AudienceFilterJson { get; set; } = "{}";
     public string VariableMappingsJson { get; set; } = "[]";
     public string AudienceFingerprint { get; set; } = string.Empty;

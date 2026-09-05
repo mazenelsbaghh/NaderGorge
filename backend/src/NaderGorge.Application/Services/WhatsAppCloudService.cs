@@ -303,6 +303,18 @@ public sealed class WhatsAppCloudService
         return await PostMessageAsync(payload, recipient, cancellationToken);
     }
 
+    public async Task<string> UploadTemplateHeaderImageAsync(
+        byte[] content,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        var result = await UploadMediaAsync(new MediaMessageRequest(
+            string.Empty, "image", fileName, "image/jpeg", content, null), cancellationToken);
+        if (!result.Success || string.IsNullOrWhiteSpace(result.MetaMessageId))
+            throw new WhatsAppCloudException(result.ErrorCode ?? "WHATSAPP_MEDIA_UPLOAD_FAILED", result.StatusCode, result.IsRetryable);
+        return result.MetaMessageId;
+    }
+
     public static bool IsSafeTemplateUrl(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var parsed) &&
         parsed.Scheme == Uri.UriSchemeHttps &&
@@ -342,6 +354,21 @@ public sealed class WhatsAppCloudService
         string type,
         TemplateComponent component)
     {
+        if (string.Equals(component.ParameterType, "image", StringComparison.OrdinalIgnoreCase) &&
+            type == "HEADER" && component.Parameters.Count == 1 &&
+            component.SubType is null && component.Index is null)
+            return new Dictionary<string, object>
+            {
+                ["type"] = "header",
+                ["parameters"] = new object[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["type"] = "image",
+                        ["image"] = new Dictionary<string, string> { ["id"] = component.Parameters[0] }
+                    }
+                }
+            };
         if (!string.Equals(component.ParameterType, "text", StringComparison.OrdinalIgnoreCase) ||
             component.SubType is not null || component.Index is not null)
             return null;

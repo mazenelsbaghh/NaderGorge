@@ -18,6 +18,9 @@ internal class StubWhatsAppCampaignService : IWhatsAppCampaignService
         throw new NotSupportedException();
     public Task<WhatsAppCampaignSpreadsheetInspectionDto> InspectSpreadsheetAsync(
         Stream stream, string fileName, CancellationToken ct) => throw new NotSupportedException();
+    public Task<WhatsAppCampaignMediaUploadDto> UploadHeaderImageAsync(
+        Stream stream, string fileName, string contentType, long sizeBytes, CancellationToken ct) =>
+        throw new NotSupportedException();
     public Task<WhatsAppCampaignPreviewDto> PreviewAsync(WhatsAppCampaignPreviewRequest request, CancellationToken ct) =>
         throw new NotSupportedException();
     public Task<WhatsAppCampaignDraftDto> CreateDraftAsync(Guid actorUserId, string idempotencyKey,

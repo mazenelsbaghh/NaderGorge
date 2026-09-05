@@ -28,6 +28,7 @@ import {
   maskWhatsAppDestination,
   validateWhatsAppAudienceFilters,
   validateWhatsAppVariableMappings,
+  whatsAppTemplateNeedsHeaderImage,
 } from '@/lib/whatsapp-campaign';
 import {
   getLiveSupportApiError,
@@ -108,6 +109,7 @@ export function WhatsAppCampaignStudio({
   const [phoneColumn, setPhoneColumn] = useState('');
   const [spreadsheetRows, setSpreadsheetRows] = useState<WhatsAppCampaignSpreadsheetRow[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [headerMediaId, setHeaderMediaId] = useState('');
   const [mappings, setMappings] = useState<WhatsAppCampaignVariableMapping[]>([]);
   const [filters, setFilters] = useState<WhatsAppCampaignAudienceFilters>(() => createEmptyWhatsAppAudienceFilters());
   const [preview, setPreview] = useState<WhatsAppCampaignAudiencePreview>();
@@ -132,11 +134,13 @@ export function WhatsAppCampaignStudio({
   const selectedTemplate = availableTemplates.find((template) => template.id === selectedTemplateId);
   const selectedTemplateFingerprint = selectedTemplate?.fingerprint ?? '';
   const templateSupport = selectedTemplate ? inspectCampaignTemplate(selectedTemplate) : undefined;
+  const needsHeaderImage = whatsAppTemplateNeedsHeaderImage(selectedTemplate);
   const mappingErrors = templateSupport?.supported
     ? validateWhatsAppVariableMappings(templateSupport.parameters, mappings, filters, selectedTemplate?.category)
     : ['اختر قالبًا نصيًا معتمدًا.'];
   const audienceErrors = validateWhatsAppAudienceFilters(filters);
   const templateStepValid = Boolean(selectedTemplate && templateSupport?.supported && mappingErrors.length === 0 &&
+    (!needsHeaderImage || headerMediaId) &&
     (audienceSource === 'platform' || spreadsheetRows.length > 0));
   const audienceStepValid = audienceSource === 'spreadsheet'
     ? spreadsheetRows.length > 0
@@ -192,6 +196,7 @@ export function WhatsAppCampaignStudio({
         filters,
         variableMappings: mappings,
         spreadsheetRows: audienceSource === 'spreadsheet' ? spreadsheetRows : undefined,
+        headerMediaId: headerMediaId || undefined,
       }, controller.signal).then((nextPreview) => {
         if (previewAbortRef.current !== controller) return;
         setPreview(nextPreview);
@@ -209,7 +214,7 @@ export function WhatsAppCampaignStudio({
       requestController?.abort();
       if (previewAbortRef.current === requestController) previewAbortRef.current = undefined;
     };
-  }, [audienceSource, audienceStepValid, filters, mappings, selectedTemplateFingerprint, selectedTemplateId, spreadsheetRows, step, templateStepValid]);
+  }, [audienceSource, audienceStepValid, filters, headerMediaId, mappings, selectedTemplateFingerprint, selectedTemplateId, spreadsheetRows, step, templateStepValid]);
 
   useEffect(() => () => previewAbortRef.current?.abort(), []);
 
@@ -244,6 +249,7 @@ export function WhatsAppCampaignStudio({
   function selectTemplate(templateId: string) {
     setSelectedTemplateId(templateId);
     setMappings([]);
+    setHeaderMediaId('');
     invalidateReview();
   }
 
@@ -313,6 +319,7 @@ export function WhatsAppCampaignStudio({
         filters,
         variableMappings: mappings,
         spreadsheetRows: audienceSource === 'spreadsheet' ? spreadsheetRows : undefined,
+        headerMediaId: headerMediaId || undefined,
       }, draftIdempotencyRef.current);
       setFrozenDraft(nextDraft);
       setConfirmationPhrase('');
@@ -381,6 +388,7 @@ export function WhatsAppCampaignStudio({
     setPhoneColumn('');
     setSpreadsheetRows([]);
     setSelectedTemplateId('');
+    setHeaderMediaId('');
     setMappings([]);
     setFilters(createEmptyWhatsAppAudienceFilters());
     setPreview(undefined);
@@ -525,6 +533,11 @@ export function WhatsAppCampaignStudio({
                     onTemplateChange={selectTemplate}
                     onMappingsChange={updateMappings}
                     onSync={onSyncTemplates}
+                    headerMediaId={headerMediaId}
+                    onHeaderMediaUploaded={(mediaId) => {
+                      setHeaderMediaId(mediaId);
+                      invalidateReview();
+                    }}
                   />
                   </div>
                 ) : null}
