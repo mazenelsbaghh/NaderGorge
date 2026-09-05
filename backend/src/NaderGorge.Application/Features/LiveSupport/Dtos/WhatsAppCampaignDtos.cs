@@ -45,13 +45,30 @@ public sealed record WhatsAppCampaignVariableMappingDto(
     Guid? ReferenceId = null,
     string? Format = null,
     int? ComponentIndex = null,
-    int? ButtonIndex = null);
+    int? ButtonIndex = null,
+    string? ColumnName = null);
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record WhatsAppCampaignSpreadsheetRowDto(
+    int RowNumber,
+    string Phone,
+    IReadOnlyDictionary<string, string> Columns);
+
+public sealed record WhatsAppCampaignImportedRowDto(
+    int RowNumber,
+    IReadOnlyDictionary<string, string> Columns);
+
+public sealed record WhatsAppCampaignSpreadsheetInspectionDto(
+    string FileName,
+    IReadOnlyList<string> Headers,
+    IReadOnlyList<WhatsAppCampaignImportedRowDto> Rows);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record WhatsAppCampaignPreviewRequest(
     Guid TemplateId,
     WhatsAppCampaignAudienceFilterDto Filters,
-    IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings);
+    IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings,
+    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null);
 
 public sealed record WhatsAppCampaignMaskedRecipientDto(
     string MaskedName,
@@ -74,7 +91,8 @@ public sealed record CreateWhatsAppCampaignDraftRequest(
     Guid TemplateId,
     string AudienceFingerprint,
     WhatsAppCampaignAudienceFilterDto Filters,
-    IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings);
+    IReadOnlyList<WhatsAppCampaignVariableMappingDto> VariableMappings,
+    IReadOnlyList<WhatsAppCampaignSpreadsheetRowDto>? SpreadsheetRows = null);
 
 public sealed record WhatsAppCampaignTemplateSnapshotDto(
     Guid Id,

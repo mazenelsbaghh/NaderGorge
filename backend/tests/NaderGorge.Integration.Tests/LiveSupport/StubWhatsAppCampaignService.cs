@@ -12,6 +12,7 @@ internal sealed class StubWhatsAppCampaignService : IWhatsAppCampaignService
         DateTime providerTimestamp, string? failureCode, CancellationToken ct) => Task.FromResult(false);
     public Task<WhatsAppCampaignBootstrapDto> GetBootstrapAsync(int page, int pageSize, CancellationToken ct) => throw new NotSupportedException();
     public Task<WhatsAppCampaignPageDto> ListAsync(int page, int pageSize, CancellationToken ct) => throw new NotSupportedException();
+    public Task<WhatsAppCampaignSpreadsheetInspectionDto> InspectSpreadsheetAsync(Stream stream, string fileName, CancellationToken ct) => throw new NotSupportedException();
     public Task<WhatsAppCampaignPreviewDto> PreviewAsync(WhatsAppCampaignPreviewRequest request, CancellationToken ct) => throw new NotSupportedException();
     public Task<WhatsAppCampaignDraftDto> CreateDraftAsync(Guid actorUserId, string idempotencyKey, CreateWhatsAppCampaignDraftRequest request, CancellationToken ct) => throw new NotSupportedException();
     public Task<WhatsAppCampaignStateDto> LaunchAsync(Guid actorUserId, Guid campaignId, LaunchWhatsAppCampaignRequest request, CancellationToken ct) => throw new NotSupportedException();

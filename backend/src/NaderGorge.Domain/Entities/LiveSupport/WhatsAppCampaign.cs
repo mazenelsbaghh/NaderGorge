@@ -92,7 +92,7 @@ public sealed class WhatsAppCampaign : BaseEntity
 public sealed class WhatsAppCampaignRecipient : BaseEntity
 {
     public Guid CampaignId { get; set; }
-    public Guid StudentUserId { get; set; }
+    public Guid? StudentUserId { get; set; }
     public string ContactRole { get; set; } = "StudentPrimary";
     public string DestinationHash { get; set; } = string.Empty;
     public string DestinationLast4 { get; set; } = string.Empty;

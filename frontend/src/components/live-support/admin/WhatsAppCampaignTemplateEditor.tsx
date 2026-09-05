@@ -30,6 +30,8 @@ interface WhatsAppCampaignTemplateEditorProps {
   syncFeedback: string;
   canUsePurchaseDate: boolean;
   audienceFilters: WhatsAppCampaignAudienceFilters;
+  audienceSource: 'platform' | 'spreadsheet';
+  spreadsheetHeaders: string[];
   onTemplateChange: (templateId: string) => void;
   onMappingsChange: (mappings: WhatsAppCampaignVariableMapping[]) => void;
   onSync: () => void;
@@ -44,6 +46,8 @@ export function WhatsAppCampaignTemplateEditor({
   syncFeedback,
   canUsePurchaseDate,
   audienceFilters,
+  audienceSource,
+  spreadsheetHeaders,
   onTemplateChange,
   onMappingsChange,
   onSync,
@@ -80,6 +84,7 @@ export function WhatsAppCampaignTemplateEditor({
       literalValue: existing?.literalValue ?? null,
       referenceId: existing?.referenceId ?? null,
       format: existing?.format ?? null,
+      columnName: existing?.columnName ?? null,
       ...change,
     };
     onMappingsChange([
@@ -201,12 +206,20 @@ export function WhatsAppCampaignTemplateEditor({
               <div className="space-y-3">
                 {selectedSupport.parameters.map((parameter) => {
                   const mapping = mappings.find((candidate) => mappingMatchesRequirement(candidate, parameter));
-                  const availableSources = availableWhatsAppCampaignVariableSources(
-                    selectedTemplate.category,
-                    parameter.parameterType,
-                  );
+                  const availableSources = audienceSource === 'spreadsheet' && parameter.parameterType === 'TEXT'
+                    ? [
+                        { value: 'SpreadsheetColumn' as const, label: 'عمود من الشيت' },
+                        { value: 'Literal' as const, label: 'نص ثابت' },
+                      ]
+                    : availableWhatsAppCampaignVariableSources(
+                        selectedTemplate.category,
+                        parameter.parameterType,
+                      );
                   const sourceDefinition = availableSources.find((source) => source.value === mapping?.source);
-                  const referenceOptions = sourceDefinition?.referenceFacet ? facets[sourceDefinition.referenceFacet] : [];
+                  const referenceFacet = sourceDefinition && 'referenceFacet' in sourceDefinition
+                    ? sourceDefinition.referenceFacet
+                    : undefined;
+                  const referenceOptions = referenceFacet ? facets[referenceFacet] : [];
                   const selectedSource = availableSources.some((source) => source.value === mapping?.source)
                     ? mapping?.source
                     : '';
@@ -234,6 +247,7 @@ export function WhatsAppCampaignTemplateEditor({
                               updateMapping(parameter, {
                                 source,
                                 literalValue: null,
+                                columnName: null,
                                 referenceId: source === 'PurchaseDate' && canUsePurchaseDate
                                   ? audienceFilters.packageIds[0]
                                   : null,
@@ -250,7 +264,19 @@ export function WhatsAppCampaignTemplateEditor({
                             ))}
                           </select>
                         </label>
-                        {mapping?.source === 'Literal' ? (
+                        {mapping?.source === 'SpreadsheetColumn' ? (
+                          <label className="min-w-0">
+                            <span className="sr-only">عمود الشيت لمتغير {parameter.parameterIndex}</span>
+                            <select
+                              value={mapping.columnName ?? ''}
+                              onChange={(event) => updateMapping(parameter, { columnName: event.target.value || null })}
+                              className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
+                            >
+                              <option value="">اختر العمود</option>
+                              {spreadsheetHeaders.map((header) => <option key={header} value={header}>{header}</option>)}
+                            </select>
+                          </label>
+                        ) : mapping?.source === 'Literal' ? (
                           <label className="min-w-0">
                             <span className="sr-only">النص الثابت في {requirementLabel(parameter)}، متغير {parameter.parameterIndex}</span>
                             <input
@@ -262,7 +288,7 @@ export function WhatsAppCampaignTemplateEditor({
                               className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
                             />
                           </label>
-                        ) : sourceDefinition?.referenceFacet ? (
+                        ) : referenceFacet ? (
                           <label className="min-w-0">
                             <span className="sr-only">القيمة المرجعية في {requirementLabel(parameter)}، متغير {parameter.parameterIndex}</span>
                             <select
@@ -270,7 +296,7 @@ export function WhatsAppCampaignTemplateEditor({
                               onChange={(event) => updateMapping(parameter, { referenceId: event.target.value || null })}
                               className="min-h-11 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)] focus:ring-2 focus:ring-[var(--admin-accent-soft)]"
                             >
-                              <option value="">اختر {sourceDefinition.label}</option>
+                              <option value="">اختر {sourceDefinition?.label}</option>
                               {referenceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                             </select>
                           </label>

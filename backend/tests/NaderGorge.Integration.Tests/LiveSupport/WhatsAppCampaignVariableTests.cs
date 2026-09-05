@@ -14,6 +14,53 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 public sealed class WhatsAppCampaignVariableTests
 {
     [Fact]
+    public async Task CsvAudience_WithQuotedCells_ReturnsHeadersAndRows()
+    {
+        await using var db = CreateDb();
+        var service = new WhatsAppCampaignService(
+            db, CreateProtector(), new ConfigurationBuilder().Build());
+        await using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+            "phone,name,course\r\n01012345678,Ahmed,Physics\r\n01112345678,\"Mona, Ali\",Chemistry"));
+
+        var inspection = await service.InspectSpreadsheetAsync(
+            stream, "audience.csv", CancellationToken.None);
+
+        Assert.Equal(["phone", "name", "course"], inspection.Headers);
+        Assert.Equal(2, inspection.Rows.Count);
+        Assert.Equal("Mona, Ali", inspection.Rows[1].Columns["name"]);
+    }
+
+    [Fact]
+    public async Task SpreadsheetAudience_ValidatesRowsAndCollapsesMatchingDuplicates()
+    {
+        await using var db = CreateDb();
+        var template = CampaignTemplate();
+        db.LiveSupportWhatsAppTemplates.Add(template);
+        await db.SaveChangesAsync();
+        var service = new WhatsAppCampaignService(
+            db, CreateProtector(), new ConfigurationBuilder().Build());
+        var mappings = new[] { new WhatsAppCampaignVariableMappingDto(
+            "BODY", 1, "SpreadsheetColumn", ComponentIndex: 0, ColumnName: "name") };
+        var rows = new[]
+        {
+            SpreadsheetRow(2, "01012345678", "Ahmed"),
+            SpreadsheetRow(3, "01012345678", "Ahmed"),
+            SpreadsheetRow(4, "not-a-phone", "Mona"),
+            SpreadsheetRow(5, "01112345678", "")
+        };
+
+        var preview = await service.PreviewAsync(new WhatsAppCampaignPreviewRequest(
+            template.Id, new WhatsAppCampaignAudienceFilterDto(), mappings, rows), CancellationToken.None);
+
+        Assert.Equal(1, preview.EligibleCount);
+        Assert.Equal(3, preview.ExcludedCount);
+        Assert.Equal(1, preview.ExcludedByReason["duplicate_collapsed"]);
+        Assert.Equal(1, preview.ExcludedByReason["invalid_phone"]);
+        Assert.Equal(1, preview.ExcludedByReason["missing_variable"]);
+        Assert.Contains("Ahmed", Assert.Single(preview.Samples).RenderedPreview);
+    }
+
+    [Fact]
     public async Task ProductionRegression_20260826_ParentTrackingCode_IsFrozenAndMissingCodesAreExcluded()
     {
         await using var db = CreateDb();
@@ -219,6 +266,14 @@ public sealed class WhatsAppCampaignVariableTests
         templateId,
         new WhatsAppCampaignAudienceFilterDto(ContactRoles: ["StudentPrimary"]),
         []);
+
+    private static WhatsAppCampaignSpreadsheetRowDto SpreadsheetRow(
+        int rowNumber,
+        string phone,
+        string name) => new(rowNumber, phone, new Dictionary<string, string>
+        {
+            ["name"] = name
+        });
 
     private static void AddStudent(
         AppDbContext db,

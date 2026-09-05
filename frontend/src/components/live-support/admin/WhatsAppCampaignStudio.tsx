@@ -41,6 +41,8 @@ import {
   type WhatsAppCampaignFacets,
   type WhatsAppCampaignPage,
   type WhatsAppCampaignSummary,
+  type WhatsAppCampaignSpreadsheetInspection,
+  type WhatsAppCampaignSpreadsheetRow,
   type WhatsAppCampaignVariableMapping,
 } from '@/services/live-support-service';
 
@@ -48,6 +50,7 @@ import { WhatsAppCampaignAudienceBuilder } from './WhatsAppCampaignAudienceBuild
 import { WhatsAppContactPreferencesPanel } from './WhatsAppContactPreferencesPanel';
 import { WhatsAppCampaignHistory } from './WhatsAppCampaignHistory';
 import { WhatsAppCampaignTemplateEditor } from './WhatsAppCampaignTemplateEditor';
+import { WhatsAppCampaignSpreadsheetAudience } from './WhatsAppCampaignSpreadsheetAudience';
 
 interface WhatsAppCampaignStudioProps {
   templates: LiveSupportWhatsAppTemplate[];
@@ -59,6 +62,7 @@ interface WhatsAppCampaignStudioProps {
 
 type ComposerStep = 1 | 2 | 3 | 4;
 type StudioTab = 'composer' | 'history';
+type AudienceSource = 'platform' | 'spreadsheet';
 
 const emptyFacets: WhatsAppCampaignFacets = {
   educationStages: [],
@@ -99,6 +103,10 @@ export function WhatsAppCampaignStudio({
   const [changingCampaignId, setChangingCampaignId] = useState<string>();
 
   const [campaignName, setCampaignName] = useState('');
+  const [audienceSource, setAudienceSource] = useState<AudienceSource>('platform');
+  const [spreadsheet, setSpreadsheet] = useState<WhatsAppCampaignSpreadsheetInspection>();
+  const [phoneColumn, setPhoneColumn] = useState('');
+  const [spreadsheetRows, setSpreadsheetRows] = useState<WhatsAppCampaignSpreadsheetRow[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [mappings, setMappings] = useState<WhatsAppCampaignVariableMapping[]>([]);
   const [filters, setFilters] = useState<WhatsAppCampaignAudienceFilters>(() => createEmptyWhatsAppAudienceFilters());
@@ -128,8 +136,11 @@ export function WhatsAppCampaignStudio({
     ? validateWhatsAppVariableMappings(templateSupport.parameters, mappings, filters, selectedTemplate?.category)
     : ['اختر قالبًا نصيًا معتمدًا.'];
   const audienceErrors = validateWhatsAppAudienceFilters(filters);
-  const templateStepValid = Boolean(selectedTemplate && templateSupport?.supported && mappingErrors.length === 0);
-  const audienceStepValid = filters.contactRoles.length > 0 && audienceErrors.length === 0;
+  const templateStepValid = Boolean(selectedTemplate && templateSupport?.supported && mappingErrors.length === 0 &&
+    (audienceSource === 'platform' || spreadsheetRows.length > 0));
+  const audienceStepValid = audienceSource === 'spreadsheet'
+    ? spreadsheetRows.length > 0
+    : filters.contactRoles.length > 0 && audienceErrors.length === 0;
   const previewCurrent = Boolean(
     preview && isWhatsAppCampaignPreviewCurrent(
       preview,
@@ -180,6 +191,7 @@ export function WhatsAppCampaignStudio({
         templateId: selectedTemplateId,
         filters,
         variableMappings: mappings,
+        spreadsheetRows: audienceSource === 'spreadsheet' ? spreadsheetRows : undefined,
       }, controller.signal).then((nextPreview) => {
         if (previewAbortRef.current !== controller) return;
         setPreview(nextPreview);
@@ -197,7 +209,7 @@ export function WhatsAppCampaignStudio({
       requestController?.abort();
       if (previewAbortRef.current === requestController) previewAbortRef.current = undefined;
     };
-  }, [audienceStepValid, filters, mappings, selectedTemplateFingerprint, selectedTemplateId, step, templateStepValid]);
+  }, [audienceSource, audienceStepValid, filters, mappings, selectedTemplateFingerprint, selectedTemplateId, spreadsheetRows, step, templateStepValid]);
 
   useEffect(() => () => previewAbortRef.current?.abort(), []);
 
@@ -256,6 +268,25 @@ export function WhatsAppCampaignStudio({
     setFilters(nextFilters);
   }
 
+  function selectAudienceSource(source: AudienceSource) {
+    if (source === audienceSource) return;
+    setAudienceSource(source);
+    setMappings([]);
+    invalidateReview();
+  }
+
+  function updateSpreadsheet(
+    nextSpreadsheet: WhatsAppCampaignSpreadsheetInspection | undefined,
+    nextPhoneColumn: string,
+    nextRows: WhatsAppCampaignSpreadsheetRow[],
+  ) {
+    setSpreadsheet(nextSpreadsheet);
+    setPhoneColumn(nextPhoneColumn);
+    setSpreadsheetRows(nextRows);
+    setMappings([]);
+    invalidateReview();
+  }
+
   function goNext() {
     if (step === 1 && !templateStepValid) return;
     if (step === 2 && (!templateStepValid || !audienceStepValid)) return;
@@ -281,6 +312,7 @@ export function WhatsAppCampaignStudio({
         audienceFingerprint: preview.audienceFingerprint,
         filters,
         variableMappings: mappings,
+        spreadsheetRows: audienceSource === 'spreadsheet' ? spreadsheetRows : undefined,
       }, draftIdempotencyRef.current);
       setFrozenDraft(nextDraft);
       setConfirmationPhrase('');
@@ -344,6 +376,10 @@ export function WhatsAppCampaignStudio({
     draftIdempotencyRef.current = createClientId();
     launchIdempotencyRef.current = createClientId();
     setCampaignName('');
+    setAudienceSource('platform');
+    setSpreadsheet(undefined);
+    setPhoneColumn('');
+    setSpreadsheetRows([]);
     setSelectedTemplateId('');
     setMappings([]);
     setFilters(createEmptyWhatsAppAudienceFilters());
@@ -466,7 +502,16 @@ export function WhatsAppCampaignStudio({
             {bootstrap ? (
               <>
                 {step === 1 ? (
-                  <WhatsAppCampaignTemplateEditor
+                  <div className="space-y-6">
+                    <fieldset className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                      <legend className="px-2 text-sm font-black text-[var(--admin-text)]">مصدر جمهور الحملة</legend>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 text-sm font-black ${audienceSource === 'platform' ? 'border-[var(--admin-accent)] bg-[var(--admin-accent-soft)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'}`}><input type="radio" name="campaign-audience-source" checked={audienceSource === 'platform'} onChange={() => selectAudienceSource('platform')} className="size-4 accent-[var(--admin-accent)]" />طلاب المنصة والفلاتر</label>
+                        <label className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 text-sm font-black ${audienceSource === 'spreadsheet' ? 'border-[var(--admin-accent)] bg-[var(--admin-accent-soft)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)]'}`}><input type="radio" name="campaign-audience-source" checked={audienceSource === 'spreadsheet'} onChange={() => selectAudienceSource('spreadsheet')} className="size-4 accent-[var(--admin-accent)]" />استيراد Excel أو CSV</label>
+                      </div>
+                    </fieldset>
+                    {audienceSource === 'spreadsheet' ? <WhatsAppCampaignSpreadsheetAudience inspection={spreadsheet} phoneColumn={phoneColumn} onChange={updateSpreadsheet} /> : null}
+                    <WhatsAppCampaignTemplateEditor
                     templates={availableTemplates}
                     facets={facets}
                     selectedTemplateId={selectedTemplateId}
@@ -475,14 +520,17 @@ export function WhatsAppCampaignStudio({
                     syncFeedback={templateSyncFeedback}
                     canUsePurchaseDate={canUsePurchaseDate}
                     audienceFilters={filters}
+                    audienceSource={audienceSource}
+                    spreadsheetHeaders={spreadsheet?.headers ?? []}
                     onTemplateChange={selectTemplate}
                     onMappingsChange={updateMappings}
                     onSync={onSyncTemplates}
                   />
+                  </div>
                 ) : null}
                 {step === 2 ? <>
                   {!templateStepValid ? <div role="alert" className="mb-4 flex flex-col gap-3 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-sm text-[var(--admin-warning)] sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold">تغيّر نطاق الجمهور بما يجعل أحد متغيرات القالب غير صالح، مثل تاريخ الشراء. راجع الربط قبل المعاينة.</p><button type="button" onClick={() => setStep(1)} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-current px-4 font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current">مراجعة المتغيرات</button></div> : null}
-                  <WhatsAppCampaignAudienceBuilder filters={filters} facets={facets} onChange={updateFilters} />
+                  {audienceSource === 'platform' ? <WhatsAppCampaignAudienceBuilder filters={filters} facets={facets} onChange={updateFilters} /> : <SpreadsheetAudienceSummary spreadsheet={spreadsheet} phoneColumn={phoneColumn} />}
                 </> : null}
                 {step === 3 ? <CampaignPreview preview={preview} loading={previewLoading} error={previewError} current={previewCurrent} onRetry={() => { setStep(2); window.setTimeout(() => setStep(3), 0); }} /> : null}
                 {step === 4 && preview ? (
@@ -598,6 +646,27 @@ function CampaignPreview({
         </section>
       </div>
       <p className="flex items-center gap-2 text-xs font-semibold text-[var(--admin-muted)]"><Clock3 aria-hidden="true" size={14} /> صلاحية المعاينة حتى <time dateTime={preview.expiresAt}>{formatCairoTimestamp(preview.expiresAt)}</time>.</p>
+    </div>
+  );
+}
+
+function SpreadsheetAudienceSummary({
+  spreadsheet,
+  phoneColumn,
+}: {
+  spreadsheet?: WhatsAppCampaignSpreadsheetInspection;
+  phoneColumn: string;
+}) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.4fr)]">
+      <div className="rounded-2xl border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] p-5">
+        <h3 className="flex items-center gap-2 font-black text-[var(--admin-success)]"><FileCheck2 aria-hidden="true" size={19} />الشيت جاهز للفحص</h3>
+        <p className="mt-2 text-sm leading-6 text-[var(--admin-text)]">سيُستخدم عمود «{phoneColumn}» كرقم واتساب، وتُحل متغيرات القالب من الأعمدة التي ربطتها.</p>
+      </div>
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-border)]">
+        <ReviewItem label="صفوف الشيت" value={formatNumber(spreadsheet?.rows.length ?? 0)} />
+        <ReviewItem label="الأعمدة" value={formatNumber(spreadsheet?.headers.length ?? 0)} />
+      </dl>
     </div>
   );
 }

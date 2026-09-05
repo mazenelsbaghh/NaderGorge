@@ -21,6 +21,18 @@ public sealed class WhatsAppCampaignController(IWhatsAppCampaignService campaign
         CancellationToken ct = default) => ExecuteAsync(
         async () => await campaigns.ListAsync(page, pageSize, ct));
 
+    [HttpPost("campaigns/spreadsheet/inspect")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public Task<IActionResult> InspectSpreadsheet(IFormFile file, CancellationToken ct) =>
+        ExecuteAsync(async () =>
+        {
+            if (file is null || file.Length == 0)
+                throw new WhatsAppCampaignException(
+                    WhatsAppCampaignErrorCodes.InvalidRequest, "اختر ملف Excel أو CSV غير فارغ.");
+            await using var stream = file.OpenReadStream();
+            return await campaigns.InspectSpreadsheetAsync(stream, file.FileName, ct);
+        });
+
     [HttpPost("campaigns/audience/preview")]
     public Task<IActionResult> Preview(WhatsAppCampaignPreviewRequest request, CancellationToken ct) =>
         ExecuteAsync(async () => await campaigns.PreviewAsync(request, ct));

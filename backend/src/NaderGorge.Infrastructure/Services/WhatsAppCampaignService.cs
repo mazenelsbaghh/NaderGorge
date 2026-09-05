@@ -124,10 +124,13 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
             ?? throw Conflict(WhatsAppCampaignErrorCodes.Conflict, "تعذر استعادة شروط الحملة.");
         var mappings = JsonSerializer.Deserialize<List<WhatsAppCampaignVariableMappingDto>>(campaign.VariableMappingsJson, JsonOptions)
             ?? throw Conflict(WhatsAppCampaignErrorCodes.Conflict, "تعذر استعادة متغيرات الحملة.");
-        var rebuilt = await BuildAudienceAsync(template, filters, mappings, ct);
-        if (!string.Equals(rebuilt.Fingerprint, campaign.AudienceFingerprint, StringComparison.Ordinal))
-            throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
-                "تغير الجمهور أو بيانات الرسالة بعد المراجعة؛ أنشئ حملة جديدة.");
+        if (!IsSpreadsheetAudience(filters))
+        {
+            var rebuilt = await BuildAudienceAsync(template, filters, mappings, ct);
+            if (!string.Equals(rebuilt.Fingerprint, campaign.AudienceFingerprint, StringComparison.Ordinal))
+                throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
+                    "تغير الجمهور أو بيانات الرسالة بعد المراجعة؛ أنشئ حملة جديدة.");
+        }
 
         var now = DateTime.UtcNow;
         campaign.Status = WhatsAppCampaignStatus.Running;
@@ -517,10 +520,11 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
         WhatsAppCampaignRecipient recipient,
         CancellationToken ct)
     {
+        if (!recipient.StudentUserId.HasValue) return true;
         try
         {
             var contact = await ResolveAdminContactAsync(
-                recipient.StudentUserId, recipient.ContactRole, ct);
+                recipient.StudentUserId.Value, recipient.ContactRole, ct);
             var e164 = NormalizeE164(contact.Phone);
             return e164 is not null && FixedHashEquals(
                 recipient.DestinationHash, _protector.DestinationHash(e164));
@@ -530,6 +534,10 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
             return false;
         }
     }
+
+    private static bool IsSpreadsheetAudience(WhatsAppCampaignAudienceFilterDto filters) =>
+        filters.ContactRoles?.Count == 1 &&
+        string.Equals(filters.ContactRoles[0], "Spreadsheet", StringComparison.Ordinal);
 
     private static bool PreferenceAtLeastAsRecent(
         WhatsAppContactPreference candidate,

@@ -71,6 +71,7 @@ export const WHATSAPP_CAMPAIGN_VARIABLE_SOURCES: ReadonlyArray<{
 ];
 
 export function whatsAppCampaignVariableSourceLabel(source: string) {
+  if (source === 'SpreadsheetColumn') return 'عمود من الشيت';
   return WHATSAPP_CAMPAIGN_VARIABLE_SOURCES.find((candidate) => candidate.value === source)?.label ?? 'قيمة الطالب';
 }
 
@@ -366,6 +367,12 @@ function mappingValueError(
   }
   if (mapping.source === 'Literal' && mapping.referenceId) {
     return `النص الثابت في ${label} لا يقبل مرجع محتوى.`;
+  }
+  if (mapping.source === 'SpreadsheetColumn' && !mapping.columnName?.trim()) {
+    return `اختر عمود الشيت للمتغير ${requirement.parameterIndex} في ${label}.`;
+  }
+  if (mapping.source === 'SpreadsheetColumn' && (mapping.literalValue != null || mapping.referenceId)) {
+    return `عمود الشيت في ${label} لا يقبل قيمة أو مرجعًا إضافيًا.`;
   }
   if (mapping.source === 'ParentTrackingCode' && templateCategory?.toUpperCase() !== 'UTILITY') {
     return 'رقم متابعة الطالب متاح في قوالب UTILITY فقط.';

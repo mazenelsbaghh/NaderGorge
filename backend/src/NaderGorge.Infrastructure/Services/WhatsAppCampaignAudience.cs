@@ -51,7 +51,7 @@ public sealed partial class WhatsAppCampaignService
         JsonSerializer.Deserialize<FrozenRecipientPayload>(payload, JsonOptions);
 
     private sealed record ResolvedAudienceRecipient(
-        Guid StudentUserId,
+        Guid? StudentUserId,
         string StudentName,
         string ContactRole,
         string DestinationHash,
@@ -76,7 +76,8 @@ public sealed partial class WhatsAppCampaignService
             .SingleOrDefaultAsync(item => item.Id == request.TemplateId, ct)
             ?? throw new WhatsAppCampaignException(
                 WhatsAppCampaignErrorCodes.TemplateInvalid, "قالب واتساب غير موجود.", 404);
-        var audience = await BuildAudienceAsync(template, request.Filters, request.VariableMappings, ct);
+        var audience = await BuildRequestedAudienceAsync(
+            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, ct);
         var samples = audience.Recipients.Take(5).Select(recipient =>
             new WhatsAppCampaignMaskedRecipientDto(
                 MaskName(recipient.StudentName),
@@ -124,7 +125,8 @@ public sealed partial class WhatsAppCampaignService
             ?? throw new WhatsAppCampaignException(
                 WhatsAppCampaignErrorCodes.TemplateInvalid, "قالب واتساب غير موجود.", 404);
         WhatsAppCampaignTemplatePolicy.RequireCampaignTemplate(template);
-        var audience = await BuildAudienceAsync(template, request.Filters, request.VariableMappings, ct);
+        var audience = await BuildRequestedAudienceAsync(
+            template, request.Filters, request.VariableMappings, request.SpreadsheetRows, ct);
         if (!string.Equals(audience.Fingerprint, request.AudienceFingerprint, StringComparison.Ordinal))
             throw Conflict(WhatsAppCampaignErrorCodes.AudienceChanged,
                 "تغير الجمهور منذ المعاينة؛ اعرض المعاينة من جديد.");
@@ -152,7 +154,9 @@ public sealed partial class WhatsAppCampaignService
             TemplateCategory = template.Category,
             TemplateComponentsJson = template.ComponentsJson,
             TemplateFingerprint = template.Fingerprint,
-            AudienceFilterJson = JsonSerializer.Serialize(request.Filters, JsonOptions),
+            AudienceFilterJson = request.SpreadsheetRows is { Count: > 0 }
+                ? JsonSerializer.Serialize(new WhatsAppCampaignAudienceFilterDto(ContactRoles: ["Spreadsheet"]), JsonOptions)
+                : JsonSerializer.Serialize(request.Filters, JsonOptions),
             VariableMappingsJson = JsonSerializer.Serialize(request.VariableMappings, JsonOptions),
             AudienceFingerprint = audience.Fingerprint,
             Status = WhatsAppCampaignStatus.Locked,

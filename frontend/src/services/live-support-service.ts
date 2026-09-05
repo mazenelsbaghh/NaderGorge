@@ -101,6 +101,7 @@ export type WhatsAppCampaignContactRole =
   | 'FatherSecondary'
   | 'Mother';
 export type WhatsAppCampaignVariableSource =
+  | 'SpreadsheetColumn'
   | 'Literal'
   | 'StudentFirstName'
   | 'StudentFullName'
@@ -125,6 +126,19 @@ export interface WhatsAppCampaignVariableMapping {
   literalValue?: string | null;
   referenceId?: string | null;
   format?: string | null;
+  columnName?: string | null;
+}
+
+export interface WhatsAppCampaignSpreadsheetRow {
+  rowNumber: number;
+  phone: string;
+  columns: Record<string, string>;
+}
+
+export interface WhatsAppCampaignSpreadsheetInspection {
+  fileName: string;
+  headers: string[];
+  rows: Array<{ rowNumber: number; columns: Record<string, string> }>;
 }
 
 /**
@@ -662,10 +676,22 @@ export const liveSupportService = {
       .get<ApiResponse<WhatsAppCampaignBootstrap>>('/live-support/whatsapp/campaigns/bootstrap', { signal })
       .then((response) => response.data.data),
 
+  inspectWhatsAppCampaignSpreadsheet: async (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    const response = await apiClient.post<ApiResponse<WhatsAppCampaignSpreadsheetInspection>>(
+      '/live-support/whatsapp/campaigns/spreadsheet/inspect',
+      body,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data.data;
+  },
+
   previewWhatsAppCampaignAudience: async (payload: {
     templateId: string;
     filters: WhatsAppCampaignAudienceFilters;
     variableMappings: WhatsAppCampaignVariableMapping[];
+    spreadsheetRows?: WhatsAppCampaignSpreadsheetRow[];
   }, signal?: AbortSignal) => {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignAudiencePreview>>(
       '/live-support/whatsapp/campaigns/audience/preview',
@@ -681,6 +707,7 @@ export const liveSupportService = {
     audienceFingerprint: string;
     filters: WhatsAppCampaignAudienceFilters;
     variableMappings: WhatsAppCampaignVariableMapping[];
+    spreadsheetRows?: WhatsAppCampaignSpreadsheetRow[];
   }, idempotencyKey = createClientId()) => {
     const response = await apiClient.post<ApiResponse<WhatsAppCampaignDraft>>(
       '/live-support/whatsapp/campaigns/drafts',

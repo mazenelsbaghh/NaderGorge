@@ -290,6 +290,25 @@ test('purchase date mapping stays bound to one paid package and complete range',
   assert.equal(validateWhatsAppVariableMappings(requirements, mappings, filters).length, 1);
 });
 
+test('spreadsheet variables require an explicit column name', () => {
+  const requirements = inspectCampaignTemplate({
+    ...approvedTextTemplate,
+    components: [{ type: 'BODY', text: 'مرحبًا {{1}}' }],
+  }).parameters;
+  const mapping = {
+    componentType: 'BODY' as const,
+    componentIndex: 0,
+    position: 1,
+    source: 'SpreadsheetColumn' as const,
+  };
+
+  assert.match(validateWhatsAppVariableMappings(requirements, [mapping])[0], /عمود الشيت/);
+  assert.deepEqual(validateWhatsAppVariableMappings(
+    requirements,
+    [{ ...mapping, columnName: 'student_name' }],
+  ), []);
+});
+
 test('negative watch targeting requires an exact lesson and bounded period', () => {
   const filters = createEmptyWhatsAppAudienceFilters();
   filters.hasWatched = false;
