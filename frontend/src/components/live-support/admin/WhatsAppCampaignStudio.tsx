@@ -145,6 +145,19 @@ export function WhatsAppCampaignStudio({
   const audienceStepValid = audienceSource === 'spreadsheet'
     ? spreadsheetRows.length > 0
     : filters.contactRoles.length > 0 && audienceErrors.length === 0;
+  const currentStepBlocker = step === 1
+    ? !selectedTemplate
+      ? 'اختر قالبًا معتمدًا للمتابعة.'
+      : needsHeaderImage && !headerMediaId
+        ? 'ارفع صورة رأس الرسالة المطلوبة لهذا القالب.'
+        : audienceSource === 'spreadsheet' && !phoneColumn
+          ? 'اختر عمود رقم الواتساب من قسم الشيت بالأعلى.'
+          : mappingErrors[0] ?? ''
+    : step === 2 && !audienceStepValid
+      ? audienceSource === 'spreadsheet'
+        ? 'الشيت لا يحتوي صفوفًا جاهزة. ارجع واختر عمود رقم الواتساب.'
+        : audienceErrors[0] ?? 'اختر جمهور الحملة قبل المتابعة.'
+      : '';
   const previewCurrent = Boolean(
     preview && isWhatsAppCampaignPreviewCurrent(
       preview,
@@ -571,7 +584,12 @@ export function WhatsAppCampaignStudio({
                   />
                 ) : null}
 
-                <div className="mt-7 flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                {currentStepBlocker ? (
+                  <p role="alert" className="mt-7 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-bold text-[var(--admin-warning)]">
+                    {currentStepBlocker}
+                  </p>
+                ) : null}
+                <div className={`${currentStepBlocker ? 'mt-3' : 'mt-7'} flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:items-center sm:justify-between`}>
                   <button type="button" disabled={step === 1 || freezing || launching} onClick={() => setStep(Math.max(1, step - 1) as ComposerStep)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-card-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)] disabled:cursor-not-allowed disabled:opacity-40">
                     <ArrowRight aria-hidden="true" size={17} /> السابق
                   </button>

@@ -34,7 +34,11 @@ export function WhatsAppCampaignSpreadsheetAudience({
     setError('');
     try {
       const nextInspection = await liveSupportService.inspectWhatsAppCampaignSpreadsheet(file);
-      onChange(nextInspection, '', []);
+      const detectedPhoneColumn = detectPhoneColumn(nextInspection.headers);
+      const rows = detectedPhoneColumn
+        ? buildSpreadsheetRows(nextInspection, detectedPhoneColumn)
+        : [];
+      onChange(nextInspection, detectedPhoneColumn, rows);
     } catch (cause) {
       setError(getLiveSupportApiError(cause, 'تعذر قراءة الشيت. تأكد من صيغة الملف والعناوين.'));
     } finally {
@@ -44,11 +48,7 @@ export function WhatsAppCampaignSpreadsheetAudience({
   }
 
   function selectPhoneColumn(columnName: string) {
-    const rows = inspection?.rows.map((row) => ({
-      rowNumber: row.rowNumber,
-      phone: row.columns[columnName] ?? '',
-      columns: row.columns,
-    })) ?? [];
+    const rows = inspection && columnName ? buildSpreadsheetRows(inspection, columnName) : [];
     onChange(inspection, columnName, rows);
   }
 
@@ -90,6 +90,33 @@ export function WhatsAppCampaignSpreadsheetAudience({
       )}
     </section>
   );
+}
+
+function buildSpreadsheetRows(
+  inspection: WhatsAppCampaignSpreadsheetInspection,
+  phoneColumn: string,
+): WhatsAppCampaignSpreadsheetRow[] {
+  return inspection.rows.map((row) => ({
+    rowNumber: row.rowNumber,
+    phone: row.columns[phoneColumn] ?? '',
+    columns: row.columns,
+  }));
+}
+
+export function detectPhoneColumn(headers: string[]) {
+  const exactNames = new Set([
+    'phone', 'phone number', 'mobile', 'mobile number', 'whatsapp', 'whatsapp number',
+    'الهاتف', 'رقم الهاتف', 'رقم الموبايل', 'الموبايل', 'رقم الواتساب', 'واتساب',
+  ]);
+  return headers.find((header) => exactNames.has(normalizeHeader(header))) ?? '';
+}
+
+function normalizeHeader(value: string) {
+  return value
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase('ar-EG')
+    .replace(/[\s_-]+/g, ' ');
 }
 
 function formatNumber(value: number) {
