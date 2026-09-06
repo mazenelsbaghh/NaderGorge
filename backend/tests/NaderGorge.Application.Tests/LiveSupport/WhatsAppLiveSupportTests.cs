@@ -481,8 +481,10 @@ public sealed class WhatsAppLiveSupportTests
         Assert.Empty(db.LiveSupportAttachments);
     }
 
-    [Fact]
-    public async Task NonPdfWhatsAppDocument_IsRecordedAsUnsupportedTextWithoutStorage()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NonPdfWhatsAppDocument_IncludingTransientProviderFailure_IsRecordedOnceWithoutStorage(bool transientFirst)
     {
         await using var db = TestAppDbContextFactory.Create();
         await SeedConversationAsync(db);
@@ -490,7 +492,9 @@ public sealed class WhatsAppLiveSupportTests
         var cloud = Cloud(new StubMetaHandler(_ =>
         {
             requests++;
-            return requests == 1
+            if (transientFirst && requests == 1)
+                return JsonResponse(HttpStatusCode.ServiceUnavailable, "{\"error\":{\"code\":2}}");
+            return requests == (transientFirst ? 2 : 1)
                 ? JsonResponse(HttpStatusCode.OK,
                     "{\"url\":\"https://cdn.example/document\",\"mime_type\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"}")
                 : new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2, 3]) };
@@ -505,7 +509,8 @@ public sealed class WhatsAppLiveSupportTests
         Assert.Contains("PDF", message.Content);
         Assert.Null(message.AttachmentId);
         Assert.Empty(db.LiveSupportAttachments);
-        Assert.Equal(2, requests);
+        Assert.Single(db.LiveSupportWhatsAppMessages);
+        Assert.Equal(transientFirst ? 3 : 2, requests);
     }
 
     [Fact]

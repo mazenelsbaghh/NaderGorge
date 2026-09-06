@@ -104,12 +104,23 @@ public class RedisRateLimitingMiddleware
             end
             return current";
 
-        var result = await _db.ScriptEvaluateAsync(
-            luaScript, 
-            new RedisKey[] { redisKey }, 
-            new RedisValue[] { (int)window.TotalSeconds });
-
-        var requestCount = (long)result;
+        long requestCount;
+        try
+        {
+            requestCount = await IncrementWithReplicationRetryAsync(redisKey, luaScript, window, context.RequestAborted);
+        }
+        catch (Exception exception) when (IsUnavailable(exception))
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.Headers.RetryAfter = "5";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                code = "RATE_LIMIT_SERVICE_UNAVAILABLE",
+                message = "الخدمة مشغولة مؤقتًا. انتظر 5 ثوانٍ ثم حاول مرة أخرى.",
+                retryAfterSeconds = 5
+            }, context.RequestAborted);
+            return;
+        }
 
         if (requestCount > permitLimit)
         {
@@ -117,13 +128,38 @@ public class RedisRateLimitingMiddleware
             context.Response.ContentType = "application/json";
             context.Response.Headers.RetryAfter = Math.Max(1, (int)window.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
             
-            var response = new { Code = "RATE_LIMITED", Message = "طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.", RetryAfterSeconds = (int)window.TotalSeconds };
+            var response = new { code = "RATE_LIMITED", message = "طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.", retryAfterSeconds = (int)window.TotalSeconds };
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
             return;
         }
 
         await _next(context);
     }
+
+    private async Task<long> IncrementWithReplicationRetryAsync(string key, string script, TimeSpan window, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                return (long)await _db.ScriptEvaluateAsync(script, new RedisKey[] { key },
+                    new RedisValue[] { (int)window.TotalSeconds });
+            }
+            catch (RedisServerException exception) when (attempt < 3 && IsReplicationUnavailable(exception))
+            {
+                // NOREPLICAS rejects the write before INCR, so retrying cannot count it twice.
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), ct);
+            }
+        }
+    }
+
+    private static bool IsReplicationUnavailable(RedisServerException exception) =>
+        exception.Message.Contains("NOREPLICAS Not enough good replicas to write", StringComparison.Ordinal);
+
+    private static bool IsUnavailable(Exception exception) =>
+        exception is RedisConnectionException or RedisTimeoutException ||
+        exception is RedisServerException server && IsReplicationUnavailable(server);
 
     private static string GuestOrIp(HttpContext context)
     {

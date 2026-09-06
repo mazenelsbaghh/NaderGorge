@@ -467,24 +467,8 @@ public sealed class WhatsAppCampaignDispatcher(
         }
     }
 
-    private static bool IsProjectionConflict(Exception exception) => exception switch
-    {
-        DbUpdateConcurrencyException => true,
-        Npgsql.PostgresException
-        {
-            SqlState: Npgsql.PostgresErrorCodes.SerializationFailure or
-                Npgsql.PostgresErrorCodes.DeadlockDetected
-        } => true,
-        DbUpdateException
-        {
-            InnerException: Npgsql.PostgresException
-            {
-                SqlState: Npgsql.PostgresErrorCodes.SerializationFailure or
-                    Npgsql.PostgresErrorCodes.DeadlockDetected
-            }
-        } => true,
-        _ => false
-    };
+    private static bool IsProjectionConflict(Exception exception) =>
+        LiveSupportWriteConflict.IsRetryable(exception);
 
     private sealed class ProviderAcceptedPersistenceException(Exception innerException)
         : Exception("Provider accepted campaign delivery but persistence failed.", innerException);

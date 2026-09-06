@@ -683,9 +683,28 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportConversationDto> CloseAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string? reason, CancellationToken ct)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await CloseOnceAsync(staffUserId, isAdmin, conversationId, reason, ct);
+            }
+            catch (Exception exception) when (attempt < 3 && LiveSupportWriteConflict.IsRetryable(exception))
+            {
+                _db.ClearTrackedChanges();
+                await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), ct);
+            }
+        }
+    }
+
+    private async Task<LiveSupportConversationDto> CloseOnceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string? reason, CancellationToken ct)
+    {
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await AcquireRoutingLockAsync(ct);
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         var closeReason = string.IsNullOrWhiteSpace(reason) ? "أغلقها موظف الدعم" : reason.Trim();
         await FinishConversationAsync(conversation, staffUserId, LiveSupportConversationStatus.Closed, closeReason, LiveSupportAssignmentEndReason.Closed, ct);
+        await tx.CommitAsync(ct);
         return await MapAsync(conversation, ct);
     }
 

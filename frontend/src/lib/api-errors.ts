@@ -16,6 +16,10 @@ const REGISTRATION_ERROR_RULES: ReadonlyArray<{
   message: string;
 }> = [
   {
+    matches: (message) => message.includes('maximum device limit'),
+    message: 'وصلت للحد الأقصى للأجهزة المسجلة. استخدم جهازًا مسجلًا بالفعل أو تواصل مع الدعم لإزالة جهاز قديم.',
+  },
+  {
     matches: (message) => message.includes('invalid phone number or password'),
     message: 'رقم الهاتف أو كلمة المرور غير صحيحة.',
   },
@@ -153,16 +157,18 @@ export function extractApiErrorMessages(error: unknown): string[] {
   const responseData = responseDataFrom(error);
   if (!responseData) return [];
 
-  const details = Array.isArray(responseData.errors)
-    ? responseData.errors.filter(
+  const rawErrors = responseData.errors ?? responseData.Errors;
+  const rawMessage = responseData.message ?? responseData.Message;
+  const details = Array.isArray(rawErrors)
+    ? rawErrors.filter(
         (value): value is string =>
           typeof value === 'string' && value.trim().length > 0,
       )
     : [];
   const message =
-    typeof responseData.message === 'string' &&
-    responseData.message.trim().length > 0
-      ? responseData.message
+    typeof rawMessage === 'string' &&
+    rawMessage.trim().length > 0
+      ? rawMessage
       : undefined;
 
   return [...details, ...(message ? [message] : [])];

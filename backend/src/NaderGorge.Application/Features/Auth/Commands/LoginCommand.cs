@@ -120,22 +120,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             {
                 var activeDeviceCount = user.Devices.Count(d => d.IsActive);
                 if (activeDeviceCount >= maxDevices)
-                    throw new InvalidOperationException($"Maximum device limit ({maxDevices}) reached. Contact admin to remove a device.");
+                    throw new InvalidOperationException($"وصلت للحد الأقصى للأجهزة المسجلة ({maxDevices}). استخدم جهازًا مسجلًا بالفعل أو تواصل مع الدعم لإزالة جهاز قديم.");
             }
 
             var (osName, browserName, deviceType) = UserAgentParser.Parse(request.DeviceName);
-            var newDevice = new Device
+            // A removed device still has a unique fingerprint row; reuse it after password and limit checks.
+            var newDevice = user.Devices.FirstOrDefault(d => d.DeviceFingerprint == request.DeviceFingerprint);
+            if (newDevice is null)
             {
-                UserId = user.Id,
-                DeviceFingerprint = request.DeviceFingerprint,
-                DeviceName = request.DeviceName,
-                IpAddress = request.IpAddress,
-                OsName = osName,
-                BrowserName = browserName,
-                DeviceType = deviceType,
-                LastUsedAt = DateTime.UtcNow
-            };
-            _db.Devices.Add(newDevice);
+                newDevice = new Device { UserId = user.Id, DeviceFingerprint = request.DeviceFingerprint };
+                _db.Devices.Add(newDevice);
+            }
+            newDevice.IsActive = true;
+            newDevice.DeviceName = request.DeviceName;
+            newDevice.IpAddress = request.IpAddress;
+            newDevice.OsName = osName;
+            newDevice.BrowserName = browserName;
+            newDevice.DeviceType = deviceType;
+            newDevice.LastUsedAt = DateTime.UtcNow;
         }
         else
         {

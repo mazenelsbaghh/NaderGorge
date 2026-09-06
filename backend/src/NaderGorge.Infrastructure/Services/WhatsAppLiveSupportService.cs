@@ -473,7 +473,7 @@ public sealed class WhatsAppLiveSupportService(
             WhatsAppCloudService.DownloadedMedia downloaded;
             try
             {
-                downloaded = await cloud.DownloadMediaAsync(mediaId, ct);
+                downloaded = await DownloadMediaWithRetryAsync(mediaId, ct);
             }
             catch (WhatsAppCloudService.WhatsAppCloudException exception) when (!exception.IsRetryable)
             {
@@ -507,15 +507,50 @@ public sealed class WhatsAppLiveSupportService(
 
     private async Task ApplyStatusAsync(JsonElement status, CancellationToken ct)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await ApplyStatusOnceAsync(status, ct);
+                return;
+            }
+            catch (Exception exception) when (attempt < 5 && LiveSupportWriteConflict.IsRetryable(exception))
+            {
+                db.ClearTrackedChanges();
+                await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), ct);
+            }
+        }
+    }
+
+    private async Task<WhatsAppCloudService.DownloadedMedia> DownloadMediaWithRetryAsync(string mediaId, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await cloud.DownloadMediaAsync(mediaId, ct);
+            }
+            catch (WhatsAppCloudService.WhatsAppCloudException exception) when (exception.IsRetryable && attempt < 3)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), ct);
+            }
+        }
+    }
+
+    private async Task ApplyStatusOnceAsync(JsonElement status, CancellationToken ct)
+    {
         if (Text(status, "id") is not { } metaMessageId) return;
-        var delivery = await db.LiveSupportWhatsAppMessages.SingleOrDefaultAsync(item => item.MetaMessageId == metaMessageId, ct);
         var state = Text(status, "status")?.ToLowerInvariant();
         var at = long.TryParse(Text(status, "timestamp"), out var unixTime)
             ? DateTimeOffset.FromUnixTimeSeconds(unixTime).UtcDateTime
-            : delivery?.ProviderTimestamp ?? DateTime.UtcNow;
+            : await db.LiveSupportWhatsAppMessages.AsNoTracking()
+                .Where(item => item.MetaMessageId == metaMessageId)
+                .Select(item => item.ProviderTimestamp).SingleOrDefaultAsync(ct) ?? DateTime.UtcNow;
         var receipt = new ReceiptObservation(metaMessageId, state, at, ReceiptFailureCode(status));
         var campaignHandled = await campaigns.ProcessReceiptAsync(
             receipt.MetaMessageId, receipt.Status, receipt.ProviderTimestamp, receipt.FailureCode, ct);
+        // Campaign retries may clear the shared change tracker. Load the delivery afterwards.
+        var delivery = await db.LiveSupportWhatsAppMessages.SingleOrDefaultAsync(item => item.MetaMessageId == metaMessageId, ct);
         if (delivery is null)
         {
             if (campaignHandled) return;

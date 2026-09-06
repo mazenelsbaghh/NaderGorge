@@ -70,6 +70,16 @@ public class ExceptionHandlingMiddleware
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
         }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || SerializationRetryHelper.IsSerializationFailure(ex))
+        {
+            var correlationId = context.Items["CorrelationId"]?.ToString() ?? context.TraceIdentifier;
+            _logger.LogWarning("Concurrent write conflict. CorrelationId: {CorrelationId}, Method: {Method}, Endpoint: {Endpoint}",
+                correlationId, context.Request.Method, context.GetEndpoint()?.DisplayName);
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(
+                "تغيّرت البيانات أثناء تنفيذ الطلب. حدّث الصفحة وراجع حالة العملية قبل المحاولة مرة أخرى.",
+                ["CONCURRENT_WRITE_CONFLICT"]));
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning("Bad request: {Message}", ex.Message);
@@ -79,11 +89,12 @@ public class ExceptionHandlingMiddleware
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.GetType().Name == "PostgresException")
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException postgres &&
+            (IsExpectedConflict(postgres.SqlState) ||
+             postgres.SqlState == "23503" && postgres.ConstraintName == "FK_audit_logs_users_PerformedByUserId"))
         {
-            var inner = ex.InnerException;
-            var sqlState = inner.GetType().GetProperty("SqlState")?.GetValue(inner)?.ToString();
-            var constraintName = inner.GetType().GetProperty("ConstraintName")?.GetValue(inner)?.ToString();
+            var sqlState = postgres.SqlState;
+            var constraintName = postgres.ConstraintName;
 
             if (sqlState == "23503" && constraintName == "FK_audit_logs_users_PerformedByUserId")
             {
@@ -96,23 +107,12 @@ public class ExceptionHandlingMiddleware
                 return;
             }
 
-            if (IsExpectedConflict(sqlState))
-            {
-                _logger.LogWarning(
-                    "Database conflict at {Method} {Path}. SqlState: {SqlState}, Constraint: {ConstraintName}",
-                    context.Request.Method,
-                    context.Request.Path,
-                    sqlState,
-                    constraintName);
-                context.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                context.Response.ContentType = "application/json";
-
-                var response = ApiResponse.Fail(GetConflictMessage(constraintName));
-                await context.Response.WriteAsJsonAsync(response);
-                return;
-            }
-
-            throw;
+            _logger.LogWarning(
+                "Database conflict at {Method} {Path}. SqlState: {SqlState}, Constraint: {ConstraintName}",
+                context.Request.Method, context.Request.Path, sqlState, constraintName);
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(GetConflictMessage(constraintName)));
         }
         catch (Exception ex)
         {

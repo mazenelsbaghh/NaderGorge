@@ -98,3 +98,18 @@ test('unknown English server errors never leak into the Arabic interface', () =>
     'حدثت مشكلة أثناء تنفيذ الطلب. حاول مرة أخرى، وإذا استمرت المشكلة تواصل مع الدعم.',
   );
 });
+
+test('2026-09-06 device-limit rejection is not presented as bad credentials or a generic failure', () => {
+  const summary = getApiErrorSummary({ response: { data: {
+    message: 'Maximum device limit (5) reached. Contact admin to remove a device.',
+  } } });
+  assert.match(summary, /للحد الأقصى للأجهزة/);
+  assert.match(summary, /الدعم/);
+});
+
+for (const field of ['message', 'Message']) {
+  test(`2026-09-06 rate-limit guidance remains visible with ${field} casing`, () => {
+    const message = 'الخدمة مشغولة مؤقتًا. انتظر 5 ثوانٍ ثم حاول مرة أخرى.';
+    assert.equal(getApiErrorSummary({ response: { status: 503, data: { [field]: message } } }), message);
+  });
+}

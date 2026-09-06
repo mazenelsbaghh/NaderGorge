@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using NaderGorge.Domain.Entities.LiveSupport;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -226,14 +225,6 @@ public sealed partial class WhatsAppCampaignService
         return !current.HasValue || candidate.Value < current.Value ? candidate : current;
     }
 
-    private static bool IsProjectionConcurrencyFailure(Exception exception) => exception switch
-    {
-        DbUpdateConcurrencyException => true,
-        PostgresException { SqlState: PostgresErrorCodes.SerializationFailure } => true,
-        DbUpdateException
-        {
-            InnerException: PostgresException { SqlState: PostgresErrorCodes.SerializationFailure }
-        } => true,
-        _ => false
-    };
+    private static bool IsProjectionConcurrencyFailure(Exception exception) =>
+        LiveSupportWriteConflict.IsRetryable(exception);
 }
