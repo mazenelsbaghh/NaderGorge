@@ -539,6 +539,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const loadActiveEmbed = useCallback((sessionId: string) => {
     embedReadinessWatchdogRef.current?.cancel();
+    embedReadinessWatchdogRef.current = null;
+    // HLS owns its media deadlines; it cannot answer Player.js bridge probes.
+    if (providerRef.current !== 'bunny') {
+      mountVideoEmbed(sessionId);
+      return;
+    }
     const watchdog = createBunnyBridgeReadinessWatchdog({
       schedule: (callback, delayMs) => window.setTimeout(callback, delayMs),
       cancelScheduled: (handle) => window.clearTimeout(handle),

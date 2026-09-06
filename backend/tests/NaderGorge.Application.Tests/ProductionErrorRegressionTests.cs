@@ -11,6 +11,26 @@ namespace NaderGorge.Application.Tests;
 public sealed class ProductionErrorRegressionTests
 {
     [Theory]
+    [InlineData(true, 499)]
+    [InlineData(false, 500)]
+    public async Task CancelledRequest_DoesNotBecomeServerFailureUnlessClientIsStillConnected(bool disconnected, int expectedStatus)
+    {
+        using var cancellation = new CancellationTokenSource();
+        if (disconnected) cancellation.Cancel();
+        var context = new DefaultHttpContext { RequestAborted = cancellation.Token };
+        context.Response.Body = new MemoryStream();
+        var middleware = new ExceptionHandlingMiddleware(
+            _ => Task.FromException(new OperationCanceledException("private cancellation detail")),
+            NullLogger<ExceptionHandlingMiddleware>.Instance);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(expectedStatus, context.Response.StatusCode);
+        if (disconnected) Assert.Equal(0, context.Response.Body.Length);
+        else Assert.True(context.Response.Body.Length > 0);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Incident20260906_DatabaseConnectionFailure_Returns503WithRetryGuidance(bool wrapped)

@@ -67,6 +67,7 @@ function normalizedMessages(messages: BridgeMessage[]): BridgeMessage[] {
 async function runBunnyBridge(options: {
   constructorFails?: boolean;
   playerLibraryAvailable?: boolean;
+  vendoredLibrary?: boolean;
 } = {}): Promise<BunnyBridgeHarness> {
   const routeSource = await readFile(routePath, 'utf8');
   const bridgeStart = routeSource.indexOf('// Bunny Player.js → Parent PostMessage Bridge');
@@ -202,7 +203,7 @@ async function runBunnyBridge(options: {
     if (interval) interval.active = false;
   };
 
-  vm.runInNewContext(bridgeScript, {
+  const context = vm.createContext({
     clearInterval: clearIntervalLike,
     document: {
       getElementById(id: string) {
@@ -216,6 +217,13 @@ async function runBunnyBridge(options: {
     setInterval: setIntervalLike,
     window: windowLike,
   });
+  if (options.vendoredLibrary) {
+    Object.assign(iframe, { nodeName: 'IFRAME' });
+    Object.assign(windowLike, { postMessage() {} });
+    vm.runInContext(await readFile(playerBridgePath, 'utf8'), context);
+    context.playerjs = (context.window as unknown as { playerjs: typeof context.playerjs }).playerjs;
+  }
+  vm.runInContext(bridgeScript, context);
 
   return {
     callbacks,
@@ -328,6 +336,24 @@ test('2026-09-03 Bunny tablet readiness is not blocked by metadata callbacks', a
   assert.equal(harness.callbacks.duration.length, 1);
   assert.equal(harness.callbacks.volume.length, 1);
 });
+
+for (const wireFormat of ['object', 'probe', 'normalized-url'] as const) {
+  test(`2026-09-06 vendored Player.js completes a recovered ${wireFormat} handshake once`, async () => {
+    const harness = await runBunnyBridge({ vendoredLibrary: true });
+    const message = { ...bunnyReadyMessage(), ...(wireFormat === 'probe'
+      ? { listener: 'massar-bunny-ready-probe-v1' } : {}) };
+    const payload = wireFormat === 'object' ? message : JSON.stringify(message);
+    harness.dispatchProviderMessage(payload, {}, 'https://attacker.example');
+    assert.equal(harness.messages.some(message => message.type === 'ready'), false);
+    harness.dispatchProviderMessage(payload);
+    harness.dispatchProviderMessage(payload);
+    assert.equal(harness.messages.filter(message => message.type === 'ready').length, 1);
+    assert.ok(harness.providerCommands().some(command => command.method === 'getDuration'));
+    harness.dispatchProviderMessage({ context: 'player.js', event: 'timeupdate', value: { seconds: 17 } });
+    assert.equal(harness.messages.find(message => message.type === 'timeUpdate')?.data?.currentTime, 17);
+    assert.equal(harness.iframeState().removeCalls, 0);
+  });
+}
 
 test('2026-09-03 raw Bunny Player.js ready messages recover the tablet handshake once', async () => {
   const harness = await runBunnyBridge();

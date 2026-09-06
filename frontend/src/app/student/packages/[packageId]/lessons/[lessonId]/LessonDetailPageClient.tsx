@@ -24,7 +24,7 @@ export default function LessonDetailPageClient() {
 
   useEffect(() => {
     if (lessonId) {
-      const cleanupCacheStore = registerCacheStore(`content:lesson:${lessonId}`, () => {}, fetchLessonDetail);
+      const cleanupCacheStore = registerCacheStore(`content:lesson:${lessonId}:detail`, () => {}, fetchLessonDetail);
       return cleanupCacheStore;
     }
   }, [fetchLessonDetail, lessonId]);

@@ -94,6 +94,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // ---------- Database ----------
 builder.Services.AddSingleton<SlowQueryInterceptor>();
 builder.Services.AddSingleton<DbCommandMetricsInterceptor>();
+builder.Services.AddSingleton<DatabaseTransactionDiagnostics>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     options.UseNpgsql(
@@ -101,7 +102,8 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
         npgsql => npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     options.AddInterceptors(
         sp.GetRequiredService<SlowQueryInterceptor>(),
-        sp.GetRequiredService<DbCommandMetricsInterceptor>());
+        sp.GetRequiredService<DbCommandMetricsInterceptor>(),
+        sp.GetRequiredService<DatabaseTransactionDiagnostics>());
 });
 builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportQueryService, NaderGorge.Application.Features.Reporting.ReportQueryService>();

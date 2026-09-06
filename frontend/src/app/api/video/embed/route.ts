@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
         },
         cache: 'no-store',
         redirect: 'error',
+        signal: AbortSignal.timeout(15_000),
       });
     } catch (error) {
       console.error('[video-embed] Embed material request failed:', error);
@@ -346,6 +347,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var isPlaying = false;
     var progressInterval = null;
     var playerReady = false;
+    var confirmPlayerReady = null;
     var parentReadySent = false;
     var lastKnownDuration = 0;
     var lastKnownVolume = 1;
@@ -444,9 +446,18 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     // an otherwise valid ready message. Validate the source window and repair
     // that specific handshake without weakening the origin boundary.
     function recoverBunnyPlayerReady(event) {
-      if (__videoEmbedSuspended || !iframe || !isTrustedBunnyBridgeOrigin(event.origin) || event.source !== iframe.contentWindow || !player || player.isReady) return;
+      if (__videoEmbedSuspended || !iframe || !isTrustedBunnyBridgeOrigin(event.origin) || event.source !== iframe.contentWindow || !player) return;
       var message = parsePlayerJsMessage(event.data);
-      if (!message || message.context !== 'player.js' || message.event !== 'ready') return;
+      if (!message || message.context !== 'player.js') return;
+      if (message.event !== 'ready') {
+        // The bundled SDK parses strings only. Keep clock/control callbacks
+        // working when the verified receiver uses structured postMessage data.
+        if (playerReady && event.origin === player.origin && typeof event.data !== 'string') {
+          player.receive({ origin: event.origin, data: JSON.stringify(message) });
+        }
+        return;
+      }
+      if (player.isReady) return;
       if (!message.value || typeof message.value.src !== 'string' || !readyPayloadSupportsTime(message.value)) return;
       bunnyBridgeOrigin = event.origin;
       try {
@@ -456,6 +467,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         // produced this ready event.
         player.origin = bunnyBridgeOrigin;
         player.ready(message);
+        // Player.js ready() initializes state but does not dispatch callbacks
+        // for object messages or replies addressed to our recovery probe.
+        if (confirmPlayerReady) confirmPlayerReady();
       } catch (e) {}
       if (message.listener === bridgeReadyProbeListener) {
         sendBunnyBridgeMessage({
@@ -608,8 +622,8 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         return;
       }
 
-      activePlayer.on('ready', function () {
-        if (__videoEmbedSuspended || player !== activePlayer) return;
+      confirmPlayerReady = function () {
+        if (__videoEmbedSuspended || player !== activePlayer || playerReady) return;
         if (!bridgeSupportsTime(activePlayer)) {
           postToParent('error', { message: 'Bunny player bridge cannot report playback time', provider: 'bunny' });
           return;
@@ -666,7 +680,8 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
             });
           } catch (e) {}
         }, 1000);
-      });
+      };
+      activePlayer.on('ready', confirmPlayerReady);
 
       activePlayer.on('timeupdate', function (value) {
         if (__videoEmbedSuspended || player !== activePlayer) return;

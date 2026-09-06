@@ -1,4 +1,4 @@
-import { recordRealtimeMetric } from '@/lib/realtime-observability';
+import { recordRealtimeMetric } from './realtime-observability.ts';
 
 /**
  * Centralized Cache Invalidation Registry
@@ -63,9 +63,15 @@ export function unregisterCacheStore(name: string, registrationId?: number): voi
  * Matches by exact key or by prefix (e.g., "content:lesson:abc" matches store "content:lesson").
  */
 export function invalidate(key: string): void {
+  invalidateKeys([key]);
+}
+
+function invalidateKeys(keys: Iterable<string>): void {
+  const invalidationKeys = [...keys];
   // Match exact keys and both prefix directions so a broad key reaches all active child queries.
   for (const [storeName, registrations] of cacheStores) {
-    if (key.startsWith(storeName) || storeName.startsWith(key)) {
+    if (invalidationKeys.some(key => key === storeName
+      || key.startsWith(`${storeName}:`) || storeName.startsWith(`${key}:`))) {
       for (const store of registrations.values()) {
         recordRealtimeMetric('invalidation');
         store.clear();
@@ -94,9 +100,7 @@ export function invalidateMany(keys: string[]): void {
     pendingInvalidations = new Set<string>();
     debounceTimer = null;
 
-    for (const key of keysToInvalidate) {
-      invalidate(key);
-    }
+    invalidateKeys(keysToInvalidate);
   }, DEBOUNCE_MS);
 }
 
@@ -112,7 +116,5 @@ export function flushInvalidations(): void {
   const keysToInvalidate = new Set(pendingInvalidations);
   pendingInvalidations = new Set<string>();
 
-  for (const key of keysToInvalidate) {
-    invalidate(key);
-  }
+  invalidateKeys(keysToInvalidate);
 }

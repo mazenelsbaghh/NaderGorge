@@ -2,6 +2,19 @@ import { expect, test, type Route } from '@playwright/test';
 import { embedSelector, json, lessonApi, openLesson } from '../fixtures/lesson-playback';
 
 test.describe('lesson playback continuity (synthetic HTTP and SignalR)', () => {
+  test('comment events refresh comments without refetching the lesson or restarting playback', async ({ page }) => {
+    const playback = await openLesson(page);
+    let detailReads = 0;
+    let commentReads = 0;
+    await page.route(lessonApi, route => { detailReads++; return json(route, playback.lesson); });
+    await page.route('**/api/content/lessons/*/comments?*', route => { commentReads++; return json(route, []); });
+    playback.notify('LessonCommentApproved');
+    await expect.poll(() => commentReads).toBeGreaterThan(0);
+    expect(detailReads).toBe(0);
+    expect(await playback.originalFrame.evaluate(frame => frame.isConnected)).toBe(true);
+    expect(playback.sessions.length).toBe(playback.originalSessionCount);
+  });
+
   // Production regression 2026-09-06: background invalidation showed the full
   // lesson skeleton, destroyed the playing iframe and reset to the first part.
   test('pending refresh and reordered metadata retain the same playing iframe and session', async ({ page }) => {

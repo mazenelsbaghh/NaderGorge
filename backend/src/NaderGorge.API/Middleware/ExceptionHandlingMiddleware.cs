@@ -24,6 +24,13 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // The client has disconnected; do not turn its cancelled transaction
+            // into a generic server failure or attempt to write to the closed response.
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+        }
         catch (ValidationException ex)
         {
             _logger.LogWarning("Validation failed: {Errors}", ex.Errors);
