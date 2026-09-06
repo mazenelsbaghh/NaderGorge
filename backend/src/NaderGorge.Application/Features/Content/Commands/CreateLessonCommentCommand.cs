@@ -14,7 +14,7 @@ public record CreateLessonCommentResponse(
     string Message
 );
 
-public record CreateLessonCommentCommand(Guid LessonId, Guid UserId, string Body)
+public record CreateLessonCommentCommand(Guid LessonId, Guid UserId, string Body, Guid? ParentCommentId = null)
     : IRequest<ApiResponse<CreateLessonCommentResponse>>;
 
 public class CreateLessonCommentCommandHandler : IRequestHandler<CreateLessonCommentCommand, ApiResponse<CreateLessonCommentResponse>>
@@ -40,15 +40,21 @@ public class CreateLessonCommentCommandHandler : IRequestHandler<CreateLessonCom
         if (!lessonExists)
             return ApiResponse<CreateLessonCommentResponse>.Fail("Lesson not found", new List<string> { "NOT_FOUND" });
 
-        var trimmedBody = request.Body.Trim();
+        var trimmedBody = request.Body?.Trim();
         if (string.IsNullOrWhiteSpace(trimmedBody))
             return ApiResponse<CreateLessonCommentResponse>.Fail("Comment body is required.", new List<string> { "VALIDATION_EMPTY_BODY" });
 
         if (trimmedBody.Length > MaxCommentLength)
             return ApiResponse<CreateLessonCommentResponse>.Fail($"Comment body must be {MaxCommentLength} characters or fewer.", new List<string> { "VALIDATION_BODY_TOO_LONG" });
 
+        if (request.ParentCommentId.HasValue && !await _db.LessonComments.AnyAsync(
+            c => c.Id == request.ParentCommentId && c.LessonId == request.LessonId
+                && c.ParentCommentId == null && c.Status == LessonCommentStatus.Approved, ct))
+            return ApiResponse<CreateLessonCommentResponse>.Fail("التعليق غير متاح للرد.", new List<string> { "NOT_FOUND" });
+
         var comment = new LessonComment
         {
+            ParentCommentId = request.ParentCommentId,
             LessonId = request.LessonId,
             AuthorUserId = request.UserId,
             Body = trimmedBody,

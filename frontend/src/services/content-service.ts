@@ -267,6 +267,8 @@ export interface LessonDetailDto {
 
 
 export interface LessonCommentDto {
+  parentCommentId?: string | null;
+  replyCount?: number;
   id: string;
   lessonId: string;
   authorName: string;
@@ -380,12 +382,13 @@ export const contentService = {
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
   getSections: (termId: string) => apiClient.get<ContentListApiResponse<ContentSectionDto>>(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get<ContentListApiResponse<LessonSummaryDto>>(`/content/sections/${sectionId}/lessons`),
-  getLessonDetail: (lessonId: string) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`),
+  getLessonDetail: (lessonId: string, signal?: AbortSignal) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`, { signal }),
   getLessonComments: (lessonId: string, offset = 0, limit = 50) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments?offset=${offset}&limit=${limit}`),
+  getLessonReplies: (lessonId: string, parentCommentId: string, offset = 0) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments`, { params: { parentCommentId, offset, limit: 20 } }),
   getLessonResources: (lessonId: string) => apiClient.get<ContentApiResponse<ResourceDto[]>>(`/content/lessons/${lessonId}/resources`),
   getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
-  createLessonComment: (lessonId: string, body: string) =>
-    apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
+  createLessonComment: (lessonId: string, body: string, parentCommentId?: string) =>
+    apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body, parentCommentId }),
   getContentSummaryTeachers: (signal?: AbortSignal) =>
     apiClient.get<ContentApiResponse<ContentSummaryTeacherDto[]>>('/admin/content/summary/teachers', { signal }),
   getContentSummary: (scope: 'admin' | 'teacher', options: ContentSummaryRequest = {}) =>

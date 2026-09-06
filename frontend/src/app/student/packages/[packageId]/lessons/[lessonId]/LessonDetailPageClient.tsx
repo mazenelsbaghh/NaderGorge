@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { LessonViewer } from "@/components/content/LessonViewer";
-import { contentService, type LessonDetailDto } from "@/services/content-service";
+import { useLessonDetail } from "@/hooks/useLessonDetail";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
 import { registerCacheStore } from "@/lib/cache-invalidation";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
@@ -19,39 +19,10 @@ export default function LessonDetailPageClient() {
   const packageId = params.packageId as string;
   const lessonId = params.lessonId as string;
 
-  const [lesson, setLesson] = useState<LessonDetailDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { lesson, loading, error, refreshError, fetchLessonDetail } = useLessonDetail(lessonId);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const fetchLessonDetail = useCallback(async () => {
-    if (!lessonId) return;
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await contentService.getLessonDetail(lessonId);
-      if (response.data.data) {
-        setLesson(response.data.data);
-        return;
-      }
-      setError("تعذر تحميل بيانات الدرس الآن.");
-    } catch (error: unknown) {
-      const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
-      if (response?.status === 403) {
-        setError(response.data?.message || "هذا الدرس غير متاح لحسابك حاليًا.");
-      } else if (response?.status === 404) {
-        setError("هذا الدرس لم يعد موجودًا في محتوى الباقة.");
-      } else {
-        setError("حدث خلل في تحميل الدرس. تم تسجيله وسيتم إصلاحه.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [lessonId]);
-
   useEffect(() => {
-    fetchLessonDetail();
     if (lessonId) {
       const cleanupCacheStore = registerCacheStore(`content:lesson:${lessonId}`, () => {}, fetchLessonDetail);
       return cleanupCacheStore;
@@ -61,13 +32,11 @@ export default function LessonDetailPageClient() {
   const { joinLesson, leaveLesson } = usePlatformEvents({
     onVideoReady: (payload) => {
       if (payload.lessonId === lessonId) {
-        fetchLessonDetail();
         toast.success(`فيديو الدرس جاهز: ${payload.title}`);
       }
     },
     onResourceReady: (payload) => {
       if (payload.lessonId === lessonId) {
-        fetchLessonDetail();
         toast.success(`ملف جديد متاح: ${payload.title}`);
       }
     }
@@ -198,7 +167,13 @@ export default function LessonDetailPageClient() {
         <span>{backLabel}</span>
       </button>
 
-      <LessonViewer lesson={lesson} packageId={packageId} />
+      {refreshError && (
+        <p role="status" className="mb-4 text-sm text-[var(--admin-muted)]">
+          {refreshError}{" "}
+          <button type="button" onClick={() => void fetchLessonDetail()} className="underline">إعادة المحاولة</button>
+        </p>
+      )}
+      <LessonViewer key={lesson.id} lesson={lesson} packageId={packageId} />
     </div>
   );
 }

@@ -215,21 +215,22 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:120000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
   function post(type,data){try{parent.postMessage({source:'video-embed',type:type,data:data||{}},location.origin)}catch(e){}}
   function hlsErrorMessage(status){if(status===401||status===403)return 'Bunny رفض رابط HLS ('+status+'). راجع CDN Token Authentication Key وAllowed Domains.';if(status===404)return 'ملف HLS غير موجود على Bunny (404). راجع CDN hostname وانتظر اكتمال ترميز الفيديو.';if(status===0)return 'تعذر اتصال هذا الجهاز بـBunny CDN. جرّب شبكة أخرى وحدّث Chrome وAndroid System WebView.';return status?'تعذر تحميل Bunny HLS (حالة '+status+').':'تعذر تحميل بث Bunny HLS.';}
-  function nativePlaybackError(){return 'Bunny رفض تشغيل HLS على مشغل Apple الأصلي. أزل Allowed Domains/Hotlink Protection من Pull Zone واعتمد على CDN Token Authentication، ثم أعد المحاولة.';}
+  function nativePlaybackError(){return 'تعذر تشغيل الفيديو على مشغل الجهاز. لم يحدد المتصفح سبب التعطل. أعد المحاولة، وإذا تكرر توقف التشغيل تواصل مع الدعم.';}
   function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}}
   function failHls(status,message,phase){if(terminalErrorSent)return;terminalErrorSent=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();post('error',{provider:'bunny-hls',code:Number(status)||0,phase:String(phase||'unknown').slice(0,80),message:message||hlsErrorMessage(Number(status)||0)});}
   function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:'bunny-hls'};}
   function ready(){if(readySent)return;readySent=true;if(loadDeadline)clearTimeout(loadDeadline);post('ready',state());}
-  function armPlaybackDeadline(phase){clearPlaybackDeadline();lastLoadPhase=phase||lastLoadPhase;playbackDeadline=setTimeout(function(){if(!video.paused&&!video.ended)failHls(0,'بدأ تحميل Bunny HLS لكن لم تصل بيانات الفيديو للجهاز. راجع اتصال Bunny CDN أو جرّب شبكة أخرى.','playback_timeout_'+lastLoadPhase)},15000);}
+  function armPlaybackDeadline(phase){lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;playbackDeadline=setTimeout(function(){playbackDeadline=null;if(!video.paused&&!video.ended)failHls(0,'بدأ تحميل Bunny HLS لكن لم تصل بيانات الفيديو للجهاز. راجع اتصال Bunny CDN أو جرّب شبكة أخرى.','playback_timeout_'+lastLoadPhase)},15000);}
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=Number(l.height)||0;var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
   function emitQuality(){var levels=hls?hlsLevels():nativeLevels;var current='auto';if(hls&&hls.autoLevelEnabled===false&&hls.currentLevel>=0)current=String(hls.currentLevel);else if(!hls)current=nativeCurrent;post('qualityLevels',{levels:levels,currentQuality:current,auto:true});}
   function attachEvents(){
     video.addEventListener('loadedmetadata',function(){lastLoadPhase='metadata';ready();post('durationChange',state());});
     video.addEventListener('canplay',function(){lastLoadPhase='canplay';ready();clearPlaybackDeadline();});
-    video.addEventListener('timeupdate',function(){var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01){lastMediaTime=current;clearPlaybackDeadline();}post('timeUpdate',state());});
+    video.addEventListener('seeking',function(){lastMediaTime=Number(video.currentTime)||0;});
+    video.addEventListener('timeupdate',function(){var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01)clearPlaybackDeadline();lastMediaTime=current;post('timeUpdate',state());});
     video.addEventListener('play',function(){armPlaybackDeadline('play');post('stateChange',state());});
-    video.addEventListener('pause',function(){post('stateChange',state());});
-    video.addEventListener('ended',function(){post('stateChange',state());});
+    video.addEventListener('pause',function(){clearPlaybackDeadline();post('stateChange',state());});
+    video.addEventListener('ended',function(){clearPlaybackDeadline();post('stateChange',state());});
     video.addEventListener('waiting',function(){if(!video.paused)armPlaybackDeadline('waiting');post('stateChange',{state:3,isPlaying:false,provider:'bunny-hls'});});
     video.addEventListener('stalled',function(){if(!video.paused)armPlaybackDeadline('stalled');post('stateChange',{state:3,isPlaying:false,provider:'bunny-hls'});});
     video.addEventListener('playing',function(){clearPlaybackDeadline();post('stateChange',state());});
@@ -241,7 +242,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function setQuality(id){if(id==='auto'){if(hls){hls.currentLevel=-1;hls.nextLevel=-1;}else if(nativeCurrent!=='auto')loadNative(masterSource,'auto');emitQuality();return;}if(hls){var index=Number(id);if(Number.isInteger(index)&&index>=0&&index<hls.levels.length){hls.currentLevel=index;hls.nextLevel=index;emitQuality();}}else{var level=nativeLevels.find(function(item){return item.id===id});if(level)loadNative(level.url,id);}}
   attachEvents();
   post('providerLoaded',{provider:'bunny-hls'});
-  loadDeadline=setTimeout(function(){failHls(0,nativePlayback?nativePlaybackError():'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. راجع CDN Token Authentication Key وAllowed Domains ثم أعد المحاولة.','load_timeout_'+lastLoadPhase)},20000);
+  loadDeadline=setTimeout(function(){failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},20000);
   if(window.Hls&&window.Hls.isSupported()){
     try{
       hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 import { LessonViewer } from "@/components/content/LessonViewer";
-import { contentService, type LessonDetailDto } from "@/services/content-service";
+import { useLessonDetail } from "@/hooks/useLessonDetail";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
 import { Lock, ShoppingCart, Sparkles } from "lucide-react";
@@ -16,40 +16,8 @@ export default function DirectLessonPageClient() {
   const searchParams = useSearchParams();
   const lessonId = params.lessonId as string;
 
-  const [lesson, setLesson] = useState<LessonDetailDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { lesson, loading, error, refreshError, fetchLessonDetail } = useLessonDetail(lessonId);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-
-  const fetchLessonDetail = useCallback(async () => {
-    if (!lessonId) return;
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await contentService.getLessonDetail(lessonId);
-      if (response.data.data) {
-        setLesson(response.data.data);
-        return;
-      }
-      setError("تعذر تحميل بيانات الحصة الآن.");
-    } catch (error: unknown) {
-      const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
-      if (response?.status === 403) {
-        setError(response.data?.message || "هذه الحصة غير متاحة لحسابك حاليًا.");
-      } else if (response?.status === 404) {
-        setError("هذه الحصة لم تعد موجودة في المحتوى.");
-      } else {
-        setError("حدث خلل في تحميل الحصة. تم تسجيله وسيتم إصلاحه.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [lessonId]);
-
-  useEffect(() => {
-    fetchLessonDetail();
-  }, [fetchLessonDetail]);
 
   const resolvedPackageId = searchParams.get("packageId") || lesson?.packageId;
 
@@ -174,7 +142,13 @@ export default function DirectLessonPageClient() {
         <span>{backLabel}</span>
       </button>
 
-      <LessonViewer lesson={lesson} packageId={resolvedPackageId} />
+      {refreshError && (
+        <p role="status" className="mb-4 text-sm text-[var(--admin-muted)]">
+          {refreshError}{" "}
+          <button type="button" onClick={() => void fetchLessonDetail()} className="underline">إعادة المحاولة</button>
+        </p>
+      )}
+      <LessonViewer key={lesson.id} lesson={lesson} packageId={resolvedPackageId} />
     </div>
   );
 }

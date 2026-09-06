@@ -1154,6 +1154,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("lesson_comments");
             e.HasKey(lc => lc.Id);
+            e.HasOne(lc => lc.ParentComment).WithMany(lc => lc.Replies)
+                .HasForeignKey(lc => lc.ParentCommentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(lc => new { lc.LessonId, lc.ParentCommentId, lc.CreatedAt });
             e.Property(lc => lc.Body).HasMaxLength(2000).IsRequired();
             e.Property(lc => lc.Status).HasConversion<int>();
             e.HasIndex(lc => lc.LessonId);

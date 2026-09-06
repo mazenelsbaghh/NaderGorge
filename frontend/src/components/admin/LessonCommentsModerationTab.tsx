@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 import { AdminDataTable, type AdminColumn } from '@/components/admin/AdminDataTable';
 import { AdminModal } from '@/components/admin/AdminModal';
+import { CommentParentQuote, ModerationCommentReply } from '@/components/content/ModerationCommentReply';
 import { adminService, type ModerationLessonCommentDto } from '@/services/admin-service';
 
 type FilterStatus = 'All' | 'Pending' | 'Approved' | 'Rejected';
@@ -17,7 +18,7 @@ type LessonCommentsModerationTabProps = {
   moderationApi?: LessonCommentsModerationApi;
 };
 
-export type LessonCommentsModerationApi = Pick<typeof adminService, 'getLessonCommentsForModeration' | 'approveLessonComment' | 'rejectLessonComment'>;
+export type LessonCommentsModerationApi = Pick<typeof adminService, 'getLessonCommentsForModeration' | 'approveLessonComment' | 'rejectLessonComment' | 'replyToLessonComment'>;
 
 const FILTER_OPTIONS: FilterStatus[] = ['All', 'Pending', 'Approved', 'Rejected'];
 
@@ -179,6 +180,7 @@ export function LessonCommentsModerationTab({
       label: 'التعليق',
       render: (row) => (
         <div className="max-w-xl space-y-2">
+          <CommentParentQuote body={row.parentBody} />
           <p className="line-clamp-3 whitespace-pre-wrap text-sm font-medium leading-7 text-[var(--admin-text)]">
             {row.body}
           </p>
@@ -349,6 +351,8 @@ export function LessonCommentsModerationTab({
           rowActionLabel={(row) => `عرض تفاصيل تعليق الطالب ${row.studentName}`}
           expandedRowRender={(row) => (
             <div className="space-y-4">
+              <CommentParentQuote body={row.parentBody} />
+              <ModerationCommentReply comment={row} onReply={moderationApi.replyToLessonComment} onReplied={() => loadComments(activeFilter)} />
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">نص التعليق الكامل</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-8 text-[var(--admin-text)]">

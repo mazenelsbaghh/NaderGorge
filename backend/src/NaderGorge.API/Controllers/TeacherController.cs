@@ -607,7 +607,7 @@ public class TeacherController : ControllerBase
         }
         var query = _db.LessonComments.AsNoTracking().Where(comment => comment.Lesson.ContentSection.Term.Package.TeacherId == context.TeacherId);
         if (parsedStatus.HasValue) query = query.Where(comment => comment.Status == parsedStatus.Value);
-        var comments = await query.OrderByDescending(comment => comment.CreatedAt).Select(comment => new ModerationLessonCommentDto(comment.Id, comment.LessonId, comment.Lesson.Title, comment.Lesson.ContentSection.Term.Package.Teacher.User.FullName, comment.Lesson.ContentSection.Term.Package.Name, comment.Lesson.ContentSection.Term.Title, comment.Lesson.ContentSection.Title, comment.AuthorUserId, comment.AuthorUser.FullName, comment.Body, comment.Status.ToString(), comment.CreatedAt, comment.ReviewedAt, comment.ReviewedByUser != null ? comment.ReviewedByUser.FullName : null)).ToListAsync(ct);
+        var comments = await query.OrderByDescending(comment => comment.CreatedAt).Select(comment => new ModerationLessonCommentDto(comment.Id, comment.LessonId, comment.Lesson.Title, comment.Lesson.ContentSection.Term.Package.Teacher.User.FullName, comment.Lesson.ContentSection.Term.Package.Name, comment.Lesson.ContentSection.Term.Title, comment.Lesson.ContentSection.Title, comment.AuthorUserId, comment.AuthorUser.FullName, comment.Body, comment.Status.ToString(), comment.CreatedAt, comment.ReviewedAt, comment.ReviewedByUser != null ? comment.ReviewedByUser.FullName : null) { ParentCommentId = comment.ParentCommentId, ParentBody = comment.ParentComment != null ? comment.ParentComment.Body : null }).ToListAsync(ct);
         return Ok(NaderGorge.Application.Common.ApiResponse<List<ModerationLessonCommentDto>>.Ok(comments));
     }
 
@@ -616,18 +616,9 @@ public class TeacherController : ControllerBase
     {
         var context = await ResolveTeacherContextAsync(ct);
         if (MissingPermission(context, TeacherStaffPermissions.Comments)) return Forbid();
-        var original = await _db.LessonComments.FirstOrDefaultAsync(comment => comment.Id == commentId && comment.Lesson.ContentSection.Term.Package.TeacherId == context.TeacherId, ct);
-        if (original == null) return NotFound();
-        var body = request.Body?.Trim();
-        if (string.IsNullOrWhiteSpace(body) || body.Length > 2000) return BadRequest(NaderGorge.Application.Common.ApiResponse.Fail("الرد مطلوب وبحد أقصى 2000 حرف."));
-        var reply = new NaderGorge.Domain.Entities.LessonComment { LessonId = original.LessonId, AuthorUserId = context.TeacherUserId, Body = body, Status = LessonCommentStatus.Approved, ReviewedAt = DateTime.UtcNow, ReviewedByUserId = context.TeacherUserId };
-        _db.LessonComments.Add(reply);
-        await _db.SaveChangesAsync(ct);
-        var lessonContext = await _db.Lessons
-            .Where(item => item.Id == reply.LessonId)
-            .Select(item => new { item.Title, TeacherName = item.ContentSection.Term.Package.Teacher.User.FullName, PackageName = item.ContentSection.Term.Package.Name, TermTitle = item.ContentSection.Term.Title, SectionTitle = item.ContentSection.Title })
-            .FirstAsync(ct);
-        return Ok(NaderGorge.Application.Common.ApiResponse<ModerationLessonCommentDto>.Ok(new ModerationLessonCommentDto(reply.Id, reply.LessonId, lessonContext.Title, lessonContext.TeacherName, lessonContext.PackageName, lessonContext.TermTitle, lessonContext.SectionTitle, reply.AuthorUserId, "", reply.Body, reply.Status.ToString(), reply.CreatedAt, reply.ReviewedAt, null)));
+        var response = await _mediator.Send(new ReplyToLessonCommentCommand(commentId, context.TeacherUserId, request.Body, context.TeacherId), ct);
+        if (response.Errors?.Contains("NOT_FOUND") == true) return NotFound(response);
+        return response.Success ? Ok(response) : BadRequest(response);
     }
 
     private async Task<bool> CanModerateLessonAsync(Guid lessonId, string permission, CancellationToken ct)

@@ -42,20 +42,24 @@ export function LessonViewer({
     return installLessonPageProtectionGuard(document);
   }, [hasViewableLessonVideo]);
 
-  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const requestedVideoId = searchParams.get("videoId");
+  const [selection, setSelection] = useState({ lessonId: lesson.id, requestedVideoId, videoId: requestedVideoId });
+  const sameSelectionContext = selection.lessonId === lesson.id && selection.requestedVideoId === requestedVideoId;
+  const selectedVideoId = sameSelectionContext ? selection.videoId : requestedVideoId;
+  const selectedIndex = lesson.videos.findIndex(video => video.id === selectedVideoId);
+  const firstPlayableIndex = lesson.videos.findIndex(video => video.hasAccess !== false);
+  const activeVideoIndex = selectedIndex >= 0 ? selectedIndex : Math.max(0, firstPlayableIndex);
+  const activeVideoId = lesson.videos[activeVideoIndex]?.id ?? null;
 
-  useEffect(() => {
-    if (!lesson.videos.length) return;
+  // Reconcile by ID before rendering children: reorders/deletions must never
+  // briefly mount another video, and metadata refreshes must retain selection.
+  if (!sameSelectionContext || selection.videoId !== activeVideoId) {
+    setSelection({ lessonId: lesson.id, requestedVideoId, videoId: activeVideoId });
+  }
 
-    const requestedVideoId = searchParams.get("videoId");
-    const requestedIndex = requestedVideoId
-      ? lesson.videos.findIndex((video) => video.id === requestedVideoId)
-      : -1;
-    const firstPlayableIndex = lesson.videos.findIndex((video) => video.hasAccess !== false);
-    const nextIndex = requestedIndex >= 0 ? requestedIndex : firstPlayableIndex >= 0 ? firstPlayableIndex : 0;
-
-    setActiveVideoIndex(nextIndex);
-  }, [lesson.videos, searchParams]);
+  const setActiveVideoIndex = (index: number) => {
+    setSelection({ lessonId: lesson.id, requestedVideoId, videoId: lesson.videos[index]?.id ?? null });
+  };
 
   const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDto[]>([]);

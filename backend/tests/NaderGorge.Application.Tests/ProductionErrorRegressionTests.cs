@@ -11,6 +11,28 @@ namespace NaderGorge.Application.Tests;
 public sealed class ProductionErrorRegressionTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Incident20260906_DatabaseConnectionFailure_Returns503WithRetryGuidance(bool wrapped)
+    {
+        Exception failure = new NpgsqlException("private connection detail", new IOException("connection interrupted"));
+        if (wrapped) failure = new InvalidOperationException("transient database failure", failure);
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        var middleware = new ExceptionHandlingMiddleware(_ => Task.FromException(failure),
+            NullLogger<ExceptionHandlingMiddleware>.Instance);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal("5", context.Response.Headers.RetryAfter);
+        context.Response.Body.Position = 0;
+        using var body = await JsonDocument.ParseAsync(context.Response.Body);
+        Assert.Contains("DATABASE_TEMPORARILY_UNAVAILABLE", body.RootElement.GetRawText());
+        Assert.DoesNotContain("private connection detail", body.RootElement.GetRawText());
+    }
+
+    [Theory]
     [InlineData("40001", null, true, 409)]
     [InlineData("23505", "IX_live_support_events_ConversationId_Sequence", true, 409)]
     [InlineData("23505", "IX_users_PhoneNumber", false, 409)]

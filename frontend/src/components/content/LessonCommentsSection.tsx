@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { registerCacheStore } from '@/lib/cache-invalidation';
+import { LessonCommentReplies } from './LessonCommentReplies';
 
 type LessonCommentsSectionProps = {
   lessonId: string;
@@ -64,8 +65,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
       setApprovedComments(approvedRes.data?.data ?? []);
       setMyComments(mineRes.data?.data ?? []);
     } catch {
-      setApprovedComments([]);
-      setMyComments([]);
+      toast.error('تعذر تحديث التعليقات. حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -180,7 +180,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
             </span>
           </div>
 
-          {loading ? (
+          {loading && approvedComments.length === 0 ? (
             <div className="space-y-3">
               <div className="h-24 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
               <div className="h-24 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
@@ -220,6 +220,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
                   <p className="mt-4 whitespace-pre-wrap text-sm font-medium leading-7 text-[var(--admin-text)]">
                     {comment.body}
                   </p>
+                  <LessonCommentReplies comment={comment} />
                 </article>
               ))}
             </div>
@@ -237,7 +238,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
             </div>
           </div>
 
-          {loading ? (
+          {loading && myComments.length === 0 ? (
             <div className="space-y-3">
               <div className="h-20 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />
               <div className="h-20 animate-pulse rounded-2xl bg-[var(--admin-card-soft)]" />

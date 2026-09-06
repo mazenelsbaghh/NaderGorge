@@ -60,6 +60,23 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
     public async Task<ApiResponse<WatchProgressDto>> Handle(TrackWatchProgressCommand request, CancellationToken ct)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await TrackOnceAsync(request, ct);
+            }
+            catch (Exception exception) when (attempt < 3 && DatabaseFailureClassifier.IsTransient(exception))
+            {
+                // ProgressSequence deduplicates a committed write even if its acknowledgement was lost.
+                _db.ClearTrackedChanges();
+                await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt), ct);
+            }
+        }
+    }
+
+    private async Task<ApiResponse<WatchProgressDto>> TrackOnceAsync(TrackWatchProgressCommand request, CancellationToken ct)
+    {
         var batchValidation = ValidateProgressBatch(request);
         if (!batchValidation.IsValid)
             return Fail(batchValidation.ErrorMessage!, batchValidation.ErrorCode!);

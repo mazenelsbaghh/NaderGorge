@@ -142,7 +142,7 @@ export const mutationContracts: readonly MutationContractSeed[] = [
   ['admin-sales-service.ts', 8, 'finance', ['finance:payroll', 'reports']],
   [
     'admin-service.ts',
-    89,
+    90,
     'users',
     ['employees', 'content:packages', 'assessments', 'student:balance'],
   ],

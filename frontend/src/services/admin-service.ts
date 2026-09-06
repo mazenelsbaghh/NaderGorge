@@ -704,6 +704,8 @@ export interface AssessmentOcrQuestionDto {
 }
 
 export interface ModerationLessonCommentDto {
+  parentCommentId?: string | null;
+  parentBody?: string | null;
   id: string;
   lessonId: string;
   lessonTitle: string;
@@ -1644,6 +1646,10 @@ export const adminService = {
       ApiResponse<ModerateLessonCommentResponse>
     >(`/admin/comments/${commentId}/approve`, {});
     return res.data?.data;
+  },
+  replyToLessonComment: async (commentId: string, body: string) => {
+    const response = await apiClient.post<ApiResponse<ModerationLessonCommentDto>>(`/admin/comments/${commentId}/reply`, { body });
+    return response.data.data;
   },
   rejectLessonComment: async (commentId: string) => {
     const res = await apiClient.post<

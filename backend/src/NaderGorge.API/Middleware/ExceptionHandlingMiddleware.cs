@@ -80,6 +80,17 @@ public class ExceptionHandlingMiddleware
                 "تغيّرت البيانات أثناء تنفيذ الطلب. حدّث الصفحة وراجع حالة العملية قبل المحاولة مرة أخرى.",
                 ["CONCURRENT_WRITE_CONFLICT"]));
         }
+        catch (Exception ex) when (DatabaseFailureClassifier.IsTransient(ex))
+        {
+            var correlationId = context.Items["CorrelationId"]?.ToString() ?? context.TraceIdentifier;
+            _logger.LogWarning("Temporary database failure. CorrelationId: {CorrelationId}, Endpoint: {Endpoint}",
+                correlationId, context.GetEndpoint()?.DisplayName);
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.Headers.RetryAfter = "5";
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(
+                "تعذّر الاتصال بالخدمة مؤقتًا. انتظر لحظات وراجع حالة العملية قبل إعادة المحاولة.",
+                ["DATABASE_TEMPORARILY_UNAVAILABLE"]));
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning("Bad request: {Message}", ex.Message);

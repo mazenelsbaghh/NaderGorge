@@ -21,7 +21,11 @@ public record ModerationLessonCommentDto(
     DateTime CreatedAt,
     DateTime? ReviewedAt,
     string? ReviewedByName
-);
+)
+{
+    public Guid? ParentCommentId { get; init; }
+    public string? ParentBody { get; init; }
+}
 
 public record GetLessonCommentsForModerationQuery(Guid LessonId, string? Status = null)
     : IRequest<ApiResponse<List<ModerationLessonCommentDto>>>;
@@ -85,7 +89,7 @@ public class GetLessonCommentsForModerationQueryHandler
                 c.CreatedAt,
                 c.ReviewedAt,
                 c.ReviewedByUser != null ? c.ReviewedByUser.FullName : null
-            ))
+            ) { ParentCommentId = c.ParentCommentId, ParentBody = c.ParentComment != null ? c.ParentComment.Body : null })
             .ToListAsync(cancellationToken);
 
         return ApiResponse<List<ModerationLessonCommentDto>>.Ok(comments);

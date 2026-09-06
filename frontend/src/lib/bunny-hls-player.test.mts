@@ -13,7 +13,7 @@ type PlayerMessage = {
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
 
-async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
+async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200) {
   const routeSource = await readFile(routePath, 'utf8');
   const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
   const scriptStart = routeSource.indexOf("(function(){\n  'use strict';", generatorStart);
@@ -28,7 +28,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
   const messages: PlayerMessage[] = [];
   const hlsListeners = new Map<string, (event: unknown, payload: unknown) => void>();
   const videoListeners = new Map<string, () => void>();
-  const timers: Array<{ callback: () => void; active: boolean }> = [];
+  let now = 0;
+  const timers: Array<{ callback: () => void; active: boolean; due: number }> = [];
   const video = {
     currentTime: 0,
     duration: Number.NaN,
@@ -102,8 +103,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
     fetch() {
       if (runtime === 'hlsjs') throw new Error('Native HLS fetch must not run when Hls.js is supported.');
       return Promise.resolve({
-        ok: true,
-        status: 200,
+        ok: nativeManifestStatus === 200,
+        status: nativeManifestStatus,
         text: () => Promise.resolve('#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\n720p/video.m3u8\n'),
       });
     },
@@ -114,8 +115,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
     parent: parentWindow,
     Promise,
     setInterval() { return 1; },
-    setTimeout(callback: () => void) {
-      const timer = { callback, active: true };
+    setTimeout(callback: () => void, delay: number) {
+      const timer = { callback, active: true, due: now + delay };
       timers.push(timer);
       return timer;
     },
@@ -136,6 +137,16 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs') {
     },
     hls: () => hlsInstances[0] ?? null,
     messages,
+    setMediaTime(time: number) { video.currentTime = time; },
+    advanceTime(milliseconds: number) {
+      now += milliseconds;
+      for (const timer of timers) {
+        if (timer.active && timer.due <= now) {
+          timer.active = false;
+          timer.callback();
+        }
+      }
+    },
     triggerVideoEvent(eventName: string) {
       if (eventName === 'play' || eventName === 'playing') video.paused = false;
       if (eventName === 'pause') video.paused = true;
@@ -161,6 +172,50 @@ test('2026-09-03 Bunny HLS 403 stops loading with its real cause and never falls
   assert.equal(player.hls()?.startLoadCalls, 0);
   assert.equal(player.hls()?.destroyCalls, 1);
   assert.equal(player.messages.some((message) => message.data?.provider === 'bunny'), false);
+});
+
+test('repeated buffering events cannot extend the playback deadline forever', async () => {
+  const player = await runHlsPlayer();
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  for (let i = 0; i < 3; i++) {
+    player.advanceTime(4000);
+    player.triggerVideoEvent('waiting');
+  }
+  player.advanceTime(3000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hls()?.destroyCalls, 1);
+});
+
+test('progress after seeking backwards clears the buffering deadline', async () => {
+  const player = await runHlsPlayer();
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.setMediaTime(120);
+  player.triggerVideoEvent('timeupdate');
+  player.setMediaTime(30);
+  player.triggerVideoEvent('seeking');
+  player.triggerVideoEvent('waiting');
+  player.advanceTime(5000);
+  player.setMediaTime(31);
+  player.triggerVideoEvent('timeupdate');
+  player.advanceTime(15000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+});
+
+test('pausing cancels a stall and resuming gets a full playback deadline', async () => {
+  const player = await runHlsPlayer();
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.advanceTime(14000);
+  player.triggerVideoEvent('pause');
+  player.advanceTime(20000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.triggerVideoEvent('play');
+  player.advanceTime(14000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(1000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
 });
 
 test('2026-09-03 Bunny HLS disables hidden manifest and segment reload loops', async () => {
@@ -213,7 +268,17 @@ test('2026-09-04 playback stall reports its exact phase instead of spinning fore
   assert.match(errorMessage?.data?.message ?? '', /لم تصل بيانات الفيديو/);
 });
 
-test('2026-09-04 Apple native media rejection explains the Bunny pull-zone fix', async () => {
+test('2026-09-04 Apple native HTTP 403 preserves the confirmed Bunny rejection', async () => {
+  const player = await runHlsPlayer('native-apple', 403);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const error = player.messages.find(message => message.type === 'error');
+  assert.equal(error?.data?.code, 403);
+  assert.equal(error?.data?.phase, 'native_manifest_http');
+  assert.match(error?.data?.message ?? '', /Token Authentication Key/);
+  assert.equal(player.messages.some(message => message.type === 'ready'), false);
+});
+
+test('unknown native media failure does not falsely blame Bunny domain protection', async () => {
   const player = await runHlsPlayer('native-apple');
   await new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -222,6 +287,7 @@ test('2026-09-04 Apple native media rejection explains the Bunny pull-zone fix',
   const errorMessage = player.messages.find((message) => message.type === 'error');
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
   assert.equal(errorMessage?.data?.phase, 'native_media_error');
-  assert.match(errorMessage?.data?.message ?? '', /Allowed Domains\/Hotlink Protection/);
+  assert.match(errorMessage?.data?.message ?? '', /لم يحدد المتصفح سبب التعطل/);
+  assert.doesNotMatch(errorMessage?.data?.message ?? '', /Allowed Domains|Hotlink Protection|403/);
   assert.equal(player.messages.some((message) => message.type === 'ready'), false);
 });

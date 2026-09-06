@@ -171,6 +171,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 }, ref) => {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [embedRequest, setEmbedRequest] = useState<{ sessionId: string } | null>(null);
   const router = useRouter();
   const params = useParams();
   const packageId = params?.packageId as string;
@@ -1469,7 +1470,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setProvider(providerName);
       setQualityLevels([]);
       setCurrentQuality('auto');
-      loadActiveEmbed(session.sessionId);
+      setEmbedRequest({ sessionId: session.sessionId });
 
     } catch (err: any) {
       const errors = err.response?.data?.errors || [];
@@ -1508,8 +1509,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       return;
     }
     setStatus('loading');
-    loadActiveEmbed(sessionId);
+    setEmbedRequest({ sessionId });
   };
+
+  // Fast session responses can arrive before React commits the loading surface.
+  // Mount after commit instead of losing the embed against a null container ref.
+  useEffect(() => {
+    if (embedRequest && !isExamLocked && !securitySuspendedRef.current) {
+      loadActiveEmbed(embedRequest.sessionId);
+    }
+  }, [embedRequest, isExamLocked, loadActiveEmbed]);
 
   useEffect(() => {
     if (status === 'idle' && !isExamLocked) void loadVideo();

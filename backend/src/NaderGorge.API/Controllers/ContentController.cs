@@ -101,9 +101,9 @@ public class ContentController : ControllerBase
     }
 
     [HttpGet("lessons/{lessonId:guid}/comments")]
-    public async Task<IActionResult> GetLessonComments(Guid lessonId, [FromQuery] int offset = 0, [FromQuery] int limit = 50)
+    public async Task<IActionResult> GetLessonComments(Guid lessonId, [FromQuery] int offset = 0, [FromQuery] int limit = 50, [FromQuery] Guid? parentCommentId = null)
     {
-        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId(), offset, limit));
+        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId(), offset, limit, parentCommentId));
 
         if (!response.Success)
         {
@@ -160,7 +160,7 @@ public class ContentController : ControllerBase
     [HttpPost("lessons/{lessonId:guid}/comments")]
     public async Task<IActionResult> CreateLessonComment(Guid lessonId, [FromBody] CreateLessonCommentRequest request)
     {
-        var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body));
+        var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body, request.ParentCommentId));
 
         if (!response.Success)
         {
@@ -208,4 +208,4 @@ public class ContentController : ControllerBase
     }
 }
 
-public record CreateLessonCommentRequest(string Body);
+public record CreateLessonCommentRequest(string Body, Guid? ParentCommentId = null);

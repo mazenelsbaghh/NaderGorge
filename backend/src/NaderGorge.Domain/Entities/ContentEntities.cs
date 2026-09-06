@@ -288,6 +288,10 @@ public class LessonResource : BaseEntity, IArchivableContent
 
 public class LessonComment : BaseEntity
 {
+    public Guid? ParentCommentId { get; set; }
+    public LessonComment? ParentComment { get; set; }
+    public ICollection<LessonComment> Replies { get; set; } = new List<LessonComment>();
+
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
 
