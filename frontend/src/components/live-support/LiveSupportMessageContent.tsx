@@ -100,7 +100,7 @@ export function LiveSupportMessageContent({
 
   useEffect(() => {
     if (
-      !['Image', 'Audio', 'Pdf'].includes(message.type) ||
+      !['Image', 'Audio', 'Pdf', 'Video'].includes(message.type) ||
       !message.attachmentId
     ) {
       setAttachmentUrl(undefined);
@@ -145,7 +145,7 @@ export function LiveSupportMessageContent({
     return <span className="italic opacity-75">تم حذف الرسالة</span>;
 
   if (
-    ['Image', 'Audio', 'Pdf'].includes(message.type) &&
+    ['Image', 'Audio', 'Pdf', 'Video'].includes(message.type) &&
     message.attachmentId
   ) {
     if (attachmentFailed) {
@@ -162,6 +162,12 @@ export function LiveSupportMessageContent({
           جارٍ تحميل المرفق…
         </span>
       );
+    }
+    if (message.type === 'Video') {
+      return <div className="min-w-0 max-w-full">
+        <video controls playsInline preload="metadata" src={attachmentUrl} className="max-h-96 w-full rounded-xl" aria-label="فيديو واتساب" />
+        <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="underline">فتح الفيديو</a>
+      </div>;
     }
     if (message.type === 'Audio') {
       return (

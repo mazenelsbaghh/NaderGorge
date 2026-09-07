@@ -198,6 +198,9 @@ public sealed class StudentActionTests
             var db = TestAppDbContextFactory.Create();
             var staff = await TestAppDbContextFactory.SeedUserAsync(db, "Support", "01011111111");
             var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01022222222");
+            var studentRole = new Role { Name = "Student", Type = RoleType.Student };
+            db.Roles.Add(studentRole);
+            db.UserRoles.Add(new UserRole { User = student, Role = studentRole });
             var employee = new EmployeeProfile { UserId = staff.Id, BasicSalary = 1 };
             db.EmployeeProfiles.Add(employee);
             db.LiveSupportStaffConfigs.Add(new LiveSupportStaffConfig { UserId = staff.Id, IsEnabled = true, MaxActiveConversations = 2, ConfiguredByUserId = staff.Id });

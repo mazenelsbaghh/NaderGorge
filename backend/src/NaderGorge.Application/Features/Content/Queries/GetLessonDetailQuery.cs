@@ -34,7 +34,8 @@ public record LessonDetailDto(
     Guid? TermId = null,
     Guid? SectionId = null,
     bool IsVideoOnlyAccess = false,
-    DateOnly? HomeworkComingSoonOn = null
+    DateOnly? HomeworkComingSoonOn = null,
+    bool IsCompleted = false
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -275,7 +276,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 lesson.ContentSectionId,
                 accessibleVideoIds.Count > 0
             );
-            return ApiResponse<LessonDetailDto>.Ok(minimalDetail);
+            var partialCompleted = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+                new(_db, request.UserId, new[] { lesson.Id }), partialVideoDtos.Where(v => v.HasAccess).Select(v => v.Id).ToArray(), ct);
+            return ApiResponse<LessonDetailDto>.Ok(minimalDetail with { IsCompleted = partialCompleted.Contains(lesson.Id) });
         }
 
         var isAuthorizedTeacher = await _auth.CanAccessLessonAsync(request.UserId, request.LessonId, ct);
@@ -711,7 +714,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             false,
             hw is null ? lesson.HomeworkComingSoonOn : null
         );
-        return ApiResponse<LessonDetailDto>.Ok(detail);
+        var completed = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            new(_db, request.UserId, new[] { lesson.Id }), videoDtos.Where(v => v.HasAccess).Select(v => v.Id).ToArray(), ct);
+        return ApiResponse<LessonDetailDto>.Ok(detail with { IsCompleted = completed.Contains(lesson.Id) });
     }
 
     private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)

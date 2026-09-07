@@ -39,6 +39,18 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
   const [loading, setLoading] = useState(true);
   const [showGenModal, setShowGenModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [codeMatches, setCodeMatches] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    setCodeMatches([]);
+    if (!searchQuery.trim()) return;
+    const timer = setTimeout(() => {
+      void adminService.listCodeGroups({ search: searchQuery.trim() }).then((matches) => {
+        if (active) setCodeMatches((matches ?? []).map(group => group.id));
+      }).catch(() => { if (active) toast.error('تعذر البحث بالكود أو السيريال. حاول مرة أخرى.'); });
+    }, 350);
+    return () => { active = false; clearTimeout(timer); };
+  }, [searchQuery]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
   
@@ -204,14 +216,14 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
     return list.filter((g) => 
-      g.name.toLowerCase().includes(q) || 
+      codeMatches.includes(g.id) || g.name.toLowerCase().includes(q) ||
       g.id.toLowerCase().includes(q) ||
       (g.packageId && (packageNameMap[g.packageId] || g.packageId).toLowerCase().includes(q)) ||
       (g.videoTypeId && (videoTypeNameMap[g.videoTypeId] || g.videoTypeId).toLowerCase().includes(q)) ||
       (g.lessonId && g.lessonId.toLowerCase().includes(q)) ||
       (!g.teacherId && 'عام للمنصة'.includes(q))
     );
-  }, [groups, searchQuery, packageNameMap, videoTypeNameMap, selectedSubjectId, selectedTeacherId, packages]);
+  }, [groups, searchQuery, codeMatches, packageNameMap, videoTypeNameMap, selectedSubjectId, selectedTeacherId, packages]);
 
   const totalCodes = groups.reduce((sum, group) => sum + group.codeCount, 0);
   const usedCodes = groups.reduce((sum, group) => sum + group.usedCount, 0);
@@ -355,7 +367,7 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
           <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
           <input
             type="text"
-            placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
+            placeholder="ابحث بالكود أو السيريال أو اسم المجموعة..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"

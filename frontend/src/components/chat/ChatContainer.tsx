@@ -6,6 +6,7 @@ import { ChatWindow } from "./ChatWindow";
 import { useSignalR, SignalRMessage } from "@/hooks/useSignalR";
 import { devConsole } from "@/utils/dev-console";
 import toast from "react-hot-toast";
+import { CreateChatGroup } from './CreateChatGroup';
 
 export const ChatContainer: React.FC = () => {
   const { user } = useAuthStore();
@@ -21,9 +22,7 @@ export const ChatContainer: React.FC = () => {
       setLoadingRooms(true);
       const data = await chatService.getRooms();
       setRooms(data);
-      if (data.length > 0 && !selectedRoomId) {
-        setSelectedRoomId(data[0].id);
-      }
+      if (data.length > 0) setSelectedRoomId(current => current ?? data[0].id);
     } catch (err) {
       devConsole.error(err);
       toast.error("تعذر تحميل المحادثات");
@@ -36,13 +35,29 @@ export const ChatContainer: React.FC = () => {
     void loadRooms();
   }, [loadRooms]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void chatService.getRooms().then(currentRooms => {
+        setRooms(currentRooms);
+        if (selectedRoomId && !currentRooms.some(room => room.id === selectedRoomId)) {
+          setSelectedRoomId(undefined);
+          setMessages([]);
+        }
+      }).catch(error => devConsole.error(error));
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [selectedRoomId]);
+
   // Fetch messages when room changes
   useEffect(() => {
     if (!selectedRoomId) return;
+    let active = true;
+    setMessages([]);
 
     const loadMessages = async () => {
       try {
         const data = await chatService.getRoomMessages(selectedRoomId);
+        if (!active) return;
         setMessages(data);
         
         // Mark room as read
@@ -58,6 +73,7 @@ export const ChatContainer: React.FC = () => {
     };
 
     void loadMessages();
+    return () => { active = false; };
   }, [selectedRoomId]);
 
   // Handle incoming real-time message
@@ -175,6 +191,9 @@ export const ChatContainer: React.FC = () => {
   }
 
   return (
+    <div className="space-y-3">
+    {user?.roles.includes('Admin') && <CreateChatGroup onCreated={(id) => { setSelectedRoomId(id); void loadRooms(); }} />}
+    {user?.roles.includes('Admin') && selectedRoom && selectedRoom.type !== 'Individual' && <CreateChatGroup roomId={selectedRoom.id} onCreated={() => void loadRooms()} />}
     <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[75vh] max-h-[800px] border border-[var(--admin-border)] rounded-3xl shadow-sm overflow-hidden">
       {/* Sidebar (Rooms List) */}
       <ChatSidebar
@@ -203,6 +222,7 @@ export const ChatContainer: React.FC = () => {
           اختر محادثة للبدء في التواصل
         </div>
       )}
+    </div>
     </div>
   );
 };

@@ -340,8 +340,9 @@ export default function AssistantLiveSupportPageClient() {
     if (!conversationId || !file || ownershipLost || pendingAction || uploading) return false;
     const isImage = file.type.startsWith('image/');
     const isAudio = file.type.startsWith('audio/');
-    if (!isImage && !isAudio) {
-      setError('اختر صورة بصيغة JPG أو PNG أو WebP، أو سجّل رسالة صوتية من زر التسجيل.');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isAudio && !isPdf) {
+      setError('اختر صورة أو ملف PDF، أو سجّل رسالة صوتية من زر التسجيل.');
       return false;
     }
     setUploading(true);
@@ -350,7 +351,7 @@ export default function AssistantLiveSupportPageClient() {
       const attachment = await liveSupportService.uploadStaffAttachment(conversationId, file);
       const message = await liveSupportService.sendStaffMessage(conversationId, {
         clientMessageId: createClientId(),
-        type: isAudio ? 'Audio' : 'Image',
+        type: isAudio ? 'Audio' : isPdf ? 'Pdf' : 'Image',
         content: file.name,
         attachmentId: attachment.id,
       });

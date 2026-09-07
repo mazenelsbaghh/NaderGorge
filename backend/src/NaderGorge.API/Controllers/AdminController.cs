@@ -101,6 +101,24 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("users/admins/{userId:guid}/reset-password")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> ResetAdminPassword(Guid userId, [FromBody] AdminResetPasswordRequest dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ResetAdminPasswordCommand(userId, dto.NewPassword, GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/staff/{userId:guid}/archive")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> ArchiveStaff(Guid userId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ArchiveStaffCommand(userId, GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("users/students/{userId:guid}/notes")]
     [HasPermission("users.manage")]
     public async Task<IActionResult> AddStudentNote(Guid userId, [FromBody] AddStudentNoteRequest dto)
@@ -179,7 +197,7 @@ public class AdminController : ControllerBase
     [HttpGet("codes/groups")]
     [HasPermission("codes.manage")]
     public async Task<IActionResult> ListCodeGroups()
-        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId())));
+        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId(), Request.Query["search"].FirstOrDefault())));
 
     [HttpGet("codes/groups/{id:guid}/details")]
     [HasPermission("codes.manage")]
@@ -941,6 +959,14 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new GetExamDashboardQuery(examId));
         return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpGet("exams/{examId:guid}/attempts/{attemptId:guid}/review")]
+    [HasPermission("exams.manage")]
+    public async Task<IActionResult> ReviewExamAttempt(Guid examId, Guid attemptId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetStaffExamAttemptQuery(examId, attemptId, GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("homework/{homeworkId:guid}/dashboard")]

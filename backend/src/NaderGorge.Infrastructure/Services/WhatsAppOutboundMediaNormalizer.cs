@@ -43,6 +43,8 @@ public sealed class WhatsAppOutboundMediaNormalizer(IWhatsAppAudioProcess audioP
         {
             LiveSupportMessageType.Image => await NormalizeImageAsync(source, sourceBytes, cancellationToken),
             LiveSupportMessageType.Audio => await NormalizeAudioAsync(source, sourceBytes, cancellationToken),
+            LiveSupportMessageType.Pdf when source.ContentType == "application/pdf" && sourceBytes.AsSpan().StartsWith("%PDF-"u8)
+                => new WhatsAppOutboundMedia("document", source.FileName, "application/pdf", sourceBytes),
             _ => throw Failure("WHATSAPP_MEDIA_UNSUPPORTED", 422,
                 "The stored media type is not supported by WhatsApp.")
         };

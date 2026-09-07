@@ -964,6 +964,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       newThreshold,
     ));
     if (sessionHasRegisteredView) {
+      if (!viewTrackedRef.current) window.dispatchEvent(new Event('massar:watch-registered'));
       setViewTracked(true);
       viewTrackedRef.current = true;
     }

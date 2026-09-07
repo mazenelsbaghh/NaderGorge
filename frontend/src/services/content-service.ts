@@ -238,6 +238,7 @@ export interface HomeworkDto {
 }
 
 export interface LessonDetailDto {
+  isCompleted?: boolean;
   id: string;
   title: string;
   summary: string;

@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
-public record ListCodeGroupsQuery(Guid? CurrentUserId = null) : IRequest<ApiResponse<List<CodeGroupDto>>>;
+public record ListCodeGroupsQuery(Guid? CurrentUserId = null, string? Search = null) : IRequest<ApiResponse<List<CodeGroupDto>>>;
 
 public record CodeGroupDto(
     Guid Id,
@@ -66,6 +66,13 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
         }
 
         var query = _db.CodeGroups.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            var hasSerial = long.TryParse(search, out var serial);
+            query = query.Where(group => group.AccessCodes.Any(code =>
+                code.CodePlaintext == search || (hasSerial && code.SerialNumber == serial)));
+        }
 
         if (isTeacher)
         {

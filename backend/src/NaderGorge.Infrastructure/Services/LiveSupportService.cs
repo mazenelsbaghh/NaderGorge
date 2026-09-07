@@ -635,8 +635,9 @@ public sealed class LiveSupportService(
             ?? throw new LiveSupportException("NOT_FOUND", "المرفق غير موجود.");
         var validImage = type == LiveSupportMessageType.Image && IsImageAttachment(attachment.ContentType);
         var validAudio = type == LiveSupportMessageType.Audio && IsAudioAttachment(attachment.ContentType);
-        if (!validImage && !validAudio)
-            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو تسجيلات صوتية.");
+        var validPdf = type == LiveSupportMessageType.Pdf && attachment.ContentType == "application/pdf";
+        if (!validImage && !validAudio && !validPdf)
+            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو PDF أو تسجيلات صوتية.");
         var whatsAppBinding = await _db.LiveSupportWhatsAppBindings.AsNoTracking()
             .SingleOrDefaultAsync(x => x.ConversationId == conversationId, ct);
         EnsureWhatsAppWindowOpen(whatsAppBinding);

@@ -9,6 +9,18 @@ namespace NaderGorge.Application.Tests.LiveSupport;
 public sealed class WhatsAppOutboundMediaNormalizerTests
 {
     [Fact]
+    public async Task PdfAttachment_IsSentAsDocumentWithoutChangingBytes()
+    {
+        var bytes = "%PDF-1.4\n%%EOF"u8.ToArray();
+        await using var stream = new MemoryStream(bytes);
+        var normalized = await new WhatsAppOutboundMediaNormalizer(new RejectingAudioProcess())
+            .NormalizeAsync(new(LiveSupportMessageType.Pdf, "lesson.pdf", "application/pdf", bytes.Length, stream), default);
+        Assert.Equal("document", normalized.MediaType);
+        Assert.Equal("application/pdf", normalized.ContentType);
+        Assert.Equal(bytes, normalized.Content);
+    }
+
+    [Fact]
     public async Task ProductionRegression_20260829_Code131053_RealFfmpeg_ProducesMp3Frames()
     {
         var audioProcess = new FfmpegWhatsAppAudioProcess(FfmpegExecutable());

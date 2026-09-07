@@ -15,7 +15,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/student/video-session")]
-[Authorize(Roles = "Student,Admin")]
+[Authorize(Roles = "Student,Admin,Teacher")]
 [EnableRateLimiting("video-session")]
 public class VideoSessionController : ControllerBase
 {
@@ -42,11 +42,25 @@ public class VideoSessionController : ControllerBase
         if (!Guid.TryParse(userIdString, out var userId))
             return Unauthorized();
 
+        if (User.IsInRole("Teacher") && !User.IsInRole("Admin"))
+        {
+            var lessonId = await _db.LessonVideos
+                .Where(video => video.Id == request.LessonVideoId)
+                .Select(video => (Guid?)video.LessonId)
+                .SingleOrDefaultAsync(ct);
+            var teacherAuthorization = new NaderGorge.Application.Services.TeacherAuthorizationService(_db);
+            var workspace = await teacherAuthorization.GetWorkspaceAccessAsync(userId, ct);
+            if (workspace is null || lessonId is null
+                || !await teacherAuthorization.CanAccessLessonAsync(userId, lessonId.Value, ct))
+                return Forbid();
+        }
+
         var command = new CreateVideoSessionCommand(
             request.LessonVideoId,
             userId,
             GetIpAddress(),
-            User.IsInRole("Admin") ? VideoSessionMode.AdminPreview : VideoSessionMode.Standard
+            User.IsInRole("Admin") || User.IsInRole("Teacher")
+                ? VideoSessionMode.AdminPreview : VideoSessionMode.Standard
         );
 
         var result = await _mediator.Send(command, ct);
@@ -108,7 +122,7 @@ public class VideoSessionController : ControllerBase
     [HttpPost("{lessonVideoId}/track-progress")]
     public async Task<IActionResult> TrackProgress(Guid lessonVideoId, [FromBody] TrackProgressRequest request, CancellationToken ct)
     {
-        if (User.IsInRole("Admin")) return NoContent();
+        if (User.IsInRole("Admin") || User.IsInRole("Teacher")) return NoContent();
 
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
@@ -169,6 +183,7 @@ public class VideoSessionController : ControllerBase
     }
 
     [HttpPost("{lessonVideoId}/request-extra")]
+    [Authorize(Roles = "Student,Admin")]
     [Idempotent]
     public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, [FromBody] CreateExtraWatchRequest request, CancellationToken ct)
     {
@@ -183,6 +198,7 @@ public class VideoSessionController : ControllerBase
     }
 
     [HttpGet("{lessonVideoId}/request-status")]
+    [Authorize(Roles = "Student,Admin")]
     public async Task<IActionResult> GetExtraWatchStatus(Guid lessonVideoId, CancellationToken ct)
     {
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

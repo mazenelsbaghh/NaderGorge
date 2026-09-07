@@ -24,6 +24,7 @@ public class UpdateUserStatusCommandHandler : IRequestHandler<UpdateUserStatusCo
             .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
         if (user == null) return ApiResponse.Fail("User not found");
+        if (user.IsDeleted) return ApiResponse.Fail("لا يمكن تنشيط حساب مؤرشف.");
 
         var oldStatus = user.IsActive ? "Active" : "Disabled";
         var isNewActive = request.NewStatus.Equals("Active", StringComparison.OrdinalIgnoreCase);

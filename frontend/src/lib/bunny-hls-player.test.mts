@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import ts from 'typescript';
 
 const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
 
@@ -16,13 +17,20 @@ type HlsRuntime = 'hlsjs' | 'native-apple';
 async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200) {
   const routeSource = await readFile(routePath, 'utf8');
   const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
-  const scriptStart = routeSource.indexOf("(function(){\n  'use strict';", generatorStart);
-  const scriptEnd = routeSource.indexOf('</script>', scriptStart);
-  assert.ok(generatorStart >= 0 && scriptStart > generatorStart && scriptEnd > scriptStart);
-
-  const playerScript = routeSource
-    .slice(scriptStart, scriptEnd)
-    .replace('${safeSource}', JSON.stringify('https://vz-example.b-cdn.net/signed/video/playlist.m3u8'));
+  const generatorEnd = routeSource.indexOf('function configuredLegacyBunnyLibraryId', generatorStart);
+  const escapeStart = routeSource.indexOf('function escapeHtml(');
+  const escapeEnd = routeSource.indexOf('function generateYouTubeEmbedHtml', escapeStart);
+  assert.ok(generatorStart >= 0 && generatorEnd > generatorStart && escapeStart >= 0);
+  // Run the real generator so template escaping matches the delivered HTML.
+  const compiled = ts.transpileModule(
+    routeSource.slice(generatorStart, generatorEnd) + routeSource.slice(escapeStart, escapeEnd),
+    { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  const html: string = vm.runInNewContext(
+    compiled + '\ngenerateBunnyHlsEmbedHtml("https://vz-example.b-cdn.net/signed/video/playlist.m3u8", "Test student", "")',
+    { URL },
+  );
+  const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
   assert.doesNotMatch(playerScript, /\$\{/);
 
   const messages: PlayerMessage[] = [];

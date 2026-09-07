@@ -15,6 +15,7 @@ import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 import { aiJobStatusFromProgressEvent } from '@/lib/ai-job-status';
 import { extractApiErrorMessages, getApiErrorSummary } from '@/lib/api-errors';
 import { AddVideoForm } from './AddVideoForm';
+import { bunnyPlaybackSelection } from '@/lib/bunny-playback-mode';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
@@ -529,11 +530,11 @@ export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false,
                       </span>
                     )}
                     {video.provider.toLowerCase() === 'bunny' && (
-                      <span className={`rounded border px-1.5 py-0.5 font-sans font-black ${video.bunnyPlaybackMode === 1
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-black ${bunnyPlaybackSelection(video.bunnyPlaybackMode) === 1
                         ? 'border-teal-500/25 bg-teal-500/10 text-teal-700 dark:text-teal-300'
                         : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'
                       }`}>
-                        المشغل: {video.bunnyPlaybackMode === 1 ? 'المنصة HLS' : 'Bunny الأصلي'}
+                        المشغل: {bunnyPlaybackSelection(video.bunnyPlaybackMode) === 1 ? 'المنصة HLS' : 'Bunny الأصلي'}
                       </span>
                     )}
                     {video.provider.toLowerCase() === 'bunny' && video.bunnyStatus && (

@@ -36,6 +36,7 @@ import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { translateRole } from '@/packages/brand';
 import { useDisableEmployee } from '@/features/employee';
+import { ArchiveStaffButton } from '@/components/admin/StaffAccountActions';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -244,6 +245,7 @@ export default function AdminAssistantsPageClient() {
       align: 'left',
       render: (u) => (
         <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          <ArchiveStaffButton user={u} onArchived={fetchUsers} />
           <NeumorphButton
             type="button"
             onClick={(e: React.MouseEvent) => {

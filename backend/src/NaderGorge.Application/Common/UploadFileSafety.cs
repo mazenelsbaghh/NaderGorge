@@ -48,6 +48,10 @@ public static class UploadFileSafety
             throw new InvalidUploadContentException("Uploaded file type could not be verified.");
         }
 
+        if (kind == SafeUploadKind.PrivateAttachment && detected.Value.Extension == ".mp4" &&
+            string.Equals(declaredContentType, "video/mp4", StringComparison.OrdinalIgnoreCase))
+            detected = (".mp4", "video/mp4");
+
         if (!IsAllowed(kind, extension, detected.Value.Extension))
         {
             throw new InvalidUploadContentException("Uploaded file type does not match the allowed file policy.");

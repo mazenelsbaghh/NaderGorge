@@ -25,6 +25,8 @@ public class SendChatMessageCommandHandler : IRequestHandler<SendChatMessageComm
 
     public async Task<ApiResponse<Guid>> Handle(SendChatMessageCommand request, CancellationToken ct)
     {
+        if (!await _db.Users.AnyAsync(u => u.Id == request.SenderUserId && u.IsActive && !u.IsDeleted, ct))
+            return ApiResponse<Guid>.Fail("الحساب غير نشط.");
         // 1. Verify room exists and sender is participant
         var room = await _db.ChatRooms
             .Include(r => r.ChatParticipants)

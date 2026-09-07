@@ -96,7 +96,9 @@ public class ChatHub : Hub
                 );
 
                 // Broadcast message to the room group
-                await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", dto);
+                var recipients = await _db.ChatParticipants.Where(p => p.ChatRoomId == roomId && p.User.IsActive && !p.User.IsDeleted)
+                    .Select(p => "User_" + p.UserId).ToListAsync();
+                await Clients.Groups(recipients).SendAsync("ReceiveMessage", dto);
 
                 // Check for mentions in the content to trigger a real-time notification alert to mentioned users
                 var mentions = System.Text.RegularExpressions.Regex.Matches(content, @"@([\w\.\-]+)")
@@ -138,6 +140,9 @@ public class ChatHub : Hub
 
         var userName = GetUserName();
         // Broadcast typing state to room group (excluding the sender)
-        await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserTyping", roomId, userId, userName);
+        if (!await _db.ChatParticipants.AnyAsync(p => p.ChatRoomId == roomId && p.UserId == userId)) return;
+        var recipients = await _db.ChatParticipants.Where(p => p.ChatRoomId == roomId && p.UserId != userId && p.User.IsActive && !p.User.IsDeleted)
+            .Select(p => "User_" + p.UserId).ToListAsync();
+        await Clients.Groups(recipients).SendAsync("UserTyping", roomId, userId, userName);
     }
 }

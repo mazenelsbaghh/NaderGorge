@@ -415,6 +415,7 @@ public sealed class WhatsAppCloudService
         if (!uploaded.Success) return uploaded with { RecipientPhoneNumber = recipient };
 
         var media = new Dictionary<string, object?> { ["id"] = uploaded.MetaMessageId };
+        if (message.MediaType == "document") media["filename"] = message.FileName;
         if (message.MediaType == "image" && !string.IsNullOrWhiteSpace(message.Caption))
             media["caption"] = message.Caption;
         var payload = new Dictionary<string, object?>
@@ -438,6 +439,7 @@ public sealed class WhatsAppCloudService
         {
             "image" => "image/jpeg",
             "audio" => "audio/mpeg",
+            "document" => "application/pdf",
             _ => null
         };
         if (expectedContentType is null ||
@@ -550,6 +552,8 @@ public sealed class WhatsAppCloudService
         "image/webp" => ".webp",
         "audio/ogg" or "audio/opus" => ".ogg",
         "application/pdf" => ".pdf",
+        "video/mp4" or "audio/mp4" => ".mp4",
+        "audio/mpeg" => ".mp3",
         _ => ".bin"
     };
 

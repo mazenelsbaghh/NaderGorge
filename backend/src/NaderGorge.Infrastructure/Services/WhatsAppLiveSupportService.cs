@@ -468,7 +468,7 @@ public sealed class WhatsAppLiveSupportService(
             var reply = interactive.TryGetProperty("button_reply", out var button) ? button : interactive.TryGetProperty("list_reply", out var list) ? list : default;
             return (reply.ValueKind == JsonValueKind.Object ? Text(reply, "title") ?? "تفاعل واتساب" : "تفاعل واتساب", LiveSupportMessageType.Text, null);
         }
-        if (type is "image" or "audio" or "document" && message.TryGetProperty(type, out var media) && Text(media, "id") is { } mediaId)
+        if (type is "image" or "audio" or "document" or "video" && message.TryGetProperty(type, out var media) && Text(media, "id") is { } mediaId)
         {
             WhatsAppCloudService.DownloadedMedia downloaded;
             try
@@ -499,7 +499,13 @@ public sealed class WhatsAppLiveSupportService(
             var attachment = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = "whatsapp" };
             db.LiveSupportAttachments.Add(attachment);
             await db.SaveChangesAsync(ct);
-            var supportType = type == "image" ? LiveSupportMessageType.Image : type == "audio" ? LiveSupportMessageType.Audio : LiveSupportMessageType.Pdf;
+            var supportType = type switch
+            {
+                "image" => LiveSupportMessageType.Image,
+                "audio" => LiveSupportMessageType.Audio,
+                "video" => LiveSupportMessageType.Video,
+                _ => LiveSupportMessageType.Pdf
+            };
             return (Text(media, "caption") ?? stored.OriginalFileName, supportType, attachment.Id);
         }
         return ($"رسالة واتساب من النوع: {type}", LiveSupportMessageType.Text, null);

@@ -181,8 +181,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
                 if (exam != null && exam.IsActive && exam.IsMandatory)
                 {
-                    var passedExam = await _db.StudentExamAttempts
-                        .AnyAsync(a => a.UserId == userId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
+                    var passedExam = passedExamIds.Contains(previousLesson.ExamId.Value);
 
                     if (!passedExam)
                     {
@@ -206,13 +205,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
             if (prevVideoExams.Any())
             {
-                var prevVideoExamIds = prevVideoExams.Select(e => e.Id).ToList();
-                var passedPrevVideoExamIds = await _db.StudentExamAttempts
-                    .Where(a => a.UserId == userId && prevVideoExamIds.Contains(a.ExamId) && a.IsPassed)
-                    .Select(a => a.ExamId)
-                    .ToListAsync(ct);
-
-                var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !passedPrevVideoExamIds.Contains(e.Id));
+                var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !passedExamIds.Contains(e.Id));
                 if (unpassedVideoExam != null)
                 {
                     return (
@@ -255,8 +248,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
             if (exam != null && exam.IsActive && exam.IsMandatory)
             {
-                var passedExam = await _db.StudentExamAttempts
-                    .AnyAsync(a => a.UserId == userId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+                var passedExam = passedExamIds.Contains(lesson.ExamId.Value);
 
                 if (!passedExam)
                 {

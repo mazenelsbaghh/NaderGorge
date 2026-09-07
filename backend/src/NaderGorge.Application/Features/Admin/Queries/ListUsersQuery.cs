@@ -76,6 +76,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
         var normalizedSearch = request.Search?.Trim();
 
         var query = _db.Users
+            .Where(u => !u.IsDeleted)
             .AsNoTracking()
             .Include(u => u.StudentProfile)
             .Include(u => u.StudentBalance)

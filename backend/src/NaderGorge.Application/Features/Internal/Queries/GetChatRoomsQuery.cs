@@ -37,7 +37,7 @@ public class GetChatRoomsQueryHandler : IRequestHandler<GetChatRoomsQuery, ApiRe
             .Include(r => r.ChatParticipants)
                 .ThenInclude(p => p.User)
             .Where(r => r.ChatParticipants.Any(p => p.UserId == request.UserId))
-            .OrderByDescending(r => r.ChatMessages.Max(m => m.CreatedAt))
+            .OrderByDescending(r => r.ChatMessages.Max(m => (DateTime?)m.CreatedAt) ?? r.CreatedAt)
             .ToListAsync(ct);
 
         var result = new List<ChatRoomDto>();

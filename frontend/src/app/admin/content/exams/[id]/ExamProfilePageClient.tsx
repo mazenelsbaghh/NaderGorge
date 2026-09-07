@@ -34,6 +34,7 @@ import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
 import { OcrQuestionImport } from '@/components/admin/OcrQuestionImport';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
+import { ExamAttemptReviewButton } from '@/components/admin/ExamAttemptReviewButton';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { normalizeQuestionRichText } from '@/lib/question-text';
@@ -689,6 +690,7 @@ export default function ExamProfilePageClient({
                         <th className="p-4 text-center">التقييم</th>
                         <th className="p-4 text-center">انتهى الوقت</th>
                         <th className="p-4">تاريخ المحاولة</th>
+                        <th className="p-4">الإجابات</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--admin-border)]">
@@ -726,6 +728,7 @@ export default function ExamProfilePageClient({
                           <td className="p-4 text-xs text-[var(--admin-muted)] font-medium">
                             {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }) : '—'}
                           </td>
+                          <td className="p-4"><ExamAttemptReviewButton examId={id} attemptId={attempt.attemptId} /></td>
                         </tr>
                       ))}
                     </tbody>

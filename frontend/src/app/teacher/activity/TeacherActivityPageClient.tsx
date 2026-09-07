@@ -194,6 +194,16 @@ export default function TeacherActivityPageClient() {
     );
   }
 
+  if (error) {
+    return <TeacherPage activePath="/teacher/activity" sectionLabel="نشاط الطلاب" pageTitle="تتبع نشاط الطلاب">
+      <div role="alert" className="rounded-xl border border-[var(--admin-danger)] p-5 text-[var(--admin-danger)]">
+        <p>{error}</p>
+        <p>الإحصائيات غير متاحة الآن، ولا يعني ذلك عدم وجود نشاط للطلاب.</p>
+        <button type="button" onClick={loadActivity} className="min-h-11 underline">إعادة تحميل النشاط</button>
+      </div>
+    </TeacherPage>;
+  }
+
   return (
     <TeacherPage
       activePath="/teacher/activity"

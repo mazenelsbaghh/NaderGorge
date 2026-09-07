@@ -174,6 +174,7 @@ export default function LessonDetailPageClient() {
         </p>
       )}
       <LessonViewer key={lesson.id} lesson={lesson} packageId={packageId} />
+      {lesson.isCompleted && <p role="status" className="mt-4 rounded-xl bg-[var(--admin-success-10)] p-4 font-bold text-[var(--admin-success)]">✓ الحصة مكتملة</p>}
     </div>
   );
 }

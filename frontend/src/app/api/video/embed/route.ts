@@ -193,7 +193,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
-  return `<!DOCTYPE html>
+  return String.raw`<!DOCTYPE html>
 <html lang="ar" dir="rtl"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="referrer" content="strict-origin-when-cross-origin"><title>Massar HLS Player</title>

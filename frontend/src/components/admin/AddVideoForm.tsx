@@ -18,6 +18,7 @@ import type { BunnyTusUploadSession } from '@/services/admin-service';
 import { BunnyLibrarySelect } from './BunnyLibrarySelect';
 import { VideoTypeSelect } from './VideoTypeSelect';
 import { AdminConfirmationDialog } from './AdminConfirmationDialog';
+import { bunnyPlaybackSelection } from '@/lib/bunny-playback-mode';
 
 interface AddVideoFormProps {
   lessonId: string;
@@ -90,14 +91,16 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [bunnyStreamLibraryId, setBunnyStreamLibraryId] = useState(() => editingVideo?.bunnyLibrary?.id ?? '');
   const [bunnyLibraryAvailable, setBunnyLibraryAvailable] = useState(false);
   const [bunnyHlsAvailable, setBunnyHlsAvailable] = useState(Boolean(editingVideo?.bunnyLibrary?.hlsConfigured));
-  const [bunnyPlaybackMode, setBunnyPlaybackMode] = useState<BunnyPlaybackSelection>(() => editingVideo?.bunnyPlaybackMode ?? 0);
+  const [bunnyPlaybackMode, setBunnyPlaybackMode] = useState<BunnyPlaybackSelection>(() => bunnyPlaybackSelection(editingVideo?.bunnyPlaybackMode));
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sourceChangeConfirmationOpen, setSourceChangeConfirmationOpen] = useState(false);
+  const editingVideoId = editingVideo?.id;
+  const savedPlaybackMode = editingVideo?.bunnyPlaybackMode;
 
   useEffect(() => {
-    if (!editingVideo) return;
-    setBunnyPlaybackMode(editingVideo.bunnyPlaybackMode ?? 0);
-  }, [editingVideo, editingVideo?.bunnyPlaybackMode]);
+    if (!editingVideoId) return;
+    setBunnyPlaybackMode(bunnyPlaybackSelection(savedPlaybackMode));
+  }, [editingVideoId, savedPlaybackMode]);
 
   const isBunny = provider === 'bunny';
   const bunnyReference = isBunny && bunnyMode === 'manual'

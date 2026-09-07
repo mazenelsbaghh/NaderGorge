@@ -7,7 +7,7 @@ const invalidateSupport = (keys: string[] = ['support:staff', 'support:dashboard
 
 export type LiveSupportConversationStatus = 'Waiting' | 'Assigned' | 'Active' | 'Closed' | 'Abandoned';
 export type LiveSupportParticipantType = 'Student' | 'Guest';
-export type LiveSupportMessageType = 'Text' | 'Image' | 'Pdf' | 'Audio' | 'System';
+export type LiveSupportMessageType = 'Text' | 'Image' | 'Pdf' | 'Audio' | 'System' | 'Video';
 export type LiveSupportAIMode = 'AiActive' | 'HumanQueued' | 'HumanAssigned' | 'AiResolved' | 'Failed' | 'Closed';
 export type LiveSupportAITurnState = 'Queued' | 'Processing' | 'ProviderCompleted' | 'Completed' | 'Failed' | 'DiscardedAfterHandoff' | 'DiscardedAfterDisable' | 'Cancelled';
 export type LiveSupportPendingDecisionKind = 'Action' | 'Handoff' | 'AccountCreation' | 'Resolution';

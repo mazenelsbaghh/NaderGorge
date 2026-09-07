@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { BunnyPlaybackMode } from '@/lib/bunny-playback-mode';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
 import type {
   CodeAccountingTiming,
@@ -819,7 +820,7 @@ export interface LessonCockpitVideoDto {
   isProcessingAI: boolean;
   isProcessingMindmaps: boolean;
   isActive: boolean;
-  bunnyPlaybackMode?: 0 | 1;
+  bunnyPlaybackMode?: BunnyPlaybackMode;
   bunnyLibrary?: BunnyLibraryReferenceDto | null;
   bunnyStatus?: string | null;
   bunnyEncodeProgress?: number | null;
@@ -1289,11 +1290,10 @@ export const adminService = {
     return res.data?.data;
   },
 
-  listCodeGroups: async (...options: [{ force?: boolean }?]) => {
-    void options;
+  listCodeGroups: async (...options: [{ force?: boolean; search?: string }?]) => {
     const isTeacher = getSurfaceName() === 'teacher';
     const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
-    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>(path);
+    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>(path, { params: { search: options[0]?.search } });
     return res.data?.data;
   },
 
@@ -2144,6 +2144,14 @@ export const adminService = {
       { newPassword }
     );
     return res.data?.data;
+  },
+
+  resetAdminPassword: async (adminId: string, newPassword: string) => {
+    await apiClient.post(`/admin/users/admins/${adminId}/reset-password`, { newPassword });
+  },
+
+  archiveStaff: async (staffId: string) => {
+    await apiClient.post(`/admin/users/staff/${staffId}/archive`);
   },
 
   addStudentNote: async (

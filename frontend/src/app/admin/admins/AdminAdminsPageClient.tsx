@@ -36,6 +36,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { useDisableEmployee } from '@/features/employee';
+import { ResetAdminPasswordButton } from '@/components/admin/StaffAccountActions';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -251,6 +252,7 @@ export default function AdminAdminsPageClient() {
         const isSelf = currentUser?.id === u.id;
         return (
           <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+            <ResetAdminPasswordButton user={u} />
             <NeumorphButton
               type="button"
               onClick={(e: React.MouseEvent) => {

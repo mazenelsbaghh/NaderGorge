@@ -16,6 +16,38 @@ namespace NaderGorge.Application.Tests;
 /// </summary>
 public sealed class ExamDeactivationProductionRegressionTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LessonList_ReusesStudentPassesWithoutUnlockingUnpassedMandatoryExam(bool passed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedDisabledLessonExamAsync(db);
+        var exam = await db.Exams.SingleAsync(e => e.Id == fixture.ExamId);
+        exam.IsActive = true;
+        db.StudentExamAttempts.Add(new StudentExamAttempt
+        {
+            UserId = fixture.StudentId,
+            ExamId = fixture.ExamId,
+            IsPassed = passed
+        });
+        await db.SaveChangesAsync();
+        var scope = new AcademicScopeService(db);
+        var archives = new ContentArchiveAccessService(db);
+        var access = new AccessCheckService(db, scope, archives);
+
+        var response = await new GetLessonsQueryHandler(db, access, scope, archives)
+            .Handle(new GetLessonsQuery(fixture.SectionId, fixture.StudentId), CancellationToken.None);
+
+        Assert.True(response.Success, response.Message);
+        foreach (var lessonId in new[] { fixture.FirstLessonId, fixture.SecondLessonId })
+        {
+            var lesson = Assert.Single(response.Data!, lesson => lesson.Id == lessonId);
+            Assert.Equal(!passed, lesson.IsLocked);
+            Assert.Equal(passed ? (Guid?)null : fixture.ExamId, lesson.BlockingExamId);
+        }
+    }
+
     [Fact]
     public async Task DisabledMandatoryExam_IsHiddenFromDashboardAndProgress()
     {

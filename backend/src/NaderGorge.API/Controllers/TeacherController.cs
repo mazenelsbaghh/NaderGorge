@@ -563,7 +563,7 @@ public class TeacherController : ControllerBase
     {
         var context = await ResolveTeacherContextAsync();
         if (MissingPermission(context, TeacherStaffPermissions.Codes)) return Forbid();
-        return Ok(await _mediator.Send(new ListCodeGroupsQuery(context.TeacherUserId)));
+        return Ok(await _mediator.Send(new ListCodeGroupsQuery(context.TeacherUserId, Request.Query["search"].FirstOrDefault())));
     }
 
     [HttpGet("codes/groups/{id:guid}/details")]

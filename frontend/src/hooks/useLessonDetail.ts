@@ -58,6 +58,11 @@ export function useLessonDetail(lessonId: string) {
   }, [fetchLessonDetail]);
 
   const lesson = snapshot.lessonId === lessonId ? snapshot.lesson : null;
+  useEffect(() => {
+    const refresh = () => { void fetchLessonDetail(); };
+    window.addEventListener('massar:watch-registered', refresh);
+    return () => window.removeEventListener('massar:watch-registered', refresh);
+  }, [fetchLessonDetail]);
   const error = snapshot.lessonId === lessonId ? snapshot.error : "";
   return {
     lesson,

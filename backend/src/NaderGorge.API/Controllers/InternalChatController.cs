@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Internal.Commands;
 using NaderGorge.Application.Features.Internal.Queries;
 using NaderGorge.Application.Services;
+using Microsoft.EntityFrameworkCore;
+using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.API.Controllers;
 
@@ -15,11 +18,13 @@ public class InternalChatController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly TeacherAuthorizationService _teacherAuthorization;
+    private readonly IAppDbContext _db;
 
-    public InternalChatController(IMediator mediator, TeacherAuthorizationService teacherAuthorization)
+    public InternalChatController(IMediator mediator, TeacherAuthorizationService teacherAuthorization, IAppDbContext db)
     {
         _mediator = mediator;
         _teacherAuthorization = teacherAuthorization;
+        _db = db;
     }
 
     private Guid GetUserId()
@@ -53,6 +58,7 @@ public class InternalChatController : ControllerBase
     }
 
     [HttpPost("rooms")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateRoom([FromBody] CreateRoomRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -64,6 +70,32 @@ public class InternalChatController : ControllerBase
 
         if (!result.Success) return BadRequest(result);
         return Ok(result);
+    }
+
+    [HttpGet("rooms/{roomId:guid}/members")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetMembers(Guid roomId, CancellationToken ct)
+    {
+        if (!await _db.ChatParticipants.AnyAsync(p => p.ChatRoomId == roomId && p.UserId == GetUserId(), ct)) return Forbid();
+        return Ok(await _db.ChatParticipants.Where(p => p.ChatRoomId == roomId).Select(p => p.UserId).ToListAsync(ct));
+    }
+
+    [HttpPut("rooms/{roomId:guid}/members")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateMembers(Guid roomId, [FromBody] List<Guid> memberIds, CancellationToken ct)
+    {
+        var room = await _db.ChatRooms.Include(r => r.ChatParticipants).SingleOrDefaultAsync(r => r.Id == roomId, ct);
+        if (room == null) return NotFound();
+        if (!room.ChatParticipants.Any(p => p.UserId == GetUserId())) return Forbid();
+        if (room.Type == Domain.Enums.ChatRoomType.Individual) return BadRequest();
+        var ids = memberIds.Append(GetUserId()).Distinct().ToList();
+        if (ids.Count > 100 || await _db.Users.CountAsync(u => ids.Contains(u.Id) && u.IsActive && !u.IsDeleted &&
+            u.UserRoles.Any(r => r.Role.Type != Domain.Enums.RoleType.Student), ct) != ids.Count) return BadRequest();
+        _db.ChatParticipants.RemoveRange(room.ChatParticipants.Where(p => !ids.Contains(p.UserId)).ToList());
+        foreach (var id in ids.Where(id => !room.ChatParticipants.Any(p => p.UserId == id)))
+            room.ChatParticipants.Add(new ChatParticipant { UserId = id });
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     [HttpPost("rooms/{roomId}/archive")]
