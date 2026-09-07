@@ -608,6 +608,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (securitySuspendedRef.current && msg.type !== 'securityViolation') return;
 
       switch (msg.type) {
+        case 'playerInteraction':
+          handlePlayerInteraction();
+          break;
         case 'securityViolation': {
           securitySuspendedRef.current = true;
           domShieldsCleanupRef.current?.();
@@ -882,7 +885,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [applyStableDuration, consumeActiveSession, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
+  }, [applyStableDuration, consumeActiveSession, handlePlayerInteraction, scheduleBunnyPlaybackRecovery, sendCommand, showPersistentPlayerShadows, showTimedPlayerShadows]);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
@@ -1747,6 +1750,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   };
 
   const fullscreenActive = isPseudoFullscreen || isNativeFullscreen;
+
+  useEffect(() => {
+    handlePlayerInteraction();
+  }, [fullscreenActive, handlePlayerInteraction]);
 
   const handlePlaybackRateChange = (rate: number) => {
     accrueTrackedPlaybackRef.current();

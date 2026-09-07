@@ -5,6 +5,7 @@ type HeaderReader = Pick<Headers, 'get'>;
 const APPROVED_FORWARDED_APP_ORIGINS = new Set([
   'https://app.massar-academy.net',
   'https://admin.massar-academy.net',
+  'https://teacher.massar-academy.net',
 ]);
 
 function requestOrigins(requestUrl: string, headers: HeaderReader) {
@@ -24,11 +25,15 @@ export function validateVideoEmbedNavigation(
   requestUrl: string,
   headers: HeaderReader,
 ): VideoEmbedNavigationError | null {
-  const destination = headers.get('sec-fetch-dest');
+  if (headers.get('sec-fetch-dest') !== 'iframe') return 'missing-context';
+  return validateVideoMediaRequest(requestUrl, headers);
+}
+
+export function validateVideoMediaRequest(requestUrl: string, headers: HeaderReader): VideoEmbedNavigationError | null {
   const fetchSite = headers.get('sec-fetch-site');
   const referer = headers.get('referer');
 
-  if (destination !== 'iframe' || !referer || !fetchSite) return 'missing-context';
+  if (!referer || !fetchSite) return 'missing-context';
   if (fetchSite !== 'same-origin' && fetchSite !== 'same-site') {
     return 'unauthorized-origin';
   }

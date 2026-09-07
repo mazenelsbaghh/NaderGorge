@@ -14,7 +14,7 @@ type PlayerMessage = {
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
 
-async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200) {
+async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '') {
   const routeSource = await readFile(routePath, 'utf8');
   const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
   const generatorEnd = routeSource.indexOf('function configuredLegacyBunnyLibraryId', generatorStart);
@@ -27,7 +27,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
   ).outputText;
   const html: string = vm.runInNewContext(
-    compiled + '\ngenerateBunnyHlsEmbedHtml("https://vz-example.b-cdn.net/signed/video/playlist.m3u8", "Test student", "")',
+    compiled + `\ngenerateBunnyHlsEmbedHtml("https://vz-example.b-cdn.net/signed/video/playlist.m3u8", "Test student", "", ${JSON.stringify(relaySource)})`,
     { URL },
   );
   const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
@@ -36,7 +36,9 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   const messages: PlayerMessage[] = [];
   const hlsListeners = new Map<string, (event: unknown, payload: unknown) => void>();
   const videoListeners = new Map<string, () => void>();
+  const documentListeners = new Map<string, (event: { type: string }) => void>();
   let now = 0;
+  let nativeRequests = 0;
   const timers: Array<{ callback: () => void; active: boolean; due: number }> = [];
   const video = {
     currentTime: 0,
@@ -46,6 +48,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     paused: true,
     playbackRate: 1,
     volume: 1,
+    src: '',
     addEventListener(eventName: string, callback: () => void) {
       videoListeners.set(eventName, callback);
     },
@@ -66,8 +69,9 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     startLoadCalls = 0;
     destroyCalls = 0;
     config: Record<string, unknown>;
+    source = '';
     constructor(config: Record<string, unknown>) { this.config = config; }
-    loadSource() {}
+    loadSource(source: string) { this.source = source; }
     attachMedia() {}
     recoverMediaError() {}
     startLoad() { this.startLoadCalls += 1; }
@@ -102,17 +106,22 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
 
   vm.runInNewContext(playerScript, {
     URL,
+    Date: { now: () => now },
     clearTimeout(timer: { active: boolean }) { timer.active = false; },
     document: {
+      addEventListener(name: string, listener: (event: { type: string }) => void) { documentListeners.set(name, listener); },
       getElementById(id: string) {
         return id === 'video' ? video : { style: { transform: '' } };
       },
     },
     fetch() {
       if (runtime === 'hlsjs') throw new Error('Native HLS fetch must not run when Hls.js is supported.');
+      nativeRequests += 1;
+      if (nativeManifestStatus === -1 && nativeRequests === 1) return Promise.reject(new TypeError('Network unavailable'));
+      const status = nativeManifestStatus === -1 ? 200 : nativeManifestStatus;
       return Promise.resolve({
-        ok: nativeManifestStatus === 200,
-        status: nativeManifestStatus,
+        ok: status === 200,
+        status,
         text: () => Promise.resolve('#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\n720p/video.m3u8\n'),
       });
     },
@@ -144,6 +153,10 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
       hlsListeners.get('manifestParsed')?.(null, {});
     },
     hls: () => hlsInstances[0] ?? null,
+    hlsInstances,
+    nativeSource: () => video.src,
+    nativeRequests: () => nativeRequests,
+    interact(type: string) { documentListeners.get(type)?.({ type }); },
     messages,
     setMediaTime(time: number) { video.currentTime = time; },
     advanceTime(milliseconds: number) {
@@ -180,6 +193,50 @@ test('2026-09-03 Bunny HLS 403 stops loading with its real cause and never falls
   assert.equal(player.hls()?.startLoadCalls, 0);
   assert.equal(player.hls()?.destroyCalls, 1);
   assert.equal(player.messages.some((message) => message.data?.provider === 'bunny'), false);
+});
+
+test('2026-09-07 pointer and touch inside the HLS iframe reveal the parent controls', async () => {
+  const player = await runHlsPlayer();
+  for (const type of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) player.interact(type);
+  assert.equal(player.messages.filter(message => message.type === 'playerInteraction').length, 4);
+  player.interact('pointermove');
+  assert.equal(player.messages.filter(message => message.type === 'playerInteraction').length, 4);
+  player.advanceTime(200);
+  player.interact('pointermove');
+  assert.equal(player.messages.filter(message => message.type === 'playerInteraction').length, 5);
+});
+
+test('2026-09-07 unreachable tablet CDN switches once to same-origin HLS, then fails visibly', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.emitFatalNetworkError(0);
+  assert.equal(player.hlsInstances.length, 2);
+  assert.equal(player.hlsInstances[0].destroyCalls, 1);
+  assert.equal(player.hlsInstances[1].source, 'https://app.massar-academy.net/api/video/hls?s=test-session');
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.emitFatalNetworkError(0);
+  assert.equal(player.hlsInstances.length, 2);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+});
+
+test('relay is never attempted for rejected or missing HLS resources', async () => {
+  for (const status of [401, 403, 404]) {
+    const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+    player.emitFatalNetworkError(status);
+    assert.equal(player.hlsInstances.length, 1);
+    assert.equal(player.messages.find(message => message.type === 'error')?.data?.code, status);
+  }
+});
+
+test('relay startup gets one bounded deadline and does not loop or refresh playable video', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.advanceTime(20000);
+  assert.equal(player.hlsInstances.length, 2);
+  player.advanceTime(20000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  const playing = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  playing.triggerVideoEvent('loadedmetadata');
+  playing.emitFatalNetworkError(0);
+  assert.equal(playing.hlsInstances.length, 1);
 });
 
 test('repeated buffering events cannot extend the playback deadline forever', async () => {
@@ -277,13 +334,25 @@ test('2026-09-04 playback stall reports its exact phase instead of spinning fore
 });
 
 test('2026-09-04 Apple native HTTP 403 preserves the confirmed Bunny rejection', async () => {
-  const player = await runHlsPlayer('native-apple', 403);
+  const player = await runHlsPlayer('native-apple', 403, '/api/video/hls?s=test-session');
   await new Promise<void>((resolve) => setImmediate(resolve));
   const error = player.messages.find(message => message.type === 'error');
   assert.equal(error?.data?.code, 403);
   assert.equal(error?.data?.phase, 'native_manifest_http');
   assert.match(error?.data?.message ?? '', /Token Authentication Key/);
   assert.equal(player.messages.some(message => message.type === 'ready'), false);
+  assert.equal(player.nativeRequests(), 1);
+});
+
+test('native mobile HLS can use the same-origin relay after a direct network failure', async () => {
+  const player = await runHlsPlayer('native-apple', -1, '/api/video/hls?s=test-session');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(player.nativeRequests(), 2);
+  assert.equal(player.nativeSource(), 'https://app.massar-academy.net/api/video/hls?s=test-session');
+  player.triggerVideoEvent('loadedmetadata');
+  player.advanceTime(20000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  assert.equal(player.messages.filter(message => message.type === 'ready').length, 1);
 });
 
 test('unknown native media failure does not falsely blame Bunny domain protection', async () => {

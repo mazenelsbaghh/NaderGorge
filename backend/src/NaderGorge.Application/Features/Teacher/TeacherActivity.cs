@@ -103,7 +103,9 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
                 VideoId = g.Key,
                 TotalWatchCount = g.Sum(v => v.WatchCount),
                 TotalTimeWatchedSeconds = g.Sum(v => v.TimeWatchedInSeconds),
-                TotalActualWatchedSeconds = g.Sum(v => v.ActualWatchedSeconds)
+                // PostgreSQL numeric sums preserve fractional precision beyond .NET decimal.
+                // Round in SQL before materialization; stored watch progress is unchanged.
+                TotalActualWatchedSeconds = Math.Round(g.Sum(v => v.ActualWatchedSeconds), 6)
             })
             .OrderByDescending(w => w.TotalWatchCount)
             .Take(10)
