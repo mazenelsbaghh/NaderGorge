@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -395,14 +396,30 @@ def build_release(repo: Path, release_id: str, output: Path) -> dict[str, str]:
     return digests
 
 
+def _stable_bundle_metadata(member: tarfile.TarInfo) -> tarfile.TarInfo:
+    # Retry identity must depend on source files, not host ownership or clocks.
+    member.uid = member.gid = 0
+    member.uname = member.gname = ""
+    member.mtime = 0
+    member.pax_headers = {}
+    return member
+
+
 def create_release_bundle(repo: Path, output: Path) -> Path:
     archive = output / "release-files.tar.gz"
     production = repo / "deploy/production"
-    with tarfile.open(archive, "w:gz") as bundle:
+    with (
+        archive.open("wb") as compressed_file,
+        gzip.GzipFile(filename="", mode="wb", fileobj=compressed_file, mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w") as bundle,
+    ):
         for path in sorted(production.rglob("*")):
             if not path.is_file() or "__pycache__" in path.parts:
                 continue
-            bundle.add(path, arcname=path.relative_to(repo), recursive=False)
+            bundle.add(
+                path, arcname=path.relative_to(repo), recursive=False,
+                filter=_stable_bundle_metadata,
+            )
     (output / "release-files.tar.gz.sha256").write_text(
         file_sha256(archive) + "\n",
         encoding="utf-8",

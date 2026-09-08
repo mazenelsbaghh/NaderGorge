@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import gzip
+import os
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,53 @@ SCRIPTS = ROOT / "deploy/production/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import release_images  # noqa: E402
+
+
+def test_interrupted_release_retry_keeps_identical_bundle_despite_timestamps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Regression: 2026-09-08 retry was rejected by an already-installed node.
+    repo = tmp_path / "repo"
+    script = repo / "deploy/production/scripts/start.sh"
+    write(script, "#!/bin/sh\nexit 0\n")
+    script.chmod(0o755)
+    first = tmp_path / "first"
+    retry = tmp_path / "retry"
+    first.mkdir()
+    retry.mkdir()
+    monkeypatch.setattr(gzip.time, "time", lambda: 1000)
+    first_archive = release_images.create_release_bundle(repo, first)
+
+    os.utime(script, (2000, 2000))
+    monkeypatch.setattr(gzip.time, "time", lambda: 3000)
+    retry_archive = release_images.create_release_bundle(repo, retry)
+
+    assert retry_archive.read_bytes() == first_archive.read_bytes()
+    with tarfile.open(retry_archive) as bundle:
+        member = bundle.getmember("deploy/production/scripts/start.sh")
+        assert member.mode == 0o755
+        assert bundle.extractfile(member).read() == b"#!/bin/sh\nexit 0\n"
+    assert (retry / "release-files.tar.gz.sha256").read_text().strip() == (
+        release_images.file_sha256(first_archive)
+    )
+
+
+def test_release_bundle_digest_changes_when_deployment_content_changes(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    config = repo / "deploy/production/compose/compose.app.yml"
+    write(config, "services: {}\n")
+    output = tmp_path / "output"
+    output.mkdir()
+    archive = release_images.create_release_bundle(repo, output)
+    initial_digest = release_images.file_sha256(archive)
+
+    write(config, "services: {backend: {image: changed}}\n")
+    release_images.create_release_bundle(repo, output)
+
+    assert release_images.file_sha256(archive) != initial_digest
 
 
 def git(repo: Path, *arguments: str) -> str:
