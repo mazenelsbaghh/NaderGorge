@@ -17,6 +17,9 @@ import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import apiClient from '@/services/api-client';
+import { platformQueryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   resolveProgressReportDurationSeconds,
   resolveStableVideoDuration,
@@ -67,6 +70,8 @@ function isSupportedVideoPlaybackRate(playbackRate: number): boolean {
 }
 
 export interface WatchStatus {
+  learningWatchedSeconds?: number;
+  durationSeconds?: number;
   current: number;
   max: number;
   isLocked?: boolean;
@@ -253,7 +258,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const bunnyRecoveryVideoIdRef = useRef(lessonVideoId);
   const bunnyReadyAtRef = useRef(0);
   const bunnyRecoveryResumeTimeRef = useRef(0);
-  const isIOSDeviceRef = useRef(false);
   const watchThresholdPercentageRef = useRef<number>(30);
   const youtubeShadowDelayMsRef = useRef(5000);
   const bunnyShadowDelayMsRef = useRef(5000);
@@ -281,11 +285,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
   const [isMindmapOpen, setIsMindmapOpen] = useState(false);
-
-  useEffect(() => {
-    isIOSDeviceRef.current = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -678,7 +677,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           bunnyReadyAtRef.current = embedProvider === 'bunny' ? Date.now() : 0;
           setProvider(embedProvider);
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
-          setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
+          setRequiresDirectPlayback(embedProvider === 'youtube' && msg.data.requiresDirectPlayback === true);
           showPersistentPlayerShadows();
 
           if (embedProvider === 'bunny') {
@@ -761,7 +760,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             clearTimeout(playFallbackTimeoutRef.current);
             playFallbackTimeoutRef.current = null;
           }
-          setRequiresDirectPlayback(isIOSDeviceRef.current && (msg.data?.provider || providerRef.current) === 'youtube');
+          setRequiresDirectPlayback((msg.data?.provider || providerRef.current) === 'youtube');
           isPlayingRef.current = false;
           setIsPlaying(false);
           setIsBuffering(false);
@@ -890,6 +889,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
   const viewTrackedRef = useRef(false);
+  const [learningWatchedSeconds, setLearningWatchedSeconds] = useState(0);
+  const learningCompletedRef = useRef(false);
   useEffect(() => { viewTrackedRef.current = viewTracked; }, [viewTracked]);
 
   const actualWatchedSeconds = useRef(0);
@@ -952,10 +953,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }));
     const sessionHasRegisteredView = progressResponse.sessionHasRegisteredView
       ?? progressResponse.viewRegistered;
-    if (progressResponse.isLocked || sessionHasRegisteredView) {
-      progressSegmentsRef.current = [];
-      fixedProgressRequestsRef.current = [];
-      activeProgressRequestRef.current = null;
+    const learningSeconds = progressResponse.learningWatchedSeconds ?? 0;
+    setLearningWatchedSeconds(learningSeconds);
+    const progressUserId = useAuthStore.getState().user?.id;
+    if (progressUserId) {
+      platformQueryClient.invalidateQueries(queryKeys.student.lessons(progressUserId));
+      platformQueryClient.invalidateQueries(queryKeys.student.dashboard(progressUserId));
+      platformQueryClient.invalidateQueries(['student', 'lesson-progress', progressUserId]);
+    }
+    if (!learningCompletedRef.current && durationRef.current > 0 && learningSeconds >= durationRef.current) {
+      learningCompletedRef.current = true;
+      window.dispatchEvent(new Event('massar:watch-registered'));
     }
     serverTrackedSecondsRef.current = progressResponse.totalTrackedSeconds;
     const refreshedExpiry = Date.parse(progressResponse.sessionExpiresAt);
@@ -1008,7 +1016,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const appendTrackedPlayback = useCallback((wallSeconds: number, playbackRate: number) => {
     if (
-      viewTrackedRef.current
+      !trackingEnabledRef.current
       || !Number.isFinite(wallSeconds)
       || wallSeconds <= 0
       || !isSupportedVideoPlaybackRate(playbackRate)
@@ -1045,7 +1053,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   accrueTrackedPlaybackRef.current = accrueTrackedPlayback;
 
   const flushTrackedProgress = useCallback((options: ProgressFlushOptions = {}): Promise<void> => {
-    if (!trackingEnabledRef.current || viewTrackedRef.current) return Promise.resolve();
+    if (!trackingEnabledRef.current) return Promise.resolve();
 
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) return Promise.resolve();
@@ -1063,8 +1071,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (!options.drain) return pageExitDrain;
       return pageExitDrain.then(() => {
         if (
-          !viewTrackedRef.current
-          && isCurrentVideoSession(sessionId, activeSessionIdRef.current)
+          isCurrentVideoSession(sessionId, activeSessionIdRef.current)
           && (
             activeProgressRequestRef.current
             || fixedProgressRequestsRef.current.length > 0
@@ -1081,8 +1088,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (!options.drain) return existingDrain;
       return existingDrain.then(() => {
         if (
-          !viewTrackedRef.current
-          && isCurrentVideoSession(sessionId, activeSessionIdRef.current)
+          isCurrentVideoSession(sessionId, activeSessionIdRef.current)
           && (
             activeProgressRequestRef.current
             || fixedProgressRequestsRef.current.length > 0
@@ -1097,7 +1103,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     const drain = (async () => {
       while (
         trackingEnabledRef.current
-        && !viewTrackedRef.current
         && isCurrentVideoSession(sessionId, activeSessionIdRef.current)
         && !pageExitProgressPromiseRef.current
       ) {
@@ -1184,7 +1189,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   flushTrackedProgressRef.current = flushTrackedProgress;
 
   const flushProgressForPageExit = useCallback((): Promise<void> => {
-    if (!trackingEnabledRef.current || viewTrackedRef.current) return Promise.resolve();
+    if (!trackingEnabledRef.current) return Promise.resolve();
 
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) return Promise.resolve();
@@ -1276,7 +1281,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const queuedWallSeconds = sumVideoProgressWallSeconds(progressSegmentsRef.current)
         + sumVideoProgressWallSeconds(fixedProgressRequestsRef.current);
       if (
-        actualWatchedSeconds.current >= targetSeconds
+        (!viewTrackedRef.current && actualWatchedSeconds.current >= targetSeconds)
         || queuedWallSeconds >= TRACKING_FLUSH_INTERVAL_SECONDS
       ) {
         void flushTrackedProgress();
@@ -1359,6 +1364,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   useEffect(() => {
     if (onWatchStatusChangeRef.current && watchInfo) {
       onWatchStatusChangeRef.current({
+        learningWatchedSeconds,
+        durationSeconds: duration,
         current: watchInfo.current,
         max: watchInfo.max,
         isLocked: watchInfo.isLocked,
@@ -1367,7 +1374,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         thresholdSeconds
       });
     }
-  }, [watchInfo, viewTracked, displayedWatched, thresholdSeconds]);
+  }, [watchInfo, viewTracked, displayedWatched, thresholdSeconds, learningWatchedSeconds, duration]);
 
   const normalizedChapters = React.useMemo(() => {
     if (!chapters || chapters.length === 0) return undefined;
@@ -1455,6 +1462,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         isLocked: session.watchInfo.isLocked
       });
       serverTrackedSecondsRef.current = session.watchInfo.totalTrackedSeconds ?? 0;
+      setLearningWatchedSeconds(session.watchInfo.learningWatchedSeconds ?? 0);
+      learningCompletedRef.current = knownDurationSeconds !== null
+        && (session.watchInfo.learningWatchedSeconds ?? 0) >= knownDurationSeconds;
       actualWatchedSeconds.current = serverTrackedSecondsRef.current;
       setDisplayedWatched(resolveDisplayedProgress(
         actualWatchedSeconds.current,
@@ -2303,12 +2313,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && !usesNativePlayerChrome && !isPlaying && !isBuffering && (
+        {status === 'ready' && !usesNativePlayerChrome && !requiresDirectPlayback && !isPlaying && !isBuffering && (
           <button
             type="button"
-            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 pointer-events-auto"
             aria-label="تشغيل الفيديو"
-            tabIndex={requiresDirectPlayback ? -1 : 0}
             onClick={(e) => {
               e.stopPropagation();
               togglePlay();

@@ -14,6 +14,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { studentService, type MyLessonDto } from '@/services/student-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { LearningProgress } from '@/components/student-dashboard/LearningProgress';
 
 type LessonFilter = 'all' | 'in-progress' | 'completed';
 const FILTERS: Array<{ value: LessonFilter; label: string }> = [
@@ -224,9 +225,10 @@ export default function MyLessonsPageClient() {
                       {lesson.teacherName} · {lesson.sectionTitle}
                     </p>
                     <p className="mt-2 text-xs font-black text-[var(--admin-muted)]">
-                      {lesson.videoCount} فيديو ·{' '}
+                      {lesson.watchedVideoCount ?? 0} من {lesson.videoCount} فيديو مكتمل ·{' '}
                       {lesson.isCompleted ? 'مكتمل' : 'متاح للمشاهدة'}
                     </p>
+                    <LearningProgress percent={lesson.watchProgressPercent ?? null} label="تقدّم الحصة" />
                   </div>
                   <ChevronLeft
                     className="h-5 w-5 shrink-0 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-1"

@@ -80,7 +80,9 @@ public record VideoDto(
     bool ExamPassed,
     bool IsExamLocked,
     List<VideoExamDto> Exams,
-    List<VideoChapterDto> Chapters
+    List<VideoChapterDto> Chapters,
+    int? DurationSeconds = null,
+    decimal LearningWatchedSeconds = 0
 );
 public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
 
@@ -222,6 +224,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     accessibleVideoIds.Add(video.Id);
             }
 
+            var partialProgress = (await StudentWatchProgressReader.ReadAsync(
+                new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), accessibleVideoIds, ct))
+                .ToDictionary(progress => progress.VideoId);
             var partialVideoDtos = sortedLessonVideos
                 .Where(v => accessibleVideoIds.Contains(v.Id))
                 .Select(v => new VideoDto(
@@ -248,7 +253,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     new List<VideoExamDto>(),
                     v.VideoChapters.OrderBy(c => c.Order)
                         .Select(c => new VideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
-                        .ToList()))
+                        .ToList(),
+                    partialProgress.GetValueOrDefault(v.Id)?.DurationSeconds,
+                    partialProgress.GetValueOrDefault(v.Id)?.WatchedSeconds ?? 0))
                 .ToList();
 
             var minimalDetail = new LessonDetailDto(
@@ -437,6 +444,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .ToListAsync(ct);
 
         var videoIds = lesson.Videos.Select(v => v.Id).ToList();
+        var videoProgress = await StudentWatchProgressReader.ReadAsync(
+            new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), videoIds, ct);
+        var progressByVideo = videoProgress.ToDictionary(video => video.VideoId);
         var allVideoExams = await _db.Exams
             .Where(e => e.IsActive && (videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id))))
             .Select(e => new { e.Id, e.Title, e.LessonVideoId, e.IsMandatory })
@@ -505,7 +515,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 examPassed,
                 isExamLocked,
                 examsForVideo,
-                chapters
+                chapters,
+                progressByVideo.GetValueOrDefault(v.Id)?.DurationSeconds,
+                progressByVideo.GetValueOrDefault(v.Id)?.WatchedSeconds ?? 0
             ));
         }
 

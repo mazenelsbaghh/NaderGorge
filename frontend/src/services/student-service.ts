@@ -86,6 +86,11 @@ export interface MyLessonDto {
   imageUrl?: string | null;
   isCompleted: boolean;
   videoCount: number;
+  watchProgressPercent?: number | null;
+  watchedVideoCount?: number;
+  recordedWatchSeconds?: number;
+  totalVideoSeconds?: number | null;
+  lastWatchedAt?: string | null;
 }
 
 export interface QuickAccessItemDto {

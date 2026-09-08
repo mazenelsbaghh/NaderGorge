@@ -1,0 +1,19 @@
+{
+  "scope": "all",
+  "authorization": "User approved the library-first mobile student home, shared student header/navigation, full local verification, Git push and production deployment.",
+  "included": ["student home and shared chrome", "speed-adjusted learning progress", "previous local YouTube tablet playback fix"],
+  "state": "verified locally; awaiting Git push and gated production rollout",
+  "verification": {
+    "applicationTestsPassed": 1251,
+    "redisBoundaryTestsPassedSeparately": 9,
+    "postgresProgressTestsPassed": 4,
+    "videoContractTestsPassed": 103,
+    "iframeBrowserTestsPassed": 5,
+    "studentHomeBrowserScenariosPassed": 2,
+    "queryContractTestsPassed": 7,
+    "learningProgressTestsPassed": 5,
+    "frontendProductionBuild": "passed",
+    "efPendingModelCheck": "passed",
+    "browserViewportWidths": [390, 768, 1280]
+  }
+}

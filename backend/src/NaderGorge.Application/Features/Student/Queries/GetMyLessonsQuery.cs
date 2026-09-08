@@ -20,7 +20,12 @@ public record MyLessonDto(
     string TeacherName,
     string? ImageUrl,
     bool IsCompleted,
-    int VideoCount);
+    int VideoCount,
+    int? WatchProgressPercent = null,
+    int WatchedVideoCount = 0,
+    long RecordedWatchSeconds = 0,
+    long? TotalVideoSeconds = null,
+    DateTime? LastWatchedAt = null);
 
 public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery, ApiResponse<List<MyLessonDto>>>
 {
@@ -122,14 +127,8 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
             completionContext,
             visibleActiveVideoIds,
             ct);
-        var visibleVideoCountByLesson = visibleActiveVideoIds.Count == 0
-            ? new Dictionary<Guid, int>()
-            : await _db.LessonVideos
-                .AsNoTracking()
-                .Where(video => visibleActiveVideoIds.Contains(video.Id))
-                .GroupBy(video => video.LessonId)
-                .Select(group => new { LessonId = group.Key, Count = group.Count() })
-                .ToDictionaryAsync(row => row.LessonId, row => row.Count, ct);
+        var videoProgress = await StudentWatchProgressReader.ReadAsync(completionContext, visibleActiveVideoIds, ct);
+        var progressByLesson = videoProgress.ToLookup(video => video.LessonId);
 
         var result = new List<MyLessonDto>(lessons.Count);
         foreach (var lesson in lessons)
@@ -148,6 +147,7 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
                 continue;
             }
 
+            var lessonVideos = progressByLesson[lesson.Id].ToList();
             result.Add(new MyLessonDto(
                 lesson.Id,
                 lesson.Title,
@@ -159,7 +159,13 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
                 lesson.TeacherName,
                 lesson.ImageUrl,
                 completedLessonIds.Contains(lesson.Id),
-                visibleVideoCountByLesson.GetValueOrDefault(lesson.Id)));
+                lessonVideos.Count,
+                StudentWatchProgressReader.CalculatePercent(lessonVideos),
+                lessonVideos.Count(video => video.IsCompleted),
+                lessonVideos.Sum(video => (long)Math.Min(video.WatchedSeconds, video.DurationSeconds ?? 0)),
+                lessonVideos.Count > 0 && lessonVideos.All(video => video.DurationSeconds is > 0)
+                    ? lessonVideos.Sum(video => (long)video.DurationSeconds!.Value) : null,
+                lessonVideos.Select(video => video.LastWatchedAt).DefaultIfEmpty().Max()));
         }
 
         return ApiResponse<List<MyLessonDto>>.Ok(result);

@@ -37,7 +37,8 @@ public record WatchProgressDto(
     int TotalTrackedSeconds,
     int ThresholdSeconds,
     DateTime SessionExpiresAt,
-    bool Duplicate
+    bool Duplicate,
+    decimal LearningWatchedSeconds = 0
 );
 
 public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgressCommand, ApiResponse<WatchProgressDto>>
@@ -321,7 +322,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
     private static SessionProgressResult ApplySessionProgress(SessionProgressContext context)
     {
-        if (context.IsLocked || context.Session.HasRegisteredView)
+        if (context.IsLocked && !context.Session.HasRegisteredView)
             return new SessionProgressResult(false, 0m);
 
         var candidateAcceptedSeconds = context.IsBatch
@@ -337,6 +338,11 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
         var playbackRate = (decimal)context.Segment.PlaybackRate;
         context.Session.AcceptedWallSeconds += actualAcceptedSeconds;
+        context.WatchEvent.LearningWatchedSeconds = Math.Min(
+            context.Session.TrackingDurationSeconds!.Value,
+            context.WatchEvent.LearningWatchedSeconds + actualAcceptedSeconds * playbackRate);
+        if (context.Session.HasRegisteredView)
+            return new SessionProgressResult(false, actualAcceptedSeconds);
         var speedAdjustedSeconds =
             (actualAcceptedSeconds * playbackRate) + context.Session.SpeedAdjustedSecondsRemainder;
         var acceptedSeconds = decimal.ToInt32(decimal.Floor(speedAdjustedSeconds));
@@ -455,7 +461,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             Math.Max(0, snapshot.WatchEvent?.TimeWatchedInSeconds ?? 0),
             snapshot.ThresholdSeconds,
             snapshot.SessionExpiresAt,
-            snapshot.Duplicate);
+            snapshot.Duplicate,
+            snapshot.WatchEvent?.LearningWatchedSeconds ?? 0);
     }
 
     private sealed record WatchProgressSnapshot(

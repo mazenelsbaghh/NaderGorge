@@ -14,6 +14,59 @@ namespace NaderGorge.Application.Tests;
 
 public class VideoWatchProgressTests
 {
+    [Theory]
+    [InlineData(0.5, 25)]
+    [InlineData(1, 50)]
+    [InlineData(1.5, 75)]
+    [InlineData(2, 100)]
+    public async Task LearningProgress_AccountsForPlaybackSpeed_WithoutChangingQuotaRules(double rate, decimal expected)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        var result = await CreateHandler(db).Handle(
+            BatchCommand(fixture, new WatchProgressSegment(1, 25, rate), new WatchProgressSegment(2, 25, rate)),
+            CancellationToken.None);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(expected, result.Data!.LearningWatchedSeconds);
+        Assert.Equal(expected >= 30 ? 1 : 0, result.Data.CurrentCount);
+        Assert.Equal(Math.Min(30, expected), result.Data.TotalTrackedSeconds);
+    }
+
+    [Fact]
+    public async Task LearningProgress_ContinuesAfterFinalQuotaView_AndDuplicateDoesNotDoubleCount()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 1);
+        var handler = CreateHandler(db);
+        var first = await handler.Handle(Command(fixture, 1, 30), CancellationToken.None);
+        Assert.True(first.Success, first.Message);
+        Assert.Equal(30, first.Data!.LearningWatchedSeconds);
+        Assert.True(first.Data.IsLocked);
+
+        // Simulate elapsed server time without sleeping; the same final-view
+        // session remains valid, but cannot register a second quota view.
+        var session = await db.VideoPlaybackSessions.SingleAsync();
+        session.CreatedAt = DateTime.UtcNow.AddMinutes(-3);
+        var watch = await db.VideoWatchEvents.SingleAsync();
+        watch.UpdatedAt = DateTime.UtcNow.AddMinutes(-2);
+        await db.SaveChangesAsync();
+        var remaining = BatchCommand(fixture,
+            new WatchProgressSegment(2, 30, 1),
+            new WatchProgressSegment(3, 30, 1),
+            new WatchProgressSegment(4, 10, 1));
+        var second = await handler.Handle(remaining, CancellationToken.None);
+        var repeated = await handler.Handle(remaining, CancellationToken.None);
+
+        Assert.True(second.Success, second.Message);
+        Assert.Equal(100, second.Data!.LearningWatchedSeconds);
+        Assert.Equal(1, second.Data.CurrentCount);
+        Assert.Equal(30, second.Data.TotalTrackedSeconds);
+        Assert.False(second.Data.ViewRegistered);
+        Assert.True(repeated.Data!.Duplicate);
+        Assert.Equal(100, repeated.Data.LearningWatchedSeconds);
+    }
+
     [Fact]
     public async Task TrackWatchProgress_RegistersAtMostOneViewPerSession_AndDiscardsExcess()
     {

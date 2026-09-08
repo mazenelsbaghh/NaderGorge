@@ -183,7 +183,7 @@ export class PlatformQueryClient {
     for (const entry of this.entries.values()) {
       if (!queryKeyStartsWith(entry.key, prefix)) continue;
       entry.generation += 1;
-      entry.snapshot = { ...entry.snapshot, updatedAt: 0 };
+      entry.snapshot = { ...entry.snapshot, status: entry.snapshot.status === 'error' ? 'idle' : entry.snapshot.status, updatedAt: 0 };
       this.notify(entry);
     }
   }

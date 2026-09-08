@@ -12,6 +12,42 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class VideoProgressRecoveryPostgresTests
 {
+    [Fact]
+    public async Task FullDurationProgress_PersistsBeyondQuota_AndFeedsStudentPercentages()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var session = await SeedSessionAsync(fixture.Db);
+        session.CreatedAt = DateTime.UtcNow.AddMinutes(-5);
+        await fixture.Db.SaveChangesAsync();
+        var handler = new TrackWatchProgressCommandHandler(fixture.Db, new Settings(), new PostgresVideoPlaybackConcurrency(fixture.Db));
+        var scope = new StudentLessonCompletionContext(fixture.Db, session.UserId, [session.LessonVideo.LessonId]);
+        var first = await handler.Handle(new TrackWatchProgressCommand(session.LessonVideoId, session.UserId, session.Id, 1, 30, 2, 100), CancellationToken.None);
+        Assert.True(first.Success, first.Message);
+        Assert.Equal(60m, first.Data!.LearningWatchedSeconds);
+        Assert.True(first.Data.SessionHasRegisteredView);
+        var partial = Assert.Single(await StudentWatchProgressReader.ReadAsync(scope, [session.LessonVideoId], CancellationToken.None));
+        Assert.False(partial.IsCompleted);
+        Assert.Equal(60, StudentWatchProgressReader.CalculatePercent([partial]));
+        await fixture.Db.VideoWatchEvents.Where(x => x.UserId == session.UserId && x.LessonVideoId == session.LessonVideoId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UpdatedAt, DateTime.UtcNow.AddMinutes(-1)));
+        fixture.Db.ChangeTracker.Clear();
+        var complete = await handler.Handle(new TrackWatchProgressCommand(session.LessonVideoId, session.UserId, session.Id, 2, 20, 2, 100), CancellationToken.None);
+        Assert.True(complete.Success, complete.Message);
+        Assert.Equal(100m, complete.Data!.LearningWatchedSeconds);
+        Assert.Equal(1, complete.Data.CurrentCount);
+        fixture.Db.ChangeTracker.Clear();
+        var saved = Assert.Single(await StudentWatchProgressReader.ReadAsync(scope, [session.LessonVideoId], CancellationToken.None));
+        Assert.True(saved.IsCompleted);
+        Assert.Equal(100, StudentWatchProgressReader.CalculatePercent([saved]));
+        Assert.NotNull(saved.LastWatchedAt);
+        var unrelated = scope with { UserId = Guid.NewGuid() };
+        var other = Assert.Single(await StudentWatchProgressReader.ReadAsync(unrelated, [session.LessonVideoId], CancellationToken.None));
+        Assert.Equal(0m, other.WatchedSeconds);
+        Assert.False(other.IsCompleted);
+        Assert.Null(StudentWatchProgressReader.CalculatePercent([other]));
+    }
+
     [Theory]
     [InlineData("lock")]
     [InlineData("commit-ack")]

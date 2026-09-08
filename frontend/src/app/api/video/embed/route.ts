@@ -843,7 +843,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
 var _k = ${xorKey};
 var _d = [${encodedId.join(',')}];
 var _vid = _d.map(function(c) { return String.fromCharCode(c ^ _k); }).join('');
-var _useNativeIPhonePlayer = /iPhone|iPod/i.test(navigator.userAgent);
+var _requiresTouchStart = navigator.maxTouchPoints > 0;
 
 // ═══════════════════════════════════════════════════════
 // LAYER 2: Closed Shadow DOM
@@ -958,7 +958,7 @@ function onYouTubeIframeAPIReady() {
   player = new YT.Player(ytDivId, {
     videoId: _vid,  // use decoded variable, not plain string
     playerVars: {
-      autoplay: _useNativeIPhonePlayer ? 0 : 1,
+      autoplay: _requiresTouchStart ? 0 : 1,
       controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3,
       // Keep playback inside the protected platform surface. Native iPhone
       // fullscreen detaches the video from the student watermark.
@@ -976,9 +976,11 @@ function onYouTubeIframeAPIReady() {
         }
         document.getElementById = origGetById;
         postToParent('ready', {
-          duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube'
+          duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube',
+          requiresDirectPlayback: _requiresTouchStart
         });
-        if (!_useNativeIPhonePlayer) e.target.playVideo();
+        if (_requiresTouchStart) enableDirectYouTubeStart(e.target);
+        else e.target.playVideo();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
         setTimeout(function() {
@@ -992,11 +994,15 @@ function onYouTubeIframeAPIReady() {
       onStateChange: function (e) {
         if (__videoEmbedSuspended) return;
         var isPlayingState = e.data === YT.PlayerState.PLAYING;
+        if (isPlayingState) {
+          document.getElementById('click-overlay').style.display = '';
+          player.getIframe().style.pointerEvents = 'none';
+        }
         postToParent('stateChange', { state: e.data, isPlaying: isPlayingState });
       },
       onAutoplayBlocked: function () {
         if (__videoEmbedSuspended) return;
-        postToParent('autoplayBlocked', { provider: 'youtube' });
+        enableDirectYouTubeStart(player);
       },
       onError: function (e) {
         if (__videoEmbedSuspended) return;
@@ -1004,6 +1010,14 @@ function onYouTubeIframeAPIReady() {
       }
     }
   });
+}
+
+function enableDirectYouTubeStart(readyPlayer) {
+  // Scripted commands cannot satisfy every mobile browser's activation policy.
+  // Let the next trusted tap reach YouTube itself, not either platform overlay.
+  readyPlayer.getIframe().style.pointerEvents = 'auto';
+  document.getElementById('click-overlay').style.display = 'none';
+  postToParent('autoplayBlocked', { provider: 'youtube' });
 }
 
 function startProgressUpdates() {

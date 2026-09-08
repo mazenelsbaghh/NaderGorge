@@ -32,7 +32,7 @@ export function StudentBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden"
+      className="student-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-card)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden"
       aria-label="القائمة السفلية للطالب"
     >
       <div className="mx-auto grid w-full max-w-md grid-cols-5 items-stretch gap-0.5">
@@ -61,7 +61,7 @@ export function StudentBottomNav({
               }`}
             >
               <Icon className="h-[22px] w-[22px]" aria-hidden="true" />
-              <span className="w-full truncate text-sm font-bold leading-none sm:text-xs">{item.label}</span>
+              <span className="w-full truncate text-xs font-bold leading-none">{item.label}</span>
             </Link>
           );
         })}

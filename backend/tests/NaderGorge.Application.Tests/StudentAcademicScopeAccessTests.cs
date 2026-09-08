@@ -10,6 +10,7 @@ using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Application.Tests;
 
@@ -274,8 +275,10 @@ public class StudentAcademicScopeAccessTests
         {
             UserId = student.Id,
             LessonVideoId = allowedVideo.Id,
-            WatchCount = 1
+            WatchCount = 1,
+            LearningWatchedSeconds = 100
         });
+        SeedFullVideoDuration(db, student.Id, allowedVideo.Id);
         db.StudentFacingAcademicScopes.AddRange(
             MatchingScope(StudentFacingScopeOwnerType.Package, package.Id),
             NonMatchingScope(StudentFacingScopeOwnerType.Term, deniedTerm.Id),
@@ -590,8 +593,10 @@ public class StudentAcademicScopeAccessTests
         {
             UserId = student.Id,
             LessonVideoId = visibleVideo.Id,
-            WatchCount = 1
+            WatchCount = 1,
+            LearningWatchedSeconds = 100
         });
+        SeedFullVideoDuration(db, student.Id, visibleVideo.Id);
         await db.SaveChangesAsync();
 
         var result = await new GetMyLessonsQueryHandler(
@@ -777,6 +782,19 @@ public class StudentAcademicScopeAccessTests
         Assert.False(markResult.Success);
         Assert.Contains("ACADEMIC_SCOPE_DENIED", markResult.Errors ?? []);
         Assert.Null(await db.NotificationEvents.Where(x => x.Id == hiddenNotification.Id).Select(x => x.ReadAt).SingleAsync());
+    }
+
+    private static void SeedFullVideoDuration(AppDbContext db, Guid userId, Guid videoId)
+    {
+        db.VideoPlaybackSessions.Add(new VideoPlaybackSession
+        {
+            UserId = userId,
+            LessonVideoId = videoId,
+            SessionToken = Guid.NewGuid().ToString("N"),
+            EncryptionKey = "test-key",
+            TrackingDurationSeconds = 100,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
+        });
     }
 
     private static StudentFacingAcademicScope MatchingScope(StudentFacingScopeOwnerType ownerType, Guid ownerId)

@@ -13,6 +13,9 @@ public class VideoWatchEvent : BaseEntity
     // Cumulative, speed-adjusted time used to calculate watch progress.
     public int TimeWatchedInSeconds { get; set; }
 
+    // Media-time learning progress continues after the session's quota view.
+    public decimal LearningWatchedSeconds { get; set; }
+
     // Real elapsed playback time. This keeps reporting independent from the
     // speed-adjusted progress value above.
     public decimal ActualWatchedSeconds { get; set; }

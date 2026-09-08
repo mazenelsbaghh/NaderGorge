@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ChevronLeft, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import {
   StudentDestinationsPanel,
   StudentGettingStartedPanel,
-  StudentMomentumRail,
-  PackageGrid,
-  StatsStrip,
   StudentHero,
   UpcomingExamsPanel,
   UpcomingHomeworkPanel,
@@ -20,10 +17,12 @@ import {
   studentService,
   type DashboardDto,
   type QuickAccessItemDto,
+  type MyLessonDto,
 } from '@/services/student-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { usePlatformQuery } from '@/components/providers/QueryProvider';
 import { queryKeys } from '@/lib/query-keys';
+import { StudentLearningOverview } from '@/components/student-dashboard/StudentLearningOverview';
 
 const CompactRegistrationInstructionsDialog = dynamic(
   () =>
@@ -34,9 +33,9 @@ const CompactRegistrationInstructionsDialog = dynamic(
 );
 
 export default function StudentDashboardClient() {
+  const router = useRouter();
   const userId = useAuthStore((state) => state.user?.id);
   const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
-  const router = useRouter();
   const userBoundary = userId ?? 'pending';
   const dashboardQueryFn = useCallback(
     ({ signal }: { signal: AbortSignal }) =>
@@ -59,6 +58,11 @@ export default function StudentDashboardClient() {
     queryFn: quickAccessQueryFn,
     staleTime: 30_000,
     enabled: Boolean(userId),
+  });
+  const lessonsQueryFn = useCallback(({ signal }: { signal: AbortSignal }) => studentService.getMyLessons(signal), []);
+  const lessonsQuery = usePlatformQuery<MyLessonDto[]>({
+    queryKey: queryKeys.student.lessons(userBoundary), queryFn: lessonsQueryFn,
+    staleTime: 30_000, enabled: Boolean(userId),
   });
   const data = dashboardQuery.data;
   const quickAccessItems = quickAccessQuery.data ?? [];
@@ -166,7 +170,7 @@ export default function StudentDashboardClient() {
   };
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="mx-auto max-w-5xl space-y-5 pb-4">
       {loadError && (
         <div
           role="alert"
@@ -185,25 +189,14 @@ export default function StudentDashboardClient() {
 
       <StudentHero data={d} />
 
-      <button
-        type="button"
-        onClick={() => router.push('/student/lessons')}
-        className="flex min-h-16 w-full items-center gap-4 rounded-2xl bg-[var(--admin-primary)] px-5 py-4 text-right text-[var(--admin-primary-contrast)] shadow-sm transition hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
-      >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-          <BookOpen className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-base font-black">افتح دروسك مباشرة</span>
-          <span className="mt-0.5 block text-xs font-bold opacity-85">كل الحصص المتاحة من جميع اشتراكاتك</span>
-        </span>
-        <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
-      </button>
+      {lessonsQuery.data ? <StudentLearningOverview lessons={lessonsQuery.data} /> : lessonsQuery.error ? (
+        <div role="alert" className="rounded-xl border border-[var(--admin-border)] p-5 text-[var(--admin-text)]">
+          <p>تعذر تحميل تقدّم المشاهدة. ده مش معناه إن تقدّمك صفر.</p>
+          <button type="button" onClick={() => void lessonsQuery.refetch()} className="mt-3 min-h-11 font-bold text-[var(--admin-primary)]">إعادة تحميل التقدّم</button>
+        </div>
+      ) : <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" aria-label="جارٍ تحميل تقدّم المشاهدة" />}
 
-      <StudentMomentumRail data={d} />
-
-      {(d.activePackages.length === 0 ||
-        (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
+      {lessonsQuery.data?.length === 0 && (
         <StudentGettingStartedPanel
           data={d}
           hasDirectContentAccess={quickAccessItems.length > 0}
@@ -240,28 +233,6 @@ export default function StudentDashboardClient() {
         </details>
       )}
 
-      <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
-        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
-          <span className="flex-1">باقاتي الكاملة</span>
-          <span className="text-xs font-bold text-[var(--admin-muted)]">
-            {d.activePackages.length} باقات
-          </span>
-          <ChevronDown
-            className="h-4 w-4 transition-transform group-open:rotate-180"
-            aria-hidden="true"
-          />
-        </summary>
-        <div className="border-t border-[var(--admin-border)] p-4">
-          <PackageGrid
-            packages={d.activePackages}
-            onOpenPackage={(packageId) =>
-              router.push(`/student/packages/${packageId}`)
-            }
-            onBrowsePackages={() => router.push('/student/packages')}
-          />
-        </div>
-      </details>
-
       <QuickAccessPanel accessItems={quickAccessItems} />
 
       <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
@@ -278,7 +249,6 @@ export default function StudentDashboardClient() {
         <div className="space-y-4 border-t border-[var(--admin-border)] p-4">
           <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
             <StudentDestinationsPanel />
-            <StatsStrip data={d} />
           </div>
         </div>
       </details>

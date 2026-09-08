@@ -194,6 +194,8 @@ export interface VideoDto {
   videoTypeId?: string;
   videoTypeName?: string;
   watchedSeconds: number;
+  learningWatchedSeconds?: number;
+  durationSeconds?: number | null;
   lastWatchedAt?: string;
   subtitleUrl?: string;
   isProcessingAI?: boolean;

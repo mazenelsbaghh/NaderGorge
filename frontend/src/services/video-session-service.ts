@@ -6,6 +6,7 @@ import { getSurfaceName } from '@/packages/surface-runtime/config';
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api').replace(/\/+$/, '');
 
 export interface WatchInfo {
+  learningWatchedSeconds?: number;
   currentCount: number;
   maxCount: number;
   isLocked: boolean;
@@ -46,6 +47,7 @@ export interface TrackProgressBatchRequest {
 }
 
 export interface WatchProgressResponse {
+  learningWatchedSeconds?: number;
   currentCount: number;
   maxCount: number;
   isLocked: boolean;

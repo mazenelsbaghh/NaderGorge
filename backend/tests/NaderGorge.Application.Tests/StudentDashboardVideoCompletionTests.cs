@@ -41,7 +41,8 @@ public sealed class StudentDashboardVideoCompletionTests
         {
             UserId = fixture.StudentId,
             LessonVideoId = fixture.FourthActiveVideoId,
-            WatchCount = 1
+            WatchCount = 1,
+            LearningWatchedSeconds = 100
         });
         await db.SaveChangesAsync();
 
@@ -164,7 +165,7 @@ public sealed class StudentDashboardVideoCompletionTests
             ContentSection = section,
             ContentSectionId = section.Id,
             Title = "Four-part lesson",
-            Summary = "Completes from registered views",
+            Summary = "Completes from full video durations",
             Order = 2
         };
         var archivedLesson = new Lesson
@@ -327,11 +328,21 @@ public sealed class StudentDashboardVideoCompletionTests
             hiddenLessonScope,
             hiddenVideoScope,
             legacyProgress);
-        db.VideoWatchEvents.AddRange(activeVideos.Take(3).Select(video => new VideoWatchEvent
+        db.VideoWatchEvents.AddRange(activeVideos.Take(3).Append(legacyVideo).Select(video => new VideoWatchEvent
         {
             UserId = student.Id,
             LessonVideoId = video.Id,
-            WatchCount = 1
+            WatchCount = 1,
+            LearningWatchedSeconds = 100
+        }));
+        db.VideoPlaybackSessions.AddRange(activeVideos.Append(legacyVideo).Select(video => new VideoPlaybackSession
+        {
+            UserId = student.Id,
+            LessonVideoId = video.Id,
+            SessionToken = "test-token",
+            EncryptionKey = "test-key",
+            TrackingDurationSeconds = 100,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
         }));
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();

@@ -34,7 +34,7 @@ public record VideoSessionDto(
     bool IsPreview
 );
 
-public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds);
+public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds, decimal LearningWatchedSeconds = 0);
 
 public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessionCommand, ApiResponse<VideoSessionDto>>
 {
@@ -268,7 +268,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     currentCount,
                     maxCount,
                     IsLocked: true,
-                    TotalTrackedSeconds: Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
+                    TotalTrackedSeconds: Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0),
+                    LearningWatchedSeconds: Math.Max(0, watchEvent?.LearningWatchedSeconds ?? 0)),
                 video.Title,
                 thresholdPercentage,
                 knownDurationSeconds,
@@ -378,7 +379,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         var sessionWatchInfo = isAdminPreview
             ? new WatchInfoDto(0, 0, IsLocked: false, TotalTrackedSeconds: 0)
-            : new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0));
+            : new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0), watchEvent?.LearningWatchedSeconds ?? 0);
         var dto = new VideoSessionDto(
             session.Id,
             session.ExpiresAt,

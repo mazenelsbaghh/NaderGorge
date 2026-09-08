@@ -1285,6 +1285,7 @@ public class AppDbContext : DbContext, IAppDbContext
         // VideoWatchEvent
         modelBuilder.Entity<VideoWatchEvent>(e =>
         {
+            e.Property(w => w.LearningWatchedSeconds).HasPrecision(18, 3);
             e.ToTable("video_watch_events");
             e.HasKey(v => v.Id);
             e.HasIndex(v => new { v.UserId, v.LessonVideoId }).IsUnique();

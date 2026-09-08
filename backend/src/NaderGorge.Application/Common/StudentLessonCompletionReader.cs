@@ -10,8 +10,8 @@ public sealed record StudentLessonCompletionContext(
     IReadOnlyCollection<Guid> CandidateLessonIds);
 
 /// <summary>
-/// Preserves legacy assessment completion and also completes a video lesson once
-/// every active part visible to the student has a registered server-side view.
+/// Video lessons require the full speed-adjusted duration of every visible part.
+/// Assessment-only lessons retain their existing completion state.
 /// </summary>
 public static class StudentLessonCompletionReader
 {
@@ -84,10 +84,11 @@ public static class StudentLessonCompletionReader
         if (activeVideoParts.Count == 0)
             return completedLessonIds;
 
-        var watchedVideoPartIds = await GetWatchedVideoPartIdsAsync(
-            context,
-            activeVideoParts,
-            cancellationToken);
+        completedLessonIds.ExceptWith(activeVideoParts.Select(part => part.LessonId));
+        var videoProgress = await StudentWatchProgressReader.ReadAsync(
+            context, activeVideoParts.Select(part => part.Id).ToList(), cancellationToken);
+        var watchedVideoPartIds = videoProgress.Where(video => video.IsCompleted)
+            .Select(video => video.VideoId).ToHashSet();
         completedLessonIds.UnionWith(activeVideoParts
             .GroupBy(video => video.LessonId)
             .Where(parts => parts.All(part => watchedVideoPartIds.Contains(part.Id)))
@@ -128,24 +129,6 @@ public static class StudentLessonCompletionReader
         return await activeVideoPartsQuery
             .Select(video => new ActiveVideoPart(video.Id, video.LessonId))
             .ToListAsync(cancellationToken);
-    }
-
-    private static async Task<HashSet<Guid>> GetWatchedVideoPartIdsAsync(
-        StudentLessonCompletionContext context,
-        IReadOnlyCollection<ActiveVideoPart> activeVideoParts,
-        CancellationToken cancellationToken)
-    {
-        var activeVideoPartIds = activeVideoParts.Select(video => video.Id).ToList();
-        return (await context.Db.VideoWatchEvents
-                .AsNoTracking()
-                .Where(watch =>
-                    watch.UserId == context.UserId &&
-                    watch.WatchCount > 0 &&
-                    activeVideoPartIds.Contains(watch.LessonVideoId))
-                .Select(watch => watch.LessonVideoId)
-                .Distinct()
-                .ToListAsync(cancellationToken))
-            .ToHashSet();
     }
 
     private sealed record ActiveVideoPart(Guid Id, Guid LessonId);

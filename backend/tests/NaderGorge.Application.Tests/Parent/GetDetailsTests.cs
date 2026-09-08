@@ -637,8 +637,9 @@ public class GetDetailsTests : IDisposable
 
         var details = result.Data;
         Assert.Equal(1, details.Attendance.TotalLessons);
-        Assert.Equal(1, details.Attendance.WatchedLessons);
-        Assert.Equal(100, details.Attendance.CompletionRate);
+        // A legacy completion flag cannot hide the remaining unwatched part.
+        Assert.Equal(0, details.Attendance.WatchedLessons);
+        Assert.Equal(0, details.Attendance.CompletionRate);
         var teacher = Assert.Single(details.Teachers);
         Assert.Equal(teacherA.Id, teacher.TeacherId);
 
@@ -649,7 +650,7 @@ public class GetDetailsTests : IDisposable
         Assert.Equal(1, watchLesson.WatchedVideos);
         Assert.Equal(2, watchLesson.WatchCount);
         Assert.Equal(180, watchLesson.WatchedSeconds);
-        Assert.True(watchLesson.IsCompleted);
+        Assert.False(watchLesson.IsCompleted);
 
         var visibleExam = Assert.Single(details.Exams);
         Assert.Equal(exam.Id, visibleExam.ExamId);

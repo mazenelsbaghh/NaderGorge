@@ -60,7 +60,8 @@ export function usePlatformQuery<T>({
   );
 
   useEffect(() => {
-    if (!enabled || !client.isStale(stableKey, staleTime)) return;
+    // Failed reads wait for explicit retry or invalidation, not a render loop.
+    if (!enabled || snapshot.status === 'error' || !client.isStale(stableKey, staleTime)) return;
     void client
       .fetchQuery({ queryKey: stableKey, queryFn, staleTime })
       .catch(() => undefined);
@@ -70,6 +71,7 @@ export function usePlatformQuery<T>({
     queryFn,
     snapshot.isFetching,
     snapshot.updatedAt,
+    snapshot.status,
     stableKey,
     staleTime,
   ]);

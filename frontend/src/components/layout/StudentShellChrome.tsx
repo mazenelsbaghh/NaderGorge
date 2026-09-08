@@ -21,8 +21,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell,
   Bug,
-  BookOpen,
   BookMarked,
+  Layers,
+  SquarePlay,
   ChartNoAxesColumn,
   ChevronLeft,
   ClipboardList,
@@ -48,7 +49,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useStudentShellStore } from '@/stores/student-shell-store';
 import { ParentCodePopup } from '@/components/student/ParentCodePopup';
 import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
-import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { StudentMobileHeader } from '@/components/layout/StudentMobileHeader';
 import { IntentLink } from '@/components/navigation/IntentLink';
 import {
   NavigationFocusManager,
@@ -99,9 +100,9 @@ const primaryNavItems: Array<{
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
-    { href: '/student/lessons', label: 'دروسي', icon: BookOpen },
-    { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
-    { href: '/student/public-exams', label: 'امتحانات', icon: ClipboardList },
+    { href: '/student/lessons', label: 'دروسي', icon: SquarePlay },
+    { href: '/student/packages', label: 'باقاتي', icon: Layers },
+    { href: '/student/public-exams', label: 'امتحاناتي', icon: ClipboardList },
   ];
 
 /** Secondary: visible only inside the drawer on mobile */
@@ -186,13 +187,13 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   /* Which top-level route is active? */
   const activePath: StudentShellRoute =
-    pathname === '/student/lessons'
+    pathname.startsWith('/student/lessons') || /\/student\/packages\/[^/]+\/lessons\//.test(pathname)
       ? '/student/lessons'
       : pathname.startsWith('/student/packages')
       ? '/student/packages'
       : pathname.startsWith('/student/shared-packages')
         ? '/student/shared-packages'
-      : pathname.startsWith('/student/public-exams')
+      : pathname.startsWith('/student/public-exams') || pathname.startsWith('/student/exams')
         ? '/student/public-exams'
       : pathname.startsWith('/student/teachers')
         ? '/student/teachers'
@@ -363,36 +364,20 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         className={`app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain ${
           isFocusMode
             ? 'px-0 py-0 pb-0 lg:ms-0 lg:px-0 lg:py-0 lg:pb-0'
-            : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:ms-24 lg:px-8 lg:py-10 lg:pb-10'
+            : 'px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:ms-24 lg:px-8 lg:py-10 lg:pb-10'
         }`}
       >
         <AnimatePresence>
           {!isFocusMode && (
             <motion.header
-              initial={{ opacity: 0, y: -20 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="mb-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-3 lg:mb-8 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
+              className="mb-4 lg:mb-8"
             >
-              <div className="mb-3 flex min-h-11 items-center justify-between gap-3 lg:hidden">
-                <HeaderParentBadge />
-                <PlatformLogo
-                  variant="full"
-                  size="sm"
-                  tone={isDark ? 'light' : 'dark'}
-                  priority
-                  className="h-9 w-auto max-w-[128px]"
-                />
-                <Link
-                  href="/student/profile"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
-                  aria-label="الملف الشخصي"
-                >
-                  <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName} size="sm" />
-                </Link>
-              </div>
-              <div className="flex items-center justify-between w-full">
+              <StudentMobileHeader fullName={user?.fullName} avatarSlug={user?.avatarSlug} unreadCount={unreadCount} isDark={isDark} />
+              <div className="hidden items-center justify-between w-full lg:flex">
                 <nav className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[var(--admin-muted)] lg:gap-2 lg:text-xs">
                   <span className="truncate">المساحة الدراسية</span>
                   <ChevronLeft className="h-3 w-3 shrink-0" />

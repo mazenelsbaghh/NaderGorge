@@ -13,6 +13,8 @@ import { useRouter, useParams } from "next/navigation";
 import { Lock, Award, ClipboardCheck, BadgeCheck, ShoppingCart } from "lucide-react";
 import toast from "react-hot-toast";
 import { getHomeworkComingSoonLabel } from "@/lib/homework-coming-soon";
+import { lessonProgressPercent, videoProgressPercent, type LearningVideo } from "@/lib/student-learning-progress";
+import { LearningProgress } from "@/components/student-dashboard/LearningProgress";
 
 // --- Icons ---
 function IconCheck({ className, ...props }: React.ComponentProps<"svg">) {
@@ -24,6 +26,8 @@ function IconCheck({ className, ...props }: React.ComponentProps<"svg">) {
 }
 
 interface VideoModel {
+    durationSeconds?: number | null;
+    learningWatchedSeconds?: number;
     id: string;
     title: string;
     examId?: string;
@@ -63,7 +67,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
         >
             <ol className="flex w-max min-w-full flex-nowrap items-stretch justify-start gap-2 sm:w-full sm:flex-row sm:flex-wrap sm:gap-3" role="list">
                 {videos.map((video, stepIdx) => {
-                    const isCompleted = current > stepIdx;
+                    const isCompleted = videoProgressPercent(video) === 100;
                     const isCurrent = current === stepIdx;
                     const isExamLocked = video.isExamLocked;
                     const isAccessLocked = video.hasAccess === false;
@@ -127,6 +131,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                         title={video.title}
                                     >
                                         {video.title}
+                                        <span className="ms-2 text-xs tabular-nums">{videoProgressPercent(video) === null ? '' : `${videoProgressPercent(video)}%`}</span>
                                     </motion.span>
                                     {video.isUnlockedByCode && (
                                         <span className="hidden items-center gap-1 rounded-full bg-[var(--admin-success-10)] px-2 py-0.5 text-sm font-black text-[var(--admin-success)] sm:inline-flex">
@@ -167,6 +172,7 @@ export function LessonCarousel({
 
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
+    const [liveProgress, setLiveProgress] = useState<Record<string, LearningVideo>>({});
     const [mobilePanel, setMobilePanel] = useState<"chapters" | "mindmap">("chapters");
     const [isBuyingLesson, setIsBuyingLesson] = useState(false);
     const playerRef = useRef<SecureVideoPlayerRef>(null);
@@ -187,6 +193,8 @@ export function LessonCarousel({
     if (!videos || videos.length === 0) return null;
 
     const activeVideo = videos[activeStep];
+    const progressVideos = videos.map(video => ({ ...video, ...liveProgress[video.id] }));
+    const lessonPercent = lessonProgressPercent(progressVideos.filter(video => video.hasAccess !== false));
     const activeVideoHasAccess = activeVideo.hasAccess !== false;
     const hasChapters = Boolean(activeVideo.chapters && activeVideo.chapters.length > 0);
     const hasMindmaps = Boolean(activeVideo.chapters?.some((chapter) => chapter.mindmapImageUrl));
@@ -279,7 +287,8 @@ export function LessonCarousel({
                             </div>
                         )}
 
-                        <Steps current={activeStep} onChange={onStepChange} videos={videos} />
+                        <div className="px-4 pt-5 sm:px-10"><LearningProgress percent={lessonPercent} label={lessonPercent === 100 ? '✓ الحصة مكتملة' : 'تقدّم الحصة بالكامل'} /></div>
+                        <Steps current={activeStep} onChange={onStepChange} videos={progressVideos} />
 
                         <div className="mt-2 flex flex-col gap-3 px-4 sm:mt-4 sm:gap-4 sm:px-6 md:px-10 xl:mt-12">
                             <AnimatePresence mode="wait">
@@ -367,7 +376,12 @@ export function LessonCarousel({
                                                 videoExamId={activeVideo.examId}
                                                 chapters={activeVideo.chapters}
                                                 onWatchStatusChange={(s: WatchStatus) => {
-                                                    if (activeVideoIdRef.current === activeVideo.id) setWatchStatus(s);
+                                                    if (activeVideoIdRef.current !== activeVideo.id) return;
+                                                    setWatchStatus(s);
+                                                    setLiveProgress(previous => ({ ...previous, [activeVideo.id]: {
+                                                        durationSeconds: s.durationSeconds || activeVideo.durationSeconds,
+                                                        learningWatchedSeconds: s.learningWatchedSeconds ?? activeVideo.learningWatchedSeconds,
+                                                    } }));
                                                 }}
                                                 onWatchProgress={(time) => {
                                                     if (activeVideoIdRef.current === activeVideo.id) setCurrentTime(time);
@@ -406,6 +420,7 @@ export function LessonCarousel({
 
                                     {activeVideoHasAccess && (
                                         <div className="mt-3 sm:mt-4">
+                                            <div className="mb-4"><LearningProgress percent={videoProgressPercent(progressVideos[activeStep])} label="شاهدت من الفيديو" /></div>
                                             <WatchStatusBar
                                                 status={watchStatus}
                                                 title={activeVideo.title}

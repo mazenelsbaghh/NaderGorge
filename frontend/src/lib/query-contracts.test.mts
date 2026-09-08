@@ -12,6 +12,17 @@ import {
   stableSerializeQueryKey,
 } from './query-keys.ts';
 
+test('failed progress remains an error until explicit invalidation allows recovery', async () => {
+  const client = new PlatformQueryClient();
+  const key = ['student', 'lessons', 'test-student'] as const;
+  await assert.rejects(client.fetchQuery({ queryKey: key, queryFn: async () => { throw new Error('unavailable'); } }));
+  assert.equal(client.getSnapshot(key).status, 'error');
+  client.invalidateQueries(key);
+  assert.equal(client.getSnapshot(key).status, 'idle');
+  await client.fetchQuery({ queryKey: key, queryFn: async () => [{ percent: 60 }] });
+  assert.deepEqual(client.getSnapshot(key).data, [{ percent: 60 }]);
+});
+
 test('AdminAI refresh scopes map to closed canonical keys and reject unknown scopes', () => {
   assert.deepEqual(Object.keys(ADMIN_AI_REFRESH_SCOPE_KEYS).sort(), [
     'commercial',
