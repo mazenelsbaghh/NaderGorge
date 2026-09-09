@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type HomeworkDashboardDto } from '@/services/admin-service';
-import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power } from 'lucide-react';
+import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power, Eye, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
@@ -12,6 +13,7 @@ import { normalizeQuestionRichText } from '@/lib/question-text';
 import { getApiErrorSummary } from '@/lib/api-errors';
 import { AssessmentAttemptReview } from './AssessmentAttemptReview';
 import { MissingHomeworkExport } from './MissingHomeworkExport';
+import { HomeworkPreview } from './HomeworkPreview';
 
 export function AttachedHomeworkViewer({
   homeworkId,
@@ -26,6 +28,7 @@ export function AttachedHomeworkViewer({
   const [data, setData] = useState<HomeworkDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const homeworkBasePath = surface === 'teacher' ? '/teacher/packages/homework' : '/admin/content/homework';
 
   const loadData = useCallback(async () => {
@@ -101,6 +104,8 @@ export function AttachedHomeworkViewer({
             )}
           </div>
           <div className="flex flex-wrap gap-3">
+            <Link href={`${homeworkBasePath}/${homeworkId}`} className="admin-btn-ghost inline-flex min-h-11 items-center gap-2"><ClipboardList className="h-4 w-4" /> بروفايل الواجب</Link>
+            <NeumorphButton type="button" intent="ghost" size="md" onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" /> معاينة الواجب</NeumorphButton>
             <ContentArchiveControl targetType="Homework" targetId={homeworkId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
             <NeumorphButton
               type="button"
@@ -185,6 +190,9 @@ export function AttachedHomeworkViewer({
                           </p>
                         )}
                         <div className="mt-4 flex flex-wrap gap-3">
+                          <NeumorphButton type="button" intent="ghost" size="sm" disabled={Boolean(questionsLockedReason)} title={questionsLockedReason || undefined} onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question?question=${encodeURIComponent(q.homeworkQuestionId)}`)} aria-label={`تعديل السؤال ${idx + 1}`}>
+                            <Pencil className="h-4 w-4" /> تعديل السؤال
+                          </NeumorphButton>
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--admin-card-strong)] px-2.5 py-1 text-xs font-medium text-[var(--admin-muted)]">
                             {q.type === 'MCQ' ? 'اختيار من متعدد' : q.type === 'Essay' ? 'مقال' : q.type === 'FindTheMistake' ? 'استخرج الخطأ' : q.type}
                           </span>
@@ -226,6 +234,7 @@ export function AttachedHomeworkViewer({
         </div>
       </div>
 
+      {previewOpen && <HomeworkPreview homework={data} onClose={() => setPreviewOpen(false)} />}
       {/* Student submissions */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
