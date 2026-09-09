@@ -12,9 +12,10 @@ async function installLesson(page, fullscreenApi) {
   await page.addInitScript(({ user, fullscreenApi }) => {
     localStorage.setItem('accessToken', 'test-token'); localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem(`onboarding_ack_${user.id}`, '1');
-    if (fullscreenApi === 'missing') {
+    if (fullscreenApi === 'missing' || fullscreenApi === 'legacy') {
       Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: undefined, configurable: true });
       Object.defineProperty(HTMLElement.prototype, 'webkitRequestFullscreen', { value: undefined, configurable: true });
+      if (fullscreenApi === 'legacy') Object.defineProperty(HTMLElement.prototype, 'showPopover', { value: undefined, configurable: true });
     } else if (fullscreenApi === 'stuck') {
       Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { value: () => new Promise(() => {}), configurable: true });
     }
@@ -42,7 +43,7 @@ async function installLesson(page, fullscreenApi) {
   return () => sessions;
 }
 
-for (const [width, fullscreenApi] of [[320, 'missing'], [390, 'stuck'], [768, 'native']]) {
+for (const [width, fullscreenApi] of [[320, 'missing'], [390, 'stuck'], [375, 'legacy'], [768, 'native']]) {
   test(`mobile player ${width}px: readable aids and ${fullscreenApi} fullscreen preserve playback`, { timeout: 120000 }, async () => {
     const browser = await webkit.launch();
     try {
@@ -78,10 +79,11 @@ for (const [width, fullscreenApi] of [[320, 'missing'], [390, 'stuck'], [768, 'n
       await page.getByRole('button', { name: 'تكبير الخريطة' }).tap();
       assert.ok((await map.boundingBox()).width > width);
       await page.getByRole('button', { name: 'إغلاق', exact: true }).tap();
+      await root.evaluate(el => el.scrollIntoView({ block: 'start' }));
       await iframe.locator('body').tap();
       await page.getByRole('button', { name: 'تبديل وضع ملء الشاشة' }).tap();
       await page.waitForFunction(() => Boolean(document.fullscreenElement) || document.querySelector('.secure-video-pseudo-fullscreen'));
-      if (fullscreenApi !== 'native') assert.equal(await root.evaluate(el => el.matches(':popover-open')), true);
+      if (fullscreenApi !== 'native' && fullscreenApi !== 'legacy') assert.equal(await root.evaluate(el => el.matches(':popover-open')), true);
       const full = await root.boundingBox();
       assert.ok(full.width >= width - 2 && full.height >= 842, JSON.stringify(full));
       assert.ok(Math.abs(full.x) <= 2 && Math.abs(full.y) <= 2, `fullscreen is off screen: ${JSON.stringify(full)}`);
@@ -91,6 +93,12 @@ for (const [width, fullscreenApi] of [[320, 'missing'], [390, 'stuck'], [768, 'n
       await page.touchscreen.tap(width / 2, 422);
       const slider = page.getByRole('slider', { name: 'تقدم الفيديو' });
       await slider.tap();
+      if (fullscreenApi === 'legacy') {
+        await page.setViewportSize({ width: 844, height: width });
+        const rotated = await root.boundingBox();
+        assert.ok(rotated.width >= 842 && rotated.height >= width - 2, JSON.stringify(rotated));
+        assert.ok(Math.abs(rotated.x) <= 2 && Math.abs(rotated.y) <= 2, JSON.stringify(rotated));
+      }
       await iframe.locator('body').tap();
       await page.getByRole('button', { name: 'تبديل وضع ملء الشاشة' }).tap();
       await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('.secure-video-pseudo-fullscreen'));

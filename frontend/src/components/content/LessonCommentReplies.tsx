@@ -1,14 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   contentService,
   type LessonCommentDto,
 } from '@/services/content-service';
 import { registerCacheStore } from '@/lib/cache-invalidation';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { formatCairoDateTime } from '@/lib/cairo-time';
+import { LessonCommentBubble } from './LessonCommentBubble';
 import { LessonCommentReplyForm } from './LessonCommentReplyForm';
 
 export function LessonCommentReplies({
@@ -16,14 +15,34 @@ export function LessonCommentReplies({
 }: {
   comment: LessonCommentDto;
 }) {
-  const listId = useId();
-  const [expanded, setExpanded] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+  const [requested, setRequested] = useState(false);
   const [composing, setComposing] = useState(false);
   const [replies, setReplies] = useState<LessonCommentDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const generation = useRef({ value: 0 });
+  const shouldLoad =
+    requested || (nearViewport && (comment.replyCount ?? 0) > 0);
+
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) return;
+    // Reveal replies automatically, without fetching every off-screen thread.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(thread);
+    return () => observer.disconnect();
+  }, []);
 
   const loadReplies = useCallback(
     async (offset = 0) => {
@@ -59,7 +78,7 @@ export function LessonCommentReplies({
   );
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!shouldLoad) return;
     const requests = generation.current;
     void loadReplies();
     const unregister = registerCacheStore(
@@ -71,7 +90,7 @@ export function LessonCommentReplies({
       requests.value++;
       unregister();
     };
-  }, [expanded, comment.lessonId, loadReplies]);
+  }, [shouldLoad, comment.lessonId, loadReplies]);
 
   async function sendReply(body: string) {
     const response = await contentService.createLessonComment(
@@ -86,65 +105,31 @@ export function LessonCommentReplies({
   }
 
   return (
-    <div className="mt-3">
+    <div ref={threadRef} className="min-w-0">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => {
-            setExpanded(true);
+            setRequested(true);
             setComposing(true);
           }}
-          className="admin-btn-ghost min-h-11"
+          className="min-h-11 rounded-lg px-2 text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-card-soft)]"
         >
           رد
         </button>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls={listId}
-          onClick={() => setExpanded(!expanded)}
-          className="admin-btn-ghost min-h-11"
-        >
-          {expanded
-            ? 'إخفاء الردود'
-            : `عرض الردود (${comment.replyCount ?? 0})`}
-        </button>
       </div>
-      {expanded && (
-        <div
-          id={listId}
-          className="ms-3 mt-2 space-y-3 border-s border-[var(--admin-border)] ps-3 sm:ms-6 sm:ps-4"
-        >
+      {(shouldLoad || replies.length > 0) && (
+        <div className="min-w-0 space-y-3 border-s border-[var(--admin-border)] ps-2 sm:ps-3">
           <div
             className="space-y-4"
             aria-label={`الردود على ${comment.authorName}`}
           >
             {replies.map((reply) => (
-              <article key={reply.id} className="min-w-0 py-2">
-                <div className="flex items-center gap-2">
-                  <UserAvatar
-                    avatarSlug={reply.authorAvatarSlug}
-                    fullName={reply.authorName}
-                    size="xs"
-                  />
-                  <p className="text-sm font-bold text-[var(--admin-text)]">
-                    {reply.authorName}
-                  </p>
-                  {reply.status === 'Pending' && (
-                    <span className="text-xs text-[var(--admin-muted)]">
-                      قيد المراجعة، ظاهر لك فقط
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--admin-text)]">
-                  {reply.body}
-                </p>
-                <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  {formatCairoDateTime(reply.createdAt, {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  })}
-                </p>
+              <article key={reply.id} className="min-w-0">
+                <LessonCommentBubble
+                  comment={reply}
+                  replyTo={comment.authorName}
+                />
               </article>
             ))}
           </div>

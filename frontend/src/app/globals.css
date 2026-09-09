@@ -550,6 +550,8 @@ body:has(.secure-video-pseudo-fullscreen) {
    support :has(), and transformed ancestors otherwise trap position: fixed. */
 .secure-video-fullscreen-ancestor,
 body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen) {
+  z-index: auto !important;
+  isolation: auto !important;
   overflow: visible !important;
   transform: none !important;
   filter: none !important;

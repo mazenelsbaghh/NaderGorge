@@ -177,8 +177,7 @@ const CustomSlider = ({
       {/* Tooltip */}
       {hoverPercent !== null && hoveredChapter && hoveredChapter.title && (
         <div 
-          className="absolute bottom-full mb-3 transform -translate-x-1/2 p-2 bg-[#111111ee] backdrop-blur-lg rounded-xl border border-[#EBE2D4]/20 shadow-xl whitespace-nowrap z-50 pointer-events-none"
-          style={{ left: `${hoverPercent}%` }}
+          className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-lg bg-black/90 p-2 text-center [overflow-wrap:anywhere] pointer-events-none"
         >
           <div className="text-[#EBE2D4] text-xs font-bold">{hoveredChapter.title}</div>
         </div>
@@ -393,7 +392,7 @@ export default function PlayerControls({
                     aria-label="اختيار جودة الفيديو"
                     aria-haspopup="listbox"
                     aria-expanded={qualityMenuOpen}
-                    className="min-h-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white"
+                    className="min-h-11 min-w-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white"
                   >
                     <Settings2 className="size-4 sm:me-1" />
                     <span className="hidden sm:inline">{currentQuality === 'auto' ? 'تلقائي' : qualityLevels.find((level) => level.id === currentQuality)?.label ?? 'الجودة'}</span>
@@ -448,7 +447,7 @@ export default function PlayerControls({
                       }}
                       variant="ghost"
                       aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
-                      className={cn("min-h-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact && "text-sm")}
+                      className={cn("min-h-11 min-w-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact && "text-sm")}
                     >
                       {playbackSpeed}x
                     </Button>

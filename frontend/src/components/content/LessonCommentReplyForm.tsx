@@ -35,10 +35,10 @@ export function LessonCommentReplyForm({
   }
 
   return (
-    <form onSubmit={submitReply} className="mt-3 space-y-3">
+    <form onSubmit={submitReply} className="mt-3 min-w-0 space-y-3">
       <label
         htmlFor={inputId}
-        className="block text-sm font-bold text-[var(--admin-text)]"
+        className="block text-sm font-bold text-[var(--admin-text)] [overflow-wrap:anywhere]"
       >
         رد على {recipient}
       </label>
@@ -50,7 +50,7 @@ export function LessonCommentReplyForm({
         maxLength={2000}
         disabled={submitting}
         autoFocus
-        className="admin-input min-h-24 w-full resize-y"
+        className="admin-input min-h-20 min-w-0 w-full resize-y rounded-2xl text-base"
         placeholder="اكتب ردك على هذا التعليق..."
       />
       {error && (
