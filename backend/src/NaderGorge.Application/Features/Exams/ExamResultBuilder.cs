@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Entities;
+using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
@@ -48,6 +49,7 @@ internal static class ExamResultBuilder
         bool revealCorrectAnswers,
         string? resultState = null)
     {
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
         var questionReviews = exam.ExamQuestions
             .OrderBy(q => q.Order)
             .Select(eq =>
@@ -92,8 +94,11 @@ internal static class ExamResultBuilder
         );
     }
 
-    public static Dictionary<Guid, QuestionReviewSnapshot> BuildQuestionReviewSnapshots(IEnumerable<StudentAnswer> answers)
+    public static Dictionary<Guid, QuestionReviewSnapshot> BuildQuestionReviewSnapshots(IEnumerable<StudentAnswer> answers, Exam exam)
     {
+        var savedOptions = exam.ExamQuestions.SelectMany(q => q.Question.Options)
+            .GroupBy(o => o.Id).ToDictionary(g => g.Key, g => g.First().Text);
+        var questionTypes = exam.ExamQuestions.ToDictionary(q => q.Id, q => q.Question.Type);
         return answers
             .GroupBy(a => a.ExamQuestionId)
             .ToDictionary(
@@ -101,9 +106,10 @@ internal static class ExamResultBuilder
                 g =>
                 {
                     var latest = g.Last();
-                    var selectedText = !string.IsNullOrWhiteSpace(latest.SubmittedText)
-                        ? latest.SubmittedText
-                        : latest.SelectedOption?.Text;
+                    var selectedText = questionTypes.GetValueOrDefault(latest.ExamQuestionId) == QuestionType.MCQ
+                        && latest.SelectedOptionId is Guid optionId && savedOptions.TryGetValue(optionId, out var optionText)
+                        ? optionText
+                        : !string.IsNullOrWhiteSpace(latest.SubmittedText) ? latest.SubmittedText : latest.SelectedOption?.Text;
                     var isAnswered = !string.IsNullOrWhiteSpace(selectedText);
 
                     return new QuestionReviewSnapshot(

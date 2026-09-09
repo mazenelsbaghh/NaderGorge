@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Queries;
@@ -48,7 +49,8 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
         var submission = await db.HomeworkSubmissions.Include(s => s.Answers).Include(s => s.Homework).ThenInclude(h => h.Questions)
             .SingleOrDefaultAsync(s => s.Id == request.Target.AttemptId && s.HomeworkId == request.Target.AssessmentId, ct);
         if (submission?.SubmittedAt == null) return ApiResponse<bool>.Fail("الواجب غير موجود أو لم يتم تسليمه.");
-        var maximums = submission.Homework.Questions.ToDictionary(q => q.Id, q => (decimal)q.PointsActive);
+        var definition = AssessmentDefinitionSnapshot.ResolveHomework(submission.Homework, submission.DefinitionSnapshotJson);
+        var maximums = definition.Questions.ToDictionary(q => q.Id, q => (decimal)q.PointsActive);
         if (!ValidScores(request.Scores, maximums) || request.Scores.Any(s => s.Score != decimal.Truncate(s.Score)))
             return ApiResponse<bool>.Fail("أدخل درجة صحيحة لكل سؤال بين صفر والحد الأقصى.");
         foreach (var score in request.Scores)
@@ -62,12 +64,17 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
             }
             answer.ScoreReceived = (int)score.Score;
         }
-        submission.OverallScore = GradingEvaluationService.CalculateScaledScore(request.Scores.Sum(s => s.Score), maximums.Values.Sum(), submission.Homework.TotalScore);
-        submission.Evaluation = GradingEvaluationService.DetermineEvaluation(submission.OverallScore, submission.Homework.PassingScoreThreshold ?? 0, submission.Homework.TotalScore);
+        var revised = submission.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId)
+                .WithGrades(request.Scores.ToDictionary(s => s.QuestionId, s => (s.Score, true)));
+        submission.OverallScore = revised?.Revision?.ScaledScore(definition.TotalScore)
+            ?? GradingEvaluationService.CalculateScaledScore(request.Scores.Sum(s => s.Score), maximums.Values.Sum(), definition.TotalScore);
+        submission.Evaluation = GradingEvaluationService.DetermineEvaluation(submission.OverallScore, definition.PassingScoreThreshold ?? 0, definition.TotalScore);
         submission.Status = SubmissionStatus.Graded;
         submission.GradedAt = DateTime.UtcNow;
         submission.AssistantReviewerId = request.Target.ActorId;
         submission.AssistantNotes = request.Feedback;
+        if (revised is not null) submission.DefinitionSnapshotJson = revised.ToJson();
         Notify("HomeworkGraded", submission.StudentId, new { homeworkId = submission.HomeworkId, submissionId = submission.Id, score = submission.OverallScore });
         return ApiResponse<bool>.Ok(true);
     }
@@ -77,15 +84,19 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
         var attempt = await db.StudentExamAttempts.Include(a => a.Answers).Include(a => a.Exam).ThenInclude(e => e.ExamQuestions).ThenInclude(q => q.Question)
             .SingleOrDefaultAsync(a => a.Id == request.Target.AttemptId && a.ExamId == request.Target.AssessmentId, ct);
         if (attempt == null) return ApiResponse<bool>.Fail("المحاولة غير موجودة.");
+        if (attempt.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)
+            return ApiResponse<bool>.Fail("انتظر استكمال الطالب للأسئلة المضافة قبل التصحيح الكامل.");
+        var definition = AssessmentDefinitionSnapshot.ResolveExam(attempt.Exam, attempt.DefinitionSnapshotJson);
         var essays = await db.EssaySubmissions.Where(e => e.StudentExamAttemptId == attempt.Id).ToListAsync(ct);
         if (attempt.Evaluation == null && essays.Count == 0) return ApiResponse<bool>.Fail("لم يتم تسليم الامتحان.");
         var assignedIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-        var maximums = attempt.Exam.ExamQuestions.Where(q => assignedIds.Contains(q.Id)).ToDictionary(q => q.Id, q => q.Points);
+        var maximums = definition.ExamQuestions.Where(q => assignedIds.Contains(q.Id)).ToDictionary(q => q.Id, q => q.Points);
         if (!ValidScores(request.Scores, maximums)) return ApiResponse<bool>.Fail("أدخل درجة لكل سؤال بين صفر والحد الأقصى.");
         var teacherId = await db.TeacherProfiles.Where(t => t.UserId == request.Target.ActorId).Select(t => (Guid?)t.Id).FirstOrDefaultAsync(ct);
         foreach (var score in request.Scores)
         {
-            var question = attempt.Exam.ExamQuestions.Single(q => q.Id == score.QuestionId);
+            var question = definition.ExamQuestions.Single(q => q.Id == score.QuestionId);
             var answer = attempt.Answers.Single(a => a.ExamQuestionId == question.Id);
             answer.PointsAwarded = score.Score;
             answer.IsCorrect = score.Score >= question.Points;
@@ -97,9 +108,14 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
                 essay.Status = EssaySubmissionStatus.TeacherGraded;
             }
         }
-        attempt.ScoreAchieved = GradingEvaluationService.CalculateScaledScore(request.Scores.Sum(s => s.Score), maximums.Values.Sum(), attempt.Exam.TotalScore);
-        attempt.IsPassed = !attempt.IsTimeExpired && attempt.ScoreAchieved >= attempt.Exam.PassingScore;
-        attempt.Evaluation = GradingEvaluationService.DetermineEvaluation(attempt.ScoreAchieved, attempt.Exam.PassingScore, attempt.Exam.TotalScore);
+        var revised = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
+                .WithGrades(request.Scores.ToDictionary(s => s.QuestionId, s => (s.Score, true)));
+        attempt.ScoreAchieved = revised?.Revision?.ScaledScore(definition.TotalScore)
+            ?? GradingEvaluationService.CalculateScaledScore(request.Scores.Sum(s => s.Score), maximums.Values.Sum(), definition.TotalScore);
+        attempt.IsPassed = !attempt.IsTimeExpired && attempt.ScoreAchieved >= definition.PassingScore;
+        attempt.Evaluation = GradingEvaluationService.DetermineEvaluation(attempt.ScoreAchieved, definition.PassingScore, definition.TotalScore);
+        if (revised is not null) attempt.DefinitionSnapshotJson = revised.ToJson();
         var notification = new { examId = attempt.ExamId, attemptId = attempt.Id, isPassed = attempt.IsPassed, score = attempt.ScoreAchieved, evaluation = attempt.Evaluation };
         Notify("ExamGraded", attempt.UserId, notification);
         Notify("ExamResultReady", attempt.UserId, notification);

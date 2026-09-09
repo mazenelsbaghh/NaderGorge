@@ -699,7 +699,7 @@ public sealed class ReportQueryService : IReportQueryService
         var homeworkQuery = _db.HomeworkSubmissions.AsNoTracking().AsQueryable();
         if (teacherId.HasValue) homeworkQuery = homeworkQuery.Where(submission => _db.Lessons.Any(lesson => lesson.Id == submission.Homework.LessonId && lesson.ContentSection.Term.Package.TeacherId == teacherId));
         var homeworks = await homeworkQuery.OrderByDescending(submission => submission.StartedAt).Take(SourceRowLimit / 2)
-            .Select(submission => new { submission.StudentId, submission.Homework.Title, submission.Student.FullName, Score = submission.OverallScore, Passed = submission.Homework.PassingScoreThreshold == null || submission.OverallScore >= submission.Homework.PassingScoreThreshold, CreatedAt = submission.StartedAt }).ToListAsync(ct);
+            .Select(submission => new { submission.StudentId, submission.Homework.Title, submission.Student.FullName, Score = submission.OverallScore, Passed = submission.OverallScore >= (submission.PassingScoreSnapshot ?? submission.Homework.PassingScoreThreshold ?? 0), CreatedAt = submission.StartedAt }).ToListAsync(ct);
         return attempts.Select(item => Row(("_studentId", item.UserId.ToString()), ("assessmentType", "exam"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))
             .Concat(homeworks.Select(item => Row(("_studentId", item.StudentId.ToString()), ("assessmentType", "homework"), ("title", item.Title), ("studentName", item.FullName), ("score", item.Score), ("isPassed", item.Passed), ("createdAt", item.CreatedAt)))).ToList();
     }

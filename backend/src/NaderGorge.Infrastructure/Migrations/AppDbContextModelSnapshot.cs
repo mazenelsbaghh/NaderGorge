@@ -4410,6 +4410,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
@@ -5291,6 +5294,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<int?>("DurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -5381,6 +5389,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("MistakeEndIndex")
                         .HasColumnType("integer");
 
@@ -5421,6 +5432,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("AssistantReviewerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DefinitionSnapshotJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Evaluation")
                         .HasColumnType("text");
 
@@ -5431,6 +5445,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("OverallScore")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("PassingScoreSnapshot")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartedAt")
@@ -5444,6 +5461,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal?>("TotalScoreSnapshot")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -10884,6 +10904,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("QuestionBankItemId")
                         .HasColumnType("uuid");
 
@@ -12161,6 +12184,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DefinitionSnapshotJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Evaluation")
                         .HasColumnType("text");

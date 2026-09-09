@@ -79,7 +79,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             .CanAccessExamAsync(request.ActorId, request.ExamId, cancellationToken))
             return ApiResponse<ExamDashboardDto>.Fail("غير مصرح بعرض هذا الامتحان.");
         var exam = await _context.Exams
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
                 .ThenInclude(eq => eq.Question)
                     .ThenInclude(q => q.Options)
             .Include(e => e.Attempts)

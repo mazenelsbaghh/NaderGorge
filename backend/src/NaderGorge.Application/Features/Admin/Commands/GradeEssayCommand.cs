@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -43,13 +44,21 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             .FirstOrDefaultAsync(s => s.Id == request.EssaySubmissionId, ct);
         if (submission == null) return ApiResponse<bool>.Fail("Essay submission not found.");
 
-        var question = await _db.ExamQuestions.FirstOrDefaultAsync(q =>
-            q.ExamId == submission.Attempt.ExamId && q.QuestionBankItemId == submission.QuestionId, ct);
+        var attempt = submission.Attempt;
+        var currentExam = await _db.Exams.Include(e => e.ExamQuestions).ThenInclude(q => q.Question)
+            .FirstOrDefaultAsync(e => e.Id == attempt.ExamId, ct);
+        if (currentExam is null) return ApiResponse<bool>.Fail("Exam not found.");
+        var exam = AssessmentDefinitionSnapshot.ResolveExam(currentExam, attempt.DefinitionSnapshotJson);
+        var question = exam.ExamQuestions.FirstOrDefault(q => q.QuestionBankItemId == submission.QuestionId);
         if (question == null || request.TeacherScore < 0 || request.TeacherScore > question.Points)
             return ApiResponse<bool>.Fail("الدرجة يجب أن تكون بين صفر ودرجة السؤال.");
         if (request.TeacherFeedback?.Length > 4000)
             return ApiResponse<bool>.Fail("ملاحظات التصحيح أطول من المسموح.");
         var previousScore = submission.TeacherFinalScore;
+        var revisedDefinition = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
+                .WithGrades(new Dictionary<Guid, (decimal, bool)> { [question.Id] = (request.TeacherScore, true) });
+        if (revisedDefinition is not null) attempt.DefinitionSnapshotJson = revisedDefinition.ToJson();
 
         Guid? teacherId = null;
         if (request.CurrentUserId.HasValue)
@@ -88,50 +97,31 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { score = request.TeacherScore })
         });
 
-        var attempt = _db.StudentExamAttempts.Local.FirstOrDefault(a => a.Id == submission.StudentExamAttemptId)
-            ?? await _db.StudentExamAttempts.FirstOrDefaultAsync(a => a.Id == submission.StudentExamAttemptId, ct);
-        var exam = attempt == null
-            ? null
-            : _db.Exams.Local.FirstOrDefault(e => e.Id == attempt.ExamId)
-                ?? await _db.Exams.FirstOrDefaultAsync(e => e.Id == attempt.ExamId, ct);
-
-        bool allTeacherGraded = false;
-
-        if (attempt != null && exam != null)
+        var essayQuestionIds = exam.ExamQuestions.Where(q => q.Question.Type == QuestionType.Essay)
+            .Select(q => q.Id).ToArray();
+        var objectiveAnswers = await _db.StudentAnswers
+            .Where(a => a.StudentExamAttemptId == attempt.Id && !essayQuestionIds.Contains(a.ExamQuestionId))
+            .ToListAsync(ct);
+        var essaySubmissions = await _db.EssaySubmissions
+            .Where(e => e.StudentExamAttemptId == attempt.Id).ToListAsync(ct);
+        var latestEssaySubmissions = essaySubmissions.GroupBy(e => e.QuestionId)
+            .Select(g => g.OrderByDescending(e => e.UpdatedAt ?? e.CreatedAt).First()).ToList();
+        var rawPointsEarned = objectiveAnswers.Sum(a => a.PointsAwarded)
+            + latestEssaySubmissions.Sum(e => e.Id == submission.Id ? request.TeacherScore : e.TeacherFinalScore ?? 0m);
+        var assignedIds = await _db.StudentAnswers.Where(a => a.StudentExamAttemptId == attempt.Id)
+            .Select(a => a.ExamQuestionId).ToListAsync(ct);
+        var rawPointsPossible = exam.ExamQuestions.Where(q => assignedIds.Contains(q.Id)).Sum(q => q.Points);
+        var allTeacherGraded = latestEssaySubmissions.Where(e => e.QuestionId != submission.QuestionId)
+            .All(e => e.Status == EssaySubmissionStatus.TeacherGraded);
+        allTeacherGraded = allTeacherGraded && revisedDefinition?.Revision?.RequiresCompletion != true
+            && revisedDefinition?.Revision?.RequiresReview != true;
+        if (allTeacherGraded)
         {
-            var objectiveAnswers = await _db.StudentAnswers
-                .Where(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestion.Question.Type != QuestionType.Essay)
-                .ToListAsync(ct);
-
-            var essaySubmissions = await _db.EssaySubmissions
-                .Where(e => e.StudentExamAttemptId == attempt.Id)
-                .ToListAsync(ct);
-
-            var latestEssaySubmissions = essaySubmissions
-                .GroupBy(e => e.QuestionId)
-                .Select(g => g
-                    .OrderByDescending(e => e.UpdatedAt ?? e.CreatedAt)
-                    .First())
-                .ToList();
-
-            var rawPointsEarned = objectiveAnswers.Sum(a => a.PointsAwarded)
-                + latestEssaySubmissions.Sum(e => e.Id == submission.Id ? request.TeacherScore : e.TeacherFinalScore ?? 0m);
-            var rawPointsPossible = await _db.ExamQuestions
-                .Where(eq => eq.ExamId == exam.Id && _db.StudentAnswers.Any(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == eq.Id))
-                .SumAsync(eq => eq.Points, ct);
-
-            var hasPendingEssayQuestions = latestEssaySubmissions
-                .Where(e => e.QuestionId != submission.QuestionId)
-                .Any(e => e.Status != EssaySubmissionStatus.TeacherGraded);
-
-            allTeacherGraded = !hasPendingEssayQuestions;
-            if (allTeacherGraded)
-            {
-                var scaledScore = NaderGorge.Application.Services.GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
-                attempt.ScoreAchieved = scaledScore;
-                attempt.IsPassed = !attempt.IsTimeExpired && scaledScore >= exam.PassingScore;
-                attempt.Evaluation = NaderGorge.Application.Services.GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
-            }
+            var scaledScore = revisedDefinition?.Revision?.ScaledScore(exam.TotalScore)
+                ?? GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
+            attempt.ScoreAchieved = scaledScore;
+            attempt.IsPassed = !attempt.IsTimeExpired && scaledScore >= exam.PassingScore;
+            attempt.Evaluation = GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
         }
 
         var homeworkGradedEvent = new OutboxEvent
@@ -149,7 +139,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         };
         _db.OutboxEvents.Add(homeworkGradedEvent);
 
-        if (allTeacherGraded && attempt != null && exam != null)
+        if (allTeacherGraded)
         {
             var examGradedEvent = new OutboxEvent
             {

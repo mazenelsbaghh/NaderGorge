@@ -238,12 +238,12 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         var gradedHomeworkIds = await _db.HomeworkSubmissions
             .AsNoTracking()
             .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
-            .Select(s => new { s.HomeworkId, s.OverallScore })
+            .Select(s => new { s.HomeworkId, s.OverallScore, s.PassingScoreSnapshot })
             .ToListAsync(ct);
 
         var upcomingHomeworks = homeworkRows
             .Where(h => visibleHomeworkIds.Contains(h.Id))
-            .Where(h => !gradedHomeworkIds.Any(s => s.HomeworkId == h.Id && s.OverallScore >= (h.PassingScoreThreshold ?? 0)))
+            .Where(h => !gradedHomeworkIds.Any(s => s.HomeworkId == h.Id && s.OverallScore >= (s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0)))
             .OrderBy(h => h.Title)
             .Take(5)
             .Select(h => new UpcomingHomeworkDto(

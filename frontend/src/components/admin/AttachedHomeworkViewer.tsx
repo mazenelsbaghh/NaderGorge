@@ -81,11 +81,6 @@ export function AttachedHomeworkViewer({
     );
   }
 
-  const questionsLockedReason = data.submissions.length > 0
-    ? 'لا يمكن تغيير الأسئلة بعد بدء الطلاب في الواجب؛ ستظل كما هي لحماية نتائجهم.'
-    : data.isActive
-      ? 'عطّل الواجب أولًا قبل تعديل أسئلته.'
-      : null;
   const activationBlocked = !data.isActive && data.questionCount === 0;
 
   return (
@@ -125,8 +120,6 @@ export function AttachedHomeworkViewer({
             </NeumorphButton>
             <NeumorphButton
               type="button"
-              disabled={Boolean(questionsLockedReason)}
-              title={questionsLockedReason || undefined}
               onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
               intent="primary"
               size="md"
@@ -137,11 +130,6 @@ export function AttachedHomeworkViewer({
             </NeumorphButton>
           </div>
         </div>
-        {questionsLockedReason && (
-          <p className="mb-6 rounded-xl bg-[var(--admin-card-soft)] px-4 py-3 text-sm font-bold leading-6 text-[var(--admin-muted)]">
-            {questionsLockedReason}
-          </p>
-        )}
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <AdminStatCard variant="accent" icon={FileQuestion} label="عدد الأسئلة" value={data.questionCount} />
@@ -190,7 +178,7 @@ export function AttachedHomeworkViewer({
                           </p>
                         )}
                         <div className="mt-4 flex flex-wrap gap-3">
-                          <NeumorphButton type="button" intent="ghost" size="sm" disabled={Boolean(questionsLockedReason)} title={questionsLockedReason || undefined} onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question?question=${encodeURIComponent(q.homeworkQuestionId)}`)} aria-label={`تعديل السؤال ${idx + 1}`}>
+                          <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question?question=${encodeURIComponent(q.homeworkQuestionId)}`)} aria-label={`تعديل السؤال ${idx + 1}`}>
                             <Pencil className="h-4 w-4" /> تعديل السؤال
                           </NeumorphButton>
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--admin-card-strong)] px-2.5 py-1 text-xs font-medium text-[var(--admin-muted)]">
@@ -220,8 +208,6 @@ export function AttachedHomeworkViewer({
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة للواجب حتى الآن.</p>
               <NeumorphButton
                 type="button"
-                disabled={Boolean(questionsLockedReason)}
-                title={questionsLockedReason || undefined}
                 onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
                 intent="primary"
                 size="sm"

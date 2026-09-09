@@ -228,7 +228,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                     .OrderByDescending(s => s.SubmittedAt)
                     .FirstOrDefaultAsync(ct);
 
-                bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
                 if (!prevHwPassed)
                 {
                     return (

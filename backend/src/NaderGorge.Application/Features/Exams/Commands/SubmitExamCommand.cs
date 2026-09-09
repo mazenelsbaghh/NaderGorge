@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
@@ -7,7 +8,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers) : IRequest<ApiResponse<ExamResultDto>>;
+public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers, Guid? RevisionId = null) : IRequest<ApiResponse<ExamResultDto>>;
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
@@ -44,9 +45,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     {
         var exam = await _db.Exams
             .AsNoTracking()
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
             .ThenInclude(eq => eq.Question)
-            .ThenInclude(q => q.Options)
+            .ThenInclude(q => q.Options.Where(o => !o.IsRetired))
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, ct);
 
         if (exam == null)
@@ -60,6 +61,16 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         if (attempt == null)
         {
             return ApiResponse<ExamResultDto>.Fail("Attempt not found or invalid.");
+        }
+
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
+
+        if (attempt.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)
+        {
+            var completed = await new ExamRevisionCompletion(_db).Submit(request, ct);
+            if (!completed.Success) return ApiResponse<ExamResultDto>.Fail(completed.Message ?? "تعذر حفظ الاستكمال.");
+            return await new Queries.GetExamAttemptResultQueryHandler(_db).Handle(new(attempt.Id, request.UserId), ct);
         }
 
         var alreadySubmitted = attempt.Evaluation != null
@@ -549,7 +560,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IEnumerable<EssaySubmission> essays,
         Exam exam)
     {
-        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers);
+        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
         var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
 
         foreach (var essay in essays)

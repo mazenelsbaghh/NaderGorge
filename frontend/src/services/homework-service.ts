@@ -23,6 +23,7 @@ export interface AnswerSubmissionDto {
 }
 
 export interface StartHomeworkAttemptDto {
+    revisionId?: string | null;
     homeworkId: string;
     submissionId: string;
     title: string;
@@ -93,8 +94,8 @@ export const homeworkService = {
         return apiClient.get<{ data: HomeworkDto[] }>('/homework/pending');
     },
 
-    submitHomework: async (homeworkId: string, answers: AnswerSubmissionDto[]) => {
-        const response = await apiClient.post(`/homework/${homeworkId}/submit`, answers);
+    submitHomework: async (homeworkId: string, answers: AnswerSubmissionDto[], revisionId?: string | null) => {
+        const response = await apiClient.post(`/homework/${homeworkId}/submit`, answers, { params: { revisionId } });
         invalidateMany(['student:homeworks', 'assessments']);
         return response;
     },

@@ -78,6 +78,7 @@ public class EssayQuestion : QuestionBankItem
 
 public class QuestionOption : BaseEntity
 {
+    public bool IsRetired { get; set; }
     public string Text { get; set; } = string.Empty;
     public bool IsCorrect { get; set; }
 
@@ -88,6 +89,7 @@ public class QuestionOption : BaseEntity
 // Junction table for Exams and Questions
 public class ExamQuestion : BaseEntity
 {
+    public bool IsRetired { get; set; }
     public Guid ExamId { get; set; }
     public Exam Exam { get; set; } = null!;
 
@@ -100,6 +102,7 @@ public class ExamQuestion : BaseEntity
 
 public class StudentExamAttempt : BaseEntity
 {
+    public string? DefinitionSnapshotJson { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

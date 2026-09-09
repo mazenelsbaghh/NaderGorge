@@ -18,6 +18,7 @@ export interface ExamQuestionDto {
 }
 
 export interface ActiveExamAttemptDto {
+  revisionId?: string | null;
   attemptId: string;
   title: string;
   description: string;
@@ -52,7 +53,7 @@ export interface ExamResultDto {
   questions: ExamQuestionReviewDto[];
 }
 
-export type ExamResultState = 'Pending' | 'PartiallyGraded' | 'Completed';
+export type ExamResultState = 'Pending' | 'PartiallyGraded' | 'Completed' | 'RequiresCompletion';
 export type EssaySubmissionStatus = 'WaitAI' | 'AIScored' | 'WaitTeacher' | 'TeacherGraded';
 
 export interface ExamQuestionReviewDto {
@@ -102,8 +103,8 @@ export const examService = {
     apiClient.get<{ data: ExamAttemptGradingStatusDto }>(`/exams/attempts/${attemptId}/grading-status`),
   getAttemptResult: (attemptId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/attempts/${attemptId}/result`),
-  submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[]) => {
-    const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers);
+  submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[], revisionId?: string | null) => {
+    const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers, { params: { revisionId } });
     invalidateMany(['student:exams', 'assessments']);
     return response;
   },

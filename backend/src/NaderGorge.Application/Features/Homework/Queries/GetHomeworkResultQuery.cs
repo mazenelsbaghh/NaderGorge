@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Homework;
@@ -100,6 +101,8 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
 
         if (submission == null)
             return ApiResponse<HomeworkResultDto>.Fail("No completed submission found for this homework.");
+
+        homework = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission.DefinitionSnapshotJson);
 
         var questionLookup = homework.Questions.ToDictionary(q => q.Id);
         var answerLookup = submission.Answers.ToDictionary(a => a.QuestionId);

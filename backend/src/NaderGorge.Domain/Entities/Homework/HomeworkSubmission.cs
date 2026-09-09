@@ -14,6 +14,9 @@ public enum SubmissionStatus
 
 public class HomeworkSubmission
 {
+    public string? DefinitionSnapshotJson { get; set; }
+    public decimal? PassingScoreSnapshot { get; set; }
+    public decimal? TotalScoreSnapshot { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid HomeworkId { get; set; }
     public Guid StudentId { get; set; }

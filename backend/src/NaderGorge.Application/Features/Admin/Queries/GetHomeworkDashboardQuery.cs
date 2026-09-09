@@ -70,7 +70,7 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
         if (!await AssessmentAccess.Allowed(_context, new TeacherAuthorizationService(_context), target, cancellationToken))
             return ApiResponse<HomeworkDashboardDto>.Fail("غير مصرح بعرض هذا الواجب.");
         var homework = await _context.Homeworks
-            .Include(h => h.Questions)
+            .Include(h => h.Questions.Where(q => !q.IsRetired))
             .Include(h => h.Submissions)
                 .ThenInclude(s => s.Student)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);

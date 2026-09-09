@@ -88,7 +88,7 @@ export function ExamResultPanel({
           if (!isCancelled) {
             onResultRefresh?.(resultResponse.data.data);
           }
-        } else if (response.data.data.resultState !== 'Completed') {
+        } else if (response.data.data.resultState !== 'Completed' && response.data.data.resultState !== 'RequiresCompletion') {
           timeoutId = setTimeout(() => { void loadGradingStatus(); }, 5000);
         }
       } catch {
@@ -116,6 +116,19 @@ export function ExamResultPanel({
   const wrongQuestions = isFinalResult
     ? reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect)
     : [];
+
+  if (effectiveResultState === 'RequiresCompletion') {
+    return (
+      <section className="mx-auto max-w-2xl space-y-4 rounded-xl border border-border bg-card p-6 text-start" dir="rtl" aria-live="polite">
+        <h2 className="text-xl font-bold text-foreground">فيه أسئلة مضافة تحتاج استكمالها</h2>
+        <p className="text-sm leading-7 text-muted-foreground">إجاباتك السابقة محفوظة. استكمل الأسئلة الجديدة علشان تظهر النتيجة المحدثة.</p>
+        <button type="button" onClick={() => onRestart ? void onRestart() : router.refresh()}
+          className="min-h-11 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          استكمال الأسئلة
+        </button>
+      </section>
+    );
+  }
 
   if (!isFinalResult) {
     return (
@@ -810,6 +823,7 @@ export function ExamViewer({
   resultReturnLabel?: string;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const draftId = `${attempt.attemptId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
   const [audioAnswers, setAudioAnswers] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -850,18 +864,18 @@ export function ExamViewer({
     setResult(null);
 
     try {
-      const saved = localStorage.getItem('exam_answers_' + attempt.attemptId);
+      const saved = localStorage.getItem('exam_answers_' + draftId);
       if (saved) {
         setAnswers(JSON.parse(saved));
       }
-      const savedAudio = localStorage.getItem('exam_audio_answers_' + attempt.attemptId);
+      const savedAudio = localStorage.getItem('exam_audio_answers_' + draftId);
       if (savedAudio) {
         setAudioAnswers(JSON.parse(savedAudio));
       }
     } catch {
       // ignore JSON parse or localStorage errors
     }
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
   useEffect(() => {
@@ -880,7 +894,7 @@ export function ExamViewer({
         const next = { ...prev };
         delete next[qId];
         try {
-          localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
         } catch { /* ignore */ }
         return next;
       });
@@ -888,12 +902,12 @@ export function ExamViewer({
       setAnswers((prev) => {
         const next = { ...prev, [qId]: value };
         try {
-          localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
         } catch { /* ignore */ }
         return next;
       });
     }
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const handleAudioAnswer = useCallback((qId: string, value: string) => {
     setAudioAnswers((prev) => {
@@ -904,11 +918,11 @@ export function ExamViewer({
         next[qId] = value;
       }
       try {
-        localStorage.setItem('exam_audio_answers_' + attempt.attemptId, JSON.stringify(next));
+        localStorage.setItem('exam_audio_answers_' + draftId, JSON.stringify(next));
       } catch { /* ignore */ }
       return next;
     });
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const handleSwap = async (qId: string) => {
     if (hasUsedSwap) return;
@@ -931,7 +945,7 @@ export function ExamViewer({
           const next = {...prev};
           delete next[qId];
           try {
-            localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+            localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
           } catch { /* ignore */ }
           return next;
         });
@@ -961,7 +975,7 @@ export function ExamViewer({
 
     const allQuestionIds = Array.from(new Set([...Object.keys(answers), ...Object.keys(audioAnswers)]));
     const submissions: AnswerSubmissionDto[] = allQuestionIds.map((qId) => {
-      const q = attempt.questions.find((x) => x.id === qId);
+      const q = shuffledQuestions.find((x) => x.id === qId);
       if (q?.type === 'Essay') {
         return {
           examQuestionId: qId,
@@ -974,10 +988,10 @@ export function ExamViewer({
     });
 
     try {
-      const res = await examService.submitExam(examId, attempt.attemptId, submissions);
+      const res = await examService.submitExam(examId, attempt.attemptId, submissions, attempt.revisionId);
       try {
-        localStorage.removeItem('exam_answers_' + attempt.attemptId);
-        localStorage.removeItem('exam_audio_answers_' + attempt.attemptId);
+        localStorage.removeItem('exam_answers_' + draftId);
+        localStorage.removeItem('exam_audio_answers_' + draftId);
       } catch { /* ignore */ }
       setResult(res.data.data);
     } catch (err: unknown) {
@@ -1053,6 +1067,11 @@ export function ExamViewer({
       {/* ─── Exam header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{examTitle}</h1>
+        {attempt.revisionId && (
+          <p role="status" className="mt-3 rounded-xl bg-muted p-3 text-sm leading-7 text-foreground">
+            استكمال الأسئلة المضافة فقط. إجاباتك السابقة محفوظة، والدرجة النهائية تشمل المحاولة كاملة.
+          </p>
+        )}
         {examDescription && (
           <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{examDescription}</p>
         )}

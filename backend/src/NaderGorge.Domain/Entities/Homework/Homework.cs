@@ -18,6 +18,7 @@ public class Homework : NaderGorge.Domain.Entities.IArchivableContent
     public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }
+    public int? DurationMinutes { get; set; } = 30;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

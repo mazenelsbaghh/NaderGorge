@@ -1403,6 +1403,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("student_exam_attempts");
             e.HasKey(a => a.Id);
+            e.Property(a => a.DefinitionSnapshotJson).HasColumnType("jsonb");
             e.Property(a => a.ScoreAchieved).HasColumnType("decimal(18,2)");
             e.HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId);
             e.HasOne(a => a.Exam).WithMany(x => x.Attempts).HasForeignKey(a => a.ExamId);
@@ -1448,6 +1449,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(h => h.Title).HasMaxLength(255).IsRequired();
             e.Property(h => h.PassingScoreThreshold).HasColumnType("decimal(18,2)");
             e.Property(h => h.IsActive).HasDefaultValue(true);
+            e.Property(h => h.DurationMinutes).HasDefaultValue(30).HasSentinel(-1);
         });
 
         modelBuilder.Entity<HomeworkQuestion>(e =>
@@ -1462,6 +1464,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("homework_submissions");
             e.HasKey(s => s.Id);
+            e.Property(s => s.DefinitionSnapshotJson).HasColumnType("jsonb");
+            e.Property(s => s.PassingScoreSnapshot).HasColumnType("decimal(18,2)");
+            e.Property(s => s.TotalScoreSnapshot).HasColumnType("decimal(18,2)");
             e.Property(s => s.OverallScore).HasColumnType("decimal(18,2)");
             e.HasOne(s => s.Homework).WithMany(h => h.Submissions).HasForeignKey(s => s.HomeworkId);
             e.HasOne(s => s.Student).WithMany().HasForeignKey(s => s.StudentId);

@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Exams.Commands;
@@ -29,6 +30,10 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
             return ApiResponse<ExamResultDto>.Fail("Attempt not found", new List<string> { "NOT_FOUND" });
         }
 
+        if (attempt.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)
+            return ApiResponse<ExamResultDto>.Fail("استكمل الأسئلة المضافة قبل عرض النتيجة.");
+
         var hasSubmission = attempt.Evaluation != null
             || await _db.EssaySubmissions.AnyAsync(e => e.StudentExamAttemptId == attempt.Id, ct)
             || await _db.StudentAnswers.AnyAsync(
@@ -52,6 +57,8 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
         {
             return ApiResponse<ExamResultDto>.Fail("Exam not found");
         }
+
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         var lesson = await _db.Lessons
             .AsNoTracking()
@@ -77,6 +84,9 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
             .ToListAsync(ct);
 
         var resultState = DetermineResultState(essays);
+        if (attempt.DefinitionSnapshotJson is not null && resultState == "Completed"
+            && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresReview == true)
+            resultState = "PartiallyGraded";
         var result = ExamResultBuilder.Build(
             exam,
             attempt,
@@ -95,7 +105,7 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
         IEnumerable<EssaySubmission> essays,
         Exam exam)
     {
-        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers);
+        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
         var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
 
         foreach (var essay in essays)

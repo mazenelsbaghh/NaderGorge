@@ -79,9 +79,9 @@ public class ExamsController : ControllerBase
 
     [HttpPost("{id:guid}/submit/{attemptId:guid}")]
     [Idempotent]
-    public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers)
+    public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers, [FromQuery] Guid? revisionId = null)
     {
-        var response = await _mediator.Send(new SubmitExamCommand(id, attemptId, GetUserId(), answers));
+        var response = await _mediator.Send(new SubmitExamCommand(id, attemptId, GetUserId(), answers, revisionId));
 
         if (!response.Success)
             return BadRequest(response); // Exam not found handled via fail

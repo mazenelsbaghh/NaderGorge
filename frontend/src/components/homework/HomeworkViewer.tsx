@@ -230,6 +230,7 @@ export function HomeworkViewer({
   const [pendingMissing, setPendingMissing] = useState(0);
 
   const questions = attempt.questions;
+  const answerStorageKey = `homework_answers_${attempt.submissionId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
   const totalQ = questions.length;
   const answeredCount = Object.keys(answers).length;
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
@@ -237,7 +238,10 @@ export function HomeworkViewer({
 
   // Restore answers from localStorage on mount
   useEffect(() => {
-    const key = `homework_answers_${attempt.submissionId}`;
+    const key = answerStorageKey;
+    setAnswers({});
+    setCurrentIdx(0);
+    setResult(null);
     const saved = localStorage.getItem(key);
     if (saved) {
       try {
@@ -246,7 +250,7 @@ export function HomeworkViewer({
         // ignore
       }
     }
-  }, [attempt.submissionId]);
+  }, [answerStorageKey]);
 
   const handleAnswer = useCallback((qId: string, value: string) => {
     setAnswers((prev) => {
@@ -256,11 +260,11 @@ export function HomeworkViewer({
       } else {
         next[qId] = value;
       }
-      const key = `homework_answers_${attempt.submissionId}`;
+      const key = answerStorageKey;
       localStorage.setItem(key, JSON.stringify(next));
       return next;
     });
-  }, [attempt.submissionId]);
+  }, [answerStorageKey]);
 
   const navigateTo = (idx: number) => {
     setDirection(idx > currentIdx ? 1 : -1);
@@ -285,10 +289,10 @@ export function HomeworkViewer({
     );
 
     try {
-      await homeworkService.submitHomework(homeworkId, submissions);
+      await homeworkService.submitHomework(homeworkId, submissions, attempt.revisionId);
       
       // Clear localStorage answers and timer on success
-      const key = `homework_answers_${attempt.submissionId}`;
+      const key = answerStorageKey;
       localStorage.removeItem(key);
       localStorage.removeItem(`homework_attempt_${homeworkId}_start_time`);
 
@@ -337,6 +341,11 @@ export function HomeworkViewer({
       {/* ─── Homework header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{attempt.title}</h1>
+        {attempt.revisionId && (
+          <p role="status" className="mt-3 rounded-xl bg-muted p-3 text-sm leading-7 text-foreground">
+            استكمال الأسئلة المضافة فقط. إجاباتك السابقة محفوظة، والدرجة النهائية تشمل المحاولة كاملة.
+          </p>
+        )}
         {attempt.instructions && (
           <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{attempt.instructions}</p>
         )}

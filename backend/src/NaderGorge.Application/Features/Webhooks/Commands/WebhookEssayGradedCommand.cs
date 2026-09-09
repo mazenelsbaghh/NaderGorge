@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
@@ -61,6 +62,7 @@ public class WebhookEssayGradedCommandHandler
             return ApiResponse<WebhookEssayGradedResultDto>.Fail("Exam not found.");
         }
 
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
         var examQuestion = exam.ExamQuestions.FirstOrDefault(eq => eq.QuestionBankItemId == submission.QuestionId);
         if (examQuestion == null)
         {
@@ -69,6 +71,9 @@ public class WebhookEssayGradedCommandHandler
 
         var isCorrect = request.AiScore >= 1m;
         var awardedScore = isCorrect ? examQuestion.Points : 0m;
+        if (attempt.DefinitionSnapshotJson is not null)
+            attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId)
+                .WithGrades(new Dictionary<Guid, (decimal, bool)> { [examQuestion.Id] = (awardedScore, false) }).ToJson();
 
         submission.AiInitialScore = request.AiScore;
         submission.AiFeedback = request.AiFeedback;
@@ -126,7 +131,11 @@ public class WebhookEssayGradedCommandHandler
         var rawPointsEarned = objectivePointsEarned + latestEssaySubmissions.Sum(e => e.TeacherFinalScore ?? 0m);
         var assignedIds = await _db.StudentAnswers.Where(a => a.StudentExamAttemptId == attempt.Id).Select(a => a.ExamQuestionId).ToListAsync(ct);
         var rawPointsPossible = exam.ExamQuestions.Where(eq => assignedIds.Contains(eq.Id)).Sum(eq => eq.Points);
-        var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
+        var revised = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision;
+        if (revised?.RequiresCompletion == true || revised?.RequiresReview == true) return;
+        var scaledScore = revised?.ScaledScore(exam.TotalScore)
+            ?? GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
 
         attempt.ScoreAchieved = scaledScore;
         attempt.IsPassed = !attempt.IsTimeExpired && scaledScore >= exam.PassingScore;

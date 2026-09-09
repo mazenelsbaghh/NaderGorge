@@ -133,7 +133,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Join(_db.Homeworks,
                 s => s.HomeworkId,
                 h => h.Id,
-                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = h.PassingScoreThreshold ?? 0 })
+                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0 })
             .Where(x => x.OverallScore >= x.PassingScore)
             .Select(x => x.HomeworkId)
             .Distinct()

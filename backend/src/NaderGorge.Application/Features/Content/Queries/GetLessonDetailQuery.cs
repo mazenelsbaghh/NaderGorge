@@ -391,7 +391,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
                     bool prevHwPassed = prevHwSubmission != null
                                       && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
                     if (!prevHwPassed)
                     {
                         isLocked = true;
@@ -580,7 +580,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .OrderByDescending(s => s.SubmittedAt)
                 .FirstOrDefaultAsync(ct);
 
-            homeworkPassed = hwSubmission != null && hwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0);
+            homeworkPassed = hwSubmission != null && hwSubmission.OverallScore >= (hwSubmission.PassingScoreSnapshot ?? hw.PassingScoreThreshold ?? 0);
         }
 
         bool lessonExamLocked = false;
@@ -600,7 +600,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
                 bool prevHwPassed = prevHwSubmission != null
                                   && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                  && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                  && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
                 if (!prevHwPassed)
                 {
                     lessonExamLocked = true;
@@ -688,7 +688,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             }
             else if (latestHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
             {
-                homeworkStatus = latestHwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0) ? "Passed" : "Failed";
+                homeworkStatus = latestHwSubmission.OverallScore >= (latestHwSubmission.PassingScoreSnapshot ?? hw.PassingScoreThreshold ?? 0) ? "Passed" : "Failed";
             }
             else if (latestHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.PendingReview)
             {

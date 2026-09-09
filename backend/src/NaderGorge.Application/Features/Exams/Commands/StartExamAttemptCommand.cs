@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Homework;
@@ -21,7 +22,8 @@ public record ActiveExamAttemptDto(
     decimal TotalScore,
     Guid? LessonId,
     Guid? PackageId,
-    List<ExamQuestionViewDto> Questions
+    List<ExamQuestionViewDto> Questions,
+    Guid? RevisionId = null
 );
 
 public record ExamQuestionViewDto(Guid Id, string Text, string Type, decimal Points, string? HintText, string? ImageUrl, string? BaseText, int? MistakeStartIndex, int? MistakeEndIndex, List<QuestionOptionViewDto> Options);
@@ -129,7 +131,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
                     bool prevHwPassed = prevHwSubmission != null
                                       && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
-                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
 
                     if (!prevHwPassed)
                     {
@@ -146,9 +148,9 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         }
 
         var exam = await _db.Exams
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
             .ThenInclude(eq => eq.Question)
-            .ThenInclude(q => q.Options)
+            .ThenInclude(q => q.Options.Where(o => !o.IsRetired))
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, ct);
 
         if (exam == null)
@@ -163,6 +165,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         // ── Idempotency: reuse an existing in-progress attempt ───────────────
         // An attempt with Evaluation != null was already submitted (see SubmitExamCommand)
         var existingAttempt = await _db.StudentExamAttempts
+            .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
             .FirstOrDefaultAsync(a => a.UserId == request.UserId
                                    && a.ExamId == request.ExamId
                                    && !a.IsPassed
@@ -174,7 +177,17 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
         if (existingAttempt != null)
         {
-            if (exam.DurationMinutes.HasValue && existingAttempt.StartedAt.HasValue)
+            var revision = existingAttempt.DefinitionSnapshotJson is null ? null
+                : AssessmentDefinitionSnapshot.Read(existingAttempt.DefinitionSnapshotJson, "exam", existingAttempt.ExamId);
+            if (revision?.Revision?.RequiresCompletion == true)
+            {
+                var started = await new ExamRevisionCompletion(_db).Start(existingAttempt.Id, request.UserId, ct);
+                if (!started.Success) return ApiResponse<ActiveExamAttemptDto>.Fail(started.Message ?? "تعذر بدء الاستكمال.");
+                existingAttempt = await _db.StudentExamAttempts.SingleAsync(a => a.Id == existingAttempt.Id, ct);
+                revision = started.Data;
+            }
+            exam = AssessmentDefinitionSnapshot.ResolveExam(exam, existingAttempt.DefinitionSnapshotJson);
+            if (revision?.Revision?.RequiresCompletion != true && exam.DurationMinutes.HasValue && existingAttempt.StartedAt.HasValue)
             {
                 var timeAllowed = TimeSpan.FromMinutes(exam.DurationMinutes.Value).Add(TimeSpan.FromSeconds(60));
                 var timeTaken = DateTime.UtcNow - existingAttempt.StartedAt.Value;
@@ -195,6 +208,11 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             await _db.Entry(attempt).Collection(a => a.Answers).LoadAsync(ct);
             var assignedQuestionIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
             selectedQuestions = exam.ExamQuestions.Where(eq => assignedQuestionIds.Contains(eq.Id)).ToList();
+            if (revision?.Revision?.RequiresCompletion == true)
+            {
+                var required = revision.Revision.Answers.Where(a => a.RequiresCompletion && !a.Excluded).Select(a => a.QuestionId).ToHashSet();
+                selectedQuestions = selectedQuestions.Where(q => required.Contains(q.Id)).ToList();
+            }
         }
         else
         {
@@ -226,6 +244,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 StartedAt = DateTime.UtcNow,
                 ScoreAchieved = 0,
                 IsTimeExpired = false,
+                DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam, selectedQuestions).ToJson(),
                 Answers = new List<StudentAnswer>()
             };
 
@@ -295,6 +314,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             remainingSeconds = (int)Math.Max(0, (timeAllowed - timeTaken).TotalSeconds);
         }
 
+        var activeRevision = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
         var dto = new ActiveExamAttemptDto(
             attempt.Id,
             exam.Title,
@@ -305,7 +326,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             exam.TotalScore,
             lesson?.Id,
             lesson?.ContentSection?.Term?.PackageId,
-            questionDtos
+            questionDtos,
+            activeRevision?.Revision?.RequiresCompletion == true ? activeRevision.RevisionId : null
         );
 
         return ApiResponse<ActiveExamAttemptDto>.Ok(dto);

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
 using NaderGorge.Application.Features.Webhooks.Commands;
@@ -46,13 +47,21 @@ public class EssayGradingWorkflowTests
         Assert.Equal("Pending", status.Data!.ResultState);
     }
 
-    [Fact]
-    public async Task EssayCallback_WhenAiReturnsTrue_AwardsEssayPointsAndFinalizesAttempt()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task EssayFinalization_PreservesAttemptScaleAfterDefinitionEdit(bool editDefinition, bool manualGrading)
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "502");
         var (exam, mcqExamQuestion, essayExamQuestion, _, _, correctOption, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
         var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        if (editDefinition)
+        {
+            attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
+            await db.SaveChangesAsync();
+        }
 
         var submitHandler = new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer());
         await submitHandler.Handle(
@@ -65,9 +74,26 @@ public class EssayGradingWorkflowTests
 
         var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
 
-        var aiHandler = new WebhookEssayGradedCommandHandler(db);
-        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 1m, "AI says correct"), CancellationToken.None);
-        Assert.True(aiResult.Success);
+        if (editDefinition)
+        {
+            exam.TotalScore = 100;
+            exam.PassingScore = 95;
+            essayExamQuestion.Points = 1;
+            essayExamQuestion.Question.WrittenCorrection = "Updated correction";
+            await db.SaveChangesAsync();
+        }
+        if (manualGrading)
+        {
+            var grade = await new GradeEssayCommandHandler(db, new TeacherAuthorizationService(db))
+                .Handle(new GradeEssayCommand(essay.Id, 8m, "Teacher says correct"), CancellationToken.None);
+            Assert.True(grade.Success, grade.Message);
+        }
+        else
+        {
+            var grade = await new WebhookEssayGradedCommandHandler(db)
+                .Handle(new WebhookEssayGradedCommand(essay.Id, 1m, "AI says correct"), CancellationToken.None);
+            Assert.True(grade.Success, grade.Message);
+        }
 
         db.ChangeTracker.Clear();
         var persistedEssay = db.EssaySubmissions.AsNoTracking().Single(e => e.Id == essay.Id);

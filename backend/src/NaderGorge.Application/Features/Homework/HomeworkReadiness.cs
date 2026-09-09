@@ -13,7 +13,7 @@ public static class HomeworkReadiness
 {
     public static IQueryable<HomeworkEntity> ReadyForStudents(
         this IQueryable<HomeworkEntity> source) =>
-        source.Where(homework => homework.IsActive && homework.Questions.Any());
+        source.Where(homework => homework.IsActive && homework.Questions.Any(question => !question.IsRetired));
 
     public static async Task<HomeworkEntity?> FirstAccessibleToStudentAsync(
         this IQueryable<HomeworkEntity> source,

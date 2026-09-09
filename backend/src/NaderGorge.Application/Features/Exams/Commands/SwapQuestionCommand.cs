@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using System;
@@ -33,14 +34,24 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         if (attempt.Evaluation != null || attempt.IsPassed)
             return ApiResponse<ExamQuestionViewDto>.Fail("Attempt already submitted");
 
+        var revision = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+        if (revision?.Revision?.RequiresCompletion == true && (revision.CompletionStartedAt is null
+            || !revision.Revision.Answers.Any(a => a.QuestionId == request.QuestionId && a.RequiresCompletion && !a.Excluded)))
+            return ApiResponse<ExamQuestionViewDto>.Fail("يمكن تبديل الأسئلة المضافة فقط بعد بدء الاستكمال.");
+
         var exam = await _db.Exams
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
             .ThenInclude(eq => eq.Question)
-            .ThenInclude(q => q.Options)
+            .ThenInclude(q => q.Options.Where(o => !o.IsRetired))
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
 
         if (exam == null)
             return ApiResponse<ExamQuestionViewDto>.Fail("Exam not found");
+
+        var replacements = AssessmentDefinitionSnapshot.ResolveSwapCandidates(exam, attempt.DefinitionSnapshotJson);
+        var originalExam = exam;
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         if (exam.DurationMinutes.HasValue && attempt.StartedAt.HasValue)
         {
@@ -48,7 +59,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
             var timeTaken = DateTime.UtcNow - attempt.StartedAt.Value;
             if (timeTaken > timeAllowed)
             {
-                if (attempt.Evaluation == null)
+                if (attempt.Evaluation == null && revision?.Revision?.RequiresCompletion != true)
                 {
                     attempt.IsTimeExpired = true;
                     attempt.ScoreAchieved = 0;
@@ -64,11 +75,9 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         if (currentAnswer == null)
             return ApiResponse<ExamQuestionViewDto>.Fail("Question is not part of your active attempt");
 
-        // Allowed to swap only if un-answered? Usually lifelines can be used any time, but if they already answered, swapping destroys the answer. We allow it anyway.
-
         var usedQuestionIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
 
-        var availableExtraQuestions = exam.ExamQuestions
+        var availableExtraQuestions = replacements
             .Where(eq => !usedQuestionIds.Contains(eq.Id))
             .ToList();
 
@@ -79,6 +88,11 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
 
         var random = new Random();
         var newExamQuestion = availableExtraQuestions[random.Next(availableExtraQuestions.Count)];
+
+        attempt.DefinitionSnapshotJson ??= AssessmentDefinitionSnapshot.FromExam(originalExam,
+            originalExam.ExamQuestions.Where(q => usedQuestionIds.Contains(q.Id))).ToJson();
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.SwapAssignedQuestion(
+            attempt.DefinitionSnapshotJson, exam.Id, request.QuestionId, newExamQuestion.Id);
 
         // Remove old answer and add new one
         _db.StudentAnswers.Remove(currentAnswer);

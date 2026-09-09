@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Exams.Commands;
@@ -78,6 +79,8 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
         if (attempt == null)
             return ApiResponse<ExamResultDto>.Fail("No completed attempt found");
 
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
+
         var answers = await _db.StudentAnswers
             .AsNoTracking()
             .Include(a => a.SelectedOption)
@@ -89,7 +92,7 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
             .Where(e => e.StudentExamAttemptId == attempt.Id)
             .ToListAsync(ct);
 
-        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers);
+        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
         var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
         foreach (var essay in essays)
         {

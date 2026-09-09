@@ -2,6 +2,7 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
@@ -15,8 +16,6 @@ import {
   Trash2,
   Edit,
   User as UserIcon,
-  Save,
-  X,
   AlertCircle,
   HelpCircle,
   ArrowRight
@@ -27,12 +26,9 @@ import {
   AdminPageSkeleton,
   AdminBackButton,
   ContentInternalCode,
-  AdminConfirmationDialog,
 } from '@/components/admin';
 import type { AdminShellRoute } from '@/components/admin/AdminShellChrome';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
-import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
-import { OcrQuestionImport } from '@/components/admin/OcrQuestionImport';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import { ExamAttemptReviewButton } from '@/components/admin/ExamAttemptReviewButton';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -59,17 +55,9 @@ export default function ExamProfilePageClient({
   // Search query for student attempts
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Editing state
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [editingQuestionData, setEditingQuestionData] = useState<InlineExamQuestionDto | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [questionPendingDeletion, setQuestionPendingDeletion] = useState<string | null>(null);
-  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
-
-  // Adding question state
-  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [addingQuestionData, setAddingQuestionData] = useState<InlineExamQuestionDto | null>(null);
-  const [savingAdd, setSavingAdd] = useState(false);
+  const router = useRouter();
+  const editorPath = `${surface === 'teacher' ? '/teacher/packages' : '/admin/content'}/exams/${id}/add-question`;
+  const handleAddQuestionClick = () => router.push(editorPath);
   const isTeacherSurface = surface === 'teacher';
   const backAction = isTeacherSurface ? (
     <button type="button" onClick={() => window.history.back()} className="admin-btn-ghost inline-flex items-center gap-2">
@@ -143,180 +131,6 @@ export default function ExamProfilePageClient({
     );
   }, [data?.attempts, searchQuery]);
 
-  // Map backend DTO to QuestionEditor DTO
-  const mapDtoToQuestion = (q: any, order: number): InlineExamQuestionDto => ({
-    text: q.text,
-    type: q.type === 'MCQ' || q.type === 'Essay' || q.type === 'FindTheMistake' ? q.type : 'MCQ',
-    points: q.points,
-    order: order,
-    options: q.options ? q.options.map((o: any) => ({ text: o.text, isCorrect: o.isCorrect })) : [],
-    audioUrl: q.audioUrl || '',
-    imageUrl: q.imageUrl || '',
-    writtenCorrection: q.writtenCorrection || '',
-    hintText: q.hintText || '',
-    baseText: q.baseText || '',
-    mistakeStartIndex: q.mistakeStartIndex,
-    mistakeEndIndex: q.mistakeEndIndex
-  });
-
-  const handleEditClick = (q: any, idx: number) => {
-    setEditingQuestionId(q.examQuestionId);
-    setEditingQuestionData(mapDtoToQuestion(q, idx + 1));
-  };
-
-  const handleEditCancel = () => {
-    setEditingQuestionId(null);
-    setEditingQuestionData(null);
-  };
-
-  const handleEditSave = async (questionBankItemId: string) => {
-    if (!editingQuestionData || !editingQuestionId) return;
-
-    if (editingQuestionData.type !== 'FindTheMistake' && !editingQuestionData.text.trim()) {
-      toast.error('يرجى كتابة نص السؤال');
-      return;
-    }
-
-    try {
-      setSavingEdit(true);
-
-      let finalAudioUrl = editingQuestionData.audioUrl;
-      // 1. Upload audio if new audio file is selected
-      if (editingQuestionData.audioFile) {
-        toast.loading('جاري رفع الملف الصوتي للسؤال...', { id: 'audio-upload' });
-        try {
-          const uploadedUrl = await adminService.uploadQuestionAudio(questionBankItemId, editingQuestionData.audioFile);
-          finalAudioUrl = uploadedUrl;
-          toast.success('تم رفع الملف الصوتي بنجاح', { id: 'audio-upload' });
-        } catch {
-          toast.error('فشل رفع الملف الصوتي، سيتم المتابعة بدون تحديث الصوت', { id: 'audio-upload' });
-        }
-      }
-
-      // 2. Map payload
-      const payload = {
-        text: editingQuestionData.text,
-        points: editingQuestionData.points,
-        audioUrl: finalAudioUrl,
-        imageUrl: editingQuestionData.imageUrl,
-        writtenCorrection: editingQuestionData.writtenCorrection,
-        hintText: editingQuestionData.hintText,
-        baseText: editingQuestionData.baseText,
-        mistakeStartIndex: editingQuestionData.mistakeStartIndex,
-        mistakeEndIndex: editingQuestionData.mistakeEndIndex,
-        options: editingQuestionData.options
-      };
-
-      await adminService.updateExamQuestion(id, editingQuestionId, payload);
-      toast.success('تم حفظ تعديلات السؤال بنجاح');
-
-      setEditingQuestionId(null);
-      setEditingQuestionData(null);
-
-      // Refresh dashboard
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق حفظ تعديلات السؤال');
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
-  const handleDeleteQuestion = async (examQuestionId: string) => {
-    try {
-      setIsDeletingQuestion(true);
-      await adminService.deleteExamQuestion(id, examQuestionId);
-      toast.success('تم حذف السؤال بنجاح');
-      // Refresh dashboard
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-      setQuestionPendingDeletion(null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق حذف السؤال');
-    } finally {
-      setIsDeletingQuestion(false);
-    }
-  };
-
-  const handleAddQuestionClick = () => {
-    const nextOrder = (data?.questionCount || 0) + 1;
-    setAddingQuestionData({
-      text: '',
-      type: 'MCQ',
-      points: 1,
-      order: nextOrder,
-      options: [
-        { text: '', isCorrect: true },
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-      ],
-    });
-    setIsAddingQuestion(true);
-  };
-
-  const handleAddQuestionCancel = () => {
-    setIsAddingQuestion(false);
-    setAddingQuestionData(null);
-  };
-
-  const handleAddQuestionSave = async () => {
-    if (!addingQuestionData) return;
-
-    if (addingQuestionData.type !== 'FindTheMistake' && !addingQuestionData.text.trim()) {
-      toast.error('يرجى كتابة نص السؤال');
-      return;
-    }
-
-    try {
-      setSavingAdd(true);
-
-      // We will first add the question to get an ID if we wanted to upload audio,
-      // but since adding expects questions payload, we add questions first.
-      // If we want audio, we upload it after or just use a standard flow.
-      // For addQuestionsToExam, we can send the clean question first:
-      const cleanQuestion = { ...addingQuestionData };
-      delete cleanQuestion.audioFile;
-
-      // Call addQuestionsToExam
-      await adminService.addQuestionsToExam(id, { questions: [cleanQuestion] });
-      toast.success('تمت إضافة السؤال بنجاح');
-
-      setIsAddingQuestion(false);
-      setAddingQuestionData(null);
-
-      // Refresh dashboard to display the new question
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق إضافة السؤال الجديد');
-    } finally {
-      setSavingAdd(false);
-    }
-  };
-
-  const handleOcrImport = async (questions: InlineExamQuestionDto[]) => {
-    if (!data) return;
-    try {
-      setSavingAdd(true);
-      await adminService.addQuestionsToExam(id, {
-        questions: questions.map((question, index) => ({
-          ...question,
-          order: data.questionCount + index + 1,
-        })),
-      });
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-      toast.success(`تمت إضافة ${questions.length} سؤال للامتحان.`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'تعذر إضافة أسئلة OCR للامتحان.');
-      throw err;
-    } finally {
-      setSavingAdd(false);
-    }
-  };
-
   if (loading) {
     return renderChrome(<AdminPageSkeleton />, 'بروفايل الامتحان التفصيلي', 'جاري تحميل البيانات...');
   }
@@ -380,7 +194,7 @@ export default function ExamProfilePageClient({
               <h3 className="text-lg font-bold text-[var(--admin-text)]">
                 الأسئلة المرفقة وإحصائيات الطلاب عليها
               </h3>
-              {!isAddingQuestion && (
+              {(
                 <NeumorphButton
                   type="button"
                   onClick={handleAddQuestionClick}
@@ -388,106 +202,15 @@ export default function ExamProfilePageClient({
                   size="md"
                   pill
                 >
-                  <Plus className="w-4 h-4 ml-2" /> إضافة سؤال جديد
+                  <Plus className="w-4 h-4 ml-2" /> تعديل الإعدادات والأسئلة
                 </NeumorphButton>
               )}
             </div>
-
-            {/* Inline Adding Question Form */}
-            {isAddingQuestion && addingQuestionData && (
-              <div className="rounded-2xl border border-[var(--admin-primary)] bg-[var(--admin-card)] shadow-md overflow-hidden animate-in slide-in-from-top-4 duration-300">
-                <div className="bg-[var(--admin-primary)]/10 px-6 py-4 border-b border-[var(--admin-primary)]/20 flex justify-between items-center">
-                  <span className="font-bold text-[var(--admin-primary)]">إضافة سؤال جديد للامتحان</span>
-                  <button onClick={handleAddQuestionCancel} className="text-[var(--admin-muted)] hover:text-red-500">
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="p-6">
-                  <OcrQuestionImport
-                    nextOrder={data.questionCount + 1}
-                    onImport={handleOcrImport}
-                  />
-                  <QuestionEditor
-                    question={addingQuestionData}
-                    index={data.questionCount}
-                    onChange={(_, q) => setAddingQuestionData(q)}
-                    onRemove={handleAddQuestionCancel}
-                  />
-                  <div className="flex justify-end gap-3 mt-6">
-                    <NeumorphButton
-                      type="button"
-                      onClick={handleAddQuestionCancel}
-                      intent="ghost"
-                      size="md"
-                      pill
-                    >
-                      إلغاء
-                    </NeumorphButton>
-                    <NeumorphButton
-                      type="button"
-                      onClick={handleAddQuestionSave}
-                      disabled={savingAdd}
-                      loading={savingAdd}
-                      intent="primary"
-                      size="md"
-                      pill
-                    >
-                      <Save className="w-4 h-4 ml-2" /> حفظ وإضافة السؤال
-                    </NeumorphButton>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Questions List */}
             <div className="space-y-4">
               {data.questions && data.questions.length > 0 ? (
                 data.questions.map((q, idx) => {
-                  const isEditing = editingQuestionId === q.examQuestionId;
-
-                  if (isEditing && editingQuestionData) {
-                    return (
-                      <div key={q.examQuestionId} className="rounded-2xl border border-amber-500 bg-[var(--admin-card)] shadow-md overflow-hidden animate-in zoom-in-95">
-                        <div className="bg-amber-500/10 px-6 py-4 border-b border-amber-500/20 flex justify-between items-center">
-                          <span className="font-bold text-amber-600 dark:text-amber-400">تعديل السؤال رقم {idx + 1}</span>
-                          <button onClick={handleEditCancel} className="text-[var(--admin-muted)] hover:text-red-500">
-                            <X size={20} />
-                          </button>
-                        </div>
-                        <div className="p-6">
-                          <QuestionEditor
-                            question={editingQuestionData}
-                            index={idx}
-                            onChange={(_, updated) => setEditingQuestionData(updated)}
-                            onRemove={handleEditCancel}
-                          />
-                          <div className="flex justify-end gap-3 mt-6">
-                            <NeumorphButton
-                              type="button"
-                              onClick={handleEditCancel}
-                              intent="ghost"
-                              size="md"
-                              pill
-                            >
-                              إلغاء
-                            </NeumorphButton>
-                            <NeumorphButton
-                              type="button"
-                              onClick={() => handleEditSave(q.questionBankItemId)}
-                              disabled={savingEdit}
-                              loading={savingEdit}
-                              intent="primary"
-                              size="md"
-                              pill
-                            >
-                              <Save className="w-4 h-4 ml-2" /> حفظ التعديلات
-                            </NeumorphButton>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
                   return (
                     <div
                       key={q.examQuestionId}
@@ -621,14 +344,14 @@ export default function ExamProfilePageClient({
                           {/* Action Buttons */}
                           <div className="flex justify-end gap-2 border-t border-[var(--admin-border)]/30 pt-3">
                             <button
-                              onClick={() => handleEditClick(q, idx)}
+                              onClick={() => router.push(`${editorPath}?question=${encodeURIComponent(q.examQuestionId)}`)}
                               className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20"
                             >
                               <Edit size={14} />
                               تعديل
                             </button>
                             <button
-                              onClick={() => setQuestionPendingDeletion(q.examQuestionId)}
+                              onClick={() => router.push(`${editorPath}?question=${encodeURIComponent(q.examQuestionId)}`)}
                               className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20"
                             >
                               <Trash2 size={14} />
@@ -742,18 +465,6 @@ export default function ExamProfilePageClient({
             </div>
           </div>
         )}
-      <AdminConfirmationDialog
-        open={questionPendingDeletion !== null}
-        onClose={() => setQuestionPendingDeletion(null)}
-        onConfirm={async () => {
-          if (questionPendingDeletion) await handleDeleteQuestion(questionPendingDeletion);
-        }}
-        title="حذف سؤال من الامتحان"
-        consequence="سيُحذف هذا السؤال نهائيًا من الامتحان، ولن يعود متاحًا للطلاب أو ضمن تحليلاته."
-        confirmLabel="حذف السؤال"
-        variant="danger"
-        isConfirming={isDeletingQuestion}
-      />
       </div>
   );
 

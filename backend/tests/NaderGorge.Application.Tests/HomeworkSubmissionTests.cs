@@ -11,6 +11,69 @@ namespace NaderGorge.Application.Tests;
 
 public sealed class HomeworkSubmissionTests
 {
+    [Theory]
+    [InlineData(5, 60, 0)]
+    [InlineData(null, 5, 10)]
+    public async Task HomeworkTimerUsesAttemptDefinitionNotLaterSettings(int? originalMinutes, int currentMinutes, decimal expectedScore)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Timer student", "201000000092");
+        var lesson = new Lesson { Title = "Timer lesson", ContentSectionId = Guid.NewGuid(), Order = 1 };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Timed work", TotalScore = 10, DurationMinutes = originalMinutes };
+        var question = new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Choose", PointsActive = 1,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ, PossibleAnswers = ["A", "B"], CorrectAnswerKey = "A" };
+        db.Lessons.Add(lesson); db.Homeworks.Add(homework); db.HomeworkQuestions.Add(question);
+        await db.SaveChangesAsync();
+        var start = new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService());
+        var first = await start.Handle(new(homework.Id, student.Id), default);
+        Assert.True(first.Success, first.Message);
+        var submission = await db.HomeworkSubmissions.SingleAsync();
+        submission.StartedAt = DateTime.UtcNow.AddMinutes(-10);
+        homework.DurationMinutes = currentMinutes;
+        await db.SaveChangesAsync();
+        var resumed = await start.Handle(new(homework.Id, student.Id), default);
+        Assert.Equal(originalMinutes, resumed.Data!.DurationMinutes);
+        Assert.Equal(originalMinutes.HasValue ? 0 : (int?)null, resumed.Data.RemainingSeconds);
+        var submitted = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(question.Id, "A")]), default);
+        Assert.True(submitted.Success, submitted.Message);
+        Assert.Equal(expectedScore, submission.OverallScore);
+        Assert.Equal("A", (await db.HomeworkAnswers.SingleAsync()).ProvidedAnswer);
+    }
+
+    [Theory]
+    [InlineData(5, true)]
+    [InlineData(null, false)]
+    public async Task StartingNextHomeworkUsesPreviousAttemptPassingThreshold(int? savedPassingScore, bool allowed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Snapshot student", "201000000091");
+        var sectionId = Guid.NewGuid();
+        var previousLesson = new Lesson { Title = "Previous", ContentSectionId = sectionId, Order = 1 };
+        var nextLesson = new Lesson { Title = "Next", ContentSectionId = sectionId, Order = 2 };
+        var previous = new Homework { LessonId = previousLesson.Id, Title = "Previous work", TotalScore = 10, PassingScoreThreshold = 9 };
+        var next = new Homework { LessonId = nextLesson.Id, Title = "Next work", TotalScore = 10 };
+        db.Lessons.AddRange(previousLesson, nextLesson);
+        db.Homeworks.AddRange(previous, next);
+        db.HomeworkQuestions.AddRange(
+            new HomeworkQuestion { HomeworkId = previous.Id, BodyText = "Previous question", PointsActive = 10 },
+            new HomeworkQuestion { HomeworkId = next.Id, BodyText = "Next question", PointsActive = 10 });
+        db.HomeworkSubmissions.Add(new HomeworkSubmission
+        {
+            HomeworkId = previous.Id, StudentId = student.Id, Status = SubmissionStatus.Graded,
+            OverallScore = 6, PassingScoreSnapshot = savedPassingScore, SubmittedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var response = await new StartHomeworkAttemptQueryHandler(db,
+                new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(next.Id, student.Id), CancellationToken.None);
+
+        Assert.Equal(allowed, response.Success);
+        Assert.Equal(allowed, await db.HomeworkSubmissions.AnyAsync(s => s.HomeworkId == next.Id));
+    }
+
     [Fact]
     public async Task SubmitHomework_PersistsAnswersForSubmission()
     {

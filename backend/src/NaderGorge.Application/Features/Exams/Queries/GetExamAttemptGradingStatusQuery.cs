@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
@@ -66,6 +67,11 @@ public class GetExamAttemptGradingStatusQueryHandler
         {
             resultState = "PartiallyGraded";
         }
+
+        var revision = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision;
+        if (revision?.RequiresCompletion == true) resultState = "RequiresCompletion";
+        else if (revision?.RequiresReview == true && resultState == "Completed") resultState = "PartiallyGraded";
 
         return ApiResponse<ExamAttemptGradingStatusDto>.Ok(
             new ExamAttemptGradingStatusDto(request.AttemptId, resultState, essays));

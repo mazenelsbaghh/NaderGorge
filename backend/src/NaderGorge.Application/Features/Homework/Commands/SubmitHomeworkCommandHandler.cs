@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Homework;
@@ -35,7 +36,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
     {
         var homework = await _dbContext.Homeworks
             .ReadyForStudents()
-            .Include(h => h.Questions)
+            .Include(h => h.Questions.Where(q => !q.IsRetired))
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);
 
         if (homework == null)
@@ -92,7 +93,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
                     bool prevHwPassed = prevHwSubmission != null 
                                       && prevHwSubmission.Status == SubmissionStatus.Graded 
-                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
 
                     if (!prevHwPassed)
                     {
@@ -118,13 +119,18 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             }
         }
 
-        if (request.Answers.Select(a => a.QuestionId).Distinct().Count() != request.Answers.Count ||
-            request.Answers.Any(a => !homework.Questions.Any(q => q.Id == a.QuestionId)))
-            return ApiResponse<bool>.Fail("قائمة الإجابات تحتوي على أسئلة مكررة أو غير موجودة في الواجب.");
-
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
+
+        if (submission?.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", homework.Id).Revision?.RequiresCompletion == true)
+            return await new HomeworkRevisionCompletion(_dbContext).Submit(request, submission.Id, cancellationToken);
+
+        homework = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission?.DefinitionSnapshotJson);
+        if (request.Answers.Select(a => a.QuestionId).Distinct().Count() != request.Answers.Count ||
+            request.Answers.Any(a => !homework.Questions.Any(q => q.Id == a.QuestionId)))
+            return ApiResponse<bool>.Fail("قائمة الإجابات تحتوي على أسئلة مكررة أو غير موجودة في الواجب.");
 
         if (submission != null && submission.Status != SubmissionStatus.InProgress)
         {
@@ -138,6 +144,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 Id = Guid.NewGuid(),
                 HomeworkId = request.HomeworkId,
                 StudentId = request.StudentId,
+                DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(homework).ToJson(),
+                PassingScoreSnapshot = homework.PassingScoreThreshold ?? 0,
+                TotalScoreSnapshot = homework.TotalScore,
                 StartedAt = DateTime.UtcNow
             };
             _dbContext.HomeworkSubmissions.Add(submission);
@@ -156,6 +165,8 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         decimal rawPointsEarned = 0;
         decimal rawPointsPossible = homework.Questions.Sum(q => q.PointsActive);
         bool hasEssayQuestions = false;
+        var expired = homework.DurationMinutes is int minutes
+            && DateTime.UtcNow - submission.StartedAt > TimeSpan.FromMinutes(minutes).Add(TimeSpan.FromSeconds(60));
 
         foreach (var answerInput in request.Answers)
         {
@@ -170,7 +181,8 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 ProvidedAnswer = answerInput.ProvidedAnswer ?? string.Empty
             };
 
-            switch (question.QuestionType)
+            if (expired) answer.ScoreReceived = 0;
+            else switch (question.QuestionType)
             {
                 case QuestionType.MCQ:
                 {

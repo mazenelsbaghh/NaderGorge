@@ -1,4 +1,5 @@
 using NaderGorge.Application.Features.Exams.Queries;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 
@@ -6,6 +7,31 @@ namespace NaderGorge.Application.Tests;
 
 public class GetLatestPassedExamResultQueryTests
 {
+    [Fact]
+    public async Task ResultUsesAttemptDefinitionAfterQuestionAndExamAreEdited()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Snapshot student", "509");
+        var (exam, examQuestion, question, correctOption, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(db);
+        var originalText = question.Text;
+        var originalTotal = exam.TotalScore;
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        attempt.Evaluation = "ممتاز";
+        attempt.IsPassed = true;
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
+        question.Text = "New live question";
+        exam.TotalScore = 999;
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var response = await new GetExamAttemptResultQueryHandler(db)
+            .Handle(new(attempt.Id, student.Id), CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal(originalTotal, response.Data!.TotalScore);
+        Assert.Equal(originalText, Assert.Single(response.Data.Questions).QuestionText);
+    }
+
     [Fact]
     public async Task Handle_IgnoresFailedAttempts()
     {

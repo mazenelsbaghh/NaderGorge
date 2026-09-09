@@ -18,6 +18,7 @@ const ReactQuill = dynamic(() => import('react-quill-new'), {
 });
 
 export interface InlineExamOptionDto {
+  id?: string;
   text: string;
   isCorrect: boolean;
 }
@@ -331,8 +332,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                     setUploading(true);
                     try {
                       const res = await studentService.uploadAudio(file);
-                      handlePropChange('audioUrl', res.url);
-                      handlePropChange('audioFile', file);
+                      onChange(index, { ...question, audioUrl: res.url, audioFile: file });
                     } catch (err) {
                       console.error("Failed to upload audio", err);
                     } finally {

@@ -240,7 +240,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 s.HomeworkId,
                 HomeworkTitle = s.Homework.Title,
                 HomeworkLessonId = s.Homework.LessonId,
-                HomeworkPassingScoreThreshold = s.Homework.PassingScoreThreshold,
+                HomeworkPassingScoreThreshold = s.PassingScoreSnapshot ?? s.Homework.PassingScoreThreshold,
                 s.OverallScore,
                 s.Status,
                 s.AssistantNotes
