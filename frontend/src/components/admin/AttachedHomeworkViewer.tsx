@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 import { getApiErrorSummary } from '@/lib/api-errors';
+import { AssessmentAttemptReview } from './AssessmentAttemptReview';
+import { MissingHomeworkExport } from './MissingHomeworkExport';
 
 export function AttachedHomeworkViewer({
   homeworkId,
@@ -226,11 +228,12 @@ export function AttachedHomeworkViewer({
 
       {/* Student submissions */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h3 className="flex items-center gap-3 text-xl font-bold text-[var(--admin-text)]">
             <Users className="h-6 w-6 text-[var(--admin-primary)]" />
             تسليمات الطلاب
           </h3>
+          <MissingHomeworkExport homeworkId={homeworkId} />
           <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
             {data.submissions?.length || 0} تسليم
           </span>
@@ -245,6 +248,7 @@ export function AttachedHomeworkViewer({
                   <th className="px-4 py-3">الدرجة</th>
                   <th className="px-4 py-3">التقييم</th>
                   <th className="px-4 py-3">تاريخ التسليم</th>
+                  <th className="px-4 py-3">الإجابات والتصحيح</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--admin-border)]">
@@ -254,7 +258,7 @@ export function AttachedHomeworkViewer({
                       <p className="font-black">{submission.studentName}</p>
                       <p className="mt-1 text-xs text-[var(--admin-muted)]">{submission.studentPhone}</p>
                     </td>
-                    <td className="px-4 py-4 font-bold">{submission.status}</td>
+                    <td className="px-4 py-4 font-bold">{({ InProgress: 'لم يسلّم', PendingReview: 'بانتظار التصحيح', Graded: 'تم التصحيح', Missed: 'لم يسلّم' } as Record<string, string>)[submission.status] || submission.status}</td>
                     <td className="px-4 py-4 font-black">{submission.scoreAchieved}</td>
                     <td className="px-4 py-4 text-[var(--admin-muted)]">{submission.evaluation}</td>
                     <td className="px-4 py-4 text-[var(--admin-muted)]">
@@ -262,6 +266,7 @@ export function AttachedHomeworkViewer({
                         ? new Date(submission.submittedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })
                         : 'لم يتم التسليم'}
                     </td>
+                    <td className="px-4 py-4"><AssessmentAttemptReview kind="homework" assessmentId={homeworkId} attemptId={submission.submissionId} onChanged={loadData} /></td>
                   </tr>
                 ))}
               </tbody>

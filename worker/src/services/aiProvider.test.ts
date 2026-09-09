@@ -8,6 +8,14 @@ test('Gemini Developer request returns the provider response', async () => {
   assert.equal(await executeGeminiRequest(async () => 'developer-result'), 'developer-result');
 });
 
+test('essay-specific deadline aborts a stuck provider without waiting for the video-analysis deadline', async () => {
+  let aborted = false;
+  await assert.rejects(executeGeminiRequest(signal => new Promise(() => {
+    signal.addEventListener('abort', () => { aborted = true; });
+  }), 10), (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout');
+  assert.equal(aborted, true);
+});
+
 test('Gemini Developer request classifies errors without exposing provider details', async () => {
   await assert.rejects(
     executeGeminiRequest(async () => { throw { name: 'ApiError', status: 403, secret: 'hidden' }; }),

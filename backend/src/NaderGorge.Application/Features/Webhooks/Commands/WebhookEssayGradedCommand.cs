@@ -20,11 +20,22 @@ public class WebhookEssayGradedCommandHandler
     public WebhookEssayGradedCommandHandler(IAppDbContext db) => _db = db;
 
     public async Task<ApiResponse<WebhookEssayGradedResultDto>> Handle(WebhookEssayGradedCommand request, CancellationToken ct)
+        => await SerializationRetryHelper.ExecuteAsync(async retryCt =>
+        {
+            _db.ClearTrackedChanges();
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, retryCt);
+            var response = await ApplyOnce(request, retryCt);
+            if (response.Success) await transaction.CommitAsync(retryCt);
+            return response;
+        }, ct);
+
+    private async Task<ApiResponse<WebhookEssayGradedResultDto>> ApplyOnce(WebhookEssayGradedCommand request, CancellationToken ct)
     {
         var submission = await _db.EssaySubmissions.FindAsync(new object[] { request.EssaySubmissionId }, ct);
         if (submission == null)
         {
-            return ApiResponse<WebhookEssayGradedResultDto>.Fail("Essay submission not found.");
+            // An operator may have deleted the attempt while its AI job was running.
+            return ApiResponse<WebhookEssayGradedResultDto>.Ok(new(request.EssaySubmissionId, "Deleted"));
         }
 
         if (submission.Status != EssaySubmissionStatus.WaitAI)
@@ -113,7 +124,8 @@ public class WebhookEssayGradedCommandHandler
             .SumAsync(a => a.PointsAwarded, ct);
 
         var rawPointsEarned = objectivePointsEarned + latestEssaySubmissions.Sum(e => e.TeacherFinalScore ?? 0m);
-        var rawPointsPossible = exam.ExamQuestions.Sum(eq => eq.Points);
+        var assignedIds = await _db.StudentAnswers.Where(a => a.StudentExamAttemptId == attempt.Id).Select(a => a.ExamQuestionId).ToListAsync(ct);
+        var rawPointsPossible = exam.ExamQuestions.Where(eq => assignedIds.Contains(eq.Id)).Sum(eq => eq.Points);
         var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
 
         attempt.ScoreAchieved = scaledScore;

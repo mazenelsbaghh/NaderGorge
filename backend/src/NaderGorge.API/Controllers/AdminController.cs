@@ -957,7 +957,7 @@ public class AdminController : ControllerBase
     [HasPermission("exams.manage")]
     public async Task<IActionResult> GetExamDashboard(Guid examId)
     {
-        var result = await _mediator.Send(new GetExamDashboardQuery(examId));
+        var result = await _mediator.Send(new GetExamDashboardQuery(examId, GetUserId()));
         return result.Success ? Ok(result) : NotFound(result);
     }
 
@@ -973,7 +973,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetHomeworkDashboard(Guid homeworkId)
     {
-        var result = await _mediator.Send(new GetHomeworkDashboardQuery(homeworkId));
+        var result = await _mediator.Send(new GetHomeworkDashboardQuery(homeworkId, GetUserId()));
         return result.Success ? Ok(result) : NotFound(result);
     }
 

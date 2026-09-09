@@ -652,6 +652,7 @@ export interface ExamDashboardDto {
 }
 
 export interface StudentHomeworkResultSummaryDto {
+  submissionId: string;
   studentId: string;
   studentName: string;
   studentPhone: string;

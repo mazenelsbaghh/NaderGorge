@@ -526,6 +526,12 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
 }
 
 .secure-video-pseudo-fullscreen {
+  position: fixed !important;
+  inset: 0;
+  z-index: 2147483000 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
@@ -547,17 +553,27 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
   overflow: visible !important;
   transform: none !important;
   filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
   perspective: none !important;
   contain: none !important;
   opacity: 1 !important;
   mix-blend-mode: normal !important;
 }
 
-.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface {
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 100vh !important;
-  min-height: 100dvh !important;
+.secure-video-root:fullscreen,
+.secure-video-root:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface,
+.secure-video-root:fullscreen .secure-video-fullscreen-surface,
+.secure-video-root:-webkit-full-screen .secure-video-fullscreen-surface {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
   aspect-ratio: auto !important;
   border-radius: 0 !important;
   background: #000 !important;
@@ -589,8 +605,8 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     min-height: 0 !important;
   }
 
-  .secure-video-fullscreen-surface.secure-video-force-landscape:fullscreen,
-  .secure-video-fullscreen-surface.secure-video-force-landscape:-webkit-full-screen {
+  .secure-video-root.secure-video-force-landscape:fullscreen,
+  .secure-video-root.secure-video-force-landscape:-webkit-full-screen {
     width: 100vh !important;
     width: 100dvh !important;
     height: 100vw !important;

@@ -118,6 +118,10 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             }
         }
 
+        if (request.Answers.Select(a => a.QuestionId).Distinct().Count() != request.Answers.Count ||
+            request.Answers.Any(a => !homework.Questions.Any(q => q.Id == a.QuestionId)))
+            return ApiResponse<bool>.Fail("قائمة الإجابات تحتوي على أسئلة مكررة أو غير موجودة في الواجب.");
+
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
@@ -147,18 +151,16 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             _dbContext.HomeworkAnswers.RemoveRange(existingAnswers);
         }
 
-        // Process answers.
+        // Unanswered questions still belong to the denominator.
         var questionLookup = homework.Questions.ToDictionary(q => q.Id);
         decimal rawPointsEarned = 0;
-        decimal rawPointsPossible = 0;
+        decimal rawPointsPossible = homework.Questions.Sum(q => q.PointsActive);
         bool hasEssayQuestions = false;
 
         foreach (var answerInput in request.Answers)
         {
             if (!questionLookup.TryGetValue(answerInput.QuestionId, out var question))
                 continue;
-
-            rawPointsPossible += question.PointsActive;
 
             var answer = new HomeworkAnswer
             {

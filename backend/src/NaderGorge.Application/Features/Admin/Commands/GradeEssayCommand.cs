@@ -22,6 +22,16 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
     }
 
     public async Task<ApiResponse<bool>> Handle(GradeEssayCommand request, CancellationToken ct)
+        => await SerializationRetryHelper.ExecuteAsync(async retryCt =>
+        {
+            _db.ClearTrackedChanges();
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, retryCt);
+            var response = await GradeOnce(request, retryCt);
+            if (response.Success) await transaction.CommitAsync(retryCt);
+            return response;
+        }, ct);
+
+    private async Task<ApiResponse<bool>> GradeOnce(GradeEssayCommand request, CancellationToken ct)
     {
         if (request.CurrentUserId.HasValue)
         {
@@ -29,13 +39,17 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to grade this essay submission.");
         }
 
-        var submission = await _db.EssaySubmissions.FindAsync(new object[] { request.EssaySubmissionId }, ct);
+        var submission = await _db.EssaySubmissions.Include(s => s.Attempt)
+            .FirstOrDefaultAsync(s => s.Id == request.EssaySubmissionId, ct);
         if (submission == null) return ApiResponse<bool>.Fail("Essay submission not found.");
 
-        if (submission.Status != EssaySubmissionStatus.WaitTeacher)
-        {
-            return ApiResponse<bool>.Fail("Essay is not ready for teacher grading.");
-        }
+        var question = await _db.ExamQuestions.FirstOrDefaultAsync(q =>
+            q.ExamId == submission.Attempt.ExamId && q.QuestionBankItemId == submission.QuestionId, ct);
+        if (question == null || request.TeacherScore < 0 || request.TeacherScore > question.Points)
+            return ApiResponse<bool>.Fail("الدرجة يجب أن تكون بين صفر ودرجة السؤال.");
+        if (request.TeacherFeedback?.Length > 4000)
+            return ApiResponse<bool>.Fail("ملاحظات التصحيح أطول من المسموح.");
+        var previousScore = submission.TeacherFinalScore;
 
         Guid? teacherId = null;
         if (request.CurrentUserId.HasValue)
@@ -59,7 +73,20 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         submission.Status = EssaySubmissionStatus.TeacherGraded;
         submission.GradedByTeacherId = teacherId;
 
-        await _db.SaveChangesAsync(ct);
+        var answer = await _db.StudentAnswers.FirstOrDefaultAsync(a =>
+            a.StudentExamAttemptId == submission.StudentExamAttemptId && a.ExamQuestionId == question.Id, ct);
+        if (answer != null)
+        {
+            answer.PointsAwarded = request.TeacherScore;
+            answer.IsCorrect = request.TeacherScore >= question.Points;
+        }
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Action = "EssayManuallyGraded", EntityType = nameof(EssaySubmission), EntityId = submission.Id,
+            PerformedByUserId = request.CurrentUserId,
+            OldValues = System.Text.Json.JsonSerializer.Serialize(new { score = previousScore }),
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { score = request.TeacherScore })
+        });
 
         var attempt = _db.StudentExamAttempts.Local.FirstOrDefault(a => a.Id == submission.StudentExamAttemptId)
             ?? await _db.StudentExamAttempts.FirstOrDefaultAsync(a => a.Id == submission.StudentExamAttemptId, ct);
@@ -73,7 +100,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         if (attempt != null && exam != null)
         {
             var objectiveAnswers = await _db.StudentAnswers
-                .Where(a => a.StudentExamAttemptId == attempt.Id)
+                .Where(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestion.Question.Type != QuestionType.Essay)
                 .ToListAsync(ct);
 
             var essaySubmissions = await _db.EssaySubmissions
@@ -90,7 +117,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             var rawPointsEarned = objectiveAnswers.Sum(a => a.PointsAwarded)
                 + latestEssaySubmissions.Sum(e => e.Id == submission.Id ? request.TeacherScore : e.TeacherFinalScore ?? 0m);
             var rawPointsPossible = await _db.ExamQuestions
-                .Where(eq => eq.ExamId == exam.Id)
+                .Where(eq => eq.ExamId == exam.Id && _db.StudentAnswers.Any(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == eq.Id))
                 .SumAsync(eq => eq.Points, ct);
 
             var hasPendingEssayQuestions = latestEssaySubmissions
@@ -102,7 +129,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             {
                 var scaledScore = NaderGorge.Application.Services.GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
                 attempt.ScoreAchieved = scaledScore;
-                attempt.IsPassed = scaledScore >= exam.PassingScore;
+                attempt.IsPassed = !attempt.IsTimeExpired && scaledScore >= exam.PassingScore;
                 attempt.Evaluation = NaderGorge.Application.Services.GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
             }
         }

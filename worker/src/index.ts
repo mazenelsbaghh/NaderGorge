@@ -208,14 +208,14 @@ async function startEssayWorker() {
   const worker = new Worker('ai-essay-grading', async (job) => {
     const processor = await import('./jobs/evaluateEssay.js');
     return await processor.processEvaluateEssayJob(job);
-  }, { connection });
+  }, { connection, concurrency: 3 });
 
   worker.on('completed', job => {
     console.log(`[Essay Worker] Job ${job.id} has completed successfully!`);
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`[Essay Worker] Job ${job?.id} has failed with ${err.message}`);
+    logError('ai-essay-worker', 'Essay grading job failed.', { jobId: job?.id, errorName: err.name });
   });
   
   console.log('[Worker] AI Essay Grading BullMQ worker started on queue: ai-essay-grading');

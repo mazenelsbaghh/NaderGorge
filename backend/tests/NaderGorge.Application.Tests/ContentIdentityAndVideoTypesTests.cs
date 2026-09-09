@@ -131,7 +131,7 @@ public class ContentIdentityAndVideoTypesTests
         var cockpitHandler = new GetLessonCockpitQueryHandler(db, new TeacherAuthorizationService(db));
         var cockpitResult = await cockpitHandler.Handle(new GetLessonCockpitQuery(lesson.Id), CancellationToken.None);
         var dashboardHandler = new GetExamDashboardQueryHandler(db);
-        var dashboardResult = await dashboardHandler.Handle(new GetExamDashboardQuery(exam.Id), CancellationToken.None);
+        var dashboardResult = await dashboardHandler.Handle(new GetExamDashboardQuery(exam.Id, Guid.NewGuid()), CancellationToken.None);
 
         Assert.True(cockpitResult.Success);
         Assert.Equal(lesson.InternalCode, cockpitResult.Data!.InternalCode);

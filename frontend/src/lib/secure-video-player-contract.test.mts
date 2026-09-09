@@ -76,7 +76,7 @@ test('2026-09-03 fullscreen isolates the video from animated page opacity', asyn
   const pseudoRootEnd = globalStyles.indexOf('\n}', pseudoRootStart);
   const ancestorStart = globalStyles.indexOf('.secure-video-fullscreen-ancestor,');
   const ancestorEnd = globalStyles.indexOf('\n}', ancestorStart);
-  const surfaceStart = globalStyles.indexOf('.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface {');
+  const surfaceStart = globalStyles.indexOf('.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface,');
   const surfaceEnd = globalStyles.indexOf('\n}', surfaceStart);
   const pseudoRoot = globalStyles.slice(pseudoRootStart, pseudoRootEnd);
   const ancestors = globalStyles.slice(ancestorStart, ancestorEnd);

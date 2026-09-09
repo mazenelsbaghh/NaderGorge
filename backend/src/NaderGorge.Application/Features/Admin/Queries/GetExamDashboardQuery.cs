@@ -62,7 +62,7 @@ public record ExamDashboardDto(
     DateTime? ArchivedAt
 );
 
-public record GetExamDashboardQuery(Guid ExamId) : IRequest<ApiResponse<ExamDashboardDto>>;
+public record GetExamDashboardQuery(Guid ExamId, Guid ActorId) : IRequest<ApiResponse<ExamDashboardDto>>;
 
 public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuery, ApiResponse<ExamDashboardDto>>
 {
@@ -75,6 +75,9 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
     public async Task<ApiResponse<ExamDashboardDto>> Handle(GetExamDashboardQuery request, CancellationToken cancellationToken)
     {
+        if (!await new NaderGorge.Application.Services.TeacherAuthorizationService(_context)
+            .CanAccessExamAsync(request.ActorId, request.ExamId, cancellationToken))
+            return ApiResponse<ExamDashboardDto>.Fail("غير مصرح بعرض هذا الامتحان.");
         var exam = await _context.Exams
             .Include(e => e.ExamQuestions)
                 .ThenInclude(eq => eq.Question)

@@ -32,6 +32,11 @@ test('fullscreen reports rejected entry and exit APIs to their fallback caller',
   assert.equal(exited, false);
 });
 
+test('2026-09-09 iPhone API that never settles releases the caller to protected fullscreen fallback', async () => {
+  const entered = await requestVideoFullscreen({ requestFullscreen: () => new Promise(() => {}) } as unknown as HTMLElement, 10);
+  assert.equal(entered, false);
+});
+
 test('webkit fullscreen and exit APIs remain supported', async () => {
   let requested = 0;
   let exited = 0;

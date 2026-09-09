@@ -50,14 +50,14 @@ function requestDeadlineMs() {
   return Number.isFinite(configuredDeadline) && configuredDeadline > 0 ? configuredDeadline : 600_000;
 }
 
-async function requestBeforeDeadline<T>(request: GeminiRequest<T>): Promise<T> {
+async function requestBeforeDeadline<T>(request: GeminiRequest<T>, timeoutMs = requestDeadlineMs()): Promise<T> {
   const abortController = new AbortController();
   let deadlineTimer: NodeJS.Timeout | undefined;
   const deadline = new Promise<never>((_resolve, reject) => {
     deadlineTimer = setTimeout(() => {
       reject(new GeminiRequestDeadlineError());
       abortController.abort();
-    }, requestDeadlineMs());
+    }, timeoutMs);
   });
 
   try {
@@ -75,9 +75,9 @@ function geminiFailure(error: unknown) {
   return new GeminiDeveloperApiError(failure.category, providerErrorName(error), failure.status ?? providerStatus(error));
 }
 
-export async function executeGeminiRequest<T>(request: GeminiRequest<T>): Promise<T> {
+export async function executeGeminiRequest<T>(request: GeminiRequest<T>, timeoutMs?: number): Promise<T> {
   try {
-    return await requestBeforeDeadline(request);
+    return await requestBeforeDeadline(request, timeoutMs);
   } catch (error) {
     throw geminiFailure(error);
   }

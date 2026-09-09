@@ -15,6 +15,7 @@ export interface EvaluateEssayJobData {
   questionText?: string;
   answerText: string;
   expectedAnswer?: string;
+  evaluation?: { isCorrect: boolean; feedback: string };
 }
 
 export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
@@ -27,7 +28,9 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
   try {
     await throwIfCancellationRequested(job);
 
-    const parsed = await evaluateEssayWithAI(answerText, expectedAnswer, questionText);
+    // A callback retry must not pay for (or wait for) the same AI evaluation again.
+    const parsed = job.data.evaluation ?? await evaluateEssayWithAI(answerText, expectedAnswer, questionText);
+    if (!job.data.evaluation) await job.updateData({ ...job.data, evaluation: parsed });
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
     await throwIfCancellationRequested(job);
 
@@ -54,8 +57,7 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     });
     
     if (!webhookResponse.ok) {
-       const errBody = await webhookResponse.text();
-       throw new Error(`Webhook failed with status ${webhookResponse.status}: ${errBody}`);
+       throw new Error(`Essay callback failed with status ${webhookResponse.status}`);
     }
 
     await job.updateProgress({ percentage: 100, stage: 'خلصنا التقييم! ✅' });
@@ -63,8 +65,8 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     
     return { success: true, score: safeScore, feedback: parsed.feedback };
 
-  } catch (error: any) {
-    console.error(`[EvaluateEssay] Failed:`, error.message);
+  } catch (error: unknown) {
+    console.error('[EvaluateEssay] Failed', { jobId: job.id, errorName: error instanceof Error ? error.name : 'UnknownError' });
     throw error;
   }
 }

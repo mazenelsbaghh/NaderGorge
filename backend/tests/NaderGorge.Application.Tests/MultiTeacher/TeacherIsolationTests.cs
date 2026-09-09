@@ -233,15 +233,21 @@ public class TeacherIsolationTests
         var (userA, profileA) = await OnboardTeacherAsync(db, "Teacher A", "01011111111");
         var (userB, profileB) = await OnboardTeacherAsync(db, "Teacher B", "01022222222");
 
-        var question = new QuestionBankItem { Id = Guid.NewGuid(), CreatedByTeacherId = profileA.Id };
+        var question = new QuestionBankItem { Id = Guid.NewGuid(), CreatedByTeacherId = profileA.Id, Type = QuestionType.Essay };
         db.QuestionBankItems.Add(question);
+        var exam = new Exam { CreatedByTeacherId = profileA.Id, TotalScore = 10, PassingScore = 5 };
+        exam.ExamQuestions.Add(new ExamQuestion { Question = question, Points = 10 });
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Essay student", "01033333333");
+        var attempt = new StudentExamAttempt { Exam = exam, UserId = student.Id };
+        db.StudentExamAttempts.Add(attempt);
 
         var submission = new EssaySubmission
         {
             Id = Guid.NewGuid(),
             QuestionId = question.Id,
             Status = EssaySubmissionStatus.WaitTeacher,
-            StudentExamAttemptId = Guid.NewGuid()
+            StudentExamAttemptId = attempt.Id,
+            StudentId = student.Id
         };
         db.EssaySubmissions.Add(submission);
         await db.SaveChangesAsync();

@@ -44,32 +44,38 @@ const CustomSlider = ({
     return percentage;
   }, [chapters]);
 
-  const updateProgressLocally = useCallback((clientX: number) => {
+  const pointerPercentage = useCallback((clientX: number, clientY: number) => {
+    const slider = containerRef.current;
+    if (!slider) return 0;
+    const rect = slider.getBoundingClientRect();
+    const rotated = Boolean(slider.closest('.secure-video-force-landscape')) && window.matchMedia('(orientation: portrait)').matches;
+    const distance = rotated ? clientY - rect.top : clientX - rect.left;
+    const length = rotated ? rect.height : rect.width;
+    return length > 0 ? Math.min(Math.max(distance / length * 100, 0), 100) : 0;
+  }, []);
+
+  const updateProgressLocally = useCallback((clientX: number, clientY: number) => {
     if (!containerRef.current) return undefined;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    let percentage = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+    let percentage = pointerPercentage(clientX, clientY);
     if (chapters) percentage = snapToChapter(percentage);
     setLocalValue(percentage);
     return percentage;
-  }, [chapters, snapToChapter]);
+  }, [chapters, snapToChapter, pointerPercentage]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
     setIsDragging(true);
     containerRef.current.setPointerCapture(e.pointerId);
-    updateProgressLocally(e.clientX);
+    updateProgressLocally(e.clientX, e.clientY);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+    const percentage = pointerPercentage(e.clientX, e.clientY);
     setHoverPercent(chapters ? snapToChapter(percentage) : percentage);
 
     if (isDragging) {
-      updateProgressLocally(e.clientX);
+      updateProgressLocally(e.clientX, e.clientY);
     }
   };
 
@@ -79,7 +85,7 @@ const CustomSlider = ({
     if (!containerRef.current?.hasPointerCapture(e.pointerId)) return;
     setIsDragging(false);
     containerRef.current.releasePointerCapture(e.pointerId);
-    const finalPercent = updateProgressLocally(e.clientX);
+    const finalPercent = updateProgressLocally(e.clientX, e.clientY);
     if (finalPercent !== undefined) {
       onChange(finalPercent);
     }
@@ -284,22 +290,22 @@ export default function PlayerControls({
       {visible && (
         <motion.div
           className={cn(
-            "absolute bottom-0 left-0 right-0 z-[var(--z-modal)] mx-auto bg-[#11111198] backdrop-blur-md",
+            "secure-player-controls absolute bottom-0 left-0 right-0 z-[var(--z-modal)] mx-auto bg-black/80",
             compact
-              ? "mb-2 max-w-[calc(100%-1rem)] rounded-xl p-2.5 sm:mb-4 sm:max-w-xl sm:rounded-2xl sm:p-4"
+              ? "mb-0 max-w-full rounded-none px-2 py-1 sm:mb-2 sm:max-w-2xl sm:rounded-xl sm:px-3 sm:py-2"
               : "mb-4 max-w-[90%] rounded-2xl p-4 md:max-w-xl"
           )}
-          initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-          exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-          transition={{ duration: 0.6, ease: "circInOut", type: "spring" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
           dir="ltr"
           onClick={(e) => e.stopPropagation()} // Prevent toggling the video player behind
           onMouseEnter={() => { if (onControlHover) onControlHover(true); }}
           onMouseLeave={() => { if (onControlHover) onControlHover(false); }}
         >
-          <div className={cn("flex items-center px-1", compact ? "mb-2 gap-2" : "mb-3 gap-3")}>
-            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-sm" : "w-10 text-xs")}>
+          <div className="flex items-center gap-2 px-1">
+            <span className="min-w-9 shrink-0 text-center text-xs font-medium tabular-nums text-white">
               {currentTimeFormatted}
             </span>
             <CustomSlider
@@ -310,7 +316,7 @@ export default function PlayerControls({
               keyboardStepPercent={durationSeconds && durationSeconds > 0 ? (10 / durationSeconds) * 100 : undefined}
               ariaLabel="تقدم الفيديو"
             />
-            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-sm" : "w-10 text-xs")}>
+            <span className="min-w-9 shrink-0 text-center text-xs font-medium tabular-nums text-white">
               {durationFormatted}
             </span>
           </div>
@@ -334,7 +340,7 @@ export default function PlayerControls({
                 </Button>
               </motion.div>
 
-              <div className={cn("ml-1 flex shrink-0 items-center", compact ? "w-20 gap-x-1 sm:w-28" : "w-24 gap-x-2 sm:w-32")}>
+              <div className="flex shrink-0 items-center gap-1 sm:w-28">
                 <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                   <Button
                     onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
@@ -354,7 +360,7 @@ export default function PlayerControls({
                   </Button>
                 </motion.div>
 
-                <div className="w-full">
+                <div className="hidden w-full sm:block">
                   <CustomSlider
                     value={isMuted ? 0 : volume}
                     onChange={onVolumeChange}
@@ -364,7 +370,7 @@ export default function PlayerControls({
               </div>
 
               {currentChapter ? (
-                <div className="flex items-center gap-2 ml-2 sm:ml-4 text-white font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden min-w-0">
+                <div className="hidden sm:flex items-center gap-2 ml-2 text-white font-bold text-xs whitespace-nowrap overflow-hidden min-w-0">
                   <span className="w-2 h-2 rounded-full bg-[#0E8F8F] shadow-[0_0_8px_rgba(14,143,143,0.75)] shrink-0"></span>
                   <span className="truncate min-w-0 leading-relaxed block mask-image-fade">{(currentChapter as any).title || (currentChapter as any).name || 'الفصل الحالي'}</span>
                 </div>

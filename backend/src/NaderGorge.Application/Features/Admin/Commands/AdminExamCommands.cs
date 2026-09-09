@@ -535,6 +535,16 @@ public class DeleteExamAttemptCommandHandler : IRequestHandler<DeleteExamAttempt
     }
 
     public async Task<ApiResponse<bool>> Handle(DeleteExamAttemptCommand request, CancellationToken ct)
+        => await SerializationRetryHelper.ExecuteAsync(async retryCt =>
+        {
+            _db.ClearTrackedChanges();
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, retryCt);
+            var response = await DeleteOnce(request, retryCt);
+            if (response.Success) await transaction.CommitAsync(retryCt);
+            return response;
+        }, ct);
+
+    private async Task<ApiResponse<bool>> DeleteOnce(DeleteExamAttemptCommand request, CancellationToken ct)
     {
         if (request.CurrentUserId.HasValue)
         {
@@ -558,6 +568,12 @@ public class DeleteExamAttemptCommandHandler : IRequestHandler<DeleteExamAttempt
             .Where(item => item.StudentExamAttemptId == attempt.Id)
             .ToListAsync(ct);
 
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Action = "ExamAttemptDeleted", EntityType = nameof(StudentExamAttempt), EntityId = attempt.Id,
+            PerformedByUserId = request.CurrentUserId,
+            OldValues = System.Text.Json.JsonSerializer.Serialize(new { attempt.ExamId, attempt.UserId, attempt.ScoreAchieved, answerCount = answers.Count })
+        });
         _db.StudentAnswers.RemoveRange(answers);
         _db.EssaySubmissions.RemoveRange(essays);
         _db.StudentExamAttempts.Remove(attempt);

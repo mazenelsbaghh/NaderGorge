@@ -17,21 +17,22 @@ export function getFullscreenElement(documentLike: Document): Element | null {
   return documentLike.fullscreenElement ?? vendorDocument.webkitFullscreenElement ?? null;
 }
 
-export async function requestVideoFullscreen(element: HTMLElement): Promise<boolean> {
+export async function requestVideoFullscreen(element: HTMLElement, timeoutMs = 700): Promise<boolean> {
   const vendorElement = element as FullscreenElement;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    if (element.requestFullscreen) {
-      await element.requestFullscreen();
-      return true;
-    }
-    if (vendorElement.webkitRequestFullscreen) {
-      await vendorElement.webkitRequestFullscreen();
-      return true;
-    }
+    const request = element.requestFullscreen ?? vendorElement.webkitRequestFullscreen;
+    if (!request) return false;
+    // Some iOS WebViews expose this API but never settle its promise.
+    return await Promise.race([
+      Promise.resolve(request.call(element)).then(() => true),
+      new Promise<boolean>((resolve) => { timeout = setTimeout(() => resolve(false), timeoutMs); }),
+    ]);
   } catch {
     return false;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
-  return false;
 }
 
 export async function waitForVideoFullscreen(

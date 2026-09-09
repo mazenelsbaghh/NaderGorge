@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -8,6 +9,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record StudentHomeworkSubmissionSummaryDto(
+    Guid SubmissionId,
     Guid StudentId,
     string StudentName,
     string StudentPhone,
@@ -51,7 +53,7 @@ public record HomeworkDashboardDto(
     DateTime? ArchivedAt
 );
 
-public record GetHomeworkDashboardQuery(Guid HomeworkId) : IRequest<ApiResponse<HomeworkDashboardDto>>;
+public record GetHomeworkDashboardQuery(Guid HomeworkId, Guid ActorId) : IRequest<ApiResponse<HomeworkDashboardDto>>;
 
 public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashboardQuery, ApiResponse<HomeworkDashboardDto>>
 {
@@ -64,6 +66,9 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
 
     public async Task<ApiResponse<HomeworkDashboardDto>> Handle(GetHomeworkDashboardQuery request, CancellationToken cancellationToken)
     {
+        var target = new AssessmentTarget(AssessmentKind.Homework, request.HomeworkId, Guid.Empty, request.ActorId);
+        if (!await AssessmentAccess.Allowed(_context, new TeacherAuthorizationService(_context), target, cancellationToken))
+            return ApiResponse<HomeworkDashboardDto>.Fail("غير مصرح بعرض هذا الواجب.");
         var homework = await _context.Homeworks
             .Include(h => h.Questions)
             .Include(h => h.Submissions)
@@ -76,6 +81,7 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
         var submissionsDto = homework.Submissions
             .OrderByDescending(s => s.SubmittedAt ?? s.StartedAt)
             .Select(s => new StudentHomeworkSubmissionSummaryDto(
+                s.Id,
                 s.StudentId,
                 s.Student?.FullName ?? "طالب محذوف",
                 s.Student?.PhoneNumber ?? "غير متوفر",

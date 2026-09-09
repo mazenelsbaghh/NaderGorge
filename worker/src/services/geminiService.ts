@@ -442,7 +442,7 @@ export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: s
   const response = await executeGeminiRequest((abortSignal) => runtime.developer.models.generateContent({
     ...request,
     config: { ...request.config, abortSignal },
-  }));
+  }), 60_000);
   const parsed = JSON.parse(response.text || '{}') as Partial<EssayAIResult>;
   if (typeof parsed.isCorrect !== 'boolean' || typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
     throw new Error('AI essay evaluation returned an invalid result.');

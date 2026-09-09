@@ -1,18 +1,14 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import Image from 'next/image';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
-import { AlertCircle, Play, Info, X, Map, Maximize2, Minimize2 } from 'lucide-react';
+import { AlertCircle, Play, Info, Map, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerLoader } from '@/components/ui/loading-indicator';
-import dynamic from 'next/dynamic';
 import PlayerControls from './PlayerControls';
-
-const SplitText = dynamic(() => import('@/components/ui/SplitText'), { ssr: false });
+import LessonAidDialog from './LessonAidDialog';
 import { applyDomShields } from '@/utils/dom-shield';
-import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -285,6 +281,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
   const [isMindmapOpen, setIsMindmapOpen] = useState(false);
+  const fullscreenRootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -1675,7 +1672,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (!isPseudoFullscreen) return;
 
     document.body.classList.add('secure-video-fullscreen-open');
-    const fullscreenRoot = containerRef.current?.parentElement?.parentElement;
+    const fullscreenRoot = fullscreenRootRef.current;
+    // Top-layer promotion keeps the same iframe mounted while escaping iOS
+    // transformed/scrolling ancestors. Never use native video fullscreen:
+    // it would separate playback from the student watermark.
+    if (fullscreenRoot && typeof fullscreenRoot.showPopover === 'function') {
+      fullscreenRoot.setAttribute('popover', 'manual');
+      fullscreenRoot.showPopover();
+    }
     const adjustedAncestors: HTMLElement[] = [];
     let ancestor = fullscreenRoot?.parentElement;
     while (ancestor && ancestor !== document.body) {
@@ -1685,6 +1689,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
 
     return () => {
+      if (fullscreenRoot?.hasAttribute('popover')) {
+        fullscreenRoot.hidePopover();
+        fullscreenRoot.removeAttribute('popover');
+      }
       document.body.classList.remove('secure-video-fullscreen-open');
       adjustedAncestors.forEach((element) => element.classList.remove('secure-video-fullscreen-ancestor'));
     };
@@ -1699,7 +1707,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const active = Boolean(getFullscreenElement(document));
+      const active = getFullscreenElement(document) === fullscreenRootRef.current;
       setIsNativeFullscreen(active);
       if (active) {
         // WebKit may resolve requestFullscreen before it exposes the active
@@ -1743,7 +1751,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, []);
 
   const toggleFullscreen = async () => {
-    const el = containerRef.current?.parentElement;
+    const el = fullscreenRootRef.current;
     if (!el) return;
 
     if (isPseudoFullscreen) {
@@ -2068,7 +2076,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }
 
   return (
-    <div className={`group flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-[var(--secondary)]/30 bg-black shadow-lg ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[var(--z-modal)] !rounded-none' : ''} ${rotateLandscapeFallback ? 'secure-video-force-landscape' : ''}`}>
+    <div ref={fullscreenRootRef} className={`secure-video-root group flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-[var(--secondary)]/30 bg-black shadow-lg ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen' : ''} ${rotateLandscapeFallback ? 'secure-video-force-landscape' : ''}`}>
       
       {/* Video Container */}
       <div 
@@ -2080,6 +2088,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onTouchStart={handlePlayerInteraction}
         onFocus={handlePlayerInteraction}
         onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             handlePlayerInteraction();
@@ -2174,133 +2183,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           )}
         </AnimatePresence>
         
-        {/* Floating Chapter Info Overlay */}
-        {activeChapterDesktop && activeChapterDesktop.summaryText && status === 'ready' && !usesNativePlayerChrome && (showControls || isChapterInfoOpen) && (
-          <div 
-            className="absolute top-4 right-4 bottom-16 z-[var(--z-floating)] flex flex-col items-end pointer-events-none"
-            onMouseEnter={() => setIsHoveringControls(true)}
-            onMouseLeave={() => setIsHoveringControls(false)}
-            onClick={(e) => e.stopPropagation()}
-            dir="rtl"
-          >
-             <AnimatePresence mode="wait">
-               {!isChapterInfoOpen ? (
-                 <motion.button 
-                   type="button"
-                   key="btn"
-                   initial={{ opacity: 0, scale: 0.8 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   exit={{ opacity: 0, scale: 0.8 }}
-                   onClick={() => setIsChapterInfoOpen(true)} 
-                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 text-white shadow-sm backdrop-blur transition hover:bg-[var(--admin-primary)]"
-                   aria-label="فتح معلومات الفصل الحالي"
-                 >
-                    <Info className="w-5 h-5" />
-                 </motion.button>
-               ) : (
-                 <motion.div 
-                   key="panel"
-                   initial={{ opacity: 0, y: -20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   exit={{ opacity: 0, y: -20 }}
-                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                   className="pointer-events-auto bg-black/70 backdrop-blur-md border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[350px] h-full overflow-y-auto custom-scrollbar shadow-sm relative flex flex-col"
-                 >
-                    <button 
-                      type="button"
-                      onClick={() => setIsChapterInfoOpen(false)} 
-                      className="absolute left-2 top-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-red-400"
-                      aria-label="إغلاق معلومات الفصل"
-                    >
-                       <X className="w-4 h-4" />
-                    </button>
-                    <div className="w-full text-start" dir="auto">
-                      <SplitText
-                        key={`title-${activeChapterDesktop.id}`}
-                        text={activeChapterDesktop.title}
-                        tag="h4"
-                        className="mb-2 ml-6 block text-sm font-black text-white"
-                        textAlign="start"
-                        splitType="words"
-                      />
-                      <SplitText
-                        key={`summary-${activeChapterDesktop.id}`}
-                        text={activeChapterDesktop.summaryText}
-                        tag="p"
-                        className="block text-xs leading-relaxed text-white/90 sm:text-sm"
-                        textAlign="start"
-                        splitType="words"
-                        delay={20}
-                      />
-                    </div>
-                 </motion.div>
-               )}
-             </AnimatePresence>
-          </div>
-        )}
-
-        {/* Floating Mindmap Overlay */}
-        {/* Keep the lesson aid reachable while the video is playing. Player controls
-            intentionally auto-hide, but that must not hide the mind-map trigger. */}
-        {activeMindmapChapter && status === 'ready' && !usesNativePlayerChrome && (
-          <div 
-            className="pointer-events-none absolute left-3 top-3 z-[var(--z-floating)] flex flex-col items-start sm:left-4 sm:top-4"
-            onMouseEnter={() => setIsHoveringControls(true)}
-            onMouseLeave={() => setIsHoveringControls(false)}
-            onClick={(e) => e.stopPropagation()}
-            dir="ltr"
-          >
-             <AnimatePresence mode="wait">
-               {!isMindmapOpen ? (
-                 <motion.button 
-                   type="button"
-                   key="btn-mindmap"
-                   initial={{ opacity: 0, scale: 0.8 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   exit={{ opacity: 0, scale: 0.8 }}
-                   onClick={() => setIsMindmapOpen(true)} 
-                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-3 text-white shadow-sm backdrop-blur transition hover:bg-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
-                   aria-label="فتح الخريطة الذهنية للفصل"
-                 >
-                    <Map className="h-5 w-5 sm:mr-2" />
-                    <span className="hidden text-sm font-bold sm:inline">الخريطة الذهنية</span>
-                 </motion.button>
-               ) : (
-                 <motion.div 
-                   key="panel-mindmap"
-                   initial={{ opacity: 0, y: -20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   exit={{ opacity: 0, y: -20 }}
-                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                   className="pointer-events-auto bg-black/70 backdrop-blur-md border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[500px] h-full overflow-hidden shadow-sm relative flex flex-col"
-                 >
-                    <button 
-                      type="button"
-                      onClick={() => setIsMindmapOpen(false)} 
-                      className="absolute right-2 top-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-red-400"
-                      aria-label="إغلاق الخريطة الذهنية"
-                    >
-                       <X className="w-4 h-4" />
-                    </button>
-                    <h4 className="mb-4 block ps-6 text-right text-sm font-black text-white" dir="rtl">
-                      <span>الخريطة الذهنية:</span>{' '}
-                      <bdi dir="auto">{activeMindmapChapter.title}</bdi>
-                    </h4>
-                    <div className="flex-grow w-full relative rounded-lg overflow-hidden border border-white/10 bg-black/50">
-                      <Image
-                        src={resolveMediaUrl(activeMindmapChapter.mindmapImageUrl)}
-                        alt={`الخريطة الذهنية: ${activeMindmapChapter.title}`}
-                        fill
-                        sizes="(max-width: 640px) 280px, 500px"
-                        className="object-contain"
-                        unoptimized
-                      />
-                    </div>
-                 </motion.div>
-               )}
-             </AnimatePresence>
-          </div>
-        )}
         
         {(status === 'loading' || isBuffering) && !(provider === 'bunny' && nativeProviderSurfaceLoaded) && (
           <div
@@ -2331,6 +2213,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
         {status === 'ready' && !usesNativePlayerChrome && (
           <PlayerControls 
+            compact
             isPlaying={isPlaying}
             onTogglePlay={togglePlay}
             progress={progress}
@@ -2354,6 +2237,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           />
         )}
       </div>
+      {status === 'ready' && (activeChapterDesktop?.summaryText || activeMindmapChapter) && (
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-white/10 bg-[#0A1D3D] px-2 text-white" dir="rtl">
+          {activeChapterDesktop?.summaryText && <button type="button" onClick={() => setIsChapterInfoOpen(true)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-white/10"><Info className="size-4" /> معلومات الفصل</button>}
+          {activeMindmapChapter && <button type="button" onClick={() => setIsMindmapOpen(true)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-white/10"><Map className="size-4" /> الخريطة الذهنية</button>}
+        </div>
+      )}
+      {isChapterInfoOpen && activeChapterDesktop?.summaryText && <LessonAidDialog title={activeChapterDesktop.title} summary={activeChapterDesktop.summaryText} onClose={() => setIsChapterInfoOpen(false)} />}
+      {isMindmapOpen && activeMindmapChapter && <LessonAidDialog title={`الخريطة الذهنية: ${activeMindmapChapter.title}`} imageUrl={activeMindmapChapter.mindmapImageUrl} onClose={() => setIsMindmapOpen(false)} />}
     </div>
   );
 });

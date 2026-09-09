@@ -136,6 +136,9 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
     },
     updateProgress: async (p: any) => {
       progressCalls.push(p);
+    },
+    updateData: async (data: unknown) => {
+      dummyJob.data = data;
     }
   };
 
@@ -197,12 +200,13 @@ test('processEvaluateEssayJob throws error to trigger queue retry if callback fa
       essaySubmissionId: 'sub-retry',
       answerText: 'wrong answer'
     },
-    updateProgress: async () => {}
+    updateProgress: async () => {},
+    updateData: async (data: unknown) => { dummyJob.data = data; }
   };
 
   await assert.rejects(async () => {
     await processEvaluateEssayJob(dummyJob);
-  }, /Webhook failed with status 500/);
+  }, /Essay callback failed with status 500/);
 });
 
 test('extractAudioFromVideo refuses to route YouTube through third-party downloaders', async () => {
