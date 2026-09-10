@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
@@ -10,6 +11,7 @@ namespace NaderGorge.Application.Features.Admin.Commands;
 
 public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
 {
+    public AssessmentParentNotificationSettings ParentNotification { get; set; } = AssessmentParentNotificationSettings.Disabled;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal PassingScore { get; set; }
@@ -100,6 +102,10 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             return ApiResponse<Guid>.Fail("Passing score cannot be greater than the total score.");
         }
 
+        var notificationError = request.ParentNotification is null ? "راجع إعدادات رسالة ولي الأمر."
+            : await request.ParentNotification.ValidateAsync(_db, ct);
+        if (notificationError is not null) return ApiResponse<Guid>.Fail(notificationError);
+
         // 2. Resolve Teacher and Subject Context
         var teacherId = Guid.Empty;
         if (request.CurrentUserId.HasValue)
@@ -170,6 +176,8 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
 
         var exam = new Exam
         {
+            ParentNotificationSettingsJson = request.ParentNotification!.ToJson(),
+            ParentNotificationEnabledAt = request.ParentNotification.Enabled ? DateTime.UtcNow : null,
             Title = request.Title,
             Description = request.Description,
             PassingScore = request.PassingScore,

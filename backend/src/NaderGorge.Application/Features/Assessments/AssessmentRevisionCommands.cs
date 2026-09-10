@@ -50,6 +50,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         var editor = workspace.Editor();
         var validation = ValidateDraft(request.Target, request.Definition, request.Policy);
         if (validation is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(validation);
+        var notificationError = await request.Definition.ParentNotification.ValidateAsync(db, ct);
+        if (notificationError is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(notificationError);
         var ownershipError = await ValidateIdentities(workspace, request.Definition, ct);
         if (ownershipError is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(ownershipError);
         var currentIds = editor.Definition.Questions.Select(q => q.Id).ToHashSet();
@@ -77,6 +79,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
             return ApiResponse<AssessmentEditorDto>.Fail("غير مصرح بتعديل هذا الواجب أو الامتحان.");
         var validation = ValidateDraft(request.Target, request.Definition, request.Policy);
         if (validation is not null) return ApiResponse<AssessmentEditorDto>.Fail(validation);
+        var notificationError = await request.Definition.ParentNotification.ValidateAsync(db, ct);
+        if (notificationError is not null) return ApiResponse<AssessmentEditorDto>.Fail(notificationError);
         if (request.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(request.RevisionToken))
             return ApiResponse<AssessmentEditorDto>.Fail("عاين تأثير التعديل قبل تأكيد الحفظ.");
         var workspace = await Load(request.Target, ct);

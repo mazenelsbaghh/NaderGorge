@@ -48,6 +48,12 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
         if (grades.RequiresCompletion) submission.SubmittedAt = null;
         submission.DefinitionSnapshotJson = (submitted ? definition : definition with { Revision = null }).ToJson();
         Audit(submission.Id, "Homework", before, write);
+        if (submission.Status == SubmissionStatus.Graded && submission.SubmittedAt.HasValue)
+            db.OutboxEvents.Add(new OutboxEvent
+            {
+                Type = "HomeworkGraded", TargetUserId = submission.StudentId.ToString(),
+                PayloadJson = JsonSerializer.Serialize(new { homeworkId = submission.HomeworkId, submissionId = submission.Id })
+            });
     }
 
     public void ApplyExam(StudentExamAttempt attempt, IReadOnlyList<EssaySubmission> essays, AssessmentRevisionWrite write)
@@ -74,6 +80,12 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
         if (submitted && grades.RequiresCompletion) attempt.StartedAt = null;
         attempt.DefinitionSnapshotJson = (submitted ? bound : bound with { Revision = null }).ToJson();
         Audit(attempt.Id, "Exam", before, write with { Revised = write.Revised with { Definition = bound } });
+        if (submitted && !grades.RequiresCompletion && !grades.RequiresReview)
+            db.OutboxEvents.Add(new OutboxEvent
+            {
+                Type = "ExamGraded", TargetUserId = attempt.UserId.ToString(),
+                PayloadJson = JsonSerializer.Serialize(new { examId = attempt.ExamId, attemptId = attempt.Id })
+            });
     }
 
     private sealed record ExamAnswerRevisionContext(AssessmentDefinitionSnapshot Original, AssessmentDefinitionSnapshot Bound,

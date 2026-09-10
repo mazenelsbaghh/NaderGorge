@@ -259,6 +259,11 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             })
         };
         _dbContext.OutboxEvents.Add(outboxEvent);
+        if (submission.Status == SubmissionStatus.Graded)
+            _dbContext.OutboxEvents.Add(new NaderGorge.Domain.Entities.OutboxEvent
+            {
+                Type = "HomeworkGraded", TargetUserId = outboxEvent.TargetUserId, PayloadJson = outboxEvent.PayloadJson
+            });
 
         try
         {

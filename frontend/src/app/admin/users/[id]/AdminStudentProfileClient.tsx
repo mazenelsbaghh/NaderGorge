@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { StudentAssessmentHistory } from '@/components/admin/StudentAssessmentHistory';
 import {
   GRADES_BY_STAGE,
   STAGE_OPTIONS,
@@ -938,6 +939,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                         emptyMessage="لا توجد عمليات رصيد مسجلة لهذا الطالب"
                       />
                   </div>
+
               </div>
           )}
 
@@ -1464,7 +1466,12 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                        );
                      })()}
                   </div>
-              </div>
+
+                  <StudentAssessmentHistory
+                    examHistory={studentData?.examHistory}
+                    homeworkHistory={studentData?.homeworkHistory}
+                  />
+                </div>
           )}
 
          <AdminConfirmationDialog

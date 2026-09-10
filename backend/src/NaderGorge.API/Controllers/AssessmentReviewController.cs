@@ -1,4 +1,8 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
@@ -11,6 +15,25 @@ namespace NaderGorge.API.Controllers;
 [ApiController, Authorize, Route("api/admin")]
 public class AssessmentReviewController(IMediator mediator) : ControllerBase
 {
+    [HttpGet("homework/notification-templates"), HasPermission("content.manage")]
+    public Task<IActionResult> HomeworkNotificationTemplates([FromServices] IAppDbContext db, CancellationToken ct) => NotificationTemplates(db, ct);
+
+    [HttpGet("exams/notification-templates"), HasPermission("exams.manage")]
+    public Task<IActionResult> ExamNotificationTemplates([FromServices] IAppDbContext db, CancellationToken ct) => NotificationTemplates(db, ct);
+
+    private async Task<IActionResult> NotificationTemplates(IAppDbContext db, CancellationToken ct)
+    {
+        var templates = await db.LiveSupportWhatsAppTemplates.AsNoTracking()
+            .Where(template => template.Status == "APPROVED" && template.Category == "UTILITY")
+            .OrderBy(template => template.Name).ToListAsync(ct);
+        return Ok(ApiResponse<object>.Ok(templates.Select(template => new
+        {
+            template.Id, template.Name, template.Language, template.Category, template.Status,
+            template.Fingerprint, template.LastSyncedAt,
+            Components = JsonSerializer.Deserialize<JsonElement>(template.ComponentsJson)
+        }).ToArray()));
+    }
+
     public record GradeRequest(List<AssessmentScoreInput> Scores, string? Feedback);
     public record RevisionPreviewRequest(AssessmentDefinitionSnapshot Definition, AssessmentRevisionPolicy Policy);
     public record RevisionSaveRequest(AssessmentDefinitionSnapshot Definition, AssessmentRevisionPolicy Policy,

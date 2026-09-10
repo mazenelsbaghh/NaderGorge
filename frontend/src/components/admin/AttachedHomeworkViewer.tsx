@@ -15,6 +15,14 @@ import { getApiErrorSummary } from '@/lib/api-errors';
 import { AssessmentAttemptReview } from './AssessmentAttemptReview';
 import { MissingHomeworkExport } from './MissingHomeworkExport';
 import { HomeworkPreview } from './HomeworkPreview';
+import { AdminSearchToolbar } from './AdminSearchToolbar';
+
+function phoneSearchDigits(phone: string): string {
+  return phone
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/\D/g, '');
+}
 
 export function AttachedHomeworkViewer({
   homeworkId,
@@ -31,6 +39,7 @@ export function AttachedHomeworkViewer({
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [studentPhoneSearch, setStudentPhoneSearch] = useState('');
   const homeworkBasePath = `${assessmentContentPath(pathname, surface)}/homework`;
 
   const loadData = useCallback(async () => {
@@ -84,6 +93,12 @@ export function AttachedHomeworkViewer({
   }
 
   const activationBlocked = !data.isActive && data.questionCount === 0;
+  const submissions = data.submissions;
+  const hasPhoneSearch = studentPhoneSearch.trim().length > 0;
+  const searchedDigits = phoneSearchDigits(studentPhoneSearch);
+  const filteredSubmissions = hasPhoneSearch
+    ? submissions.filter((submission) => searchedDigits.length > 0 && phoneSearchDigits(submission.studentPhone).includes(searchedDigits))
+    : submissions;
 
   return (
     <div className="space-y-6">
@@ -231,11 +246,22 @@ export function AttachedHomeworkViewer({
             تسليمات الطلاب
           </h3>
           <MissingHomeworkExport homeworkId={homeworkId} />
-          <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
-            {data.submissions?.length || 0} تسليم
+          <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
+            {hasPhoneSearch ? `${filteredSubmissions.length} من ${submissions.length}` : submissions.length} تسليم
           </span>
         </div>
-        {data.submissions && data.submissions.length > 0 ? (
+        <AdminSearchToolbar
+          value={studentPhoneSearch}
+          onChange={setStudentPhoneSearch}
+          label="البحث برقم هاتف الطالب"
+          placeholder="ابحث برقم هاتف الطالب أو جزء منه..."
+          actions={studentPhoneSearch && (
+            <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => setStudentPhoneSearch('')}>
+              مسح البحث
+            </NeumorphButton>
+          )}
+        />
+        {filteredSubmissions.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border border-[var(--admin-border)]">
             <table className="w-full min-w-[680px] text-right text-sm">
               <thead className="bg-[var(--admin-card-soft)] text-xs font-black text-[var(--admin-muted)]">
@@ -249,7 +275,7 @@ export function AttachedHomeworkViewer({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--admin-border)]">
-                {data.submissions.map((submission) => (
+                {filteredSubmissions.map((submission) => (
                   <tr key={`${submission.studentId}-${submission.startedAt}`} className="text-[var(--admin-text)]">
                     <td className="px-4 py-4">
                       <p className="font-black">{submission.studentName}</p>
@@ -271,7 +297,9 @@ export function AttachedHomeworkViewer({
           </div>
         ) : (
           <p className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-background)] px-5 py-8 text-center font-bold text-[var(--admin-muted)]">
-            لا توجد تسليمات لهذا الواجب حتى الآن.
+            {hasPhoneSearch && submissions.length > 0
+              ? 'لا توجد تسليمات تطابق رقم الهاتف. جرّب رقمًا آخر أو امسح البحث لعرض الكل.'
+              : 'لا توجد تسليمات لهذا الواجب حتى الآن.'}
           </p>
         )}
       </div>

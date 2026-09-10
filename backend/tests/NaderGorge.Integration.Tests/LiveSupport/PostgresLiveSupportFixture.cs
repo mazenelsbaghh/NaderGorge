@@ -59,6 +59,7 @@ public sealed class PostgresLiveSupportFixture : IAsyncDisposable
             "live_support_ai_knowledge_entries",
             "live_support_ai_knowledge_revisions",
             "live_support_ai_policy_knowledge_revisions",
+            "assessment_parent_deliveries",
             "outbox_events"
         };
 

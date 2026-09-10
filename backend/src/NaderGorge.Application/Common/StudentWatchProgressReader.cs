@@ -34,9 +34,10 @@ public static class StudentWatchProgressReader
             }).ToListAsync(ct);
         var watches = await context.Db.VideoWatchEvents.AsNoTracking()
             .Where(watch => watch.UserId == context.UserId && ids.Contains(watch.LessonVideoId))
-            .Select(watch => new { watch.LessonVideoId, watch.LearningWatchedSeconds, LastWatchedAt = watch.UpdatedAt ?? watch.CreatedAt })
+            .Select(watch => new { watch.LessonVideoId, watch.LearningWatchedSeconds, watch.LearningDurationSeconds, LastWatchedAt = watch.UpdatedAt ?? watch.CreatedAt })
             .ToDictionaryAsync(watch => watch.LessonVideoId, ct);
-        return videos.Select(video => new StudentVideoProgress(video.Id, video.LessonId, video.Duration,
+        return videos.Select(video => new StudentVideoProgress(video.Id, video.LessonId, video.Duration is > 0 ? video.Duration
+            : watches.GetValueOrDefault(video.Id)?.LearningDurationSeconds,
             Math.Max(0, watches.GetValueOrDefault(video.Id)?.LearningWatchedSeconds ?? 0))
             { LastWatchedAt = watches.GetValueOrDefault(video.Id)?.LastWatchedAt }).ToList();
     }

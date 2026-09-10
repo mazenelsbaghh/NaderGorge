@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -384,6 +385,97 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .ThenBy(activity => activity.VideoTitle)
             .ToList();
 
+        var examAttemptsRaw = await _context.StudentExamAttempts
+            .AsNoTracking()
+            .Where(attempt => attempt.UserId == request.UserId)
+            .Select(attempt => new
+            {
+                attempt.Id,
+                attempt.ExamId,
+                attempt.Exam.Title,
+                attempt.Exam.TotalScore,
+                attempt.DefinitionSnapshotJson,
+                attempt.ScoreAchieved,
+                attempt.IsPassed,
+                attempt.IsTimeExpired,
+                attempt.Evaluation,
+                AttemptedAt = attempt.StartedAt ?? attempt.CreatedAt,
+                LessonTitle = attempt.Exam.LessonVideo != null
+                    ? attempt.Exam.LessonVideo.Lesson.Title
+                    : _context.Lessons.Where(lesson => lesson.ExamId == attempt.ExamId)
+                        .Select(lesson => lesson.Title).FirstOrDefault(),
+                PackageName = attempt.Exam.LessonVideo != null
+                    ? attempt.Exam.LessonVideo.Lesson.ContentSection.Term.Package.Name
+                    : _context.Lessons.Where(lesson => lesson.ExamId == attempt.ExamId)
+                        .Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+            })
+            .OrderByDescending(attempt => attempt.AttemptedAt)
+            .ToListAsync(cancellationToken);
+        var examHistory = examAttemptsRaw.Select(attempt =>
+        {
+            var snapshot = ReadAssessmentSnapshot(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+            var hasFinalGrade = !string.IsNullOrWhiteSpace(attempt.Evaluation)
+                && attempt.Evaluation != "قيد التصحيح";
+            return new StudentExamHistoryDto
+            {
+                AttemptId = attempt.Id,
+                ExamId = attempt.ExamId,
+                Title = snapshot?.Title ?? attempt.Title,
+                PackageName = attempt.PackageName,
+                LessonTitle = attempt.LessonTitle,
+                Score = attempt.ScoreAchieved,
+                TotalScore = snapshot?.TotalScore ?? attempt.TotalScore,
+                HasFinalGrade = hasFinalGrade,
+                IsPassed = attempt.IsPassed,
+                IsTimeExpired = attempt.IsTimeExpired,
+                Status = hasFinalGrade ? "Graded"
+                    : attempt.Evaluation == "قيد التصحيح" ? "PendingReview" : "InProgress",
+                Evaluation = attempt.Evaluation,
+                AttemptedAt = attempt.AttemptedAt
+            };
+        }).ToList();
+
+        var homeworkSubmissionsRaw = await _context.HomeworkSubmissions
+            .AsNoTracking()
+            .Where(submission => submission.StudentId == request.UserId)
+            .Select(submission => new
+            {
+                submission.Id,
+                submission.HomeworkId,
+                submission.Homework.Title,
+                submission.Homework.TotalScore,
+                submission.TotalScoreSnapshot,
+                submission.DefinitionSnapshotJson,
+                submission.OverallScore,
+                submission.Status,
+                submission.Evaluation,
+                AttemptedAt = submission.SubmittedAt ?? submission.StartedAt,
+                LessonTitle = _context.Lessons.Where(lesson => lesson.Id == submission.Homework.LessonId)
+                    .Select(lesson => lesson.Title).FirstOrDefault(),
+                PackageName = _context.Lessons.Where(lesson => lesson.Id == submission.Homework.LessonId)
+                    .Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+            })
+            .OrderByDescending(submission => submission.AttemptedAt)
+            .ToListAsync(cancellationToken);
+        var homeworkHistory = homeworkSubmissionsRaw.Select(submission =>
+        {
+            var snapshot = ReadAssessmentSnapshot(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId);
+            return new StudentHomeworkHistoryDto
+            {
+                SubmissionId = submission.Id,
+                HomeworkId = submission.HomeworkId,
+                Title = snapshot?.Title ?? submission.Title,
+                PackageName = submission.PackageName,
+                LessonTitle = submission.LessonTitle,
+                Score = submission.OverallScore,
+                TotalScore = snapshot?.TotalScore ?? submission.TotalScoreSnapshot ?? submission.TotalScore,
+                HasFinalGrade = submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded,
+                Status = submission.Status.ToString(),
+                Evaluation = submission.Evaluation,
+                AttemptedAt = submission.AttemptedAt
+            };
+        }).ToList();
+
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
             .Where(a => a.EntityType == "User" && a.EntityId == request.UserId)
@@ -590,6 +682,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 WatchedVideosCount = watchedVideosCount,
                 Activities = watchActivities
             },
+            ExamHistory = examHistory,
+            HomeworkHistory = homeworkHistory,
             CurrentBalance = balance?.CurrentBalance ?? 0m,
             PromotionalBalances = promotionalBalances,
             BalanceTransactions = balanceTransactions,
@@ -618,5 +712,13 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         return actualWatchedSeconds > 0
             ? decimal.Round(activities.Sum(activity => activity.WatchedSeconds) / actualWatchedSeconds, 2)
             : 1m;
+    }
+
+    private static AssessmentDefinitionSnapshot? ReadAssessmentSnapshot(string? json, string kind, Guid assessmentId)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return AssessmentDefinitionSnapshot.Read(json, kind, assessmentId); }
+        catch (InvalidOperationException) { return null; }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 }

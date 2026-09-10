@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Services;
@@ -150,11 +151,10 @@ public sealed class WhatsAppExamNotificationService
             : null;
 
         var studentProfile = attempt.User.StudentProfile;
-        var recipient = FirstNonBlank(
-            overrideRecipientPhoneNumber,
-            studentProfile?.ParentPhone,
-            studentProfile?.SecondaryParentPhone,
-            studentProfile?.MotherPhone);
+        var recipient = !string.IsNullOrWhiteSpace(overrideRecipientPhoneNumber)
+            ? overrideRecipientPhoneNumber.Trim()
+            : ParentWhatsAppRecipients.Resolve(studentProfile,
+                await ParentWhatsAppRecipients.ReadPriorityAsync(_db, cancellationToken)) ?? string.Empty;
 
         var subject = lesson?.ContentSection.Term.Package.Subject.Name
             ?? lessonVideo?.Lesson.ContentSection.Term.Package.Subject.Name
@@ -178,11 +178,6 @@ public sealed class WhatsAppExamNotificationService
             subject,
             lecture,
             isResultReady);
-    }
-
-    private static string FirstNonBlank(params string?[] values)
-    {
-        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
     }
 
     private static string FormatDecimal(decimal value)

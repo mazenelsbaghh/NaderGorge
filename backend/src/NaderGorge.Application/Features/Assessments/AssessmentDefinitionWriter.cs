@@ -20,6 +20,9 @@ public static class AssessmentDefinitionWriter
         homework.PassingScoreThreshold = definition.PassingScore;
         homework.IsMandatory = definition.IsMandatory;
         homework.IsRandomized = definition.IsRandomized;
+        homework.ParentNotificationEnabledAt = definition.ParentNotification.Enabled
+            ? homework.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
+        homework.ParentNotificationSettingsJson = definition.ParentNotification.ToJson();
         homework.UpdatedAt = DateTime.UtcNow;
         var included = definition.Questions.Select(q => q.Id).ToHashSet();
         foreach (var question in homework.Questions) question.IsRetired = !included.Contains(question.Id);
@@ -48,6 +51,9 @@ public static class AssessmentDefinitionWriter
         exam.IsMandatory = definition.IsMandatory;
         exam.IsRandomized = definition.IsRandomized;
         exam.DisplayQuestionCount = definition.DisplayQuestionCount;
+        exam.ParentNotificationEnabledAt = definition.ParentNotification.Enabled
+            ? exam.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
+        exam.ParentNotificationSettingsJson = definition.ParentNotification.ToJson();
         exam.UpdatedAt = DateTime.UtcNow;
         var included = definition.Questions.Select(q => q.Id).ToHashSet();
         foreach (var question in exam.ExamQuestions) question.IsRetired = !included.Contains(question.Id);
@@ -57,6 +63,7 @@ public static class AssessmentDefinitionWriter
 
     public static void Validate(AssessmentDefinitionSnapshot definition, string kind, Guid assessmentId)
     {
+        if (definition.ParentNotification is null) throw new ArgumentException("راجع إعدادات رسالة ولي الأمر.");
         if (definition.SchemaVersion != 1 || definition.Kind != kind || definition.AssessmentId != assessmentId)
             throw new ArgumentException("تعريف الواجب أو الامتحان لا يطابق العنصر المطلوب.");
         if (string.IsNullOrWhiteSpace(definition.Title) || definition.Title.Length > 255

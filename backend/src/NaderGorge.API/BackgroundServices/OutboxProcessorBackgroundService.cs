@@ -1,3 +1,4 @@
+using NaderGorge.Infrastructure.Services;
 using Microsoft.AspNetCore.SignalR;
 using NaderGorge.API.Hubs;
 using NaderGorge.Domain.Interfaces;
@@ -179,6 +180,9 @@ public class OutboxProcessorBackgroundService : BackgroundService
         IServiceProvider services,
         CancellationToken ct)
     {
+        if (@event.Type is "ExamGraded" or "HomeworkGraded")
+            await services.GetRequiredService<AssessmentParentNotificationDispatcher>().DispatchAsync(@event, ct);
+
         if (AdminAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
         {
             var jobEnqueuer = services.GetService<IJobEnqueuer>()

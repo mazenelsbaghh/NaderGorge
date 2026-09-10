@@ -1,4 +1,5 @@
 using System.Data;
+using NaderGorge.Application.Common;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -759,21 +760,7 @@ public sealed partial class WhatsAppCampaignService : IWhatsAppCampaignService
     private static WhatsAppCampaignFacetItemDto Facet(string value, int count) =>
         new(value, value, count);
 
-    internal static string? NormalizeE164(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        value = value.Trim();
-        if (value.Length > 32 || value.Count(character => character == '+') > 1 ||
-            value.Contains('+') && value[0] != '+' ||
-            value.Any(character => !(character is >= '0' and <= '9') &&
-            character is not ('+' or '-' or '(' or ')') && !char.IsWhiteSpace(character))) return null;
-        var digits = new string(value.Where(character => character is >= '0' and <= '9').ToArray());
-        if (digits.StartsWith("00", StringComparison.Ordinal)) digits = digits[2..];
-        if (digits.Length == 11 && digits[0] == '0' && digits[1] == '1' && "0125".Contains(digits[2]))
-            digits = $"20{digits[1..]}";
-        return digits.Length == 12 && digits.StartsWith("201", StringComparison.Ordinal) &&
-            "0125".Contains(digits[3]) ? digits : null;
-    }
+    internal static string? NormalizeE164(string? value) => EgyptMobilePhone.Normalize(value);
 
     private static string NormalizeContactRole(string value)
     {

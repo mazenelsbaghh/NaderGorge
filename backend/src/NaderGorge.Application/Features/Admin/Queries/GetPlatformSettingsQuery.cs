@@ -29,6 +29,7 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
         EnsureDefault(settings, PlatformSettingKeys.MaxExtraWatchRequestsPerVideo, CachedPlatformSettings.Default.MaxExtraWatchRequestsPerVideo.ToString());
         EnsureDefault(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage.ToString("0.##"));
         EnsureDefault(settings, PlatformSettingKeys.PlatformName, CachedPlatformSettings.Default.PlatformName);
+        EnsureDefault(settings, ParentWhatsAppRecipients.SettingKey, ParentWhatsAppRecipients.DefaultPriority);
         EnsureDefault(settings, PlatformSettingKeys.SupportPhoneNumber, CachedPlatformSettings.Default.SupportPhoneNumber);
         EnsureDefault(settings, PlatformSettingKeys.SupportWhatsAppUrl, CachedPlatformSettings.Default.SupportWhatsAppUrl);
         EnsureDefault(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled.ToString().ToLower());

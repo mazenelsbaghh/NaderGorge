@@ -21,6 +21,9 @@ public class UpdatePlatformSettingsCommandHandler : IRequestHandler<UpdatePlatfo
 
     public async Task<ApiResponse<bool>> Handle(UpdatePlatformSettingsCommand request, CancellationToken cancellationToken)
     {
+        if (request.Settings.TryGetValue(ParentWhatsAppRecipients.SettingKey, out var priority)
+            && !ParentWhatsAppRecipients.IsValidPriority(priority))
+            return ApiResponse<bool>.Fail("رتّب رقم ولي الأمر الإضافي والأب والأم، كل نوع مرة واحدة.");
         foreach (var kvp in request.Settings)
         {
             var setting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == kvp.Key, cancellationToken);

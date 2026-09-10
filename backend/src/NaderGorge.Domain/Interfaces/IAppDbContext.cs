@@ -111,6 +111,7 @@ public interface IAppDbContext
 
     // Phase 2: Notifications
     DbSet<NotificationEvent> NotificationEvents { get; }
+    DbSet<AssessmentParentDelivery> AssessmentParentDeliveries { get; }
     DbSet<ParentDeviceToken> ParentDeviceTokens { get; }
 
     // Student Notes

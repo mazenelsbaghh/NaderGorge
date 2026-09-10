@@ -224,6 +224,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportMessengerConfiguration> LiveSupportMessengerConfigurations => Set<LiveSupportMessengerConfiguration>();
     public DbSet<LiveSupportMessengerPage> LiveSupportMessengerPages => Set<LiveSupportMessengerPage>();
     public DbSet<WhatsAppCampaign> WhatsAppCampaigns => Set<WhatsAppCampaign>();
+    public DbSet<NaderGorge.Domain.Entities.Notifications.AssessmentParentDelivery> AssessmentParentDeliveries => Set<NaderGorge.Domain.Entities.Notifications.AssessmentParentDelivery>();
     public DbSet<WhatsAppCampaignRecipient> WhatsAppCampaignRecipients => Set<WhatsAppCampaignRecipient>();
     public DbSet<WhatsAppContactPreference> WhatsAppContactPreferences => Set<WhatsAppContactPreference>();
     public DbSet<WhatsAppCampaignAuditEvent> WhatsAppCampaignAuditEvents => Set<WhatsAppCampaignAuditEvent>();
@@ -2998,6 +2999,20 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.PageId, x.DeduplicationKey }).IsUnique();
             e.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        });
+
+        modelBuilder.Entity<NaderGorge.Domain.Entities.Notifications.AssessmentParentDelivery>(e =>
+        {
+            e.ToTable("assessment_parent_deliveries");
+            e.HasKey(delivery => delivery.Id);
+            e.Property(delivery => delivery.AssessmentKind).HasMaxLength(16);
+            e.Property(delivery => delivery.TemplateFingerprint).HasMaxLength(64);
+            e.Property(delivery => delivery.DestinationHash).HasMaxLength(64);
+            e.Property(delivery => delivery.PayloadDigest).HasMaxLength(64);
+            e.Property(delivery => delivery.MetaMessageId).HasMaxLength(255);
+            e.Property(delivery => delivery.FailureCode).HasMaxLength(100);
+            e.HasIndex(delivery => new { delivery.AssessmentKind, delivery.AttemptId }).IsUnique();
+            e.HasIndex(delivery => new { delivery.Status, delivery.CreatedAt });
         });
 
         modelBuilder.Entity<WhatsAppCampaign>(e =>

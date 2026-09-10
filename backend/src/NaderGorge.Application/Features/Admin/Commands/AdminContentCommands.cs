@@ -1485,7 +1485,8 @@ public record AttachHomeworkCommand(
     decimal TotalScore,
     List<AttachHomeworkQuestionDto> Questions,
     Guid? CurrentUserId = null,
-    DateOnly? HomeworkComingSoonOn = null) : IRequest<ApiResponse<Guid>>;
+    DateOnly? HomeworkComingSoonOn = null,
+    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
 
@@ -1537,6 +1538,10 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 "اختر اليوم أو تاريخًا قادمًا لظهور إعلان الواجب.",
                 ["HOMEWORK_COMING_SOON_DATE_PAST"]);
         }
+
+        var parentNotification = request.ParentNotification ?? NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings.Disabled;
+        var notificationError = await parentNotification.ValidateAsync(_db, ct);
+        if (notificationError is not null) return ApiResponse<Guid>.Fail(notificationError);
 
         // Load homework WITHOUT including questions to avoid EF tracking issues
         var hw = await _db.Homeworks
@@ -1591,6 +1596,9 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 .ToListAsync(ct);
             _db.HomeworkQuestions.RemoveRange(existingQuestions);
         }
+
+        hw.ParentNotificationEnabledAt = parentNotification.Enabled ? hw.ParentNotificationEnabledAt ?? DateTime.UtcNow : null;
+        hw.ParentNotificationSettingsJson = parentNotification.ToJson();
 
         // Build new questions as standalone entities (not via navigation property)
         var newQuestions = new List<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>();

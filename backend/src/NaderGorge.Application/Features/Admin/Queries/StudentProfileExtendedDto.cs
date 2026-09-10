@@ -45,12 +45,46 @@ public class StudentProfileExtendedDto
     public List<StudentDeviceDto> Devices { get; set; } = new();
     public List<VideoOverrideDto> Overrides { get; set; } = new();
     public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
+    public List<StudentExamHistoryDto> ExamHistory { get; set; } = new();
+    public List<StudentHomeworkHistoryDto> HomeworkHistory { get; set; } = new();
     public decimal CurrentBalance { get; set; }
     public List<StudentPromotionalBalanceDto> PromotionalBalances { get; set; } = new();
     public List<StudentBalanceTransactionDto> BalanceTransactions { get; set; } = new();
     public List<StudentRechargeRequestDto> RechargeRequests { get; set; } = new();
     public List<AuditLogDto> AuditTrail { get; set; } = new();
     public List<StudentNoteDto> Notes { get; set; } = new();
+}
+
+public class StudentExamHistoryDto
+{
+    public Guid AttemptId { get; set; }
+    public Guid ExamId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? PackageName { get; set; }
+    public string? LessonTitle { get; set; }
+    public decimal Score { get; set; }
+    public decimal TotalScore { get; set; }
+    public bool HasFinalGrade { get; set; }
+    public bool IsPassed { get; set; }
+    public bool IsTimeExpired { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Evaluation { get; set; }
+    public DateTime AttemptedAt { get; set; }
+}
+
+public class StudentHomeworkHistoryDto
+{
+    public Guid SubmissionId { get; set; }
+    public Guid HomeworkId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? PackageName { get; set; }
+    public string? LessonTitle { get; set; }
+    public decimal Score { get; set; }
+    public decimal TotalScore { get; set; }
+    public bool HasFinalGrade { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Evaluation { get; set; }
+    public DateTime AttemptedAt { get; set; }
 }
 
 public class StudentPromotionalBalanceDto

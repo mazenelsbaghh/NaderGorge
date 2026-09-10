@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaderGorge.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NaderGorge.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260910161456_AddAssessmentParentNotifications")]
+    partial class AddAssessmentParentNotifications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -13957,9 +13960,6 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<decimal>("LastPlaybackRate")
                         .HasColumnType("numeric");
-
-                    b.Property<int?>("LearningDurationSeconds")
-                        .HasColumnType("integer");
 
                     b.Property<decimal>("LearningWatchedSeconds")
                         .HasPrecision(18, 3)

@@ -23,12 +23,15 @@ for (const surface of ['admin', 'teacher']) {
           audioUrl: null, imageUrl: null, writtenCorrection: question.writtenCorrection ?? null, hintText: null,
           baseText: null, mistakeStartIndex: null, mistakeEndIndex: null, correctAnswerKey: question.correctAnswerKey ?? null,
           options: (question.possibleAnswers ?? []).map((text, index) => ({ id: `option-${index}`, text, isCorrect: index === 0 })) })) };
+      const template = { id: 'parent-result', name: 'نتيجة الواجب', language: 'ar', category: 'UTILITY', status: 'APPROVED',
+        fingerprint: 'a'.repeat(64), components: [{ type: 'BODY', text: 'الدرجة {{1}} من {{2}}' }] };
       const writes = [];
       let failSave = true;
       await page.route('**/api/**', async route => {
         const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
         let data = [];
         if (path === '/auth/session') data = { user, authorizationVersion: 1 };
+        if (path.endsWith('/notification-templates')) data = [template];
         if (path.endsWith('/dashboard')) data = homework;
         if (path.endsWith('/editor')) data = { definition, attemptCount: homework.submissions.length, revisionToken: 'original' };
         if (route.request().method() !== 'GET') {
@@ -57,6 +60,11 @@ for (const surface of ['admin', 'teacher']) {
       await page.getByRole('button', { name: 'تعديل السؤال 2', exact: true }).click();
       const selectedEditor = page.locator('#assessment-question-editor .ql-editor').first();
       await selectedEditor.fill('السؤال الثاني بعد التعديل');
+      await page.getByRole('checkbox', { name: 'إرسال واتساب تلقائيًا بعد اكتمال التصحيح' }).check();
+      await page.getByRole('combobox', { name: 'قالب رسالة النتيجة' }).selectOption(template.id);
+      await page.getByRole('combobox', { name: 'المتغير 1 (نص الرسالة)' }).selectOption('Score');
+      await page.getByRole('combobox', { name: 'المتغير 2 (نص الرسالة)' }).selectOption('TotalScore');
+      await page.getByText('الدرجة 35 من 40', { exact: true }).waitFor();
       await page.getByRole('button', { name: 'معاينة تأثير التعديل', exact: true }).click();
       await page.getByRole('button', { name: 'حفظ التعديلات المؤكدة' }).click();
       await page.getByRole('alert').filter({ hasText: 'تعذر حفظ الاختبار مؤقتًا' }).waitFor();
@@ -70,6 +78,8 @@ for (const surface of ['admin', 'teacher']) {
       assert.ok(saved.questions[1].text.includes('السؤال الثاني بعد التعديل'));
       assert.equal(saved.questions[1].writtenCorrection, 'نموذج الإجابة');
       assert.equal(saved.totalScore, 40);
+      assert.deepEqual(saved.parentNotification, { enabled: true, templateId: template.id,
+        templateFingerprint: template.fingerprint, parameters: [{ source: 'Score' }, { source: 'TotalScore' }] });
       assert.ok(writes.every(write => /\/(revision-preview|definition)$/.test(write.path)));
       const saves = writes.filter(write => write.path.endsWith('/definition'));
       assert.equal(saves[0].body.operationId, saves[1].body.operationId);

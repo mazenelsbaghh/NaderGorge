@@ -530,14 +530,16 @@ public sealed partial class WhatsAppCampaignService
         if (filters.Dto.HasExamAttempt.HasValue)
             query = query.Where(user => _db.StudentExamAttempts.Any(attempt =>
                 attempt.UserId == user.Id && filters.ExamIds.Contains(attempt.ExamId) &&
-                (attempt.StartedAt ?? attempt.CreatedAt) >= filters.Dto.ExamFromUtc!.Value &&
-                (attempt.StartedAt ?? attempt.CreatedAt) < filters.Dto.ExamToUtc!.Value
+                attempt.Evaluation != null && attempt.Evaluation != "" &&
+                (!filters.Dto.ExamFromUtc.HasValue || (attempt.StartedAt ?? attempt.CreatedAt) >= filters.Dto.ExamFromUtc.Value) &&
+                (!filters.Dto.ExamToUtc.HasValue || (attempt.StartedAt ?? attempt.CreatedAt) < filters.Dto.ExamToUtc.Value)
             ) == filters.Dto.HasExamAttempt.Value);
         if (filters.Dto.HasHomeworkSubmission.HasValue)
             query = query.Where(user => _db.HomeworkSubmissions.Any(submission =>
                 submission.StudentId == user.Id && filters.HomeworkIds.Contains(submission.HomeworkId) &&
-                submission.SubmittedAt != null && submission.SubmittedAt >= filters.Dto.HomeworkFromUtc!.Value &&
-                submission.SubmittedAt < filters.Dto.HomeworkToUtc!.Value
+                submission.SubmittedAt != null &&
+                (!filters.Dto.HomeworkFromUtc.HasValue || submission.SubmittedAt >= filters.Dto.HomeworkFromUtc.Value) &&
+                (!filters.Dto.HomeworkToUtc.HasValue || submission.SubmittedAt < filters.Dto.HomeworkToUtc.Value)
             ) == filters.Dto.HasHomeworkSubmission.Value);
         return query;
     }
@@ -582,8 +584,8 @@ public sealed partial class WhatsAppCampaignService
         if (filters.HasActiveAccess == false && !hasAcademicBase)
             throw Invalid("فلتر ليس لديه صلاحية يحتاج جمهورًا أكاديميًا محددًا.");
         ValidateActivity("المشاهدة", filters.HasWatched, lessonIds, filters.WatchFromUtc, filters.WatchToUtc, hasAcademicBase);
-        ValidateActivity("الامتحان", filters.HasExamAttempt, examIds, filters.ExamFromUtc, filters.ExamToUtc, hasAcademicBase);
-        ValidateActivity("الواجب", filters.HasHomeworkSubmission, homeworkIds, filters.HomeworkFromUtc, filters.HomeworkToUtc, hasAcademicBase);
+        ValidateActivity("الامتحان", filters.HasExamAttempt, examIds, filters.ExamFromUtc, filters.ExamToUtc, hasAcademicBase, requireDateRange: filters.HasExamAttempt != true);
+        ValidateActivity("الواجب", filters.HasHomeworkSubmission, homeworkIds, filters.HomeworkFromUtc, filters.HomeworkToUtc, hasAcademicBase, requireDateRange: filters.HasHomeworkSubmission != true);
         if (filters.HasPaidPurchase.HasValue)
         {
             if (!filters.HasPaidPurchase.Value && !hasAcademicBase)
@@ -860,7 +862,8 @@ public sealed partial class WhatsAppCampaignService
         Guid[] scopedIds,
         DateTime? from,
         DateTime? to,
-        bool hasAcademicBase)
+        bool hasAcademicBase,
+        bool requireDateRange = true)
     {
         if (!condition.HasValue)
         {
@@ -871,7 +874,7 @@ public sealed partial class WhatsAppCampaignService
         if (scopedIds.Length == 0) throw Invalid($"فلتر {label} يحتاج عنصرًا محددًا.");
         if (!condition.Value && !hasAcademicBase)
             throw Invalid($"فلتر لم يتم {label} يحتاج جمهورًا أكاديميًا محددًا أولًا.");
-        ValidateRange(label, from, to, required: true);
+        ValidateRange(label, from, to, required: requireDateRange);
     }
 
     private static void ValidateRange(string label, DateTime? from, DateTime? to, bool required)

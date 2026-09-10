@@ -12,6 +12,8 @@ import {
   getHomeworkComingSoonLabel,
 } from '@/lib/homework-coming-soon';
 import { getApiErrorSummary } from '@/lib/api-errors';
+import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
+import { disabledParentNotification } from '@/services/assessment-revision-service';
 
 interface UnifiedAssessmentBuilderProps {
   type: 'exam' | 'homework';
@@ -55,6 +57,7 @@ export function UnifiedAssessmentBuilder({
   );
   
   const [saving, setSaving] = useState(false);
+  const [parentNotification, setParentNotification] = useState(disabledParentNotification);
 
 
 
@@ -103,6 +106,7 @@ export function UnifiedAssessmentBuilder({
       if (isExam) {
         // Exam payload mapping
         const payload = {
+          parentNotification,
           title,
           description,
           totalScore,
@@ -124,6 +128,7 @@ export function UnifiedAssessmentBuilder({
         toast.success('تم إنشاء الامتحان وإضافته بنجاح');
       } else {
         const payload = {
+          parentNotification,
           title,
           instructions: description,
           isMandatory,
@@ -143,6 +148,7 @@ export function UnifiedAssessmentBuilder({
       
       // Reset
       setTitle('');
+      setParentNotification(disabledParentNotification);
       setDescription('');
       setDurationMinutes(undefined);
       setDisplayQuestionCount(undefined);
@@ -248,6 +254,7 @@ export function UnifiedAssessmentBuilder({
               </div>
             </div>
 
+            <AssessmentParentNotificationEditor kind={type} settings={parentNotification} onChange={setParentNotification} disabled={saving} />
             <div className="space-y-4 pt-2">
               <div className="flex items-center">
                 <Checkbox isSelected={isMandatory} onChange={setIsMandatory}>

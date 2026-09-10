@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Domain.Entities.LiveSupport;

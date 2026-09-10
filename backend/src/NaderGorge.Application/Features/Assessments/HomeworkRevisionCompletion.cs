@@ -30,7 +30,13 @@ public sealed class HomeworkRevisionCompletion(IAppDbContext db)
                 submission.StartedAt = DateTime.UtcNow;
                 definition = definition with { CompletionStartedAt = submission.StartedAt };
                 submission.DefinitionSnapshotJson = definition.ToJson();
-                await db.SaveChangesAsync(retryCt);
+                if (submission.Status == SubmissionStatus.Graded)
+                db.OutboxEvents.Add(new OutboxEvent
+                {
+                    Type = "HomeworkGraded", TargetUserId = submission.StudentId.ToString(),
+                    PayloadJson = JsonSerializer.Serialize(new { homeworkId = submission.HomeworkId, submissionId = submission.Id })
+                });
+            await db.SaveChangesAsync(retryCt);
             }
             await transaction.CommitAsync(retryCt);
             return ApiResponse<StartedHomeworkRevision>.Ok(new(submission.StartedAt, definition));

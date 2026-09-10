@@ -24,6 +24,7 @@ public sealed record AssessmentDefinitionSnapshot(
     public DateTime? CompletionStartedAt { get; init; }
     public Guid? RevisionId { get; init; }
     public bool IsActive { get; init; } = true;
+    public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
 
@@ -46,6 +47,7 @@ public sealed record AssessmentDefinitionSnapshot(
         (assignedQuestions ?? exam.ExamQuestions).Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromExamQuestion).ToArray())
     {
         IsActive = exam.IsActive,
+        ParentNotification = AssessmentParentNotificationSettings.Read(exam.ParentNotificationSettingsJson),
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
             .OrderBy(q => q.Order).ThenBy(q => q.Id).Select(FromExamQuestion).ToArray()
@@ -78,7 +80,7 @@ public sealed record AssessmentDefinitionSnapshot(
         1, "homework", homework.Id, homework.Title, homework.Description, homework.TotalScore,
         homework.PassingScoreThreshold, homework.DurationMinutes, homework.IsMandatory, homework.IsRandomized, null,
         homework.Questions.Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromHomeworkQuestion).ToArray())
-    { IsActive = homework.IsActive };
+    { IsActive = homework.IsActive, ParentNotification = AssessmentParentNotificationSettings.Read(homework.ParentNotificationSettingsJson) };
 
     public static Exam ResolveExam(Exam current, string? snapshotJson)
     {

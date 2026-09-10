@@ -48,6 +48,35 @@ public sealed class VideoProgressRecoveryPostgresTests
         Assert.Null(StudentWatchProgressReader.CalculatePercent([other]));
     }
 
+    [Fact]
+    public async Task HistoricalCorrectionSuppliesMissingDurationWithoutChangingOtherStudentsOrQuota()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var session = await SeedSessionAsync(fixture.Db);
+        session.TrackingDurationSeconds = null;
+        fixture.Db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = session.UserId, LessonVideoId = session.LessonVideoId,
+            LearningWatchedSeconds = 95, LearningDurationSeconds = 100,
+            TimeWatchedInSeconds = 12, ActualWatchedSeconds = 6, WatchCount = 1
+        });
+        await fixture.Db.SaveChangesAsync();
+        var scope = new StudentLessonCompletionContext(fixture.Db, session.UserId, [session.LessonVideo.LessonId]);
+        var corrected = await StudentWatchProgressReader.ReadAsync(scope, [session.LessonVideoId], default);
+        Assert.Equal(95, StudentWatchProgressReader.CalculatePercent(corrected));
+        var unrelated = await StudentWatchProgressReader.ReadAsync(scope with { UserId = Guid.NewGuid() }, [session.LessonVideoId], default);
+        Assert.Null(StudentWatchProgressReader.CalculatePercent(unrelated));
+        session.TrackingDurationSeconds = 200;
+        await fixture.Db.SaveChangesAsync();
+        var actual = await StudentWatchProgressReader.ReadAsync(scope, [session.LessonVideoId], default);
+        Assert.Equal(47, StudentWatchProgressReader.CalculatePercent(actual));
+        var watch = await fixture.Db.VideoWatchEvents.SingleAsync(watch => watch.UserId == session.UserId);
+        Assert.Equal(1, watch.WatchCount);
+        Assert.Equal(12, watch.TimeWatchedInSeconds);
+        Assert.Equal(6, watch.ActualWatchedSeconds);
+    }
+
     [Theory]
     [InlineData("lock")]
     [InlineData("commit-ack")]

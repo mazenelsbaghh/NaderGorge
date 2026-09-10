@@ -1,3 +1,4 @@
+import type { AssessmentParentNotificationSettings } from './assessment-revision-service';
 import apiClient from './api-client';
 import type { BunnyPlaybackMode } from '@/lib/bunny-playback-mode';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
@@ -565,6 +566,34 @@ export interface StudentProfileExtendedDto {
       lastWatchedAt: string | null;
     }>;
   };
+  examHistory: Array<{
+    attemptId: string;
+    examId: string;
+    title: string;
+    packageName?: string | null;
+    lessonTitle?: string | null;
+    score: number;
+    totalScore: number;
+    hasFinalGrade: boolean;
+    isPassed: boolean;
+    isTimeExpired: boolean;
+    status: 'InProgress' | 'PendingReview' | 'Graded';
+    evaluation?: string | null;
+    attemptedAt: string;
+  }>;
+  homeworkHistory: Array<{
+    submissionId: string;
+    homeworkId: string;
+    title: string;
+    packageName?: string | null;
+    lessonTitle?: string | null;
+    score: number;
+    totalScore: number;
+    hasFinalGrade: boolean;
+    status: 'InProgress' | 'PendingReview' | 'Graded' | 'Missed';
+    evaluation?: string | null;
+    attemptedAt: string;
+  }>;
   currentBalance: number;
   promotionalBalances: Array<{
     teacherId?: string | null;
@@ -1870,6 +1899,7 @@ export const adminService = {
       totalScore: number;
       requiredPointsToPass: number;
       homeworkComingSoonOn?: string | null;
+      parentNotification?: AssessmentParentNotificationSettings;
       questions: {
         text: string;
         type: string;
@@ -1972,6 +2002,7 @@ export const adminService = {
     return res.data;
   },
   createInlineExam: async (payload: {
+    parentNotification?: AssessmentParentNotificationSettings;
     title: string;
     description: string;
     passingScore: number;

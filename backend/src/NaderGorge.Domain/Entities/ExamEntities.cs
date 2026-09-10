@@ -12,6 +12,8 @@ public enum QuestionType
 
 public class Exam : BaseEntity, IArchivableContent
 {
+    public string? ParentNotificationSettingsJson { get; set; }
+    public DateTime? ParentNotificationEnabledAt { get; set; }
     public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

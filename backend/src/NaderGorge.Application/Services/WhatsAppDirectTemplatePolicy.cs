@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.LiveSupport;
 
-namespace NaderGorge.Infrastructure.Services;
+namespace NaderGorge.Application.Services;
 
 public sealed record WhatsAppDirectTemplateValidation(
     IReadOnlyList<WhatsAppCloudService.TemplateComponent> ProviderComponents,

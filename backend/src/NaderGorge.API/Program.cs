@@ -280,6 +280,7 @@ builder.Services.AddHttpClient<FacebookMessengerGraphClient>(client =>
 builder.Services.AddScoped<FacebookMessengerLiveSupportService>();
 builder.Services.AddScoped<FacebookMessengerAdminService>();
 builder.Services.AddSingleton<IWhatsAppCampaignDataProtector, WhatsAppCampaignDataProtector>();
+builder.Services.AddScoped<AssessmentParentNotificationDispatcher>();
 builder.Services.AddScoped<WhatsAppCampaignService>();
 builder.Services.AddScoped<IWhatsAppCampaignService>(provider =>
     provider.GetRequiredService<WhatsAppCampaignService>());

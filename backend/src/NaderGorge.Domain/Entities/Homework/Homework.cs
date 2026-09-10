@@ -6,6 +6,8 @@ namespace NaderGorge.Domain.Entities.Homework;
 
 public class Homework : NaderGorge.Domain.Entities.IArchivableContent
 {
+    public string? ParentNotificationSettingsJson { get; set; }
+    public DateTime? ParentNotificationEnabledAt { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid LessonId { get; set; }
     public string Title { get; set; } = string.Empty;

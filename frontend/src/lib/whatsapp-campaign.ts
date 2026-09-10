@@ -459,16 +459,18 @@ export function validateWhatsAppAudienceFilters(filters: WhatsAppCampaignAudienc
     errors.push('نطاق المشاهدة يحتاج اختيار «شاهد الحصة» أو «لم يشاهدها».');
   }
   if (filters.hasExamAttempt !== null && filters.hasExamAttempt !== undefined) {
-    if (filters.examIds.length === 0 || !filters.examFromUtc || !filters.examToUtc) {
-      errors.push('فلتر الامتحان يحتاج امتحانًا محددًا وفترة بداية ونهاية.');
+    if (filters.examIds.length === 0) errors.push('اختر الامتحان المطلوب.');
+    if ((filters.hasExamAttempt === false || filters.examFromUtc || filters.examToUtc) && (!filters.examFromUtc || !filters.examToUtc)) {
+      errors.push(filters.hasExamAttempt === false ? 'فلتر لم يمتحن يحتاج بداية ونهاية الفترة.' : 'حدد بداية ونهاية فترة الامتحان، أو اتركهما فارغتين لكل التسليمات.');
     }
     if (filters.hasExamAttempt === false && !hasAcademicBase) errors.push('«لم يمتحن» يحتاج نطاقًا دراسيًا أو محتوى محددًا.');
   } else if (filters.examIds.length > 0 || filters.examFromUtc || filters.examToUtc) {
     errors.push('نطاق الامتحان يحتاج اختيار «امتحن» أو «لم يمتحن».');
   }
   if (filters.hasHomeworkSubmission !== null && filters.hasHomeworkSubmission !== undefined) {
-    if (filters.homeworkIds.length === 0 || !filters.homeworkFromUtc || !filters.homeworkToUtc) {
-      errors.push('فلتر الواجب يحتاج واجبًا محددًا وفترة بداية ونهاية.');
+    if (filters.homeworkIds.length === 0) errors.push('اختر الواجب المطلوب.');
+    if ((filters.hasHomeworkSubmission === false || filters.homeworkFromUtc || filters.homeworkToUtc) && (!filters.homeworkFromUtc || !filters.homeworkToUtc)) {
+      errors.push(filters.hasHomeworkSubmission === false ? 'فلتر لم يسلم الواجب يحتاج بداية ونهاية الفترة.' : 'حدد بداية ونهاية فترة الواجب، أو اتركهما فارغتين لكل التسليمات.');
     }
     if (filters.hasHomeworkSubmission === false && !hasAcademicBase) errors.push('«لم يسلّم الواجب» يحتاج نطاقًا دراسيًا أو محتوى محددًا.');
   } else if (filters.homeworkIds.length > 0 || filters.homeworkFromUtc || filters.homeworkToUtc) {

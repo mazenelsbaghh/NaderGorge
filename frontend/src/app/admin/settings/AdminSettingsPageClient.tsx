@@ -1,6 +1,7 @@
 'use client';
 
 import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
+import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
 import { watermarkDefaults } from '@/lib/video-watermark';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -412,6 +413,7 @@ export default function AdminSettingsPageClient() {
 
   // Settings States
   const [settings, setSettings] = useState<Record<string, string>>({
+    ParentWhatsAppPhonePriority: defaultParentWhatsAppPriority,
     VideoWatchThresholdPercentage: '30',
     YouTubeWatchThresholdPercentage: '30',
     BunnyWatchThresholdPercentage: '30',
@@ -539,7 +541,8 @@ export default function AdminSettingsPageClient() {
 
     setIsSaving(true);
     try {
-      await adminService.updatePlatformSettings(settings);
+      const saved = await adminService.updatePlatformSettings(settings);
+      if (!saved.success) throw new Error(saved.message || 'تعذر حفظ الإعدادات.');
       toast.success('تم حفظ إعدادات المنصة بنجاح ✅');
     } catch (err) {
       devConsole.error(err);
@@ -1194,7 +1197,11 @@ export default function AdminSettingsPageClient() {
                 <div className="flex justify-end"><button onClick={handleSaveSettings} disabled={isSaving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-7 font-bold text-white disabled:opacity-50"><Save size={18}/>{isSaving ? 'جاري الحفظ...' : 'حفظ إعدادات المشغل'}</button></div>
               </motion.div>
             ) : activeTab === 'whatsapp' ? (
-              <WhatsAppSettingsTab />
+              <div className="space-y-6">
+                <ParentWhatsAppPrioritySettings value={settings.ParentWhatsAppPhonePriority} onChange={priority => handleSettingChange('ParentWhatsAppPhonePriority', priority)} disabled={isSaving} />
+                <div className="flex justify-end"><button type="button" onClick={handleSaveSettings} disabled={isSaving} className="admin-btn-primary min-h-11 px-5">{isSaving ? 'جاري الحفظ...' : 'حفظ ترتيب أرقام ولي الأمر'}</button></div>
+                <WhatsAppSettingsTab />
+              </div>
             ) : activeTab === 'messenger' ? (
               <motion.div
                 key="messenger-tab"

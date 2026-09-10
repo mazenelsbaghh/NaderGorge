@@ -44,16 +44,16 @@ export function WhatsAppCampaignAudienceBuilder({
   });
   const hasPurchasePeriod = Boolean(filters.purchaseFromUtc && filters.purchaseToUtc);
   const hasWatchScope = filters.lessonIds.length > 0 && Boolean(filters.watchFromUtc && filters.watchToUtc);
-  const hasExamScope = filters.examIds.length > 0 && Boolean(filters.examFromUtc && filters.examToUtc);
-  const hasHomeworkScope = filters.homeworkIds.length > 0 && Boolean(filters.homeworkFromUtc && filters.homeworkToUtc);
+  const hasExamScope = filters.examIds.length > 0;
+  const hasHomeworkScope = filters.homeworkIds.length > 0;
   const canChooseNegativeWatch = Boolean(
     hasWatchScope && hasAcademicBase
   );
   const canChooseNegativeExam = Boolean(
-    hasExamScope && hasAcademicBase
+    hasExamScope && hasAcademicBase && filters.examFromUtc && filters.examToUtc
   );
   const canChooseNegativeHomework = Boolean(
-    hasHomeworkScope && hasAcademicBase
+    hasHomeworkScope && hasAcademicBase && filters.homeworkFromUtc && filters.homeworkToUtc
   );
 
   function patch(change: Partial<WhatsAppCampaignAudienceFilters>) {
@@ -220,15 +220,15 @@ export function WhatsAppCampaignAudienceBuilder({
         )}
       </section>
 
-      <details className="group rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-accent)]">
-          فلاتر الامتحان والواجب المتقدمة
-          <span aria-hidden="true" className="text-xl text-[var(--admin-muted)] transition-transform group-open:rotate-45">+</span>
-        </summary>
+      <section aria-labelledby="campaign-assessment-filters" className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]">
+        <div className="px-4 py-3">
+          <h3 id="campaign-assessment-filters" className="font-black text-[var(--admin-text)]">الطلاب الذين امتحنوا أو سلّموا الواجب</h3>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">اختر الامتحان أو الواجب لاستهداف من سلّموه. الفترة اختيارية، وفتح المحاولة بدون تسليم لا يُحتسب.</p>
+        </div>
         <div className="space-y-6 border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
           <div className="space-y-4">
             <div className="grid gap-3 lg:grid-cols-3">
-              <FacetPicker label="الامتحان" options={facets.exams} values={filters.examIds} onChange={(examIds) => patch({ examIds, hasExamAttempt: examIds.length > 0 ? filters.hasExamAttempt : null })} />
+              <FacetPicker label="الامتحان" options={facets.exams} values={filters.examIds} onChange={(examIds) => patch({ examIds, hasExamAttempt: examIds.length > 0 ? filters.hasExamAttempt ?? true : null, ...(examIds.length === 0 ? { examFromUtc: null, examToUtc: null } : {}) })} />
               <DateField label="بداية فترة الامتحان" value={filters.examFromUtc} onChange={(date) => patch({ examFromUtc: startOfCairoDate(date) })} />
               <DateField label="نهاية فترة الامتحان" value={filters.examToUtc} exclusiveEnd onChange={(date) => patch({ examToUtc: endOfCairoDate(date) })} />
             </div>
@@ -237,13 +237,13 @@ export function WhatsAppCampaignAudienceBuilder({
               value={filters.hasExamAttempt ?? null}
               options={[[null, 'لا أفلتر بالامتحان'], [true, 'امتحن'], [false, 'لم يمتحن']]}
               disabledValues={[...(!hasExamScope ? [true] as const : []), ...(!canChooseNegativeExam ? [false] as const : [])]}
-              disabledHint="الحالتان تحتاجان امتحانًا وفترة؛ و«لم يمتحن» يحتاج أيضًا نطاقًا دراسيًا أو محتوى."
+              disabledHint="اختر امتحانًا أولًا. «لم يمتحن» يحتاج أيضًا تحديد فترة."
               onChange={(value) => setBooleanCondition('hasExamAttempt', value)}
             />
           </div>
           <div className="space-y-4 border-t border-[var(--admin-border)] pt-5">
             <div className="grid gap-3 lg:grid-cols-3">
-              <FacetPicker label="الواجب" options={facets.homeworks} values={filters.homeworkIds} onChange={(homeworkIds) => patch({ homeworkIds, hasHomeworkSubmission: homeworkIds.length > 0 ? filters.hasHomeworkSubmission : null })} />
+              <FacetPicker label="الواجب" options={facets.homeworks} values={filters.homeworkIds} onChange={(homeworkIds) => patch({ homeworkIds, hasHomeworkSubmission: homeworkIds.length > 0 ? filters.hasHomeworkSubmission ?? true : null, ...(homeworkIds.length === 0 ? { homeworkFromUtc: null, homeworkToUtc: null } : {}) })} />
               <DateField label="بداية فترة الواجب" value={filters.homeworkFromUtc} onChange={(date) => patch({ homeworkFromUtc: startOfCairoDate(date) })} />
               <DateField label="نهاية فترة الواجب" value={filters.homeworkToUtc} exclusiveEnd onChange={(date) => patch({ homeworkToUtc: endOfCairoDate(date) })} />
             </div>
@@ -252,12 +252,12 @@ export function WhatsAppCampaignAudienceBuilder({
               value={filters.hasHomeworkSubmission ?? null}
               options={[[null, 'لا أفلتر بالواجب'], [true, 'سلّم الواجب'], [false, 'لم يسلّم الواجب']]}
               disabledValues={[...(!hasHomeworkScope ? [true] as const : []), ...(!canChooseNegativeHomework ? [false] as const : [])]}
-              disabledHint="الحالتان تحتاجان واجبًا وفترة؛ و«لم يسلّم الواجب» يحتاج أيضًا نطاقًا دراسيًا أو محتوى."
+              disabledHint="اختر واجبًا أولًا. «لم يسلّم الواجب» يحتاج أيضًا تحديد فترة."
               onChange={(value) => setBooleanCondition('hasHomeworkSubmission', value)}
             />
           </div>
         </div>
-      </details>
+      </section>
 
       {errors.length > 0 ? (
         <ul role="alert" className="space-y-1 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-sm font-semibold text-[var(--admin-warning)]">

@@ -15,6 +15,8 @@ import { assessmentRevisionService, defaultRevisionPolicy, type AssessmentDefini
 import { getApiErrorSummary } from '@/lib/api-errors';
 import { createClientId } from '@/lib/client-id';
 import { questionTextToPlainText } from '@/lib/question-text';
+import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
+import { disabledParentNotification } from '@/services/assessment-revision-service';
 
 const button = 'min-h-11 rounded-xl border border-[var(--admin-border)] px-4 py-2 text-sm font-bold hover:bg-[var(--admin-card-soft)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]';
 const primary = `${button} bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:brightness-110`;
@@ -108,6 +110,7 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
             <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={definition.isRandomized} onChange={event => updateDefinition({ isRandomized: event.target.checked })} />ترتيب عشوائي للأسئلة</label>
           </div>
         </fieldset>
+        <AssessmentParentNotificationEditor kind={kind} settings={definition.parentNotification ?? disabledParentNotification} onChange={parentNotification => updateDefinition({ parentNotification })} disabled={busy} />
         <section aria-label="تعديل الأسئلة" className="space-y-4">
           {subjects.length > 0 && <label className="block space-y-2"><span>مادة أسئلة الامتحان</span><select className="admin-input w-full" disabled={busy} value={subjectId} onChange={event => { setSubjectId(event.target.value); invalidatePreview(); }}><option value="">اختر المادة</option>{subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>}
           <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">الأسئلة ({definition.questions.length})</h2>

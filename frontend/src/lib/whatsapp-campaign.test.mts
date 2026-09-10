@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import type { WhatsAppCampaignAudienceFilters } from '@/services/live-support-service';
+
 import {
   availableWhatsAppCampaignVariableSources,
   createEmptyWhatsAppAudienceFilters,
@@ -367,4 +369,14 @@ test('template drift and expired previews invalidate launch review', () => {
   assert.equal(isWhatsAppCampaignPreviewCurrent(preview, approvedTextTemplate.id, approvedTextTemplate), true);
   assert.equal(isWhatsAppCampaignPreviewCurrent(preview, approvedTextTemplate.id, { ...approvedTextTemplate, fingerprint: 'b'.repeat(64) }), false);
   assert.equal(isWhatsAppCampaignPreviewCurrent({ ...preview, expiresAt: '2000-01-01T00:00:00Z' }, approvedTextTemplate.id, approvedTextTemplate), false);
+});
+
+test('submitted exams and homework allow all dates but negative audiences still require a period', () => {
+  for (const kind of ['exam', 'homework']) {
+    const filters: WhatsAppCampaignAudienceFilters = { ...createEmptyWhatsAppAudienceFilters(), contactRoles: ['StudentPrimary'], packageIds: ['package'],
+      ...(kind === 'exam' ? { examIds: ['exam'], hasExamAttempt: true } : { homeworkIds: ['homework'], hasHomeworkSubmission: true }) };
+    assert.deepEqual(validateWhatsAppAudienceFilters(filters), []);
+    const negative = { ...filters, ...(kind === 'exam' ? { hasExamAttempt: false } : { hasHomeworkSubmission: false }) };
+    assert.ok(validateWhatsAppAudienceFilters(negative).some(error => error.includes('الفترة')));
+  }
 });

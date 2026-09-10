@@ -1,7 +1,16 @@
 import apiClient from './api-client';
 import { invalidateMany } from '@/lib/cache-invalidation';
+import type { LiveSupportWhatsAppTemplate } from './live-support-service';
 
 export type AssessmentKind = 'homework' | 'exam';
+export interface AssessmentResultParameter { source: string; literal?: string | null }
+export interface AssessmentParentNotificationSettings {
+  enabled: boolean; templateId: string | null; templateFingerprint: string | null;
+  parameters: AssessmentResultParameter[];
+}
+export const disabledParentNotification: AssessmentParentNotificationSettings = {
+  enabled: false, templateId: null, templateFingerprint: null, parameters: [],
+};
 export interface RevisionOption { id: string; text: string; isCorrect: boolean }
 export interface RevisionQuestion {
   id: string; bankQuestionId: string; order: number; type: number; text: string; points: number;
@@ -14,6 +23,7 @@ export interface AssessmentDefinition {
   totalScore: number; passingScore: number | null; durationMinutes: number | null;
   isMandatory: boolean; isRandomized: boolean; isActive: boolean; displayQuestionCount: number | null;
   questions: RevisionQuestion[];
+  parentNotification?: AssessmentParentNotificationSettings;
 }
 export interface RevisionPolicy {
   previousAttempts: 'Preserve' | 'Regrade';
@@ -38,6 +48,8 @@ function unwrap<T>(response: { data: ApiEnvelope<T> }): T {
   return response.data.data;
 }
 export const assessmentRevisionService = {
+  notificationTemplates: async (kind: AssessmentKind) => unwrap(await apiClient.get<ApiEnvelope<LiveSupportWhatsAppTemplate[]>>(
+    `/admin/${kind === 'exam' ? 'exams' : 'homework'}/notification-templates`)),
   load: async (kind: AssessmentKind, id: string) => unwrap(await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`${endpoint(kind, id)}/editor`)),
   preview: async (definition: AssessmentDefinition, policy: RevisionPolicy) => unwrap(await apiClient.post<ApiEnvelope<RevisionPreview>>(
     `${endpoint(definition.kind, definition.assessmentId)}/revision-preview`, { definition, policy })),
