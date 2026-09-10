@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Clock, ClockAlert } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 
@@ -26,9 +26,20 @@ export function CountdownTimer({
     return durationMinutes * 60;
   });
   const shouldReduceMotion = useReducedMotion();
+  const onTimeExpiredRef = useRef(onTimeExpired);
+  const expiredAttemptRef = useRef<string | null>(null);
+  useEffect(() => {
+    onTimeExpiredRef.current = onTimeExpired;
+  }, [onTimeExpired]);
 
   useEffect(() => {
     if (!durationMinutes) return;
+    const expirationKey = `${startedAt}:${durationMinutes}`;
+    const expireAttempt = () => {
+      if (expiredAttemptRef.current === expirationKey) return;
+      expiredAttemptRef.current = expirationKey;
+      onTimeExpiredRef.current();
+    };
 
     // Use remainingSeconds if provided, otherwise compute target from client system clock relative to startedAt
     const initialTimeLeft = remainingSeconds !== undefined && remainingSeconds !== null
@@ -44,7 +55,7 @@ export function CountdownTimer({
     setTimeLeft(initialTimeLeft);
 
     if (initialTimeLeft <= 0) {
-      onTimeExpired();
+      expireAttempt();
       return;
     }
 
@@ -56,14 +67,14 @@ export function CountdownTimer({
       if (remainingMs <= 0) {
         clearInterval(interval);
         setTimeLeft(0);
-        onTimeExpired();
+        expireAttempt();
       } else {
         setTimeLeft(Math.ceil(remainingMs / 1000));
       }
     }, 200); // 200ms poll speed ensures wake from tab suspend is processed near-instantly
 
     return () => clearInterval(interval);
-  }, [startedAt, durationMinutes, remainingSeconds, onTimeExpired]);
+  }, [startedAt, durationMinutes, remainingSeconds]);
 
   if (!durationMinutes) {
     return null;

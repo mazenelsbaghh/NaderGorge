@@ -130,6 +130,7 @@ export default function HomeworkPageClient() {
       </button>
 
       <HomeworkViewer
+        key={`${attempt.submissionId}:${attempt.revisionId ?? ""}`}
         homeworkId={homeworkId}
         attempt={attempt}
         packageId={packageId}

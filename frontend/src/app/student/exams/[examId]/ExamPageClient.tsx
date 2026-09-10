@@ -22,63 +22,45 @@ export default function ExamPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadExam = useCallback(async () => {
+  const startExam = useCallback(async () => {
     if (!examId) return;
-
     setLoading(true);
     setError('');
-    setPassedResult(null);
-
     try {
-      try {
-        const passedResultResponse = await examService.getLatestResult(examId);
-        setPassedResult(passedResultResponse.data.data);
-        setExam(null);
-        return;
-      } catch (err: unknown) {
-        const passedResultError = err as { response?: { status?: number; data?: { message?: string } } };
-        if (passedResultError.response?.status && passedResultError.response.status !== 404) {
-          if (passedResultError.response.data?.message) {
-            setError(passedResultError.response.data.message);
-          } else if (passedResultError.response.status === 403) {
-            setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
-          } else {
-            setError('تعذر تحميل نتيجة الامتحان الحالية.');
-          }
-          setExam(null);
-          return;
-        }
-      }
-
-      try {
-        const res = await examService.startExam(examId);
-        setExam(res.data.data);
-      } catch (err: unknown) {
-        const apiError = err as { response?: { status?: number; data?: { errors?: string[]; message?: string } } };
-
-        if (apiError.response?.data?.message) {
-          setError(apiError.response.data.message);
-        } else if (apiError.response?.status === 403) {
-          setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
-        } else if (apiError.response?.data?.errors?.includes('لقد اجتزت هذا الامتحان بالفعل.')) {
-          try {
-            const passedResultResponse = await examService.getLatestPassedResult(examId);
-            setPassedResult(passedResultResponse.data.data);
-            setExam(null);
-            return;
-          } catch {
-            setError('لقد اجتزت هذا الامتحان بالفعل.');
-          }
-        } else {
-          setError('الامتحان غير موجود أو حدث خطأ أثناء تحميله.');
-        }
-        setExam(null);
-      }
-
+      const response = await examService.startExam(examId);
+      setExam(response.data.data);
+      setPassedResult(null);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
+      setError(apiError.response?.data?.message || 'تعذر بدء محاولة جديدة. حاول مرة أخرى.');
+      setExam(null);
+      setPassedResult(null);
     } finally {
       setLoading(false);
     }
   }, [examId]);
+
+  const loadExam = useCallback(async () => {
+    if (!examId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const response = await examService.getLatestResult(examId);
+      setPassedResult(response.data.data);
+      setExam(null);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { status?: number; data?: { message?: string } } };
+      if (apiError.response?.status === 404) {
+        await startExam();
+      } else {
+        setError(apiError.response?.data?.message || 'تعذر تحميل نتيجة الامتحان الحالية. حاول مرة أخرى.');
+        setExam(null);
+        setPassedResult(null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [examId, startExam]);
 
   useEffect(() => {
     void loadExam();
@@ -103,7 +85,7 @@ export default function ExamPageClient() {
             result={passedResult}
             packageId={packageId}
             lessonId={passedResult.lessonId}
-            onRestart={loadExam}
+            onRestart={startExam}
             onResultRefresh={setPassedResult}
             returnHref={resultReturnHref}
             returnLabel={resultReturnLabel}
@@ -159,13 +141,14 @@ export default function ExamPageClient() {
       )}
 
       <ExamViewer
+        key={`${exam.attemptId}:${exam.revisionId ?? ""}`}
         examId={examId}
         examTitle={exam.title}
         examDescription={exam.description}
         attempt={exam}
         packageId={packageId}
         lessonId={lessonId}
-        onRestart={loadExam}
+        onRestart={startExam}
         resultReturnHref={resultReturnHref}
         resultReturnLabel={resultReturnLabel}
       />

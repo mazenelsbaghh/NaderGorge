@@ -286,7 +286,7 @@ export function ExamResultPanel({
 
         {/* CTA buttons */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-          {!result.isPassed && (
+          {isFinalResult && !result.isPassed && onRestart && (
             <button
               type="button"
               onClick={() => { void onRestart?.(); }}
@@ -1007,21 +1007,6 @@ export function ExamViewer({
     setCurrentIdx(idx);
   };
 
-  const restartExam = async () => {
-    setResult(null);
-    setError('');
-    setCurrentIdx(0);
-    setDirection(1);
-    setAnswers({});
-    setAudioAnswers({});
-    setSkipped(new Set());
-    setHiddenOptions(new Set());
-    setHasUsedFiftyFifty(false);
-    setHasUsedHint(false);
-    setRevealedHintId(null);
-    setHasUsedSwap(false);
-    await onRestart?.();
-  };
 
   if (result) {
     return (
@@ -1029,7 +1014,7 @@ export function ExamViewer({
         result={result}
         packageId={packageId ?? attempt.packageId}
         lessonId={lessonId ?? attempt.lessonId}
-        onRestart={restartExam}
+        onRestart={onRestart}
         onResultRefresh={setResult}
         returnHref={resultReturnHref}
         returnLabel={resultReturnLabel}

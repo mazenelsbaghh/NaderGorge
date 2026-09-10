@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2,
+  Clock3,
   XCircle,
   ArrowRight,
   ShieldCheck,
@@ -29,6 +30,7 @@ export function HomeworkResultPanel({
   onRestart?: () => Promise<void> | void;
 }) {
   const router = useRouter();
+  const isPendingReview = result.status === 'PendingReview';
   const reviewedQuestions = result.questionReviews ?? [];
   const wrongQuestions = reviewedQuestions.filter((q) => q.isCorrect === false);
   const accuracy =
@@ -43,7 +45,9 @@ export function HomeworkResultPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={`relative overflow-hidden rounded-3xl border p-8 sm:p-10 ${
-          result.isPassed
+          isPendingReview
+            ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+            : result.isPassed
             ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/40'
             : 'bg-destructive/5 border-destructive/20'
         }`}
@@ -60,25 +64,31 @@ export function HomeworkResultPanel({
           <div className="space-y-3">
             <div
               className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-black tracking-widest uppercase ${
-                result.isPassed
+                isPendingReview
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                  : result.isPassed
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
                   : 'bg-destructive/10 text-destructive'
               }`}
             >
-              {result.isPassed ? (
+              {isPendingReview ? (
+                <Clock3 className="h-3.5 w-3.5" />
+              ) : result.isPassed ? (
                 <ShieldCheck className="h-3.5 w-3.5" />
               ) : (
                 <ShieldX className="h-3.5 w-3.5" />
               )}
-              {result.isPassed ? 'اجتزت الواجب' : 'لم تجتز الواجب'}
+              {isPendingReview ? 'بانتظار التصحيح' : result.isPassed ? 'اجتزت الواجب' : 'لم تجتز الواجب'}
             </div>
 
             <h2 className="text-4xl font-black text-foreground sm:text-5xl">
-              {result.isPassed ? 'أحسنت!' : 'حاول مرة أخرى'}
+              {isPendingReview ? 'تم تسليم الواجب' : result.isPassed ? 'أحسنت!' : 'حاول مرة أخرى'}
             </h2>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-              {result.isPassed
+              {isPendingReview
+                ? 'إجاباتك محفوظة وبانتظار التصحيح. ستتاح إعادة الحل إذا لم تجتز الواجب بعد ظهور النتيجة النهائية.'
+                : result.isPassed
                 ? 'أجدت في هذا الواجب. راجع إجاباتك بالتفصيل أدناه.'
                 : 'إجاباتك وأماكن الخطأ ظاهرة أدناه مع الإجابات الصحيحة.'}
             </p>
@@ -86,17 +96,21 @@ export function HomeworkResultPanel({
 
           <div
             className={`flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl ${
-              result.isPassed
+              isPendingReview
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                : result.isPassed
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
                 : 'bg-destructive/10 text-destructive'
             }`}
           >
-            {result.isPassed ? (
+            {isPendingReview ? (
+              <Clock3 className="h-10 w-10" />
+            ) : result.isPassed ? (
               <CheckCircle2 className="h-10 w-10" />
             ) : (
               <XCircle className="h-10 w-10" />
             )}
-            <span className="mt-1 text-xs font-black">{accuracy}%</span>
+            <span className="mt-1 text-xs font-black">{isPendingReview ? 'قيد التصحيح' : `${accuracy}%`}</span>
           </div>
         </div>
 
@@ -120,7 +134,7 @@ export function HomeworkResultPanel({
 
         {/* CTA button */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-          {!result.isPassed && onRestart && (
+          {result.status === 'Graded' && !result.isPassed && onRestart && (
             <button
               type="button"
               onClick={() => { void onRestart(); }}
@@ -150,7 +164,7 @@ export function HomeworkResultPanel({
       </motion.div>
 
       {/* ─── Wrong answers summary ─── */}
-      {wrongQuestions.length > 0 && (
+      {!isPendingReview && wrongQuestions.length > 0 && (
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
