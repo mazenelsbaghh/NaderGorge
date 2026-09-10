@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decryptVideoEmbedMaterial } from '@/lib/video-embed-material';
+import { configureWatermarkHtml } from '@/lib/video-watermark';
 import {
   isBunnyLibraryId,
   isBunnyVideoGuid,
@@ -19,6 +20,8 @@ const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL
 const INTERNAL_TOKEN = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET;
 
 type VideoEmbedMaterialResponse = {
+  watermarkSettings?: Record<string, string>;
+  studentId?: string;
   token?: string;
   key?: string;
   Token?: string;
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     let materialResponse: Response;
     try {
-      materialResponse = await fetch(`${API_URL}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material`, {
+      materialResponse = await fetch(`${API_URL}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material?includeWatermark=true`, {
         headers: {
           'X-Internal-Token': INTERNAL_TOKEN,
         },
@@ -125,7 +128,10 @@ export async function GET(request: NextRequest) {
       ? generateBunnyHlsEmbedHtml(videoId, studentName, studentPhone, `/api/video/hls?s=${encodeURIComponent(sessionId)}`)
       : generateVideoEmbedHtml(provider, videoId, studentName, studentPhone);
 
-    return new NextResponse(html, {
+    const configuredHtml = configureWatermarkHtml(html, material.watermarkSettings ?? {}, {
+      name: studentName, phone: studentPhone, studentId: material.studentId ?? '',
+    });
+    return new NextResponse(configuredHtml, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
@@ -172,6 +178,10 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   }
 
   const safeSource = JSON.stringify(parsedUrl.toString());
+  const signedExpirySeconds = Number(parsedUrl.pathname.match(/(?:^|&)expires=(\d+)(?:&|$)/)?.[1]);
+  const signedSourceExpiresAtMs = Number.isSafeInteger(signedExpirySeconds) && signedExpirySeconds > 0
+    ? signedExpirySeconds * 1000
+    : 0;
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -192,7 +202,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
 <script>
 (function(){
   'use strict';
-  var source=${safeSource}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false;
+  var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
   var noRetryLoadPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:20000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
   var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:120000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
@@ -204,7 +214,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function nativePlaybackError(){return 'تعذر تشغيل الفيديو على مشغل الجهاز. لم يحدد المتصفح سبب التعطل. أعد المحاولة، وإذا تكرر توقف التشغيل تواصل مع الدعم.';}
   function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}}
   function failHls(status,message,phase){if(terminalErrorSent)return;terminalErrorSent=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();post('error',{provider:'bunny-hls',code:Number(status)||0,phase:((relayAttempted?'relay_':'')+String(phase||'unknown')).slice(0,80),message:message||hlsErrorMessage(Number(status)||0)});}
-  function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:'bunny-hls'};}
+  function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs};}
   function ready(){if(readySent)return;readySent=true;if(loadDeadline)clearTimeout(loadDeadline);post('ready',state());}
   function armPlaybackDeadline(phase){lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;playbackDeadline=setTimeout(function(){playbackDeadline=null;if(!video.paused&&!video.ended)failHls(0,'بدأ تحميل Bunny HLS لكن لم تصل بيانات الفيديو للجهاز. راجع اتصال Bunny CDN أو جرّب شبكة أخرى.','playback_timeout_'+lastLoadPhase)},15000);}
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=Number(l.height)||0;var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
@@ -227,7 +237,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function loadNative(url,quality){var time=video.currentTime||0,paused=video.paused,rate=video.playbackRate,vol=video.volume,muted=video.muted;nativeCurrent=quality;video.src=url;video.load();video.addEventListener('loadedmetadata',function restore(){video.removeEventListener('loadedmetadata',restore);if(time>0)video.currentTime=Math.min(time,Math.max(0,(video.duration||time)-.1));video.playbackRate=rate;video.volume=vol;video.muted=muted;if(!paused)video.play().catch(function(){});emitQuality();});}
   function setQuality(id){if(id==='auto'){if(hls){hls.currentLevel=-1;hls.nextLevel=-1;}else if(nativeCurrent!=='auto')loadNative(masterSource,'auto');emitQuality();return;}if(hls){var index=Number(id);if(Number.isInteger(index)&&index>=0&&index<hls.levels.length){hls.currentLevel=index;hls.nextLevel=index;emitQuality();}}else{var level=nativeLevels.find(function(item){return item.id===id});if(level)loadNative(level.url,id);}}
   attachEvents();
-  post('providerLoaded',{provider:'bunny-hls'});
+  post('providerLoaded',{provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs});
   function armLoadDeadline(){loadDeadline=setTimeout(function(){if(tryRelay(0))return;failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},20000);}
   function tryRelay(status){
     if(status!==0||readySent||relayAttempted||!relaySource||terminalErrorSent)return false;
@@ -252,7 +262,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   }
   armLoadDeadline();startPlayer();
   window.addEventListener('message',function(event){if(event.origin!==location.origin||event.source!==parent)return;var msg=event.data||{};switch(msg.type){case'play':video.play().catch(function(){post('autoplayBlocked',{provider:'bunny-hls'})});break;case'pause':video.pause();break;case'togglePlay':video.paused?video.play().catch(function(){}):video.pause();break;case'seekTo':if(isFinite(Number(msg.time)))video.currentTime=Math.max(0,Math.min(Number(msg.time),video.duration||Number(msg.time)));break;case'setVolume':video.volume=Math.max(0,Math.min(1,Number(msg.volume)/100));break;case'mute':video.muted=true;break;case'unmute':video.muted=false;break;case'setPlaybackRate':var rate=Number(msg.rate);if([.5,.75,1,1.25,1.5,1.75,2].indexOf(rate)>=0)video.playbackRate=rate;break;case'setQuality':setQuality(String(msg.quality||'auto'));break;case'getQualityLevels':emitQuality();break;}});
-  setInterval(function(){var wm=document.getElementById('wm');if(wm)wm.style.transform='translate3d('+(Math.random()*38)+'vw,'+(Math.random()*50)+'vh,0)'},12000);
+  setInterval(function(){var wm=document.getElementById('wm');if(wm&&!wm.dataset.configured)wm.style.transform='translate3d('+(Math.random()*38)+'vw,'+(Math.random()*50)+'vh,0)'},12000);
 })();
 </script></body></html>`;
 }
@@ -776,6 +786,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var watermark = document.getElementById('video-watermark');
     function moveWatermark() {
       if (!watermark) return;
+      if (watermark.dataset && watermark.dataset.configured) return;
       var edge = 8;
       var maxX = Math.max(edge, window.innerWidth - watermark.offsetWidth - edge);
       var maxY = Math.max(edge, window.innerHeight - watermark.offsetHeight - edge);
@@ -882,13 +893,14 @@ watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; poi
 });
 
 setInterval(function() {
-  if (!watermark) return;
+  if (!watermark || (watermark.dataset && watermark.dataset.configured)) return;
   var topPos = Math.random() * 58 + 8;
   var leftPos = Math.random() * 52 + 4;
   watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
 }, 120000);
 
 wrap.appendChild(ytDiv);
+if(window.configureMassarWatermark)window.configureMassarWatermark(watermark);
 wrap.appendChild(watermark);
 shadow.appendChild(wrap);
 
@@ -959,9 +971,8 @@ function onYouTubeIframeAPIReady() {
     videoId: _vid,  // use decoded variable, not plain string
     playerVars: {
       autoplay: _requiresTouchStart ? 0 : 1,
-      controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3,
-      // Keep playback inside the protected platform surface. Native iPhone
-      // fullscreen detaches the video from the student watermark.
+      controls: _requiresTouchStart ? 1 : 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 1, iv_load_policy: 3,
+      // Touch users can enter YouTube's native fullscreen through its own controls.
       playsinline: 1,
       // Explicit client identity is required by YouTube when an embed is nested in our secure player.
       origin: window.location.origin,
@@ -1180,6 +1191,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
 
     wrap.appendChild(iframe);
     wrap.appendChild(clickOverlay);
+    if(window.configureMassarWatermark)window.configureMassarWatermark(watermark);
     wrap.appendChild(watermark);
     shadow.appendChild(wrap);
 
@@ -1231,7 +1243,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
 
     // Watermark roaming
     setInterval(function() {
-      if (!watermark) return;
+      if (!watermark || (watermark.dataset && watermark.dataset.configured)) return;
       var topPos = Math.random() * 58 + 8;
       var leftPos = Math.random() * 52 + 4;
       watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';

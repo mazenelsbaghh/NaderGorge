@@ -8,6 +8,7 @@ import {
   isBunnyPlaybackError,
   isBunnyPlaybackStable,
   isCurrentVideoSession,
+  isExpiredHlsSourceError,
 } from './video-playback-recovery.ts';
 
 test('2026-09-02 transient Bunny playback failure retries twice and then stops', () => {
@@ -25,6 +26,18 @@ test('only an explicit Bunny provider error consumes the Bunny recovery budget',
   assert.equal(isBunnyPlaybackError('Bunny'), true);
   assert.equal(isBunnyPlaybackError(undefined), false);
   assert.equal(isBunnyPlaybackError('youtube'), false);
+});
+
+test('2026-09-10 only an expired signed HLS rejection permits bounded same-session recovery', () => {
+  for (const [status, expiry, now, expected] of [
+    [403, 1000, 1000, true], [401, 1000, 1001, true],
+    [403, 1001, 1000, false], [403, 0, 1000, false],
+    [404, 1000, 1001, false], [0, 1000, 1001, false],
+  ]) {
+    assert.equal(isExpiredHlsSourceError(Number(status), Number(expiry), Number(now)), expected);
+  }
+  assert.equal(canRetryBunnyPlayback('bunny-hls', 0), true);
+  assert.equal(canRetryBunnyPlayback('bunny-hls', MAX_BUNNY_PLAYBACK_RECOVERY_ATTEMPTS), false);
 });
 
 test('2026-09-02 Bunny recovery budget resets only after stable playback', () => {

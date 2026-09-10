@@ -3,12 +3,39 @@ import test from 'node:test';
 
 import {
   exitVideoFullscreen,
+  enterNativeVideoFullscreen,
   getFullscreenElement,
   lockVideoToLandscape,
   requestVideoFullscreen,
   unlockVideoOrientation,
   waitForVideoFullscreen,
 } from './video-fullscreen.ts';
+
+test('iPhone native video entry runs inside the gesture and reports Done without replacing playback', () => {
+  const video = Object.assign(new EventTarget(), {
+    readyState: 1, currentTime: 123, playbackRate: 1.5,
+    webkitEnterFullscreen() { entered = true; },
+  });
+  let entered = false;
+  let exited = false;
+  const cleanup = enterNativeVideoFullscreen(video as unknown as HTMLVideoElement, () => { exited = true; });
+  assert.equal(entered, true);
+  assert.equal(video.currentTime, 123);
+  assert.equal(video.playbackRate, 1.5);
+  video.dispatchEvent(new Event('webkitendfullscreen'));
+  assert.equal(exited, true);
+  cleanup?.();
+});
+
+test('rejected native iPhone entry leaves fallback available and removes the exit listener', () => {
+  const video = Object.assign(new EventTarget(), {
+    readyState: 1, webkitEnterFullscreen() { throw new Error('not ready'); },
+  });
+  let exited = false;
+  assert.equal(enterNativeVideoFullscreen(video as unknown as HTMLVideoElement, () => { exited = true; }), null);
+  video.dispatchEvent(new Event('webkitendfullscreen'));
+  assert.equal(exited, false);
+});
 
 test('fullscreen uses the standard browser API when available', async () => {
   let requested = 0;

@@ -1,5 +1,7 @@
 'use client';
 
+import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
+import { watermarkDefaults } from '@/lib/video-watermark';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -424,8 +426,7 @@ export default function AdminSettingsPageClient() {
     YouTubeChannelUrl: '',
     TelegramChannelUrl: '',
     MaxActiveDevicesPerStudent: '2',
-    EnableWatermark: 'false',
-    WatermarkOpacity: '0.15',
+    ...watermarkDefaults,
     MaintenanceMode: 'false',
     MaintenanceMessage: 'المنصة في أعمال صيانة مجدولة. سنعود قريباً!',
     ParentAppUpdateRequired: 'false',
@@ -880,6 +881,8 @@ export default function AdminSettingsPageClient() {
                         <button
                           type="button"
                           onClick={() => handleSettingChange('EnableWatermark', settings.EnableWatermark === 'true' ? 'false' : 'true')}
+                          aria-label="تفعيل العلامة المائية"
+                          aria-pressed={settings.EnableWatermark === 'true'}
                           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                             settings.EnableWatermark === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)] dark:bg-[var(--admin-card-strong)]'
                           }`}
@@ -896,23 +899,7 @@ export default function AdminSettingsPageClient() {
                         </div>
                       </div>
 
-                      {settings.EnableWatermark === 'true' && (
-                        <div className="mt-4 space-y-2 pt-3 border-t border-[var(--admin-border)]">
-                          <div className="flex justify-between text-xs text-[var(--admin-text)] font-semibold">
-                            <span className="font-mono">{Math.round(parseFloat(settings.WatermarkOpacity) * 100)}%</span>
-                            <span>شفافية العلامة المائية</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.05"
-                            max="1.0"
-                            step="0.05"
-                            value={settings.WatermarkOpacity}
-                            onChange={(e) => handleSettingChange('WatermarkOpacity', e.target.value)}
-                            className="w-full accent-[var(--admin-primary)]"
-                          />
-                        </div>
-                      )}
+                      <WatermarkSettingsEditor settings={settings} onChange={handleSettingChange} />
                     </div>
 
                     <div className="space-y-2 text-right">

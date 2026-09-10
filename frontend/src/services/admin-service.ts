@@ -1834,7 +1834,8 @@ export const adminService = {
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(
       '/admin/resources',
-      payload
+      payload,
+      { suppressErrorToast: true }
     );
     return res.data?.data;
   },
@@ -1845,6 +1846,9 @@ export const adminService = {
       '/admin/resources/upload',
       formData,
       {
+        // A 10 MB upload can legitimately exceed the normal API read timeout.
+        timeout: 180_000,
+        suppressErrorToast: true,
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import axios from 'axios';
 import { adminService } from '@/services/admin-service';
+import { getApiErrorSummary } from '@/lib/api-errors';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { Dropdown } from '@/components/ui/dropdown';
@@ -19,6 +21,7 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
   const [resourceType, setResourceType] = useState('PDF');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,13 +52,18 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
       setFileUrl('');
       setSelectedFile(null);
       
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
 
       onSuccess?.();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء إضافة الملف، أعد المحاولة.');
+    } catch (err: unknown) {
+      const timedOut = axios.isAxiosError(err) &&
+        (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT');
+      const tooLarge = axios.isAxiosError(err) && err.response?.status === 413;
+      toast.error(timedOut
+        ? 'انتهت مهلة رفع أو حفظ الملف. تحقق من قائمة الملفات قبل إعادة المحاولة.'
+        : tooLarge
+          ? 'حجم الملف أكبر من المسموح. الحد الأقصى 10 ميجابايت.'
+          : getApiErrorSummary(err, 'تعذر إضافة الملف. أعد المحاولة.'));
     } finally {
       setSaving(false);
       setUploading(false);
@@ -141,9 +149,11 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
               <label className="text-xs font-bold text-[var(--admin-muted)]">اختر الملف للرفع (الحد الأقصى 10 ميجابايت)</label>
               <input
                 type="file"
+                ref={fileInputRef}
                 accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
+                  setSelectedFile(null);
                   if (file) {
                     if (file.size > 10 * 1024 * 1024) {
                       toast.error('حجم الملف يجب ألا يتجاوز 10 ميجابايت.');

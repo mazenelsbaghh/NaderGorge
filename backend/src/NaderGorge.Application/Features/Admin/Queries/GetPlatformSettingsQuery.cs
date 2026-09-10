@@ -39,6 +39,10 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
         EnsureDefault(settings, PlatformSettingKeys.MaxActiveDevicesPerStudent, CachedPlatformSettings.Default.MaxActiveDevicesPerStudent.ToString());
         EnsureDefault(settings, PlatformSettingKeys.EnableWatermark, CachedPlatformSettings.Default.EnableWatermark.ToString().ToLower());
         EnsureDefault(settings, PlatformSettingKeys.WatermarkOpacity, CachedPlatformSettings.Default.WatermarkOpacity.ToString("0.##"));
+        foreach (var (key, value) in WatermarkDefaults)
+        {
+            EnsureDefault(settings, key, value);
+        }
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode.ToString().ToLower());
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage);
         EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateRequired, CachedPlatformSettings.Default.ParentAppUpdateRequired.ToString().ToLower());
@@ -76,4 +80,29 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
             Value = value,
         });
     }
+
+    private static readonly (string Key, string Value)[] WatermarkDefaults =
+    [
+        (PlatformSettingKeys.WatermarkShowBrand, "true"),
+        (PlatformSettingKeys.WatermarkShowName, "true"),
+        (PlatformSettingKeys.WatermarkShowPhone, "true"),
+        (PlatformSettingKeys.WatermarkShowStudentId, "false"),
+        (PlatformSettingKeys.WatermarkShowCustom, "false"),
+        (PlatformSettingKeys.WatermarkBrandText, "Massar Academy"),
+        (PlatformSettingKeys.WatermarkCustomText, ""),
+        (PlatformSettingKeys.WatermarkBrandColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkNameColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkPhoneColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkStudentIdColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkCustomColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkFontSize, "18"),
+        (PlatformSettingKeys.WatermarkFontWeight, "700"),
+        (PlatformSettingKeys.WatermarkFontFamily, "Tajawal"),
+        (PlatformSettingKeys.WatermarkPosition, "top-left"),
+        (PlatformSettingKeys.WatermarkMoving, "true"),
+        (PlatformSettingKeys.WatermarkIntervalSeconds, "12"),
+        (PlatformSettingKeys.WatermarkBackgroundColor, "#000000"),
+        (PlatformSettingKeys.WatermarkBackgroundOpacity, "0"),
+        (PlatformSettingKeys.WatermarkTextShadow, "true"),
+    ];
 }

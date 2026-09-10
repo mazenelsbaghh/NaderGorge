@@ -753,7 +753,8 @@ public class AdminController : ControllerBase
 
     [HttpPost("resources/upload")]
     [HasPermission("content.manage")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    // Keep the file limit at 10 MB; allow room for the multipart envelope.
+    [RequestSizeLimit(11 * 1024 * 1024)]
     public async Task<IActionResult> UploadResourceFile(
         IFormFile file,
         [FromServices] ISharedFileStorage sharedStorage,
@@ -761,12 +762,12 @@ public class AdminController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest(ApiResponse.Fail("No file uploaded"));
+            return BadRequest(ApiResponse.Fail("اختر ملفًا غير فارغ للرفع."));
         }
 
         if (file.Length > 10 * 1024 * 1024)
         {
-            return BadRequest(ApiResponse.Fail("File size must not exceed 10 MB"));
+            return BadRequest(ApiResponse.Fail("حجم الملف يجب ألا يتجاوز 10 ميجابايت."));
         }
 
         byte[] fileBytes;

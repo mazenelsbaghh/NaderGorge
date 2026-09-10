@@ -7,6 +7,10 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Domain.Entities;
 using System.Security.Claims;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using NaderGorge.Application.Services;
+using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.Application.Tests;
 
@@ -18,17 +22,28 @@ public sealed class VideoSessionControllerTests
         await using var db = TestAppDbContextFactory.Create();
         var session = ActiveSession();
         session.IsConsumed = true;
+        var encryption = new VideoEncryptionService();
+        session.EncryptionKey = encryption.GenerateSessionKey();
+        session.SessionToken = encryption.EncryptVideoInfo("youtube", "example", session.EncryptionKey);
         db.VideoPlaybackSessions.Add(session);
+        db.PlatformSettings.Add(new PlatformSetting { Key = PlatformSettingKeys.WatermarkShowName, Value = "false" });
         await db.SaveChangesAsync();
 
-        var controller = new VideoSessionController(null!, db, NullLogger<VideoSessionController>.Instance);
+        var controller = new VideoSessionController(null!, db, NullLogger<VideoSessionController>.Instance)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
 
-        var response = await controller.GetEmbedMaterial(session.Id, CancellationToken.None);
+        var service = new VideoSessionMaterialService(db, encryption, new BunnyHlsUrlSigner(),
+            new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider()));
+        var response = await controller.GetEmbedMaterial(session.Id, service, true, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(response);
         var material = Assert.IsType<VideoEmbedMaterialResponse>(ok.Value);
         Assert.Equal(session.SessionToken, material.Token);
         Assert.Equal(session.EncryptionKey, material.Key);
+        Assert.Equal("false", material.WatermarkSettings?[PlatformSettingKeys.WatermarkShowName]);
+        Assert.Equal(session.UserId.ToString(), material.StudentId);
     }
 
     [Fact]
@@ -42,7 +57,7 @@ public sealed class VideoSessionControllerTests
 
         var controller = new VideoSessionController(null!, db, NullLogger<VideoSessionController>.Instance);
 
-        var response = await controller.GetEmbedMaterial(session.Id, CancellationToken.None);
+        var response = await controller.GetEmbedMaterial(session.Id, null!, false, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(response);
     }

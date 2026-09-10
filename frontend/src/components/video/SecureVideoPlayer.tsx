@@ -27,10 +27,13 @@ import {
   isBunnyPlaybackError,
   isBunnyPlaybackStable,
   isCurrentVideoSession,
+  isExpiredHlsSourceError,
 } from '@/lib/video-playback-recovery';
 import { usesNativeProviderControls } from '@/lib/video-player-provider';
 import {
   exitVideoFullscreen,
+  enterNativeVideoFullscreen,
+  findNativeFullscreenVideo,
   getFullscreenElement,
   lockVideoToLandscape,
   requestVideoFullscreen,
@@ -268,6 +271,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const reloadActiveEmbedRef = useRef<(() => void) | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const sessionExpiresAtRef = useRef(0);
+  const signedSourceExpiresAtRef = useRef(0);
+  const nativeFullscreenCleanupRef = useRef<(() => void) | null>(null);
+  const recoveryPlaybackRateRef = useRef(1);
   const embedSessionRefreshCountRef = useRef(0);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
@@ -504,6 +510,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     bunnyRecoveryAttemptsRef.current += 1;
     bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
+    recoveryPlaybackRateRef.current = playbackRateRef.current;
     bunnyReadyAtRef.current = 0;
     embedReadinessWatchdogRef.current?.cancel();
     embedReadinessWatchdogRef.current = null;
@@ -654,6 +661,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             setProvider(loadedProvider);
           } else if (loadedProvider === 'bunny-hls') {
             providerRef.current = loadedProvider;
+            signedSourceExpiresAtRef.current = Number(msg.data?.signedSourceExpiresAtMs) || 0;
             serverCanResolveDurationRef.current = true;
             setProvider(loadedProvider);
           }
@@ -669,19 +677,26 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setVolume(msg.data.volume ?? 100);
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
+          if (embedProvider === 'bunny-hls') {
+            signedSourceExpiresAtRef.current = Number(msg.data?.signedSourceExpiresAtMs) || 0;
+          }
           providerRef.current = embedProvider;
           serverCanResolveDurationRef.current = embedProvider === 'bunny' || embedProvider === 'bunny-hls';
-          bunnyReadyAtRef.current = embedProvider === 'bunny' ? Date.now() : 0;
+          bunnyReadyAtRef.current = ['bunny', 'bunny-hls'].includes(embedProvider) ? Date.now() : 0;
           setProvider(embedProvider);
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
           setRequiresDirectPlayback(embedProvider === 'youtube' && msg.data.requiresDirectPlayback === true);
           showPersistentPlayerShadows();
 
-          if (embedProvider === 'bunny') {
+          if (embedProvider === 'bunny' || embedProvider === 'bunny-hls') {
             const resumeTime = bunnyRecoveryResumeTimeRef.current;
             if (resumeTime > 0) {
               iframeRef.current?.contentWindow?.postMessage(
                 { type: 'seekTo', time: resumeTime },
+                window.location.origin,
+              );
+              iframeRef.current?.contentWindow?.postMessage(
+                { type: 'setPlaybackRate', rate: recoveryPlaybackRateRef.current },
                 window.location.origin,
               );
               iframeRef.current?.contentWindow?.postMessage(
@@ -690,6 +705,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               );
               bunnyRecoveryResumeTimeRef.current = 0;
             }
+          }
+          if (embedProvider === 'bunny') {
             setIsBuffering(false);
             setShowControls(false);
           } else {
@@ -804,7 +821,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               playbackRateRef.current = reportedPlaybackRate;
             }
             if (
-              providerRef.current === 'bunny'
+              (providerRef.current === 'bunny' || providerRef.current === 'bunny-hls')
               && isBunnyPlaybackStable(bunnyReadyAtRef.current, Date.now())
             ) {
               bunnyRecoveryAttemptsRef.current = 0;
@@ -852,6 +869,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             }).catch(() => {
               // Playback errors must remain visible even if diagnostic delivery fails.
             });
+            if (isExpiredHlsSourceError(statusCode, signedSourceExpiresAtRef.current, Date.now())
+              && scheduleBunnyPlaybackRecovery()) break;
           }
           if (msg.data?.message === 'Session expired or invalid' && embedSessionRefreshCountRef.current < 1) {
             embedSessionRefreshCountRef.current += 1;
@@ -1429,6 +1448,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       activeSessionIdRef.current = session.sessionId;
       const sessionExpiry = Date.parse(session.expiresAt);
       sessionExpiresAtRef.current = Number.isFinite(sessionExpiry) ? sessionExpiry : 0;
+      signedSourceExpiresAtRef.current = 0;
       consumedSessionIdRef.current = null;
       nextProgressSequenceRef.current = 1;
       activeProgressRequestRef.current = null;
@@ -1525,6 +1545,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       reloadSessionRef.current?.();
       return;
     }
+    signedSourceExpiresAtRef.current = 0;
     setStatus('loading');
     setEmbedRequest({ sessionId });
   };
@@ -1674,8 +1695,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     document.body.classList.add('secure-video-fullscreen-open');
     const fullscreenRoot = fullscreenRootRef.current;
     // Top-layer promotion keeps the same iframe mounted while escaping iOS
-    // transformed/scrolling ancestors. Never use native video fullscreen:
-    // it would separate playback from the student watermark.
+    // transformed/scrolling ancestors when native fullscreen is unavailable.
     if (fullscreenRoot && typeof fullscreenRoot.showPopover === 'function') {
       fullscreenRoot.setAttribute('popover', 'manual');
       fullscreenRoot.showPopover();
@@ -1699,6 +1719,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [isPseudoFullscreen]);
 
   const resetFullscreenState = useCallback(() => {
+    nativeFullscreenCleanupRef.current?.();
+    nativeFullscreenCleanupRef.current = null;
     setIsPseudoFullscreen(false);
     setIsNativeFullscreen(false);
     setRotateLandscapeFallback(false);
@@ -1728,6 +1750,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
+      nativeFullscreenCleanupRef.current?.();
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       window.removeEventListener('keydown', handleKeyDown);
@@ -1736,6 +1759,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [isPseudoFullscreen, resetFullscreenState]);
 
   const enterFullscreen = useCallback(async (element: HTMLElement) => {
+    const nativeVideo = findNativeFullscreenVideo(element);
+    if (nativeVideo) {
+      const cleanup = enterNativeVideoFullscreen(nativeVideo, resetFullscreenState);
+      if (cleanup) {
+        nativeFullscreenCleanupRef.current = cleanup;
+        setIsNativeFullscreen(true);
+        setIsPseudoFullscreen(false);
+        setRotateLandscapeFallback(false);
+        return;
+      }
+    }
     const fullscreenRequestResolved = await requestVideoFullscreen(element);
     const enteredNativeFullscreen = fullscreenRequestResolved
       ? await waitForVideoFullscreen(document)
@@ -1748,7 +1782,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       : false;
     const viewportIsPortrait = window.matchMedia('(orientation: portrait)').matches;
     setRotateLandscapeFallback(viewportIsPortrait && !landscapeLocked);
-  }, []);
+  }, [resetFullscreenState]);
 
   const toggleFullscreen = async () => {
     const el = fullscreenRootRef.current;

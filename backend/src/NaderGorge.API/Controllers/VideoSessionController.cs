@@ -106,7 +106,10 @@ public class VideoSessionController : ControllerBase
     [DisableRateLimiting]
     [HttpGet("{sessionId:guid}/embed-material")]
     [HttpGet("~/api/v1/internal/video-sessions/{sessionId:guid}/embed-material")]
-    public async Task<IActionResult> GetEmbedMaterial(Guid sessionId, CancellationToken ct)
+    public async Task<IActionResult> GetEmbedMaterial(Guid sessionId,
+        [FromServices] NaderGorge.Application.Services.VideoSessionMaterialService materialService,
+        [FromQuery] bool includeWatermark,
+        CancellationToken ct)
     {
         var session = await _db.VideoPlaybackSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsSuperseded && s.ExpiresAt > DateTime.UtcNow, ct);
@@ -116,7 +119,17 @@ public class VideoSessionController : ControllerBase
             return NotFound("Video session not found or expired.");
         }
 
-        return Ok(new VideoEmbedMaterialResponse(session.SessionToken, session.EncryptionKey));
+        Response.Headers.CacheControl = "no-store";
+        var token = await materialService.GetTokenAsync(session, ct);
+        if (!includeWatermark)
+        {
+            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey));
+        }
+
+        var watermark = await _db.PlatformSettings.AsNoTracking()
+            .Where(setting => setting.Key == "EnableWatermark" || setting.Key.StartsWith("Watermark"))
+            .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct);
+        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, watermark, session.UserId.ToString()));
     }
 
     [HttpPost("{lessonVideoId}/track-progress")]
@@ -266,4 +279,5 @@ public sealed partial class VideoPlaybackClientEventRequest
     private static partial Regex SafePhasePattern();
 }
 
-public record VideoEmbedMaterialResponse(string Token, string Key);
+public record VideoEmbedMaterialResponse(string Token, string Key,
+    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null);

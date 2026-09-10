@@ -1891,6 +1891,41 @@ public sealed class BunnyStreamLibrariesTests
     }
 
     [Fact]
+    public async Task Incident20260910_RenewedHlsSessionRefreshesExpiredSignatureWithoutChangingWatchState()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        var encryption = new VideoEncryptionService();
+        var signer = new BunnyHlsUrlSigner();
+        var protector = new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider());
+        const string tokenKey = "test-hls-key";
+        seeded.Library.HlsCdnHostname = "vz-example.b-cdn.net";
+        seeded.Library.HlsTokenKeyCiphertext = ((IBunnyHlsSecretProtector)protector).Protect(seeded.Library.Id, tokenKey);
+        await db.SaveChangesAsync();
+        var session = new VideoPlaybackSession
+        {
+            Id = Guid.NewGuid(), LessonVideoId = seeded.Video.Id,
+            EncryptionKey = encryption.GenerateSessionKey(),
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            HasRegisteredView = true, LastProgressSequence = 17
+        };
+        var expiredUrl = signer.SignPlaylist(seeded.Library.HlsCdnHostname, seeded.Video.ProviderVideoId,
+            tokenKey, DateTime.UtcNow.AddMinutes(-1));
+        session.SessionToken = encryption.EncryptVideoInfo("bunny-hls", expiredUrl, session.EncryptionKey);
+        var originalToken = session.SessionToken;
+        var service = new VideoSessionMaterialService(db, encryption, signer, protector);
+
+        var refreshed = encryption.DecryptVideoInfo(await service.GetTokenAsync(session, CancellationToken.None), session.EncryptionKey);
+
+        Assert.Equal(signer.SignPlaylist(seeded.Library.HlsCdnHostname, seeded.Video.ProviderVideoId,
+            tokenKey, session.ExpiresAt), refreshed.ProviderVideoId);
+        Assert.Equal(originalToken, session.SessionToken);
+        Assert.True(session.HasRegisteredView);
+        Assert.Equal(17, session.LastProgressSequence);
+        Assert.False(db.ChangeTracker.HasChanges());
+    }
+
+    [Fact]
     public async Task ManagedBunnyVideo_PlatformHlsSessionUsesSignedCdnPlaylistWithoutExposingTokenKey()
     {
         await using var db = TestAppDbContextFactory.Create();

@@ -2,8 +2,13 @@ export const MAX_BUNNY_PLAYBACK_RECOVERY_ATTEMPTS = 2;
 export const BUNNY_PLAYBACK_STABILITY_WINDOW_MS = 10_000;
 
 export function canRetryBunnyPlayback(provider: string, attempts: number): boolean {
-  return provider.toLowerCase() === 'bunny'
+  return ['bunny', 'bunny-hls'].includes(provider.toLowerCase())
     && attempts < MAX_BUNNY_PLAYBACK_RECOVERY_ATTEMPTS;
+}
+
+export function isExpiredHlsSourceError(status: number, signedExpiresAtMs: number, nowMs: number): boolean {
+  return (status === 401 || status === 403)
+    && signedExpiresAtMs > 0 && signedExpiresAtMs <= nowMs;
 }
 
 export function isBunnyPlaybackError(provider: unknown): boolean {

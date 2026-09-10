@@ -7,6 +7,40 @@ type FullscreenElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
 };
 
+export type NativeFullscreenVideo = HTMLVideoElement & {
+  webkitEnterFullscreen?: () => void;
+  webkitExitFullscreen?: () => void;
+  webkitSupportsFullscreen?: boolean;
+};
+
+export function findNativeFullscreenVideo(root: HTMLElement): NativeFullscreenVideo | null {
+  const direct = root.querySelector('video') as NativeFullscreenVideo | null;
+  if (direct?.webkitEnterFullscreen) return direct;
+  for (const iframe of root.querySelectorAll('iframe')) {
+    try {
+      const video = iframe.contentDocument?.querySelector('video') as NativeFullscreenVideo | null;
+      if (video?.webkitEnterFullscreen) return video;
+    } catch {
+      // Cross-origin provider frames remain controlled by their own player.
+    }
+  }
+  return null;
+}
+
+export function enterNativeVideoFullscreen(video: NativeFullscreenVideo, onExit: () => void): (() => void) | null {
+  if (!video.webkitEnterFullscreen || video.webkitSupportsFullscreen === false || video.readyState < 1) return null;
+  const cleanup = () => video.removeEventListener('webkitendfullscreen', onExit);
+  video.addEventListener('webkitendfullscreen', onExit, { once: true });
+  try {
+    // Must run synchronously in the click gesture, before any awaited container request.
+    video.webkitEnterFullscreen();
+    return cleanup;
+  } catch {
+    cleanup();
+    return null;
+  }
+}
+
 type LockableScreenOrientation = ScreenOrientation & {
   lock?: (orientation: 'landscape') => Promise<void>;
   unlock?: () => void;

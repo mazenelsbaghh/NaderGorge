@@ -57,6 +57,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
     public async Task<ApiResponse<List<LessonSummaryDto>>> Handle(GetLessonsQuery request, CancellationToken ct)
     {
         var section = await _db.ContentSections
+            .AsNoTracking()
             .Include(cs => cs.Lessons)
                 .ThenInclude(l => l.Videos.Where(v => v.IsActive))
                     .ThenInclude(v => v.VideoType)
@@ -114,7 +115,12 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         {
             var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
             var isCompleted = completedLessonIds.Contains(lesson.Id);
-            var blockingState = await GetBlockingStateAsync(lesson, section, request.UserId, passedExamIds, ct);
+            // Use the complete section, including hidden lessons, so prerequisites stay enforced.
+            var previousLesson = section.Lessons
+                .Where(candidate => candidate.Order < lesson.Order)
+                .OrderByDescending(candidate => candidate.Order)
+                .FirstOrDefault();
+            var blockingState = await GetBlockingStateAsync(lesson, previousLesson, request.UserId, passedExamIds, ct);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
             if (visibleActiveVideoIds is not null)
@@ -163,16 +169,11 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
     private async Task<(bool IsLocked, string? LockedReason, Guid? BlockingExamId, Guid? BlockingHomeworkLessonId)> GetBlockingStateAsync(
         Lesson lesson,
-        ContentSection section,
+        Lesson? previousLesson,
         Guid userId,
         List<Guid> passedExamIds,
         CancellationToken ct)
     {
-        var previousLesson = await _db.Lessons
-            .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
-            .OrderByDescending(l => l.Order)
-            .FirstOrDefaultAsync(ct);
-
         if (previousLesson != null)
         {
             // 1. Check if previous lesson has a mandatory exam and if it is passed
