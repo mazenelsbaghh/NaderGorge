@@ -3,18 +3,19 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { isExpiredHlsSourceError } from './video-playback-recovery.ts';
 
 const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
 
 type PlayerMessage = {
   source?: string;
   type?: string;
-  data?: { code?: number; message?: string; phase?: string; provider?: string };
+  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number };
 };
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
 
-async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '') {
+async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '', signedSource = 'https://vz-example.b-cdn.net/signed/video/playlist.m3u8') {
   const routeSource = await readFile(routePath, 'utf8');
   const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
   const generatorEnd = routeSource.indexOf('function configuredLegacyBunnyLibraryId', generatorStart);
@@ -27,7 +28,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
   ).outputText;
   const html: string = vm.runInNewContext(
-    compiled + `\ngenerateBunnyHlsEmbedHtml("https://vz-example.b-cdn.net/signed/video/playlist.m3u8", "Test student", "", ${JSON.stringify(relaySource)})`,
+    compiled + `\ngenerateBunnyHlsEmbedHtml(${JSON.stringify(signedSource)}, "Test student", "", ${JSON.stringify(relaySource)})`,
     { URL },
   );
   const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
@@ -59,7 +60,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   };
 
   class FakeHls {
-    static Events = { ERROR: 'error', LEVEL_SWITCHED: 'levelSwitched', MANIFEST_PARSED: 'manifestParsed', LEVEL_LOADED: 'levelLoaded', FRAG_LOADED: 'fragmentLoaded' };
+    static Events = { ERROR: 'error', LEVEL_SWITCHED: 'levelSwitched', MANIFEST_PARSED: 'manifestParsed', LEVEL_LOADED: 'levelLoaded', FRAG_LOADING: 'fragmentLoading', FRAG_LOADED: 'fragmentLoaded' };
     static ErrorTypes = { MEDIA_ERROR: 'mediaError', NETWORK_ERROR: 'networkError' };
     static isSupported() { return true; }
     levels: unknown[] = [];
@@ -155,6 +156,11 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     },
     emitLevelLoaded() { hlsListeners.get('levelLoaded')?.(null, {}); },
     emitFragmentLoaded() { hlsListeners.get('fragmentLoaded')?.(null, {}); },
+    beginFragmentDownload() {
+      const stats = { loaded: 0 };
+      hlsListeners.get('fragmentLoading')?.(null, { frag: { stats } });
+      return stats;
+    },
     hls: () => hlsInstances[0] ?? null,
     hlsInstances,
     nativeSource: () => video.src,
@@ -182,6 +188,43 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
       for (const timer of timers) if (timer.active) timer.callback();
     },
   };
+}
+
+test('2026-09-11 Nader signed path expiry reaches the parent and permits renewal after CDN rejection', async () => {
+  const videoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
+  const expirySeconds = 2000000000;
+  const source = `https://vz-example.b-cdn.net/bcdn_token=HS256-test&expires=${expirySeconds}&token_path=%2F${videoId}%2F/${videoId}/playlist.m3u8`;
+  const player = await runHlsPlayer('hlsjs', 200, '', source);
+  player.triggerVideoEvent('loadedmetadata');
+  for (const type of ['providerLoaded', 'ready']) {
+    const expiry = player.messages.find(message => message.type === type)?.data?.signedSourceExpiresAtMs ?? 0;
+    assert.equal(expiry, expirySeconds * 1000, type);
+    assert.equal(isExpiredHlsSourceError(403, expiry, expiry + 1), true);
+    assert.equal(isExpiredHlsSourceError(403, expiry, expiry - 1), false);
+  }
+});
+
+for (const phase of ['startup', 'playback'] as const) {
+  test(`2026-09-11 Nader ${phase} keeps receiving a slow segment but still bounds an unusable stream`, async () => {
+    const player = await runHlsPlayer();
+    if (phase === 'startup') player.emitLevelLoaded();
+    else {
+      player.triggerVideoEvent('loadedmetadata');
+      player.triggerVideoEvent('play');
+      player.triggerVideoEvent('waiting');
+    }
+    const download = player.beginFragmentDownload();
+    for (let elapsed = 15000; elapsed <= 45000; elapsed += 15000) {
+      download.loaded += 1024;
+      player.advanceTime(15000);
+      assert.equal(player.messages.some(message => message.type === 'error'), false, `${elapsed}ms with incoming bytes`);
+    }
+    for (let elapsed = 50000; elapsed <= 125000; elapsed += 5000) {
+      download.loaded += 1024;
+      player.advanceTime(5000);
+    }
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  });
 }
 
 test('2026-09-10 slow first fragment survives the old twenty-second cutoff', async () => {

@@ -204,20 +204,31 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   'use strict';
   var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var relayResume=null;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
+  var activeDownload=null; var observedDownloadBytes=0; var downloadProgressObserved=false; var playbackWaitStartedAt=null; var maxFragmentLoadMs=120000;
   var noRetryLoadPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:20000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
-  var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:120000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
+  var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:maxFragmentLoadMs,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
   function post(type,data){try{parent.postMessage({source:'video-embed',type:type,data:data||{}},location.origin)}catch(e){}}
   var lastInteractionAt=-Infinity;
   function relayInteraction(event){var now=Date.now();if(event.type==='pointermove'&&now-lastInteractionAt<200)return;lastInteractionAt=now;post('playerInteraction');}
   ['pointerover','pointermove','pointerdown','touchstart','keydown'].forEach(function(name){document.addEventListener(name,relayInteraction,{passive:true});});
   function hlsErrorMessage(status){if(status===401||status===403)return 'Bunny رفض رابط HLS ('+status+'). راجع CDN Token Authentication Key وAllowed Domains.';if(status===404)return 'ملف HLS غير موجود على Bunny (404). راجع CDN hostname وانتظر اكتمال ترميز الفيديو.';if(status===0)return relayAttempted?'تعذر تحميل الفيديو عبر المنصة أيضًا. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.':'تعذر تحميل الفيديو من Bunny على هذا الجهاز. جرّب شبكة أخرى ثم أعد المحاولة.';return status?'تعذر تحميل Bunny HLS (حالة '+status+').':'تعذر تحميل بث Bunny HLS.';}
   function nativePlaybackError(){return 'تعذر تشغيل الفيديو على مشغل الجهاز. لم يحدد المتصفح سبب التعطل. أعد المحاولة، وإذا تكرر توقف التشغيل تواصل مع الدعم.';}
-  function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}}
+  // Receiving an incomplete segment advances its byte counter before the media clock can move.
+  function downloadAdvanced(){var loaded=Number(activeDownload&&activeDownload.stats.loaded)||0;var advanced=loaded>observedDownloadBytes;observedDownloadBytes=loaded;if(advanced)downloadProgressObserved=true;return advanced;}
+  function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}playbackWaitStartedAt=null;}
   function failHls(status,message,phase){if(terminalErrorSent)return;terminalErrorSent=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();post('error',{provider:'bunny-hls',code:Number(status)||0,phase:((relayAttempted?'relay_':'')+String(phase||'unknown')).slice(0,80),message:message||hlsErrorMessage(Number(status)||0)});}
   function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs};}
   function ready(){sourceReady=true;if(loadDeadline)clearTimeout(loadDeadline);if(readySent)return;readySent=true;post('ready',state());}
   function restoreRelayPlayback(){if(!relayResume||terminalErrorSent)return;var resume=relayResume;relayResume=null;video.playbackRate=resume.rate;video.volume=resume.volume;video.muted=resume.muted;if(resume.time>0)video.currentTime=Math.min(resume.time,Math.max(0,(video.duration||resume.time)-.1));lastMediaTime=Number(video.currentTime)||0;if(!resume.paused)video.play().catch(function(){post('autoplayBlocked',{provider:'bunny-hls'})});}
-  function armPlaybackDeadline(phase){lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;playbackDeadline=setTimeout(function(){playbackDeadline=null;if(!video.paused&&!video.ended&&!tryRelay(0))failHls(0,'توقف تحميل الفيديو ولم تصل بيانات جديدة. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.','playback_timeout_'+lastLoadPhase)},15000);}
+  function armPlaybackDeadline(phase){
+    lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;
+    if(playbackWaitStartedAt===null){playbackWaitStartedAt=Date.now();downloadAdvanced();}
+    playbackDeadline=setTimeout(function(){
+      playbackDeadline=null;if(video.paused||video.ended)return;
+      if(downloadAdvanced()&&Date.now()-playbackWaitStartedAt<maxFragmentLoadMs){armPlaybackDeadline(lastLoadPhase);return;}
+      if(!tryRelay(0))failHls(0,'توقف تحميل الفيديو ولم تصل بيانات جديدة. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.','playback_timeout_'+lastLoadPhase);
+    },Math.min(15000,maxFragmentLoadMs-(Date.now()-playbackWaitStartedAt)));
+  }
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=Number(l.height)||0;var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
   function emitQuality(){var levels=hls?hlsLevels():nativeLevels;var current='auto';if(hls&&hls.autoLevelEnabled===false&&hls.currentLevel>=0)current=String(hls.currentLevel);else if(!hls)current=nativeCurrent;post('qualityLevels',{levels:levels,currentQuality:current,auto:true});}
   function attachEvents(){
@@ -240,13 +251,22 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   attachEvents();
   post('providerLoaded',{provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs});
   var loadStartedAt=Date.now();var loadMilestones={};
-  function armLoadDeadline(budget){if(loadDeadline)clearTimeout(loadDeadline);loadDeadline=setTimeout(function(){if(tryRelay(0))return;failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},Math.max(0,Math.min(budget||20000,60000-(Date.now()-loadStartedAt))));}
+  function armLoadDeadline(budget){
+    if(loadDeadline)clearTimeout(loadDeadline);
+    loadDeadline=setTimeout(function(){
+      loadDeadline=null;
+      if(downloadAdvanced()&&Date.now()-loadStartedAt<maxFragmentLoadMs){armLoadDeadline(20000);return;}
+      if(tryRelay(0))return;
+      failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase);
+    },Math.max(0,Math.min(budget||20000,(downloadProgressObserved?maxFragmentLoadMs:60000)-(Date.now()-loadStartedAt))));
+  }
   function loadProgress(phase,budget){if(sourceReady||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
   function tryRelay(status){
     if(status!==0||relayAttempted||!relaySource||terminalErrorSent)return false;
     relayResume={time:Number(video.currentTime)||0,paused:video.paused,rate:video.playbackRate,volume:video.volume,muted:video.muted};sourceReady=false;
     relayAttempted=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls){var previousHls=hls;hls=null;previousHls.destroy();}
     source=new URL(relaySource,location.origin).toString();masterSource=source;lastLoadPhase='relay_manifest';loadStartedAt=Date.now();loadMilestones={};
+    activeDownload=null;observedDownloadBytes=0;downloadProgressObserved=false;
     armLoadDeadline();startPlayer();return true;
   }
   function startPlayer(){
@@ -254,6 +274,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
     try{
       hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:relayResume?relayResume.time:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);
       var loadingInstance=hls;
+      hls.on(window.Hls.Events.FRAG_LOADING,function(_,download){if(hls!==loadingInstance)return;activeDownload=download.part||download.frag;observedDownloadBytes=0;});
       hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});
       if(window.Hls.Events.LEVEL_LOADED)hls.on(window.Hls.Events.LEVEL_LOADED,function(){if(hls===loadingInstance)loadProgress('level_loaded',40000);});
       if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance)loadProgress('fragment_loaded',20000);});
