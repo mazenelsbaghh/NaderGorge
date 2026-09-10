@@ -9,6 +9,7 @@ import { normalizeQuestionRichText } from '@/lib/question-text';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { getApiErrorSummary } from '@/lib/api-errors';
 import toast from 'react-hot-toast';
+import { Trash2 } from 'lucide-react';
 
 interface AnswerReview {
   questionId: string; order: number; text: string; imageUrl?: string;
@@ -19,8 +20,8 @@ interface AttemptReview {
   status: string; canGrade: boolean; feedback?: string; questions: AnswerReview[];
 }
 
-export function AssessmentAttemptReview({ kind, assessmentId, attemptId, onChanged }: {
-  kind: 'homework' | 'exam'; assessmentId: string; attemptId: string; onChanged?: () => void | Promise<void>;
+export function AssessmentAttemptReview({ kind, assessmentId, attemptId, studentName, onChanged }: {
+  kind: 'homework' | 'exam'; assessmentId: string; attemptId: string; studentName: string; onChanged?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [review, setReview] = useState<AttemptReview>();
@@ -30,6 +31,13 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, onChang
   const mutationRef = useRef(false);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const returnToReviewRef = useRef(false);
+  const requestDelete = () => {
+    returnToReviewRef.current = open;
+    setError('');
+    setOpen(false);
+    setConfirmDelete(true);
+  };
   const load = async () => {
     setOpen(true); setBusy(true); setError(''); setReview(undefined);
     try {
@@ -67,11 +75,19 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, onChang
       setOpen(false); setReview(undefined);
       toast.success('تم حذف المحاولة وإتاحة الحل من جديد.');
       await onChanged?.();
-    } catch (failure) { setOpen(true); setError(getApiErrorSummary(failure, 'تعذر حذف المحاولة.')); }
+    } catch (failure) { setOpen(returnToReviewRef.current); setError(getApiErrorSummary(failure, 'تعذر حذف المحاولة.')); }
     finally { mutationRef.current = false; setBusy(false); }
   };
   return <>
-    <NeumorphButton type="button" disabled={busy} onClick={() => void load()}>الإجابات والتصحيح</NeumorphButton>
+    <div className="flex flex-wrap items-center gap-2">
+      <NeumorphButton type="button" disabled={busy} onClick={() => void load()}>الإجابات والتصحيح</NeumorphButton>
+      <NeumorphButton type="button" intent="danger" disabled={busy} onClick={requestDelete} aria-label={`حذف محاولة ${studentName} وإتاحة الإعادة`}>
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+        حذف المحاولة
+      </NeumorphButton>
+    </div>
+    {!open && error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
+    {!open && busy && <p role="status" className="mt-2 text-sm text-[var(--admin-muted)]">جارٍ حذف المحاولة…</p>}
     <AdminModal open={open} onClose={() => { if (!busy) setOpen(false); }} title={review ? `إجابات ${review.studentName}` : 'إجابات الطالب'} size="lg">
       {error && <p role="alert" className="mb-4 text-red-700">{error}</p>}
       {busy && <p role="status">جارٍ تنفيذ الطلب…</p>}
@@ -98,10 +114,10 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, onChang
         <label className="block text-sm font-bold">ملاحظات التصحيح<textarea maxLength={4000} value={feedback} disabled={busy || !review.canGrade} onChange={e => setFeedback(e.target.value)} rows={3} className="mt-2 w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3" /></label>
         <div className="flex flex-wrap justify-between gap-3">
           <NeumorphButton type="submit" disabled={busy || !review.canGrade}>حفظ التصحيح اليدوي</NeumorphButton>
-          <NeumorphButton type="button" intent="danger" disabled={busy} onClick={() => { setOpen(false); setConfirmDelete(true); }}>حذف المحاولة وإتاحة الحل من جديد</NeumorphButton>
+          <NeumorphButton type="button" intent="danger" disabled={busy} onClick={requestDelete}>حذف المحاولة وإتاحة الحل من جديد</NeumorphButton>
         </div>
       </form>}
     </AdminModal>
-    <ConfirmDialog open={confirmDelete} title="حذف محاولة الطالب؟" description={`سيتم حذف إجابات ${review?.studentName || 'الطالب'} ودرجات هذه المحاولة فقط، وإتاحة الحل من جديد. لا يمكن التراجع عن الحذف من هنا.`} confirmLabel="حذف المحاولة" onConfirm={() => void remove()} onCancel={() => { setConfirmDelete(false); setOpen(true); }} />
+    <ConfirmDialog open={confirmDelete} title="حذف محاولة الطالب؟" description={`سيتم حذف إجابات ${studentName} ودرجات هذه المحاولة فقط، وإتاحة الحل من جديد. لا يمكن التراجع عن الحذف من هنا.`} confirmLabel="حذف وإتاحة الإعادة" onConfirm={() => void remove()} onCancel={() => { setConfirmDelete(false); setOpen(returnToReviewRef.current); }} />
   </>;
 }

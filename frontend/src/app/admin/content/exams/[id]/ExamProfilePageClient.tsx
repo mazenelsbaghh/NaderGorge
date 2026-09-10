@@ -453,7 +453,7 @@ export default function ExamProfilePageClient({
                           <td className="p-4 text-xs text-[var(--admin-muted)] font-medium">
                             {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }) : '—'}
                           </td>
-                          <td className="p-4"><ExamAttemptReviewButton examId={id} attemptId={attempt.attemptId} onChanged={loadData} /></td>
+                          <td className="p-4"><ExamAttemptReviewButton examId={id} attemptId={attempt.attemptId} studentName={attempt.studentName} onChanged={loadData} /></td>
                         </tr>
                       ))}
                     </tbody>

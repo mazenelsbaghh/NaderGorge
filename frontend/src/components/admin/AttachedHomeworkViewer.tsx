@@ -289,7 +289,7 @@ export function AttachedHomeworkViewer({
                         ? new Date(submission.submittedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })
                         : 'لم يتم التسليم'}
                     </td>
-                    <td className="px-4 py-4"><AssessmentAttemptReview kind="homework" assessmentId={homeworkId} attemptId={submission.submissionId} onChanged={loadData} /></td>
+                    <td className="px-4 py-4"><AssessmentAttemptReview kind="homework" assessmentId={homeworkId} attemptId={submission.submissionId} studentName={submission.studentName} onChanged={loadData} /></td>
                   </tr>
                 ))}
               </tbody>

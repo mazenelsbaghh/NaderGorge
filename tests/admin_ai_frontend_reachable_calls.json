@@ -1952,7 +1952,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 66
+        "line": 74
       }
     },
     {
@@ -1997,7 +1997,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 65
+        "line": 73
       }
     },
     {
@@ -2348,7 +2348,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 38
+        "line": 46
       }
     },
     {
@@ -2483,7 +2483,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 37
+        "line": 45
       }
     },
     {
@@ -6686,7 +6686,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 54
+        "line": 62
       }
     },
     {
@@ -6731,7 +6731,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/components/admin/AssessmentAttemptReview.tsx",
-        "line": 53
+        "line": 61
       }
     },
     {
@@ -7521,5 +7521,5 @@
       }
     }
   ],
-  "digest": "9afeeba06a15e780fea169d1e9ca190885aa7e3998c11bd09323c3d1939dcb2c"
+  "digest": "1dbbff3031d66076da88b109debb53623279a70900a434151f7e6145d4275e04"
 }
