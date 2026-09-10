@@ -202,7 +202,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
 <script>
 (function(){
   'use strict';
-  var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false;
+  var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var relayResume=null;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
   var noRetryLoadPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:20000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
   var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:120000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
@@ -215,15 +215,16 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function clearPlaybackDeadline(){if(playbackDeadline){clearTimeout(playbackDeadline);playbackDeadline=null;}}
   function failHls(status,message,phase){if(terminalErrorSent)return;terminalErrorSent=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls)try{hls.destroy()}catch(e){}video.pause();post('error',{provider:'bunny-hls',code:Number(status)||0,phase:((relayAttempted?'relay_':'')+String(phase||'unknown')).slice(0,80),message:message||hlsErrorMessage(Number(status)||0)});}
   function state(){return {currentTime:video.currentTime||0,duration:isFinite(video.duration)?video.duration:0,volume:Math.round(video.volume*100),isMuted:video.muted,state:video.ended?0:(video.paused?2:1),isPlaying:!video.paused&&!video.ended,playbackRate:video.playbackRate||1,provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs};}
-  function ready(){if(readySent)return;readySent=true;if(loadDeadline)clearTimeout(loadDeadline);post('ready',state());}
-  function armPlaybackDeadline(phase){lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;playbackDeadline=setTimeout(function(){playbackDeadline=null;if(!video.paused&&!video.ended)failHls(0,'بدأ تحميل Bunny HLS لكن لم تصل بيانات الفيديو للجهاز. راجع اتصال Bunny CDN أو جرّب شبكة أخرى.','playback_timeout_'+lastLoadPhase)},15000);}
+  function ready(){sourceReady=true;if(loadDeadline)clearTimeout(loadDeadline);if(readySent)return;readySent=true;post('ready',state());}
+  function restoreRelayPlayback(){if(!relayResume||terminalErrorSent)return;var resume=relayResume;relayResume=null;video.playbackRate=resume.rate;video.volume=resume.volume;video.muted=resume.muted;if(resume.time>0)video.currentTime=Math.min(resume.time,Math.max(0,(video.duration||resume.time)-.1));lastMediaTime=Number(video.currentTime)||0;if(!resume.paused)video.play().catch(function(){post('autoplayBlocked',{provider:'bunny-hls'})});}
+  function armPlaybackDeadline(phase){lastLoadPhase=phase||lastLoadPhase;if(playbackDeadline||terminalErrorSent)return;playbackDeadline=setTimeout(function(){playbackDeadline=null;if(!video.paused&&!video.ended&&!tryRelay(0))failHls(0,'توقف تحميل الفيديو ولم تصل بيانات جديدة. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.','playback_timeout_'+lastLoadPhase)},15000);}
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=Number(l.height)||0;var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
   function emitQuality(){var levels=hls?hlsLevels():nativeLevels;var current='auto';if(hls&&hls.autoLevelEnabled===false&&hls.currentLevel>=0)current=String(hls.currentLevel);else if(!hls)current=nativeCurrent;post('qualityLevels',{levels:levels,currentQuality:current,auto:true});}
   function attachEvents(){
-    video.addEventListener('loadedmetadata',function(){lastLoadPhase='metadata';ready();post('durationChange',state());});
+    video.addEventListener('loadedmetadata',function(){lastLoadPhase='metadata';restoreRelayPlayback();ready();post('durationChange',state());});
     video.addEventListener('canplay',function(){lastLoadPhase='canplay';ready();clearPlaybackDeadline();});
     video.addEventListener('seeking',function(){lastMediaTime=Number(video.currentTime)||0;});
-    video.addEventListener('timeupdate',function(){var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01)clearPlaybackDeadline();lastMediaTime=current;post('timeUpdate',state());});
+    video.addEventListener('timeupdate',function(){if(relayResume)return;var current=Number(video.currentTime)||0;if(current>lastMediaTime+.01)clearPlaybackDeadline();lastMediaTime=current;post('timeUpdate',state());});
     video.addEventListener('play',function(){armPlaybackDeadline('play');post('stateChange',state());});
     video.addEventListener('pause',function(){clearPlaybackDeadline();post('stateChange',state());});
     video.addEventListener('ended',function(){clearPlaybackDeadline();post('stateChange',state());});
@@ -240,17 +241,18 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   post('providerLoaded',{provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs});
   var loadStartedAt=Date.now();var loadMilestones={};
   function armLoadDeadline(budget){if(loadDeadline)clearTimeout(loadDeadline);loadDeadline=setTimeout(function(){if(tryRelay(0))return;failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},Math.max(0,Math.min(budget||20000,60000-(Date.now()-loadStartedAt))));}
-  function loadProgress(phase,budget){if(readySent||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
+  function loadProgress(phase,budget){if(sourceReady||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
   function tryRelay(status){
-    if(status!==0||readySent||relayAttempted||!relaySource||terminalErrorSent)return false;
-    relayAttempted=true;if(loadDeadline)clearTimeout(loadDeadline);if(hls){hls.destroy();hls=null;}
+    if(status!==0||relayAttempted||!relaySource||terminalErrorSent)return false;
+    relayResume={time:Number(video.currentTime)||0,paused:video.paused,rate:video.playbackRate,volume:video.volume,muted:video.muted};sourceReady=false;
+    relayAttempted=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();if(hls){var previousHls=hls;hls=null;previousHls.destroy();}
     source=new URL(relaySource,location.origin).toString();masterSource=source;lastLoadPhase='relay_manifest';loadStartedAt=Date.now();loadMilestones={};
     armLoadDeadline();startPlayer();return true;
   }
   function startPlayer(){
   if(window.Hls&&window.Hls.isSupported()){
     try{
-      hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);
+      hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:relayResume?relayResume.time:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);
       var loadingInstance=hls;
       hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});
       if(window.Hls.Events.LEVEL_LOADED)hls.on(window.Hls.Events.LEVEL_LOADED,function(){if(hls===loadingInstance)loadProgress('level_loaded',40000);});
@@ -264,7 +266,21 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   }else failHls(0,'المتصفح لا يدعم تشغيل HLS. حدّث Chrome وAndroid System WebView ثم أعد المحاولة.');
   }
   armLoadDeadline();startPlayer();
-  window.addEventListener('message',function(event){if(event.origin!==location.origin||event.source!==parent)return;var msg=event.data||{};switch(msg.type){case'play':video.play().catch(function(){post('autoplayBlocked',{provider:'bunny-hls'})});break;case'pause':video.pause();break;case'togglePlay':video.paused?video.play().catch(function(){}):video.pause();break;case'seekTo':if(isFinite(Number(msg.time)))video.currentTime=Math.max(0,Math.min(Number(msg.time),video.duration||Number(msg.time)));break;case'setVolume':video.volume=Math.max(0,Math.min(1,Number(msg.volume)/100));break;case'mute':video.muted=true;break;case'unmute':video.muted=false;break;case'setPlaybackRate':var rate=Number(msg.rate);if([.5,.75,1,1.25,1.5,1.75,2].indexOf(rate)>=0)video.playbackRate=rate;break;case'setQuality':setQuality(String(msg.quality||'auto'));break;case'getQualityLevels':emitQuality();break;}});
+  window.addEventListener('message',function(event){
+    if(event.origin!==location.origin||event.source!==parent)return;var msg=event.data||{};
+    switch(msg.type){
+      case'play':if(relayResume)relayResume.paused=false;else video.play().catch(function(){post('autoplayBlocked',{provider:'bunny-hls'})});break;
+      case'pause':if(relayResume)relayResume.paused=true;video.pause();break;
+      case'togglePlay':if(relayResume)relayResume.paused=!relayResume.paused;else video.paused?video.play().catch(function(){}):video.pause();break;
+      case'seekTo':if(isFinite(Number(msg.time))){var seekTime=Math.max(0,Math.min(Number(msg.time),video.duration||Number(msg.time)));if(relayResume)relayResume.time=seekTime;else video.currentTime=seekTime;}break;
+      case'setVolume':video.volume=Math.max(0,Math.min(1,Number(msg.volume)/100));if(relayResume)relayResume.volume=video.volume;break;
+      case'mute':video.muted=true;if(relayResume)relayResume.muted=true;break;
+      case'unmute':video.muted=false;if(relayResume)relayResume.muted=false;break;
+      case'setPlaybackRate':var rate=Number(msg.rate);if([.5,.75,1,1.25,1.5,1.75,2].indexOf(rate)>=0){video.playbackRate=rate;if(relayResume)relayResume.rate=rate;}break;
+      case'setQuality':setQuality(String(msg.quality||'auto'));break;
+      case'getQualityLevels':emitQuality();break;
+    }
+  });
   setInterval(function(){var wm=document.getElementById('wm');if(wm&&!wm.dataset.configured)wm.style.transform='translate3d('+(Math.random()*38)+'vw,'+(Math.random()*50)+'vh,0)'},12000);
 })();
 </script></body></html>`;

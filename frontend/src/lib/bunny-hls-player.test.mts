@@ -53,7 +53,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
       videoListeners.set(eventName, callback);
     },
     canPlayType() { return runtime === 'native-apple' ? 'probably' : ''; },
-    load() {},
+    load() { this.currentTime = 0; this.paused = true; },
     pause() { this.paused = true; },
     play() { this.paused = false; return Promise.resolve(); },
   };
@@ -84,14 +84,15 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   const parentWindow = {
     postMessage(message: PlayerMessage) { messages.push(message); },
   };
+  let receiveCommand: ((event: unknown) => void) | undefined;
   const windowLike: {
     Hls: typeof FakeHls | undefined;
-    addEventListener: () => void;
+    addEventListener: (name: string, listener: (event: unknown) => void) => void;
     location: { origin: string };
     parent: typeof parentWindow;
   } = {
     Hls: runtime === 'hlsjs' ? FakeHls : undefined,
-    addEventListener() {},
+    addEventListener(name, listener) { if (name === 'message') receiveCommand = listener; },
     location: { origin: 'https://app.massar-academy.net' },
     parent: parentWindow,
   };
@@ -160,6 +161,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     nativeRequests: () => nativeRequests,
     interact(type: string) { documentListeners.get(type)?.({ type }); },
     messages,
+    video,
+    command(type: string) { receiveCommand?.({ origin: windowLike.location.origin, source: parentWindow, data: { type } }); },
     setMediaTime(time: number) { video.currentTime = time; },
     advanceTime(milliseconds: number) {
       now += milliseconds;
@@ -261,16 +264,12 @@ test('relay is never attempted for rejected or missing HLS resources', async () 
   }
 });
 
-test('relay startup gets one bounded deadline and does not loop or refresh playable video', async () => {
+test('relay startup gets one bounded deadline and does not loop', async () => {
   const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
   player.advanceTime(20000);
   assert.equal(player.hlsInstances.length, 2);
   player.advanceTime(20000);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
-  const playing = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
-  playing.triggerVideoEvent('loadedmetadata');
-  playing.emitFatalNetworkError(0);
-  assert.equal(playing.hlsInstances.length, 1);
 });
 
 test('repeated buffering events cannot extend the playback deadline forever', async () => {
@@ -364,7 +363,7 @@ test('2026-09-04 playback stall reports its exact phase instead of spinning fore
   const errorMessage = player.messages.find((message) => message.type === 'error');
   assert.equal(errorMessage?.data?.provider, 'bunny-hls');
   assert.equal(errorMessage?.data?.phase, 'playback_timeout_waiting');
-  assert.match(errorMessage?.data?.message ?? '', /لم تصل بيانات الفيديو/);
+  assert.match(errorMessage?.data?.message ?? '', /لم تصل بيانات جديدة/);
 });
 
 test('2026-09-04 Apple native HTTP 403 preserves the confirmed Bunny rejection', async () => {
@@ -401,4 +400,72 @@ test('unknown native media failure does not falsely blame Bunny domain protectio
   assert.match(errorMessage?.data?.message ?? '', /لم يحدد المتصفح سبب التعطل/);
   assert.doesNotMatch(errorMessage?.data?.message ?? '', /Allowed Domains|Hotlink Protection|403/);
   assert.equal(player.messages.some((message) => message.type === 'ready'), false);
+});
+
+for (const runtime of ['hlsjs', 'native-apple'] as const) {
+  test(`2026-09-10 stall after metadata uses relay and resumes the same position: ${runtime}`, async () => {
+    const player = await runHlsPlayer(runtime, 200, '/api/video/hls?s=test-session');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    player.video.duration = 600;
+    player.triggerVideoEvent('loadedmetadata');
+    player.setMediaTime(123);
+    player.video.playbackRate = 1.5;
+    player.video.volume = 0.4;
+    player.video.muted = true;
+    player.triggerVideoEvent('play');
+    player.triggerVideoEvent('waiting');
+    player.advanceTime(15000);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+    if (runtime === 'hlsjs') {
+      assert.equal(player.hlsInstances.length, 2);
+      assert.match(player.hlsInstances[1].source, /\/api\/video\/hls/);
+      assert.equal(player.hlsInstances[1].config.startPosition, 123);
+    } else {
+      assert.equal(player.nativeRequests(), 2);
+      assert.match(player.nativeSource(), /\/api\/video\/hls/);
+    }
+    player.setMediaTime(0);
+    player.video.playbackRate = 1;
+    player.triggerVideoEvent('loadedmetadata');
+    assert.equal(player.video.currentTime, 123);
+    assert.equal(player.video.playbackRate, 1.5);
+    assert.equal(player.video.volume, 0.4);
+    assert.equal(player.video.muted, true);
+    assert.equal(player.video.paused, false);
+    player.triggerVideoEvent('playing');
+    player.advanceTime(60000);
+    assert.equal(player.messages.filter(message => message.type === 'ready').length, 1);
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+  });
+}
+
+test('post-start relay honors a pause command and fails once if recovery never loads', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.emitFatalNetworkError(0);
+  player.command('pause');
+  player.triggerVideoEvent('loadedmetadata');
+  assert.equal(player.video.paused, true);
+  player.command('play');
+  player.triggerVideoEvent('waiting');
+  player.advanceTime(15000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hlsInstances.length, 2);
+  assert.match(player.messages.find(message => message.type === 'error')?.data?.phase ?? '', /^relay_playback_timeout/);
+});
+
+test('recovery after metadata still has a bounded startup deadline', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.advanceTime(15000);
+  player.advanceTime(12000);
+  player.emitManifestParsed();
+  player.advanceTime(15000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(5000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hlsInstances.length, 2);
 });
