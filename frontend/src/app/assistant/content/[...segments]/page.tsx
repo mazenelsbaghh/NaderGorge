@@ -58,7 +58,7 @@ export default async function AssistantContentRoute({
   }
 
   return (
-    <NavRouteGuard routePath="/assistant/content" permission="content.manage">
+    <NavRouteGuard routePath="/assistant/content" permission={resource === 'exams' ? 'exams.manage' : 'content.manage'}>
       {content}
     </NavRouteGuard>
   );

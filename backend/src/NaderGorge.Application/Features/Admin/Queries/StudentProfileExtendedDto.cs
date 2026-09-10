@@ -162,6 +162,10 @@ public class WatchTrackingSummaryDto
 
 public class StudentVideoWatchActivityDto
 {
+    public decimal LearningWatchedSeconds { get; set; }
+    public int? DurationSeconds { get; set; }
+    public bool IsCompleted { get; set; }
+    public List<StudentPlaybackSessionDto> Sessions { get; set; } = new();
     public Guid LessonVideoId { get; set; }
     public string VideoTitle { get; set; } = string.Empty;
     public int VideoOrder { get; set; }
@@ -181,6 +185,8 @@ public class StudentVideoWatchActivityDto
     public bool IsLocked { get; set; }
     public DateTime? LastWatchedAt { get; set; }
 }
+
+public record StudentPlaybackSessionDto(Guid Id, DateTime StartedAt, decimal ActualWatchedSeconds, int? DurationSeconds);
 
 public class AuditLogDto
 {

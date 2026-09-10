@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import {
   BarChart3,
@@ -27,10 +28,11 @@ export function AttachedExamViewer({
   surface?: 'admin' | 'teacher';
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const examBasePath = surface === 'teacher' ? '/teacher/packages/exams' : '/admin/content/exams';
+  const examBasePath = `${assessmentContentPath(pathname, surface)}/exams`;
 
   const loadData = useCallback(async () => {
     try {

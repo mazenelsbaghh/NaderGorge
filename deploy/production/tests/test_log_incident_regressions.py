@@ -95,3 +95,13 @@ def test_frontend_options_probes_do_not_create_405_noise() -> None:
     nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
 
     assert nginx.count("if ($request_method = OPTIONS) { return 204; }") == 5
+
+
+def test_hls_proxy_streams_segments_without_disk_buffering() -> None:
+    nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
+    student = nginx.split("server_name app.massar-academy.net;", 1)[1].split("\n}", 1)[0]
+    hls = student.split("location ^~ /api/video/hls", 1)[1].split("\n    }", 1)[0]
+
+    assert "proxy_buffering off;" in hls
+    assert "proxy_request_buffering off;" in hls
+    assert "proxy_max_temp_file_size 0;" in hls

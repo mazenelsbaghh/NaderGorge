@@ -154,21 +154,18 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var sortedLessonVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
         if (_academicScope != null && !isPrivilegedUser)
         {
-            var eligibleVideos = new List<NaderGorge.Domain.Entities.LessonVideo>();
-            foreach (var video in sortedLessonVideos)
-            {
-                if (await _academicScope.IsOwnerEligibleForStudentAsync(
-                        StudentFacingScopeOwnerType.LessonVideo,
-                        video.Id,
-                        request.UserId,
-                        ct) && await _archiveAccess.CanViewAsync(
-                        request.UserId, ContentArchiveTargetType.Video, video.Id, ct))
-                {
-                    eligibleVideos.Add(video);
-                }
-            }
-
-            sortedLessonVideos = eligibleVideos;
+            var candidateVideoIds = sortedLessonVideos.Select(video => video.Id).ToArray();
+            var academicallyEligibleVideoIds = await _academicScope.GetEligibleLessonVideoIdsForStudentAsync(
+                candidateVideoIds,
+                request.UserId,
+                ct);
+            var viewableVideoIds = await _archiveAccess.GetViewableLessonVideoIdsAsync(
+                request.UserId,
+                candidateVideoIds,
+                ct);
+            sortedLessonVideos = sortedLessonVideos
+                .Where(video => academicallyEligibleVideoIds.Contains(video.Id) && viewableVideoIds.Contains(video.Id))
+                .ToList();
         }
         var now = DateTime.UtcNow;
         var codeUnlockedVideoIds = new HashSet<Guid>();
@@ -217,12 +214,10 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         if (!hasAccess)
         {
-            var accessibleVideoIds = new HashSet<Guid>();
-            foreach (var video in sortedLessonVideos)
-            {
-                if (await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct))
-                    accessibleVideoIds.Add(video.Id);
-            }
+            var accessibleVideoIds = await _access.GetAccessibleVideoIdsAsync(
+                request.UserId,
+                sortedLessonVideos.Select(video => video.Id).ToArray(),
+                ct);
 
             var partialProgress = (await StudentWatchProgressReader.ReadAsync(
                 new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), accessibleVideoIds, ct))

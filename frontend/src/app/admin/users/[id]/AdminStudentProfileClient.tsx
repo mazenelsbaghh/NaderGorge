@@ -1377,8 +1377,27 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                              {/* Metrics */}
                                                              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--admin-muted)]">
                                                                <div>
-                                                                 <span className="font-bold">الوقت المحتسب:</span> {formatDuration(activity.watchedSeconds)}
+                                                                 <span className="font-bold">تقدم الفيديو:</span>{' '}
+                                                                 {formatDuration(Math.floor(activity.learningWatchedSeconds ?? 0))} من{' '}
+                                                                 {activity.durationSeconds ? formatDuration(activity.durationSeconds) : 'مدة غير متوفرة'}
+                                                                 {activity.durationSeconds ? ` · ${Math.min(100, Math.floor((activity.learningWatchedSeconds ?? 0) * 100 / activity.durationSeconds))}%` : ''}
+                                                                 {activity.isCompleted ? ' · مكتمل' : ''}
                                                                </div>
+                                                               <div>
+                                                                 <span className="font-bold">وقت احتساب العدد:</span> {formatDuration(activity.watchedSeconds)}
+                                                               </div>
+                                                               {!!activity.sessions?.length && (
+                                                                 <details className="w-full">
+                                                                   <summary className="cursor-pointer font-bold">تفاصيل جلسات المشاهدة ({activity.sessions.length})</summary>
+                                                                   <p className="mt-2">الوقت الفعلي هو الوقت الذي قضاه الطالب، وقد يقل عن مدة الفيديو عند زيادة السرعة. الجلسة ليست بالضرورة مشاهدة محتسبة.</p>
+                                                                   {activity.sessions.map((session) => (
+                                                                     <div key={session.id} className="mt-2 rounded-lg border border-[var(--admin-border)]/20 p-2">
+                                                                       <span>{new Date(session.startedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}</span>
+                                                                       <div>وقت المشاهدة الفعلي: {formatDuration(Math.floor(session.actualWatchedSeconds))} · مدة الفيديو: {session.durationSeconds ? formatDuration(session.durationSeconds) : 'غير متوفرة'}</div>
+                                                                     </div>
+                                                                   ))}
+                                                                 </details>
+                                                               )}
                                                                <div dir="ltr">
                                                                  <span className="font-bold" dir="rtl">متوسط السرعة:</span> {activity.averagePlaybackRate.toFixed(2).replace(/\.00$/, '')}×
                                                                </div>

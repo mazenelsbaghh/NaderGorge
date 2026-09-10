@@ -543,6 +543,10 @@ export interface StudentProfileExtendedDto {
     averagePlaybackRate: number;
     watchedVideosCount: number;
     activities: Array<{
+      learningWatchedSeconds?: number;
+      durationSeconds?: number | null;
+      isCompleted?: boolean;
+      sessions?: Array<{ id: string; startedAt: string; actualWatchedSeconds: number; durationSeconds: number | null }>;
       lessonVideoId: string;
       videoTitle: string;
       videoOrder: number;

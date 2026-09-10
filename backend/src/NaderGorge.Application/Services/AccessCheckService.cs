@@ -103,6 +103,53 @@ public class AccessCheckService : IAccessCheckService
             await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Lesson, lessonId, userId, ct);
     }
 
+    public async Task<IReadOnlySet<Guid>> GetAccessibleLessonIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> lessonIds,
+        CancellationToken ct = default)
+    {
+        var requestedIds = lessonIds.Distinct().ToArray();
+        if (requestedIds.Length == 0)
+            return new HashSet<Guid>();
+
+        if (await IsPrivilegedAsync(userId, ct))
+            return requestedIds.ToHashSet();
+
+        var viewableIds = await _archiveAccess.GetViewableLessonIdsAsync(userId, requestedIds, ct);
+        var eligibleIds = _academicScope is null
+            ? requestedIds.ToHashSet()
+            : await _academicScope.GetEligibleLessonIdsForStudentAsync(requestedIds, userId, ct);
+        var candidateIds = requestedIds
+            .Where(id => viewableIds.Contains(id) && eligibleIds.Contains(id))
+            .ToArray();
+        if (candidateIds.Length == 0)
+            return new HashSet<Guid>();
+
+        var scopes = await _db.Lessons
+            .AsNoTracking()
+            .Where(lesson => candidateIds.Contains(lesson.Id))
+            .Select(lesson => new LessonAccessScope(
+                lesson.Id,
+                lesson.ContentSectionId,
+                lesson.ContentSection.TermId,
+                lesson.ContentSection.Term.PackageId,
+                lesson.ContentSection.Term.Package.TeacherId))
+            .ToListAsync(ct);
+        var hiddenTeacherIds = await HiddenTeacherIdsAsync(
+            scopes.Select(scope => scope.TeacherId).Distinct().ToArray(),
+            ct);
+        var grants = await LoadActiveGrantsAsync(userId, ct);
+
+        return scopes
+            .Where(scope => !hiddenTeacherIds.Contains(scope.TeacherId) && grants.Any(grant =>
+                (grant.GrantType == CodeType.Lesson && grant.LessonId == scope.LessonId) ||
+                (grant.GrantType == CodeType.Month && grant.ContentSectionId == scope.ContentSectionId) ||
+                (grant.GrantType == CodeType.Term && grant.TermId == scope.TermId) ||
+                (grant.GrantType == CodeType.Package && grant.PackageId == scope.PackageId)))
+            .Select(scope => scope.LessonId)
+            .ToHashSet();
+    }
+
     public async Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default)
     {
         if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Video, lessonVideoId, ct))
@@ -161,6 +208,65 @@ public class AccessCheckService : IAccessCheckService
 
         return hasDirectVideoAccess &&
             await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.LessonVideo, lessonVideoId, userId, ct);
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetAccessibleVideoIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> lessonVideoIds,
+        CancellationToken ct = default)
+    {
+        var requestedIds = lessonVideoIds.Distinct().ToArray();
+        if (requestedIds.Length == 0)
+            return new HashSet<Guid>();
+
+        if (await IsPrivilegedAsync(userId, ct))
+            return requestedIds.ToHashSet();
+
+        var viewableIds = await _archiveAccess.GetViewableLessonVideoIdsAsync(userId, requestedIds, ct);
+        var eligibleIds = _academicScope is null
+            ? requestedIds.ToHashSet()
+            : await _academicScope.GetEligibleLessonVideoIdsForStudentAsync(requestedIds, userId, ct);
+        var candidateIds = requestedIds
+            .Where(id => viewableIds.Contains(id) && eligibleIds.Contains(id))
+            .ToArray();
+        if (candidateIds.Length == 0)
+            return new HashSet<Guid>();
+
+        var scopes = await _db.LessonVideos
+            .AsNoTracking()
+            .Where(video => candidateIds.Contains(video.Id) && video.IsActive)
+            .Select(video => new VideoAccessScope(
+                video.Id,
+                video.LessonId,
+                video.VideoTypeId,
+                video.Lesson.ContentSectionId,
+                video.Lesson.ContentSection.TermId,
+                video.Lesson.ContentSection.Term.PackageId,
+                video.Lesson.ContentSection.Term.Package.TeacherId))
+            .ToListAsync(ct);
+        var hiddenTeacherIds = await HiddenTeacherIdsAsync(
+            scopes.Select(scope => scope.TeacherId).Distinct().ToArray(),
+            ct);
+        var lessonAccess = await GetAccessibleLessonIdsAsync(
+            userId,
+            scopes.Select(scope => scope.LessonId).Distinct().ToArray(),
+            ct);
+        var grants = await LoadActiveGrantsAsync(userId, ct);
+
+        return scopes
+            .Where(scope => !hiddenTeacherIds.Contains(scope.TeacherId) &&
+                (lessonAccess.Contains(scope.LessonId) || grants.Any(grant =>
+                    grant.GrantType == CodeType.Video &&
+                    (grant.MaxUses is null || grant.UsesConsumed < grant.MaxUses) &&
+                    (grant.LessonVideoId == scope.VideoId ||
+                     (grant.VideoTypeId == scope.VideoTypeId &&
+                      (grant.LessonId is null || grant.LessonId == scope.LessonId) &&
+                      (grant.ContentSectionId is null || grant.ContentSectionId == scope.ContentSectionId) &&
+                      (grant.TermId is null || grant.TermId == scope.TermId) &&
+                      (grant.PackageId is null || grant.PackageId == scope.PackageId) &&
+                      (grant.CodeGroupTeacherId is null || grant.CodeGroupTeacherId == scope.TeacherId))))))
+            .Select(scope => scope.VideoId)
+            .ToHashSet();
     }
 
     public async Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default)
@@ -295,4 +401,71 @@ public class AccessCheckService : IAccessCheckService
         return _academicScope == null ||
             await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct);
     }
+
+    private Task<bool> IsPrivilegedAsync(Guid userId, CancellationToken ct) =>
+        _db.UserRoles
+            .AsNoTracking()
+            .AnyAsync(userRole => userRole.UserId == userId &&
+                (userRole.Role.Type == RoleType.Admin || userRole.Role.Type == RoleType.Teacher), ct);
+
+    private Task<List<ActiveAccessGrant>> LoadActiveGrantsAsync(Guid userId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        return _db.StudentAccessGrants
+            .AsNoTracking()
+            .Where(grant => grant.UserId == userId && grant.IsActive &&
+                (grant.ExpiresAt == null || grant.ExpiresAt > now))
+            .Select(grant => new ActiveAccessGrant(
+                grant.GrantType,
+                grant.PackageId,
+                grant.TermId,
+                grant.ContentSectionId,
+                grant.LessonId,
+                grant.LessonVideoId,
+                grant.VideoTypeId,
+                grant.MaxUses,
+                grant.UsesConsumed,
+                grant.AccessCode != null ? grant.AccessCode.CodeGroup.TeacherId : null))
+            .ToListAsync(ct);
+    }
+
+    private async Task<IReadOnlySet<Guid>> HiddenTeacherIdsAsync(
+        IReadOnlyCollection<Guid> teacherIds,
+        CancellationToken ct)
+    {
+        var hiddenIds = await _db.TeacherProfiles
+            .AsNoTracking()
+            .Where(teacher => teacherIds.Contains(teacher.Id) && !teacher.IsContentVisibleToStudents)
+            .Select(teacher => teacher.Id)
+            .ToListAsync(ct);
+        return hiddenIds.ToHashSet();
+    }
+
+    private sealed record LessonAccessScope(
+        Guid LessonId,
+        Guid ContentSectionId,
+        Guid? TermId,
+        Guid PackageId,
+        Guid TeacherId);
+
+    private sealed record VideoAccessScope(
+        Guid VideoId,
+        Guid LessonId,
+        Guid VideoTypeId,
+        Guid ContentSectionId,
+        Guid? TermId,
+        Guid PackageId,
+        Guid TeacherId);
+
+    private sealed record ActiveAccessGrant(
+        CodeType GrantType,
+        Guid? PackageId,
+        Guid? TermId,
+        Guid? ContentSectionId,
+        Guid? LessonId,
+        Guid? LessonVideoId,
+        Guid? VideoTypeId,
+        int? MaxUses,
+        int UsesConsumed,
+        Guid? CodeGroupTeacherId);
 }

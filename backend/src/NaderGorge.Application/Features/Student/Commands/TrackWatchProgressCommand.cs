@@ -88,23 +88,34 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (_playbackConcurrency is not null)
             await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
 
-        var session = await _db.VideoPlaybackSessions.FirstOrDefaultAsync(
-            s => s.Id == request.SessionId
-                 && s.UserId == request.UserId
-                 && s.LessonVideoId == request.LessonVideoId,
-            ct);
+        var sessionState = await _db.VideoPlaybackSessions
+            .Where(candidate => candidate.Id == request.SessionId
+                 && candidate.UserId == request.UserId
+                 && candidate.LessonVideoId == request.LessonVideoId)
+            .Select(candidate => new
+            {
+                Session = candidate,
+                Video = candidate.LessonVideo,
+                HasNewerSession = _db.VideoPlaybackSessions.Any(other =>
+                    other.UserId == request.UserId
+                    && other.LessonVideoId == request.LessonVideoId
+                    && other.Id != candidate.Id
+                    && !other.IsSuperseded
+                    && other.CreatedAt > candidate.CreatedAt)
+            })
+            .FirstOrDefaultAsync(ct);
 
-        if (session == null)
+        if (sessionState == null)
             return Fail("Invalid playback session", "SESSION_INVALID");
 
+        var session = sessionState.Session;
+
         var now = DateTime.UtcNow;
-        var sessionError = await GetSessionErrorAsync(session, request, now, ct);
+        var sessionError = GetSessionError(session, sessionState.HasNewerSession, now);
         if (sessionError != null)
             return sessionError;
 
-        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
-        if (video == null)
-            return Fail("Video not found", "VIDEO_NOT_FOUND");
+        var video = sessionState.Video;
 
         var trackingPolicy = await ResolveTrackingPolicyAsync(session, video, request, ct);
         if (trackingPolicy is null)
@@ -269,38 +280,27 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             : normalizedProvider == VideoProviders.YouTube
                 ? PlatformSettingKeys.YouTubeWatchThresholdPercentage
                 : PlatformSettingKeys.VideoWatchThresholdPercentage;
-        var providerThreshold = await _db.PlatformSettings
-            .AsNoTracking()
-            .Where(setting => setting.Key == providerKey)
-            .Select(setting => setting.Value)
-            .FirstOrDefaultAsync(ct);
-
-        return int.TryParse(providerThreshold, out var configuredThreshold)
-            ? Math.Clamp(configuredThreshold, 1, 100)
-            : Math.Clamp(settings.VideoWatchThresholdPercentage, 1, 100);
+        return providerKey switch
+        {
+            PlatformSettingKeys.BunnyWatchThresholdPercentage => settings.BunnyWatchThresholdPercentage,
+            PlatformSettingKeys.YouTubeWatchThresholdPercentage => settings.YouTubeWatchThresholdPercentage,
+            _ => settings.VideoWatchThresholdPercentage
+        };
     }
 
     private static ApiResponse<WatchProgressDto> Fail(string message, string error) =>
         ApiResponse<WatchProgressDto>.Fail(message, new List<string> { error });
 
-    private async Task<ApiResponse<WatchProgressDto>?> GetSessionErrorAsync(
+    private static ApiResponse<WatchProgressDto>? GetSessionError(
         VideoPlaybackSession session,
-        TrackWatchProgressCommand request,
-        DateTime now,
-        CancellationToken ct)
+        bool hasNewerSession,
+        DateTime now)
     {
         if (session.IsSuperseded)
             return Fail("Playback session was superseded", "SESSION_SUPERSEDED");
         if (session.ExpiresAt <= now)
             return Fail("Playback session expired", "SESSION_EXPIRED");
 
-        var hasNewerSession = await _db.VideoPlaybackSessions.AnyAsync(
-            candidate => candidate.UserId == request.UserId
-                         && candidate.LessonVideoId == request.LessonVideoId
-                         && candidate.Id != session.Id
-                         && !candidate.IsSuperseded
-                         && candidate.CreatedAt > session.CreatedAt,
-            ct);
         return hasNewerSession
             ? Fail("Playback session was superseded", "SESSION_SUPERSEDED")
             : null;

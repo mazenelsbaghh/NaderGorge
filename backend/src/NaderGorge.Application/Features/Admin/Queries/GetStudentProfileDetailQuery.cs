@@ -348,8 +348,28 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             watchActivities.AddRange(unwatchedActivities);
         }
 
+        var progressByVideo = (await NaderGorge.Application.Common.StudentWatchProgressReader.ReadAsync(
+            new(_context, request.UserId, watchedLessonIds),
+            watchActivities.Select(activity => activity.LessonVideoId).ToArray(),
+            cancellationToken)).ToDictionary(progress => progress.VideoId);
+        var playbackSessions = await _context.VideoPlaybackSessions.AsNoTracking()
+            .Where(session => session.UserId == request.UserId && session.AcceptedWallSeconds > 0)
+            .OrderByDescending(session => session.CreatedAt)
+            .Select(session => new
+            {
+                session.LessonVideoId,
+                Session = new StudentPlaybackSessionDto(session.Id, session.CreatedAt,
+                    session.AcceptedWallSeconds, session.TrackingDurationSeconds)
+            }).ToListAsync(cancellationToken);
+        var sessionsByVideo = playbackSessions.ToLookup(session => session.LessonVideoId, session => session.Session);
+
         foreach (var activity in watchActivities)
         {
+            var progress = progressByVideo.GetValueOrDefault(activity.LessonVideoId);
+            activity.LearningWatchedSeconds = progress?.WatchedSeconds ?? 0;
+            activity.DurationSeconds = progress?.DurationSeconds;
+            activity.IsCompleted = progress?.IsCompleted ?? false;
+            activity.Sessions = sessionsByVideo[activity.LessonVideoId].ToList();
             activity.PlaybackRateSeconds = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(activity.PlaybackRateBreakdownJson) ?? new();
             activity.AveragePlaybackRate = activity.ActualWatchedSeconds > 0
                 ? decimal.Round(activity.WatchedSeconds / (decimal)activity.ActualWatchedSeconds, 2)

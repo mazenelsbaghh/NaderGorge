@@ -2,7 +2,8 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
@@ -56,7 +57,8 @@ export default function ExamProfilePageClient({
   const [searchQuery, setSearchQuery] = useState('');
 
   const router = useRouter();
-  const editorPath = `${surface === 'teacher' ? '/teacher/packages' : '/admin/content'}/exams/${id}/add-question`;
+  const pathname = usePathname();
+  const editorPath = `${assessmentContentPath(pathname, surface)}/exams/${id}/add-question`;
   const handleAddQuestionClick = () => router.push(editorPath);
   const isTeacherSurface = surface === 'teacher';
   const backAction = isTeacherSurface ? (

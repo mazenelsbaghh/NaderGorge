@@ -1,6 +1,7 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
+import { formatPlayerTime } from '@/lib/player-time';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
 import { AlertCircle, Play, Info, Map, Maximize2, Minimize2 } from 'lucide-react';
@@ -247,7 +248,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   
   const [showControls, setShowControls] = useState(true);
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
-  const [requiresDirectPlayback, setRequiresDirectPlayback] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shadowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const embedReadinessWatchdogRef = useRef<BunnyBridgeReadinessWatchdog | null>(null);
@@ -586,12 +586,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (bunnyRecoveryTimerRef.current) clearTimeout(bunnyRecoveryTimerRef.current);
   }, []);
 
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
+  const formatTime = formatPlayerTime;
 
   const sendCommand = useCallback((type: string, data?: Record<string, unknown>) => {
     if (securitySuspendedRef.current) return;
@@ -685,7 +680,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           bunnyReadyAtRef.current = ['bunny', 'bunny-hls'].includes(embedProvider) ? Date.now() : 0;
           setProvider(embedProvider);
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
-          setRequiresDirectPlayback(embedProvider === 'youtube' && msg.data.requiresDirectPlayback === true);
           showPersistentPlayerShadows();
 
           if (embedProvider === 'bunny' || embedProvider === 'bunny-hls') {
@@ -743,7 +737,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               clearTimeout(playFallbackTimeoutRef.current);
               playFallbackTimeoutRef.current = null;
             }
-            setRequiresDirectPlayback(false);
             setShowControls(false);
             setIsBuffering(false);
             showTimedPlayerShadows();
@@ -774,7 +767,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             clearTimeout(playFallbackTimeoutRef.current);
             playFallbackTimeoutRef.current = null;
           }
-          setRequiresDirectPlayback((msg.data?.provider || providerRef.current) === 'youtube');
           isPlayingRef.current = false;
           setIsPlaying(false);
           setIsBuffering(false);
@@ -2229,21 +2221,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && !usesNativePlayerChrome && !requiresDirectPlayback && !isPlaying && !isBuffering && (
-          <button
-            type="button"
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 pointer-events-auto"
-            aria-label="تشغيل الفيديو"
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePlay();
-            }}
-          >
-            <div className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full bg-[#0A1D3D] text-white shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95">
-              <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
-            </div>
-          </button>
-        )}
 
         {status === 'ready' && !usesNativePlayerChrome && (
           <PlayerControls 
@@ -2265,18 +2242,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             currentQuality={currentQuality}
             onQualityChange={handleQualityChange}
             visible={showControls}
+            onHide={() => setShowControls(false)}
             provider={provider}
             onControlHover={setIsHoveringControls}
             chapters={normalizedChapters}
           />
         )}
-      </div>
-      {status === 'ready' && (activeChapterDesktop?.summaryText || activeMindmapChapter) && (
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-white/10 bg-[#0A1D3D] px-2 text-white" dir="rtl">
-          {activeChapterDesktop?.summaryText && <button type="button" onClick={() => setIsChapterInfoOpen(true)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-white/10"><Info className="size-4" /> معلومات الفصل</button>}
-          {activeMindmapChapter && <button type="button" onClick={() => setIsMindmapOpen(true)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-white/10"><Map className="size-4" /> الخريطة الذهنية</button>}
+      {status === 'ready' && showControls && (activeChapterDesktop?.summaryText || activeMindmapChapter) && (
+        <div className="absolute right-2 top-2 z-[var(--z-modal)] flex gap-1 text-white" dir="rtl" onClick={e => e.stopPropagation()}>
+          {activeChapterDesktop?.summaryText && <button type="button" aria-label="معلومات الفصل" onClick={() => setIsChapterInfoOpen(true)} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Info className="size-4" /></button>}
+          {activeMindmapChapter && <button type="button" aria-label="الخريطة الذهنية" onClick={() => setIsMindmapOpen(true)} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Map className="size-4" /></button>}
         </div>
       )}
+      </div>
       {isChapterInfoOpen && activeChapterDesktop?.summaryText && <LessonAidDialog title={activeChapterDesktop.title} summary={activeChapterDesktop.summaryText} onClose={() => setIsChapterInfoOpen(false)} />}
       {isMindmapOpen && activeMindmapChapter && <LessonAidDialog title={`الخريطة الذهنية: ${activeMindmapChapter.title}`} imageUrl={activeMindmapChapter.mindmapImageUrl} onClose={() => setIsMindmapOpen(false)} />}
     </div>

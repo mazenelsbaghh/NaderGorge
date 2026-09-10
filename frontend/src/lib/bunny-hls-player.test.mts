@@ -59,7 +59,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   };
 
   class FakeHls {
-    static Events = { ERROR: 'error', LEVEL_SWITCHED: 'levelSwitched', MANIFEST_PARSED: 'manifestParsed' };
+    static Events = { ERROR: 'error', LEVEL_SWITCHED: 'levelSwitched', MANIFEST_PARSED: 'manifestParsed', LEVEL_LOADED: 'levelLoaded', FRAG_LOADED: 'fragmentLoaded' };
     static ErrorTypes = { MEDIA_ERROR: 'mediaError', NETWORK_ERROR: 'networkError' };
     static isSupported() { return true; }
     levels: unknown[] = [];
@@ -152,6 +152,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     emitManifestParsed() {
       hlsListeners.get('manifestParsed')?.(null, {});
     },
+    emitLevelLoaded() { hlsListeners.get('levelLoaded')?.(null, {}); },
+    emitFragmentLoaded() { hlsListeners.get('fragmentLoaded')?.(null, {}); },
     hls: () => hlsInstances[0] ?? null,
     hlsInstances,
     nativeSource: () => video.src,
@@ -178,6 +180,38 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     },
   };
 }
+
+test('2026-09-10 slow first fragment survives the old twenty-second cutoff', async () => {
+  const player = await runHlsPlayer();
+  player.advanceTime(12000);
+  player.emitManifestParsed();
+  player.advanceTime(6000);
+  player.emitLevelLoaded();
+  player.advanceTime(22000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.emitFragmentLoaded();
+  player.triggerVideoEvent('loadedmetadata');
+  player.advanceTime(60000);
+  assert.equal(player.messages.filter(message => message.type === 'ready').length, 1);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+});
+
+test('2026-09-10 repeated milestones cannot extend startup beyond its sixty-second cap', async () => {
+  const player = await runHlsPlayer();
+  player.advanceTime(15000);
+  player.emitManifestParsed();
+  player.advanceTime(15000);
+  player.emitLevelLoaded();
+  player.advanceTime(15000);
+  player.emitFragmentLoaded();
+  player.advanceTime(14000);
+  player.emitLevelLoaded();
+  player.emitFragmentLoaded();
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(1000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hls()?.destroyCalls, 1);
+});
 
 test('2026-09-03 Bunny HLS 403 stops loading with its real cause and never falls back', async () => {
   const player = await runHlsPlayer();

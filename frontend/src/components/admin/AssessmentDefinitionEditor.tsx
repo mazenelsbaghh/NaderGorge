@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { AdminPage } from './AdminShellChrome';
 import { AdminBackButton } from './AdminBackButton';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
@@ -22,6 +23,7 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
   id: string; kind: AssessmentKind; surface?: 'admin' | 'teacher'; initialQuestionId?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [definition, setDefinition] = useState<AssessmentDefinition | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [policy, setPolicy] = useState<RevisionPolicy>(defaultRevisionPolicy);
@@ -34,7 +36,7 @@ export function AssessmentDefinitionEditor({ id, kind, surface = 'admin', initia
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [subjectId, setSubjectId] = useState('');
   const label = kind === 'exam' ? 'الامتحان' : 'الواجب';
-  const profilePath = `${surface === 'teacher' ? '/teacher/packages' : '/admin/content'}/${kind === 'exam' ? 'exams' : 'homework'}/${id}`;
+  const profilePath = `${assessmentContentPath(pathname, surface)}/${kind === 'exam' ? 'exams' : 'homework'}/${id}`;
 
   useEffect(() => {
     let cancelled = false;

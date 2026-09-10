@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/services/admin-service';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus, Copy, Search, Send } from 'lucide-react';
 import { AdminPage, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
 import { ConfirmModal } from '@/components/ui/admin-modal';
@@ -13,6 +14,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
   const params = props.params;
   const examId = params.id;
   const router = useRouter();
+  const pathname = usePathname();
 
   const [dashboard, setDashboard] = useState<ExamDashboardDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -185,7 +187,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
             </div>
             <button
               type="button"
-              onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+              onClick={() => router.push(`${assessmentContentPath(pathname)}/exams/${examId}/add-question`)}
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
             >
               <Plus className="h-4 w-4" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { Play } from 'lucide-react';
+import { formatPlayerTime } from '@/lib/player-time';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -42,12 +42,7 @@ const clamp = (value: unknown, fallback: number, max: number) => {
   return Number.isFinite(numberValue) ? Math.min(max, Math.max(0, numberValue)) : fallback;
 };
 
-const formatTime = (seconds: number) => {
-  if (!seconds || Number.isNaN(seconds)) return '0:00';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
+const formatTime = formatPlayerTime;
 
 /**
  * Public introductions use the same embed protocol and visual controls as lesson videos.
@@ -218,11 +213,6 @@ export function PublicVideoPlayer({ url, title }: PublicVideoPlayerProps) {
 
       {isBuffering && <div className="pointer-events-none absolute inset-0 z-[var(--z-floating)] flex items-center justify-center bg-black/40 backdrop-blur-sm"><SpinnerLoader /></div>}
 
-      {isReady && !isPlaying && !isBuffering && (
-        <button type="button" className="absolute inset-0 z-[var(--z-floating-action)] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={togglePlay} aria-label="تشغيل الفيديو">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/50 bg-white/20 shadow-sm backdrop-blur-md transition hover:scale-110"><Play className="ml-1 h-8 w-8 text-white" fill="currentColor" /></span>
-        </button>
-      )}
 
       {isReady && <PlayerControls
         isPlaying={isPlaying}
@@ -239,6 +229,7 @@ export function PublicVideoPlayer({ url, title }: PublicVideoPlayerProps) {
         currentTimeFormatted={formatTime(currentTime)}
         onPlaybackRateChange={(rate) => sendCommand('setPlaybackRate', { rate })}
         visible={showControls}
+        onHide={() => setShowControls(false)}
         compact
         provider={provider}
       />}

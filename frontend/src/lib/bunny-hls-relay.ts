@@ -2,6 +2,26 @@ const MAX_PLAYLIST_BYTES = 1024 * 1024;
 const MAX_SEGMENT_BYTES = 32 * 1024 * 1024;
 const MEDIA_TYPES: Record<string, string> = { ts: 'video/mp2t', mp4: 'video/mp4', m4s: 'video/mp4', aac: 'audio/aac' };
 
+function isTransientConnectFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error instanceof AggregateError) {
+    return error.errors.length > 0 && error.errors.every(isTransientConnectFailure);
+  }
+  const code = 'code' in error ? error.code : undefined;
+  return code === 'ETIMEDOUT' || code === 'ECONNRESET' || code === 'UND_ERR_CONNECT_TIMEOUT'
+    || isTransientConnectFailure(error.cause);
+}
+
+async function fetchRelayResource(upstream: URL, options: RequestInit): Promise<Response> {
+  try {
+    return await fetch(upstream, options);
+  } catch (error) {
+    if (options.signal?.aborted || !isTransientConnectFailure(error)) throw error;
+    // Retry only connection establishment, never an HTTP rejection or a partially streamed body.
+    return fetch(upstream, options);
+  }
+}
+
 export function bunnyHlsRoot(signedPlaylist: string): URL {
   const source = new URL(signedPlaylist);
   if (source.protocol !== 'https:' || !/^[a-z0-9-]+\.b-cdn\.net$/i.test(source.hostname)
@@ -42,7 +62,7 @@ export async function relayBunnyResource(upstream: URL, sessionId: string, root:
   const range = request.headers.get('range');
   if (range && !/^bytes=\d+-\d*$/.test(range)) return new Response(null, { status: 416 });
   const playlist = upstream.pathname.endsWith('.m3u8');
-  const response = await fetch(upstream, {
+  const response = await fetchRelayResource(upstream, {
     cache: 'no-store', redirect: 'error',
     signal: AbortSignal.any([request.signal, AbortSignal.timeout(playlist ? 20_000 : 120_000)]),
     headers: range && !playlist ? { Range: range } : {},

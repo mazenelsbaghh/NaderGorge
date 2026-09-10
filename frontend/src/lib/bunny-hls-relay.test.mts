@@ -51,6 +51,29 @@ test('relay forwards only the byte range and preserves partial segment bytes', a
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes);
 });
 
+test('transient connection timeout retries once and returns the actual segment', async (context) => {
+  let requests = 0;
+  context.mock.method(globalThis, 'fetch', async () => {
+    if (++requests === 1) throw new TypeError('fetch failed', {
+      cause: new AggregateError([Object.assign(new Error('connect timeout'), { code: 'ETIMEDOUT' })]),
+    });
+    return new Response(new Uint8Array([1, 2, 3]));
+  });
+  const response = await relay.relayBunnyResource(new URL('720p/part.ts', root), sessionId, root, new Request('https://app.massar-academy.net'));
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new Uint8Array([1, 2, 3]));
+  assert.equal(requests, 2);
+});
+
+test('persistent connection timeout stops after two requests', async (context) => {
+  let requests = 0;
+  context.mock.method(globalThis, 'fetch', async () => {
+    requests++;
+    throw Object.assign(new Error('connect timeout'), { code: 'ETIMEDOUT' });
+  });
+  await assert.rejects(relay.relayBunnyResource(new URL(source), sessionId, root, new Request('https://app.massar-academy.net')), /connect timeout/);
+  assert.equal(requests, 2);
+});
+
 test('relay preserves upstream rejection instead of converting it to successful video', async (context) => {
   context.mock.method(globalThis, 'fetch', async () => new Response('private error', { status: 403 }));
   const response = await relay.relayBunnyResource(new URL(source), sessionId, root, new Request('https://app.massar-academy.net'));

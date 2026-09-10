@@ -238,20 +238,23 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function setQuality(id){if(id==='auto'){if(hls){hls.currentLevel=-1;hls.nextLevel=-1;}else if(nativeCurrent!=='auto')loadNative(masterSource,'auto');emitQuality();return;}if(hls){var index=Number(id);if(Number.isInteger(index)&&index>=0&&index<hls.levels.length){hls.currentLevel=index;hls.nextLevel=index;emitQuality();}}else{var level=nativeLevels.find(function(item){return item.id===id});if(level)loadNative(level.url,id);}}
   attachEvents();
   post('providerLoaded',{provider:'bunny-hls',signedSourceExpiresAtMs:signedSourceExpiresAtMs});
-  function armLoadDeadline(){loadDeadline=setTimeout(function(){if(tryRelay(0))return;failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},20000);}
+  var loadStartedAt=Date.now();var loadMilestones={};
+  function armLoadDeadline(budget){if(loadDeadline)clearTimeout(loadDeadline);loadDeadline=setTimeout(function(){if(tryRelay(0))return;failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase)},Math.max(0,Math.min(budget||20000,60000-(Date.now()-loadStartedAt))));}
+  function loadProgress(phase,budget){if(readySent||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
   function tryRelay(status){
     if(status!==0||readySent||relayAttempted||!relaySource||terminalErrorSent)return false;
     relayAttempted=true;if(loadDeadline)clearTimeout(loadDeadline);if(hls){hls.destroy();hls=null;}
-    source=new URL(relaySource,location.origin).toString();masterSource=source;lastLoadPhase='relay_manifest';
+    source=new URL(relaySource,location.origin).toString();masterSource=source;lastLoadPhase='relay_manifest';loadStartedAt=Date.now();loadMilestones={};
     armLoadDeadline();startPlayer();return true;
   }
   function startPlayer(){
   if(window.Hls&&window.Hls.isSupported()){
     try{
       hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);
-      hls.on(window.Hls.Events.MANIFEST_PARSED,function(){lastLoadPhase='manifest_parsed';emitQuality();});
-      if(window.Hls.Events.LEVEL_LOADED)hls.on(window.Hls.Events.LEVEL_LOADED,function(){lastLoadPhase='level_loaded';});
-      if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){lastLoadPhase='fragment_loaded';});
+      var loadingInstance=hls;
+      hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});
+      if(window.Hls.Events.LEVEL_LOADED)hls.on(window.Hls.Events.LEVEL_LOADED,function(){if(hls===loadingInstance)loadProgress('level_loaded',40000);});
+      if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance)loadProgress('fragment_loaded',20000);});
       hls.on(window.Hls.Events.LEVEL_SWITCHED,function(){emitQuality();});
       var instance=hls;
       hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&mediaRecoveries<1){mediaRecoveries++;hls.recoverMediaError();return;}var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&tryRelay(status))return;failHls(status,hlsErrorMessage(status)+' ['+phase+']',phase);});

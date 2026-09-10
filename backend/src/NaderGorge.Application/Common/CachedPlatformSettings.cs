@@ -6,6 +6,8 @@ namespace NaderGorge.Application.Common;
 
 public sealed record CachedPlatformSettings(
     int VideoWatchThresholdPercentage,
+    int BunnyWatchThresholdPercentage,
+    int YouTubeWatchThresholdPercentage,
     int MaxExtraWatchRequestsPerVideo,
     decimal HintPenaltyPercentage,
     string PlatformName,
@@ -38,6 +40,8 @@ public sealed record CachedPlatformSettings(
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
+        30,
+        30,
         30,
         3,
         25m,
@@ -102,6 +106,8 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
 
             return new CachedPlatformSettings(
                 GetInt(settings, PlatformSettingKeys.VideoWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage, minValue: 1),
+                GetInt(settings, PlatformSettingKeys.BunnyWatchThresholdPercentage, CachedPlatformSettings.Default.BunnyWatchThresholdPercentage, minValue: 1, maxValue: 100),
+                GetInt(settings, PlatformSettingKeys.YouTubeWatchThresholdPercentage, CachedPlatformSettings.Default.YouTubeWatchThresholdPercentage, minValue: 1, maxValue: 100),
                 GetInt(settings, PlatformSettingKeys.MaxExtraWatchRequestsPerVideo, CachedPlatformSettings.Default.MaxExtraWatchRequestsPerVideo, minValue: 1),
                 GetDecimal(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage, minValue: 0m),
                 GetString(settings, PlatformSettingKeys.PlatformName, CachedPlatformSettings.Default.PlatformName),

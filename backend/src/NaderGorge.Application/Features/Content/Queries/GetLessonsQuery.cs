@@ -110,10 +110,19 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             .Distinct()
             .ToListAsync(ct);
 
+        var accessibleLessonIds = await _access.GetAccessibleLessonIdsAsync(
+            request.UserId,
+            lessonIds,
+            ct);
+        var accessibleVideoIds = await _access.GetAccessibleVideoIdsAsync(
+            request.UserId,
+            lessons.SelectMany(lesson => lesson.Videos).Select(video => video.Id).ToArray(),
+            ct);
+
         var dtos = new List<LessonSummaryDto>();
         foreach (var lesson in lessons)
         {
-            var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
+            var hasAccess = accessibleLessonIds.Contains(lesson.Id);
             var isCompleted = completedLessonIds.Contains(lesson.Id);
             // Use the complete section, including hidden lessons, so prerequisites stay enforced.
             var previousLesson = section.Lessons
@@ -132,7 +141,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
             foreach (var video in videos)
             {
-                var hasVideoAccess = await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct);
+                var hasVideoAccess = accessibleVideoIds.Contains(video.Id);
                 videoSummaries.Add(new LessonVideoSummaryDto(
                     video.Id,
                     video.Title,

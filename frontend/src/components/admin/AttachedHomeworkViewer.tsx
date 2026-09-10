@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { adminService, type HomeworkDashboardDto } from '@/services/admin-service';
 import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power, Eye, Pencil } from 'lucide-react';
 import Link from 'next/link';
@@ -25,11 +26,12 @@ export function AttachedHomeworkViewer({
   onStatusChanged?: () => void | Promise<void>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [data, setData] = useState<HomeworkDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const homeworkBasePath = surface === 'teacher' ? '/teacher/packages/homework' : '/admin/content/homework';
+  const homeworkBasePath = `${assessmentContentPath(pathname, surface)}/homework`;
 
   const loadData = useCallback(async () => {
     try {
