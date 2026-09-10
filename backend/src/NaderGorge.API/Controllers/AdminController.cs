@@ -679,7 +679,10 @@ public class AdminController : ControllerBase
             GetUserId(),
             dto.BunnyStreamLibraryId,
             dto.IsActive,
-            dto.BunnyPlaybackMode));
+            dto.BunnyPlaybackMode)
+        {
+            PreserveSourceDerivedData = dto.PreserveSourceDerivedData
+        });
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1568,7 +1571,10 @@ public record UpdateVideoRequest(
     Guid VideoTypeId,
     Guid? BunnyStreamLibraryId,
     bool? IsActive = null,
-    Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
+    Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer)
+{
+    public bool PreserveSourceDerivedData { get; init; }
+}
 public record AttachHomeworkRequest(
     string Title,
     string Instructions,

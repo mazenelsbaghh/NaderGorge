@@ -989,7 +989,10 @@ public record UpdateVideoCommand(
     Guid? CurrentUserId = null,
     Guid? BunnyStreamLibraryId = null,
     bool? IsActive = null,
-    BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse>;
+    BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse>
+{
+    public bool PreserveSourceDerivedData { get; init; }
+}
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
 {
@@ -1153,7 +1156,10 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             LessonVideoSourceMutation.SuppressHistoricalBunnyReplacementOutcomes(
                 video.BunnyVideoAssets,
                 DateTime.UtcNow);
-            await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(_db, video, ct);
+            if (request.PreserveSourceDerivedData)
+                await LessonVideoSourceMutation.SupersedePlaybackSessionsAsync(_db, video, ct);
+            else
+                await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(_db, video, ct);
             checked
             {
                 video.SourceRevision++;
@@ -1287,6 +1293,14 @@ internal static class LessonVideoSourceMutation
             db.VideoChapters.RemoveRange(chapters);
         }
 
+        await SupersedePlaybackSessionsAsync(db, video, cancellationToken);
+    }
+
+    public static async Task SupersedePlaybackSessionsAsync(
+        IAppDbContext db,
+        LessonVideo video,
+        CancellationToken cancellationToken)
+    {
         var activeSessions = await db.VideoPlaybackSessions
             .Where(session => session.LessonVideoId == video.Id && !session.IsSuperseded)
             .ToListAsync(cancellationToken);

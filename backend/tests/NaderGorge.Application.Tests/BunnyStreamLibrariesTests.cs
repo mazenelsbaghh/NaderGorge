@@ -538,13 +538,32 @@ public sealed class BunnyStreamLibrariesTests
         Assert.Equal("bf782c91-a093-4d59-8d20-daa579657041", result.VideoGuid);
     }
 
-    [Fact]
-    public async Task ManagedBunnyVideo_UpdateToYoutube_PreservesIdentityAndRetiresAssetHistory()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ManagedBunnyVideo_UpdateToYoutube_RespectsContentRetentionAndRetiresAssetHistory(bool preserveContent)
     {
-        await using AppDbContext db = TestAppDbContextFactory.Create();
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
         var seeded = await SeedManagedBunnyVideoAsync(db);
         var originalId = seeded.Video.Id;
         var originalInternalCode = seeded.Video.InternalCode;
+        var originalRevision = seeded.Video.SourceRevision;
+        seeded.Video.SubtitleUrl = "https://example.com/same-video.srt";
+        var chapter = new VideoChapter
+        {
+            LessonVideoId = originalId, Title = "Existing chapter", StartTime = 0, EndTime = 20,
+            SummaryText = "Existing analysis", MindmapImageUrl = "https://example.com/map.png"
+        };
+        var playbackSession = new VideoPlaybackSession
+        {
+            UserId = seeded.Admin.Id, LessonVideoId = originalId, SessionToken = "prior-source-session",
+            EncryptionKey = "test-key", ExpiresAt = DateTime.UtcNow.AddMinutes(5)
+        };
+        db.AddRange(chapter, playbackSession);
+        await db.SaveChangesAsync();
 
         var result = await new UpdateVideoCommandHandler(
                 db,
@@ -561,7 +580,7 @@ public sealed class BunnyStreamLibrariesTests
                     7,
                     0,
                     seeded.VideoType.Id,
-                    IsActive: false),
+                    IsActive: false) { PreserveSourceDerivedData = preserveContent },
                 CancellationToken.None);
 
         Assert.True(result.Success, result.Message);
@@ -575,6 +594,18 @@ public sealed class BunnyStreamLibrariesTests
 
         Assert.Equal(originalId, video.Id);
         Assert.Equal(originalInternalCode, video.InternalCode);
+        Assert.Equal(originalRevision + 1, video.SourceRevision);
+        Assert.Equal(preserveContent ? "https://example.com/same-video.srt" : null, video.SubtitleUrl);
+        var retainedChapter = await db.VideoChapters.AsNoTracking().SingleOrDefaultAsync(row => row.Id == chapter.Id);
+        if (preserveContent)
+        {
+            Assert.NotNull(retainedChapter);
+            Assert.Equal("Existing analysis", retainedChapter.SummaryText);
+            Assert.Equal("https://example.com/map.png", retainedChapter.MindmapImageUrl);
+            Assert.Equal(20, retainedChapter.EndTime);
+        }
+        else Assert.Null(retainedChapter);
+        Assert.True((await db.VideoPlaybackSessions.AsNoTracking().SingleAsync(row => row.Id == playbackSession.Id)).IsSuperseded);
         Assert.Equal(VideoProviders.YouTube, video.Provider);
         Assert.Equal("new-youtube-id", video.ProviderVideoId);
         Assert.Equal(7, video.Order);

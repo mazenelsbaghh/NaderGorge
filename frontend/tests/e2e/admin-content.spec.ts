@@ -127,7 +127,7 @@ test.describe('Admin Content Management Flow', () => {
 
     await page.goto(`${adminBaseUrl}/admin/content/lessons/${seededLessonId}`);
     await expect(page.getByText(/^LES-[0-9a-f]{32}$/)).toBeVisible();
-    await page.getByRole('button', { name: 'الفيديوهات', exact: true }).click();
+    await page.getByRole('tab', { name: 'الفيديوهات', exact: true }).click();
     await expect(page.getByText(/^VID-[0-9a-f]{32}$/)).toBeVisible();
     const title = `Typed Video ${Date.now()}`;
     await page.getByPlaceholder('مثال: الدرس الأول - مراجعة').fill(title);
@@ -144,6 +144,16 @@ test.describe('Admin Content Management Flow', () => {
     const originalCode = await videoRow.getByText(/^VID-[0-9a-f]{32}$/).textContent();
     expect(originalCode).toMatch(/^VID-[0-9a-f]{32}$/);
 
+    await videoRow.getByRole('button', { name: 'تعديل الفيديو' }).click();
+    await videoRow.getByPlaceholder('رابط الفيديو').fill('https://youtu.be/M7lc1UVf-VE');
+    await expect(videoRow.getByRole('radio', { name: 'نفس الفيديو، احتفظ بالفصول والترجمة والخرائط' })).toBeChecked();
+    await videoRow.getByRole('button', { name: 'حفظ التعديلات' }).click();
+    const retainedSave = page.waitForRequest(request => request.method() === 'PUT' && /\/videos\//.test(request.url()));
+    await page.getByRole('button', { name: 'تحديث الرابط والاحتفاظ بالبيانات' }).click();
+    expect((await retainedSave).postDataJSON().preserveSourceDerivedData).toBe(true);
+    await expect(videoRow.getByRole('button', { name: 'تعديل الفيديو' })).toBeVisible();
+    await expect(videoRow.getByText(originalCode!)).toBeVisible();
+
     await page.goto(`${adminBaseUrl}/admin/content/video-types`);
     const row = page.getByRole('row').filter({ hasText: uniqueType });
     await row.getByRole('button', { name: `تعطيل ${uniqueType}` }).click();
@@ -154,7 +164,7 @@ test.describe('Admin Content Management Flow', () => {
     await expect(row).toBeVisible();
 
     await page.goto(`${adminBaseUrl}/admin/content/lessons/${seededLessonId}`);
-    await page.getByRole('button', { name: 'الفيديوهات', exact: true }).click();
+    await page.getByRole('tab', { name: 'الفيديوهات', exact: true }).click();
     videoRow = page.locator('div.rounded-xl').filter({ hasText: title }).first();
     await videoRow.getByRole('button', { name: 'تعديل الفيديو' }).click();
     await expect(videoRow.getByRole('combobox', { name: 'نوع الفيديو' })).toContainText(`${uniqueType} (معطل، مستخدم حالياً)`);
@@ -168,9 +178,10 @@ test.describe('Admin Content Management Flow', () => {
     await videoRow.getByPlaceholder('مثال: oid=-22822305&id=456241864').fill('oid=-22822305&id=456241864');
     await videoRow.getByPlaceholder('مثال: الدرس الأول - مراجعة').fill(`${title} Updated`);
     await videoRow.getByLabel('تفعيل الفيديو مباشرة للطلاب').uncheck();
+    await videoRow.getByRole('radio', { name: 'فيديو مختلف، احذف البيانات المرتبطة بالمصدر القديم' }).check();
     await videoRow.getByRole('button', { name: 'حفظ التعديلات' }).click();
     await expect(page.getByText('استبدال مصدر الفيديو')).toBeVisible();
-    await page.getByRole('button', { name: 'استبدال المصدر' }).click();
+    await page.getByRole('button', { name: 'استبدال المصدر وحذف البيانات القديمة' }).click();
     videoRow = page.locator('div.rounded-xl').filter({ hasText: `${title} Updated` }).first();
     await expect(videoRow.getByText(originalCode!)).toBeVisible();
     await expect(videoRow).toContainText('vk');

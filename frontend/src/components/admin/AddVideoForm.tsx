@@ -94,6 +94,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [bunnyPlaybackMode, setBunnyPlaybackMode] = useState<BunnyPlaybackSelection>(() => bunnyPlaybackSelection(editingVideo?.bunnyPlaybackMode));
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sourceChangeConfirmationOpen, setSourceChangeConfirmationOpen] = useState(false);
+  const [preserveSourceDerivedData, setPreserveSourceDerivedData] = useState(true);
   const editingVideoId = editingVideo?.id;
   const savedPlaybackMode = editingVideo?.bunnyPlaybackMode;
 
@@ -126,9 +127,14 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     editingVideo && (
       provider !== videoProviderForForm(editingVideo.provider)
       || (isBunny && bunnyMode !== 'manual')
+      || (isBunny && bunnyStreamLibraryId !== (editingVideo.bunnyLibrary?.id ?? ''))
       || urlOrEmbedCode.trim() !== (editingVideo.url ?? '').trim()
     )
   );
+  const keepsVideoContent = preserveSourceDerivedData && (!isBunny || bunnyMode === 'manual');
+  const sourceChangeConsequence = keepsVideoContent
+    ? 'سيُحدّث الرابط مع الاحتفاظ بالفصول والترجمة والتحليل والخرائط الذهنية وسجل المشاهدات. اختر هذا فقط لنفس الفيديو وبنفس ترتيب المحتوى والتوقيت.'
+    : 'سيبقى نفس كود الفيديو وروابطه وسجل المشاهدات، لكن ستُزال الترجمة والفصول والتحليل والخرائط الذهنية المرتبطة بالمصدر القديم حتى لا تظهر على الفيديو الجديد.';
 
   const handleSelectedBunnyLibraryChange = useCallback((library: BunnyLibraryReferenceDto | null) => {
     const hlsReady = Boolean(library?.hlsConfigured);
@@ -213,6 +219,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : null,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
+          preserveSourceDerivedData: keepsVideoContent,
         });
       } else {
         await adminService.createVideo({
@@ -426,9 +433,22 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
         </div>
       )}
       {sourceMayChange && (
-        <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm font-semibold leading-6 text-amber-800 dark:text-amber-200" role="status">
-          تغيير المصدر سيبقي كود الفيديو وروابطه وسجل المشاهدات، لكنه سيعيد تهيئة الترجمة والفصول والتحليل الذكي المرتبطين بالمصدر القديم.
-        </p>
+        <fieldset className="space-y-2 text-sm text-[var(--admin-text)]" disabled={saving}>
+          <legend className="font-bold">نوع تغيير الفيديو</legend>
+          {(!isBunny || bunnyMode === 'manual') && (
+            <div className="flex flex-col gap-1">
+              <label className="flex min-h-11 items-center gap-2">
+                <input type="radio" name={`source-change-${editingVideo?.id}`} checked={preserveSourceDerivedData} onChange={() => setPreserveSourceDerivedData(true)} />
+                نفس الفيديو، احتفظ بالفصول والترجمة والخرائط
+              </label>
+              <label className="flex min-h-11 items-center gap-2">
+                <input type="radio" name={`source-change-${editingVideo?.id}`} checked={!preserveSourceDerivedData} onChange={() => setPreserveSourceDerivedData(false)} />
+                فيديو مختلف، احذف البيانات المرتبطة بالمصدر القديم
+              </label>
+            </div>
+          )}
+          <p className="leading-6" role="status">{sourceChangeConsequence}</p>
+        </fieldset>
       )}
       <div className="flex flex-wrap items-end gap-4">
         <div className="w-full md:w-56">
@@ -504,8 +524,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           if (await saveVideo()) setSourceChangeConfirmationOpen(false);
         }}
         title="استبدال مصدر الفيديو"
-        consequence="سيبقى نفس كود الفيديو وروابطه وسجل المشاهدات، لكن ستُزال الترجمة والفصول والتحليل والخرائط الذهنية المرتبطة بالمصدر القديم حتى لا تظهر على الفيديو الجديد."
-        confirmLabel="استبدال المصدر"
+        consequence={sourceChangeConsequence}
+        confirmLabel={keepsVideoContent ? 'تحديث الرابط والاحتفاظ بالبيانات' : 'استبدال المصدر وحذف البيانات القديمة'}
         isConfirming={saving}
       />
     </form>

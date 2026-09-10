@@ -69,7 +69,7 @@ export type CreateVideoPayload = {
 export type UpdateVideoPayload = Omit<
   CreateVideoPayload,
   'lessonId'
->;
+> & { preserveSourceDerivedData?: boolean };
 
 export type BunnyTusUploadRequest = {
   teacherId?: string;
