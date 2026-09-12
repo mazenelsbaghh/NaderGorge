@@ -16,13 +16,15 @@ class Transport:
 def test_installer_targets_node3_and_installs_reviewed_builder_assets():
     transport=Transport(); installer.install(inventory(),transport)
     assert len(transport.copies)==3 and all(args[0].node_id=="node-3" for args in transport.copies)
-    script=transport.commands[0][1][-1]; assert "visudo -cf" in script and "root:root:755" in script and "trap 'rm -f" in script
+    script="\n".join(command[1][-1] for command in transport.commands); assert "visudo -cf" in script and "root:root:755" in script and "trap 'rm -f" in script
     assert "if ! test -e /etc/massar/node-id" in script and "root:root:644" in script and "$(cat /etc/massar/node-id)\" = node-3" in script
     assert "/usr/sbin/visudo -cf /tmp/massar-remote-builder.sudoers" in script
     assert "sudo /usr/sbin/visudo" not in script
     assert "stat -c '%U:%G:%a' /etc/sudoers.d" not in script
     assert "sudo -n -l /usr/local/sbin/massar-remote-builder" in script
     assert "backup" not in script and "secret" not in script
+    assert installer.BUILDX_SHA256 in script and "sha256sum -c -" in script
+    assert "sudo /usr/bin/docker buildx version" in script
 def test_installer_refuses_any_non_node3_builder():
     with pytest.raises(installer.RemoteBuilderInstallError,match="node-3") : installer.target(inventory("node-1"))
 def test_dry_run_does_not_create_transport(monkeypatch,tmp_path):

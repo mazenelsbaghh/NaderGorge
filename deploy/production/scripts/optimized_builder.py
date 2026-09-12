@@ -30,6 +30,7 @@ FRONTEND_ARGS = {
 def docker(*arguments: str) -> str:
     return subprocess.check_output(
         ["/usr/bin/docker", *arguments], text=True, timeout=1800,
+        env={**os.environ, "DOCKER_BUILDKIT": "1"},
     ).strip()
 
 
@@ -163,6 +164,7 @@ def execute(workspace: Path, release: str, source_sha256: str) -> dict:
     if installed != (source / "deploy/production/scripts/optimized_builder.py").read_bytes():
         raise RuntimeError("install the reviewed optimized builder before building this source")
     CACHE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    docker("buildx", "version")
     with (CACHE / "build.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         bases = base_images(source)

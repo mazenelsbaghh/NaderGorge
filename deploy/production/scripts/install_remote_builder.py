@@ -11,6 +11,23 @@ HELPER=ROOT/"deploy/production/scripts/remote_builder_executor.py"
 SUDOERS=ROOT/"deploy/production/config/sudoers/massar-remote-builder"
 REMOTE_HELPER="/usr/local/sbin/massar-remote-builder"
 REMOTE_SUDOERS="/etc/sudoers.d/massar-remote-builder"
+BUILDX_VERSION = "v0.37.1"
+BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+
+def install_buildx(inventory, transport) -> None:
+    plugin = "/usr/local/lib/docker/cli-plugins/docker-buildx"
+    url = f"https://github.com/docker/buildx/releases/download/{BUILDX_VERSION}/buildx-{BUILDX_VERSION}.linux-amd64"
+    script = (
+        "set -euo pipefail; "
+        f"if ! printf '%s  %s\\n' '{BUILDX_SHA256}' '{plugin}' | sha256sum -c - >/dev/null 2>&1; then "
+        "staging=$(mktemp -d /tmp/massar-buildx.XXXXXXXX); trap 'rm -rf -- \"$staging\"' EXIT; "
+        f"curl --fail --silent --show-error --location --max-time 300 '{url}' -o \"$staging/docker-buildx\"; "
+        f"printf '%s  %s\\n' '{BUILDX_SHA256}' \"$staging/docker-buildx\" | sha256sum -c -; "
+        "sudo /usr/bin/install -d -m 0755 -o root -g root /usr/local/lib/docker/cli-plugins; "
+        f"sudo /usr/bin/install -m 0755 -o root -g root \"$staging/docker-buildx\" {plugin}; fi; "
+        "sudo /usr/bin/docker buildx version"
+    )
+    transport.run(target(inventory), ("bash", "-lc", script), timeout_seconds=360)
 
 class RemoteBuilderInstallError(RuntimeError): pass
 def digest(path: Path) -> str:
@@ -22,6 +39,7 @@ def target(inventory):
     return SshTarget("node-3",nodes[2].public_address,inventory.cluster["ssh_user"])
 def install(inventory,transport) -> None:
     if not HELPER.is_file() or not SUDOERS.is_file(): raise RemoteBuilderInstallError("reviewed helper assets are missing")
+    install_buildx(inventory, transport)
     remote=target(inventory); helper_sha=digest(HELPER); sudoers_sha=digest(SUDOERS)
     temporary_helper="/tmp/massar-remote-builder.py"; temporary_sudoers="/tmp/massar-remote-builder.sudoers"
     transport.copy(remote,HELPER,temporary_helper,timeout_seconds=120)
@@ -43,7 +61,7 @@ def arguments():
     parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--inventory",required=True,type=Path); parser.add_argument("--known-hosts",required=True,type=Path); parser.add_argument("--identity",required=True,type=Path); parser.add_argument("--node",required=True,choices=("node-3",)); parser.add_argument("--dry-run",action="store_true"); parser.add_argument("--yes",action="store_true"); return parser.parse_args()
 def main() -> int:
     args=arguments(); inventory=load_inventory(args.inventory)
-    if args.dry_run: print('{"status":"dry-run","node":"node-3","assets":["helper","sudoers","optimized_builder"],"nodeMarker":"initialize-if-absent"}'); return 0
+    if args.dry_run: print('{"status":"dry-run","node":"node-3","assets":["helper","sudoers","optimized_builder","pinned-buildx-v0.37.1"],"nodeMarker":"initialize-if-absent"}'); return 0
     if not args.yes: raise RemoteBuilderInstallError("installer requires --yes or --dry-run")
     install(inventory,StrictSshTransport(args.known_hosts,args.identity)); print('{"status":"success","node":"node-3"}'); return 0
 if __name__=="__main__":

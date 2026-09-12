@@ -45,7 +45,9 @@ per-node Docker client trust, and starts `massar-image-registry.service`.
 It does not restart Docker or application services. Install the reviewed builder
 with `install_remote_builder.py --dry-run` followed by `--yes`, passing its
 required inventory, known-hosts, identity, and `--node node-3` arguments.
-Normal `prod-build`, `prod-gate`, and `prod-release` commands then use this path.
+This installer also installs the SHA-256-verified official Buildx v0.37.1
+plugin on node-3, without restarting Docker. The builder explicitly enables
+BuildKit. Normal `prod-build`, `prod-gate`, and `prod-release` commands then use this path.
 
 Certificate keys live outside Git at `~/.config/massar/image-registry` with
 private permissions. The CA key stays on the operator machine; each node

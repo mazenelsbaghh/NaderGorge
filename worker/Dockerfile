@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # ─── Stage 1: Install & Build ────────────────────────────────────────────────
 FROM node:22.13.0-slim AS builder
 

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # ─── Stage 1: Build & Publish ────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:9.0.201 AS builder
 
