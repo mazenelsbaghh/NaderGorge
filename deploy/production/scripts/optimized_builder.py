@@ -45,13 +45,13 @@ def registry_endpoint() -> str:
     return endpoint
 
 
-def registry_manifest(endpoint: str, image: str, reference: str) -> tuple[str, str]:
+def registry_document(endpoint: str, image: str, reference: str) -> tuple[str, dict]:
     certificates = Path("/etc/docker/certs.d") / endpoint
     context = ssl.create_default_context(cafile=str(certificates / "ca.crt"))
     context.load_cert_chain(certificates / "client.cert", certificates / "client.key")
     request = urllib.request.Request(
         f"https://{endpoint}/v2/massar/{image}/manifests/{reference}",
-        headers={"Accept": "application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json"},
+        headers={"Accept": "application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json"},
     )
     with urllib.request.urlopen(request, context=context, timeout=30) as response:
         content = response.read(1024 * 1024 + 1)
@@ -59,10 +59,25 @@ def registry_manifest(endpoint: str, image: str, reference: str) -> tuple[str, s
     actual = "sha256:" + hashlib.sha256(content).hexdigest()
     if len(content) > 1024 * 1024 or declared != actual:
         raise RuntimeError("registry manifest digest mismatch")
-    config_digest = json.loads(content)["config"]["digest"]
+    if reference.startswith("sha256:") and reference != actual:
+        raise RuntimeError("registry returned a different content-addressed manifest")
+    return actual, json.loads(content)
+
+
+def registry_manifest(endpoint: str, image: str, reference: str) -> tuple[str, set[str]]:
+    actual, manifest = registry_document(endpoint, image, reference)
+    identities = {actual}
+    if "manifests" in manifest:
+        platforms = [entry for entry in manifest["manifests"] if entry.get("platform", {}).get("os") == "linux" and entry.get("platform", {}).get("architecture") == "amd64"]
+        if len(platforms) != 1 or not DIGEST.fullmatch(platforms[0].get("digest", "")):
+            raise RuntimeError("registry index must contain exactly one linux/amd64 image")
+        child_digest, manifest = registry_document(endpoint, image, platforms[0]["digest"])
+        identities.add(child_digest)
+    config_digest = manifest["config"]["digest"]
     if not DIGEST.fullmatch(config_digest):
         raise RuntimeError("registry image configuration digest is invalid")
-    return actual, config_digest
+    identities.add(config_digest)
+    return actual, identities
 
 
 def context_path(source: Path, image: str) -> Path:
@@ -135,8 +150,9 @@ def publish_image(source: Path, image: str, release: str, bases: dict) -> dict:
         entry = json.loads(index.read_text())
         if entry.get("inputSha256") != fingerprint or not DIGEST.fullmatch(entry.get("registryDigest", "")):
             raise RuntimeError("image cache provenance mismatch")
-        registry_digest, identity = registry_manifest(endpoint, image, entry["registryDigest"])
-        if identity != entry.get("imageDigest") or registry_digest != entry["registryDigest"]:
+        registry_digest, identities = registry_manifest(endpoint, image, entry["registryDigest"])
+        identity = entry.get("imageDigest")
+        if identity not in identities or registry_digest != entry["registryDigest"]:
             raise RuntimeError("cached image differs from the verified registry artifact")
         docker("pull", f"{endpoint}/massar/{image}@{registry_digest}")
         disposition = "reused"
@@ -146,8 +162,8 @@ def publish_image(source: Path, image: str, release: str, bases: dict) -> dict:
         registry_tag = f"{endpoint}/massar/{image}:{release}"
         docker("tag", tag, registry_tag)
         docker("push", registry_tag)
-        registry_digest, registry_identity = registry_manifest(endpoint, image, release)
-        if identity != registry_identity:
+        registry_digest, registry_identities = registry_manifest(endpoint, image, release)
+        if identity not in registry_identities:
             raise RuntimeError("published image configuration does not match the build")
         entry = {"imageDigest": identity, "registryDigest": registry_digest, "inputSha256": fingerprint}
         save_json(index, entry)

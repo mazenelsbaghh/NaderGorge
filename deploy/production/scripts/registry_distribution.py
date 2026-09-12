@@ -73,7 +73,7 @@ class RegistryDistributionRunner:
             digest = self.builder["artifacts"][image]["registryDigest"]
             reference = f"{self.builder['registryEndpoint']}/massar/{image}@{digest}"
             tag = f"massar/{image}:{self.builder['releaseId']}"
-            # Docker checks manifest/blob digests, and we independently check the config ID.
+            # Docker checks manifest/blob digests, and we independently check the Docker image identity.
             script = (
                 "set -euo pipefail; "
                 f"if ! test \"$(sudo /usr/bin/docker image inspect {identity} --format '{{{{.Id}}}}' 2>/dev/null)\" = '{identity}'; then "

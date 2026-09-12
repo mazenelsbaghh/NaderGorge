@@ -9,7 +9,7 @@ health checks and application rollback still run for each deployment.
 `optimized_builder.py` runs only through the root-owned builder on node-3.
 It refreshes base images, then fingerprints each complete immutable build context,
 the base image configuration digests, architecture, and builder policy. A matching
-root-owned cache record must agree with the registry manifest and image config ID
+root-owned cache record must agree with the registry manifest and Docker image identity
 before reuse. Missing cache records build normally; corrupt records or a failed
 registry stop the release. There is no fallback to workstation image transfers.
 
@@ -23,7 +23,7 @@ four-image manifest and container labels. Unrelated releases can reuse that imag
 The node-3 registry binds only its inventory WireGuard address on port 5443.
 It requires a verified client certificate. Docker pulls by registry manifest
 digest and downloads missing layers; the distributor separately verifies the
-image configuration digest and platform on all three nodes. Final v2 manifests
+Docker image identity and platform on all three nodes. Final v2 manifests
 accept either historical archive evidence or `imageDigest`, `registryDigest`,
 and `inputSha256` evidence. Historical release validation remains supported.
 
@@ -53,7 +53,13 @@ Certificate keys live outside Git at `~/.config/massar/image-registry` with
 private permissions. The CA key stays on the operator machine; each node
 receives only its own client key, and node-3 receives the server key. Preserve
 this directory securely. Installation refuses an incomplete credential set or
-a different installed CA identity. Leaf certificates last 825 days; renewal
+a different installed CA identity. The initial CA key-usage compatibility repair is available through
+`install_image_registry.py --dry-run --repair-ca-usage` followed by
+`--yes --repair-ca-usage`. It preserves the signing key, verifies existing leaf
+certificates strictly, and restarts only the registry. Its recovery marker
+limits accepted previous trust to the saved CA fingerprint.
+
+Leaf certificates last 825 days; renewal
 requires a reviewed rotation before expiry. The registry data directory is
 `/var/lib/massar/image-registry`; no automatic deletion or garbage collection
 is enabled, so monitor its disk usage. Running applications do not depend on

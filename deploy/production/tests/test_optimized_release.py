@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import optimized_builder as builder
 import registry_distribution as distribution
 import release_contract
-from install_image_registry import prepare_certificates, registry_config, registry_unit
+from install_image_registry import prepare_certificates, registry_config, registry_unit, repair_ca_usage, openssl
 from test_release_contract import release_manifest_v2, RELEASE
 
 
@@ -107,6 +107,9 @@ def test_mtls_credentials_are_stable_and_incomplete_state_is_not_rotated(tmp_pat
     original = (root / "ca.key").read_bytes()
     prepare_certificates(root, "10.77.0.13")
     assert (root / "ca.key").read_bytes() == original
+    repair_ca_usage(root)
+    assert (root / "ca.key").read_bytes() == original
+    openssl("verify", "-x509_strict", "-CAfile", str(root / "ca.crt"), str(root / "server.crt"))
     (root / "node-2.key").unlink()
     with pytest.raises(RuntimeError, match="refusing automatic rotation"):
         prepare_certificates(root, "10.77.0.13")
@@ -115,3 +118,16 @@ def test_mtls_credentials_are_stable_and_incomplete_state_is_not_rotated(tmp_pat
     assert config["http"]["addr"] == "10.77.0.13:5443"
     assert config["http"]["tls"]["clientauth"] == "require-and-verify-client-cert"
     assert "--network host" in registry_unit() and "--publish" not in registry_unit()
+
+
+def test_registry_index_binds_docker_identity_to_verified_platform(monkeypatch):
+    # Only the HTTPS boundary is replaced; index selection and identity binding are real.
+    root_digest, child_digest, config_digest = ("sha256:" + c * 64 for c in "abc")
+    def document(_endpoint, _image, reference):
+        if reference == root_digest:
+            return root_digest, {"manifests": [{"digest": child_digest, "platform": {"os": "linux", "architecture": "amd64"}}]}
+        return child_digest, {"config": {"digest": config_digest}}
+    monkeypatch.setattr(builder, "registry_document", document)
+    observed, identities = builder.registry_manifest("10.77.0.13:5443", "backend", root_digest)
+    assert observed == root_digest
+    assert identities == {root_digest, child_digest, config_digest}

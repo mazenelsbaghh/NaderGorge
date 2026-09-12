@@ -50,6 +50,7 @@ def prepare_certificates(root: Path, address: str) -> None:
     root.mkdir(mode=0o700, parents=True)
     openssl("req", "-x509", "-newkey", "rsa:3072", "-nodes", "-days", "3650", "-sha256",
             "-subj", "/CN=Massar private image registry CA", "-addext", "basicConstraints=critical,CA:TRUE",
+            "-addext", "keyUsage=critical,keyCertSign,cRLSign",
             "-keyout", str(root / "ca.key"), "-out", str(root / "ca.crt"))
     os.chmod(root / "ca.key", 0o600)
     issue_certificate(root, "server", f"subjectAltName=IP:{address}\nextendedKeyUsage=serverAuth\n")
@@ -102,7 +103,29 @@ def install_file(transport, host, source: Path, destination: str) -> None:
     transport.run(host, ("bash", "-lc", script), timeout_seconds=120)
 
 
-def install(inventory, transport) -> None:
+def repair_ca_usage(root: Path) -> None:
+    """Repair the original CA certificate without changing its signing key."""
+    marker = root / "ca-usage-repair.json"
+    if marker.exists():
+        recorded = json.loads(marker.read_text())
+        if hashlib.sha256((root / "ca.crt").read_bytes()).hexdigest() != recorded["repairedCaSha256"]:
+            pending = root / "ca-repaired.crt"
+            if not pending.is_file() or hashlib.sha256(pending.read_bytes()).hexdigest() != recorded["repairedCaSha256"]:
+                raise RuntimeError("CA repair state does not match its verified certificate")
+            pending.replace(root / "ca.crt")
+        return
+    old_digest = hashlib.sha256((root / "ca.crt").read_bytes()).hexdigest()
+    repaired = root / "ca-repaired.crt"
+    openssl("req", "-x509", "-key", str(root / "ca.key"), "-days", "3650", "-sha256",
+            "-subj", "/CN=Massar private image registry CA", "-addext", "basicConstraints=critical,CA:TRUE",
+            "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-out", str(repaired))
+    for name in ("server", "node-1", "node-2", "node-3"):
+        openssl("verify", "-x509_strict", "-CAfile", str(repaired), str(root / f"{name}.crt"))
+    marker.write_text(json.dumps({"previousCaSha256": old_digest, "repairedCaSha256": hashlib.sha256(repaired.read_bytes()).hexdigest()}))
+    repaired.replace(root / "ca.crt")
+
+
+def install(inventory, transport, trusted_previous_ca: str | None = None) -> None:
     builder = select_builder(inventory)
     address = str(ipaddress.ip_address(builder.overlay_address))
     endpoint = f"{address}:5443"
@@ -115,8 +138,11 @@ def install(inventory, transport) -> None:
         # Validate every existing trust root before modifying any node.
         for node in inventory.nodes:
             observed = transport.run(target(inventory, node), ("bash", "-lc", "if test -f /etc/massar/image-registry.json; then cat /etc/massar/image-registry.json; else printf absent; fi"), timeout_seconds=30)
-            if observed.stdout.strip() != "absent" and json.loads(observed.stdout) != registry_identity:
-                raise RuntimeError("registry trust differs from the saved credentials; refusing rotation")
+            if observed.stdout.strip() != "absent":
+                previous = json.loads(observed.stdout)
+                allowed = previous == registry_identity or (trusted_previous_ca is not None and previous == {"endpoint": endpoint, "caSha256": trusted_previous_ca})
+                if not allowed:
+                    raise RuntimeError("registry trust differs from the saved credentials; refusing rotation")
         for node in inventory.nodes:
             host = target(inventory, node)
             certs = f"/etc/docker/certs.d/{endpoint}"
@@ -143,6 +169,8 @@ def install(inventory, transport) -> None:
         transport.run(host, ("rm", "-f", staged_unit), timeout_seconds=30)
         transport.run(host, ("sudo", "/usr/bin/systemctl", "daemon-reload"), timeout_seconds=60)
         transport.run(host, ("sudo", "/usr/bin/systemctl", "enable", "--now", "massar-image-registry"), timeout_seconds=90)
+        if trusted_previous_ca is not None:
+            transport.run(host, ("sudo", "/usr/bin/systemctl", "restart", "massar-image-registry"), timeout_seconds=90)
 
 
 def probe_registry(inventory, transport) -> None:
@@ -173,6 +201,7 @@ def main() -> None:
     action.add_argument("--dry-run", action="store_true")
     action.add_argument("--yes", action="store_true")
     action.add_argument("--probe", action="store_true")
+    parser.add_argument("--repair-ca-usage", action="store_true")
     args = parser.parse_args()
     inventory = load_inventory(args.inventory, require_operator_files=True)
     builder = select_builder(inventory)
@@ -180,10 +209,14 @@ def main() -> None:
         probe_registry(inventory, operator_transport(inventory))
         return
     if args.dry_run:
-        print(json.dumps({"status": "dry-run", "registryNode": builder.id, "endpoint": f"{builder.overlay_address}:5443", "image": REGISTRY_IMAGE,
+        print(json.dumps({"status": "dry-run", "repairCaKeyUsage": args.repair_ca_usage, "registryNode": builder.id, "endpoint": f"{builder.overlay_address}:5443", "image": REGISTRY_IMAGE,
                           "steps": ["stable-external-mtls-certificates", "install-client-trust-all-nodes", "pull-pinned-registry-image", "start-private-registry-only"], "applicationRestarts": False}))
         return
-    install(inventory, operator_transport(inventory))
+    trusted_previous_ca = None
+    if args.repair_ca_usage:
+        repair_ca_usage(SECRET_ROOT)
+        trusted_previous_ca = json.loads((SECRET_ROOT / "ca-usage-repair.json").read_text())["previousCaSha256"]
+    install(inventory, operator_transport(inventory), trusted_previous_ca)
     probe_registry(inventory, operator_transport(inventory))
     print(json.dumps({"status": "success", "registryNode": builder.id}))
 
