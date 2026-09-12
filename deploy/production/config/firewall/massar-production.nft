@@ -27,6 +27,7 @@ table inet massar {
     # App containers may reach only the local stable database writer proxy and
     # Redis/Sentinel listeners. Remote member traffic is still forced over wg0.
     ip saddr 172.29.0.0/24 tcp dport { 6379, 6432, 26379 } accept
+    iifname "massar-app0" ip saddr 172.29.0.0/24 tcp dport 3002 accept comment "massar-baileys-local"
   }
 
   chain forward {

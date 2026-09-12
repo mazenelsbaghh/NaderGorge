@@ -10,4 +10,6 @@ Production uses the same immutable worker image for a separate Baileys process o
 
 `sync_baileys_env.py --secret-file <protected-file-outside-repo> --dry-run` previews configuration; `--yes` creates or reuses mode-0600 local keys and merges them into the established server environment without printing values or rotating existing keys. The local secret file must be retained securely. Frontend, gateway and ordinary worker processes receive empty overrides for the new Baileys secrets. Production configuration was synchronized after its preview; no application was restarted by that step.
 
+The configuration helper also previews and installs one persistent/runtime firewall rule on node-3: only traffic arriving through `massar-app0` from `172.29.0.0/24` may reach TCP 3002. This is required for that node's own backend container to reach the host-network bridge. The existing WireGuard peer rule covers the other two nodes. No public listener or public ingress rule is added, and existing firewall contents are preserved.
+
 Rollout evidence is written beneath `artifacts/production/` by the release helpers. No production database Down migration or restore is part of this release.

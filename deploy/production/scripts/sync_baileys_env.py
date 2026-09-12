@@ -18,6 +18,34 @@ sys.path.insert(0, str(ROOT / "deploy/production/scripts"))
 from clusterctl import load_inventory, operator_transport, target
 
 
+def configure_local_bridge_access(transport, remote, *, apply: bool) -> None:
+    rule = ['iifname', '"massar-app0"', 'ip', 'saddr', '172.29.0.0/24', 'tcp', 'dport', '3002', 'accept', 'comment', '"massar-baileys-local"']
+    transport.run(remote, ['sudo', '/usr/sbin/nft', '--check', 'insert', 'rule', 'inet', 'massar', 'input', *rule])
+    source = '/etc/massar/massar-production.nft'
+    anchor = 'ip saddr 172.29.0.0/24 tcp dport { 6379, 6432, 26379 } accept'
+    transport.run(remote, ['python3', '-c', f"from pathlib import Path; text=Path('{source}').read_text(); assert {anchor!r} in text, 'Unrecognized firewall configuration'"])
+    if not apply:
+        print('node-3: preview local app-network access to the private bridge; no public port rule')
+        return
+    staged = f'/home/massar-ops/.massar-baileys-firewall-{uuid.uuid4().hex}'
+    line = '    ' + ' '.join(rule)
+    code = (
+        f"from pathlib import Path; source=Path('{source}'); text=source.read_text(); "
+        f"updated=text if 'massar-baileys-local' in text else text.replace({anchor!r}, {anchor!r}+'\\n'+{line!r},1); "
+        f"Path('{staged}').write_text(updated)"
+    )
+    try:
+        transport.run(remote, ['python3', '-c', code])
+        transport.run(remote, ['sudo', '/usr/sbin/nft', '--check', '-f', staged])
+        transport.run(remote, ['sudo', '/usr/bin/install', '-m', '0644', '-o', 'root', '-g', 'root', staged, source])
+        live = transport.run(remote, ['sudo', '/usr/sbin/nft', '-j', 'list', 'chain', 'inet', 'massar', 'input']).stdout
+        if 'massar-baileys-local' not in live:
+            transport.run(remote, ['sudo', '/usr/sbin/nft', 'insert', 'rule', 'inet', 'massar', 'input', *rule])
+        print('node-3: persistent and live local bridge access configured')
+    finally:
+        transport.run(remote, ['rm', '-f', staged])
+
+
 def credentials(path: Path) -> dict[str, str]:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if not path.exists():
@@ -49,6 +77,7 @@ def main() -> int:
     for node in inventory.nodes:
         transport.run(target(inventory, node), ["test", "-f", "/etc/massar/app.env"])
         print(f"{node.id}: environment available; bridge target node-3")
+    configure_local_bridge_access(transport, target(inventory, bridge), apply=False)
     if args.dry_run:
         print("Preview: preserve/create local protected keys, merge matching credentials and private routing on all nodes; no restart.")
         return 0
@@ -80,6 +109,7 @@ def main() -> int:
                 print(f"{node.id}: configured")
             finally:
                 transport.run(remote, ["rm", "-f", incoming, staged], timeout_seconds=10)
+        configure_local_bridge_access(transport, target(inventory, bridge), apply=True)
     finally:
         local.unlink(missing_ok=True)
     return 0

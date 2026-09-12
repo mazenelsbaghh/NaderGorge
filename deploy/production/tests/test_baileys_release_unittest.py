@@ -42,6 +42,8 @@ class BaileysReleaseTests(unittest.TestCase):
         self.assertIn("BAILEYS_HOST: ${MASSAR_OVERLAY_IP:", bridge)
         self.assertIn("${MASSAR_WORKER_IMAGE:", bridge)
         self.assertNotIn("ports:", bridge)
+        firewall = (ROOT / "deploy/production/config/firewall/massar-production.nft").read_text()
+        self.assertIn('iifname "massar-app0" ip saddr 172.29.0.0/24 tcp dport 3002 accept', firewall)
         frontend = compose.split("x-frontend-internal-api:", 1)[1].split("\nservices:", 1)[0]
         for key in ("BAILEYS_API_KEY", "BAILEYS_AUTH_KEY", "Baileys__ApiKey"):
             self.assertIn(f'{key}: ""', frontend)
