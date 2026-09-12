@@ -16,6 +16,7 @@ import {
   LiveSupportMessageContent,
   LiveSupportMessageMeta,
 } from '@/components/live-support/LiveSupportMessageContent';
+import { SupportBlockPanel } from './SupportBlockPanel';
 import { WhatsAppTemplatePicker } from '@/components/live-support/staff/WhatsAppTemplatePicker';
 import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSupportChannelBadge';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
@@ -79,7 +80,8 @@ export function ConversationInvestigation({
     messageId: string;
     viewportOffset: number;
   } | null>(null);
-  const conversation = timeline.conversation;
+  const [refreshedConversation, setRefreshedConversation] = useState<LiveSupportConversationTimeline['conversation']>();
+  const conversation = refreshedConversation?.id === timeline.conversation.id ? refreshedConversation : timeline.conversation;
   const isWhatsApp = conversation.channel === 'WhatsApp';
   const isMessenger = conversation.channel === 'Messenger';
   const canSend =
@@ -472,14 +474,15 @@ export function ConversationInvestigation({
                 ? `المسؤول الآن: ${conversation.ownerName}`
                 : 'في انتظار الاستلام'}{' '}
               · {conversation.status}
-              {isWhatsApp && conversation.externalPhoneNumber ? (
+              {conversation.whatsAppAccountName && <span className="mx-2">الرقم: {conversation.whatsAppAccountName}</span>}
+          {isWhatsApp && conversation.externalPhoneNumber ? (
                 <>
                   {' '}
                   · <bdi dir="ltr">{conversation.externalPhoneNumber}</bdi>
                 </>
               ) : null}
             </p>
-            {channelCapabilities.usesExternalThread ? (
+            {channelCapabilities.requiresCustomerServiceWindow ? (
               <p
                 className={`mt-1 text-xs font-bold ${externalWindowOpen ? 'text-[var(--admin-success)]' : 'text-[var(--admin-warning)]'}`}
               >
@@ -513,6 +516,9 @@ export function ConversationInvestigation({
             <X />
           </button>
         </header>
+        <SupportBlockPanel key={conversation.id} conversationId={conversation.id} onChanged={() => {
+          void liveSupportService.getAdminTimeline(conversation.id).then(updated => setRefreshedConversation(updated.conversation)).catch(cause => setError(getLiveSupportApiError(cause, 'تعذر إتمام الطلب. حاول مجددًا.')));
+        }} />
 
         {canSend ? (
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 sm:px-5">

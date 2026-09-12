@@ -24,6 +24,128 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class WhatsAppOutboundBackgroundServiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OutdatedNativeAction_CannotUndoTheCurrentBlockDecision(bool blockedAgain)
+    {
+        var handler = new StubMetaHandler(_ => throw new InvalidOperationException("Superseded actions must not reach WhatsApp."));
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid actionId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var queued = AddDelivery(db, true, DateTime.UtcNow);
+            var oldBlock = new LiveSupportContactBlock { ConversationId = queued.ConversationId, PhoneNumber = "201022222222", Reason = "سابق", UnblockedAt = DateTime.UtcNow };
+            var action = new LiveSupportBlockDelivery { BlockId = oldBlock.Id, PhoneNumber = oldBlock.PhoneNumber, DesiredBlocked = !blockedAgain };
+            actionId = action.Id;
+            db.LiveSupportContactBlocks.Add(oldBlock);
+            if (blockedAgain) db.LiveSupportContactBlocks.Add(new() { ConversationId = queued.ConversationId, PhoneNumber = oldBlock.PhoneNumber, Reason = "جديد" });
+            db.LiveSupportBlockDeliveries.Add(action);
+            await db.SaveChangesAsync();
+        }
+        await using var dispatchScope = harness.Services.CreateAsyncScope();
+        var dispatcher = new LiveSupportBlockDispatcher(dispatchScope.ServiceProvider.GetRequiredService<IAppDbContext>(),
+            dispatchScope.ServiceProvider.GetRequiredService<WhatsAppCloudService>(), dispatchScope.ServiceProvider.GetRequiredService<BaileysWhatsAppClient>());
+        await dispatcher.DispatchAsync(actionId, CancellationToken.None);
+        Assert.Empty(handler.Requests);
+        Assert.Equal("Superseded", (await dispatchScope.ServiceProvider.GetRequiredService<AppDbContext>().LiveSupportBlockDeliveries.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task BaileysBlock_SendsReasonBeforeNativeBlock_AndDoesNotRepeatCompletedDelivery()
+    {
+        var handler = new StubMetaHandler(request => JsonResponse(HttpStatusCode.OK,
+            request.RequestUri!.AbsolutePath.EndsWith("/text", StringComparison.Ordinal)
+                ? "{\"key\":{\"id\":\"notice-id\"}}" : "{\"blocked\":true}"));
+        await using var harness = await Harness.CreateAsync(handler);
+        Guid actionId;
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var queued = AddDelivery(db, true, DateTime.UtcNow);
+            var account = new LiveSupportWhatsAppAccount { Name = "دعم", InstanceName = "massar-support-" + Guid.NewGuid().ToString("N") };
+            var block = new LiveSupportContactBlock { ConversationId = queued.ConversationId, PhoneNumber = "201022222222", Reason = "رسائل مسيئة" };
+            var action = new LiveSupportBlockDelivery { BlockId = block.Id, AccountId = account.Id, PhoneNumber = block.PhoneNumber };
+            actionId = action.Id;
+            db.LiveSupportWhatsAppAccounts.Add(account);
+            db.LiveSupportContactBlocks.Add(block);
+            db.LiveSupportBlockDeliveries.Add(action);
+            await db.SaveChangesAsync();
+        }
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            await using var scope = harness.Services.CreateAsyncScope();
+            var dispatcher = new LiveSupportBlockDispatcher(scope.ServiceProvider.GetRequiredService<IAppDbContext>(),
+                scope.ServiceProvider.GetRequiredService<WhatsAppCloudService>(), scope.ServiceProvider.GetRequiredService<BaileysWhatsAppClient>());
+            await dispatcher.DispatchAsync(actionId, CancellationToken.None);
+        }
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.EndsWith("/text", handler.Requests[0]);
+        Assert.EndsWith("/block", handler.Requests[1]);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var result = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().LiveSupportBlockDeliveries.SingleAsync();
+        Assert.Equal("Succeeded", result.Status);
+        Assert.Equal("Sent", result.NoticeStatus);
+    }
+
+    [Fact]
+    public async Task TwoBaileysNumbers_ReplyThroughTheirOwnSession_WithDistinctProviderIds()
+    {
+        var handler = new StubMetaHandler(request =>
+        {
+            Assert.Equal("baileys.test", request.RequestUri!.Host);
+            Assert.Equal("bridge-test-token", Assert.Single(request.Headers.GetValues("X-Baileys-Token")));
+            return JsonResponse(HttpStatusCode.OK, "{\"key\":{\"id\":\"same-provider-id\"}}");
+        });
+        await using var harness = await Harness.CreateAsync(handler);
+        string[] sessions = ["massar-support-" + Guid.NewGuid().ToString("N"), "massar-support-" + Guid.NewGuid().ToString("N")];
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            foreach (var session in sessions)
+            {
+                var account = new LiveSupportWhatsAppAccount { Name = session, InstanceName = session, Status = "Connected" };
+                db.LiveSupportWhatsAppAccounts.Add(account);
+                var delivery = AddDelivery(db, true, DateTime.UtcNow.AddMinutes(-1));
+                var binding = db.LiveSupportWhatsAppBindings.Local.Single(item => item.ConversationId == delivery.ConversationId);
+                binding.AccountId = account.Id;
+                binding.CustomerServiceWindowExpiresAt = DateTime.UtcNow.AddDays(-2);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+
+        Assert.Equal(2, handler.Requests.Count);
+        foreach (var session in sessions) Assert.Contains($"/sessions/{session}/text", handler.Requests);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var deliveries = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().LiveSupportWhatsAppMessages.ToListAsync();
+        Assert.All(deliveries, item => Assert.Equal("Sent", item.Status));
+        Assert.Equal(2, deliveries.Select(item => item.MetaMessageId).Distinct().Count());
+        foreach (var session in sessions) Assert.Contains(deliveries, item => item.MetaMessageId == $"baileys:{session}:same-provider-id");
+    }
+
+    [Fact]
+    public async Task QueuedReplyAfterContactBlock_IsRejectedBeforeCallingProvider()
+    {
+        var handler = new StubMetaHandler(_ => throw new InvalidOperationException("Blocked replies must not reach WhatsApp."));
+        await using var harness = await Harness.CreateAsync(handler);
+        await using (var scope = harness.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var delivery = AddDelivery(db, true, DateTime.UtcNow.AddMinutes(-1));
+            db.LiveSupportContactBlocks.Add(new() { ConversationId = delivery.ConversationId, PhoneNumber = "201022222222", Reason = "إساءة" });
+            await db.SaveChangesAsync();
+        }
+        await harness.Worker.DispatchBatchAsync(CancellationToken.None);
+        Assert.Empty(handler.Requests);
+        await using var assertionScope = harness.Services.CreateAsyncScope();
+        var deliveryResult = await assertionScope.ServiceProvider.GetRequiredService<AppDbContext>().LiveSupportWhatsAppMessages.SingleAsync();
+        Assert.Equal("Failed", deliveryResult.Status);
+        Assert.Equal("SUPPORT_BLOCKED", deliveryResult.FailureCode);
+    }
+
     [Fact]
     public async Task ProductionRegression_20260826_StaffTemplateWithStaticUrls_SendsOnlyBodyParameters()
     {
@@ -834,7 +956,9 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["WhatsAppCloudApi:AccessToken"] = "test-token",
-                ["WhatsAppCloudApi:PhoneNumberId"] = "phone-id"
+                ["WhatsAppCloudApi:PhoneNumberId"] = "phone-id",
+                ["Baileys:BaseUrl"] = "http://baileys.test",
+                ["Baileys:ApiKey"] = "bridge-test-token"
             }).Build();
             var cloud = new WhatsAppCloudService(
                 new HttpClient(handler), configuration, NullLogger<WhatsAppCloudService>.Instance);
@@ -852,6 +976,7 @@ public sealed class WhatsAppOutboundBackgroundServiceTests
                 .AddScoped<WhatsAppLiveSupportService>()
                 .AddSingleton<ILiveSupportAttachmentStorage>(attachmentStorage)
                 .AddSingleton<IWhatsAppOutboundMediaNormalizer>(mediaNormalizer)
+                .AddSingleton(new BaileysWhatsAppClient(new HttpClient(handler, disposeHandler: false), configuration))
                 .AddSingleton(cloud)
                 .BuildServiceProvider();
             await using var scope = services.CreateAsyncScope();

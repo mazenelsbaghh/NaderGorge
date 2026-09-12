@@ -24,7 +24,8 @@ public sealed class WhatsAppLiveSupportService(
     ILiveSupportEventWriter eventWriter,
     IConfiguration configuration,
     IWhatsAppCampaignService campaigns,
-    IServiceScopeFactory? serviceScopeFactory = null)
+    IServiceScopeFactory? serviceScopeFactory = null,
+    BaileysWhatsAppClient? baileys = null)
 {
     private const string UnsupportedDocumentMessage = "تعذر استلام مرفق واتساب. يُسمح بملفات PDF فقط.";
     private const string UnavailableMediaMessage = "تعذر استلام مرفق واتساب لأن الملف غير متاح أو غير مدعوم.";
@@ -314,7 +315,7 @@ public sealed class WhatsAppLiveSupportService(
         return expired.Count;
     }
 
-    private async Task IngestAsync(JsonElement envelope, JsonElement message, CancellationToken ct)
+    internal async Task IngestAsync(JsonElement envelope, JsonElement message, CancellationToken ct, LiveSupportWhatsAppAccount? account = null, JsonElement? baileysMessage = null)
     {
         // Reactions annotate an existing WhatsApp message; they are not new support
         // requests and must never create or reopen a live-support conversation.
@@ -327,9 +328,23 @@ public sealed class WhatsAppLiveSupportService(
         if (IsOptOutKeyword(message))
             await campaigns.RecordInboundOptOutAsync(whatsAppUserId, metaMessageId, providerTimestamp, ct);
         if (await db.LiveSupportWhatsAppMessages.AnyAsync(item => item.MetaMessageId == metaMessageId, ct)) return;
+        var contactBlock = await LiveSupportBlockPolicy.ForParticipant(db, null, null, whatsAppUserId).FirstOrDefaultAsync(ct);
+        if (contactBlock is not null)
+        {
+            var accountId = account?.Id;
+            if (!await db.LiveSupportBlockDeliveries.AnyAsync(item => item.BlockId == contactBlock.Id && item.AccountId == accountId, ct))
+            {
+                db.LiveSupportBlockDeliveries.Add(new LiveSupportBlockDelivery
+                {
+                    BlockId = contactBlock.Id, AccountId = accountId, PhoneNumber = whatsAppUserId, Version = 1
+                });
+                await db.SaveChangesAsync(ct);
+            }
+            return;
+        }
         var displayName = ContactName(envelope, whatsAppUserId);
-        var (content, messageType, attachmentId) = await ContentAsync(message, ct);
-        var (conversation, participant, binding) = await ConversationAsync(whatsAppUserId, displayName, providerTimestamp, ct);
+        var (content, messageType, attachmentId) = await ContentAsync(message, ct, account, baileysMessage);
+        var (conversation, participant, binding) = await ConversationAsync(whatsAppUserId, displayName, providerTimestamp, ct, account);
         binding.DisplayName = displayName;
         AdvanceCustomerServiceWindow(binding, providerTimestamp);
         binding.Version++;
@@ -353,13 +368,15 @@ public sealed class WhatsAppLiveSupportService(
         string whatsAppUserId,
         string displayName,
         DateTime providerTimestamp,
-        CancellationToken ct)
+        CancellationToken ct,
+        LiveSupportWhatsAppAccount? account = null)
     {
+        var accountId = account?.Id;
         var openConversationIds = await db.LiveSupportConversations.AsNoTracking()
             .Where(item => item.Status != LiveSupportConversationStatus.Closed && item.Status != LiveSupportConversationStatus.Abandoned)
             .Select(item => item.Id).ToListAsync(ct);
         var binding = await db.LiveSupportWhatsAppBindings
-            .Where(item => item.WhatsAppUserId == whatsAppUserId && openConversationIds.Contains(item.ConversationId))
+            .Where(item => item.WhatsAppUserId == whatsAppUserId && item.AccountId == accountId && openConversationIds.Contains(item.ConversationId))
             .OrderByDescending(item => item.LastInboundAt).FirstOrDefaultAsync(ct);
         if (binding is not null)
         {
@@ -368,8 +385,9 @@ public sealed class WhatsAppLiveSupportService(
         }
 
         var phone = NormalizePhone(whatsAppUserId);
+        var channelIdentity = account is null ? "WhatsApp Cloud API" : "Baileys:" + account.Id;
         var guest = await db.LiveSupportGuestSessions
-            .Where(item => item.PhoneNumber == phone && item.RevokedAt == null)
+            .Where(item => item.PhoneNumber == phone && item.RevokedAt == null && item.UserAgentSummary == channelIdentity)
             .OrderByDescending(item => item.CreatedAt).FirstOrDefaultAsync(ct);
         if (guest is null)
         {
@@ -381,7 +399,7 @@ public sealed class WhatsAppLiveSupportService(
                 CreatedIpHash = Hash("whatsapp-cloud"),
                 ExpiresAt = DateTime.UtcNow.AddYears(10),
                 LastSeenAt = DateTime.UtcNow,
-                UserAgentSummary = "WhatsApp Cloud API"
+                UserAgentSummary = channelIdentity
             };
             db.LiveSupportGuestSessions.Add(guest);
             await db.SaveChangesAsync(ct);
@@ -398,7 +416,7 @@ public sealed class WhatsAppLiveSupportService(
             .OrderByDescending(item => item.CreatedAt).FirstOrDefaultAsync(ct);
         if (conversation is null)
         {
-            var previousConversationId = await LatestTerminalWhatsAppConversationIdAsync(whatsAppUserId, ct);
+            var previousConversationId = await LatestTerminalWhatsAppConversationIdAsync(whatsAppUserId, ct, accountId);
             conversation = await CreateConversationAsync(participant, previousConversationId, ct);
         }
         var linkedStudentId = await FindStudentAsync(phone, ct);
@@ -406,6 +424,7 @@ public sealed class WhatsAppLiveSupportService(
         binding = new LiveSupportWhatsAppBinding
         {
             ConversationId = conversation.Id,
+            AccountId = accountId,
             GuestSessionId = guest.Id,
             WhatsAppUserId = whatsAppUserId,
             PhoneNumber = phone,
@@ -419,11 +438,11 @@ public sealed class WhatsAppLiveSupportService(
         return (conversation, participant, binding);
     }
 
-    private async Task<Guid?> LatestTerminalWhatsAppConversationIdAsync(string whatsAppUserId, CancellationToken ct) =>
+    private async Task<Guid?> LatestTerminalWhatsAppConversationIdAsync(string whatsAppUserId, CancellationToken ct, Guid? accountId = null) =>
         await (from binding in db.LiveSupportWhatsAppBindings.AsNoTracking()
                join conversation in db.LiveSupportConversations.AsNoTracking()
                    on binding.ConversationId equals conversation.Id
-               where binding.WhatsAppUserId == whatsAppUserId &&
+               where binding.WhatsAppUserId == whatsAppUserId && binding.AccountId == accountId &&
                    (conversation.Status == LiveSupportConversationStatus.Closed || conversation.Status == LiveSupportConversationStatus.Abandoned)
                orderby (conversation.ClosedAt ?? conversation.CreatedAt) descending, conversation.Id descending
                select (Guid?)conversation.Id)
@@ -459,7 +478,7 @@ public sealed class WhatsAppLiveSupportService(
         }
     }
 
-    private async Task<(string Content, LiveSupportMessageType Type, Guid? AttachmentId)> ContentAsync(JsonElement message, CancellationToken ct)
+    private async Task<(string Content, LiveSupportMessageType Type, Guid? AttachmentId)> ContentAsync(JsonElement message, CancellationToken ct, LiveSupportWhatsAppAccount? account = null, JsonElement? baileysMessage = null)
     {
         var type = Text(message, "type") ?? "unknown";
         if (type == "text" && message.TryGetProperty("text", out var text)) return (Text(text, "body") ?? "رسالة واتساب", LiveSupportMessageType.Text, null);
@@ -473,7 +492,8 @@ public sealed class WhatsAppLiveSupportService(
             WhatsAppCloudService.DownloadedMedia downloaded;
             try
             {
-                downloaded = await DownloadMediaWithRetryAsync(mediaId, ct);
+                downloaded = account is null ? await DownloadMediaWithRetryAsync(mediaId, ct)
+                    : await baileys!.DownloadMediaAsync(account.InstanceName, baileysMessage!.Value, ct);
             }
             catch (WhatsAppCloudService.WhatsAppCloudException exception) when (!exception.IsRetryable)
             {
@@ -511,7 +531,7 @@ public sealed class WhatsAppLiveSupportService(
         return ($"رسالة واتساب من النوع: {type}", LiveSupportMessageType.Text, null);
     }
 
-    private async Task ApplyStatusAsync(JsonElement status, CancellationToken ct)
+    internal async Task ApplyStatusAsync(JsonElement status, CancellationToken ct)
     {
         for (var attempt = 1; ; attempt++)
         {

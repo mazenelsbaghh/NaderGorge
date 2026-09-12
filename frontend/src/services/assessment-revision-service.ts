@@ -42,7 +42,6 @@ export interface RevisionPreview {
   attempts: { attemptId: string; previousScore: number; revisedScore: number | null; requiresCompletion: boolean; requiresReview: boolean }[];
 }
 interface ApiEnvelope<T> { success: boolean; data: T; message?: string }
-const endpoint = (kind: AssessmentKind, id: string) => `/admin/${kind === 'exam' ? 'exams' : 'homework'}/${id}`;
 function unwrap<T>(response: { data: ApiEnvelope<T> }): T {
   if (!response.data.success) throw new Error(response.data.message || 'تعذر تنفيذ الطلب.');
   return response.data.data;
@@ -50,12 +49,12 @@ function unwrap<T>(response: { data: ApiEnvelope<T> }): T {
 export const assessmentRevisionService = {
   notificationTemplates: async (kind: AssessmentKind) => unwrap(await apiClient.get<ApiEnvelope<LiveSupportWhatsAppTemplate[]>>(
     `/admin/${kind === 'exam' ? 'exams' : 'homework'}/notification-templates`)),
-  load: async (kind: AssessmentKind, id: string) => unwrap(await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`${endpoint(kind, id)}/editor`)),
+  load: async (kind: AssessmentKind, id: string) => unwrap(await apiClient.get<ApiEnvelope<AssessmentEditorResponse>>(`/admin/${kind === 'exam' ? 'exams' : 'homework'}/${id}/editor`)),
   preview: async (definition: AssessmentDefinition, policy: RevisionPolicy) => unwrap(await apiClient.post<ApiEnvelope<RevisionPreview>>(
-    `${endpoint(definition.kind, definition.assessmentId)}/revision-preview`, { definition, policy })),
+    `/admin/${definition.kind === 'exam' ? 'exams' : 'homework'}/${definition.assessmentId}/revision-preview`, { definition, policy })),
   save: async (request: { definition: AssessmentDefinition; policy: RevisionPolicy; revisionToken: string; operationId: string; confirmPreviousAttempts: boolean; subjectId?: string }) => {
     const saved = unwrap(await apiClient.put<ApiEnvelope<AssessmentEditorResponse>>(
-      `${endpoint(request.definition.kind, request.definition.assessmentId)}/definition`, request));
+      `/admin/${request.definition.kind === 'exam' ? 'exams' : 'homework'}/${request.definition.assessmentId}/definition`, request));
     invalidateMany(['assessments', 'student:homeworks', 'student:exams']);
     return saved;
   },

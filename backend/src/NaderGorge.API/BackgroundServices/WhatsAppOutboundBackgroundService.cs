@@ -20,6 +20,7 @@ public sealed class WhatsAppOutboundBackgroundService(
     private sealed record DispatchContext(
         IAppDbContext Db,
         WhatsAppCloudService Cloud,
+        BaileysWhatsAppClient Baileys,
         WhatsAppLiveSupportService WhatsAppSupport,
         ILiveSupportAttachmentStorage AttachmentStorage,
         IWhatsAppOutboundMediaNormalizer MediaNormalizer,
@@ -162,7 +163,10 @@ public sealed class WhatsAppOutboundBackgroundService(
         var delivery = await context.Db.LiveSupportWhatsAppMessages.SingleAsync(message => message.Id == messageId, ct);
         var binding = await context.Db.LiveSupportWhatsAppBindings.AsNoTracking()
             .SingleAsync(binding => binding.ConversationId == delivery.ConversationId, ct);
-        var response = await SendAsync(context, delivery, binding.PhoneNumber, ct);
+        var conversation = await context.Db.LiveSupportConversations.AsNoTracking().SingleAsync(item => item.Id == delivery.ConversationId, ct);
+        var blocked = await LiveSupportBlockPolicy.FindAsync(context.Db, conversation, ct);
+        var response = blocked is null ? await SendAsync(context, delivery, binding, ct)
+            : new WhatsAppCloudService.SendTestMessageResult(false, "الشخص محظور من الدعم.", binding.PhoneNumber, null, 409, "SUPPORT_BLOCKED");
         CompleteAttempt(delivery, response);
         try
         {
@@ -186,6 +190,7 @@ public sealed class WhatsAppOutboundBackgroundService(
     private DispatchContext ResolveContext(IServiceScope scope) => new(
         scope.ServiceProvider.GetRequiredService<IAppDbContext>(),
         scope.ServiceProvider.GetRequiredService<WhatsAppCloudService>(),
+        scope.ServiceProvider.GetRequiredService<BaileysWhatsAppClient>(),
         scope.ServiceProvider.GetRequiredService<WhatsAppLiveSupportService>(),
         scope.ServiceProvider.GetRequiredService<ILiveSupportAttachmentStorage>(),
         scope.ServiceProvider.GetRequiredService<IWhatsAppOutboundMediaNormalizer>(),
@@ -194,15 +199,41 @@ public sealed class WhatsAppOutboundBackgroundService(
     private static async Task<WhatsAppCloudService.SendTestMessageResult> SendAsync(
         DispatchContext context,
         LiveSupportWhatsAppMessage delivery,
-        string phoneNumber,
+        LiveSupportWhatsAppBinding binding,
         CancellationToken ct)
     {
+        var phoneNumber = binding.PhoneNumber;
+        if (binding.AccountId.HasValue) return await SendBaileysAsync(context, delivery, binding, ct);
         if (delivery.MessageType == "template") return await SendTemplateAsync(context, delivery, phoneNumber, ct);
         var supportMessage = await context.Db.LiveSupportMessages.AsNoTracking()
             .SingleAsync(message => message.Id == delivery.LiveSupportMessageId, ct);
         if (delivery.MessageType is "image" or "audio")
             return await SendMediaAsync(context, supportMessage, phoneNumber, ct);
         return await context.Cloud.SendTextAsync(phoneNumber, supportMessage.Content, ct);
+    }
+
+    private static async Task<WhatsAppCloudService.SendTestMessageResult> SendBaileysAsync(
+        DispatchContext context, LiveSupportWhatsAppMessage delivery, LiveSupportWhatsAppBinding binding, CancellationToken ct)
+    {
+        var account = await context.Db.LiveSupportWhatsAppAccounts.AsNoTracking().SingleAsync(item => item.Id == binding.AccountId, ct);
+        if (!account.IsEnabled || delivery.MessageType == "template")
+            return new(false, "رقم واتساب غير متصل أو نوع الرسالة غير مدعوم.", binding.PhoneNumber, null, 409, "BAILEYS_SEND_UNAVAILABLE");
+        var message = await context.Db.LiveSupportMessages.AsNoTracking().SingleAsync(item => item.Id == delivery.LiveSupportMessageId, ct);
+        try
+        {
+            if (!message.AttachmentId.HasValue)
+                return await context.Baileys.SendTextAsync(account.InstanceName, binding.WhatsAppUserId, message.Content, ct);
+            var attachment = await context.Db.LiveSupportAttachments.AsNoTracking().SingleAsync(item => item.Id == message.AttachmentId, ct);
+            await using var source = await context.AttachmentStorage.OpenReadAsync(attachment.StoragePath, ct);
+            var normalized = await context.MediaNormalizer.NormalizeAsync(new WhatsAppOutboundMediaSource(
+                message.Type, attachment.OriginalFileName, attachment.ContentType, attachment.SizeBytes, source), ct);
+            return await context.Baileys.SendMediaAsync(account.InstanceName, new WhatsAppCloudService.MediaMessageRequest(
+                binding.WhatsAppUserId, normalized.MediaType, normalized.FileName, normalized.ContentType, normalized.Content, message.Content), ct);
+        }
+        catch (LiveSupportException exception)
+        {
+            return new(false, exception.Message, binding.PhoneNumber, null, 502, exception.Code);
+        }
     }
 
     private static async Task<WhatsAppCloudService.SendTestMessageResult> SendTemplateAsync(

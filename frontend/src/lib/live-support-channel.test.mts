@@ -124,3 +124,23 @@ test('honors the current DTO canSend flag for Web conversations', () => {
   assert.equal(capabilities.supportsMessageReply, true);
   assert.equal(capabilities.supportsParticipantTypingPreview, true);
 });
+
+
+test('Baileys replies stay available after the Meta window expires and templates stay disabled', () => {
+  const capabilities = resolveLiveSupportChannelCapabilities({ channel: 'WhatsApp', whatsAppAccountId: 'qr-account', canSend: true,
+    customerServiceWindowExpiresAt: '2020-01-01T00:00:00Z' });
+  assert.equal(capabilities.canSendFreeform, true);
+  assert.equal(capabilities.canSendAttachments, true);
+  assert.equal(capabilities.canSendTemplate, false);
+  assert.equal(capabilities.requiresCustomerServiceWindow, false);
+});
+
+test('support blocks override stale sending flags for every channel', () => {
+  for (const channel of ['Web', 'WhatsApp', 'Messenger'] as const) {
+    const capabilities = resolveLiveSupportChannelCapabilities({ channel, isSupportBlocked: true, canSend: true,
+      customerServiceWindowExpiresAt: '2099-01-01T00:00:00Z' });
+    assert.equal(capabilities.canSendFreeform, false);
+    assert.equal(capabilities.canSendTemplate, false);
+    assert.equal(capabilities.canSendAttachments, false);
+  }
+});

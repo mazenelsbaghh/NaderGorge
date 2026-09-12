@@ -1,0 +1,30 @@
+{
+  "scope": "learning-center only; concurrent LiveSupport changes excluded",
+  "baseCommit": "d4c6f296ae178e3485fffc65d5a1c06269625016",
+  "integrationTests": {
+    "passed": 7,
+    "failed": 0,
+    "database": "isolated PostgreSQL 16"
+  },
+  "applicationTests": {
+    "passed": 1320,
+    "skipped": 2,
+    "failed": 0
+  },
+  "frontendBuild": "passed",
+  "frontendTypecheck": "passed",
+  "focusedFrontendLint": "passed",
+  "pendingModelChanges": false,
+  "adminBrowser": "real local API; create question; responsive views; no page errors",
+  "teacherBrowser": "real local API; create question; responsive views; no page errors",
+  "productionDeployment": false,
+  "featureSourceHashes": {
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningCenterContracts.cs": "85e6c761ee47df760374a17340a785c924e75a7fae6ec1f2c28d7c7ca763fe2e",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningCenterScope.cs": "da4f5724c17edd747c834fa7c53427db4be41a037702075be8f3e9118c7d7878",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningEvidence.cs": "d4de57206283eead8d54cc31c1fb9092aea9edc1034abca2f180ce0dbcc47007",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningFollowUps.cs": "ffd425365a0be2f84bb85a0c236a99f645b572851d9303e1a2cce3befd6b3786",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningFormGenerator.cs": "609d55d6651a2c05f7809723b4ad18f740315065ab3f6140921c987eff3b5d72",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningOverview.cs": "65a78ab4b02acdac7ca595cc51ba0a79e0cd2fe657b39f6098d4067a5485cb84",
+    "backend/src/NaderGorge.Application/Features/LearningCenter/LearningQuestionBank.cs": "9ec895efed0833b787bab38b522192a00c1ffa29ce5e11b28a679fdabdc65823"
+  }
+}

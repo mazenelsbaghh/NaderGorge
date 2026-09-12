@@ -203,7 +203,7 @@ export const mutationContracts: readonly MutationContractSeed[] = [
   ],
   [
     'live-support-service.ts',
-    23,
+    29,
     'support',
     ['support:staff', 'support:dashboard', 'support:ai'],
   ],

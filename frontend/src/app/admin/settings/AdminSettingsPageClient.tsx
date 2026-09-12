@@ -1,6 +1,7 @@
 'use client';
 
 import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
+import { WhatsAppQrSettings } from '@/components/live-support/admin/WhatsAppQrSettings';
 import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
 import { watermarkDefaults } from '@/lib/video-watermark';
 import { useState, useEffect, useCallback } from 'react';
@@ -1200,6 +1201,7 @@ export default function AdminSettingsPageClient() {
               <div className="space-y-6">
                 <ParentWhatsAppPrioritySettings value={settings.ParentWhatsAppPhonePriority} onChange={priority => handleSettingChange('ParentWhatsAppPhonePriority', priority)} disabled={isSaving} />
                 <div className="flex justify-end"><button type="button" onClick={handleSaveSettings} disabled={isSaving} className="admin-btn-primary min-h-11 px-5">{isSaving ? 'جاري الحفظ...' : 'حفظ ترتيب أرقام ولي الأمر'}</button></div>
+                <WhatsAppQrSettings />
                 <WhatsAppSettingsTab />
               </div>
             ) : activeTab === 'messenger' ? (

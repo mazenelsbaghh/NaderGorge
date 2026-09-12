@@ -4,6 +4,7 @@ namespace NaderGorge.Domain.Entities.LiveSupport;
 
 public sealed class LiveSupportWhatsAppBinding : BaseEntity
 {
+    public Guid? AccountId { get; set; }
     public Guid ConversationId { get; set; }
     public Guid GuestSessionId { get; set; }
     public string WhatsAppUserId { get; set; } = string.Empty;

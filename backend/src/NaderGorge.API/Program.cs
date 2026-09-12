@@ -269,6 +269,12 @@ builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStor
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
+builder.Services.AddHttpClient<BaileysWhatsAppClient>();
+builder.Services.AddScoped<BaileysAccountService>();
+builder.Services.AddScoped<BaileysWebhookService>();
+builder.Services.AddScoped<LiveSupportBlockingService>();
+builder.Services.AddScoped<LiveSupportBlockDispatcher>();
+builder.Services.AddHostedService<NaderGorge.API.BackgroundServices.LiveSupportBlockBackgroundService>();
 builder.Services.AddSingleton(new FacebookMessengerConfiguration(builder.Configuration));
 builder.Services.AddSingleton<IFacebookMessengerSecretProtector, FacebookMessengerSecretProtector>();
 builder.Services.AddScoped<IFacebookMessengerRuntimeConfigurationReader, FacebookMessengerRuntimeConfigurationReader>();

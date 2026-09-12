@@ -203,7 +203,10 @@ def test_deploy_node_requires_every_service_shared_write_and_atomic_pointer() ->
     assert "compose up -d --no-build --force-recreate --remove-orphans" in script
     assert "compose_state=\"$(compose ps --format json)\"" in script
     assert "compose rm --stop --force release-evidence" in script
-    assert "compose up -d --no-build --force-recreate --remove-orphans backend worker" in script
+    assert 'services="backend worker landing student admin teacher staff gateway"' in script
+    assert 'compose up -d --no-build --force-recreate --remove-orphans $services' in script
+    assert "test 'node-3' = node-3" in script
+    assert 'services="$services baileys"' in script
     assert "/shared/public/.massar-worker-write-" in script
     assert "docker exec --user 10001:10001" in script
     assert "id -G" in script

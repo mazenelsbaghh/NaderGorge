@@ -5,6 +5,8 @@ export type LiveSupportChannel = (typeof LIVE_SUPPORT_CHANNELS)[number];
 export interface LiveSupportChannelSource {
   channel?: LiveSupportChannel | null;
   canSend?: boolean;
+  whatsAppAccountId?: string | null;
+  isSupportBlocked?: boolean;
   externalPhoneNumber?: string | null;
   externalPageId?: string | null;
   externalPageName?: string | null;
@@ -114,11 +116,13 @@ export function resolveLiveSupportChannelCapabilities(
   currentTime = Date.now()
 ): LiveSupportChannelCapabilities {
   const channel = normalizeLiveSupportChannel(source.channel);
-  const fallback = CHANNEL_CAPABILITY_FALLBACKS[channel];
+  const fallback = channel === 'WhatsApp' && source.whatsAppAccountId
+    ? { ...CHANNEL_CAPABILITY_FALLBACKS.WhatsApp, requiresCustomerServiceWindow: false, supportsTemplates: false }
+    : CHANNEL_CAPABILITY_FALLBACKS[channel];
   const customerServiceWindowOpen = fallback.requiresCustomerServiceWindow
     ? isWindowOpen(source.customerServiceWindowExpiresAt, currentTime)
     : null;
-  const conversationAllowsSending = source.canSend !== false;
+  const conversationAllowsSending = source.canSend !== false && !source.isSupportBlocked;
   const canSendFreeform =
     conversationAllowsSending && customerServiceWindowOpen !== false;
 

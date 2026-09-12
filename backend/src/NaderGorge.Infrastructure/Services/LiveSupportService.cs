@@ -94,6 +94,7 @@ public sealed class LiveSupportService(
         // concurrent conversation creation.
         await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await AcquireRoutingLockAsync(ct);
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, new LiveSupportConversation { StudentUserId = participant.StudentUserId, GuestSessionId = participant.GuestSessionId }, ct);
         var availability = await GetAvailabilityAsync(ct);
         if (!availability.IsAvailable && !availability.IsOutsideBusinessHours)
             throw new LiveSupportException(LiveSupportErrorCodes.SupportUnavailable, availability.Message);
@@ -253,6 +254,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAttachmentDto> SaveParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
         if (sizeBytes is <= 0 or > 10 * 1024 * 1024) throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو حجمه أكبر من 10 ميجابايت.");
@@ -292,6 +294,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAttachmentDto> SaveStaffAttachmentAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct), ct);
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
         if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "رفع المرفقات غير متاح مؤقتًا.");
@@ -417,6 +420,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportMessageDto> UpdateParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid messageId, string content, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         await RequireParticipantConversationAsync(participant, conversationId, ct);
         var message = await RequireParticipantOwnedMessageAsync(participant, conversationId, messageId, ct);
         return await UpdateMessageAsync(message, content, participant.StudentUserId, participant.GuestSessionId, ct);
@@ -424,6 +428,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportMessageDto> DeleteParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid messageId, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         await RequireParticipantConversationAsync(participant, conversationId, ct);
         var message = await RequireParticipantOwnedMessageAsync(participant, conversationId, messageId, ct);
         return await DeleteMessageAsync(message, participant.StudentUserId, participant.GuestSessionId, ct);
@@ -569,7 +574,7 @@ public sealed class LiveSupportService(
         var conversation = await RequireStaffConversationAsync(command.StaffUserId, command.IsAdmin, command.ConversationId, ct);
         if (!command.IsAdmin && !await IsCheckedInAsync(command.StaffUserId, ct))
             throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "يجب تسجيل الحضور أولًا.");
-        if (!await _db.LiveSupportWhatsAppBindings.AnyAsync(item => item.ConversationId == conversation.Id, ct))
+        if (!await _db.LiveSupportWhatsAppBindings.AnyAsync(item => item.ConversationId == conversation.Id && item.AccountId == null, ct))
             throw new LiveSupportException("WHATSAPP_CHANNEL_REQUIRED", "هذه المحادثة ليست محادثة واتساب.");
         var template = await _db.LiveSupportWhatsAppTemplates.AsNoTracking().SingleOrDefaultAsync(item => item.Id == command.Request.TemplateId, ct)
             ?? throw new LiveSupportException("WHATSAPP_TEMPLATE_NOT_FOUND", "قالب واتساب غير موجود.");
@@ -1387,6 +1392,7 @@ public sealed class LiveSupportService(
         CancellationToken ct)
     {
         var (conversation, senderType, userId, guestId, clientMessageId, content, type, attachmentId, replyToMessageId) = request;
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, conversation, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة. ابدأ محادثة جديدة.");
         clientMessageId = clientMessageId.Trim(); content = content.Trim();
         if (clientMessageId.Length is < 8 or > 100 || content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "الرسالة غير صالحة.");
@@ -1530,6 +1536,7 @@ public sealed class LiveSupportService(
          join conversation in _db.LiveSupportConversations.AsNoTracking()
              on binding.ConversationId equals conversation.Id
          where binding.WhatsAppUserId == whatsAppUserId &&
+             binding.AccountId == _db.LiveSupportWhatsAppBindings.Where(current => current.ConversationId == currentConversationId).Select(current => current.AccountId).Single() &&
              (includeActiveConversations ||
               conversation.Id == currentConversationId ||
               conversation.Status == LiveSupportConversationStatus.Closed ||
@@ -1562,6 +1569,9 @@ public sealed class LiveSupportService(
         var whatsAppBindings = await _db.LiveSupportWhatsAppBindings.AsNoTracking()
             .Where(x => conversationIds.Contains(x.ConversationId))
             .ToDictionaryAsync(x => x.ConversationId, ct);
+        var accountIds = whatsAppBindings.Values.Select(binding => binding.AccountId).ToArray();
+        var accountNames = await _db.LiveSupportWhatsAppAccounts.AsNoTracking().Where(account => accountIds.Contains(account.Id))
+            .ToDictionaryAsync(account => account.Id, account => account.Name, ct);
         var messengerBindings = await _db.LiveSupportMessengerBindings.AsNoTracking()
             .Where(x => conversationIds.Contains(x.ConversationId))
             .ToDictionaryAsync(x => x.ConversationId, ct);
@@ -1630,6 +1640,13 @@ public sealed class LiveSupportService(
             .GroupBy(x => x.ConversationId)
             .ToDictionary(x => x.Key, x => (IReadOnlyList<string>)x.Select(value => value.FailureCode).ToList());
 
+        var studentIds = items.Select(c => c.StudentUserId ?? c.LinkedStudentUserId).Where(id => id.HasValue).ToArray();
+        var guestIds = items.Select(c => c.GuestSessionId).Where(id => id.HasValue).ToArray();
+        var phones = whatsAppBindings.Values.Select(binding => binding.WhatsAppUserId).ToArray();
+        var supportBlocks = await _db.LiveSupportContactBlocks.AsNoTracking().Where(block => block.UnblockedAt == null &&
+            (block.StudentUserId != null && studentIds.Contains(block.StudentUserId) ||
+             block.GuestSessionId != null && guestIds.Contains(block.GuestSessionId) ||
+             block.PhoneNumber != null && phones.Contains(block.PhoneNumber))).ToListAsync(ct);
         return items.Select(c =>
         {
             statesByConversation.TryGetValue(c.Id, out var state);
@@ -1650,6 +1667,10 @@ public sealed class LiveSupportService(
 
             whatsAppBindings.TryGetValue(c.Id, out var whatsAppBinding);
             messengerBindings.TryGetValue(c.Id, out var messengerBinding);
+            var supportBlock = supportBlocks.FirstOrDefault(block =>
+                block.StudentUserId != null && block.StudentUserId == (c.StudentUserId ?? c.LinkedStudentUserId) ||
+                block.GuestSessionId != null && block.GuestSessionId == c.GuestSessionId ||
+                block.PhoneNumber != null && block.PhoneNumber == whatsAppBinding?.WhatsAppUserId);
             var channel = messengerBinding is not null
                 ? "Messenger"
                 : whatsAppBinding is not null
@@ -1675,7 +1696,7 @@ public sealed class LiveSupportService(
                     ? queuePositions.GetValueOrDefault(c.Id)
                     : null,
                 c.Version,
-                !IsTerminal(c.Status),
+                !IsTerminal(c.Status) && supportBlock is null,
                 IsTerminal(c.Status) && !ratedSet.Contains(c.Id),
                 isAiActive,
                 isAiActive && typingSet.Contains(c.Id),
@@ -1685,7 +1706,8 @@ public sealed class LiveSupportService(
                 whatsAppBinding?.PhoneNumber,
                 messengerBinding?.ReplyWindowExpiresAt ?? whatsAppBinding?.CustomerServiceWindowExpiresAt,
                 messengerBinding?.PageId,
-                messengerBinding?.PageName);
+                messengerBinding?.PageName, whatsAppBinding?.AccountId, supportBlock is not null, supportBlock?.Reason,
+                    whatsAppBinding?.AccountId is Guid accountId ? accountNames.GetValueOrDefault(accountId) : null);
         }).ToList();
     }
 
@@ -1746,7 +1768,10 @@ public sealed class LiveSupportService(
         var whatsAppBinding = await _db.LiveSupportWhatsAppBindings.AsNoTracking().FirstOrDefaultAsync(x => x.ConversationId == c.Id, ct);
         var messengerBinding = await _db.LiveSupportMessengerBindings.AsNoTracking().FirstOrDefaultAsync(x => x.ConversationId == c.Id, ct);
         var channel = messengerBinding is not null ? "Messenger" : whatsAppBinding is not null ? "WhatsApp" : "Web";
-        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, participantName, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), IsTerminal(c.Status) && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary, unreadParticipantMessageCount, channel, whatsAppBinding?.PhoneNumber, messengerBinding?.ReplyWindowExpiresAt ?? whatsAppBinding?.CustomerServiceWindowExpiresAt, messengerBinding?.PageId, messengerBinding?.PageName);
+        var accountName = whatsAppBinding?.AccountId is Guid accountId
+            ? await _db.LiveSupportWhatsAppAccounts.Where(account => account.Id == accountId).Select(account => account.Name).SingleOrDefaultAsync(ct) : null;
+        var supportBlock = await LiveSupportBlockPolicy.FindAsync(_db, c, ct);
+        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, participantName, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status) && supportBlock is null, IsTerminal(c.Status) && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary, unreadParticipantMessageCount, channel, whatsAppBinding?.PhoneNumber, messengerBinding?.ReplyWindowExpiresAt ?? whatsAppBinding?.CustomerServiceWindowExpiresAt, messengerBinding?.PageId, messengerBinding?.PageName, whatsAppBinding?.AccountId, supportBlock is not null, supportBlock?.Reason, accountName);
     }
 
     public async Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct)
@@ -2284,6 +2309,8 @@ public sealed class LiveSupportService(
             {
                 x.ConversationId,
                 Channel = "WhatsApp",
+                AccountId = x.AccountId,
+                AccountName = _db.LiveSupportWhatsAppAccounts.Where(account => account.Id == x.AccountId).Select(account => account.Name).FirstOrDefault(),
                 ExternalPhoneNumber = (string?)x.PhoneNumber,
                 ReplyWindowExpiresAt = (DateTime?)x.CustomerServiceWindowExpiresAt,
                 ExternalPageId = (string?)null,
@@ -2295,6 +2322,8 @@ public sealed class LiveSupportService(
                 {
                     x.ConversationId,
                     Channel = "Messenger",
+                AccountId = (Guid?)null,
+                AccountName = (string?)null,
                     ExternalPhoneNumber = (string?)null,
                     ReplyWindowExpiresAt = (DateTime?)x.ReplyWindowExpiresAt,
                     ExternalPageId = (string?)x.PageId,
@@ -2403,7 +2432,7 @@ public sealed class LiveSupportService(
                     ? null
                     : latestExternalStatuses.GetValueOrDefault((c.Id, externalBinding.Channel)),
                 externalBinding?.ExternalPageId,
-                externalBinding?.ExternalPageName);
+                externalBinding?.ExternalPageName, externalBinding?.AccountId, externalBinding?.AccountName);
         }).ToList();
     }
 
@@ -2567,7 +2596,7 @@ public sealed class LiveSupportService(
     private static bool IsTerminal(LiveSupportConversationStatus s) => s is LiveSupportConversationStatus.Closed or LiveSupportConversationStatus.Abandoned;
     private static void EnsureWhatsAppWindowOpen(LiveSupportWhatsAppBinding? binding)
     {
-        if (binding is not null && binding.CustomerServiceWindowExpiresAt <= DateTime.UtcNow)
+        if (binding is not null && binding.AccountId == null && binding.CustomerServiceWindowExpiresAt <= DateTime.UtcNow)
             throw new LiveSupportException("WHATSAPP_WINDOW_CLOSED", "انتهت نافذة واتساب لمدة 24 ساعة. استخدم قالبًا معتمدًا لبدء المحادثة من جديد.");
     }
     private static void EnsureMessengerWindowOpen(LiveSupportMessengerBinding? binding)
@@ -2599,6 +2628,7 @@ public sealed class LiveSupportService(
 
     public async Task ConfirmPendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid proposalId, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         if (_mediator is null) throw new InvalidOperationException("Mediator is required.");
         try
         {
@@ -2629,6 +2659,7 @@ public sealed class LiveSupportService(
 
     public async Task ConfirmHandoffAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         if (!conversation.AllowsAI)
             throw new LiveSupportException("CONFLICT", "AI is disabled for this conversation.");
@@ -2712,6 +2743,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAIVerificationSessionDto> StartVerificationLookupAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportLookupRequestDto request, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         if (_aiVerificationService is null) throw new InvalidOperationException("Verification service is not available.");
         var lookupDto = new NaderGorge.Application.Features.LiveSupportAI.Dtos.LiveSupportAIVerificationLookupCommandDto(request.LookupKey, request.Value, Guid.NewGuid().ToString("N"));
         var result = await _aiVerificationService.StartLookupAsync(participant, conversationId, lookupDto, ct);
@@ -2727,6 +2759,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAIVerificationSessionDto> SubmitVerificationChallengeAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportAnswerChallengeDto request, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         if (_aiVerificationService is null) throw new InvalidOperationException("Verification service is not available.");
         var active = await GetActiveVerificationSessionAsync(participant, conversationId, ct);
         if (active is null) throw new LiveSupportException("NOT_FOUND", "Active verification session not found.");
@@ -2745,6 +2778,7 @@ public sealed class LiveSupportService(
 
     public async Task ConfirmRegistrationProposalAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct)
     {
+        await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         if (_aiRegistrationService is null) throw new InvalidOperationException("Registration service is not available.");
         
         var decision = await _db.LiveSupportAIPendingActions

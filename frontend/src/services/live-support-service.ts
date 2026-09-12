@@ -57,6 +57,10 @@ export interface LiveSupportConversation {
   externalPageId?: string | null;
   externalPageName?: string | null;
   customerServiceWindowExpiresAt?: string | null;
+  whatsAppAccountId?: string | null;
+  whatsAppAccountName?: string | null;
+  isSupportBlocked?: boolean;
+  supportBlockReason?: string | null;
 }
 
 export interface LiveSupportWhatsAppTemplateButton {
@@ -470,6 +474,8 @@ export interface LiveSupportAdminConversation {
   externalPageName?: string | null;
   customerServiceWindowExpiresAt?: string | null;
   lastExternalDeliveryStatus?: string | null;
+  whatsAppAccountId?: string | null;
+  whatsAppAccountName?: string | null;
 }
 export interface LiveSupportStaffPerformance { staffUserId: string; staffName: string; participatedConversations: number; closedConversations: number; ratingCount: number; averageRating?: number; }
 export interface LiveSupportWhatsAppAdminSummary {
@@ -561,7 +567,27 @@ export function getLiveSupportApiErrorCode(error: unknown) {
   return undefined;
 }
 
+export interface SupportWhatsAppAccount { id: string; name: string; status: string; phoneNumber?: string | null; isEnabled: boolean }
+export interface SupportWhatsAppConnection { account: SupportWhatsAppAccount; qrDataUrl?: string | null; qrExpiresAt?: string | null }
+export interface SupportBlockStatus {
+  block?: { id: string; reason: string; unblockedAt?: string | null } | null;
+  deliveries: { id: string; accountId?: string | null; status: string; noticeStatus: string; desiredBlocked: boolean; failureCode?: string | null }[];
+  conversationVersion: number;
+}
+
 export const liveSupportService = {
+  getWhatsAppAccounts: () => apiClient.get<ApiResponse<SupportWhatsAppAccount[]>>('/live-support/connections/whatsapp').then(response => response.data.data),
+  createWhatsAppAccount: (name: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>('/live-support/connections/whatsapp', { name }).then(response => response.data.data),
+  connectWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppConnection>>(`/live-support/connections/whatsapp/${id}/connect`).then(response => response.data.data),
+  refreshWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>(`/live-support/connections/whatsapp/${id}/refresh`).then(response => response.data.data),
+  disconnectWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>(`/live-support/connections/whatsapp/${id}/disconnect`).then(response => response.data.data),
+  getSupportBlock: (id: string, signal?: AbortSignal) => apiClient.get<ApiResponse<SupportBlockStatus>>(`/live-support/connections/conversations/${id}/block`, { signal }).then(response => response.data.data),
+  retrySupportBlock: (id: string) => apiClient.post<ApiResponse<SupportBlockStatus>>(`/live-support/connections/conversations/${id}/block/retry`).then(response => response.data.data),
+  setSupportBlock: async (id: string, blocked: boolean, reason: string, expectedVersion: number) => {
+    const response = await apiClient.put<ApiResponse<SupportBlockStatus>>(`/live-support/connections/conversations/${id}/block`, { blocked, reason, expectedVersion });
+    invalidateSupport();
+    return response.data.data;
+  },
   getAvailability: (signal?: AbortSignal) =>
     apiClient.get<ApiResponse<LiveSupportAvailability>>('/live-support/availability', { signal }).then((response) => response.data.data),
 

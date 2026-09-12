@@ -35,7 +35,7 @@ public class ListQuestionsQueryHandler : IRequestHandler<ListQuestionsQuery, Api
         }
 
         var query = _db.QuestionBankItems.Include(q => q.Options)
-            .Where(q => q.Tags != "Inline" && q.Tags != "Added")
+            .Where(q => q.Tags != "Inline" && q.Tags != "Added" && q.SupersededByQuestionId == null)
             .AsQueryable();
 
         if (teacherId.HasValue)

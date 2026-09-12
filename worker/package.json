@@ -12,7 +12,8 @@
     "dump-tg-history": "tsc -p tsconfig.json && node dist/scripts/dump-tg-history.js",
     "test": "npm run build && node scripts/run-tests.mjs",
     "accept:real-ai": "npm run build && node dist/scripts/accept-real-ai-provider.js",
-    "accept:essay-grading": "npm run build && node dist/scripts/accept-essay-grading.js"
+    "accept:essay-grading": "npm run build && node dist/scripts/accept-essay-grading.js",
+    "whatsapp:bridge": "node dist/whatsapp/server.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +28,7 @@
     "@google/genai": "^1.47.0",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.20.0",
+    "@whiskeysockets/baileys": "7.0.0-rc13",
     "bullmq": "^5.71.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -36,6 +38,8 @@
     "input": "^1.0.1",
     "ioredis": "^5.10.1",
     "pg": "^8.20.0",
+    "pino": "9.14.0",
+    "qrcode": "1.5.4",
     "redis": "^5.11.0",
     "telegram": "^2.26.22",
     "ts-node": "^10.9.2",
@@ -46,6 +50,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/fluent-ffmpeg": "^2.1.28"
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/qrcode": "1.5.6"
   }
 }

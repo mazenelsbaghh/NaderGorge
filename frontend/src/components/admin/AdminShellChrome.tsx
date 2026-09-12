@@ -109,6 +109,7 @@ export type AdminShellRoute =
   | '/admin/public-exams'
   | '/admin/community'
   | '/admin/comments'
+  | '/admin/learning-center'
   | '/admin/questions'
   | '/admin/overrides'
   | '/admin/watch-requests'
@@ -394,6 +395,12 @@ const navItems: AdminNavItem[] = [
     permission: 'sales.manage',
   },
   {
+    href: '/admin/learning-center',
+    label: 'التقييم والمتابعة',
+    icon: BarChart3,
+    adminOnly: true,
+  },
+  {
     href: '/admin/questions',
     label: 'الأسئلة',
     icon: Shield,
@@ -637,7 +644,7 @@ const GROUP_CONFIG = [
     id: 'academic',
     label: 'التعليم والمحتوى',
     icon: Library,
-    hrefs: ['/admin/subjects', '/admin/content', '/admin/content/video-types', '/admin/shared-packages', '/admin/questions', '/admin/public-exams', '/admin/forms'],
+    hrefs: ['/admin/subjects', '/admin/content', '/admin/content/video-types', '/admin/shared-packages', '/admin/questions', '/admin/learning-center', '/admin/public-exams', '/admin/forms'],
   },
   {
     id: 'hr',

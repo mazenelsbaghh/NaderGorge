@@ -58,6 +58,9 @@ digest_re=re.compile(r"^sha256:[0-9a-f]{64}$")
 hex_re=re.compile(r"^[0-9a-f]{64}$")
 maximum=4*1024*1024
 services={"backend":"backend","worker":"worker","landing":"frontend","student":"frontend","admin":"frontend","teacher":"frontend","staff":"frontend","gateway":None}
+compose=current / "deploy/production/compose/compose.app.yml"
+if expected_node=="node-3" and compose.is_file() and "\n  baileys:" in compose.read_text():
+    services["baileys"]="worker"
 image_names=("backend","frontend","worker","migrator")
 
 def docker(*args):

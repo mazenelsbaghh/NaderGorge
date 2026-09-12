@@ -100,6 +100,7 @@ public class AppDbContext : DbContext, IAppDbContext
     // Exams
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<QuestionBankItem> QuestionBankItems => Set<QuestionBankItem>();
+    public DbSet<LearningFollowUp> LearningFollowUps => Set<LearningFollowUp>();
     public DbSet<QuestionOption> QuestionOptions => Set<QuestionOption>();
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<StudentExamAttempt> StudentExamAttempts => Set<StudentExamAttempt>();
@@ -215,6 +216,9 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportAssignment> LiveSupportAssignments => Set<LiveSupportAssignment>();
     public DbSet<LiveSupportMessage> LiveSupportMessages => Set<LiveSupportMessage>();
     public DbSet<LiveSupportWhatsAppBinding> LiveSupportWhatsAppBindings => Set<LiveSupportWhatsAppBinding>();
+    public DbSet<LiveSupportWhatsAppAccount> LiveSupportWhatsAppAccounts => Set<LiveSupportWhatsAppAccount>();
+    public DbSet<LiveSupportContactBlock> LiveSupportContactBlocks => Set<LiveSupportContactBlock>();
+    public DbSet<LiveSupportBlockDelivery> LiveSupportBlockDeliveries => Set<LiveSupportBlockDelivery>();
     public DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages => Set<LiveSupportWhatsAppMessage>();
     public DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts => Set<LiveSupportWhatsAppPendingReceipt>();
     public DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates => Set<LiveSupportWhatsAppTemplate>();
@@ -341,6 +345,17 @@ public class AppDbContext : DbContext, IAppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<LearningFollowUp>(e =>
+        {
+            e.ToTable("learning_follow_ups");
+            e.HasIndex(x => new { x.PackageId, x.StudentId, x.CreatedAt });
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.PerformedByUser).WithMany().HasForeignKey(x => x.PerformedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<QuestionBankItem>().HasOne(x => x.LearningLesson).WithMany()
+            .HasForeignKey(x => x.LearningLessonId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<QuestionBankItem>().HasIndex(x => new { x.LearningLessonId, x.LearningDifficulty });
         modelBuilder.HasDbFunction(typeof(PostgresSearchFunctions).GetMethod(
             nameof(PostgresSearchFunctions.NormalizeArabic),
             [typeof(string)])!);
@@ -2853,9 +2868,61 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(x => x.RevokedAt);
         });
 
+        modelBuilder.Entity<LiveSupportBaileysAuth>(e =>
+        {
+            e.ToTable("live_support_baileys_auth");
+            e.Property(x => x.Key).HasMaxLength(400).IsRequired();
+            e.Property(x => x.Ciphertext).IsRequired();
+            e.HasIndex(x => new { x.AccountId, x.Key }).IsUnique();
+            e.HasOne<LiveSupportWhatsAppAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<LiveSupportBaileysCallback>(e =>
+        {
+            e.ToTable("live_support_baileys_callbacks");
+            e.Property(x => x.Ciphertext).IsRequired();
+            e.HasIndex(x => x.NextAttemptAt);
+            e.HasOne<LiveSupportWhatsAppAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportWhatsAppAccount>(e =>
+        {
+            e.ToTable("live_support_whatsapp_accounts");
+            e.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            e.Property(x => x.InstanceName).HasMaxLength(80).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(32);
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.InstanceName).IsUnique();
+        });
+        modelBuilder.Entity<LiveSupportContactBlock>(e =>
+        {
+            e.ToTable("live_support_contact_blocks");
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(32);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.ConversationId).IsUnique().HasFilter("\"UnblockedAt\" IS NULL");
+            e.HasIndex(x => new { x.StudentUserId, x.UnblockedAt });
+            e.HasIndex(x => new { x.GuestSessionId, x.UnblockedAt });
+            e.HasIndex(x => new { x.PhoneNumber, x.UnblockedAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<LiveSupportBlockDelivery>(e =>
+        {
+            e.ToTable("live_support_block_deliveries");
+            e.Property(x => x.PhoneNumber).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.NoticeStatus).HasMaxLength(32).IsRequired();
+            e.Property(x => x.FailureCode).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasOne<LiveSupportContactBlock>().WithMany().HasForeignKey(x => x.BlockId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportWhatsAppAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<LiveSupportWhatsAppBinding>(e =>
         {
             e.ToTable("live_support_whatsapp_bindings");
+            e.HasOne<LiveSupportWhatsAppAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.WhatsAppUserId).HasMaxLength(32).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(32).IsRequired();
             e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();

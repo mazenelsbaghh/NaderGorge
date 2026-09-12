@@ -113,6 +113,8 @@ services:
       EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}
       EvolutionApi__ApiKey: ${EVOLUTION_API_KEY:-}
       EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Massar}
+      Baileys__BaseUrl: ${BAILEYS_BASE_URL:-http://baileys:3002}
+      Baileys__ApiKey: ${BAILEYS_API_KEY:-}
       WhatsAppCloudApi__AccessToken: ${WHATSAPP_CLOUD_ACCESS_TOKEN:-}
       WhatsAppCloudApi__PhoneNumberId: ${WHATSAPP_CLOUD_PHONE_NUMBER_ID:-}
       WhatsAppCloudApi__BusinessAccountId: ${WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID:-}
@@ -176,6 +178,34 @@ services:
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:5245/api/health || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Direct Baileys bridge. Enable explicitly with --profile whatsapp.
+  baileys:
+    profiles: [whatsapp]
+    image: massar_worker:local
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    command: ["node", "dist/whatsapp/server.js"]
+    restart: unless-stopped
+    environment:
+      DB_CONNECTION_STRING: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-massar_platform}"
+      BAILEYS_API_KEY: ${BAILEYS_API_KEY:-}
+      BAILEYS_AUTH_KEY: ${BAILEYS_AUTH_KEY:-}
+      BAILEYS_HOST: 0.0.0.0
+      BACKEND_API_URL: http://backend:5245
+      NODE_ENV: production
+      TZ: UTC
+    networks: [massar_net]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health',{headers:{'X-Baileys-Token':process.env.BAILEYS_API_KEY}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

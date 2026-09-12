@@ -73,6 +73,28 @@ public sealed class WhatsAppCloudService
         public bool IsRetryable { get; }
     }
 
+    public async Task SetBlockedAsync(string phone, bool blocked, CancellationToken ct)
+    {
+        var token = _configuration["WhatsAppCloudApi:AccessToken"];
+        var phoneId = _configuration["WhatsAppCloudApi:PhoneNumberId"];
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(phoneId))
+            throw Failure("WHATSAPP_CLOUD_NOT_CONFIGURED", 503);
+        var version = _configuration["WhatsAppCloudApi:ApiVersion"] ?? "v20.0";
+        using var request = new HttpRequestMessage(blocked ? HttpMethod.Post : HttpMethod.Delete,
+            $"https://graph.facebook.com/{version}/{phoneId}/block_users");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Content = JsonContent.Create(new { messaging_product = "whatsapp", block_users = new[] { new { user = phone } } });
+        using var response = await _httpClient.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode) throw Failure("WHATSAPP_BLOCK_FAILED", (int)response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+        var accepted = document.RootElement.TryGetProperty("block_users", out var users) &&
+            users.TryGetProperty(blocked ? "added_users" : "removed_users", out var changed) &&
+            changed.ValueKind == JsonValueKind.Array && changed.EnumerateArray().Any(user =>
+                user.TryGetProperty("wa_id", out var id) && id.GetString() == phone ||
+                user.TryGetProperty("input", out var input) && input.GetString()?.TrimStart('+') == phone);
+        if (!accepted) throw Failure("WHATSAPP_BLOCK_NOT_CONFIRMED", 409);
+    }
+
     public sealed record DownloadedMedia(byte[] Content, string ContentType, string FileName);
 
     public sealed record TemplateSnapshot(

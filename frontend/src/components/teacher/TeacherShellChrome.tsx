@@ -61,6 +61,7 @@ export type TeacherShellRoute =
   | '/teacher/essays'
   | '/teacher/students'
   | '/teacher/finance'
+  | '/teacher/learning-center'
   | '/teacher/reports'
   | '/teacher/profile'
   | '/teacher/chat';
@@ -101,6 +102,7 @@ type TeacherNavItem = {
 };
 
 const navItems: TeacherNavItem[] = [
+  { href: '/teacher/learning-center', label: 'التقييم والمتابعة', icon: BarChart3, group: 'followup', permission: 'content' },
   {
     href: '/teacher/reports',
     label: 'مركز التقارير',
@@ -197,7 +199,7 @@ const GROUP_CONFIG: Array<{
     id: 'followup',
     label: 'المتابعة والتفاعل',
     icon: Users,
-    hrefs: ['/teacher/activity', '/teacher/students', '/teacher/community', '/teacher/comments', '/teacher/essays', '/teacher/reports'],
+    hrefs: ['/teacher/activity', '/teacher/students', '/teacher/community', '/teacher/comments', '/teacher/essays', '/teacher/reports', '/teacher/learning-center'],
   },
   {
     id: 'content',
@@ -466,7 +468,9 @@ function TeacherShellFrame({
   }, [workspaceReload]);
 
   const canSeeItem = (item: TeacherNavItem) =>
-    isOwner || !item.permission || Boolean(workspacePermissions?.has(item.permission));
+    isOwner || (item.href === '/teacher/learning-center'
+      ? Boolean(workspacePermissions?.has('content') && workspacePermissions?.has('students'))
+      : !item.permission || Boolean(workspacePermissions?.has(item.permission)));
   const canSeeDashboard = isOwner || Boolean(workspacePermissions?.has('dashboard'));
   const canSeeProfile = isOwner || Boolean(workspacePermissions?.has('profile'));
 

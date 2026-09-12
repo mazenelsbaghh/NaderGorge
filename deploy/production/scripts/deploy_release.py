@@ -548,12 +548,15 @@ compose() {{
     -f "$previous/deploy/production/compose/compose.app.yml" "$@"
 }}
 stage="restore-previous-compose"
+if test '{target.node_id}' = node-3 && grep -q '^  baileys:' "$previous/deploy/production/compose/compose.app.yml"; then
+  services="$services baileys"
+fi
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true
 compose up -d --no-build --force-recreate --remove-orphans $services
 stage="wait-previous-health"
 for attempt in $(seq 1 60); do
   healthy=1
-  for service in backend worker landing student admin teacher staff gateway; do
+  for service in $services; do
     container_id="$(compose ps -q "$service")"
     test -n "$container_id" || healthy=0
     if test -n "$container_id"; then
@@ -862,13 +865,17 @@ compose() {{
 }}
 stage="validate-compose"
 compose config -q
+services="{services}"
+if test '{target.node_id}' = node-3 && grep -q '^  baileys:' {release_root}/deploy/production/compose/compose.app.yml; then
+  services="$services baileys"
+fi
 stage="start-compose"
 compose rm --stop --force release-evidence >/dev/null 2>&1 || true
-compose up -d --no-build --force-recreate --remove-orphans {services}
+compose up -d --no-build --force-recreate --remove-orphans $services
 stage="wait-container-health"
 for attempt in $(seq 1 60); do
   healthy=1
-  for service in {services}; do
+  for service in $services; do
     container_id="$(compose ps -q "$service")"
     test -n "$container_id" || healthy=0
     if test -n "$container_id"; then

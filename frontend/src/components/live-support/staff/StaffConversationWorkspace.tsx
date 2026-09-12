@@ -206,6 +206,7 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
           title={conversation.subject || channelPresentation.detail}
         >
           {participantDetail}
+          {conversation.whatsAppAccountName && <span className="mx-2">الرقم: {conversation.whatsAppAccountName}</span>}
           {isWhatsApp && conversation.externalPhoneNumber ? (
             <>
               {' '}· <bdi dir="ltr">{conversation.externalPhoneNumber}</bdi>
@@ -215,6 +216,7 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
       </div>
       <div className="flex gap-2"><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onTransfer} className="min-h-11 rounded-xl border border-[var(--admin-border)] px-3 text-sm font-semibold text-[var(--admin-text)] hover:bg-[var(--admin-hover)] disabled:opacity-50">{pendingAction === 'transfer' ? 'جارٍ التحويل…' : 'تحويل المحادثة'}</button><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onClose} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)] disabled:opacity-50"><XCircle size={17}/>{pendingAction === 'close' ? 'جارٍ الإنهاء…' : 'إنهاء المحادثة'}</button></div>
     </header>
+    {conversation.isSupportBlocked && <p role="alert" className="bg-[var(--admin-danger-10)] px-4 py-3 text-sm text-[var(--admin-danger)]">محظور من الدعم. السبب: {conversation.supportBlockReason}</p>}
     {ownershipLost && <p role="alert" className="border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-medium text-[var(--admin-warning)]">تم نقل ملكية المحادثة. تم إيقاف الرد والإجراءات فورًا.</p>}
     <div ref={messagesViewportRef} aria-label="سجل رسائل المحادثة" onScroll={(event) => { const viewport = event.currentTarget; shouldStickToBottom.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
     <div role="log" aria-live="polite" className="min-h-full space-y-2 p-4">

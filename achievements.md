@@ -679,3 +679,10 @@
 - [ ] Authenticated k6 workflows and the complete Chromium/WebKit/four-role
   accessibility matrix remain evidence gaps; no success is claimed without a
   disposable account and protected token files.
+
+## Support blocks and direct Baileys accounts (2026-09-12)
+
+- Implemented multiple QR-linked WhatsApp accounts with independent encrypted sessions and source-account reply routing; administrative support blocks record a visible reason and provider block/unblock delivery status.
+- Local verification: Application tests 1330 passed/2 skipped; Next.js production build and lint passed (one existing warning); worker build and session encryption test passed; support/query client contracts passed; EF migration guard passed; Compose WhatsApp profile validated with validation-only environment values.
+- External verification remains open: no configured local PostgreSQL/Redis E2E stack or real WhatsApp pairing session was used. Real QR pairing, provider delivery/blocking and restart recovery require configured services and the account owner’s mobile device. No production rollout or runtime database migration was performed.
+- Repository-wide verification is not claimed: local Python lacks pytest; the endpoint inventory retains three unrelated unresolved assessment-revision routes. See docs/change-notes/2026-09-12-support-blocks-baileys.md for setup and scope.

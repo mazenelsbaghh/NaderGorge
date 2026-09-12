@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 476,
+  "reachableFileCount": 486,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -398,6 +398,10 @@
     {
       "file": "frontend/src/app/admin/hr/shifts/page.tsx",
       "route": "/admin/hr/shifts"
+    },
+    {
+      "file": "frontend/src/app/admin/learning-center/page.tsx",
+      "route": "/admin/learning-center"
     },
     {
       "file": "frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx",
@@ -1108,6 +1112,30 @@
       "route": null
     },
     {
+      "file": "frontend/src/components/learning-center/LearningBank.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/learning-center/LearningCenterPage.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/learning-center/LearningFollowUpList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/learning-center/LearningForms.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/learning-center/LearningMap.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/learning-center/LearningQuestionEditor.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/components/live-support/admin/ConversationInvestigation.tsx",
       "route": null
     },
@@ -1125,6 +1153,10 @@
     },
     {
       "file": "frontend/src/components/live-support/admin/StaffPerformancePanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/SupportBlockPanel.tsx",
       "route": null
     },
     {
@@ -1153,6 +1185,10 @@
     },
     {
       "file": "frontend/src/components/live-support/admin/WhatsAppOperationsPanel.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/live-support/admin/WhatsAppQrSettings.tsx",
       "route": null
     },
     {
@@ -1828,6 +1864,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/services/learning-center-service.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/services/live-support-ai-service.ts",
       "route": null
     },
@@ -1908,7 +1948,7 @@
       "route": null
     }
   ],
-  "callCount": 574,
+  "callCount": 584,
   "calls": [
     {
       "method": "DELETE",
@@ -2002,6 +2042,15 @@
     },
     {
       "method": "DELETE",
+      "path": "/admin/homework/{homeworkId}/submissions/{submissionId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 2101
+      }
+    },
+    {
+      "method": "DELETE",
       "path": "/admin/live-support/messenger/pages/{encodeURIComponentpageRecordId}",
       "dynamic": true,
       "source": {
@@ -2024,7 +2073,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2300
+        "line": 2306
       }
     },
     {
@@ -2069,7 +2118,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2210
+        "line": 2216
       }
     },
     {
@@ -2132,7 +2181,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 629
+        "line": 655
       }
     },
     {
@@ -2141,7 +2190,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 829
+        "line": 855
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{base}/{path}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/learning-center-service.ts",
+        "line": 142
       }
     },
     {
@@ -2182,15 +2240,6 @@
     },
     {
       "method": "GET",
-      "path": "/{endpointkindid}/editor",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 53
-      }
-    },
-    {
-      "method": "GET",
       "path": "/{scope}/content/summary",
       "dynamic": true,
       "source": {
@@ -2204,7 +2253,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2461
+        "line": 2467
       }
     },
     {
@@ -2213,7 +2262,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2473
+        "line": 2479
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/{kindexamexamshomework}/{id}/editor",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 52
       }
     },
     {
@@ -2222,7 +2280,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 51
+        "line": 50
       }
     },
     {
@@ -2231,7 +2289,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2399
+        "line": 2405
       }
     },
     {
@@ -2240,7 +2298,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2377
+        "line": 2383
       }
     },
     {
@@ -2249,7 +2307,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2388
+        "line": 2394
       }
     },
     {
@@ -2258,7 +2316,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2410
+        "line": 2416
       }
     },
     {
@@ -2375,7 +2433,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2362
+        "line": 2368
       }
     },
     {
@@ -2609,7 +2667,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2422
+        "line": 2428
       }
     },
     {
@@ -2780,7 +2838,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2269
+        "line": 2275
       }
     },
     {
@@ -2843,7 +2901,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2444
+        "line": 2450
       }
     },
     {
@@ -2852,7 +2910,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2257
+        "line": 2263
       }
     },
     {
@@ -2969,7 +3027,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2351
+        "line": 2357
       }
     },
     {
@@ -2987,7 +3045,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2340
+        "line": 2346
       }
     },
     {
@@ -3005,7 +3063,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2307
+        "line": 2313
       }
     },
     {
@@ -3014,7 +3072,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2321
+        "line": 2327
       }
     },
     {
@@ -3032,7 +3090,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2433
+        "line": 2439
       }
     },
     {
@@ -3140,7 +3198,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2217
+        "line": 2223
       }
     },
     {
@@ -3563,7 +3621,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 601
+        "line": 627
       }
     },
     {
@@ -3617,7 +3675,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 856
+        "line": 882
       }
     },
     {
@@ -3626,7 +3684,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 865
+        "line": 891
       }
     },
     {
@@ -3635,7 +3693,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 859
+        "line": 885
       }
     },
     {
@@ -3644,7 +3702,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 862
+        "line": 888
       }
     },
     {
@@ -3653,7 +3711,25 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 566
+        "line": 592
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/connections/conversations/{id}/block",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 584
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/connections/whatsapp",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 579
       }
     },
     {
@@ -3662,7 +3738,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 569
+        "line": 595
       }
     },
     {
@@ -3671,7 +3747,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 578
+        "line": 604
       }
     },
     {
@@ -3680,7 +3756,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 983
+        "line": 1009
       }
     },
     {
@@ -3689,7 +3765,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 587
+        "line": 613
       }
     },
     {
@@ -3698,7 +3774,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 986
+        "line": 1012
       }
     },
     {
@@ -3707,7 +3783,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 581
+        "line": 607
       }
     },
     {
@@ -3716,7 +3792,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 647
+        "line": 673
       }
     },
     {
@@ -3725,7 +3801,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 891
+        "line": 917
       }
     },
     {
@@ -3734,7 +3810,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 920
+        "line": 946
       }
     },
     {
@@ -3743,7 +3819,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 926
+        "line": 952
       }
     },
     {
@@ -3752,7 +3828,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 923
+        "line": 949
       }
     },
     {
@@ -3761,7 +3837,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 835
+        "line": 861
       }
     },
     {
@@ -3770,7 +3846,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 908
+        "line": 934
       }
     },
     {
@@ -3779,7 +3855,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 911
+        "line": 937
       }
     },
     {
@@ -3788,7 +3864,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 914
+        "line": 940
       }
     },
     {
@@ -3797,7 +3873,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 917
+        "line": 943
       }
     },
     {
@@ -3806,7 +3882,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 899
+        "line": 925
       }
     },
     {
@@ -3815,7 +3891,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 609
+        "line": 635
       }
     },
     {
@@ -3824,7 +3900,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 838
+        "line": 864
       }
     },
     {
@@ -3833,7 +3909,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 757
+        "line": 783
       }
     },
     {
@@ -3842,7 +3918,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 675
+        "line": 701
       }
     },
     {
@@ -3851,7 +3927,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 784
+        "line": 810
       }
     },
     {
@@ -3860,7 +3936,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 667
+        "line": 693
       }
     },
     {
@@ -4400,7 +4476,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 623
+        "line": 649
       }
     },
     {
@@ -4409,7 +4485,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 823
+        "line": 849
       }
     },
     {
@@ -4477,11 +4553,11 @@
     },
     {
       "method": "POST",
-      "path": "/{endpointdefinitionkinddefinitionassessmentId}/revision-preview",
+      "path": "/admin/{definitionkindexamexamshomework}/{definitionassessmentId}/revision-preview",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 54
+        "line": 53
       }
     },
     {
@@ -4859,7 +4935,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2122
+        "line": 2128
       }
     },
     {
@@ -5084,7 +5160,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2279
+        "line": 2285
       }
     },
     {
@@ -5327,7 +5403,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2190
+        "line": 2196
       }
     },
     {
@@ -5336,7 +5412,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2194
+        "line": 2200
       }
     },
     {
@@ -5345,7 +5421,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2152
+        "line": 2158
       }
     },
     {
@@ -5354,7 +5430,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2202
+        "line": 2208
       }
     },
     {
@@ -5363,7 +5439,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2182
+        "line": 2188
       }
     },
     {
@@ -5390,7 +5466,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2249
+        "line": 2255
       }
     },
     {
@@ -5507,7 +5583,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2228
+        "line": 2234
       }
     },
     {
@@ -5516,7 +5592,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2236
+        "line": 2242
       }
     },
     {
@@ -5597,7 +5673,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2115
+        "line": 2121
       }
     },
     {
@@ -6011,7 +6087,52 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 868
+        "line": 894
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/connections/conversations/{id}/block/retry",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 585
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/connections/whatsapp",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 580
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/connections/whatsapp/{id}/connect",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 581
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/connections/whatsapp/{id}/disconnect",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 583
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/connections/whatsapp/{id}/refresh",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 582
       }
     },
     {
@@ -6020,7 +6141,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 572
+        "line": 598
       }
     },
     {
@@ -6029,7 +6150,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 635
+        "line": 661
       }
     },
     {
@@ -6038,7 +6159,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 977
+        "line": 1003
       }
     },
     {
@@ -6047,7 +6168,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 941
+        "line": 967
       }
     },
     {
@@ -6056,7 +6177,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 935
+        "line": 961
       }
     },
     {
@@ -6065,7 +6186,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 959
+        "line": 985
       }
     },
     {
@@ -6074,7 +6195,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 947
+        "line": 973
       }
     },
     {
@@ -6083,7 +6204,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 953
+        "line": 979
       }
     },
     {
@@ -6092,7 +6213,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 971
+        "line": 997
       }
     },
     {
@@ -6101,7 +6222,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 965
+        "line": 991
       }
     },
     {
@@ -6110,7 +6231,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 591
+        "line": 617
       }
     },
     {
@@ -6119,7 +6240,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 617
+        "line": 643
       }
     },
     {
@@ -6128,7 +6249,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 641
+        "line": 667
       }
     },
     {
@@ -6137,7 +6258,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 929
+        "line": 955
       }
     },
     {
@@ -6146,7 +6267,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 652
+        "line": 678
       }
     },
     {
@@ -6155,7 +6276,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 844
+        "line": 870
       }
     },
     {
@@ -6164,7 +6285,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 661
+        "line": 687
       }
     },
     {
@@ -6173,7 +6294,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 850
+        "line": 876
       }
     },
     {
@@ -6182,7 +6303,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 817
+        "line": 843
       }
     },
     {
@@ -6191,7 +6312,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 771
+        "line": 797
       }
     },
     {
@@ -6200,7 +6321,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 741
+        "line": 767
       }
     },
     {
@@ -6209,7 +6330,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 707
+        "line": 733
       }
     },
     {
@@ -6218,7 +6339,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 724
+        "line": 750
       }
     },
     {
@@ -6227,7 +6348,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 693
+        "line": 719
       }
     },
     {
@@ -6236,7 +6357,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 682
+        "line": 708
       }
     },
     {
@@ -6245,7 +6366,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 807
+        "line": 833
       }
     },
     {
@@ -6254,7 +6375,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 795
+        "line": 821
       }
     },
     {
@@ -6263,7 +6384,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 670
+        "line": 696
       }
     },
     {
@@ -6646,11 +6767,11 @@
     },
     {
       "method": "PUT",
-      "path": "/{endpointrequestdefinitionkindrequestdefinitionassessmentId}/definition",
+      "path": "/admin/{requestdefinitionkindexamexamshomework}/{requestdefinitionassessmentId}/definition",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 57
+        "line": 56
       }
     },
     {
@@ -6695,7 +6816,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2106
+        "line": 2112
       }
     },
     {
@@ -6794,7 +6915,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2134
+        "line": 2140
       }
     },
     {
@@ -6821,7 +6942,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2292
+        "line": 2298
       }
     },
     {
@@ -6848,7 +6969,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2262
+        "line": 2268
       }
     },
     {
@@ -6920,7 +7041,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2174
+        "line": 2180
       }
     },
     {
@@ -6929,7 +7050,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2163
+        "line": 2169
       }
     },
     {
@@ -7010,7 +7131,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 886
+        "line": 912
       }
     },
     {
@@ -7019,7 +7140,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 874
+        "line": 900
       }
     },
     {
@@ -7028,7 +7149,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 880
+        "line": 906
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/live-support/connections/conversations/{id}/block",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 587
       }
     },
     {
@@ -7037,7 +7167,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 894
+        "line": 920
       }
     },
     {
@@ -7046,7 +7176,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 902
+        "line": 928
       }
     },
     {
@@ -7521,5 +7651,5 @@
       }
     }
   ],
-  "digest": "1dbbff3031d66076da88b109debb53623279a70900a434151f7e6145d4275e04"
+  "digest": "f99e38a2c4973b1a73532bd666e48c7349a2e4a551e65c1e92b3c6b8685f0efd"
 }

@@ -803,6 +803,26 @@
     ]
   },
   {
+    "route": "api/admin/comments/{commentId:guid}/reply",
+    "controller": "AdminLessonComments",
+    "action": "ReplyToLessonComment",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "comments.manage",
+      "comments.manage"
+    ]
+  },
+  {
     "route": "api/admin/community/comments/{commentId:guid}/approve",
     "controller": "AdminCommunity",
     "action": "ApproveComment",
@@ -1103,6 +1123,26 @@
     ]
   },
   {
+    "route": "api/Admin/exams/{examId:guid}/attempts/{attemptId:guid}/review",
+    "controller": "Admin",
+    "action": "ReviewExamAttempt",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
     "route": "api/Admin/exams/{examId:guid}/dashboard",
     "controller": "Admin",
     "action": "GetExamDashboard",
@@ -1203,11 +1243,131 @@
     ]
   },
   {
+    "route": "api/admin/exams/{id:guid}/attempts/{attemptId:guid}/assessment-review",
+    "controller": "AssessmentReview",
+    "action": "ExamReview",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
+    "route": "api/admin/exams/{id:guid}/attempts/{attemptId:guid}/grade",
+    "controller": "AssessmentReview",
+    "action": "GradeExam",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
+    "route": "api/admin/exams/{id:guid}/definition",
+    "controller": "AssessmentReview",
+    "action": "SaveExamRevision",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
+    "route": "api/admin/exams/{id:guid}/editor",
+    "controller": "AssessmentReview",
+    "action": "ExamEditor",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
+    "route": "api/admin/exams/{id:guid}/revision-preview",
+    "controller": "AssessmentReview",
+    "action": "PreviewExamRevision",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
     "route": "api/Admin/exams/inline",
     "controller": "Admin",
     "action": "CreateInlineExam",
     "methods": [
       "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "exams.manage",
+      "exams.manage"
+    ]
+  },
+  {
+    "route": "api/admin/exams/notification-templates",
+    "controller": "AssessmentReview",
+    "action": "ExamNotificationTemplates",
+    "methods": [
+      "GET"
     ],
     "authorization": [
       {
@@ -1768,6 +1928,166 @@
     "action": "SetHomeworkStatus",
     "methods": [
       "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/definition",
+    "controller": "AssessmentReview",
+    "action": "SaveHomeworkRevision",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/editor",
+    "controller": "AssessmentReview",
+    "action": "HomeworkEditor",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/missing-students",
+    "controller": "AssessmentReview",
+    "action": "MissingStudents",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/revision-preview",
+    "controller": "AssessmentReview",
+    "action": "PreviewHomeworkRevision",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/submissions/{attemptId:guid}",
+    "controller": "AssessmentReview",
+    "action": "DeleteHomework",
+    "methods": [
+      "DELETE"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/submissions/{attemptId:guid}/grade",
+    "controller": "AssessmentReview",
+    "action": "GradeHomework",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/{id:guid}/submissions/{attemptId:guid}/review",
+    "controller": "AssessmentReview",
+    "action": "HomeworkReview",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/admin/homework/notification-templates",
+    "controller": "AssessmentReview",
+    "action": "HomeworkNotificationTemplates",
+    "methods": [
+      "GET"
     ],
     "authorization": [
       {
@@ -5341,6 +5661,56 @@
     ]
   },
   {
+    "route": "api/Admin/users/admins/{userId:guid}/reset-password",
+    "controller": "Admin",
+    "action": "ResetAdminPassword",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "users.manage",
+      "users.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/users/staff/{userId:guid}/archive",
+    "controller": "Admin",
+    "action": "ArchiveStaff",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "users.manage",
+      "users.manage"
+    ]
+  },
+  {
     "route": "api/Admin/users/staff/{userId:guid}/profile",
     "controller": "Admin",
     "action": "UpdateStaffProfile",
@@ -6416,6 +6786,11 @@
         "Policy": null,
         "Roles": "Admin,Supervisor,Assistant,Teacher,AssistantReviewer,AssistantAcademic,Staff",
         "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
       }
     ],
     "AllowsAnonymous": false,
@@ -6432,6 +6807,50 @@
       {
         "Policy": null,
         "Roles": "Admin,Supervisor,Assistant,Teacher,AssistantReviewer,AssistantAcademic,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/chat/rooms/{roomId:guid}/members",
+    "controller": "InternalChat",
+    "action": "GetMembers",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Supervisor,Assistant,Teacher,AssistantReviewer,AssistantAcademic,Staff",
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/chat/rooms/{roomId:guid}/members",
+    "controller": "InternalChat",
+    "action": "UpdateMembers",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Supervisor,Assistant,Teacher,AssistantReviewer,AssistantAcademic,Staff",
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
         "AuthenticationSchemes": null
       }
     ],
@@ -9600,6 +10019,193 @@
     ]
   },
   {
+    "route": "api/learning-center/follow-ups",
+    "controller": "LearningCenter",
+    "action": "FollowUps",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/follow-ups",
+    "controller": "LearningCenter",
+    "action": "SaveFollowUp",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/follow-ups/history",
+    "controller": "LearningCenter",
+    "action": "History",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/forms",
+    "controller": "LearningCenter",
+    "action": "GenerateForms",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/options",
+    "controller": "LearningCenter",
+    "action": "Options",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/overview",
+    "controller": "LearningCenter",
+    "action": "Overview",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/questions",
+    "controller": "LearningCenter",
+    "action": "CreateQuestion",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/questions",
+    "controller": "LearningCenter",
+    "action": "Questions",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/questions/{id:guid}",
+    "controller": "LearningCenter",
+    "action": "VersionQuestion",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/questions/{id:guid}/classification",
+    "controller": "LearningCenter",
+    "action": "Classify",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/learning-center/questions/import",
+    "controller": "LearningCenter",
+    "action": "ImportQuestions",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/live-support/admin/ai/active-conversations",
     "controller": "LiveSupportAIAdmin",
     "action": "GetActiveConversations",
@@ -9942,6 +10548,129 @@
     "authorization": [],
     "AllowsAnonymous": true,
     "permissions": []
+  },
+  {
+    "route": "api/live-support/baileys/webhook",
+    "controller": "BaileysWebhook",
+    "action": "Receive",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": true,
+    "permissions": []
+  },
+  {
+    "route": "api/live-support/connections/conversations/{id:guid}/block",
+    "controller": "LiveSupportConnections",
+    "action": "Block",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/conversations/{id:guid}/block",
+    "controller": "LiveSupportConnections",
+    "action": "BlockStatus",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/conversations/{id:guid}/block/retry",
+    "controller": "LiveSupportConnections",
+    "action": "RetryBlock",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/whatsapp",
+    "controller": "LiveSupportConnections",
+    "action": "Create",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/whatsapp",
+    "controller": "LiveSupportConnections",
+    "action": "List",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/whatsapp/{id:guid}/connect",
+    "controller": "LiveSupportConnections",
+    "action": "Connect",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/whatsapp/{id:guid}/disconnect",
+    "controller": "LiveSupportConnections",
+    "action": "Disconnect",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/connections/whatsapp/{id:guid}/refresh",
+    "controller": "LiveSupportConnections",
+    "action": "Refresh",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
   },
   {
     "route": "api/live-support/messenger/webhook",
@@ -10761,6 +11490,34 @@
     "route": "api/live-support/whatsapp/campaigns/drafts",
     "controller": "WhatsAppCampaign",
     "action": "CreateDraft",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/media/header-image",
+    "controller": "WhatsAppCampaign",
+    "action": "UploadHeaderImage",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "whatsapp_campaigns.manage",
+      "whatsapp_campaigns.manage"
+    ]
+  },
+  {
+    "route": "api/live-support/whatsapp/campaigns/spreadsheet/inspect",
+    "controller": "WhatsAppCampaign",
+    "action": "InspectSpreadsheet",
     "methods": [
       "POST"
     ],
@@ -11664,7 +12421,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],
@@ -11679,6 +12436,11 @@
       "POST"
     ],
     "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Student,Admin,Teacher",
+        "AuthenticationSchemes": null
+      },
       {
         "Policy": null,
         "Roles": "Student,Admin",
@@ -11698,6 +12460,11 @@
     "authorization": [
       {
         "Policy": null,
+        "Roles": "Student,Admin,Teacher",
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
         "Roles": "Student,Admin",
         "AuthenticationSchemes": null
       }
@@ -11715,7 +12482,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],
@@ -11732,7 +12499,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],
@@ -11749,7 +12516,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],
@@ -11766,7 +12533,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],
@@ -13013,7 +13780,7 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin",
+        "Roles": "Student,Admin,Teacher",
         "AuthenticationSchemes": null
       }
     ],

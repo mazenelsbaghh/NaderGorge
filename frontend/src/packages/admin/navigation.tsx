@@ -37,6 +37,7 @@ export interface AdminRootLink {
 }
 
 export const adminMenuItems = [
+  { label: 'التقييم والمتابعة', href: '/admin/learning-center', icon: <BarChart3 className="h-4 w-4" />, adminOnly: true },
   { label: 'وكيل الإدارة AI', href: '/admin/ai-agent', icon: <Bot className="h-4 w-4" />, adminOnly: true },
   { label: 'المستندات والمواد', href: '/admin/subjects', icon: <Library className="h-4 w-4" />, permission: 'content.manage' },
   { label: 'المعلمين', href: '/admin/teachers', icon: <GraduationCap className="h-4 w-4" />, permission: 'users.manage' },
@@ -94,6 +95,7 @@ export const adminAllNavigationRoutePermissions = [
 ];
 
 export const adminRootLinks: AdminRootLink[] = [
+  { href: '/admin/learning-center', title: 'التقييم والمتابعة', body: 'خريطة فهم المنهج ومتابعة الطلاب وبنك الأسئلة المنظم.', icon: BarChart3, adminOnly: true },
   {
     href: '/admin/ai-agent',
     title: 'وكيل الإدارة AI',

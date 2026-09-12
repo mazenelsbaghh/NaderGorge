@@ -84,6 +84,7 @@ public interface IAppDbContext
     // Exams
     DbSet<Exam> Exams { get; }
     DbSet<QuestionBankItem> QuestionBankItems { get; }
+    DbSet<LearningFollowUp> LearningFollowUps { get; }
     DbSet<QuestionOption> QuestionOptions { get; }
     DbSet<ExamQuestion> ExamQuestions { get; }
     DbSet<StudentExamAttempt> StudentExamAttempts { get; }
@@ -202,6 +203,9 @@ public interface IAppDbContext
     DbSet<LiveSupportAssignment> LiveSupportAssignments { get; }
     DbSet<LiveSupportMessage> LiveSupportMessages { get; }
     DbSet<LiveSupportWhatsAppBinding> LiveSupportWhatsAppBindings { get; }
+    DbSet<LiveSupportWhatsAppAccount> LiveSupportWhatsAppAccounts { get; }
+    DbSet<LiveSupportContactBlock> LiveSupportContactBlocks { get; }
+    DbSet<LiveSupportBlockDelivery> LiveSupportBlockDeliveries { get; }
     DbSet<LiveSupportWhatsAppMessage> LiveSupportWhatsAppMessages { get; }
     DbSet<LiveSupportWhatsAppPendingReceipt> LiveSupportWhatsAppPendingReceipts { get; }
     DbSet<LiveSupportWhatsAppTemplate> LiveSupportWhatsAppTemplates { get; }

@@ -133,7 +133,7 @@ public sealed class LiveSupportAITurnOrchestrator(
 
         var conversation = await db.LiveSupportConversations.SingleAsync(item => item.Id == turn.ConversationId, cancellationToken);
         var state = await db.LiveSupportAIConversationStates.SingleOrDefaultAsync(item => item.ConversationId == turn.ConversationId, cancellationToken);
-        if (!conversation.AllowsAI || state is null || state.Mode != LiveSupportAIMode.AiActive)
+        if (!conversation.AllowsAI || await LiveSupportBlockPolicy.FindAsync(db, conversation, cancellationToken) is not null || state is null || state.Mode != LiveSupportAIMode.AiActive)
         {
             turn.Status = state?.Mode == LiveSupportAIMode.HumanQueued || state?.Mode == LiveSupportAIMode.HumanAssigned
                 ? LiveSupportAITurnStatus.DiscardedAfterHandoff
@@ -173,7 +173,7 @@ public sealed class LiveSupportAITurnOrchestrator(
         var whatsAppWindowExpired = !string.IsNullOrWhiteSpace(request.Decision.MessageAr) &&
             await db.LiveSupportWhatsAppBindings.AsNoTracking()
                 .AnyAsync(binding => binding.ConversationId == conversation.Id &&
-                    binding.CustomerServiceWindowExpiresAt <= completionTime, cancellationToken);
+                    binding.AccountId == null && binding.CustomerServiceWindowExpiresAt <= completionTime, cancellationToken);
         if (whatsAppWindowExpired)
         {
             turn.Status = LiveSupportAITurnStatus.Failed;

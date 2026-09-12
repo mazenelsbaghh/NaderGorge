@@ -49,6 +49,12 @@ public class Exam : BaseEntity, IArchivableContent
 
 public class QuestionBankItem : BaseEntity
 {
+    public Guid? LearningLessonId { get; set; }
+    public Lesson? LearningLesson { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(160)]
+    public string LearningConcept { get; set; } = string.Empty;
+    public int LearningDifficulty { get; set; }
+    public Guid? SupersededByQuestionId { get; set; }
     public string Text { get; set; } = string.Empty;
     public QuestionType Type { get; set; } = QuestionType.MCQ;
     public decimal DefaultPoints { get; set; } = 1.0m;

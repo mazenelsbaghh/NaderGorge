@@ -69,7 +69,11 @@ public sealed record LiveSupportConversationDto(
     string? ExternalPhoneNumber = null,
     DateTime? CustomerServiceWindowExpiresAt = null,
     string? ExternalPageId = null,
-    string? ExternalPageName = null);
+    string? ExternalPageName = null,
+    Guid? WhatsAppAccountId = null,
+    bool IsSupportBlocked = false,
+    string? SupportBlockReason = null,
+    string? WhatsAppAccountName = null);
 
 public sealed record LiveSupportWhatsAppTemplateDto(
     Guid Id,
@@ -159,7 +163,7 @@ public sealed record LiveSupportStudentSupportHistoryDto(
     IReadOnlyList<LiveSupportStudentSupportActivityDto> Activities);
 public sealed record LiveSupportStudentSupportActivityDto(DateTime At, string Type);
 
-public sealed record LiveSupportAdminConversationDto(Guid Id, string ParticipantName, LiveSupportParticipantType ParticipantType, LiveSupportConversationStatus Status, string? OwnerName, DateTime CreatedAt, DateTime? AssignedAt, DateTime? FirstResponseAt, DateTime? ClosedAt, double? WaitSeconds, double? HandleSeconds, string? Subject, string? AiTurnStatus, string? AiTurnFailureCode, string Channel = "Web", string? ExternalPhoneNumber = null, DateTime? CustomerServiceWindowExpiresAt = null, string? LastExternalDeliveryStatus = null, string? ExternalPageId = null, string? ExternalPageName = null);
+public sealed record LiveSupportAdminConversationDto(Guid Id, string ParticipantName, LiveSupportParticipantType ParticipantType, LiveSupportConversationStatus Status, string? OwnerName, DateTime CreatedAt, DateTime? AssignedAt, DateTime? FirstResponseAt, DateTime? ClosedAt, double? WaitSeconds, double? HandleSeconds, string? Subject, string? AiTurnStatus, string? AiTurnFailureCode, string Channel = "Web", string? ExternalPhoneNumber = null, DateTime? CustomerServiceWindowExpiresAt = null, string? LastExternalDeliveryStatus = null, string? ExternalPageId = null, string? ExternalPageName = null, Guid? WhatsAppAccountId = null, string? WhatsAppAccountName = null);
 public sealed record LiveSupportStaffPerformanceDto(Guid StaffUserId, string StaffName, int ParticipatedConversations, int ClosedConversations, int RatingCount, double? AverageRating);
 public sealed record LiveSupportWhatsAppOperationsSummaryDto(int Open, int Waiting, int Active, int ClosedToday, int FailedOutbound, int ApprovedTemplates, DateTime? LastInboundAt, DateTime? LastOutboundAt, DateTime? LastTemplateSyncAt);
 public sealed record LiveSupportAdminDashboardDto(int WaitingCount, int ActiveCount, int ClosedToday, IReadOnlyList<LiveSupportAdminConversationDto> Conversations, IReadOnlyList<LiveSupportStaffPerformanceDto> StaffPerformance, LiveSupportWhatsAppOperationsSummaryDto WhatsApp);

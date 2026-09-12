@@ -6407,6 +6407,53 @@ namespace NaderGorge.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LearningFollowUp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("PackageId", "StudentId", "CreatedAt");
+
+                    b.ToTable("learning_follow_ups", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveBalance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7775,6 +7822,188 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("live_support_attachments", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBaileysAuth", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ciphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("live_support_baileys_auth", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBaileysCallback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Ciphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("NextAttemptAt");
+
+                    b.ToTable("live_support_baileys_callbacks", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBlockDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("DesiredBlocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("NoticeStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("BlockId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("live_support_block_deliveries", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportContactBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("GuestSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("StudentUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UnblockedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UnblockedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId")
+                        .IsUnique()
+                        .HasFilter("\"UnblockedAt\" IS NULL");
+
+                    b.HasIndex("GuestSessionId", "UnblockedAt");
+
+                    b.HasIndex("PhoneNumber", "UnblockedAt");
+
+                    b.HasIndex("StudentUserId", "UnblockedAt");
+
+                    b.ToTable("live_support_contact_blocks", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8619,10 +8848,62 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("live_support_student_link_history", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InstanceName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstanceName")
+                        .IsUnique();
+
+                    b.ToTable("live_support_whatsapp_accounts", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppBinding", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccountId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConversationId")
@@ -8663,6 +8944,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
 
                     b.HasIndex("ConversationId")
                         .IsUnique();
@@ -10953,7 +11236,21 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("LearningConcept")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("LearningDifficulty")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("LearningLessonId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SupersededByQuestionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Tags")
@@ -10979,6 +11276,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("CreatedByTeacherId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("LearningLessonId", "LearningDifficulty");
 
                     b.ToTable("question_bank_items", (string)null);
 
@@ -15942,6 +16241,33 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("JournalEntry");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LearningFollowUp", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("PerformedByUser");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveBalance", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
@@ -16327,6 +16653,47 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBaileysAuth", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBaileysCallback", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportBlockDelivery", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportContactBlock", null)
+                        .WithMany()
+                        .HasForeignKey("BlockId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportContactBlock", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", null)
@@ -16518,6 +16885,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppBinding", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation", null)
                         .WithOne()
                         .HasForeignKey("NaderGorge.Domain.Entities.LiveSupport.LiveSupportWhatsAppBinding", "ConversationId")
@@ -17057,6 +17429,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NaderGorge.Domain.Entities.Lesson", "LearningLesson")
+                        .WithMany()
+                        .HasForeignKey("LearningLessonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
                         .WithMany("QuestionBankItems")
                         .HasForeignKey("SubjectId")
@@ -17064,6 +17441,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CreatedByTeacher");
+
+                    b.Navigation("LearningLesson");
 
                     b.Navigation("Subject");
                 });
