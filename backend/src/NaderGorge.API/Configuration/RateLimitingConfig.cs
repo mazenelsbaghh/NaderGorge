@@ -62,6 +62,16 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
+            options.AddPolicy("video-progress", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
             // AI Analysis: 5 requests per minute per user
             options.AddPolicy("ai-analysis", context =>
                 RateLimitPartition.GetFixedWindowLimiter(

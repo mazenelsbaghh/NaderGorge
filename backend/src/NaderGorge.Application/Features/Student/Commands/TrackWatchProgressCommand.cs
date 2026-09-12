@@ -149,7 +149,6 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (progressBatch.IsBatch && pendingSegments[0].ProgressSequence != session.LastProgressSequence + 1)
             return Fail("Progress sequence gap", "PROGRESS_SEQUENCE_GAP");
 
-        var isNewWatchEvent = watchEvent == null;
         watchEvent ??= CreateWatchEvent(request, now);
 
         if (watchEvent.TimeWatchedInSeconds < 0)
@@ -184,11 +183,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 watchEvent,
                 thresholdSeconds,
                 maxLimit,
-                now,
-                isNewWatchEvent,
                 isLocked,
-                remainingSessionWallSeconds,
-                progressBatch.IsBatch));
+                remainingSessionWallSeconds));
             viewRegistered |= progressResult.ViewRegistered;
             remainingSessionWallSeconds = Math.Max(
                 0m,
@@ -325,13 +321,11 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (context.IsLocked && !context.Session.HasRegisteredView)
             return new SessionProgressResult(false, 0m);
 
-        var candidateAcceptedSeconds = context.IsBatch
-            ? VideoWatchProgressCalculator.SanitizeReportedSeconds(context.Segment.SecondsWatched)
-            : VideoWatchProgressCalculator.ResolveAcceptedSeconds(
-                context.Segment.SecondsWatched,
-                context.Now,
-                context.WatchEvent,
-                context.IsNewWatchEvent);
+        // Delayed segments can arrive back-to-back after a network/rate-limit
+        // interruption. Their budget is elapsed session time minus accepted time,
+        // not the time since the preceding HTTP request acknowledged its segment.
+        var candidateAcceptedSeconds = VideoWatchProgressCalculator.SanitizeReportedSeconds(
+            context.Segment.SecondsWatched);
         var actualAcceptedSeconds = Math.Min(
             candidateAcceptedSeconds,
             context.MaxAcceptedWallSeconds);
@@ -480,11 +474,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         VideoWatchEvent WatchEvent,
         int ThresholdSeconds,
         int MaxLimit,
-        DateTime Now,
-        bool IsNewWatchEvent,
         bool IsLocked,
-        decimal MaxAcceptedWallSeconds,
-        bool IsBatch);
+        decimal MaxAcceptedWallSeconds);
 
     private sealed record SessionProgressResult(
         bool ViewRegistered,

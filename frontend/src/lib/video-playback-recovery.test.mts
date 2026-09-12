@@ -9,7 +9,19 @@ import {
   isBunnyPlaybackStable,
   isCurrentVideoSession,
   isExpiredHlsSourceError,
+  shouldRenewHlsSource,
 } from './video-playback-recovery.ts';
+
+test('2026-09-12 a renewed session refreshes its expiring HLS source before fragment rejection', () => {
+  for (const [signedExpiry, sessionExpiry, now, expected] of [
+    [100_000, 300_000, 70_000, true],
+    [100_000, 300_000, 100_001, true],
+    [100_000, 300_000, 69_999, false],
+    [100_000, 100_000, 70_000, false],
+    [0, 300_000, 70_000, false],
+    [100_000, 300_000, 300_001, false],
+  ] as const) assert.equal(shouldRenewHlsSource(signedExpiry, sessionExpiry, now), expected);
+});
 
 test('2026-09-02 transient Bunny playback failure retries twice and then stops', () => {
   assert.equal(canRetryBunnyPlayback('bunny', 0), true);

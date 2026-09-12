@@ -42,7 +42,8 @@ export const json = (route: Route, data: unknown, status = 200) =>
 
 export async function openLesson(
   page: Page,
-  beforeNavigate?: () => Promise<void>
+  beforeNavigate?: () => Promise<void>,
+  options: { trackProgress?: boolean } = {},
 ) {
   const user = {
     id: '96000000-0000-0000-0000-000000000099',
@@ -88,7 +89,7 @@ export async function openLesson(
       videoTitle: videoId,
       durationSeconds: 600,
       thresholdPercentage: 80,
-      isPreview: true,
+      isPreview: !options.trackProgress,
       watchInfo: {
         currentCount: 0,
         maxCount: 5,

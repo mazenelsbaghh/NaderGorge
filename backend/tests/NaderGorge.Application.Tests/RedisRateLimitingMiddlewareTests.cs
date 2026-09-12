@@ -26,6 +26,7 @@ public class RedisRateLimitingMiddlewareTests
         { "auth", 30, false },
         { "codes", 20, true },
         { "video-session", 30, true },
+        { "video-progress", 120, true },
         { "ai-analysis", 5, true },
         { "sign-download", 10, true },
         { "public-whatsapp", 12, false },

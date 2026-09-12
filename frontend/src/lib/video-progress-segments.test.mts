@@ -133,3 +133,11 @@ test('page-exit batch respects its request cap and retains overflow for a later 
   assert.equal(nextSequence, 31);
   assert.deepEqual(rawSegments, [{ seconds: 35, playbackRate: 1 }]);
 });
+
+test('an unreportable final clock remainder cannot block completion or the next speed segment', () => {
+  const segments: VideoProgressSegment[] = [{ seconds: 0.005, playbackRate: 1 }, { seconds: 1.25, playbackRate: 2 }];
+  const requests: SequencedVideoProgressSegment[] = [];
+  assert.equal(materializeVideoProgressRequests(segments, requests, 7, 30, 30), 8);
+  assert.deepEqual(requests, [{ sequence: 7, seconds: 1.25, playbackRate: 2 }]);
+  assert.deepEqual(segments, []);
+});

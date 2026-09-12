@@ -11,6 +11,11 @@ export function isExpiredHlsSourceError(status: number, signedExpiresAtMs: numbe
     && signedExpiresAtMs > 0 && signedExpiresAtMs <= nowMs;
 }
 
+export function shouldRenewHlsSource(signedExpiresAtMs: number, sessionExpiresAtMs: number, nowMs: number): boolean {
+  return signedExpiresAtMs > 0 && signedExpiresAtMs - nowMs <= 30_000
+    && sessionExpiresAtMs > Math.max(nowMs, signedExpiresAtMs) + 60_000;
+}
+
 export function isBunnyPlaybackError(provider: unknown): boolean {
   return typeof provider === 'string' && provider.toLowerCase() === 'bunny';
 }

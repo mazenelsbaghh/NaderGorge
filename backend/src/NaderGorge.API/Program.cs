@@ -431,6 +431,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    NaderGorge.API.Authorization.VideoPlaybackAuthorization.AddVideoPlaybackPolicy(options);
     options.AddLiveSupportPolicies();
     options.AddPolicy("RequireAssistantReviewer", policy =>
         policy.RequireRole("Admin", "Assistant", "AssistantReviewer", "Staff"));
@@ -478,6 +479,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(origins)
             .AllowAnyMethod()
             .AllowAnyHeader()
+            .WithExposedHeaders("Retry-After")
             .AllowCredentials();
     });
 });

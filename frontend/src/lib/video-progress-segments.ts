@@ -73,6 +73,7 @@ export function materializeVideoProgressRequests(
 ): number {
   let sequence = nextSequence;
   while (requests.length < maxRequestCount) {
+    while (segments[0] && segments[0].seconds <= SEGMENT_EPSILON_SECONDS) segments.shift();
     const segment = peekVideoProgressSegment(segments, maxSecondsPerRequest);
     if (!segment) break;
 

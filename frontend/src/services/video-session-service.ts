@@ -119,7 +119,7 @@ function postProgressWithKeepalive(
     if (!response.ok) {
       throw {
         message: body?.message || `Progress delivery failed with HTTP ${response.status}`,
-        response: { status: response.status, data: body },
+        response: { status: response.status, data: body, headers: { 'retry-after': response.headers.get('Retry-After') } },
       };
     }
     return { data: body as { data: WatchProgressResponse } };

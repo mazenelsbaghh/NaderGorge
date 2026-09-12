@@ -2,6 +2,7 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { formatPlayerTime } from '@/lib/player-time';
+import { videoProgressRetryDelayMs } from '@/lib/video-progress-retry';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
 import { AlertCircle, Play, Info, Map, Maximize2, Minimize2 } from 'lucide-react';
@@ -29,6 +30,7 @@ import {
   isBunnyPlaybackStable,
   isCurrentVideoSession,
   isExpiredHlsSourceError,
+  shouldRenewHlsSource,
 } from '@/lib/video-playback-recovery';
 import { usesNativeProviderControls } from '@/lib/video-player-provider';
 import {
@@ -272,6 +274,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const activeSessionIdRef = useRef<string | null>(null);
   const sessionExpiresAtRef = useRef(0);
   const signedSourceExpiresAtRef = useRef(0);
+  const progressRetryAtRef = useRef(0);
+  const progressRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notifyEndedRef = useRef<() => void>(() => undefined);
+  const endedSessionNotifiedRef = useRef<string | null>(null);
   const nativeFullscreenCleanupRef = useRef<(() => void) | null>(null);
   const recoveryPlaybackRateRef = useRef(1);
   const embedSessionRefreshCountRef = useRef(0);
@@ -749,7 +755,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               const endingSessionId = activeSessionIdRef.current;
               void flushTrackedProgressRef.current({ keepalive: true, drain: true }).then(() => {
                 if (endingSessionId && isCurrentVideoSession(endingSessionId, activeSessionIdRef.current)) {
-                  onEndedRef.current?.();
+                  notifyEndedRef.current();
                 }
               });
             }
@@ -924,6 +930,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, []);
 
   const stopSessionTracking = useCallback((nextStatus: 'error' | 'superseded', message?: string) => {
+    hasEndedRef.current = false;
+    if (progressRetryTimerRef.current) clearTimeout(progressRetryTimerRef.current);
+    progressRetryTimerRef.current = null;
+    progressRetryAtRef.current = 0;
     activeProgressRequestRef.current = null;
     progressSegmentsRef.current = [];
     fixedProgressRequestsRef.current = [];
@@ -1060,8 +1070,24 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   accrueTrackedPlaybackRef.current = accrueTrackedPlayback;
 
+  notifyEndedRef.current = () => {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId || !hasEndedRef.current || endedSessionNotifiedRef.current === sessionId
+      || activeProgressRequestRef.current || fixedProgressRequestsRef.current.length > 0
+      || progressSegmentsRef.current.length > 0) return;
+    endedSessionNotifiedRef.current = sessionId;
+    onEndedRef.current?.();
+  };
+
+  useEffect(() => () => {
+    if (progressRetryTimerRef.current) clearTimeout(progressRetryTimerRef.current);
+    progressRetryTimerRef.current = null;
+    progressRetryAtRef.current = 0;
+  }, [lessonVideoId]);
+
   const flushTrackedProgress = useCallback((options: ProgressFlushOptions = {}): Promise<void> => {
     if (!trackingEnabledRef.current) return Promise.resolve();
+    if (Date.now() < progressRetryAtRef.current) return Promise.resolve();
 
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) return Promise.resolve();
@@ -1146,7 +1172,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               break;
             } catch (error) {
               const status = (error as { response?: { status?: number } }).response?.status;
-              if ((status !== undefined && status < 500) || attempt === TRACKING_RETRY_MAX_ATTEMPTS) {
+              if ((status !== undefined && status < 500) || status === 503 || attempt === TRACKING_RETRY_MAX_ATTEMPTS) {
                 throw error;
               }
               await new Promise<void>((resolve) => window.setTimeout(resolve, attempt * 250));
@@ -1162,6 +1188,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           acknowledgeProgressResponse(sessionId, progressRequest.sequence, res.data.data);
         } catch (err) {
           if (!isCurrentVideoSession(sessionId, activeSessionIdRef.current)) return;
+          const retryDelay = videoProgressRetryDelayMs(err, Date.now());
+          if (retryDelay > 0) {
+            progressRetryAtRef.current = Date.now() + retryDelay;
+            if (progressRetryTimerRef.current) clearTimeout(progressRetryTimerRef.current);
+            progressRetryTimerRef.current = setTimeout(() => {
+              progressRetryTimerRef.current = null;
+              if (isCurrentVideoSession(sessionId, activeSessionIdRef.current)) {
+                void flushTrackedProgressRef.current({ drain: true });
+              }
+            }, retryDelay);
+          }
           const apiError = err as { response?: { data?: { errors?: string[] } } };
           const errors = apiError.response?.data?.errors ?? [];
           if (errors.includes('SESSION_SUPERSEDED')) {
@@ -1188,6 +1225,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         && progressSegmentsRef.current.length === 0
       ) {
         keepaliveProgressRequestedRef.current = false;
+        notifyEndedRef.current();
       }
     };
     void drain.then(releaseDrain, releaseDrain);
@@ -1196,8 +1234,20 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   flushTrackedProgressRef.current = flushTrackedProgress;
 
+  useEffect(() => {
+    if (status !== 'ready') return;
+    const renewal = setInterval(() => {
+      if (providerRef.current !== 'bunny-hls' || !isPlayingRef.current
+        || !shouldRenewHlsSource(signedSourceExpiresAtRef.current, sessionExpiresAtRef.current, Date.now())) return;
+      void flushTrackedProgressRef.current();
+      scheduleBunnyPlaybackRecovery();
+    }, 5_000);
+    return () => clearInterval(renewal);
+  }, [scheduleBunnyPlaybackRecovery, status]);
+
   const flushProgressForPageExit = useCallback((): Promise<void> => {
     if (!trackingEnabledRef.current) return Promise.resolve();
+    if (Date.now() < progressRetryAtRef.current) return Promise.resolve();
 
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) return Promise.resolve();
@@ -1438,6 +1488,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const session = response.data.data;
       trackingEnabledRef.current = !session.isPreview;
       activeSessionIdRef.current = session.sessionId;
+      progressRetryAtRef.current = 0;
+      if (progressRetryTimerRef.current) clearTimeout(progressRetryTimerRef.current);
+      progressRetryTimerRef.current = null;
       const sessionExpiry = Date.parse(session.expiresAt);
       sessionExpiresAtRef.current = Number.isFinite(sessionExpiry) ? sessionExpiry : 0;
       signedSourceExpiresAtRef.current = 0;

@@ -89,7 +89,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         }
 
         // 1. Verify access to the package
-        var hasLessonAccess = await _access.HasAccessToLessonAsync(request.UserId, video.LessonId, ct);
+        // Preview mode is selected only after controller authorization, including
+        // teacher ownership. Content managers need no student purchase grant.
+        var hasLessonAccess = isAdminPreview || await _access.HasAccessToLessonAsync(request.UserId, video.LessonId, ct);
         var hasAccess = hasLessonAccess || await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct);
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });

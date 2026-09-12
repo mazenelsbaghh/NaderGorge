@@ -29,8 +29,8 @@ public sealed class VideoProgressRecoveryPostgresTests
         var partial = Assert.Single(await StudentWatchProgressReader.ReadAsync(scope, [session.LessonVideoId], CancellationToken.None));
         Assert.False(partial.IsCompleted);
         Assert.Equal(60, StudentWatchProgressReader.CalculatePercent([partial]));
-        await fixture.Db.VideoWatchEvents.Where(x => x.UserId == session.UserId && x.LessonVideoId == session.LessonVideoId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UpdatedAt, DateTime.UtcNow.AddMinutes(-1)));
+        // Incident 2026-09-12: queued progress arrives immediately after the
+        // preceding acknowledgement; do not artificially age UpdatedAt.
         fixture.Db.ChangeTracker.Clear();
         var complete = await handler.Handle(new TrackWatchProgressCommand(session.LessonVideoId, session.UserId, session.Id, 2, 20, 2, 100), CancellationToken.None);
         Assert.True(complete.Success, complete.Message);
@@ -46,6 +46,34 @@ public sealed class VideoProgressRecoveryPostgresTests
         Assert.Equal(0m, other.WatchedSeconds);
         Assert.False(other.IsCompleted);
         Assert.Null(StudentWatchProgressReader.CalculatePercent([other]));
+    }
+
+    [Fact]
+    public async Task Incident20260912_DelayedSinglesPreserveFullLearningTimeAndRemainIdempotent()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var session = await SeedSessionAsync(fixture.Db);
+        session.CreatedAt = DateTime.UtcNow.AddMinutes(-5);
+        await fixture.Db.SaveChangesAsync();
+        var handler = new TrackWatchProgressCommandHandler(fixture.Db, new Settings(), new PostgresVideoPlaybackConcurrency(fixture.Db));
+
+        for (var sequence = 1; sequence <= 4; sequence++)
+        {
+            var command = new TrackWatchProgressCommand(session.LessonVideoId, session.UserId, session.Id,
+                sequence, sequence == 4 ? 10 : 30, 1, 100);
+            var accepted = await handler.Handle(command, CancellationToken.None);
+            var replay = await handler.Handle(command, CancellationToken.None);
+            Assert.True(accepted.Success, accepted.Message);
+            Assert.True(replay.Data!.Duplicate);
+            Assert.Equal(Math.Min(sequence * 30, 100), replay.Data.LearningWatchedSeconds);
+        }
+
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.VideoWatchEvents.SingleAsync(watch => watch.UserId == session.UserId);
+        Assert.Equal(100m, saved.LearningWatchedSeconds);
+        Assert.Equal(1, saved.WatchCount);
+        Assert.Equal(100m, (await fixture.Db.VideoPlaybackSessions.SingleAsync(s => s.Id == session.Id)).AcceptedWallSeconds);
     }
 
     [Fact]

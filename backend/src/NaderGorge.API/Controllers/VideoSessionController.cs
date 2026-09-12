@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Configuration;
+using NaderGorge.API.Authorization;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
@@ -15,7 +16,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/student/video-session")]
-[Authorize(Roles = "Student,Admin,Teacher")]
+[Authorize(Policy = VideoPlaybackAuthorization.Policy)]
 [EnableRateLimiting("video-session")]
 public class VideoSessionController : ControllerBase
 {
@@ -59,7 +60,7 @@ public class VideoSessionController : ControllerBase
             request.LessonVideoId,
             userId,
             GetIpAddress(),
-            User.IsInRole("Admin") || User.IsInRole("Teacher")
+            VideoPlaybackAuthorization.CanPreview(User)
                 ? VideoSessionMode.AdminPreview : VideoSessionMode.Standard
         );
 
@@ -133,9 +134,10 @@ public class VideoSessionController : ControllerBase
     }
 
     [HttpPost("{lessonVideoId}/track-progress")]
+    [EnableRateLimiting("video-progress")]
     public async Task<IActionResult> TrackProgress(Guid lessonVideoId, [FromBody] TrackProgressRequest request, CancellationToken ct)
     {
-        if (User.IsInRole("Admin") || User.IsInRole("Teacher")) return NoContent();
+        if (VideoPlaybackAuthorization.CanPreview(User)) return NoContent();
 
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
@@ -168,8 +170,6 @@ public class VideoSessionController : ControllerBase
         [FromBody] VideoPlaybackClientEventRequest request,
         CancellationToken ct)
     {
-        if (User.IsInRole("Admin")) return NoContent();
-
         var userIdString = User.FindFirst("id")?.Value
             ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();

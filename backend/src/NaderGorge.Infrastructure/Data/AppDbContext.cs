@@ -344,6 +344,8 @@ public class AppDbContext : DbContext, IAppDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        if (Database.IsNpgsql())
+            modelBuilder.HasSequence<long>("live_support_event_sequence");
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<LearningFollowUp>(e =>
         {
@@ -3652,6 +3654,7 @@ public class AppDbContext : DbContext, IAppDbContext
                 await EnsurePendingParentTrackingCodesAreUniqueAsync(cancellationToken);
             }
 
+            await LiveSupportEventSequences.AssignAsync(this, cancellationToken);
             var savedEntityCount = await base.SaveChangesAsync(cancellationToken);
             if (identityProtection is not null)
                 await identityProtection.CommitAsync(cancellationToken);

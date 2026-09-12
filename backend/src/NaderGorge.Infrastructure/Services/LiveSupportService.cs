@@ -1340,7 +1340,9 @@ public sealed class LiveSupportService(
             await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
             await AcquireRoutingLockAsync(ct);
             await AssignOldestWaitingCoreAsync(ct, excludedStaffUserId);
-            await tx.CommitAsync(ct);
+            // Once routing and its outbox are staged, a browser disconnect must
+            // not interrupt the commit acknowledgement for that durable work.
+            await tx.CommitAsync(CancellationToken.None);
             return;
         }
 
