@@ -205,8 +205,9 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var relayResume=null;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
   var activeDownload=null; var observedDownloadBytes=0; var downloadProgressObserved=false; var playbackWaitStartedAt=null; var maxFragmentLoadMs=120000;
-  var noRetryLoadPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:20000,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
-  var noRetryFragmentPolicy={default:{maxTimeToFirstByteMs:10000,maxLoadTimeMs:maxFragmentLoadMs,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};
+  // Relay headers arrive after session validation (15s) and the upstream playlist fetch (20s).
+  var relayRequestTimeoutMs=45000;
+  function loadPolicy(maxLoadMs){return {default:{maxTimeToFirstByteMs:relayAttempted?relayRequestTimeoutMs:10000,maxLoadTimeMs:maxLoadMs,timeoutRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0},errorRetry:{maxNumRetry:0,retryDelayMs:0,maxRetryDelayMs:0}}};}
   function post(type,data){try{parent.postMessage({source:'video-embed',type:type,data:data||{}},location.origin)}catch(e){}}
   var lastInteractionAt=-Infinity;
   function relayInteraction(event){var now=Date.now();if(event.type==='pointermove'&&now-lastInteractionAt<200)return;lastInteractionAt=now;post('playerInteraction');}
@@ -227,7 +228,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
       playbackDeadline=null;if(video.paused||video.ended)return;
       if(downloadAdvanced()&&Date.now()-playbackWaitStartedAt<maxFragmentLoadMs){armPlaybackDeadline(lastLoadPhase);return;}
       if(!tryRelay(0))failHls(0,'توقف تحميل الفيديو ولم تصل بيانات جديدة. أعد المحاولة، وإذا استمرت المشكلة تواصل مع الدعم.','playback_timeout_'+lastLoadPhase);
-    },Math.min(15000,maxFragmentLoadMs-(Date.now()-playbackWaitStartedAt)));
+    },Math.min(relayAttempted?relayRequestTimeoutMs:15000,maxFragmentLoadMs-(Date.now()-playbackWaitStartedAt)));
   }
   function hlsLevels(){if(!hls)return[];var seen={};return hls.levels.map(function(l,i){var h=Number(l.height)||0;var label=h?String(h)+'p':String(Math.round((l.bitrate||0)/1000))+'k';return {id:String(i),label:label,height:h,bitrate:l.bitrate||0};}).filter(function(l){var k=l.height||l.bitrate;if(seen[k])return false;seen[k]=true;return true;});}
   function emitQuality(){var levels=hls?hlsLevels():nativeLevels;var current='auto';if(hls&&hls.autoLevelEnabled===false&&hls.currentLevel>=0)current=String(hls.currentLevel);else if(!hls)current=nativeCurrent;post('qualityLevels',{levels:levels,currentQuality:current,auto:true});}
@@ -258,7 +259,7 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
       if(downloadAdvanced()&&Date.now()-loadStartedAt<maxFragmentLoadMs){armLoadDeadline(20000);return;}
       if(tryRelay(0))return;
       failHls(0,'انتهت مهلة تجهيز فيديو Bunny HLS قبل وصول بيانات التشغيل. أعد المحاولة، وإذا استمر التحميل تواصل مع الدعم.','load_timeout_'+lastLoadPhase);
-    },Math.max(0,Math.min(budget||20000,(downloadProgressObserved?maxFragmentLoadMs:60000)-(Date.now()-loadStartedAt))));
+    },Math.max(0,Math.min(Math.max(budget||20000,relayAttempted?relayRequestTimeoutMs:0),((relayAttempted||downloadProgressObserved)?maxFragmentLoadMs:60000)-(Date.now()-loadStartedAt))));
   }
   function loadProgress(phase,budget){if(sourceReady||terminalErrorSent||loadMilestones[phase])return;loadMilestones[phase]=true;lastLoadPhase=phase;armLoadDeadline(budget);}
   function tryRelay(status){
@@ -272,7 +273,8 @@ function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: strin
   function startPlayer(){
   if(window.Hls&&window.Hls.isSupported()){
     try{
-      hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:relayResume?relayResume.time:-1,manifestLoadPolicy:noRetryLoadPolicy,playlistLoadPolicy:noRetryLoadPolicy,keyLoadPolicy:noRetryLoadPolicy,fragLoadPolicy:noRetryFragmentPolicy});hls.loadSource(source);hls.attachMedia(video);
+      var playlistPolicy=loadPolicy(relayAttempted?relayRequestTimeoutMs:20000);
+      hls=new window.Hls({enableWorker:true,capLevelToPlayerSize:true,preferManagedMediaSource:true,startLevel:-1,startPosition:relayResume?relayResume.time:-1,manifestLoadPolicy:playlistPolicy,playlistLoadPolicy:playlistPolicy,keyLoadPolicy:playlistPolicy,fragLoadPolicy:loadPolicy(maxFragmentLoadMs)});hls.loadSource(source);hls.attachMedia(video);
       var loadingInstance=hls;
       hls.on(window.Hls.Events.FRAG_LOADING,function(_,download){if(hls!==loadingInstance)return;activeDownload=download.part||download.frag;observedDownloadBytes=0;});
       hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});

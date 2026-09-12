@@ -18,13 +18,6 @@ interface ContentSubscribersTabProps {
 
 const PAGE_SIZE = 10;
 
-const directAcquisitionLabel: Record<ContentSubscribersTabProps['contentType'], string> = {
-  package: 'الباقة كاملة',
-  term: 'الترم',
-  section: 'القسم',
-  lesson: 'الحصة',
-};
-
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
@@ -200,7 +193,7 @@ export default function ContentSubscribersTab({
           <Users className="h-5 w-5 text-[var(--admin-primary)]" />
           <div>
             <h3 className="text-lg font-black text-[var(--admin-text)]">
-              الطلاب الذين حصلوا على {directAcquisitionLabel[contentType]} مباشرة
+              الطلاب المشتركين في {contentName}
               {!loading && (
                 <span className="me-2 text-sm font-bold text-[var(--admin-muted)]">
                   ({totalCount})
@@ -208,7 +201,7 @@ export default function ContentSubscribersTab({
               )}
             </h3>
             <p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">
-              كل طالب يظهر مرة واحدة، وتشمل القائمة الشراء والهدايا المسجّلة مباشرة على هذا المستوى.
+              كل طالب يظهر مرة واحدة، وتشمل القائمة الشراء والهدايا على هذا المستوى والمستويات التابعة له. نوع الاشتراك المعروض هو أحدث شراء للطالب، أو أحدث هدية إذا لم يشترِ.
             </p>
           </div>
         </div>
@@ -242,7 +235,7 @@ export default function ContentSubscribersTab({
         columns={columns}
         loading={loading}
         rowKey={(item) => item.studentId}
-        emptyMessage="لا يوجد طلاب حصلوا على هذا المستوى مباشرة"
+        emptyMessage="لا يوجد مشتركين في هذا المحتوى أو المستويات التابعة له"
         errorMessage={error}
         onRetry={() => fetchSubscribers(page, search)}
         pagination={false}

@@ -106,6 +106,7 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
                 essay.TeacherFeedback = request.Feedback;
                 essay.GradedByTeacherId = teacherId;
                 essay.Status = EssaySubmissionStatus.TeacherGraded;
+                essay.AiNextRetryAt = null;
             }
         }
         var revised = attempt.DefinitionSnapshotJson is null ? null

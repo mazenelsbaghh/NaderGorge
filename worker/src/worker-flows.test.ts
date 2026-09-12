@@ -85,15 +85,7 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
     if (urlString.includes('callbacks/essay-graded')) {
       calledUrl = urlString;
       calledBody = JSON.parse(options?.body as string);
-      return {
-        ok: true,
-        status: 200,
-        headers: {
-          get: (n: string) => null,
-          entries: () => []
-        },
-        text: async () => 'OK'
-      } as unknown as Response;
+      return Response.json({ success: true, data: { essaySubmissionId: 'sub-789', status: 'TeacherGraded' } });
     } else {
       // Gemini API mock response
       const geminiResponse = {
@@ -198,7 +190,7 @@ test('processEvaluateEssayJob throws error to trigger queue retry if callback fa
     id: 'essay-job-retry',
     data: {
       essaySubmissionId: 'sub-retry',
-      answerText: 'wrong answer'
+      answerText: 'wrong answer', questionText: 'Question', expectedAnswer: 'Correct answer'
     },
     updateProgress: async () => {},
     updateData: async (data: unknown) => { dummyJob.data = data; }

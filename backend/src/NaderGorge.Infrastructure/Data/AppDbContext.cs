@@ -1435,6 +1435,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(es => es.TeacherFinalScore).HasColumnType("decimal(18,2)");
             e.Property(es => es.AudioUrl).HasMaxLength(2000);
             e.Property(es => es.Status).HasConversion<int>();
+            e.HasIndex(es => new { es.Status, es.AiNextRetryAt, es.CreatedAt });
             e.HasOne(es => es.Student).WithMany().HasForeignKey(es => es.StudentId);
             e.HasOne(es => es.Question).WithMany().HasForeignKey(es => es.QuestionId);
             e.HasOne(es => es.Attempt).WithMany().HasForeignKey(es => es.StudentExamAttemptId);

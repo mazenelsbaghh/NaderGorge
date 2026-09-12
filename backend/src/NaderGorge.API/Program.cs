@@ -308,6 +308,7 @@ builder.Services.AddSignalR()
         options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("MassarSignalR");
     });
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
+builder.Services.AddHostedService<EssayGradingRecoveryBackgroundService>();
 builder.Services.AddHostedService<AdminAIRecoveryBackgroundService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIAccessGate, NaderGorge.Infrastructure.Services.AdminAI.AdminAIAccessGate>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIRecoveryService, NaderGorge.Infrastructure.Services.AdminAI.AdminAIRecoveryService>();

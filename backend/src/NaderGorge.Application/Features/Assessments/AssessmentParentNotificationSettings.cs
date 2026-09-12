@@ -16,6 +16,16 @@ public sealed record AssessmentParentNotificationSettings(
             ?? throw new InvalidOperationException("Invalid assessment notification settings.");
     public string? ToJson() => Enabled ? JsonSerializer.Serialize(this) : null;
 
+    public async Task<string?> AuthorizeChangeAsync(
+        IAppDbContext db, Guid? actorId, AssessmentParentNotificationSettings current, CancellationToken ct)
+    {
+        if (ToJson() == current.ToJson()) return null;
+        var isAdmin = actorId.HasValue && await db.Users.AsNoTracking().AnyAsync(user =>
+            user.Id == actorId.Value && user.IsActive &&
+            user.UserRoles.Any(role => role.Role.Type == NaderGorge.Domain.Enums.RoleType.Admin), ct);
+        return isAdmin ? null : "إعداد إرسال واتساب للامتحان والواجب متاح للأدمن فقط.";
+    }
+
     public async Task<string?> ValidateAsync(IAppDbContext db, CancellationToken ct)
     {
         if (!Enabled) return null;
@@ -33,7 +43,7 @@ public sealed record AssessmentParentNotificationSettings(
 
     private static bool ValidParameter(AssessmentResultParameter? parameter) => parameter is not null && parameter.Source switch
     {
-        "ParentName" or "StudentName" or "AssessmentName" or "Score" or "TotalScore" or "Percentage"
+        "ParentName" or "StudentName" or "ParentTrackingCode" or "AssessmentName" or "Score" or "TotalScore" or "Percentage"
             or "Evaluation" or "SubjectName" or "LessonName" or "TeacherName" => parameter.Literal is null,
         "Literal" => !string.IsNullOrWhiteSpace(parameter.Literal) && parameter.Literal.Length <= 1000
             && !parameter.Literal.Any(char.IsControl),

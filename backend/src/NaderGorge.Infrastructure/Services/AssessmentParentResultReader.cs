@@ -74,6 +74,7 @@ internal static class AssessmentParentResultReader
         {
             "ParentName" => $"ولي أمر {result.Student.FullName}",
             "StudentName" => result.Student.FullName,
+            "ParentTrackingCode" => result.Student.StudentProfile?.ParentTrackingCode ?? string.Empty,
             "AssessmentName" => result.Title,
             "Score" => Number(result.Score),
             "TotalScore" => Number(result.Total),

@@ -80,6 +80,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         submission.TeacherFinalScore = request.TeacherScore;
         submission.TeacherFeedback = request.TeacherFeedback;
         submission.Status = EssaySubmissionStatus.TeacherGraded;
+        submission.AiNextRetryAt = null;
         submission.GradedByTeacherId = teacherId;
 
         var answer = await _db.StudentAnswers.FirstOrDefaultAsync(a =>
@@ -123,21 +124,6 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             attempt.IsPassed = !attempt.IsTimeExpired && scaledScore >= exam.PassingScore;
             attempt.Evaluation = GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
         }
-
-        var homeworkGradedEvent = new OutboxEvent
-        {
-            Type = "HomeworkGraded",
-            TargetUserId = submission.StudentId.ToString(),
-            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                submissionId = submission.Id,
-                studentId = submission.StudentId,
-                examAttemptId = submission.StudentExamAttemptId,
-                teacherScore = submission.TeacherFinalScore,
-                feedback = submission.TeacherFeedback
-            })
-        };
-        _db.OutboxEvents.Add(homeworkGradedEvent);
 
         if (allTeacherGraded)
         {

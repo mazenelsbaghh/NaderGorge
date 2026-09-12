@@ -122,11 +122,22 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     : undefined;
   logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
 
+  if (jobType === 'essay' && await isJobCancellationMarked(targetJobId)) {
+    await acknowledge(redis, messageStreamId);
+    return { action: 'skipped-existing', targetJobId };
+  }
+
   const existingJob = await targetQueue.getJob(targetJobId);
   if (existingJob) {
     const state = await existingJob.getState();
     if (queuedAlias) await storeQueuedJobAlias(redis, queuedAlias, messageStreamId);
     if (state === 'completed' || state === 'failed') {
+      if (jobType === 'essay') {
+        // Keep the saved evaluation when redelivering after a callback outage.
+        await existingJob.retry(state, { resetAttemptsMade: true, resetAttemptsStarted: true });
+        await acknowledge(redis, messageStreamId);
+        return { action: 'enqueued', targetJobId };
+      }
       await existingJob.remove();
     } else {
       logQueueEvent('job-stream', 'Skipping duplicate existing BullMQ job.', { jobId: targetJobId, state });

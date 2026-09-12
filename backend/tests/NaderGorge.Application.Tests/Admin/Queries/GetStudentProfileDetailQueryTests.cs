@@ -207,6 +207,72 @@ public sealed class GetStudentProfileDetailQueryTests
             });
     }
 
+    [Theory]
+    [InlineData("lesson-exam")]
+    [InlineData("video-exam")]
+    [InlineData("homework")]
+    [InlineData("session")]
+    public async Task LessonWithAssessmentOrSessionButNoWatchRecord_RemainsVisibleWithoutInventingViews(string activityKind)
+    {
+        // September 2026: the second lecture disappeared despite an exam and homework history.
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var teacherUser = UserFor("Teacher", "01095000001");
+        var student = UserFor("Student", "01095000002");
+        var otherStudent = UserFor("Other Student", "01095000003");
+        var teacher = new TeacherProfile { User = teacherUser };
+        var subject = new Subject { Name = "History", NormalizedName = "HISTORY" };
+        var package = new Package { Name = "History Package", Teacher = teacher, Subject = subject };
+        var term = new Term { Title = "Term", Package = package };
+        var section = new ContentSection { Title = "Section", Term = term };
+        var lesson = new Lesson { Title = "Second Lecture", ContentSection = section };
+        var unrelatedLesson = new Lesson { Title = "Other Lecture", ContentSection = section };
+        var videoType = new VideoType { Name = "Explanation", NormalizedName = "EXPLANATION" };
+        var video = new LessonVideo { Title = "Lecture Video", Lesson = lesson, VideoType = videoType, Provider = "youtube", ProviderVideoId = "second" };
+        var unrelatedVideo = new LessonVideo { Title = "Other Video", Lesson = unrelatedLesson, VideoType = videoType, Provider = "youtube", ProviderVideoId = "other" };
+        db.AddRange(student, otherStudent, video, unrelatedVideo);
+        db.VideoWatchEvents.Add(new VideoWatchEvent { User = otherStudent, LessonVideo = unrelatedVideo, WatchCount = 1, TimeWatchedInSeconds = 600 });
+        var unrelatedExam = new Exam { Title = "Other Exam", CreatedByTeacher = teacher, LessonVideo = unrelatedVideo };
+        db.StudentExamAttempts.Add(new StudentExamAttempt { User = otherStudent, Exam = unrelatedExam });
+        if (activityKind is "lesson-exam" or "video-exam")
+        {
+            var exam = new Exam { Title = "Lecture Exam", CreatedByTeacher = teacher };
+            if (activityKind == "lesson-exam") lesson.ExamId = exam.Id;
+            else exam.LessonVideo = video;
+            db.StudentExamAttempts.Add(new StudentExamAttempt { User = student, Exam = exam, Evaluation = "ممتاز", ScoreAchieved = 12 });
+        }
+        else if (activityKind == "homework")
+        {
+            var homework = new NaderGorge.Domain.Entities.Homework.Homework { LessonId = lesson.Id, Title = "Lecture Homework" };
+            db.HomeworkSubmissions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkSubmission
+            {
+                Student = student, Homework = homework,
+                Status = NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded, OverallScore = 10
+            });
+        }
+        else
+        {
+            db.VideoPlaybackSessions.Add(new VideoPlaybackSession { User = student, LessonVideo = video, SessionToken = "test", EncryptionKey = "test", ExpiresAt = DateTime.UtcNow.AddHours(1) });
+        }
+        await db.SaveChangesAsync();
+
+        var profile = await new GetStudentProfileDetailQueryHandler(db)
+            .Handle(new GetStudentProfileDetailQuery(student.Id), CancellationToken.None);
+
+        var activity = Assert.Single(profile.WatchTracking.Activities);
+        Assert.Equal(lesson.Id, activity.LessonId);
+        Assert.Equal(video.Id, activity.LessonVideoId);
+        Assert.Equal(0, profile.WatchTracking.WatchedVideosCount);
+        Assert.Equal(0, profile.WatchTracking.TotalWatchedSeconds);
+        Assert.Equal(0, activity.WatchCount);
+        Assert.Equal(0, activity.LearningWatchedSeconds);
+        Assert.Null(activity.LastWatchedAt);
+        Assert.False(activity.IsCompleted);
+        Assert.Empty(activity.Sessions);
+    }
+
     private static User UserFor(string name, string phone) => new()
     {
         FullName = name,

@@ -113,14 +113,7 @@ public sealed class ExamRevisionCompletion(IAppDbContext db)
         };
         db.EssaySubmissions.Add(essay);
         if (points is not null) return;
-        db.OutboxEvents.Add(new OutboxEvent
-        {
-            Type = "EssayEvaluationQueued", PayloadJson = JsonSerializer.Serialize(new
-            {
-                essaySubmissionId = essay.Id, questionId = question.BankQuestionId, studentId = attempt.UserId,
-                questionText = question.Text, answerText = essay.AnswerText, expectedAnswer = question.WrittenCorrection ?? string.Empty
-            })
-        });
+        EssayEvaluationQueue.Enqueue(db, essay, question.Text, question.WrittenCorrection);
     }
 
     private void NotifyAttempt(StudentExamAttempt attempt)

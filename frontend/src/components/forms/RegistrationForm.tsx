@@ -22,6 +22,7 @@ import { ARAB_NATIONALITIES } from '@/data/arab-nationalities';
 import { SCHOOL_TYPES } from '@/data/school-types';
 import { computeBirthdayInfo } from '@/utils/birthday-utils';
 import { useWhatsAppCheck } from '@/utils/whatsapp-utils';
+import { normalizeEgyptianMobileInput } from '@/utils/phone-utils';
 import type { ZodIssue } from 'zod';
 import Image from 'next/image';
 import { AVATAR_LIST } from '@/data/avatars';
@@ -89,7 +90,7 @@ function getRegistrationSchema() {
     district: z.string().min(1, 'يرجى اختيار المنطقة / الحي'),
     address: z.string().min(3, 'يرجى كتابة عنوانك بالتفصيل'),
     parentPhone: z.string().optional().or(z.literal('')),
-    secondaryParentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم ولي أمر إضافي بشكل صحيح'),
+    secondaryParentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم ولي أمر إضافي بشكل صحيح').optional().or(z.literal('')),
     motherPhone: z.string().optional().or(z.literal('')),
     isFatherAlive: z.boolean(),
     isMotherAlive: z.boolean(),
@@ -177,17 +178,17 @@ type RegistrationFormState = typeof EMPTY_FORM;
 function normalizeFormData(data: Partial<RegistrationFormState>): RegistrationFormState {
   return {
     fullName: data.fullName ?? '',
-    phoneNumber: data.phoneNumber ?? '',
-    secondaryPhone: data.secondaryPhone ?? '',
+    phoneNumber: normalizeEgyptianMobileInput(data.phoneNumber ?? ''),
+    secondaryPhone: normalizeEgyptianMobileInput(data.secondaryPhone ?? ''),
     dateOfBirth: data.dateOfBirth ?? '',
     gender: data.gender ?? '',
     nationality: data.nationality ?? '',
     governorate: data.governorate ?? '',
     district: data.district ?? '',
     address: data.address ?? '',
-    parentPhone: data.parentPhone ?? '',
-    secondaryParentPhone: data.secondaryParentPhone ?? '',
-    motherPhone: data.motherPhone ?? '',
+    parentPhone: normalizeEgyptianMobileInput(data.parentPhone ?? ''),
+    secondaryParentPhone: normalizeEgyptianMobileInput(data.secondaryParentPhone ?? ''),
+    motherPhone: normalizeEgyptianMobileInput(data.motherPhone ?? ''),
     isFatherAlive: data.isFatherAlive ?? true,
     isMotherAlive: data.isMotherAlive ?? true,
     fatherDateOfBirth: data.fatherDateOfBirth ?? '',
@@ -919,8 +920,8 @@ export function RegistrationForm() {
 
             {/* ── Secondary parent phone ── */}
             <div>
-              <label className="auth-label" htmlFor="reg-secondaryParentPhone">رقم ولي أمر إضافي</label>
-              <input id="reg-secondaryParentPhone" name="secondaryParentPhone" type="tel" dir="ltr" className={inputCls('secondaryParentPhone')} placeholder="مثال: 01312345678" value={formData.secondaryParentPhone ?? ''} onChange={handleChange} />
+              <label className="auth-label" htmlFor="reg-secondaryParentPhone">رقم ولي أمر إضافي <span className="text-[var(--admin-muted)] text-xs">(اختياري)</span></label>
+              <input id="reg-secondaryParentPhone" name="secondaryParentPhone" type="tel" dir="ltr" className={inputCls('secondaryParentPhone')} placeholder="مثال: 01012345678" value={formData.secondaryParentPhone ?? ''} onChange={handleChange} />
               {fieldError('secondaryParentPhone') && <p className="auth-field-error">{fieldError('secondaryParentPhone')}</p>}
             </div>
           </div>

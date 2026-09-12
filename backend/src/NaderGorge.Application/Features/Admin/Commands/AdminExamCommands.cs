@@ -106,6 +106,10 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             : await request.ParentNotification.ValidateAsync(_db, ct);
         if (notificationError is not null) return ApiResponse<Guid>.Fail(notificationError);
 
+        var notificationAccessError = await request.ParentNotification!.AuthorizeChangeAsync(
+            _db, request.CurrentUserId, AssessmentParentNotificationSettings.Disabled, ct);
+        if (notificationAccessError is not null) return ApiResponse<Guid>.Fail(notificationAccessError);
+
         // 2. Resolve Teacher and Subject Context
         var teacherId = Guid.Empty;
         if (request.CurrentUserId.HasValue)

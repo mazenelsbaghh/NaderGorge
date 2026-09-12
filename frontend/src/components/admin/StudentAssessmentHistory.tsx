@@ -1,10 +1,16 @@
 'use client';
 
-import { ClipboardCheck, FileCheck2 } from 'lucide-react';
-import type { StudentProfileExtendedDto } from '@/services/admin-service';
+import { useRef, useState } from 'react';
+import { ClipboardCheck, FileCheck2, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
+import { useAuthStore } from '@/stores/auth-store';
+import { getApiErrorSummary } from '@/lib/api-errors';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 type AssessmentHistoryItem = {
   id: string;
+  assessmentId: string;
   title: string;
   packageName?: string | null;
   lessonTitle?: string | null;
@@ -56,11 +62,23 @@ function Grade({ item }: { item: AssessmentHistoryItem }) {
   </div>;
 }
 
-function HistorySection({ title, description, items, kind }: {
+function DeleteAttemptButton({ item, onDelete, disabled }: {
+  item: AssessmentHistoryItem; onDelete: (item: AssessmentHistoryItem) => void; disabled: boolean;
+}) {
+  return <button type="button" onClick={() => onDelete(item)} disabled={disabled}
+    aria-label={`حذف محاولة ${item.title} بتاريخ ${formatDate(item.attemptedAt)}`}
+    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[var(--admin-danger-20)] px-3 text-sm font-bold text-[var(--admin-danger)] transition-colors hover:bg-[var(--admin-danger-10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-danger)] disabled:cursor-not-allowed disabled:opacity-50">
+    <Trash2 size={16} aria-hidden />حذف المحاولة
+  </button>;
+}
+
+function HistorySection({ title, description, items, kind, onDelete, deleting }: {
   title: string;
   description: string;
   items: AssessmentHistoryItem[];
   kind: 'exam' | 'homework';
+  onDelete?: (item: AssessmentHistoryItem) => void;
+  deleting: boolean;
 }) {
   const Icon = kind === 'exam' ? FileCheck2 : ClipboardCheck;
   const gradedCount = items.filter(item => item.hasFinalGrade).length;
@@ -98,12 +116,13 @@ function HistorySection({ title, description, items, kind }: {
             <time className="text-left text-xs text-[var(--admin-muted)]" dateTime={item.attemptedAt}>{formatDate(item.attemptedAt)}</time>
           </div>
           {item.expired && <p className="text-xs font-bold text-red-700">انتهى وقت المحاولة</p>}
+          {onDelete && <DeleteAttemptButton item={item} onDelete={onDelete} disabled={deleting} />}
         </article>)}
       </div>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[780px] text-right text-sm">
           <thead className="bg-[var(--admin-card-soft)] text-xs text-[var(--admin-muted)]">
-            <tr><th className="px-5 py-3 font-bold">{kind === 'exam' ? 'الامتحان' : 'الواجب'}</th><th className="px-5 py-3 font-bold">الباقة والحصة</th><th className="px-5 py-3 font-bold">الحالة</th><th className="px-5 py-3 font-bold">الدرجة</th><th className="px-5 py-3 font-bold">تاريخ المحاولة</th></tr>
+            <tr><th className="px-5 py-3 font-bold">{kind === 'exam' ? 'الامتحان' : 'الواجب'}</th><th className="px-5 py-3 font-bold">الباقة والحصة</th><th className="px-5 py-3 font-bold">الحالة</th><th className="px-5 py-3 font-bold">الدرجة</th><th className="px-5 py-3 font-bold">تاريخ المحاولة</th>{onDelete && <th className="px-5 py-3 font-bold">الإجراءات</th>}</tr>
           </thead>
           <tbody className="divide-y divide-[var(--admin-border)]">
             {items.map(item => <tr key={item.id} className="transition-colors hover:bg-[var(--admin-card-soft)]/60">
@@ -112,6 +131,7 @@ function HistorySection({ title, description, items, kind }: {
               <td className="px-5 py-4"><StatusBadge item={item} /></td>
               <td className="px-5 py-4"><Grade item={item} /></td>
               <td className="whitespace-nowrap px-5 py-4 text-[var(--admin-muted)]"><time dateTime={item.attemptedAt}>{formatDate(item.attemptedAt)}</time></td>
+              {onDelete && <td className="px-5 py-4"><DeleteAttemptButton item={item} onDelete={onDelete} disabled={deleting} /></td>}
             </tr>)}
           </tbody>
         </table>
@@ -120,16 +140,48 @@ function HistorySection({ title, description, items, kind }: {
   </section>;
 }
 
-export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [] }: {
+export function StudentAssessmentHistory({ examHistory = [], homeworkHistory = [], studentName, onAttemptDeleted }: {
   examHistory?: StudentProfileExtendedDto['examHistory'];
   homeworkHistory?: StudentProfileExtendedDto['homeworkHistory'];
+  studentName: string;
+  onAttemptDeleted: (kind: 'exam' | 'homework', attemptId: string) => void;
 }) {
+  const user = useAuthStore(state => state.user);
+  const canDeleteExam = Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('exams.manage'));
+  const canDeleteHomework = Boolean(user?.roles.includes('Admin') || user?.permissions?.includes('content.manage'));
+  const [pendingDelete, setPendingDelete] = useState<{ kind: 'exam' | 'homework'; item: AssessmentHistoryItem } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const mutationRef = useRef(false);
+  const deleteAttempt = async () => {
+    if (!pendingDelete || mutationRef.current) return;
+    mutationRef.current = true;
+    setDeleting(true);
+    try {
+      const { kind, item } = pendingDelete;
+      const response = kind === 'exam'
+        ? await adminService.deleteExamAttempt(item.assessmentId, item.id)
+        : await adminService.deleteHomeworkAttempt(item.assessmentId, item.id);
+      if (!response.success) throw new Error(response.message || 'تعذر حذف المحاولة.');
+      onAttemptDeleted(kind, item.id);
+      setPendingDelete(null);
+      toast.success('تم حذف المحاولة وإجاباتها.');
+    } catch (failure) {
+      toast.error(getApiErrorSummary(failure, 'تعذر حذف المحاولة. حاول مرة أخرى.'));
+    } finally {
+      mutationRef.current = false;
+      setDeleting(false);
+    }
+  };
   const exams: AssessmentHistoryItem[] = examHistory.map(item => ({
-    id: item.attemptId, ...item, passed: item.hasFinalGrade ? item.isPassed : undefined, expired: item.isTimeExpired,
+    id: item.attemptId, assessmentId: item.examId, ...item, passed: item.hasFinalGrade ? item.isPassed : undefined, expired: item.isTimeExpired,
   }));
-  const homeworks: AssessmentHistoryItem[] = homeworkHistory.map(item => ({ id: item.submissionId, ...item }));
+  const homeworks: AssessmentHistoryItem[] = homeworkHistory.map(item => ({ id: item.submissionId, assessmentId: item.homeworkId, ...item }));
   return <div className="space-y-6">
-    <HistorySection kind="exam" title="سجل الامتحانات" description="كل محاولات الطالب ودرجاتها وحالة التصحيح في مكان واحد." items={exams} />
-    <HistorySection kind="homework" title="سجل الواجبات" description="كل الواجبات التي بدأها الطالب أو سلّمها مع الدرجة النهائية." items={homeworks} />
+    <HistorySection kind="exam" title="سجل الامتحانات" description="كل محاولات الطالب ودرجاتها وحالة التصحيح في مكان واحد." items={exams} deleting={deleting} onDelete={canDeleteExam ? item => setPendingDelete({ kind: 'exam', item }) : undefined} />
+    <HistorySection kind="homework" title="سجل الواجبات" description="كل الواجبات التي بدأها الطالب أو سلّمها مع الدرجة النهائية." items={homeworks} deleting={deleting} onDelete={canDeleteHomework ? item => setPendingDelete({ kind: 'homework', item }) : undefined} />
+    <AdminConfirmationDialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)} onConfirm={deleteAttempt}
+      title={`حذف محاولة ${pendingDelete?.kind === 'homework' ? 'الواجب' : 'الامتحان'}`}
+      consequence={pendingDelete ? `سيتم حذف محاولة ${studentName} في «${pendingDelete.item.title}» بتاريخ ${formatDate(pendingDelete.item.attemptedAt)}، بكل إجاباتها ودرجتها نهائيًا. لا يمكن التراجع عن الحذف.` : ''}
+      confirmLabel="حذف المحاولة نهائيًا" variant="danger" isConfirming={deleting} />
   </div>;
 }

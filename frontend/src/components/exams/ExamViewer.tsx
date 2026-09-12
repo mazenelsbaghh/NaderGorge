@@ -37,6 +37,7 @@ import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInterac
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { QuestionImage } from '@/components/assessment/QuestionImage';
 import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 // ─── Result Panel ───────────────────────────────────────────────────────────────
 
@@ -68,6 +69,13 @@ export function ExamResultPanel({
   const hasReviewData = reviewedQuestions.length > 0;
   const [gradingStatus, setGradingStatus] = useState<ExamAttemptGradingStatusDto | null>(null);
   const [gradingError, setGradingError] = useState('');
+  const [gradingRefreshVersion, setGradingRefreshVersion] = useState(0);
+  usePlatformEvents({
+    onExamResultReady: ({ attemptId }) => {
+      if (attemptId === result.attemptId && result.resultState !== 'Completed')
+        setGradingRefreshVersion(version => version + 1);
+    },
+  });
 
   useEffect(() => {
     if (result.resultState === 'Completed') {
@@ -102,7 +110,7 @@ export function ExamResultPanel({
       isCancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [onResultRefresh, result.attemptId, result.resultState]);
+  }, [onResultRefresh, result.attemptId, result.resultState, gradingRefreshVersion]);
 
   const effectiveResultState = gradingStatus?.resultState ?? result.resultState;
   const essayStatusLabels: Record<string, string> = {
@@ -112,6 +120,7 @@ export function ExamResultPanel({
     TeacherGraded: 'اكتمل التصحيح',
   };
   const isFinalResult = effectiveResultState === 'Completed';
+  const needsTeacherReview = effectiveResultState === 'PartiallyGraded';
   const pendingEssayCount = gradingStatus?.essays.filter((essay) => essay.status !== 'TeacherGraded').length ?? 0;
   const wrongQuestions = isFinalResult
     ? reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect)
@@ -134,15 +143,17 @@ export function ExamResultPanel({
     return (
       <section className="mx-auto flex min-h-[420px] max-w-2xl flex-col items-center justify-center rounded-3xl border border-amber-200/70 bg-amber-50/70 p-8 text-center dark:border-amber-800/40 dark:bg-amber-950/20" dir="rtl" aria-live="polite">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-          <RefreshCw className="h-10 w-10 animate-spin" aria-hidden="true" />
+          <RefreshCw className={`h-10 w-10 ${needsTeacherReview ? '' : 'animate-spin'}`} aria-hidden="true" />
         </div>
-        <p className="mt-6 text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">جاري التصحيح بالذكاء الاصطناعي</p>
-        <h2 className="mt-3 text-2xl font-black text-foreground">بنراجع إجاباتك المقالية الآن</h2>
+        <p className="mt-6 text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">{needsTeacherReview ? 'بانتظار مراجعة المدرس' : 'جاري التصحيح بالذكاء الاصطناعي'}</p>
+        <h2 className="mt-3 text-2xl font-black text-foreground">{needsTeacherReview ? 'إجاباتك المقالية محفوظة للمراجعة' : 'بنراجع إجاباتك المقالية الآن'}</h2>
         <p className="mt-3 max-w-md text-sm font-bold leading-7 text-muted-foreground">
-          النتيجة النهائية هتظهر تلقائيًا فور الانتهاء. تقدر تخرج من الصفحة وترجع في أي وقت، والتصحيح هيكمل في الخلفية.
+          {needsTeacherReview
+            ? 'بعض الإجابات محتاجة مراجعة المدرس. النتيجة النهائية هتظهر تلقائيًا بعد اكتمال التصحيح.'
+            : 'النتيجة النهائية هتظهر تلقائيًا فور الانتهاء. لو التصحيح اتعطل، النظام هيعيد المحاولة تلقائيًا. تقدر تخرج وترجع في أي وقت.'}
         </p>
         <p className="mt-4 rounded-full bg-background/70 px-4 py-2 text-sm font-black text-amber-700 dark:text-amber-400">
-          {pendingEssayCount > 0 ? `جاري تصحيح ${pendingEssayCount} سؤال مقالي` : 'جاري تجهيز النتيجة'}
+          {pendingEssayCount > 0 ? `${needsTeacherReview ? 'بانتظار مراجعة' : 'جاري تصحيح'} ${pendingEssayCount} سؤال مقالي` : 'جاري تجهيز النتيجة'}
         </p>
         {gradingError && <p className="mt-4 text-sm font-bold text-destructive">{gradingError}</p>}
         <button

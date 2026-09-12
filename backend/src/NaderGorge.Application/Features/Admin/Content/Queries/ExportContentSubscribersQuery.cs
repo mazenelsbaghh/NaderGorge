@@ -26,10 +26,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
             request.ContentId,
             request.Search);
         var query = ContentSubscriberGrantQuery.RepresentativePerStudent(matchingGrants);
-        var balanceStudentIds = ContentSubscriberGrantQuery.BalanceStudentIds(
-            _db,
-            request.ContentType,
-            request.ContentId);
+        var balanceGrantIds = ContentSubscriberGrantQuery.BalanceGrantIds(_db, matchingGrants);
         var now = DateTime.UtcNow;
         var activeStudentIds = matchingGrants
             .Where(grant => grant.IsActive && (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now))
@@ -38,6 +35,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
 
         var rows = await query
             .OrderByDescending(sag => sag.GrantedAt)
+            .ThenBy(sag => sag.UserId)
             .Select(sag => new
             {
                 sag.User.FullName,
@@ -50,15 +48,16 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 ParentPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.ParentPhone : "",
                 MotherPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.MotherPhone : "",
                 sag.GrantedAt,
+                PurchaseType = sag.GrantType.ToString(),
                 IsActive = activeStudentIds.Contains(sag.UserId),
-                PurchaseMethod = sag.AccessCodeId != null ? "كود" : sag.GiftRecipientId != null ? "هدية" : balanceStudentIds.Contains(sag.UserId) ? "رصيد" : "مباشر / غير مصنف"
+                PurchaseMethod = sag.AccessCodeId != null ? "كود" : sag.GiftRecipientId != null ? "هدية" : balanceGrantIds.Contains(sag.Id) ? "رصيد" : "مباشر / غير مصنف"
             })
             .ToListAsync(ct);
 
         var sb = new StringBuilder();
 
         // Header row
-        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,نوع المحتوى,المحتوى,طريقة الاقتناء,تاريخ الاقتناء,الحالة");
+        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,نوع المحتوى,المحتوى,نوع الاشتراك,طريقة الاقتناء,تاريخ الاقتناء,الحالة");
 
         foreach (var row in rows)
         {
@@ -74,6 +73,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 CsvEscape(row.MotherPhone ?? ""),
                 CsvEscape(MapContentTypeAr(request.ContentType)),
                 CsvEscape(contentName),
+                CsvEscape(MapContentTypeAr(row.PurchaseType == "Month" ? "section" : row.PurchaseType)),
                 CsvEscape(row.PurchaseMethod),
                 CsvEscape(row.GrantedAt.ToString("yyyy-MM-dd")),
                 CsvEscape(row.IsActive ? "نشط" : "منتهي / غير نشط")

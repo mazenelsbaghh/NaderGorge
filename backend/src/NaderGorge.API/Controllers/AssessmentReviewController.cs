@@ -23,6 +23,9 @@ public class AssessmentReviewController(IMediator mediator) : ControllerBase
 
     private async Task<IActionResult> NotificationTemplates(IAppDbContext db, CancellationToken ct)
     {
+        var actorId = User.RequireUserId();
+        if (!await db.Users.AsNoTracking().AnyAsync(user => user.Id == actorId && user.IsActive &&
+            user.UserRoles.Any(role => role.Role.Type == NaderGorge.Domain.Enums.RoleType.Admin), ct)) return Forbid();
         var templates = await db.LiveSupportWhatsAppTemplates.AsNoTracking()
             .Where(template => template.Status == "APPROVED" && template.Category == "UTILITY")
             .OrderBy(template => template.Name).ToListAsync(ct);

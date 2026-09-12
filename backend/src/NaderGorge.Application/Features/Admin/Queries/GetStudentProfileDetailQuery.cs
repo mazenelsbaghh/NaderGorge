@@ -314,16 +314,14 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .ToListAsync(cancellationToken);
 
         var watchedVideosCount = watchActivities.Count;
-        var watchedLessonIds = watchActivities
-            .Select(activity => activity.LessonId)
-            .Distinct()
-            .ToList();
-        if (watchedLessonIds.Count > 0)
+        var activityLessonIds = await GetActivityLessonIdsAsync(request.UserId, cancellationToken);
+        activityLessonIds = activityLessonIds.Concat(watchActivities.Select(activity => activity.LessonId)).Distinct().ToList();
+        if (activityLessonIds.Count > 0)
         {
             var unwatchedActivities = await _context.LessonVideos
                 .AsNoTracking()
                 .Where(video => video.IsActive
-                    && watchedLessonIds.Contains(video.LessonId)
+                    && activityLessonIds.Contains(video.LessonId)
                     && !_context.VideoWatchEvents.Any(watchEvent =>
                         watchEvent.UserId == request.UserId
                         && watchEvent.LessonVideoId == video.Id))
@@ -350,7 +348,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         }
 
         var progressByVideo = (await NaderGorge.Application.Common.StudentWatchProgressReader.ReadAsync(
-            new(_context, request.UserId, watchedLessonIds),
+            new(_context, request.UserId, activityLessonIds),
             watchActivities.Select(activity => activity.LessonVideoId).ToArray(),
             cancellationToken)).ToDictionary(progress => progress.VideoId);
         var playbackSessions = await _context.VideoPlaybackSessions.AsNoTracking()
@@ -705,6 +703,19 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 .ToListAsync(cancellationToken)
         };
     }
+
+    private Task<List<Guid>> GetActivityLessonIdsAsync(Guid studentId, CancellationToken ct) =>
+        _context.Lessons.AsNoTracking()
+            .Where(lesson =>
+                _context.StudentExamAttempts.Any(attempt => attempt.UserId == studentId &&
+                    (attempt.ExamId == lesson.ExamId ||
+                     (attempt.Exam.LessonVideo != null && attempt.Exam.LessonVideo.LessonId == lesson.Id))) ||
+                _context.HomeworkSubmissions.Any(submission => submission.StudentId == studentId &&
+                    submission.Homework.LessonId == lesson.Id) ||
+                _context.VideoPlaybackSessions.Any(session => session.UserId == studentId &&
+                    session.LessonVideo.LessonId == lesson.Id))
+            .Select(lesson => lesson.Id)
+            .ToListAsync(ct);
 
     private static decimal CalculateAveragePlaybackRate(IReadOnlyCollection<StudentVideoWatchActivityDto> activities)
     {

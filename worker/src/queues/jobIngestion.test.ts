@@ -215,6 +215,36 @@ test('ingestStreamJob retries essay grading jobs after a fixed 20 seconds', asyn
   }
 });
 
+test('essay recovery retains the saved evaluation and retries terminal jobs without replacing them', async context => {
+  const oldGet = Redis.prototype.get;
+  Redis.prototype.get = async () => null;
+  context.after(() => { Redis.prototype.get = oldGet; });
+  for (const state of ['failed', 'completed']) {
+    redisRef = redis();
+    const evaluation = { isCorrect: true, feedback: 'Original evaluation' };
+    const existing = {
+      data: { evaluation }, state, attemptsMade: 5,
+      getState: async () => existing.state,
+      retry: async (_state: string, options: { resetAttemptsMade?: boolean }) => {
+        existing.state = 'waiting';
+        if (options.resetAttemptsMade) existing.attemptsMade = 0;
+      },
+      remove: async () => { throw new Error('Recovery must not discard the evaluation'); },
+    };
+    const queueSet = queues();
+    queueSet.essayQueue = queue(existing, 'ai-essay-grading');
+    const result = await ingestStreamJob(redisRef as any, queueSet, `retry-${state}`, [
+      'jobType', 'essay', 'jobId', 'essay-id', 'payload', JSON.stringify({ essaySubmissionId: 'essay-id' }),
+    ]);
+    assert.equal(result.action, 'enqueued');
+    assert.equal(existing.state, 'waiting');
+    assert.equal(existing.attemptsMade, 0);
+    assert.deepEqual(existing.data.evaluation, evaluation);
+    assert.equal(queueSet.essayQueue.added.length, 0);
+    assert.deepEqual(redisRef.acked, [`retry-${state}`]);
+  }
+});
+
 test('ingestStreamJob routes Admin AI turns to their isolated BullMQ queue', async () => {
   const originalGet = Redis.prototype.get;
   try {

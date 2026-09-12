@@ -117,6 +117,7 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
             // A result from the previous rubric must never overwrite the explicitly requested revision.
             essay.Status = grade.Excluded || grade.AwardedPoints.HasValue
                 ? EssaySubmissionStatus.TeacherGraded : EssaySubmissionStatus.WaitTeacher;
+            essay.AiNextRetryAt = null;
         }
     }
 

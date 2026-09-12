@@ -16,36 +16,30 @@ internal static class ContentSubscriberGrantQuery
         _ => null
     };
 
-    internal static IQueryable<Guid> BalanceStudentIds(
+    internal static IQueryable<Guid> BalanceGrantIds(
         IAppDbContext db,
-        string contentType,
-        Guid contentId)
+        IQueryable<StudentAccessGrant> grants)
     {
-        var salesTargetType = contentType.ToLowerInvariant() switch
+        var targets = grants.Select(grant => new
         {
-            "package" => SalesTargetType.Package,
-            "term" => SalesTargetType.Term,
-            "section" => SalesTargetType.ContentSection,
-            "lesson" => SalesTargetType.Lesson,
-            _ => (SalesTargetType?)null
-        };
-
-        var financialEffectStudents = salesTargetType.HasValue
-            ? db.SalesFinancialEffects.AsNoTracking()
-                .Where(effect =>
-                    effect.TargetType == salesTargetType.Value &&
-                    effect.TargetId == contentId &&
-                    (effect.PaidAmount > 0m || effect.PromotionalAmount > 0m))
-                .Select(effect => effect.StudentId)
-            : db.SalesFinancialEffects.AsNoTracking().Where(_ => false).Select(effect => effect.StudentId);
-
-        var legacyTransactionStudents = db.BalanceTransactions.AsNoTracking()
-            .Where(transaction =>
+            grant.Id,
+            grant.UserId,
+            TargetId = grant.GrantType == CodeType.Package ? grant.PackageId :
+                grant.GrantType == CodeType.Term ? grant.TermId :
+                grant.GrantType == CodeType.Month ? grant.ContentSectionId : grant.LessonId,
+            TargetType = grant.GrantType == CodeType.Package ? SalesTargetType.Package :
+                grant.GrantType == CodeType.Term ? SalesTargetType.Term :
+                grant.GrantType == CodeType.Month ? SalesTargetType.ContentSection : SalesTargetType.Lesson
+        });
+        return targets.Where(target => db.SalesFinancialEffects.Any(effect =>
+                effect.StudentId == target.UserId && effect.TargetId == target.TargetId &&
+                effect.TargetType == target.TargetType &&
+                (effect.PaidAmount > 0m || effect.PromotionalAmount > 0m)) ||
+            db.BalanceTransactions.Any(transaction =>
+                transaction.StudentBalance.UserId == target.UserId &&
                 transaction.TransactionType == "ContentPurchase" &&
-                transaction.ReferenceId == contentId)
-            .Select(transaction => transaction.StudentBalance.UserId);
-
-        return financialEffectStudents.Concat(legacyTransactionStudents).Distinct();
+                transaction.ReferenceId == target.TargetId))
+            .Select(target => target.Id);
     }
 
     internal static IQueryable<StudentAccessGrant> Build(
@@ -54,22 +48,8 @@ internal static class ContentSubscriberGrantQuery
         Guid contentId,
         string? search)
     {
-        var grantType = MapContentType(contentType);
-        if (!grantType.HasValue)
-            return db.StudentAccessGrants.AsNoTracking().Where(_ => false);
-
-        var query = db.StudentAccessGrants
-            .AsNoTracking()
-            .Where(grant => grant.GrantType == grantType.Value && !grant.CancelledAt.HasValue);
-
-        query = contentType.ToLowerInvariant() switch
-        {
-            "package" => query.Where(grant => grant.PackageId == contentId),
-            "term" => query.Where(grant => grant.TermId == contentId),
-            "section" => query.Where(grant => grant.ContentSectionId == contentId),
-            "lesson" => query.Where(grant => grant.LessonId == contentId),
-            _ => query.Where(_ => false)
-        };
+        var query = DescendantGrants(db, contentType.ToLowerInvariant(), contentId)
+            .Where(grant => !grant.CancelledAt.HasValue);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -80,6 +60,27 @@ internal static class ContentSubscriberGrantQuery
         }
 
         return query;
+    }
+
+    private static IQueryable<StudentAccessGrant> DescendantGrants(
+        IAppDbContext db, string contentType, Guid contentId)
+    {
+        var termIds = db.Terms.Where(term => contentType == "package" && term.PackageId == contentId)
+            .Select(term => term.Id);
+        var sectionIds = db.ContentSections.Where(section =>
+                termIds.Contains(section.TermId) || (contentType == "term" && section.TermId == contentId))
+            .Select(section => section.Id);
+        var lessonIds = db.Lessons.Where(lesson =>
+                sectionIds.Contains(lesson.ContentSectionId) ||
+                (contentType == "section" && lesson.ContentSectionId == contentId))
+            .Select(lesson => lesson.Id);
+
+        // Follow the content hierarchy: child grants need not store ancestor IDs.
+        return db.StudentAccessGrants.AsNoTracking().Where(grant =>
+            (grant.GrantType == CodeType.Package && contentType == "package" && grant.PackageId == contentId) ||
+            (grant.GrantType == CodeType.Term && ((contentType == "term" && grant.TermId == contentId) || termIds.Contains(grant.TermId!.Value))) ||
+            (grant.GrantType == CodeType.Month && ((contentType == "section" && grant.ContentSectionId == contentId) || sectionIds.Contains(grant.ContentSectionId!.Value))) ||
+            (grant.GrantType == CodeType.Lesson && ((contentType == "lesson" && grant.LessonId == contentId) || lessonIds.Contains(grant.LessonId!.Value))));
     }
 
     internal static IQueryable<StudentAccessGrant> RepresentativePerStudent(IQueryable<StudentAccessGrant> query)

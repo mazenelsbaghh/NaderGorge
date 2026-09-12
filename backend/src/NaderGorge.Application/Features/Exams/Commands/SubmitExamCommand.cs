@@ -211,19 +211,8 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             foreach (var essay in submittedEssays)
             {
                 var examQuestion = exam.ExamQuestions.FirstOrDefault(question => question.Question.Id == essay.QuestionId);
-                _db.OutboxEvents.Add(new OutboxEvent
-                {
-                    Type = "EssayEvaluationQueued",
-                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        essaySubmissionId = essay.Id,
-                        questionId = essay.QuestionId,
-                        studentId = essay.StudentId,
-                        questionText = examQuestion?.Question.Text ?? string.Empty,
-                        answerText = essay.AnswerText,
-                        expectedAnswer = examQuestion?.Question.WrittenCorrection ?? string.Empty
-                    })
-                });
+                if (examQuestion is not null)
+                    EssayEvaluationQueue.Enqueue(_db, essay, examQuestion.Question.Text, examQuestion.Question.WrittenCorrection);
             }
 
             if (!hasEssayQuestions)
@@ -383,7 +372,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             lesson?.ContentSection?.Term?.PackageId,
             questionSnapshotsByQuestion,
             revealCorrectAnswers: true,
-            resultState: hasEssayQuestions ? "Pending" : "Completed");
+            resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id)));
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
     }

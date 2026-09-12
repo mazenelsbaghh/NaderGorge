@@ -1,6 +1,6 @@
 import { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
-import { evaluateEssayWithAI } from '../services/geminiService.js';
+import { evaluateEssayWithAI, ESSAY_GRADING_MODEL } from '../services/geminiService.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 const API_URL = (() => {
   const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
@@ -19,6 +19,7 @@ export interface EvaluateEssayJobData {
 }
 
 export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
+  const startedAt = Date.now();
   const { essaySubmissionId, questionText, answerText, expectedAnswer } = job.data;
   
   await job.updateProgress({ percentage: 10, stage: 'بنحلل إجابتك...' });
@@ -29,7 +30,9 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     await throwIfCancellationRequested(job);
 
     // A callback retry must not pay for (or wait for) the same AI evaluation again.
-    const parsed = job.data.evaluation ?? await evaluateEssayWithAI(answerText, expectedAnswer, questionText);
+    const parsed = job.data.evaluation ?? (answerText.trim()
+      ? await evaluateEssayWithAI(answerText, expectedAnswer, questionText)
+      : { isCorrect: false, feedback: 'لم يتم تقديم إجابة مكتوبة لهذا السؤال.' });
     if (!job.data.evaluation) await job.updateData({ ...job.data, evaluation: parsed });
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
     await throwIfCancellationRequested(job);
@@ -44,6 +47,7 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     const webhookResponse = await fetchWithTimeout(`${API_URL}/internal/callbacks/essay-graded`, {
       method: 'POST',
       timeoutMs: 10_000,
+      maxResponseBytes: 16_384,
       operation: 'essay-callback',
       headers: {
         'Content-Type': 'application/json',
@@ -59,9 +63,16 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     if (!webhookResponse.ok) {
        throw new Error(`Essay callback failed with status ${webhookResponse.status}`);
     }
+    const receipt = await webhookResponse.json() as { success?: boolean; data?: { essaySubmissionId?: string; status?: string } };
+    if (receipt.success !== true || receipt.data?.essaySubmissionId !== essaySubmissionId
+      || !['TeacherGraded', 'WaitTeacher', 'AIScored', 'Deleted'].includes(receipt.data?.status ?? '')) {
+      throw new Error('Essay callback did not confirm a persisted grading result.');
+    }
 
     await job.updateProgress({ percentage: 100, stage: 'خلصنا التقييم! ✅' });
-    console.log(`[EvaluateEssay] Completed successfully for ${essaySubmissionId}`);
+    console.log(`[EvaluateEssay] Completed successfully for ${essaySubmissionId}`, {
+      model: ESSAY_GRADING_MODEL, elapsedMs: Date.now() - startedAt,
+    });
     
     return { success: true, score: safeScore, feedback: parsed.feedback };
 

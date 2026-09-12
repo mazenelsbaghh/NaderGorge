@@ -1256,7 +1256,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
                      <div className="mb-5">
                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
-                       <p className="text-[var(--admin-muted)]">زمن المشاهدة المحتسب، السرعة المستخدمة، وآخر نشاط لكل فيديو.</p>
+                       <p className="text-[var(--admin-muted)]">يشمل المحاضرات ذات نشاط فيديو أو امتحان أو واجب. حل الامتحان والواجب لا يثبت مشاهدة الفيديو، وغياب السجل لا يجزم بعدم المشاهدة.</p>
                      </div>
 
                      {(() => {
@@ -1376,6 +1376,10 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                <span className="whitespace-normal break-words text-xs font-medium leading-5 text-[var(--admin-text)]" title={activity.videoTitle}>{activity.videoTitle}</span>
                                                              </div>
 
+                                                             {!activity.lastWatchedAt && !activity.sessions?.length && (
+                                                               <p className="mb-2 text-xs font-bold text-[var(--admin-muted)]">لا توجد مشاهدة مسجّلة لهذا الفيديو.</p>
+                                                             )}
+
                                                              {/* Metrics */}
                                                              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--admin-muted)]">
                                                                <div>
@@ -1468,8 +1472,14 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                   </div>
 
                   <StudentAssessmentHistory
+                    studentName={studentData?.fullName ?? 'الطالب'}
                     examHistory={studentData?.examHistory}
                     homeworkHistory={studentData?.homeworkHistory}
+                    onAttemptDeleted={(kind, attemptId) => setStudentData(current => current ? {
+                      ...current,
+                      examHistory: kind === 'exam' ? current.examHistory.filter(attempt => attempt.attemptId !== attemptId) : current.examHistory,
+                      homeworkHistory: kind === 'homework' ? current.homeworkHistory.filter(attempt => attempt.submissionId !== attemptId) : current.homeworkHistory,
+                    } : current)}
                   />
                 </div>
           )}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { AssessmentStartConfirmation } from '@/components/assessments/AssessmentStartConfirmation';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import {
   homeworkService,
@@ -11,6 +12,11 @@ import { HomeworkViewer } from '@/components/homework/HomeworkViewer';
 import { HomeworkResultPanel } from '@/components/homework/HomeworkResultPanel';
 
 export default function HomeworkPageClient() {
+  const params = useParams();
+  return <HomeworkPageClientContent key={params.homeworkId as string} />;
+}
+
+function HomeworkPageClientContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -23,6 +29,7 @@ export default function HomeworkPageClient() {
   const [completedResult, setCompletedResult] = useState<HomeworkResultDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState<'entry' | 'restart' | null>('entry');
 
   const loadHomework = useCallback(async () => {
     if (!homeworkId) return;
@@ -65,9 +72,27 @@ export default function HomeworkPageClient() {
     }
   }, [homeworkId]);
 
-  useEffect(() => {
-    void loadHomework();
-  }, [loadHomework]);
+  const confirmationDialog = confirmation ? (
+    <AssessmentStartConfirmation
+      kind="homework"
+      onConfirm={() => {
+        const action = confirmation === 'restart' ? loadHomework : loadHomework;
+        setConfirmation(null);
+        void action();
+      }}
+      onCancel={() => {
+        if (confirmation === 'restart') {
+          setConfirmation(null);
+        } else {
+          router.push(packageId && lessonId
+            ? `/student/packages/${packageId}/lessons/${lessonId}`
+            : packageId ? `/student/packages/${packageId}` : '/student');
+        }
+      }}
+    />
+  ) : null;
+
+  if (confirmation === 'entry') return confirmationDialog;
 
   if (loading) {
     return (
@@ -84,7 +109,8 @@ export default function HomeworkPageClient() {
     if (completedResult) {
       return (
         <div className="mx-auto max-w-5xl pb-16">
-          <HomeworkResultPanel result={completedResult} packageId={packageId} lessonId={lessonId} onRestart={loadHomework} />
+      {confirmationDialog}
+          <HomeworkResultPanel result={completedResult} packageId={packageId} lessonId={lessonId} onRestart={() => setConfirmation('restart')} />
         </div>
       );
     }
@@ -112,6 +138,7 @@ export default function HomeworkPageClient() {
 
   return (
     <div className="mx-auto max-w-5xl pb-16">
+      {confirmationDialog}
       <button
         type="button"
         onClick={() => {
@@ -135,7 +162,7 @@ export default function HomeworkPageClient() {
         attempt={attempt}
         packageId={packageId}
         lessonId={lessonId}
-        onRestart={loadHomework}
+        onRestart={() => setConfirmation('restart')}
       />
     </div>
   );

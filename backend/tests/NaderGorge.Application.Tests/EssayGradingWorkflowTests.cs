@@ -14,8 +14,10 @@ namespace NaderGorge.Application.Tests;
 
 public class EssayGradingWorkflowTests
 {
-    [Fact]
-    public async Task SubmitExam_WithEssay_ReturnsPendingResultAndCreatesWaitAIEssay()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SubmittedEssayQueuesTextForAiAndRecordingForTeacherReview(bool hasRecording)
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "501");
@@ -27,24 +29,35 @@ public class EssayGradingWorkflowTests
             new SubmitExamCommand(exam.Id, attempt.Id, student.Id, new List<AnswerSubmissionDto>
             {
                 new(mcqExamQuestion.Id, correctOption.Id, null),
-                new(essayExamQuestion.Id, null, "Gravity pulls objects together.")
+                new(essayExamQuestion.Id, null, "Gravity pulls objects together.", AudioUrl: hasRecording ? "/answer.webm" : null)
             }),
             CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal("Pending", result.Data!.ResultState);
+        var expectedState = hasRecording ? "PartiallyGraded" : "Pending";
+        Assert.Equal(expectedState, result.Data!.ResultState);
         Assert.False(result.Data.IsPassed);
         var pendingEssayReview = result.Data.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
         Assert.Null(pendingEssayReview.CorrectOptionText);
         Assert.Null(pendingEssayReview.WrittenCorrection);
         var savedEssay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
-        Assert.Equal(EssaySubmissionStatus.WaitAI, savedEssay.Status);
-        var queuedEvaluation = db.OutboxEvents.Single(e => e.Type == "EssayEvaluationQueued");
-        Assert.Contains(savedEssay.Id.ToString(), queuedEvaluation.PayloadJson);
+        Assert.Equal(hasRecording ? EssaySubmissionStatus.WaitTeacher : EssaySubmissionStatus.WaitAI, savedEssay.Status);
+        var queuedEvaluations = db.OutboxEvents.Where(e => e.Type == "EssayEvaluationQueued").ToList();
+        if (hasRecording) Assert.Empty(queuedEvaluations);
+        else
+        {
+            var bridge = new FakeJobEnqueuer();
+            await NaderGorge.API.BackgroundServices.EssayEvaluationOutboxQueueDispatcher.DispatchAsync(Assert.Single(queuedEvaluations), bridge);
+            using var payload = System.Text.Json.JsonDocument.Parse(Assert.Single(bridge.Payloads));
+            Assert.Equal(savedEssay.Id, payload.RootElement.GetProperty("essaySubmissionId").GetGuid());
+            Assert.Equal("Explain gravity", payload.RootElement.GetProperty("questionText").GetString());
+            Assert.Equal("A force attracting masses.", payload.RootElement.GetProperty("expectedAnswer").GetString());
+            Assert.Equal("Gravity pulls objects together.", payload.RootElement.GetProperty("answerText").GetString());
+        }
 
         var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
         var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);
-        Assert.Equal("Pending", status.Data!.ResultState);
+        Assert.Equal(expectedState, status.Data!.ResultState);
     }
 
     [Theory]
@@ -166,10 +179,12 @@ public class EssayGradingWorkflowTests
 internal sealed class FakeJobEnqueuer : IJobEnqueuer
 {
     public readonly List<(string QueueName, string JobName)> Jobs = new();
+    public readonly List<string> Payloads = new();
 
     public Task EnqueueJobAsync<T>(string queueName, string jobName, T data)
     {
         Jobs.Add((queueName, jobName));
+        Payloads.Add(System.Text.Json.JsonSerializer.Serialize(data));
         return Task.CompletedTask;
     }
 }

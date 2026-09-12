@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/stores/auth-store';
 import { assessmentRevisionService, type AssessmentKind, type AssessmentParentNotificationSettings } from '@/services/assessment-revision-service';
 import type { LiveSupportWhatsAppTemplate } from '@/services/live-support-service';
 import { inspectDirectWhatsAppTemplate, renderWhatsAppTemplatePreview } from '@/components/live-support/staff/whatsapp-template';
@@ -8,6 +9,7 @@ import { getApiErrorSummary } from '@/lib/api-errors';
 
 const sources = [
   ['ParentName', 'اسم ولي الأمر', 'ولي أمر أحمد'], ['StudentName', 'اسم الطالب', 'أحمد محمد'],
+  ['ParentTrackingCode', 'رقم متابعة الطالب', '123456789'],
   ['AssessmentName', 'اسم الامتحان أو الواجب', 'واجب الحصة الأولى'], ['Score', 'درجة الطالب', '35'],
   ['TotalScore', 'الدرجة النهائية', '40'], ['Percentage', 'النسبة المئوية', '87.5%'],
   ['Evaluation', 'التقييم', 'جيد جدًا'], ['SubjectName', 'المادة', 'التاريخ'],
@@ -15,10 +17,19 @@ const sources = [
   ['Literal', 'نص ثابت', ''],
 ] as const;
 
-export function AssessmentParentNotificationEditor({ kind, settings, onChange, disabled = false }: {
-  kind: AssessmentKind; settings: AssessmentParentNotificationSettings;
-  onChange: (settings: AssessmentParentNotificationSettings) => void; disabled?: boolean;
-}) {
+interface AssessmentParentNotificationEditorProps {
+  kind: AssessmentKind;
+  settings: AssessmentParentNotificationSettings;
+  onChange: (settings: AssessmentParentNotificationSettings) => void;
+  disabled?: boolean;
+}
+
+export function AssessmentParentNotificationEditor(props: AssessmentParentNotificationEditorProps) {
+  const isAdmin = useAuthStore(state => state.user?.roles.includes('Admin') ?? false);
+  return isAdmin ? <AdminParentNotificationEditor {...props} /> : null;
+}
+
+function AdminParentNotificationEditor({ kind, settings, onChange, disabled = false }: AssessmentParentNotificationEditorProps) {
   const [templates, setTemplates] = useState<LiveSupportWhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

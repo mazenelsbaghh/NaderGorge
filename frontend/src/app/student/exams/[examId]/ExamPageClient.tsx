@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { AssessmentStartConfirmation } from '@/components/assessments/AssessmentStartConfirmation';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { examService, ActiveExamAttemptDto, ExamResultDto } from '@/services/exam-service';
 import { ExamViewer, ExamResultPanel } from '@/components/exams/ExamViewer';
 
 export default function ExamPageClient() {
+  const params = useParams();
+  return <ExamPageClientContent key={params.examId as string} />;
+}
+
+function ExamPageClientContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -21,6 +27,7 @@ export default function ExamPageClient() {
   const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState<'entry' | 'restart' | null>('entry');
 
   const startExam = useCallback(async () => {
     if (!examId) return;
@@ -62,9 +69,27 @@ export default function ExamPageClient() {
     }
   }, [examId, startExam]);
 
-  useEffect(() => {
-    void loadExam();
-  }, [loadExam]);
+  const confirmationDialog = confirmation ? (
+    <AssessmentStartConfirmation
+      kind="exam"
+      onConfirm={() => {
+        const action = confirmation === 'restart' ? startExam : loadExam;
+        setConfirmation(null);
+        void action();
+      }}
+      onCancel={() => {
+        if (confirmation === 'restart') {
+          setConfirmation(null);
+        } else {
+          router.push(packageId && lessonId
+            ? `/student/packages/${packageId}/lessons/${lessonId}`
+            : fromPublicExams ? '/student/public-exams' : packageId ? `/student/packages/${packageId}` : '/student');
+        }
+      }}
+    />
+  ) : null;
+
+  if (confirmation === 'entry') return confirmationDialog;
 
   if (loading) {
     return (
@@ -81,11 +106,12 @@ export default function ExamPageClient() {
     if (passedResult) {
       return (
         <div className="mx-auto max-w-5xl pb-16">
+      {confirmationDialog}
           <ExamResultPanel
             result={passedResult}
             packageId={packageId}
             lessonId={passedResult.lessonId}
-            onRestart={startExam}
+            onRestart={() => setConfirmation('restart')}
             onResultRefresh={setPassedResult}
             returnHref={resultReturnHref}
             returnLabel={resultReturnLabel}
@@ -119,6 +145,7 @@ export default function ExamPageClient() {
 
   return (
     <div className="mx-auto max-w-5xl pb-16">
+      {confirmationDialog}
       {!passedResult && (
         <button 
           type="button"
@@ -148,7 +175,7 @@ export default function ExamPageClient() {
         attempt={exam}
         packageId={packageId}
         lessonId={lessonId}
-        onRestart={startExam}
+        onRestart={() => setConfirmation('restart')}
         resultReturnHref={resultReturnHref}
         resultReturnLabel={resultReturnLabel}
       />

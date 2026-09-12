@@ -176,10 +176,23 @@ test('English lesson mindmap accepts verified English visible text (2026-08-10 r
   assert.match(imageUrl, /\/mindmaps\/english-language-regression_run_/);
 });
 
-test('essay evaluation validates and returns the existing structured result', async () => {
-  const client = { models: { generateContent: async () => ({ text: '{"isCorrect":true,"feedback":"برافو عليك"}' }) } };
+test('essay request sends the exact question, teacher key and student answer to Flash-Lite', async () => {
+  let sent: any;
+  const client = { models: { generateContent: async (request: any) => {
+    sent = request;
+    return { text: '{"isCorrect":true,"feedback":"برافو عليك"}' };
+  } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
-  assert.deepEqual(await evaluateEssayWithAI('إجابة', 'نموذج'), { isCorrect: true, feedback: 'برافو عليك' });
+  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { isCorrect: true, feedback: 'برافو عليك' });
+  assert.equal(sent.model, 'gemini-3.5-flash-lite');
+  assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
+  assert.deepEqual(sent.config.responseSchema.required, ['isCorrect', 'feedback']);
+});
+
+test('missing teacher key or question cannot be graded using guessed context', async () => {
+  setAIServiceRuntimeFactoryForTests(() => { throw new Error('Provider must not be used'); });
+  for (const [key, question] of [['', 'سؤال'], ['نموذج', ' '], [undefined, 'سؤال']])
+    await assert.rejects(evaluateEssayWithAI('إجابة', key, question), /requires the question and the teacher answer key/);
 });
 
 test('live support returns a valid Developer API decision', async () => {

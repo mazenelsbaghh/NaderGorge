@@ -307,11 +307,69 @@ test('relay is never attempted for rejected or missing HLS resources', async () 
   }
 });
 
+test('2026-09-12 relay manifest survives session validation plus upstream latency', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.emitFatalNetworkError(0);
+  const config = player.hlsInstances[1].config;
+  // The relay can spend 15s validating the session, then 20s retrieving a playlist.
+  for (const name of ['manifestLoadPolicy', 'playlistLoadPolicy', 'keyLoadPolicy', 'fragLoadPolicy']) {
+    const policy = config[name] as { default: { maxTimeToFirstByteMs: number; maxLoadTimeMs: number } };
+    assert.ok(policy.default.maxTimeToFirstByteMs > 35000, name);
+    assert.ok(policy.default.maxLoadTimeMs > 35000, name);
+  }
+  player.advanceTime(35000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.emitManifestParsed();
+  player.advanceTime(35000);
+  player.emitLevelLoaded();
+  player.advanceTime(25000);
+  player.triggerVideoEvent('loadedmetadata');
+  assert.equal(player.messages.filter(message => message.type === 'ready').length, 1);
+  player.advanceTime(120000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  assert.equal(player.hlsInstances.length, 2);
+});
+
+test('2026-09-12 relay playback waits for authenticated segment headers without restarting', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.emitFatalNetworkError(0);
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.triggerVideoEvent('waiting');
+  player.advanceTime(35000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.setMediaTime(1);
+  player.triggerVideoEvent('timeupdate');
+  player.advanceTime(120000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  assert.equal(player.hlsInstances.length, 2);
+});
+
+test('relay milestones cannot extend startup beyond the overall two-minute cap', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.emitFatalNetworkError(0);
+  player.advanceTime(44000);
+  player.emitManifestParsed();
+  player.advanceTime(44000);
+  player.emitLevelLoaded();
+  player.advanceTime(31000);
+  player.emitFragmentLoaded();
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(1000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hlsInstances.length, 2);
+});
+
 test('relay startup gets one bounded deadline and does not loop', async () => {
   const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
   player.advanceTime(20000);
   assert.equal(player.hlsInstances.length, 2);
-  player.advanceTime(20000);
+  player.advanceTime(44999);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.advanceTime(1);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  player.advanceTime(120000);
+  assert.equal(player.hlsInstances.length, 2);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
 });
 
@@ -493,7 +551,7 @@ test('post-start relay honors a pause command and fails once if recovery never l
   assert.equal(player.video.paused, true);
   player.command('play');
   player.triggerVideoEvent('waiting');
-  player.advanceTime(15000);
+  player.advanceTime(45000);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.hlsInstances.length, 2);
   assert.match(player.messages.find(message => message.type === 'error')?.data?.phase ?? '', /^relay_playback_timeout/);
@@ -508,7 +566,7 @@ test('recovery after metadata still has a bounded startup deadline', async () =>
   player.emitManifestParsed();
   player.advanceTime(15000);
   assert.equal(player.messages.some(message => message.type === 'error'), false);
-  player.advanceTime(5000);
+  player.advanceTime(30000);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.hlsInstances.length, 2);
 });

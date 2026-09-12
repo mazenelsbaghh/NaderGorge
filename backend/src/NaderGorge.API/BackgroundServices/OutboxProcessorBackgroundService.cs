@@ -50,8 +50,10 @@ public class OutboxProcessorBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessOutboxEventsAsync(stoppingToken);
+                // Drain queued work immediately; only poll slowly when the outbox is empty.
+                if (await ProcessOutboxEventsAsync(stoppingToken)) continue;
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred processing outbox events.");
@@ -63,10 +65,10 @@ public class OutboxProcessorBackgroundService : BackgroundService
         _logger.LogInformation("OutboxProcessorBackgroundService stopped.");
     }
 
-    private async Task ProcessOutboxEventsAsync(CancellationToken cancellationToken)
+    private async Task<bool> ProcessOutboxEventsAsync(CancellationToken cancellationToken)
     {
         var events = await ClaimBatchAsync(cancellationToken);
-        if (events.Count == 0) return;
+        if (events.Count == 0) return false;
 
         using var dispatchScope = _scopeFactory.CreateScope();
         _logger.LogInformation(
@@ -151,6 +153,7 @@ public class OutboxProcessorBackgroundService : BackgroundService
                 }
             }
         }
+        return true;
     }
 
     private async Task<List<OutboxEvent>> ClaimBatchAsync(CancellationToken ct)

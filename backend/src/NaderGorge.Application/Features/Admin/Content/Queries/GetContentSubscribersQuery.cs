@@ -55,10 +55,7 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
             request.ContentId,
             request.Search);
         var query = ContentSubscriberGrantQuery.RepresentativePerStudent(matchingGrants);
-        var balanceStudentIds = ContentSubscriberGrantQuery.BalanceStudentIds(
-            _db,
-            request.ContentType,
-            request.ContentId);
+        var balanceGrantIds = ContentSubscriberGrantQuery.BalanceGrantIds(_db, matchingGrants);
         var totalCount = await query.CountAsync(ct);
         var now = DateTime.UtcNow;
         var activeStudentIds = matchingGrants
@@ -68,6 +65,7 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
 
         var items = await query
             .OrderByDescending(sag => sag.GrantedAt)
+            .ThenBy(sag => sag.UserId)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(sag => new ContentSubscriberDto(
@@ -85,7 +83,7 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
                 activeStudentIds.Contains(sag.UserId),
                 sag.User.StudentProfile != null ? sag.User.StudentProfile.AvatarSlug : null,
                 sag.GrantType.ToString(),
-                sag.AccessCodeId != null ? "Code" : sag.GiftRecipientId != null ? "Gift" : balanceStudentIds.Contains(sag.UserId) ? "Balance" : "Direct"
+                sag.AccessCodeId != null ? "Code" : sag.GiftRecipientId != null ? "Gift" : balanceGrantIds.Contains(sag.Id) ? "Balance" : "Direct"
             ))
             .ToListAsync(ct);
 

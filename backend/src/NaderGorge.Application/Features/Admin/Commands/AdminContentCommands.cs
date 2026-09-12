@@ -1547,6 +1547,10 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
         var hw = await _db.Homeworks
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
 
+        var notificationAccessError = await parentNotification.AuthorizeChangeAsync(_db, request.CurrentUserId,
+            NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings.Read(hw?.ParentNotificationSettingsJson), ct);
+        if (notificationAccessError is not null) return ApiResponse<Guid>.Fail(notificationAccessError);
+
         if (hw is not null)
         {
             var hasStudentWork = await _db.HomeworkSubmissions

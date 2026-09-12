@@ -50,6 +50,9 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         var editor = workspace.Editor();
         var validation = ValidateDraft(request.Target, request.Definition, request.Policy);
         if (validation is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(validation);
+        var notificationAccessError = await request.Definition.ParentNotification.AuthorizeChangeAsync(
+            db, request.Target.ActorId, editor.Definition.ParentNotification, ct);
+        if (notificationAccessError is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(notificationAccessError);
         var notificationError = await request.Definition.ParentNotification.ValidateAsync(db, ct);
         if (notificationError is not null) return ApiResponse<AssessmentRevisionPreviewDto>.Fail(notificationError);
         var ownershipError = await ValidateIdentities(workspace, request.Definition, ct);
@@ -85,6 +88,9 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
             return ApiResponse<AssessmentEditorDto>.Fail("عاين تأثير التعديل قبل تأكيد الحفظ.");
         var workspace = await Load(request.Target, ct);
         if (workspace is null) return ApiResponse<AssessmentEditorDto>.Fail("الواجب أو الامتحان غير موجود.");
+        var notificationAccessError = await request.Definition.ParentNotification.AuthorizeChangeAsync(
+            db, request.Target.ActorId, workspace.Editor().Definition.ParentNotification, ct);
+        if (notificationAccessError is not null) return ApiResponse<AssessmentEditorDto>.Fail(notificationAccessError);
         var fingerprint = Hash(JsonSerializer.Serialize(request));
         var previousOperation = await db.AuditLogs.SingleOrDefaultAsync(a => a.Id == request.OperationId, ct);
         if (previousOperation is not null)

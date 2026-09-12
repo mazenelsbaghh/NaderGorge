@@ -46,6 +46,18 @@ public class WebhookEssayGradedCommandHandler
                 "Essay submission has already processed or left WaitAI state.");
         }
 
+        if (request.AiScore is not (0m or 1m) || string.IsNullOrWhiteSpace(request.AiFeedback)
+            || request.AiFeedback.Length > 4000)
+            return ApiResponse<WebhookEssayGradedResultDto>.Fail("Invalid essay evaluation result.");
+
+        if (!string.IsNullOrWhiteSpace(submission.AudioUrl))
+        {
+            submission.Status = EssaySubmissionStatus.WaitTeacher;
+            submission.AiNextRetryAt = null;
+            await _db.SaveChangesAsync(ct);
+            return ApiResponse<WebhookEssayGradedResultDto>.Ok(new(submission.Id, submission.Status.ToString()));
+        }
+
         var attempt = await _db.StudentExamAttempts
             .FirstOrDefaultAsync(a => a.Id == submission.StudentExamAttemptId, ct);
         if (attempt == null)
@@ -80,6 +92,7 @@ public class WebhookEssayGradedCommandHandler
         submission.TeacherFinalScore = awardedScore;
         submission.TeacherFeedback = request.AiFeedback;
         submission.Status = EssaySubmissionStatus.TeacherGraded;
+        submission.AiNextRetryAt = null;
 
         var studentAnswer = await _db.StudentAnswers
             .FirstOrDefaultAsync(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == examQuestion.Id, ct);

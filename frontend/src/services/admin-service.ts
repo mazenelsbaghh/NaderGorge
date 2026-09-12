@@ -2097,6 +2097,12 @@ export const adminService = {
     );
     return res.data;
   },
+  deleteHomeworkAttempt: async (homeworkId: string, submissionId: string) => {
+    const res = await apiClient.delete<ApiResponse>(
+      `/admin/homework/${homeworkId}/submissions/${submissionId}`
+    );
+    return res.data;
+  },
 
   updateExamQuestion: async (
     examId: string,

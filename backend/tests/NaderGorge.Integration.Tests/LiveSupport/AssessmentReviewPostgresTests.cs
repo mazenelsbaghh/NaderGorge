@@ -49,7 +49,7 @@ public sealed class AssessmentReviewPostgresTests
         var target = new AssessmentTarget(AssessmentKind.Exam, exam.Id, Guid.Empty, seed.Teacher.UserId);
         var original = AssessmentDefinitionSnapshot.FromExam(exam);
         var added = original.Questions.Single() with { Id = Guid.NewGuid(), BankQuestionId = Guid.NewGuid(),
-            Text = "Added question", Type = (int)addedType,
+            Text = "Added question", Type = (int)addedType, WrittenCorrection = "Model answer",
             Options = addedType == ExamQuestionType.MCQ ? [new(Guid.NewGuid(), "C", true), new(Guid.NewGuid(), "D", false)] : [] };
         var definition = original with { Questions = [original.Questions[0], added] };
         var policy = new AssessmentRevisionPolicy(PreviousAttemptsPolicy.Regrade, AddedQuestions: AddedQuestionPolicy.RequestCompletion);
@@ -635,7 +635,7 @@ public sealed class AssessmentReviewPostgresTests
     }
     private static async Task<EssaySubmission> Essay(AppDbContext db, TeacherProfile teacher, Guid studentId)
     {
-        var question = new QuestionBankItem { Text = "علل؟", Type = ExamQuestionType.Essay, CreatedByTeacherId = teacher.Id, Subject = new Subject { Name = "Essay subject", NormalizedName = Guid.NewGuid().ToString("N") } };
+        var question = new QuestionBankItem { Text = "علل؟", WrittenCorrection = "الإجابة النموذجية", Type = ExamQuestionType.Essay, CreatedByTeacherId = teacher.Id, Subject = new Subject { Name = "Essay subject", NormalizedName = Guid.NewGuid().ToString("N") } };
         var exam = new Exam { Title = "امتحان", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
         var examQuestion = new ExamQuestion { Question = question, Points = 4, Order = 1 };
         exam.ExamQuestions.Add(examQuestion);
