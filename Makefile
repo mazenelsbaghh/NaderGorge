@@ -11,6 +11,7 @@
         prod-db-fast-preview prod-db-fast \
         prod-small-preview prod-small prod-release-id \
         prod-sync-ocr-key-preview prod-sync-ocr-key \
+        prod-image-transfer-preview prod-image-transfer-install \
         prod-build-preview prod-build prod-gate-preview prod-gate \
         prod-release-preview prod-release prod-fast-release \
         dev frontend backend stop \
@@ -434,6 +435,16 @@ prod-db-fast: ## Repair DB drift with current migrator; CONFIRM=DB-ONLY required
 
 prod-build-preview: ## Preview node-3 immutable build (RELEASE required)
 	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)"
+
+prod-image-transfer-preview: ## Preview direct WireGuard image-transfer setup
+	python3 deploy/production/scripts/install_node_image_transfer.py \
+		--inventory deploy/production/inventory/production.yml \
+		--known-hosts "$$MASSAR_KNOWN_HOSTS_FILE" --identity "$$MASSAR_SSH_IDENTITY_FILE" --dry-run
+
+prod-image-transfer-install: prod-image-transfer-preview ## Install restricted node-to-node image transfer
+	python3 deploy/production/scripts/install_node_image_transfer.py \
+		--inventory deploy/production/inventory/production.yml \
+		--known-hosts "$$MASSAR_KNOWN_HOSTS_FILE" --identity "$$MASSAR_SSH_IDENTITY_FILE" --yes
 
 prod-build: ## Build/distribute four immutable images on node-3 (RELEASE required)
 	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)" --yes

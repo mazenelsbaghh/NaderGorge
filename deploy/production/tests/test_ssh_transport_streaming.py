@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -130,36 +131,48 @@ def test_stream_directory_uses_strict_ssh_and_never_creates_a_local_archive(
     assert after == before
 
 
-def test_stream_remote_file_relays_two_strict_ssh_processes_without_local_output(
+def test_20260912_image_transfer_runs_on_builder_without_relaying_bytes_through_workstation(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     transport = strict_transport(monkeypatch, tmp_path)
     calls: list[tuple[list[str], dict]] = []
-    processes = [Process(), Process()]
+    receipt = {"route": "wireguard", "sourceNode": "node-3", "targetNode": "node-1", "image": "backend"}
 
-    def popen(argv, **kwargs):
+    def run(argv, **kwargs):
         calls.append((list(argv), kwargs))
-        return processes.pop(0)
+        return subprocess.CompletedProcess(argv, 0, json.dumps(receipt), "")
 
-    monkeypatch.setattr(transport_module.subprocess, "Popen", popen)
+    monkeypatch.setattr(transport_module.subprocess, "run", run)
+    monkeypatch.setattr(transport_module.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("local image pipe forbidden"))
     release = "src-" + "a" * 40
-    transport.stream_remote_file(
+    observed = transport.stream_remote_file(
         target("node-3", "192.0.2.3"),
         f"/var/lib/massar/builds/{release}/artifacts/backend.tar",
-        target("node-1", "192.0.2.1"),
+        target("node-1", "10.77.0.11"),
         f"/tmp/massar-{release}/backend.tar",
     )
 
-    assert len(calls) == 2
-    assert all("StrictHostKeyChecking=yes" in argv for argv, _ in calls)
-    assert all("ServerAliveInterval=15" in argv for argv, _ in calls)
-    assert all("ServerAliveCountMax=12" in argv for argv, _ in calls)
+    assert observed == receipt
+    assert len(calls) == 1
+    assert "StrictHostKeyChecking=yes" in calls[0][0]
     assert "massar-ops@192.0.2.3" in calls[0][0]
-    assert "massar-ops@192.0.2.1" in calls[1][0]
-    assert "exec cat" in calls[0][0][-1]
-    assert "cat >" in calls[1][0][-1]
+    assert "massar-node-image-transfer.py send node-1" in calls[0][0][-1]
+    assert "stdin" not in calls[0][1] and "input" not in calls[0][1]
     assert not list(tmp_path.glob("*.tar"))
+
+
+@pytest.mark.parametrize(("source", "destination", "receiver"), [
+    ("/etc/passwd", "/tmp/massar-file", "10.77.0.11"),
+    (f"/var/lib/massar/builds/src-{'a' * 40}/artifacts/backend.tar", f"/tmp/massar-src-{'b' * 40}/backend.tar", "10.77.0.11"),
+    (f"/var/lib/massar/builds/src-{'a' * 40}/artifacts/backend.tar", f"/tmp/massar-src-{'a' * 40}/backend.tar", "8.8.8.8"),
+])
+def test_direct_transfer_rejects_unsafe_paths_and_public_receivers_before_ssh(monkeypatch, tmp_path, source, destination, receiver):
+    transport = strict_transport(monkeypatch, tmp_path)
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: pytest.fail("SSH must not run"))
+
+    with pytest.raises(transport_module.SshTransportError):
+        transport.stream_remote_file(target("node-3", "192.0.2.3"), source, target("node-1", receiver), destination)
 
 
 def test_stream_propagates_remote_receiver_failure(

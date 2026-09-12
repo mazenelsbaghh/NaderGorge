@@ -348,6 +348,18 @@ Authorization, cookies, phone numbers, or result records in evidence.
 Build Production release images only on remote builder `node-3`; local
 offline Docker builds are disposable developer checks, never release inputs.
 
+Image archives transfer directly from node-3 to node-1/node-2 over WireGuard;
+the workstation carries control commands and source/metadata only. The
+dedicated node-3 identity is restricted to receiving release archives, with
+host pins derived from the operator's existing trust. Missing setup fails
+closed, with no workstation relay fallback. After the normal change checks
+and healthy status, use `make prod-image-transfer-preview`, then
+`make prod-image-transfer-install` to install or update the reviewed user-level
+helper and its restricted authorization. This tooling-only setup does not
+build or restart application images. See
+[direct image transfer](../../../docs/production/node-image-transfer.md)
+for the benchmark command and failure handling.
+
 ```bash
 # 1. Compute the immutable source release ID locally (does not build).
 python3 - <<'PY'

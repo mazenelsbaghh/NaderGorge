@@ -116,7 +116,8 @@ class RemoteDistributionRunner:
                         }
                         continue
                     else:
-                        self.transport.stream_remote_file(self.target(self.builder), str(transfer.source_path), target, str(transfer.target_path))
+                        receiver = SshTarget(node.id, node.overlay_address, self.inventory.cluster["ssh_user"])
+                        self.transport.stream_remote_file(self.target(self.builder), str(transfer.source_path), receiver, str(transfer.target_path))
                         script = "set -euo pipefail; " + f"printf '%s  %s\\n' '{transfer.archive_sha256}' '{transfer.target_path}' | sha256sum -c -; " + f"sudo /usr/bin/docker load --input {transfer.target_path} >/dev/null; " + f"test \"$(sudo /usr/bin/docker image inspect massar/{transfer.image}:{self.plan.release_id} --format '{{{{.Id}}}}')\" = '{transfer.image_digest}'; rm -f {transfer.target_path}"
                     self.transport.run(target, ("bash", "-lc", script), timeout_seconds=1800)
                     evidence[transfer.image] = {"archiveSha256": transfer.archive_sha256, "imageDigest": transfer.image_digest}

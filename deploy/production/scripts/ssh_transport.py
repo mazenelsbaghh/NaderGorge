@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import ipaddress
+import json
 import os
+import re
 import shlex
 import stat
 import subprocess
@@ -105,42 +108,35 @@ test -z "$(find {shlex.quote(str(remote_destination))} -type l -print -quit)"
         destination: str,
         *,
         timeout_seconds: int = 1200,
-    ) -> None:
-        """Relay one remote regular file directly between production nodes.
+    ) -> dict:
+        """Ask node-3 to send an archive over its pinned WireGuard SSH link.
 
-        The relay is a pair of strict SSH processes joined by a pipe; it never
-        writes the file to the operator workstation.
+        Only the command and small transfer receipt pass through this process.
+        Missing node-side setup fails closed; there is no workstation relay.
         """
         remote_source = _remote_path(source, label="remote source")
         remote_destination = _remote_path(destination, label="remote destination")
-        if not remote_source.is_relative_to(PurePosixPath("/var/lib/massar/builds")):
-            raise SshTransportError("remote source must be under the remote build root")
-        if not str(remote_destination).startswith("/tmp/massar-"):
-            raise SshTransportError("remote destination must be a release staging path")
-        source_script = f"""
-set -euo pipefail
-test "$(cat /etc/massar/cluster-id)" = "massar-production"
-test -f {shlex.quote(str(remote_source))}
-test ! -L {shlex.quote(str(remote_source))}
-exec cat {shlex.quote(str(remote_source))}
-"""
-        destination_parent = remote_destination.parent
-        destination_script = f"""
-set -euo pipefail
-test "$(cat /etc/massar/cluster-id)" = "massar-production"
-install -d -m 0700 {shlex.quote(str(destination_parent))}
-test ! -e {shlex.quote(str(remote_destination))}
-( umask 077; cat > {shlex.quote(str(remote_destination))} )
-test -f {shlex.quote(str(remote_destination))}
-test ! -L {shlex.quote(str(remote_destination))}
-"""
-        self._stream(
-            self._ssh_argv(source_target, ("bash", "-lc", source_script)),
-            self._ssh_argv(destination_target, ("bash", "-lc", destination_script)),
-            timeout_seconds=timeout_seconds,
-            producer_label=f"{source_target.node_id} file sender",
-            consumer_label=f"{destination_target.node_id} file receiver",
+        match = re.fullmatch(r"/var/lib/massar/builds/((?:git|src)-[0-9a-f]{40})/artifacts/(backend|frontend|worker|migrator)\.tar", str(remote_source))
+        if not match:
+            raise SshTransportError("remote source must be an immutable release image archive")
+        release, image = match.groups()
+        if str(remote_destination) != f"/tmp/massar-{release}/{image}.tar":
+            raise SshTransportError("source and destination must name the same release image")
+        if (source_target.node_id != "node-3" or destination_target.node_id not in ("node-1", "node-2")
+                or source_target.user != "massar-ops" or destination_target.user != "massar-ops"
+                or not ipaddress.ip_address(destination_target.address).is_private):
+            raise SshTransportError("image transfer requires node-3 and an internal massar-ops receiver")
+        completed = self.run(
+            source_target,
+            ("python3", "-I", "/home/massar-ops/.local/libexec/massar-node-image-transfer.py",
+             "send", destination_target.node_id, release, image),
+            timeout_seconds=timeout_seconds + 60,
         )
+        receipt = json.loads(completed.stdout)
+        if (receipt.get("route") != "wireguard" or receipt.get("sourceNode") != "node-3"
+                or receipt.get("targetNode") != destination_target.node_id or receipt.get("image") != image):
+            raise SshTransportError("node-side image transfer returned an invalid receipt")
+        return receipt
 
     def _ssh_argv(self, target: SshTarget, remote_argv: Sequence[str]) -> list[str]:
         if not remote_argv:

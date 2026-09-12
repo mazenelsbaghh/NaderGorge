@@ -1,0 +1,111 @@
+{
+  "measuredAt": "2026-09-12T15:41:31.845481Z",
+  "releaseId": "git-20d8516b7175faf3735a2e1a08ac91f94dc87cfb",
+  "helperSha256": "ff7a5f55699279f580be841761e324760dfbe953770d7f7fbd91cae7e7a3d867",
+  "comparison": {
+    "image": "frontend",
+    "targetNode": "node-2",
+    "archiveBytes": 87163904,
+    "archiveSha256": "3db5b7f86debfb4d395897ea3b4613bcaf20496cbcf3931bde635b4c27ce3aac",
+    "workstationRelaySeconds": 154.263,
+    "directWireGuardSeconds": 2.863,
+    "transferTimeReductionPercent": 98.14,
+    "speedFactor": 53.88
+  },
+  "allImagesToBothReceivers": {
+    "totalBytes": 1923766272,
+    "elapsedSeconds": 68.147,
+    "transfers": [
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-1",
+        "image": "backend",
+        "route": "wireguard",
+        "bytes": 348134912,
+        "sha256": "612f2de57c24de3df135223a742d88e3fa3d923622661b436c63bb04cc15f6e6",
+        "elapsedSeconds": 6.566,
+        "mebibytesPerSecond": 50.57
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-1",
+        "image": "frontend",
+        "route": "wireguard",
+        "bytes": 87163904,
+        "sha256": "3db5b7f86debfb4d395897ea3b4613bcaf20496cbcf3931bde635b4c27ce3aac",
+        "elapsedSeconds": 2.413,
+        "mebibytesPerSecond": 34.45
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-1",
+        "image": "worker",
+        "route": "wireguard",
+        "bytes": 369784832,
+        "sha256": "e8add13cc84edf468461fdf2b39ff7c54bc42521dbf967ef0881629a4a8fe3aa",
+        "elapsedSeconds": 11.354,
+        "mebibytesPerSecond": 31.06
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-1",
+        "image": "migrator",
+        "route": "wireguard",
+        "bytes": 156799488,
+        "sha256": "7ee29352502c33539d7f61af5c5125d9d5ae99724d3f076e13de4790baf7f8b8",
+        "elapsedSeconds": 4.471,
+        "mebibytesPerSecond": 33.44
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-2",
+        "image": "backend",
+        "route": "wireguard",
+        "bytes": 348134912,
+        "sha256": "612f2de57c24de3df135223a742d88e3fa3d923622661b436c63bb04cc15f6e6",
+        "elapsedSeconds": 9.552,
+        "mebibytesPerSecond": 34.76
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-2",
+        "image": "frontend",
+        "route": "wireguard",
+        "bytes": 87163904,
+        "sha256": "3db5b7f86debfb4d395897ea3b4613bcaf20496cbcf3931bde635b4c27ce3aac",
+        "elapsedSeconds": 2.863,
+        "mebibytesPerSecond": 29.03
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-2",
+        "image": "worker",
+        "route": "wireguard",
+        "bytes": 369784832,
+        "sha256": "e8add13cc84edf468461fdf2b39ff7c54bc42521dbf967ef0881629a4a8fe3aa",
+        "elapsedSeconds": 11.962,
+        "mebibytesPerSecond": 29.48
+      },
+      {
+        "sourceNode": "node-3",
+        "targetNode": "node-2",
+        "image": "migrator",
+        "route": "wireguard",
+        "bytes": 156799488,
+        "sha256": "7ee29352502c33539d7f61af5c5125d9d5ae99724d3f076e13de4790baf7f8b8",
+        "elapsedSeconds": 4.94,
+        "mebibytesPerSecond": 30.27
+      }
+    ]
+  },
+  "verification": {
+    "productionContractTestsPassed": 516,
+    "productionContractTestsSkipped": 6,
+    "receiverRejectsArbitraryCommands": [
+      "node-1",
+      "node-2"
+    ],
+    "unknownHostPinRejected": true
+  },
+  "scope": "Transfer and checksum timings only. Excludes application build, Docker image loading, migration gates, and rollout. Measurements are sequential, not concurrent."
+}

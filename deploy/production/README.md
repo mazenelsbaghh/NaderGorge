@@ -4,6 +4,10 @@ This directory is the source of truth for the pre-domain three-node cluster.
 It contains no secret values. Runtime secrets live on the operator host and
 servers in root-only files referenced by `config/secrets.manifest.example.yml`.
 
+Image distribution uses direct WireGuard transfers from node-3. Setup,
+failure handling, and measurements are documented in
+[Direct image transfer](../../docs/production/node-image-transfer.md).
+
 Safety rules:
 
 - Run every command with an explicit inventory and target.

@@ -12,7 +12,7 @@ RELEASE="src-"+"a"*40
 STAGE=f"/tmp/massar-{RELEASE}"
 CLEANUP=f"set -euo pipefail; rm -rf -- {STAGE}"
 def inventory():
-    return SimpleNamespace(cluster={"ssh_user":"massar-ops"},nodes=tuple(SimpleNamespace(id=node,public_address=f"192.0.2.{i}",roles=("builder",) if node=="node-3" else ()) for i,node in enumerate(planner.NODE_IDS,1)))
+    return SimpleNamespace(cluster={"ssh_user":"massar-ops"},nodes=tuple(SimpleNamespace(id=node,public_address=f"192.0.2.{i}",overlay_address=f"10.77.0.{i}",roles=("builder",) if node=="node-3" else ()) for i,node in enumerate(planner.NODE_IDS,1)))
 def plan():
     return planner.create_remote_distribution_plan(inventory(),{"schemaVersion":1,"status":"success","clusterId":"massar-production","builderNodeId":"node-3","releaseId":RELEASE,"sourceStateSha256":"a"*64,"platform":"linux/amd64","images":{n:f"sha256:{i:064x}" for i,n in enumerate(planner.IMAGES,1)},"artifacts":{n:{"filename":f"{n}.tar","sha256":f"{i:064x}"} for i,n in enumerate(planner.IMAGES,1)}})
 class Transport:

@@ -21,7 +21,7 @@ class RemoteDistributionError(ValueError):
 
 @dataclass(frozen=True)
 class RemoteArtifactTransfer:
-    """One remote-only artifact relay and its post-load verification contract."""
+    """One direct node transfer and its post-load verification contract."""
 
     image: str
     source_node_id: str
