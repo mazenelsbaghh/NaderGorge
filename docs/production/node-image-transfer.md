@@ -1,4 +1,8 @@
-# Direct image transfer between production nodes
+# Direct archive transfer between production nodes
+
+New releases use [the private registry and content-addressed build cache](optimized-releases.md)
+once installed. This document covers the retained archive path for historical
+release artifacts; it is not used as an automatic registry failure fallback.
 
 Release image archives travel from node-3 to node-1 and node-2 over `wg0`.
 The operator sends the source snapshot, small release metadata, and control

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ─── Stage 1: Install & Build ────────────────────────────────────────────────
 FROM node:22.13.0-slim AS builder
 
@@ -15,7 +16,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 # Install ALL dependencies (including devDependencies for TypeScript compile)
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund --loglevel=error
+RUN --mount=type=cache,id=massar-worker-npm,target=/root/.npm,sharing=locked npm ci --no-audit --no-fund --loglevel=error
 
 # Copy source and compile TypeScript → dist/
 COPY . .
@@ -41,7 +42,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 # Install only production dependencies
 COPY package.json package-lock.json ./
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+RUN --mount=type=cache,id=massar-worker-npm,target=/root/.npm,sharing=locked DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
     && npm ci --omit=dev --no-audit --no-fund --loglevel=error \
     && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove build-essential \

@@ -132,7 +132,7 @@ def test_release_builder_targets_production_architecture_and_distribution() -> N
 
 
 def test_migrator_has_required_framework_and_drops_root_after_secret_read() -> None:
-    dockerfile = (ROOT / "backend/Dockerfile.migrator").read_text(encoding="utf-8")
+    dockerfile = (ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
     migration = (SCRIPTS / "migrate_release.py").read_text(encoding="utf-8")
     gate = (SCRIPTS / "prepare_release_migration_gate.py").read_text(
         encoding="utf-8"

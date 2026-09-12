@@ -9,6 +9,7 @@ from remote_distribution_plan import create_remote_distribution_plan
 from remote_distribution_runner import RemoteDistributionRunner, builder_executor_command
 from release_images import ReleaseManifestInputs, assert_source_unchanged, create_release_bundle, create_release_manifest_v2, create_source_snapshot, publish_final_manifest, write_json_atomic
 from ssh_transport import SshTarget
+from registry_distribution import RegistryDistributionRunner, validate_builder
 
 class RemoteBuilderWorkflowError(RuntimeError): pass
 def _target(inventory, node): return SshTarget(node.id, node.public_address, inventory.cluster["ssh_user"])
@@ -45,7 +46,24 @@ def run_remote_builder_workflow(*, repository: Path, output: Path, inventory: ob
             transport.run(_target(inventory,builder),builder_executor_command(remote),timeout_seconds=3600)
             transport.fetch(_target(inventory,builder),str(remote.workspace/"builder-manifest.json"),builder_manifest,timeout_seconds=120,max_bytes=1024*1024)
             transport.fetch(_target(inventory,builder),str(remote.workspace/"build-evidence.json"),temporary/"build-evidence.json",timeout_seconds=120,max_bytes=1024*1024)
-        plan=create_remote_distribution_plan(inventory,_read(builder_manifest)); create_release_bundle(snapshot,temporary)
+        builder_document = _read(builder_manifest)
+        if builder_document.get("schemaVersion") == 2:
+            artifacts = validate_builder(builder_document, inventory, dict(provenance))
+            create_release_bundle(snapshot, temporary)
+            assert_source_unchanged(repository, dict(provenance))
+            initial = create_release_manifest_v2(ReleaseManifestInputs(
+                repo=snapshot, output=temporary, provenance=dict(provenance),
+                images=builder_document["images"], created_at=created_at, registry_artifacts=artifacts,
+            ))
+            manifest = temporary / "manifest.json"
+            write_json_atomic(manifest, initial)
+            final = {**initial, **RegistryDistributionRunner(inventory, transport, builder_document, temporary).run()}
+            write_json_atomic(manifest, final)
+            assert_source_unchanged(repository, dict(provenance))
+            publish_final_manifest(temporary, remote.release_id, nodes, inventory.cluster["ssh_user"], transport)
+            os.rename(temporary, output)
+            return final
+        plan=create_remote_distribution_plan(inventory,builder_document); create_release_bundle(snapshot,temporary)
         archive_sha256s = {
             name: next(
                 transfer.archive_sha256

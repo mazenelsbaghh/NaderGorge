@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ─── Stage 1: Build ──────────────────────────────────────────────────────────
 FROM node:22.13.0-alpine AS builder
 
@@ -10,7 +11,7 @@ ENV NPM_CONFIG_AUDIT=false \
 
 # Install dependencies (separate layer for cache efficiency)
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund --loglevel=error
+RUN --mount=type=cache,id=massar-frontend-npm,target=/root/.npm,sharing=locked npm ci --no-audit --no-fund --loglevel=error
 
 # Copy source and build
 COPY . .
@@ -30,7 +31,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_RELEASE_ID=$NEXT_PUBLIC_RELEASE_ID
 
 # next.config.ts has output: 'standalone' — this produces .next/standalone/
-RUN npm run build
+RUN --mount=type=cache,id=massar-next,target=/app/.next/cache,sharing=locked npm run build
 
 # ─── Stage 2: Runtime shared by landing, student, and admin surfaces ─────────
 FROM node:22.13.0-alpine AS runner

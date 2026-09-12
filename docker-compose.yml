@@ -405,7 +405,8 @@ services:
     image: massar_migrator:local
     build:
       context: ./backend
-      dockerfile: Dockerfile.migrator
+      dockerfile: Dockerfile
+      target: migrator
     container_name: massar_migrator
     environment:
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-massar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"

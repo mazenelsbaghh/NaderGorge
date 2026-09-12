@@ -37,6 +37,7 @@ class ReleaseManifestInputs:
     images: dict[str, str]
     created_at: str
     archive_sha256s: Mapping[str, str] | None = None
+    registry_artifacts: Mapping[str, dict[str, str]] | None = None
 
 
 def command(argv: list[str]) -> str:
@@ -219,6 +220,9 @@ def artifact_manifest(inputs: ReleaseManifestInputs) -> dict[str, dict[str, str]
     verify_manifest(inputs.images)
     artifacts: dict[str, dict[str, str]] = {}
     for name in IMAGES:
+        if inputs.registry_artifacts is not None:
+            artifacts[name] = dict(inputs.registry_artifacts[name])
+            continue
         if inputs.archive_sha256s is None:
             archive = inputs.output / f"{name}.tar"
             if archive.is_symlink() or not archive.is_file():
@@ -347,13 +351,15 @@ def build_release(repo: Path, release_id: str, output: Path) -> dict[str, str]:
         "backend": [repo / "backend", repo / "backend/Dockerfile"],
         "frontend": [repo / "frontend", repo / "frontend/Dockerfile"],
         "worker": [repo / "worker", repo / "worker/Dockerfile"],
-        "migrator": [repo / "backend", repo / "backend/Dockerfile.migrator"],
+        "migrator": [repo / "backend", repo / "backend/Dockerfile"],
     }
     output.mkdir(parents=True, exist_ok=True)
     digests: dict[str, str] = {}
     for name in IMAGES:
         context, dockerfile = builds[name]
         build_arguments: list[str] = []
+        if name == "migrator":
+            build_arguments.extend(["--target", "migrator"])
         if name == "frontend":
             frontend_contract = {
                 "NEXT_PUBLIC_API_URL": "https://api.massar-academy.net/api",

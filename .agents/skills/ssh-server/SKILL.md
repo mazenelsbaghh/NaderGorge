@@ -77,11 +77,11 @@ incompatible choice:
 | EF entities, context, migrations, Compose/Production tooling, or an unknown affected area | `all` |
 
 The scope is an explicit intent and a focused local-verification/build choice.
-The current immutable Production release contract still assembles all four
-images into one digest-parity manifest; never claim that selecting one scope
-alone permits a partial Production deployment. For a genuine faster
-Production lane, first implement and test selective artifact reuse in the
-release tooling, then update this rule and its tests.
+The immutable Production release contract assembles all four images into one
+digest-parity manifest. With the reviewed private registry installed, the
+builder reuses an image only when its complete context, base image identities,
+and build policy fingerprint match a verified cached artifact. The chosen
+scope does not omit any service from the release or skip its safety gates.
 
 For a normal small release, use the one-command path instead of copying a SHA
 or evidence paths by hand:
@@ -218,10 +218,11 @@ build commands. `deploy.sh` is preview-only unless `--yes` is supplied.
 | `docker/nginx/` | Compose contract | `gateway` | foundation workflow, not app release |
 | Production/Compose/skill tooling | contract checks | only changed build contexts | all four immutable images |
 
-Production intentionally rebuilds backend, frontend, worker, and migrator
-together. Selective Production images would break the single immutable release
-manifest and digest-parity guarantees. Remote build cache provides speed while
-retaining one auditable release identity.
+Production includes backend, frontend, worker, and migrator together. The
+optimized builder builds changed inputs and reuses unchanged images by their
+verified input, registry-manifest, and image-configuration digests. Backend
+and migrator share one compiled Docker stage. The four-image manifest and
+three-node parity remain mandatory.
 
 The explicit DB-only repair lane is the exception because it changes no
 application image or release. It can apply only migrations already embedded in
@@ -348,7 +349,12 @@ Authorization, cookies, phone numbers, or result records in evidence.
 Build Production release images only on remote builder `node-3`; local
 offline Docker builds are disposable developer checks, never release inputs.
 
-Image archives transfer directly from node-3 to node-1/node-2 over WireGuard;
+New releases use the private mTLS registry on node-3 over WireGuard to transfer
+only missing image layers. Install it with `make prod-registry-preview` then
+`make prod-registry-install`, and verify with `make prod-registry-status`.
+See [optimized releases](../../../docs/production/optimized-releases.md).
+
+Historical archive releases transfer directly from node-3 to node-1/node-2 over WireGuard;
 the workstation carries control commands and source/metadata only. The
 dedicated node-3 identity is restricted to receiving release archives, with
 host pins derived from the operator's existing trust. Missing setup fails

@@ -256,7 +256,7 @@ def _build_spec(source: Path, release_id: str) -> dict[str, tuple[Path, Path, li
         "backend": (source / "backend", source / "backend/Dockerfile", []),
         "frontend": (source / "frontend", source / "frontend/Dockerfile", frontend_args),
         "worker": (source / "worker", source / "worker/Dockerfile", []),
-        "migrator": (source / "backend", source / "backend/Dockerfile.migrator", []),
+        "migrator": (source / "backend", source / "backend/Dockerfile", ["--target", "migrator"]),
     }
 
 
@@ -318,6 +318,17 @@ def execute(*, workspace: Path, release_id: str, source_sha256: str, source_stag
         raise RemoteBuilderError("temporary builder cache path already exists")
     temporary.mkdir(mode=0o700)
     try:
+        if (source / "deploy/production/scripts/optimized_builder.py").is_file():
+            if not Path("/etc/massar/image-registry.json").is_file():
+                raise RemoteBuilderError("install the private image registry before building this source")
+            # Only root-installed code is imported into this privileged process.
+            sys.path.insert(0, "/usr/local/lib/massar")
+            from optimized_builder import execute as optimized_execute
+            manifest = optimized_execute(workspace, release_id, source_sha256)
+            for filename in ("builder-manifest.json", "build-evidence.json"):
+                secure_relay_file(workspace / filename, massar_gid)
+            shutil.rmtree(temporary)
+            return manifest
         existing = _existing_manifest(workspace, release_id, source_sha256)
         if existing is not None:
             secure_relay_directory(workspace / "artifacts", massar_gid)
@@ -392,7 +403,8 @@ def execute(*, workspace: Path, release_id: str, source_sha256: str, source_stag
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
-    parser.add_argument("--source-staging", required=True, type=Path)
+    parser.add_argument("--source-staging", type=Path)
+    parser.add_argument("--benchmark-reuse", action="store_true")
     parser.add_argument("--release", required=True)
     parser.add_argument("--source-sha256", required=True)
     parser.add_argument("--yes", action="store_true")
@@ -403,6 +415,16 @@ def main() -> int:
     args = arguments()
     if not args.yes:
         raise RemoteBuilderError("remote build requires --yes")
+    if args.benchmark_reuse:
+        preflight(workspace=args.workspace, release_id=args.release, expected_source_sha256=args.source_sha256)
+        sys.path.insert(0, "/usr/local/lib/massar")
+        from optimized_builder import benchmark_reuse
+        evidence = benchmark_reuse(args.workspace, args.release)
+        secure_relay_file(args.workspace / "reuse-benchmark.json", grp.getgrnam("massar").gr_gid)
+        print(json.dumps(evidence))
+        return 0
+    if args.source_staging is None:
+        raise RemoteBuilderError("remote build requires --source-staging")
     print(json.dumps(execute(
         workspace=args.workspace,
         release_id=args.release,

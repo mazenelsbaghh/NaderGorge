@@ -88,7 +88,7 @@ require_local_docker_bases() {
   for service in "$@"; do
     case "$service" in
       backend) dockerfile="$ROOT/backend/Dockerfile" ;;
-      migrator) dockerfile="$ROOT/backend/Dockerfile.migrator" ;;
+      migrator) dockerfile="$ROOT/backend/Dockerfile" ;;
       worker) dockerfile="$ROOT/worker/Dockerfile" ;;
       landing) dockerfile="$ROOT/frontend/Dockerfile" ;;
       gateway) dockerfile="$ROOT/docker/nginx/Dockerfile" ;;

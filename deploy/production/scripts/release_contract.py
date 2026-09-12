@@ -192,6 +192,17 @@ def _validate_artifacts(
     artifacts: dict[str, dict[str, str]] = {}
     for name in IMAGES:
         item = value[name]
+        if isinstance(item, dict) and set(item) == {"imageDigest", "registryDigest", "inputSha256"}:
+            if (
+                item["imageDigest"] != images[name]
+                or not isinstance(item["registryDigest"], str)
+                or not DIGEST.fullmatch(item["registryDigest"])
+                or not isinstance(item["inputSha256"], str)
+                or not HEX_SHA256.fullmatch(item["inputSha256"])
+            ):
+                raise ReleaseContractError(f"registry artifact parity is invalid for {name}")
+            artifacts[name] = dict(item)
+            continue
         if (
             not isinstance(item, dict)
             or set(item) != {"imageDigest", "archiveSha256"}

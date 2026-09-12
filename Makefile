@@ -397,6 +397,15 @@ prod-plan: ## Show affected areas and immutable Production image plan
 prod-release-id: ## Print the exact immutable release ID; never type a short SHA
 	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release-id
 
+prod-registry-preview: ## Preview private registry and per-node mTLS installation
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --dry-run
+
+prod-registry-install: ## Install reviewed registry infrastructure without restarting apps
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --yes
+
+prod-registry-status: ## Verify private TLS connectivity and reject anonymous clients
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --probe
+
 prod-sync-ocr-key-preview: ## Validate secure OCR-key synchronization to all nodes
 	$(PYTHON) deploy/production/scripts/sync_ocr_vision_key.py
 

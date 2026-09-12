@@ -13,9 +13,9 @@ class Transport:
     def __init__(self): self.copies=[]; self.commands=[]
     def copy(self,*args,**kwargs): self.copies.append(args)
     def run(self,*args,**kwargs): self.commands.append(args)
-def test_installer_targets_node3_and_installs_only_helper_and_sudoers():
+def test_installer_targets_node3_and_installs_reviewed_builder_assets():
     transport=Transport(); installer.install(inventory(),transport)
-    assert len(transport.copies)==2 and all(args[0].node_id=="node-3" for args in transport.copies)
+    assert len(transport.copies)==3 and all(args[0].node_id=="node-3" for args in transport.copies)
     script=transport.commands[0][1][-1]; assert "visudo -cf" in script and "root:root:755" in script and "trap 'rm -f" in script
     assert "if ! test -e /etc/massar/node-id" in script and "root:root:644" in script and "$(cat /etc/massar/node-id)\" = node-3" in script
     assert "/usr/sbin/visudo -cf /tmp/massar-remote-builder.sudoers" in script
