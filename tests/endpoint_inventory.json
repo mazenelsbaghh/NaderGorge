@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 778,
+  "endpointCount": 787,
   "frontendCallCount": 649,
   "missingFrontendRouteCount": 0,
-  "digest": "12ee1f4f4e1d3407e644b5799bd77dc75a6721ef8e24e22da3b53b3c8c751dd3",
+  "digest": "20f14e1d546c41d237cc6a50da95521c772cb5013ccb7900ebe879e3852de2ca",
   "endpoints": [
     {
       "controller": "AdminAIAgentController",
@@ -8989,6 +8989,114 @@
       }
     },
     {
+      "controller": "VideoLearningController",
+      "action": "Read",
+      "method": "GET",
+      "path": "/api/video-learning/{videoid}",
+      "routeTemplate": "/api/video-learning/{videoId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 17
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Ai",
+      "method": "POST",
+      "path": "/api/video-learning/{videoid}/ai",
+      "routeTemplate": "/api/video-learning/{videoId}/ai",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 29
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Author",
+      "method": "GET",
+      "path": "/api/video-learning/{videoid}/author",
+      "routeTemplate": "/api/video-learning/{videoId}/author",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 19
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Save",
+      "method": "PUT",
+      "path": "/api/video-learning/{videoid}/author",
+      "routeTemplate": "/api/video-learning/{videoId}/author",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 21
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Record",
+      "method": "POST",
+      "path": "/api/video-learning/{videoid}/entries",
+      "routeTemplate": "/api/video-learning/{videoId}/entries",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 23
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Delete",
+      "method": "DELETE",
+      "path": "/api/video-learning/{videoid}/entries/{entryid}",
+      "routeTemplate": "/api/video-learning/{videoId}/entries/{entryId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 27
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Replies",
+      "method": "GET",
+      "path": "/api/video-learning/{videoid}/entries/{entryid}/replies",
+      "routeTemplate": "/api/video-learning/{videoId}/entries/{entryId}/replies",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 25
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Report",
+      "method": "GET",
+      "path": "/api/video-learning/{videoid}/report",
+      "routeTemplate": "/api/video-learning/{videoId}/report",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 31
+      }
+    },
+    {
+      "controller": "VideoLearningController",
+      "action": "Review",
+      "method": "GET",
+      "path": "/api/video-learning/review",
+      "routeTemplate": "/api/video-learning/review",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 33
+      }
+    },
+    {
       "controller": "VideoSessionController",
       "action": "CreateSession",
       "method": "POST",
@@ -8997,7 +9105,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 36
+        "line": 37
       }
     },
     {
@@ -9033,7 +9141,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 135
+        "line": 136
       }
     },
     {
@@ -9045,7 +9153,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 165
+        "line": 167
       }
     },
     {
@@ -9057,7 +9165,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 82
+        "line": 83
       }
     },
     {
@@ -9069,7 +9177,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 107
+        "line": 108
       }
     },
     {
@@ -9081,7 +9189,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 108
+        "line": 109
       }
     },
     {
@@ -9705,7 +9813,7 @@
       "rawExpression": "'/public/settings'",
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 294
+        "line": 306
       }
     },
     {

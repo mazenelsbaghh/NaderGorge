@@ -18,7 +18,11 @@ public sealed class LearningOverview(IAppDbContext db)
         var catalog = await db.QuestionBankItems.AsNoTracking().Where(q => q.LearningLessonId.HasValue && lessonIds.Contains(q.LearningLessonId.Value))
             .Select(q => new { q.LearningLessonId, q.LearningConcept }).Distinct().ToListAsync(ct);
         var evidence = await new LearningEvidenceReader(db).ReadAsync(packageIds, filter.Days, ct);
+        evidence.Attempts.AddRange(await new NaderGorge.Application.Features.VideoLearning.VideoLearningEvidence(db).ReadAsync(packageIds, filter.Days, ct));
         var answers = evidence.Attempts.SelectMany(a => a.Answers.Select(answer => new AnswerRow(a, answer))).ToArray();
+        catalog.AddRange(answers.Where(a => !string.IsNullOrWhiteSpace(a.Answer.Concept))
+            .Select(a => new { LearningLessonId = (Guid?)a.Answer.LessonId, LearningConcept = a.Answer.Concept }).Distinct()
+            .Where(c => !catalog.Any(existing => existing.LearningLessonId == c.LearningLessonId && existing.LearningConcept == c.LearningConcept)));
         var concepts = catalog.Where(q => !string.IsNullOrWhiteSpace(q.LearningConcept)).Select(q =>
         {
             var lesson = lessons.Single(l => l.Id == q.LearningLessonId);

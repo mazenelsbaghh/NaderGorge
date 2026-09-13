@@ -1,8 +1,8 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `713d67daa7f3b18fa5ef4c065b9a03983f874fa31d134abf32805b01dbafd32e`
+Digest: `60f64653d95f0a5d5005a2586b91a294cfcb3bf4967f49203458b99e757c5990`
 
-Items: 1065; external-side-effect=25, mutation=609, read=419, export=11, preview=1.
+Items: 1073; external-side-effect=25, mutation=613, read=423, export=11, preview=1.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -516,6 +516,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:delete:hr-employees-employeeid:frontend-src-services-hr-service-ts:249 | DELETE | /hr/employees/{employeeId} | mutation | hr | ordinary | blocked |
 | fe:delete:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:655 | DELETE | /live-support/participant/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
 | fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:855 | DELETE | /live-support/staff/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
+| fe:delete:video-learning-id-entries-entryid:frontend-src-services-video-learning-service-ts:42 | DELETE | /video-learning/{id}/entries/{entryId} | mutation | content | ordinary | blocked |
 | fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2405 | GET | /admin/assistants/{assistantId}/homework-reviews | read | content | none | candidate |
 | fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2383 | GET | /admin/assistants/{assistantId}/stats | read | other | none | candidate |
 | fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2394 | GET | /admin/assistants/{assistantId}/tasks | read | other | none | candidate |
@@ -720,7 +721,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-whatsapp-templates:frontend-src-services-live-support-service-ts:693 | GET | /live-support/whatsapp/templates | read | support | none | candidate |
 | fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153 | GET | /public/forms/{slug} | read | other | none | candidate |
 | fe:get:public-packages-packageid:frontend-src-services-student-service-ts:326 | GET | /public/packages/{packageId} | read | identity | none | candidate |
-| fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:294 | GET | /public/settings | read | content | none | candidate |
+| fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:306 | GET | /public/settings | read | content | none | candidate |
 | fe:get:public-teachers-landing:frontend-src-services-student-service-ts:316 | GET | /public/teachers/landing | read | identity | none | candidate |
 | fe:get:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:331 | GET | /public/teachers/{teacherId}/community-posts | read | identity | none | candidate |
 | fe:get:public-teachers-teacheridorslug:frontend-src-services-student-service-ts:321 | GET | /public/teachers/{teacherIdOrSlug} | read | identity | none | candidate |
@@ -763,6 +764,10 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:v1-assistant-tasks-my:frontend-src-services-assistant-service-ts:70 | GET | /v1/assistant/tasks/my | read | other | none | candidate |
 | fe:get:v1-assistant-tasks-pending-queryparams:frontend-src-services-assistant-service-ts:59 | GET | /v1/assistant/tasks/pending{queryParams} | read | other | none | candidate |
+| fe:get:video-learning-id-authorauthor:frontend-src-services-video-learning-service-ts:35 | GET | /video-learning/{id}{authorauthor} | read | identity | none | candidate |
+| fe:get:video-learning-id-entries-entryid-replies:frontend-src-services-video-learning-service-ts:41 | GET | /video-learning/{id}/entries/{entryId}/replies | read | content | none | candidate |
+| fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:46 | GET | /video-learning/{id}/report | read | content | none | candidate |
+| fe:get:video-learning-review:frontend-src-services-video-learning-service-ts:47 | GET | /video-learning/review | read | content | none | candidate |
 | fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1780 | PATCH | /admin/bunny/libraries/{encodeURIComponentlibraryRecordId}/status | mutation | content | ordinary | blocked |
 | fe:patch:admin-users-students-userid-status:frontend-src-services-admin-service-ts:1280 | PATCH | /admin/users/students/{userId}/status | mutation | identity | ordinary | blocked |
 | fe:patch:admin-video-types-id-status:frontend-src-services-admin-service-ts:1609 | PATCH | /admin/video-types/{id}/status | mutation | content | ordinary | blocked |
@@ -1021,6 +1026,8 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84 | POST | /v1/assistant/tasks/my/{taskId}/comments | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-status:frontend-src-services-assistant-service-ts:78 | POST | /v1/assistant/tasks/my/{taskId}/status | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-taskid-resolve:frontend-src-services-assistant-service-ts:63 | POST | /v1/assistant/tasks/{taskId}/resolve | mutation | other | ordinary | blocked |
+| fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:44 | POST | /video-learning/{id}/ai | mutation | content | ordinary | blocked |
+| fe:post:video-learning-id-entries:frontend-src-services-video-learning-service-ts:40 | POST | /video-learning/{id}/entries | mutation | content | ordinary | blocked |
 | fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1047 | POST | /whatsapp/admin/exam-result-message | mutation | content | ordinary | blocked |
 | fe:post:whatsapp-admin-test-message:frontend-src-services-admin-service-ts:1038 | POST | /whatsapp/admin/test-message | mutation | other | ordinary | blocked |
 | fe:put:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1772 | PUT | /admin/bunny/libraries/{encodeURIComponentlibraryRecordId} | mutation | content | ordinary | blocked |
@@ -1073,3 +1080,4 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:put:student-profile:frontend-src-services-student-service-ts:381 | PUT | /student/profile | mutation | identity | ordinary | blocked |
 | fe:put:student-theme-preferences:frontend-src-services-student-service-ts:371 | PUT | /student/theme-preferences | mutation | identity | ordinary | blocked |
 | fe:put:teacher-profile:frontend-src-services-teacher-service-ts:255 | PUT | /teacher/profile | mutation | identity | ordinary | blocked |
+| fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | PUT | /video-learning/{id}/author | mutation | identity | ordinary | blocked |

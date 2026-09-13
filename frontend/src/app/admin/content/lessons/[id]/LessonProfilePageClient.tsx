@@ -8,9 +8,12 @@ import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
-type ActiveTab = 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
+import { LessonInteractionsEditor } from '@/components/video-learning/LessonInteractionsEditor';
+
+type ActiveTab = 'interactions' | 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
+  { key: 'interactions', label: 'التفاعل والمراجعة', icon: MessageSquareText },
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
   { key: 'ai-analysis', label: 'تحليل AI', icon: Sparkles },
@@ -129,6 +132,8 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       <div className="mb-8">
         <AdminTabBar tabs={TAB_OPTIONS} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
+
+      {activeTab === 'interactions' && <LessonInteractionsEditor lessonId={lesson.lessonId} videos={lesson.videos || []} />}
 
       {activeTab === 'overview' && (
         <EntityOverviewDashboard

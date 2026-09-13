@@ -266,6 +266,8 @@ builder.Services.AddSingleton<IWhatsAppAudioProcess>(
     _ => new FfmpegWhatsAppAudioProcess("/usr/bin/ffmpeg"));
 builder.Services.AddSingleton<IWhatsAppOutboundMediaNormalizer, WhatsAppOutboundMediaNormalizer>();
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
+builder.Services.AddScoped<NaderGorge.Application.Features.VideoLearning.VideoLearningService>();
+builder.Services.AddHttpClient<NaderGorge.Application.Features.VideoLearning.IVideoLearningAi, NaderGorge.Infrastructure.Services.VideoLearningAiClient>(client => client.Timeout = TimeSpan.FromSeconds(65));
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();

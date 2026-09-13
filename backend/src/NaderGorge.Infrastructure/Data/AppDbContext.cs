@@ -30,6 +30,8 @@ public class AppDbContext : DbContext, IAppDbContext
         _userSecurityStateCache = userSecurityStateCache;
     }
 
+    public DbSet<VideoLearningConfiguration> VideoLearningConfigurations => Set<VideoLearningConfiguration>();
+    public DbSet<VideoLearningEntry> VideoLearningEntries => Set<VideoLearningEntry>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
@@ -347,6 +349,20 @@ public class AppDbContext : DbContext, IAppDbContext
         if (Database.IsNpgsql())
             modelBuilder.HasSequence<long>("live_support_event_sequence");
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<VideoLearningConfiguration>(b =>
+        {
+            b.HasIndex(x => x.LessonVideoId).IsUnique();
+            b.Property(x => x.Version).IsConcurrencyToken();
+            b.HasOne(x => x.LessonVideo).WithMany().HasForeignKey(x => x.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<VideoLearningEntry>(b =>
+        {
+            b.HasIndex(x => new { x.StudentId, x.LessonVideoId, x.SourceRevision });
+            b.HasIndex(x => new { x.StudentId, x.LessonVideoId, x.ConfigurationVersion, x.ActivityId, x.Kind }).IsUnique().HasFilter("\"Kind\" = 'answer'");
+            b.HasIndex(x => new { x.LessonVideoId, x.ConfigurationVersion, x.Kind });
+            b.HasOne(x => x.LessonVideo).WithMany().HasForeignKey(x => x.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<LearningFollowUp>(e =>
         {
             e.ToTable("learning_follow_ups");

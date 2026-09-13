@@ -12420,8 +12420,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12438,12 +12438,12 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Roles": "Student,Admin",
         "AuthenticationSchemes": null
       },
       {
-        "Policy": null,
-        "Roles": "Student,Admin",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12460,12 +12460,12 @@
     "authorization": [
       {
         "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Roles": "Student,Admin",
         "AuthenticationSchemes": null
       },
       {
-        "Policy": null,
-        "Roles": "Student,Admin",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12481,8 +12481,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12498,8 +12498,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12515,8 +12515,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -12532,8 +12532,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -13779,8 +13779,8 @@
     ],
     "authorization": [
       {
-        "Policy": null,
-        "Roles": "Student,Admin,Teacher",
+        "Policy": "VideoPlayback",
+        "Roles": null,
         "AuthenticationSchemes": null
       }
     ],
@@ -13817,6 +13817,174 @@
       "reports.manage",
       "reports.manage"
     ]
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}",
+    "controller": "VideoLearning",
+    "action": "Read",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/ai",
+    "controller": "VideoLearning",
+    "action": "Ai",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/author",
+    "controller": "VideoLearning",
+    "action": "Author",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/author",
+    "controller": "VideoLearning",
+    "action": "Save",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/entries",
+    "controller": "VideoLearning",
+    "action": "Record",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/entries/{entryId:guid}",
+    "controller": "VideoLearning",
+    "action": "Delete",
+    "methods": [
+      "DELETE"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/entries/{entryId:guid}/replies",
+    "controller": "VideoLearning",
+    "action": "Replies",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/{videoId:guid}/report",
+    "controller": "VideoLearning",
+    "action": "Report",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      },
+      {
+        "Policy": null,
+        "Roles": "Admin,Teacher",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/video-learning/review",
+    "controller": "VideoLearning",
+    "action": "Review",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
   },
   {
     "route": "api/WhatsApp/admin/exam-result-message",

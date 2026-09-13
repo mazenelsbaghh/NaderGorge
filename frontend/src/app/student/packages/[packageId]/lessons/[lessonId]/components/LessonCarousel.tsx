@@ -4,11 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import clsx from "clsx";
-import SecureVideoPlayer from "../../../../../../../components/video/SecureVideoPlayer";
+import { InteractiveVideoPlayer } from "@/components/video-learning/InteractiveVideoPlayer";
 import type { SecureVideoPlayerRef, WatchStatus } from "../../../../../../../components/video/SecureVideoPlayer";
 import { WatchStatusBar } from "../../../../../../../components/video/WatchStatusBar";
-import { ChapterList } from "../../../../../../../components/video/ChapterList";
-import { LessonMindmapDisplay } from "../../../../../../../components/video/LessonMindmapDisplay";
 import { useRouter, useParams } from "next/navigation";
 import { Lock, Award, ClipboardCheck, BadgeCheck, ShoppingCart } from "lucide-react";
 import toast from "react-hot-toast";
@@ -173,10 +171,8 @@ export function LessonCarousel({
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
     const [liveProgress, setLiveProgress] = useState<Record<string, LearningVideo>>({});
-    const [mobilePanel, setMobilePanel] = useState<"chapters" | "mindmap">("chapters");
     const [isBuyingLesson, setIsBuyingLesson] = useState(false);
     const playerRef = useRef<SecureVideoPlayerRef>(null);
-    const [currentTime, setCurrentTime] = useState(0);
 
     useEffect(() => {
         setMounted(true);
@@ -187,7 +183,6 @@ export function LessonCarousel({
     activeVideoIdRef.current = activeVideoId;
     useEffect(() => {
         setWatchStatus(null);
-        setCurrentTime(0);
     }, [activeVideoId]);
 
     if (!videos || videos.length === 0) return null;
@@ -196,8 +191,6 @@ export function LessonCarousel({
     const progressVideos = videos.map(video => ({ ...video, ...liveProgress[video.id] }));
     const lessonPercent = lessonProgressPercent(progressVideos.filter(video => video.hasAccess !== false));
     const activeVideoHasAccess = activeVideo.hasAccess !== false;
-    const hasChapters = Boolean(activeVideo.chapters && activeVideo.chapters.length > 0);
-    const hasMindmaps = Boolean(activeVideo.chapters?.some((chapter) => chapter.mindmapImageUrl));
 
     const handleBuyLesson = async () => {
         if (!lessonId || isBuyingLesson) return;
@@ -366,8 +359,8 @@ export function LessonCarousel({
                                     className="w-full relative z-30"
                                 >
                                     {activeVideoHasAccess ? (
-                                        <div className="relative aspect-video overflow-hidden rounded-lg border border-[var(--admin-primary)]/20 bg-black sm:rounded-xl">
-                                            <SecureVideoPlayer
+                                        <div className="relative w-full">
+                                            <InteractiveVideoPlayer
                                                 ref={playerRef}
                                                 className="h-full w-full !rounded-none !border-0 !shadow-none"
                                                 lessonVideoId={activeVideo.id}
@@ -382,9 +375,6 @@ export function LessonCarousel({
                                                         durationSeconds: s.durationSeconds || activeVideo.durationSeconds,
                                                         learningWatchedSeconds: s.learningWatchedSeconds ?? activeVideo.learningWatchedSeconds,
                                                     } }));
-                                                }}
-                                                onWatchProgress={(time) => {
-                                                    if (activeVideoIdRef.current === activeVideo.id) setCurrentTime(time);
                                                 }}
                                                 onEnded={() => {
                                                     if (activeVideoIdRef.current === activeVideo.id && activeStep < videos.length - 1) {
@@ -428,55 +418,6 @@ export function LessonCarousel({
                                         </div>
                                     )}
 
-                                    {activeVideoHasAccess && hasChapters && (
-                                        <>
-                                            <div className="mt-5 flex gap-2 lg:hidden">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setMobilePanel("chapters")}
-                                                    className={cn(
-                                                        "min-h-11 flex-1 rounded-full px-4 text-sm font-bold transition-colors",
-                                                        mobilePanel === "chapters"
-                                                            ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]"
-                                                            : "bg-[var(--admin-card-soft)] text-[var(--admin-muted)]"
-                                                    )}
-                                                >
-                                                    فصول الدرس
-                                                </button>
-                                                {hasMindmaps && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setMobilePanel("mindmap")}
-                                                        className={cn(
-                                                            "min-h-11 flex-1 rounded-full px-4 text-sm font-bold transition-colors",
-                                                            mobilePanel === "mindmap"
-                                                                ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]"
-                                                                : "bg-[var(--admin-card-soft)] text-[var(--admin-muted)]"
-                                                        )}
-                                                    >
-                                                        الخريطة الذهنية
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            <div className={cn("mt-6", mobilePanel !== "chapters" && "hidden lg:block")}>
-                                                <ChapterList
-                                                    chapters={activeVideo.chapters!}
-                                                    currentTime={currentTime}
-                                                    onSeek={(sec) => playerRef.current?.seekTo(sec)}
-                                                />
-                                            </div>
-
-                                            {hasMindmaps && (
-                                                <div className={cn("mt-6", mobilePanel !== "mindmap" && "hidden lg:block")}>
-                                                    <LessonMindmapDisplay
-                                                        chapters={activeVideo.chapters!}
-                                                        currentTime={currentTime}
-                                                    />
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>

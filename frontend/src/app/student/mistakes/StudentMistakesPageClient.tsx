@@ -1,5 +1,6 @@
 "use client";
 
+import { LearningReviewList } from "@/components/video-learning/LearningReviewList";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowUpLeft, BookX, Bug, ChevronLeft, ShieldCheck } from "lucide-react";
@@ -73,6 +74,8 @@ export default function StudentMistakesPageClient() {
           </dl>
         </div>
       </section>
+
+      <LearningReviewList />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">

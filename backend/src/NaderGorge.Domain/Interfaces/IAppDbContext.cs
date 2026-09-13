@@ -14,6 +14,8 @@ namespace NaderGorge.Domain.Interfaces;
 
 public interface IAppDbContext
 {
+    DbSet<VideoLearningConfiguration> VideoLearningConfigurations { get; }
+    DbSet<VideoLearningEntry> VideoLearningEntries { get; }
     DbSet<User> Users { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }

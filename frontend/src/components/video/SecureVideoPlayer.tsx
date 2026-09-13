@@ -9,7 +9,7 @@ import { AlertCircle, Play, Info, Map, Maximize2, Minimize2 } from 'lucide-react
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerLoader } from '@/components/ui/loading-indicator';
 import PlayerControls from './PlayerControls';
-import LessonAidDialog from './LessonAidDialog';
+import { PlayerChapterPanel } from './PlayerChapterPanel';
 import { applyDomShields } from '@/utils/dom-shield';
 import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ import {
   isExpiredHlsSourceError,
   shouldRenewHlsSource,
 } from '@/lib/video-playback-recovery';
-import { usesNativeProviderControls } from '@/lib/video-player-provider';
+import { VIDEO_PLAYBACK_RATES, usesNativeProviderControls } from '@/lib/video-player-provider';
 import {
   exitVideoFullscreen,
   enterNativeVideoFullscreen,
@@ -64,7 +64,7 @@ import {
   type BunnyBridgeReadinessWatchdog,
 } from '@/lib/bunny-bridge-readiness';
 
-const SUPPORTED_PLAYBACK_RATES = new Set([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
+const SUPPORTED_PLAYBACK_RATES = new Set(VIDEO_PLAYBACK_RATES);
 export type VideoQualityLevel = { id: string; label: string; height?: number; bitrate?: number };
 
 function isSupportedVideoPlaybackRate(playbackRate: number): boolean {
@@ -91,6 +91,9 @@ interface SecureVideoPlayerProps {
   onWatchProgress?: (secondsWatched: number) => void;
   onWatchStatusChange?: (status: WatchStatus) => void;
   onEnded?: () => void;
+  enableChapterAids?: boolean;
+  reactionDensity?: { seconds: number; understood: number; confused: number; example: number }[];
+  onPlaybackTime?: (seconds: number, duration: number) => void;
   className?: string;
   onSessionError?: (error: string) => void;
   lessonPrice?: number;
@@ -171,6 +174,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   onWatchProgress,
   onWatchStatusChange,
   onEnded,
+  onPlaybackTime,
+  reactionDensity = [],
+  enableChapterAids = true,
   className = '',
   onSessionError,
   lessonPrice,
@@ -450,6 +456,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const durationRef = useRef(0);
   const stableDurationRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  useEffect(() => { onPlaybackTime?.(currentTime, duration); }, [currentTime, duration, onPlaybackTime]);
   const currentTimeRef = useRef(0);
   const lastReportedMediaTimeRef = useRef(0);
   const lastMediaProgressAtRef = useRef(0);
@@ -1652,7 +1659,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     singleTapTimerRef.current = setTimeout(() => {
       lastSeekTapRef.current = null;
       singleTapTimerRef.current = null;
-      if (usesNativeProviderControls(providerRef.current)) togglePlay();
+      setShowControls(visible => !visible);
     }, DOUBLE_TAP_WINDOW_MS);
   };
 
@@ -1670,12 +1677,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (!pointerStart || pointerStart.pointerId !== event.pointerId) return;
     if (Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 24) return;
     event.stopPropagation();
-    handlePlayerInteraction();
 
     const currentTap = { direction, timestamp: Date.now() };
     if (isDoubleTapSeek(lastSeekTapRef.current, currentTap)) {
       cancelSingleTapAction();
       lastSeekTapRef.current = null;
+      handlePlayerInteraction();
       seekByDoubleTap(direction);
       return;
     }
@@ -1871,20 +1878,21 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       && (currentTime < chapter.endTime || (index === normalizedChapters.length - 1 && currentTime <= chapter.endTime))
     ));
     if (activeChapter) return activeChapter;
-    return currentTime < normalizedChapters[0].startTime
-      ? normalizedChapters[0]
-      : normalizedChapters[normalizedChapters.length - 1];
+    return normalizedChapters.findLast(chapter => chapter.startTime <= currentTime) ?? normalizedChapters[0];
   }, [normalizedChapters, currentTime, duration]);
 
-  // A mind map is a lesson aid, not a control that should disappear until the
-  // playback clock reaches one specific chapter. Fall back to the first ready
-  // map so students can always open it from the player.
   const activeMindmapChapter = React.useMemo(() => {
     if (!normalizedChapters?.length) return null;
-    return activeChapterDesktop?.mindmapImageUrl
-      ? activeChapterDesktop
-      : normalizedChapters.find((chapter) => Boolean(chapter.mindmapImageUrl)) ?? null;
+    return activeChapterDesktop?.mindmapImageUrl ? activeChapterDesktop : null;
   }, [activeChapterDesktop, normalizedChapters]);
+
+  const chapterKey = activeChapterDesktop?.id;
+  useEffect(() => {
+    if (!enableChapterAids) { setIsChapterInfoOpen(false); setIsMindmapOpen(false); return; }
+    if (status !== 'ready' || !chapterKey || /iPhone|iPod/i.test(navigator.userAgent)) return;
+    setIsChapterInfoOpen(!activeChapterDesktop?.mindmapImageUrl);
+    setIsMindmapOpen(Boolean(activeChapterDesktop?.mindmapImageUrl));
+  }, [chapterKey, status, activeChapterDesktop?.mindmapImageUrl, enableChapterAids]);
 
   const usesNativePlayerChrome = usesNativeProviderControls(provider);
 
@@ -2164,7 +2172,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         aria-label="مشغل الفيديو"
         tabIndex={0}
         onMouseMove={handlePlayerInteraction}
-        onTouchStart={handlePlayerInteraction}
         onFocus={handlePlayerInteraction}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
@@ -2173,7 +2180,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             handlePlayerInteraction();
           }
         }}
-        onClick={() => handlePlayerInteraction()}
+        onClick={() => setShowControls(visible => !visible)}
         onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
@@ -2185,7 +2192,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             dir="ltr"
           >
             <div
-              className="pointer-events-auto h-full w-[12.5%] min-w-11 max-w-16 touch-manipulation select-none"
+              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -2195,9 +2202,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               onPointerCancel={cancelSeekTap}
               onClick={(event) => event.stopPropagation()}
             />
-            <div className="h-full flex-1" />
+            {usesNativePlayerChrome && <div className="h-full flex-1" />}
             <div
-              className="pointer-events-auto h-full w-[12.5%] min-w-11 max-w-16 touch-manipulation select-none"
+              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -2219,7 +2226,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </div>
         )}
 
-        {status === 'ready' && usesNativePlayerChrome && (
+        {status === 'ready' && usesNativePlayerChrome && showControls && !isChapterInfoOpen && !isMindmapOpen && <select
+          aria-label="سرعة التشغيل" defaultValue={1} onClick={e => e.stopPropagation()}
+          onChange={e => handlePlaybackRateChange(Number(e.target.value))}
+          className="absolute left-16 top-3 z-[var(--z-modal)] h-11 rounded-lg bg-black/80 px-2 text-sm text-white">
+          {VIDEO_PLAYBACK_RATES.map(rate => <option key={rate} value={rate}>{rate}×</option>)}
+        </select>}
+
+        {status === 'ready' && usesNativePlayerChrome && !isChapterInfoOpen && !isMindmapOpen && (
           <>
             <button
               type="button"
@@ -2275,7 +2289,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
 
 
-        {status === 'ready' && !usesNativePlayerChrome && (
+        {status === 'ready' && showControls && !isChapterInfoOpen && !isMindmapOpen && duration > 0 && reactionDensity.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-14 bottom-24 z-30 flex h-3 items-end" aria-label="كثافة تفاعلات الطلاب على توقيت الفيديو" role="img" dir="ltr">
+            {reactionDensity.map(point => {
+              const count = point.understood + point.confused + point.example;
+              return <span key={point.seconds} className="absolute bottom-0 min-w-1 rounded-t" style={{ left: `${Math.min(100, point.seconds / duration * 100)}%`, width: `${Math.max(.4, 15 / duration * 100)}%`, height: `${Math.min(100, 25 + Math.log2(1 + count) * 15)}%`, background: point.confused + point.example > point.understood ? '#fbbf24' : '#34d399', opacity: .85 }} />;
+            })}
+          </div>
+        )}
+        {status === 'ready' && !usesNativePlayerChrome && !isChapterInfoOpen && !isMindmapOpen && (
           <PlayerControls 
             compact
             isPlaying={isPlaying}
@@ -2301,15 +2323,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             chapters={normalizedChapters}
           />
         )}
-      {status === 'ready' && showControls && (activeChapterDesktop?.summaryText || activeMindmapChapter) && (
+      {enableChapterAids && status === 'ready' && showControls && !isChapterInfoOpen && !isMindmapOpen && (activeChapterDesktop || activeMindmapChapter) && (
         <div className="absolute right-2 top-2 z-[var(--z-modal)] flex gap-1 text-white" dir="rtl" onClick={e => e.stopPropagation()}>
-          {activeChapterDesktop?.summaryText && <button type="button" aria-label="معلومات الفصل" onClick={() => setIsChapterInfoOpen(true)} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Info className="size-4" /></button>}
-          {activeMindmapChapter && <button type="button" aria-label="الخريطة الذهنية" onClick={() => setIsMindmapOpen(true)} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Map className="size-4" /></button>}
+          {activeChapterDesktop && <button type="button" aria-label="معلومات الفصل" onClick={() => { setIsChapterInfoOpen(true); setIsMindmapOpen(false); }} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Info className="size-4" /></button>}
+          {activeMindmapChapter && <button type="button" aria-label="الخريطة الذهنية" onClick={() => { setIsMindmapOpen(true); setIsChapterInfoOpen(false); }} className="flex size-11 items-center justify-center rounded-full bg-black/65"><Map className="size-4" /></button>}
         </div>
       )}
+      {enableChapterAids && (isChapterInfoOpen || isMindmapOpen) && activeChapterDesktop && normalizedChapters && <PlayerChapterPanel
+        key={`${activeChapterDesktop.id}-${isMindmapOpen}`} chapter={activeChapterDesktop} chapters={normalizedChapters}
+        initialTab={isMindmapOpen ? 'map' : 'summary'}
+        onClose={() => { setIsChapterInfoOpen(false); setIsMindmapOpen(false); }}
+        onSeek={time => { if (duration > 0) handleSeek(time / duration * 100); }} />}
       </div>
-      {isChapterInfoOpen && activeChapterDesktop?.summaryText && <LessonAidDialog title={activeChapterDesktop.title} summary={activeChapterDesktop.summaryText} onClose={() => setIsChapterInfoOpen(false)} />}
-      {isMindmapOpen && activeMindmapChapter && <LessonAidDialog title={`الخريطة الذهنية: ${activeMindmapChapter.title}`} imageUrl={activeMindmapChapter.mindmapImageUrl} onClose={() => setIsMindmapOpen(false)} />}
     </div>
   );
 });

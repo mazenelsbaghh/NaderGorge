@@ -1,3 +1,4 @@
+import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { Worker, Queue } from 'bullmq';
@@ -374,6 +375,16 @@ async function startWorker() {
   }
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  app.post('/internal/video-learning', workerAdminGuard, async (req, res) => {
+    const { mode, question, context } = req.body ?? {};
+    if (!['author', 'simplify', 'example', 'quiz', 'foundation', 'ask', 'note'].includes(mode) ||
+        typeof question !== 'string' || question.length > 1000 ||
+        typeof context !== 'string' || context.length === 0 || context.length > 24000)
+      return res.status(400).json({ error: 'INVALID_LEARNING_REQUEST' });
+    try { return res.json(await generateVideoLearning(mode, question, context)); }
+    catch { return res.status(503).json({ error: 'AI_UNAVAILABLE' }); }
+  });
 
   app.post('/internal/live-support/preview', workerAdminGuard, async (req, res) => {
     const startedAt = Date.now();

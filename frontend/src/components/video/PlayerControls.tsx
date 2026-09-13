@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { VIDEO_PLAYBACK_RATES } from "@/lib/video-player-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -309,7 +310,7 @@ export default function PlayerControls({
         </div>
         <div className="flex h-11 items-center justify-end gap-1">
           <button type="button" className={action} aria-label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'} onClick={onToggleMute}>{isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}</button>
-          {provider !== 'vk' && <select aria-label="سرعة التشغيل" value={playbackSpeed} onChange={e => setSpeed(Number(e.target.value))} className="h-11 w-16 bg-black text-xs text-white">{[0.5, 1, 1.5, 2].map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>}
+          {provider !== 'vk' && <select aria-label="سرعة التشغيل" value={playbackSpeed} onChange={e => setSpeed(Number(e.target.value))} className="h-11 w-16 bg-black text-xs text-white">{VIDEO_PLAYBACK_RATES.map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>}
           {qualityLevels.length > 0 && onQualityChange && <select aria-label="جودة الفيديو" value={currentQuality} onChange={e => onQualityChange(e.target.value)} className="h-11 max-w-24 bg-black text-xs text-white">{[{ id: 'auto', label: 'تلقائي' }, ...qualityLevels.filter(level => level.id !== 'auto')].map(level => <option key={level.id} value={level.id}>{level.label}</option>)}</select>}
           <button type="button" className={action} aria-label="ملء الشاشة" onClick={onToggleFullscreen}><Maximize className="size-4" /></button>
         </div>
@@ -448,7 +449,7 @@ export default function PlayerControls({
                     role="group"
                     aria-label="سرعة تشغيل الفيديو"
                   >
-                    {[0.5, 1, 1.5, 2].map((speed) => (
+                    {VIDEO_PLAYBACK_RATES.map((speed) => (
                       <motion.div
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -475,7 +476,7 @@ export default function PlayerControls({
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const next = playbackSpeed === 1 ? 1.5 : playbackSpeed === 1.5 ? 2 : playbackSpeed === 2 ? 0.5 : 1;
+                        const next = VIDEO_PLAYBACK_RATES[(VIDEO_PLAYBACK_RATES.indexOf(playbackSpeed) + 1) % VIDEO_PLAYBACK_RATES.length];
                         setSpeed(next);
                       }}
                       variant="ghost"

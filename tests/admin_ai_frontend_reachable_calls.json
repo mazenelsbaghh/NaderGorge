@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 486,
+  "reachableFileCount": 491,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -1328,7 +1328,19 @@
       "route": null
     },
     {
-      "file": "frontend/src/components/video/LessonAidDialog.tsx",
+      "file": "frontend/src/components/video-learning/ActivityEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/video-learning/LearningActivityCard.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/video-learning/LessonInteractionsEditor.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/components/video/PlayerChapterPanel.tsx",
       "route": null
     },
     {
@@ -1736,6 +1748,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/lib/video-progress-retry.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/lib/video-progress-segments.ts",
       "route": null
     },
@@ -1900,6 +1916,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/services/video-learning-service.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/services/video-session-service.ts",
       "route": null
     },
@@ -1948,7 +1968,7 @@
       "route": null
     }
   ],
-  "callCount": 584,
+  "callCount": 592,
   "calls": [
     {
       "method": "DELETE",
@@ -2191,6 +2211,15 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 855
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/video-learning/{id}/entries/{entryId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 42
       }
     },
     {
@@ -3963,7 +3992,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 294
+        "line": 306
       }
     },
     {
@@ -4333,6 +4362,42 @@
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
         "line": 59
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/video-learning/{id}{authorauthor}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 35
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/video-learning/{id}/entries/{entryId}/replies",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 41
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/video-learning/{id}/report",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 46
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/video-learning/review",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 47
       }
     },
     {
@@ -6641,6 +6706,24 @@
     },
     {
       "method": "POST",
+      "path": "/video-learning/{id}/ai",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 44
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/video-learning/{id}/entries",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 40
+      }
+    },
+    {
+      "method": "POST",
       "path": "/whatsapp/admin/exam-result-message",
       "dynamic": false,
       "source": {
@@ -7205,6 +7288,15 @@
         "file": "frontend/src/services/teacher-service.ts",
         "line": 255
       }
+    },
+    {
+      "method": "PUT",
+      "path": "/video-learning/{id}/author",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 36
+      }
     }
   ],
   "unreachableCallCount": 49,
@@ -7651,5 +7743,5 @@
       }
     }
   ],
-  "digest": "f99e38a2c4973b1a73532bd666e48c7349a2e4a551e65c1e92b3c6b8685f0efd"
+  "digest": "b66d207285c8ce106e23f6523f1fa39ca02a23aa0a8ffeeb552f9531da144c61"
 }

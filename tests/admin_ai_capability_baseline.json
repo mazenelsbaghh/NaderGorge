@@ -5,11 +5,11 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "3a202714e44f7d2874c956d8ad0acbe0e25457dc3d2b3210bdc2a87991cbc290"
+      "digest": "d444943d8fd7cfd62a0417248af57f7f01d25e8f6be403f8e49068b5be96751b"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "1a7f5afc0a0ad449ae3ceda13dfb6d075f941716904f01418153c8cbe04571dd"
+      "digest": "263a3984af8e9ea183965887f6a1383d93762b00cf3aba1f884d7f510828e041"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -14706,6 +14706,36 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "fe:delete:video-learning-id-entries-entryid:frontend-src-services-video-learning-service-ts:42",
+      "kind": "frontend-call",
+      "method": "DELETE",
+      "route": "/video-learning/{id}/entries/{entryId}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 42
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2405",
       "kind": "frontend-call",
       "method": "GET",
@@ -20214,7 +20244,7 @@
       }
     },
     {
-      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:294",
+      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:306",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/settings",
@@ -20237,7 +20267,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 294
+        "line": 306
       }
     },
     {
@@ -21372,6 +21402,114 @@
       "source": {
         "file": "frontend/src/services/assistant-service.ts",
         "line": 59
+      }
+    },
+    {
+      "id": "fe:get:video-learning-id-authorauthor:frontend-src-services-video-learning-service-ts:35",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/video-learning/{id}{authorauthor}",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 35
+      }
+    },
+    {
+      "id": "fe:get:video-learning-id-entries-entryid-replies:frontend-src-services-video-learning-service-ts:41",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/video-learning/{id}/entries/{entryId}/replies",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 41
+      }
+    },
+    {
+      "id": "fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:46",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/video-learning/{id}/report",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 46
+      }
+    },
+    {
+      "id": "fe:get:video-learning-review:frontend-src-services-video-learning-service-ts:47",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/video-learning/review",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 47
       }
     },
     {
@@ -29115,6 +29253,66 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:44",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/video-learning/{id}/ai",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 44
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:video-learning-id-entries:frontend-src-services-video-learning-service-ts:40",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/video-learning/{id}/entries",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 40
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1047",
       "kind": "frontend-call",
       "method": "POST",
@@ -30673,8 +30871,38 @@
         "line": 255
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:36",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/video-learning/{id}/author",
+      "effect": "mutation",
+      "domain": "identity",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "identity"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 36
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     }
   ],
   "exclusions": [],
-  "digest": "713d67daa7f3b18fa5ef4c065b9a03983f874fa31d134abf32805b01dbafd32e"
+  "digest": "60f64653d95f0a5d5005a2586b91a294cfcb3bf4967f49203458b99e757c5990"
 }

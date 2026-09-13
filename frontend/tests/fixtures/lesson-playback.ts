@@ -61,6 +61,10 @@ export async function openLesson(
     localStorage.setItem('user', JSON.stringify(authUser));
   }, user);
   await page.route('**/api/**', (route) => json(route, []));
+  await page.route('**/api/video-learning/*', route => json(route, {
+    version: '00000000-0000-0000-0000-000000000000', sourceRevision: 0, stale: false,
+    document: { tools: { notes: true, bookmarks: true }, activities: [] }, entries: [], density: [],
+  }));
   await page.route('**/api/auth/session', (route) =>
     json(route, { user, authorizationVersion: 1 })
   );
