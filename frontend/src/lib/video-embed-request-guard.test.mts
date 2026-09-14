@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { validateVideoEmbedNavigation } from './video-embed-request-guard.ts';
+import { validateVideoEmbedNavigation, validateVideoMediaRequest } from './video-embed-request-guard.ts';
 
 function requestHeaders(values: Record<string, string>) {
   const normalized = new Map(
@@ -43,7 +43,7 @@ test('2026-09-02 Safari same-site metadata accepts the exact application origin'
   );
 });
 
-test('forwarded headers cannot authorize a non-student host', () => {
+test('forwarded headers cannot authorize an unapproved host', () => {
   assert.equal(
     validateVideoEmbedNavigation(
       'http://frontend:3000/api/video/embed?s=session-id',
@@ -59,8 +59,8 @@ test('forwarded headers cannot authorize a non-student host', () => {
   );
 });
 
-test('2026-09-07 admin and teacher video previews accept their exact forwarded application origin', () => {
-  for (const surface of ['admin', 'teacher']) {
+test('staff, admin and teacher video previews accept their exact forwarded application origin', () => {
+  for (const surface of ['admin', 'teacher', 'staff']) {
   assert.equal(
     validateVideoEmbedNavigation(
       'http://frontend:3000/api/video/embed?s=session-id',
@@ -82,10 +82,10 @@ test('same-site metadata cannot authorize an unapproved Massar sibling surface',
     validateVideoEmbedNavigation(
       'http://frontend:3000/api/video/embed?s=session-id',
       requestHeaders({
-        referer: 'https://staff.massar-academy.net/lessons/2',
+        referer: 'https://assets.massar-academy.net/lessons/2',
         'sec-fetch-dest': 'iframe',
         'sec-fetch-site': 'same-site',
-        'x-forwarded-host': 'staff.massar-academy.net',
+        'x-forwarded-host': 'assets.massar-academy.net',
         'x-forwarded-proto': 'https',
       }),
     ),
@@ -157,4 +157,22 @@ test('video embed rejects cross-site fetch metadata even with a forged same-host
     ),
     'unauthorized-origin',
   );
+});
+
+test('staff preview media accepts only the matching forwarded origin', () => {
+  for (const referer of [
+    'https://staff.massar-academy.net/api/video/embed?s=session-id',
+    'https://admin.massar-academy.net/api/video/embed?s=session-id',
+    'https://staff.massar-academy.net.evil.example/api/video/embed',
+  ]) {
+    assert.equal(validateVideoMediaRequest(
+      'http://frontend:3000/api/video/bunny-hls/segment',
+      requestHeaders({
+        referer,
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'staff.massar-academy.net',
+        'x-forwarded-proto': 'https',
+      }),
+    ), referer.startsWith('https://staff.massar-academy.net/') ? null : 'unauthorized-origin');
+  }
 });

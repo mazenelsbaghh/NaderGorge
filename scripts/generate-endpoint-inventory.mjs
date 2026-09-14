@@ -593,7 +593,9 @@ function frontendCallContract(filePath, source, method, args, callerKind, callIn
     return null;
   }
 
-  const normalizedPath = normalizeFrontendPath(args[0], callerKind);
+  const config = args[['POST', 'PUT', 'PATCH'].includes(method) ? 2 : 1] ?? '';
+  const sameOriginOverride = /(?:^|[{,])\s*baseURL\s*:\s*window\.location\.origin\s*(?:[,}])/.test(config);
+  const normalizedPath = normalizeFrontendPath(args[0], sameOriginOverride ? 'fetch' : callerKind);
   const queryParameters = [
     ...normalizedPath.queryParameters,
     ...extractParamsObjectKeys(args.slice(1).join(', ')),

@@ -32,6 +32,11 @@ const navigationRules: AdminRouteRule[] =
  */
 export const adminRouteRules: readonly AdminRouteRule[] = [
   {
+    pattern: '/admin/teachers/:id/account',
+    adminOnly: true,
+    match: 'exact',
+  },
+  {
     pattern: '/admin/content/video-types',
     permissions: [],
     adminOnly: true,

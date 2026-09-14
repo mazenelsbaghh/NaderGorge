@@ -19,7 +19,7 @@ export default function HrBreaksPageClient() {
   const [rows, setRows] = useState<AdminBreakSessionDto[]>([]); const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<{ id: string; startedAt: string; endedAt: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  const load = useCallback(async () => { setLoading(true); try { setRows(await hrService.listAdminBreakSessions()); } finally { setLoading(false); } }, []);
+  const load = useCallback(async () => { setLoading(true); try { setRows((await hrService.listAdminBreakSessions()).filter((row) => row.state !== 'Cancelled')); } finally { setLoading(false); } }, []);
   useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30000); return () => window.clearInterval(timer); }, [load]);
   const active = useMemo(() => rows.filter((row) => row.openBreak), [rows]);
   const saveBreak = async () => {

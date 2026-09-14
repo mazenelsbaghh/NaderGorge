@@ -40,11 +40,10 @@ public sealed class BaileysAccountService(IAppDbContext db, BaileysWhatsAppClien
         var qr = BaileysWhatsAppClient.Text(response, "base64");
         if (qr is not null && (!qr.StartsWith("data:image/png;base64,", StringComparison.Ordinal) || qr.Length > 300_000))
             throw new LiveSupportException("BAILEYS_INVALID_QR", "تعذر تحميل رمز الربط. حاول مجددًا.");
-        account.IsEnabled = true;
         var state = response.TryGetProperty("instance", out var instance) ? BaileysWhatsAppClient.Text(instance, "state") : null;
         account.Status = state == "open" ? "Connected" : qr is null ? "Connecting" : "AwaitingQr";
-        account.Version++;
-        await db.SaveChangesAsync(ct);
+        account = await SaveStateAsync(account, true, ct);
+        if (account.Status == "Connected") qr = null;
         return new(Map(account), qr, qr is null ? null : DateTime.UtcNow.AddSeconds(30));
     }
 
@@ -54,25 +53,34 @@ public sealed class BaileysAccountService(IAppDbContext db, BaileysWhatsAppClien
         var response = await client.StateAsync(account.InstanceName, ct);
         var state = response.TryGetProperty("instance", out var instance) ? BaileysWhatsAppClient.Text(instance, "state") : null;
         account.Status = state == "open" ? "Connected" : state == "connecting" ? "Connecting" : "Disconnected";
-        account.UpdatedAt = DateTime.UtcNow;
-        account.Version++;
-        await db.SaveChangesAsync(ct);
-        return Map(account);
+        return Map(await SaveStateAsync(account, null, ct));
     }
 
     public async Task<BaileysAccountDto> DisconnectAsync(Guid id, CancellationToken ct)
     {
         var account = await RequireAsync(id, ct);
         await client.LogoutAsync(account.InstanceName, ct);
-        account.IsEnabled = false;
         account.Status = "Disconnected";
-        account.Version++;
-        await db.SaveChangesAsync(ct);
-        return Map(account);
+        return Map(await SaveStateAsync(account, false, ct));
+    }
+
+    private async Task<LiveSupportWhatsAppAccount> SaveStateAsync(
+        LiveSupportWhatsAppAccount observed, bool? enabled, CancellationToken ct)
+    {
+        // Webhooks may advance the connection while the bridge request is in flight.
+        // Preserve their newer state; logout still explicitly disables the account.
+        await db.LiveSupportWhatsAppAccounts.Where(account => account.Id == observed.Id)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(account => account.Status, account =>
+                    enabled == false || account.Version == observed.Version ? observed.Status : account.Status)
+                .SetProperty(account => account.IsEnabled, account => enabled ?? account.IsEnabled)
+                .SetProperty(account => account.UpdatedAt, DateTime.UtcNow)
+                .SetProperty(account => account.Version, account => account.Version + 1), ct);
+        return await RequireAsync(observed.Id, ct);
     }
 
     private async Task<LiveSupportWhatsAppAccount> RequireAsync(Guid id, CancellationToken ct) =>
-        await db.LiveSupportWhatsAppAccounts.SingleOrDefaultAsync(account => account.Id == id, ct)
+        await db.LiveSupportWhatsAppAccounts.AsNoTracking().SingleOrDefaultAsync(account => account.Id == id, ct)
         ?? throw new LiveSupportException("NOT_FOUND", "رقم واتساب غير موجود.");
 
     private static BaileysAccountDto Map(LiveSupportWhatsAppAccount account) =>

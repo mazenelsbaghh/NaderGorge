@@ -20,7 +20,9 @@ public record CreateTeacherProfileCommand(
     string? FacebookUrl,
     string? YouTubeUrl,
     string? TelegramUrl,
-    bool ShowOnLanding = true) : IRequest<ApiResponse<Guid>>;
+    bool ShowOnLanding = true,
+    TeacherFinancePreset FinancePreset = TeacherFinancePreset.Standard,
+    [property: System.Text.Json.Serialization.JsonIgnore] Guid ActorUserId = default) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherProfileCommand, ApiResponse<Guid>>
 {
@@ -30,6 +32,8 @@ public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherP
 
     public async Task<ApiResponse<Guid>> Handle(CreateTeacherProfileCommand request, CancellationToken ct)
     {
+        if (!Enum.IsDefined(request.FinancePreset) || request.CommissionRate is < 0 or > 100)
+            return ApiResponse<Guid>.Fail("نسبة المدرس يجب أن تكون بين 0 و100");
         var user = await _db.Users.FindAsync(new object[] { request.UserId }, ct);
         if (user == null)
             return ApiResponse<Guid>.Fail("User not found");
@@ -55,6 +59,7 @@ public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherP
             UserId = request.UserId,
             Bio = request.Bio ?? string.Empty,
             Specialization = request.Specialization ?? string.Empty,
+            FinancePreset = request.FinancePreset,
             CommissionRate = request.CommissionRate,
             ProfileImageUrl = request.ProfileImageUrl,
             ContactInfo = request.ContactInfo ?? string.Empty,
@@ -71,6 +76,8 @@ public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherP
         }
 
         _db.TeacherProfiles.Add(profile);
+        _db.TeacherFinancialAgreements.AddRange(NaderGorge.Application.Services.TeacherFinanceDefaults.CreateAgreements(
+            profile.Id, request.ActorUserId, request.FinancePreset, DateTime.UtcNow));
 
         // Auto-assign Teacher role if not present
         var teacherRole = await _db.Roles.FirstOrDefaultAsync(r => r.Type == RoleType.Teacher, ct);

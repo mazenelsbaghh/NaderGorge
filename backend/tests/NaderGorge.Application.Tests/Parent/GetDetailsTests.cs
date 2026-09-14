@@ -275,6 +275,14 @@ public class GetDetailsTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
+        _db.WarningEvents.Add(new WarningEvent
+        {
+            StudentId = user.Id,
+            TriggerReason = "Inactive for more than 7 days",
+            IsResolved = true
+        });
+        await _db.SaveChangesAsync();
+
         // 8. Create controller with claims
         var claims = new List<Claim>
         {
@@ -325,8 +333,13 @@ public class GetDetailsTests : IDisposable
         Assert.Equal("Critical", details.Warnings[0].Severity);
     }
 
-    [Fact]
-    public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance()
+    // 2026-09-13: partial playback was hidden when the consumed-view counter remained zero.
+    [Theory]
+    [InlineData(90, 0, 2, 270)]
+    [InlineData(0, 15, 2, 180)]
+    [InlineData(0, 0, 1, 180)]
+    public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance(
+        int partialSeconds, int actualSeconds, int expectedWatchedVideos, int expectedWatchedSeconds)
     {
         var student = new User { FullName = "طالب متابعة", PhoneNumber = "01000000002", PasswordHash = "hash" };
         _db.Users.Add(student);
@@ -540,7 +553,8 @@ public class GetDetailsTests : IDisposable
             {
                 UserId = student.Id,
                 LessonVideoId = visibleUnwatchedVideo.Id,
-                TimeWatchedInSeconds = 90,
+                TimeWatchedInSeconds = partialSeconds,
+                ActualWatchedSeconds = actualSeconds,
                 WatchCount = 0
             },
             new VideoWatchEvent
@@ -647,9 +661,9 @@ public class GetDetailsTests : IDisposable
         Assert.Equal(teacherA.Id, watchLesson.TeacherId);
         Assert.Equal(lessonA.Id, watchLesson.LessonId);
         Assert.Equal(2, watchLesson.TotalVideos);
-        Assert.Equal(1, watchLesson.WatchedVideos);
+        Assert.Equal(expectedWatchedVideos, watchLesson.WatchedVideos);
         Assert.Equal(2, watchLesson.WatchCount);
-        Assert.Equal(180, watchLesson.WatchedSeconds);
+        Assert.Equal(expectedWatchedSeconds, watchLesson.WatchedSeconds);
         Assert.False(watchLesson.IsCompleted);
 
         var visibleExam = Assert.Single(details.Exams);

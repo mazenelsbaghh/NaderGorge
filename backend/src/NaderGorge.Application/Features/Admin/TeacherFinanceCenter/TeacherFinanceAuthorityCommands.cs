@@ -77,6 +77,7 @@ internal static class TeacherAgreementAuthority
             (terms.AllocationMode == TeacherAgreementAllocationMode.Percentage && terms.AllocationValue > 100m) ||
             (terms.EffectiveTo.HasValue && terms.EffectiveTo < terms.EffectiveFrom) ||
             !Enum.IsDefined(terms.ScopeType) ||
+            !Enum.IsDefined(terms.Trigger) || !Enum.IsDefined(terms.AllocationMode) || !Enum.IsDefined(terms.PriceBasis) ||
             terms.ScopeId == Guid.Empty ||
             (terms.ScopeType == TeacherAgreementScopeType.Default && terms.ScopeId != null))
             return new(TeacherFinanceCommandStatus.Invalid, Message: "بيانات الاتفاق غير صالحة");
@@ -93,12 +94,15 @@ public sealed class SetCodeGroupFinancialTermsCommandHandler(IAppDbContext db)
 {
     public async Task<TeacherFinanceCommandResult> Handle(SetCodeGroupFinancialTermsCommand command, CancellationToken ct)
     {
+        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         if (command.Trigger is not (TeacherAgreementTrigger.CodeDelivery or TeacherAgreementTrigger.CodeActivation))
             return new(TeacherFinanceCommandStatus.Invalid, Message: "توقيت الحساب غير صالح");
         var group = await db.CodeGroups.FirstOrDefaultAsync(x => x.Id == command.CodeGroupId, ct);
         if (group is null) return new(TeacherFinanceCommandStatus.NotFound, Message: "دفعة الأكواد غير موجودة");
+        if (command.Trigger == TeacherAgreementTrigger.CodeDelivery && await db.TeacherProfiles.AnyAsync(x => x.Id == group.TeacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct))
+            return new(TeacherFinanceCommandStatus.Invalid, Message: "أكواد نادر تُحسب عند الاستخدام فقط");
         if (group.CodeType == CodeType.Balance) return new(TeacherFinanceCommandStatus.Invalid, Message: "أكواد الرصيد لا تنشئ استحقاق مدرس");
-        if (group.AccountingRecordedAt is not null) return new(TeacherFinanceCommandStatus.Conflict, Message: "لا يمكن تغيير شروط دفعة تم احتسابها بالفعل");
+        if (await CodeGroupAccountingGuard.HasStartedAsync(db, group, ct)) return new(TeacherFinanceCommandStatus.Conflict, Message: "لا يمكن تغيير شروط دفعة تم احتسابها بالفعل");
         if (command.AgreementId.HasValue && (!group.TeacherId.HasValue || !await db.TeacherFinancialAgreements.AnyAsync(x =>
                 x.Id == command.AgreementId && x.TeacherId == group.TeacherId && x.IsActive && x.Trigger == command.Trigger, ct)))
             return new(TeacherFinanceCommandStatus.Invalid, Message: "الاتفاق المحدد لا يخص مدرس الدفعة أو توقيتها");
@@ -108,6 +112,7 @@ public sealed class SetCodeGroupFinancialTermsCommandHandler(IAppDbContext db)
         terms.UpdatedByUserId = command.ActorUserId; terms.UpdatedAt = DateTime.UtcNow;
         group.AccountingTiming = command.Trigger == TeacherAgreementTrigger.CodeDelivery ? CodeAccountingTiming.Immediate : CodeAccountingTiming.OnActivation;
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return new(TeacherFinanceCommandStatus.Success);
     }
 }
@@ -123,11 +128,15 @@ public sealed class ConfirmCodeGroupDeliveryCommandHandler(IAppDbContext db, Cod
         if (group is null) return new(TeacherFinanceCommandStatus.NotFound, Message: "دفعة الأكواد غير موجودة");
         if (group.CodeType == CodeType.Balance || !group.TeacherId.HasValue)
             return new(TeacherFinanceCommandStatus.Invalid, Message: "هذه الدفعة لا تحتوي على استحقاق مدرس للتأكيد");
+        if (await db.TeacherProfiles.AnyAsync(x => x.Id == group.TeacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct))
+            return new(TeacherFinanceCommandStatus.Invalid, Message: "أكواد نادر تُحسب عند الاستخدام فقط");
         var terms = await db.CodeGroupFinancialTerms.FirstOrDefaultAsync(x => x.CodeGroupId == command.CodeGroupId, ct);
         if (terms?.Trigger != TeacherAgreementTrigger.CodeDelivery)
             return new(TeacherFinanceCommandStatus.Conflict, Message: "هذه الدفعة مضبوطة للحساب عند تفعيل كل كود");
         var existing = await db.CodeGroupDeliveryConfirmations.FirstOrDefaultAsync(x => x.CodeGroupId == command.CodeGroupId, ct);
         if (existing is not null) { await transaction.CommitAsync(ct); return new(TeacherFinanceCommandStatus.Success, existing.Id, existing.ConfirmedAt, true); }
+        if (await CodeGroupAccountingGuard.HasStartedAsync(db, group, ct))
+            return new(TeacherFinanceCommandStatus.Conflict, Message: "بدأ استخدام أو حساب هذه الدفعة؛ لا يمكن احتسابها مرة أخرى عند التسليم");
         var occurredAt = command.DeliveredAt?.ToUniversalTime() ?? DateTime.UtcNow;
         var confirmation = new CodeGroupDeliveryConfirmation { Id = Guid.NewGuid(), CodeGroupId = command.CodeGroupId,
             Recipient = command.Recipient.Trim(), AttachmentUrl = string.IsNullOrWhiteSpace(command.AttachmentUrl) ? null : command.AttachmentUrl.Trim(),

@@ -6,6 +6,7 @@ const APPROVED_FORWARDED_APP_ORIGINS = new Set([
   'https://app.massar-academy.net',
   'https://admin.massar-academy.net',
   'https://teacher.massar-academy.net',
+  'https://staff.massar-academy.net',
 ]);
 
 function requestOrigins(requestUrl: string, headers: HeaderReader) {

@@ -1,6 +1,6 @@
 export type TeacherAgreementScopeType = 'Default' | 'Package' | 'Term' | 'ContentSection' | 'Lesson' | 'LessonVideo' | 'PublicExam' | 'SharedPackage' | 'CodeGroup';
 export type TeacherAgreementTrigger = 'ContentSale' | 'CodeDelivery' | 'CodeActivation';
-export type TeacherAgreementAllocationMode = 'Percentage' | 'FixedPerSale' | 'FixedPerCode' | 'FixedPerBatch';
+export type TeacherAgreementAllocationMode = 'Percentage' | 'FixedPerSale' | 'FixedPerCode' | 'FixedPerBatch' | 'PlatformFixedPerUnit';
 export type TeacherPriceBasis = 'Gross' | 'NetAfterDiscount';
 
 export interface TeacherAgreement {
@@ -26,6 +26,32 @@ export interface TeacherFinanceSummary {
   paid: number;
   debt: number;
   netPayable: number;
+}
+
+export interface TeacherCollection {
+  id: string;
+  studentName: string;
+  amount: number;
+  walletLabel: string;
+  walletPhoneNumber: string;
+  senderPhoneNumber: string;
+  resolvedAt: string | null;
+  status: 'Matched' | 'Approved';
+  transferReference: string | null;
+  isVodafoneCash: boolean;
+}
+
+export interface TeacherCollections {
+  teacherId: string;
+  totalAmount: number;
+  vodafoneCashAmount: number;
+  otherOrUnverifiedAmount: number;
+  totalCount: number;
+  vodafoneCashCount: number;
+  filteredCount: number;
+  page: number;
+  pageSize: number;
+  items: TeacherCollection[];
 }
 
 export type TeacherPayoutStatus = 'Unpaid' | 'Reserved' | 'Paid' | 'Reversed' | 'Debt' | string;

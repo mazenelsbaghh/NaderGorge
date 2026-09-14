@@ -1890,8 +1890,11 @@ public sealed class BunnyStreamLibrariesTests
         Assert.True(sessionResult.Data.ExpiresAt <= DateTime.UtcNow.AddHours(4.5));
     }
 
-    [Fact]
-    public async Task Incident20260910_RenewedHlsSessionRefreshesExpiredSignatureWithoutChangingWatchState()
+    [Theory]
+    [InlineData(60, false)]
+    [InlineData(60, true)]
+    [InlineData(1, false)]
+    public async Task RenewedHlsSession_BoundsSignatureLifetimeWithoutChangingWatchState(int sessionMinutes, bool nativeHls)
     {
         await using var db = TestAppDbContextFactory.Create();
         var seeded = await SeedManagedBunnyVideoAsync(db);
@@ -1906,7 +1909,7 @@ public sealed class BunnyStreamLibrariesTests
         {
             Id = Guid.NewGuid(), LessonVideoId = seeded.Video.Id,
             EncryptionKey = encryption.GenerateSessionKey(),
-            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(sessionMinutes),
             HasRegisteredView = true, LastProgressSequence = 17
         };
         var expiredUrl = signer.SignPlaylist(seeded.Library.HlsCdnHostname, seeded.Video.ProviderVideoId,
@@ -1915,14 +1918,48 @@ public sealed class BunnyStreamLibrariesTests
         var originalToken = session.SessionToken;
         var service = new VideoSessionMaterialService(db, encryption, signer, protector);
 
-        var refreshed = encryption.DecryptVideoInfo(await service.GetTokenAsync(session, CancellationToken.None), session.EncryptionKey);
-
-        Assert.Equal(signer.SignPlaylist(seeded.Library.HlsCdnHostname, seeded.Video.ProviderVideoId,
-            tokenKey, session.ExpiresAt), refreshed.ProviderVideoId);
+        var beforeRenewal = DateTimeOffset.UtcNow;
+        var refreshed = encryption.DecryptVideoInfo(await service.GetTokenAsync(session, CancellationToken.None, nativeHls), session.EncryptionKey);
+        var expiry = long.Parse(System.Text.RegularExpressions.Regex.Match(refreshed.ProviderVideoId, @"&expires=(\d+)&").Groups[1].Value);
+        var watchExpiry = new DateTimeOffset(session.ExpiresAt).ToUnixTimeSeconds();
+        if (nativeHls || sessionMinutes < 5) Assert.Equal(watchExpiry, expiry);
+        else Assert.InRange(expiry, beforeRenewal.AddMinutes(5).ToUnixTimeSeconds(), DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds());
+        Assert.True(expiry <= watchExpiry);
+        Assert.EndsWith($"/{seeded.Video.ProviderVideoId}/playlist.m3u8", refreshed.ProviderVideoId);
+        Assert.DoesNotContain(tokenKey, refreshed.ProviderVideoId);
         Assert.Equal(originalToken, session.SessionToken);
         Assert.True(session.HasRegisteredView);
         Assert.Equal(17, session.LastProgressSequence);
         Assert.False(db.ChangeTracker.HasChanges());
+    }
+
+    [Fact]
+    public async Task NativeBunnyMaterial_UsesItsLibraryPlayerKeyAndRejectsReplacedVideo()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedManagedBunnyVideoAsync(db);
+        var encryption = new VideoEncryptionService();
+        var playerKeys = JsonSerializer.Serialize(new Dictionary<string, string> {
+            [seeded.Library.ExternalLibraryId.ToString()] = "private-player-key"
+        });
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+            ["BunnyAnalysis:PlayerTokenSecurityKeysJson"] = playerKeys
+        }).Build();
+        var service = new VideoSessionMaterialService(db, encryption, new BunnyHlsUrlSigner(),
+            new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider()), new BunnyPlayerTokenSigner(configuration));
+        var session = new VideoPlaybackSession {
+            LessonVideoId = seeded.Video.Id, EncryptionKey = encryption.GenerateSessionKey(), ExpiresAt = DateTime.UtcNow.AddHours(1)
+        };
+        session.SessionToken = encryption.EncryptVideoInfo("bunny",
+            $"{seeded.Library.ExternalLibraryId}/{seeded.Video.ProviderVideoId}", session.EncryptionKey);
+
+        var query = await service.GetBunnyEmbedQueryAsync(session, CancellationToken.None);
+        Assert.NotNull(query);
+        Assert.Matches(@"^token=[a-f0-9]{64}&expires=\d+$", query);
+        Assert.DoesNotContain("private-player-key", query);
+        seeded.Video.ProviderVideoId = Guid.NewGuid().ToString();
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetBunnyEmbedQueryAsync(session, CancellationToken.None));
     }
 
     [Fact]
@@ -1957,6 +1994,9 @@ public sealed class BunnyStreamLibrariesTests
         Assert.StartsWith("https://vz-example.b-cdn.net/bcdn_token=HS256-", material.ProviderVideoId);
         Assert.EndsWith($"/{VideoGuid}/playlist.m3u8", material.ProviderVideoId);
         Assert.DoesNotContain(tokenKey, material.ProviderVideoId, StringComparison.Ordinal);
+        var signedExpiry = long.Parse(System.Text.RegularExpressions.Regex.Match(material.ProviderVideoId, @"&expires=(\d+)&").Groups[1].Value);
+        Assert.Equal(new DateTimeOffset(session.CreatedAt.AddMinutes(5)).ToUnixTimeSeconds(), signedExpiry);
+        Assert.True(signedExpiry < new DateTimeOffset(session.ExpiresAt).ToUnixTimeSeconds());
     }
 
     [Fact]

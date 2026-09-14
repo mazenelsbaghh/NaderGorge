@@ -66,7 +66,8 @@ public enum TeacherAgreementAllocationMode
     Percentage = 0,
     FixedPerSale = 1,
     FixedPerCode = 2,
-    FixedPerBatch = 3
+    FixedPerBatch = 3,
+    PlatformFixedPerUnit = 4
 }
 
 public enum TeacherPriceBasis
@@ -128,3 +129,5 @@ public enum TeacherPayoutAdjustmentStatus
     Applied = 1,
     Voided = 2
 }
+
+public enum TeacherFinancePreset { Standard = 0, SandyAshraf = 1, Nader = 2 }

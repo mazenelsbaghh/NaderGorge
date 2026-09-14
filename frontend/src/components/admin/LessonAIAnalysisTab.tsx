@@ -24,6 +24,7 @@ import {
   type MindmapStyleSelection,
 } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { getApiErrorSummary } from '@/lib/api-errors';
 import { AIProgressTracker } from './LessonVideoList';
 import { ImageZoomModal } from './ImageZoomModal';
 import {
@@ -114,8 +115,8 @@ export function LessonAIAnalysisTab({
       await adminService.triggerVideoAiAnalysis(videoId);
       toast.success('تم تشغيل استخراج الفصول والترجمة بالذكاء الاصطناعي');
       if (onRefresh) onRefresh();
-    } catch {
-      toast.error('أخفق تشغيل تحليل الفيديو');
+    } catch (error) {
+      toast.error(getApiErrorSummary(error, 'أخفق تشغيل تحليل الفيديو'));
     } finally {
       setTriggeringId(null);
     }

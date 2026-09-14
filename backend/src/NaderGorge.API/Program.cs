@@ -105,6 +105,8 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
         sp.GetRequiredService<DbCommandMetricsInterceptor>(),
         sp.GetRequiredService<DatabaseTransactionDiagnostics>());
 });
+builder.Services.AddScoped<NaderGorge.API.AutoRepair.RepairStore>();
+builder.Services.AddScoped<NaderGorge.API.AutoRepair.RepairRunnerAuth>();
 builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportQueryService, NaderGorge.Application.Features.Reporting.ReportQueryService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportExportService, NaderGorge.Infrastructure.Services.ReportExportService>();
@@ -170,6 +172,7 @@ builder.Services.AddSingleton<IBunnyStreamLibrarySecretProtector, BunnyStreamLib
 builder.Services.AddSingleton<IBunnyHlsSecretProtector>(sp =>
     (BunnyStreamLibrarySecretProtector)sp.GetRequiredService<IBunnyStreamLibrarySecretProtector>());
 builder.Services.AddSingleton<IBunnyHlsUrlSigner, BunnyHlsUrlSigner>();
+builder.Services.AddSingleton<IBunnyPlayerTokenSigner, BunnyPlayerTokenSigner>();
 builder.Services.AddHttpClient("BunnyHlsValidation", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(8);

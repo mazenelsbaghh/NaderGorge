@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Common.HR;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.HR.Reporting;
@@ -31,11 +32,11 @@ public sealed class WorkforceReportService(IAppDbContext db)
             item.Id, item.EmployeeNumber, item.User!.FullName, Status = item.EmploymentStatus.ToString(), item.HireDate,
             OrganizationUnit = db.EmploymentAssignments.Where(assignment => assignment.EmployeeId == item.Id && assignment.EffectiveFrom <= to && (!assignment.EffectiveTo.HasValue || assignment.EffectiveTo >= from)).OrderByDescending(assignment => assignment.EffectiveFrom).Select(assignment => assignment.OrganizationUnit!.Name).FirstOrDefault(),
             ShiftName = db.ShiftAssignments.Where(assignment => assignment.EmployeeId == item.Id && assignment.EffectiveFrom <= to && (!assignment.EffectiveTo.HasValue || assignment.EffectiveTo >= from)).OrderByDescending(assignment => assignment.EffectiveFrom).Select(assignment => assignment.ShiftTemplate!.Name).FirstOrDefault(),
-            AttendanceDays = db.AttendanceSessions.Count(session => session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to),
-            CompletedAttendanceDays = db.AttendanceSessions.Count(session => session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to && session.ClockedOutAt.HasValue),
-            LateMinutes = db.AttendanceSessions.Where(session => session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.LateMinutes),
-            EarlyLeaveMinutes = db.AttendanceSessions.Where(session => session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.EarlyLeaveMinutes),
-            WorkedMinutes = db.AttendanceSessions.Where(session => session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.WorkedMinutes),
+            AttendanceDays = db.AttendanceSessions.Count(session => session.State != AttendanceSessionState.Cancelled && session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to),
+            CompletedAttendanceDays = db.AttendanceSessions.Count(session => session.State != AttendanceSessionState.Cancelled && session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to && session.ClockedOutAt.HasValue),
+            LateMinutes = db.AttendanceSessions.Where(session => session.State != AttendanceSessionState.Cancelled && session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.LateMinutes),
+            EarlyLeaveMinutes = db.AttendanceSessions.Where(session => session.State != AttendanceSessionState.Cancelled && session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.EarlyLeaveMinutes),
+            WorkedMinutes = db.AttendanceSessions.Where(session => session.State != AttendanceSessionState.Cancelled && session.EmployeeId == item.Id && session.WorkDate >= from && session.WorkDate <= to).Sum(session => session.WorkedMinutes),
             ApprovedLeaveDays = db.HrLeaveRequests.Where(leave => leave.EmployeeId == item.Id && leave.State == Domain.Enums.LeaveRequestState.Approved && leave.StartDate <= to && leave.EndDate >= from).Sum(leave => leave.Workdays),
             LastNetPayroll = db.EmployeePayrolls.Where(payroll => payroll.EmployeeId == item.Id && payroll.PayrollRun!.PeriodStart <= to && payroll.PayrollRun.PeriodEnd >= from).OrderByDescending(payroll => payroll.PayrollRun!.PeriodEnd).Select(payroll => (decimal?)payroll.Net).FirstOrDefault(),
             UserId = item.UserId

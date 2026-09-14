@@ -66,6 +66,12 @@ export interface VideoPlaybackClientEvent {
   statusCode: number;
 }
 
+export interface VideoPlaybackSource {
+  source: string;
+  signedSourceExpiresAtMs: number;
+  sessionExpiresAtMs: number;
+}
+
 export type ExtraWatchRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface ExtraWatchStatusDto {
@@ -135,6 +141,18 @@ function trackProgressBatchWithKeepalive(request: TrackProgressBatchRequest) {
 }
 
 export const videoSessionService = {
+  authorizePlayback: (sessionId: string, signal?: AbortSignal) => {
+    return apiClient.post('/api/video/session', { sessionId, purpose: 'start' }, {
+      baseURL: window.location.origin, signal, suppressErrorToast: true,
+    });
+  },
+
+  renewPlaybackSource: (sessionId: string, nativeHls = false) => {
+    return apiClient.post<{ data: VideoPlaybackSource }>('/api/video/session', { sessionId, purpose: 'renew', nativeHls }, {
+      baseURL: window.location.origin, suppressErrorToast: true,
+    });
+  },
+
   createSession: (lessonVideoId: string) => {
     return apiClient.post<{ data: VideoSession }>('/student/video-session', {
       lessonVideoId,

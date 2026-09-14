@@ -69,6 +69,13 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
   const [genLoading, setGenLoading] = useState(false);
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
+  const generationTeacher = teachers.find((teacher) => teacher.id === (genTeacherId || packages.find((pkg) => pkg.id === genSelection.packageId)?.teacherId));
+  const naderCodes = generationTeacher?.financePreset === 'Nader';
+  const generationPreset = generationTeacher?.financePreset ?? 'Standard';
+  const platformFeeLabel = genSelection.codeType === 'Package' ? (naderCodes ? '250 جنيه' : '25% من سعر البيع بعد الخصم')
+    : genSelection.codeType === 'Term' ? (naderCodes ? '100 جنيه' : '25% من سعر البيع بعد الخصم')
+    : genSelection.codeType === 'Month' ? `${naderCodes ? 30 : generationPreset === 'SandyAshraf' ? 50 : 60} جنيه`
+    : genSelection.codeType === 'Lesson' ? `${generationPreset === 'SandyAshraf' ? 12.5 : 15} جنيه` : null;
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
@@ -154,7 +161,7 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
         revenueOwner: genSelection.codeType === 'Balance' ? undefined : genRevenueOwner,
         revenueAllocationMode: genSelection.codeType === 'Balance' || !genRevenueAllocationValue ? undefined : genRevenueAllocationMode,
         revenueAllocationValue: genSelection.codeType === 'Balance' || !genRevenueAllocationValue ? undefined : Number(genRevenueAllocationValue),
-        accountingTiming: genSelection.codeType === 'Balance' ? 'OnActivation' : genAccountingTiming,
+        accountingTiming: naderCodes || genSelection.codeType === 'Balance' ? 'OnActivation' : genAccountingTiming,
         expiresAt: genSelection.expiresAt || undefined,
         expireActivatedAccess: genSelection.expiresAt ? genSelection.expireActivatedAccess !== false : undefined,
         academicScopes: genAcademicScopes,
@@ -578,23 +585,25 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
                     dir="ltr"
                   />
                   <p className="text-xs text-[var(--admin-muted)]">
-                    لو سيبتها فاضية هيستخدم عمولة المدرس الافتراضية.
+                    لو سيبتها فاضية هيستخدم اتفاقات المدرس ونصيب المنصة حسب نوع الاشتراك.
                   </p>
                 </div>
 
                 <div className="space-y-2">
+                  {platformFeeLabel && generationTeacher && <p className="rounded-xl bg-[var(--admin-bg)] p-3 text-sm font-bold">نصيب المنصة الافتراضي: {platformFeeLabel} لكل كود. {naderCodes ? 'أكواد نادر تُحسب عند أول استخدام فقط.' : 'يُحسب الكود مرة واحدة حسب توقيت الدفعة.'}</p>}
                   <label className="text-xs font-bold text-[var(--admin-muted)]">توقيت التسجيل</label>
                   <div className="grid gap-2">
                     {[
-                      { value: 'Immediate' as const, label: 'فوري عند إنشاء الدفعة', icon: Zap },
+                      { value: 'Immediate' as const, label: 'عند تأكيد تسليم الدفعة', icon: Zap },
                       { value: 'OnActivation' as const, label: 'لا، حسب تفعيل الكود', icon: Clock3 },
                     ].map((item) => {
                       const Icon = item.icon;
-                      const active = genAccountingTiming === item.value;
+                      const active = (naderCodes ? 'OnActivation' : genAccountingTiming) === item.value;
                       return (
                         <button
                           key={item.value}
                           type="button"
+                          disabled={naderCodes && item.value === 'Immediate'}
                           onClick={() => setGenAccountingTiming(item.value)}
                           className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-bold transition ${
                             active

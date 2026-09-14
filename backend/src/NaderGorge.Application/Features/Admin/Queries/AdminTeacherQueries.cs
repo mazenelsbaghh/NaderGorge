@@ -27,7 +27,8 @@ public record TeacherDto(
     bool ShowOnLanding,
     bool IsVisibleToStudents,
     bool IsContentVisibleToStudents,
-    bool IsActive);
+    bool IsActive,
+    NaderGorge.Domain.Enums.TeacherFinancePreset FinancePreset = NaderGorge.Domain.Enums.TeacherFinancePreset.Standard);
 
 public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, ApiResponse<List<TeacherDto>>>
 {
@@ -62,7 +63,7 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, ApiResp
                 tp.ShowOnLanding,
                 tp.IsVisibleToStudents,
                 tp.IsContentVisibleToStudents,
-                tp.User.IsActive
+                tp.User.IsActive, tp.FinancePreset
             ))
             .ToListAsync(ct);
 
@@ -105,7 +106,7 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, A
                 tp.ShowOnLanding,
                 tp.IsVisibleToStudents,
                 tp.IsContentVisibleToStudents,
-                tp.User.IsActive
+                tp.User.IsActive, tp.FinancePreset
             ))
             .FirstOrDefaultAsync(ct);
 

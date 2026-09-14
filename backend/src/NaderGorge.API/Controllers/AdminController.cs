@@ -1445,7 +1445,7 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherProfileCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { ActorUserId = User.RequireUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateTeacher), new { id = result.Data }, result) : BadRequest(result);
     }
 

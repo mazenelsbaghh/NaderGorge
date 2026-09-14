@@ -30,7 +30,7 @@ public sealed class HrAttendanceController : ControllerBase
         var today = CairoTime.GetCurrentDate();
         var serverNowUtc = DateTime.UtcNow;
         var session = await _db.AttendanceSessions.AsNoTracking().Where(item =>
-                item.Employee!.UserId == userId &&
+                item.Employee!.UserId == userId && item.State != AttendanceSessionState.Cancelled &&
                 (item.State == AttendanceSessionState.Open || item.WorkDate == today))
             .OrderByDescending(item => item.State == AttendanceSessionState.Open)
             .ThenByDescending(item => item.ClockedInAt).Select(item => new
@@ -52,7 +52,7 @@ public sealed class HrAttendanceController : ControllerBase
     {
         var userId = User.RequireUserId();
         if (await IsGeneralAdminAsync(userId, ct)) return AdminAttendanceNotApplicable();
-        return Ok(await _db.AttendanceSessions.AsNoTracking().Where(item => item.Employee!.UserId == userId &&
+        return Ok(await _db.AttendanceSessions.AsNoTracking().Where(item => item.Employee!.UserId == userId && item.State != AttendanceSessionState.Cancelled &&
             (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to)).OrderByDescending(item => item.WorkDate)
             .Select(item => new { item.Id, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(), item.WorkedMinutes, item.LateMinutes, item.EarlyLeaveMinutes, item.OvertimeMinutes }).ToListAsync(ct));
     }
@@ -98,6 +98,16 @@ public sealed class HrAttendanceController : ControllerBase
         return result.Success ? Ok(result) : Conflict(result);
     }
 
+    [HttpPost("admin/attendance/sessions/{sessionId:guid}/cancel")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission(HrPermissions.AttendanceManage)]
+    public async Task<IActionResult> CancelEvent(Guid sessionId, CancelAttendanceEventRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CancelAttendanceEventCommand(sessionId, request.EventType,
+            request.ExpectedVersion, request.Reason, User.RequireUserId()), ct);
+        return result.Success ? Ok(result) : Conflict(result);
+    }
+
     [HttpPut("admin/attendance/breaks/{breakId:guid}")]
     [HasPermission(HrPermissions.AttendanceManage)]
     public async Task<IActionResult> UpdateBreak(Guid breakId, UpdateAttendanceBreakRequest request, CancellationToken ct)
@@ -123,7 +133,7 @@ public sealed class HrAttendanceController : ControllerBase
         var serverNowUtc = DateTime.UtcNow;
         return Ok(await _db.AttendanceSessions.AsNoTracking()
         .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
-        .OrderByDescending(item => item.WorkDate).Select(item => new { item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(), item.WorkedMinutes,
+        .OrderByDescending(item => item.WorkDate).Select(item => new { item.Id, item.Version, item.EmployeeId, employee = item.Employee!.User!.FullName, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(), item.WorkedMinutes,
             employeePhone = item.Employee!.User!.PhoneNumber, item.LateMinutes, item.EarlyLeaveMinutes, item.OvertimeMinutes,
             breakAllowanceMinutes = item.Employee!.DailyBreakAllowanceMinutes, shortPermissionMaxMinutes = item.Employee.ShortPermissionMaxMinutes,
             serverNowUtc, openBreak = item.Breaks.Where(b => !b.EndedAt.HasValue).Select(b => new { b.Id, b.StartedAt, kind = b.Kind.ToString(), b.AllowedMinutes }).FirstOrDefault(),
@@ -136,7 +146,7 @@ public sealed class HrAttendanceController : ControllerBase
     {
         var serverNowUtc = DateTime.UtcNow;
         var sessions = await _db.AttendanceSessions.AsNoTracking()
-            .Where(item => (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
+            .Where(item => item.State != AttendanceSessionState.Cancelled && (!from.HasValue || item.WorkDate >= from) && (!to.HasValue || item.WorkDate <= to))
             .Select(item => new
             {
                 item.EmployeeId,
@@ -247,3 +257,5 @@ public sealed record SubmitAttendanceCorrectionRequest(Guid AttendanceSessionId,
 public sealed record DecideAttendanceCorrectionRequest(bool Approve, bool IsHrDecision, string Reason, int ExpectedVersion);
 public sealed record AttendanceRecalculationRequest(DateTime ClockedInAt, DateTime ClockedOutAt, DateTime ScheduledStart, DateTime ScheduledEnd,
     int BreakMinutes, int GraceMinutes, int ExpectedMinutes);
+
+public sealed record CancelAttendanceEventRequest(AttendanceEventType EventType, int ExpectedVersion, string Reason);

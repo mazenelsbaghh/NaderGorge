@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
+import { TeacherAccountSummary } from '@/features/teacher-finance-center/TeacherAccountSummary';
+import { TeacherCollectionsPanel } from '@/features/teacher-finance-center/TeacherCollectionsPanel';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
@@ -501,6 +503,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             ══════════════════════════════════════════ */}
         {activeTab === 'overview' && (
           <div className="flex flex-col gap-8">
+            <TeacherCollectionsPanel key={`collections-${id}`} teacherId={id} />
+            <TeacherAccountSummary key={id} teacherId={id} />
             {/* Stat cards */}
             <div>
               <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">ملخص الإحصاءات</h3>
@@ -807,6 +811,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             ══════════════════════════════════════════ */}
         {activeTab === 'financials' && (
           <div className="flex flex-col gap-6">
+            <TeacherCollectionsPanel key={`collections-${id}`} teacherId={id} />
+            <TeacherAccountSummary key={id} teacherId={id} />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <AdminStatCard variant="accent" icon={Wallet} label="نسبة العمولة" value={`${teacher?.commissionRate ?? 0}%`} />
               <AdminStatCard variant="light" icon={DollarSign} label="عدد التحويلات" value={payouts.length} />

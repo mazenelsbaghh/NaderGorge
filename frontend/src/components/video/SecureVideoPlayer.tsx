@@ -3,6 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import { formatPlayerTime } from '@/lib/player-time';
 import { videoProgressRetryDelayMs } from '@/lib/video-progress-retry';
+import { clearVideoPlaybackCookies } from '@/lib/video-playback-cleanup';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
 import { AlertCircle, Play, Info, Map, Maximize2, Minimize2 } from 'lucide-react';
@@ -29,8 +30,6 @@ import {
   isBunnyPlaybackError,
   isBunnyPlaybackStable,
   isCurrentVideoSession,
-  isExpiredHlsSourceError,
-  shouldRenewHlsSource,
 } from '@/lib/video-playback-recovery';
 import { VIDEO_PLAYBACK_RATES, usesNativeProviderControls } from '@/lib/video-player-provider';
 import {
@@ -279,7 +278,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const reloadActiveEmbedRef = useRef<(() => void) | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const sessionExpiresAtRef = useRef(0);
-  const signedSourceExpiresAtRef = useRef(0);
+  const sourceRenewalInFlightRef = useRef<Window | null>(null);
   const progressRetryAtRef = useRef(0);
   const progressRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notifyEndedRef = useRef<() => void>(() => undefined);
@@ -553,7 +552,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     return true;
   }, []);
 
-  const loadActiveEmbed = useCallback((sessionId: string) => {
+  const loadActiveEmbed = useCallback(async (sessionId: string, signal: AbortSignal) => {
+    try {
+      await videoSessionService.authorizePlayback(sessionId, signal);
+    } catch {
+      if (!signal.aborted && sessionId === activeSessionIdRef.current) {
+        setStatus('error');
+        setErrorMessage('تعذر تجهيز إذن المشاهدة. تحقق من الاتصال ثم حاول مرة أخرى.');
+      }
+      return;
+    }
+    if (signal.aborted || sessionId !== activeSessionIdRef.current || securitySuspendedRef.current) return;
     embedReadinessWatchdogRef.current?.cancel();
     embedReadinessWatchdogRef.current = null;
     // HLS owns its media deadlines; it cannot answer Player.js bridge probes.
@@ -619,6 +628,38 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (securitySuspendedRef.current && msg.type !== 'securityViolation') return;
 
       switch (msg.type) {
+        case 'bootstrapError': {
+          const statusCode = Number(msg.data?.status) || 0;
+          if (statusCode !== 403 && embedSessionRefreshCountRef.current < 1) {
+            embedSessionRefreshCountRef.current += 1;
+            reloadActiveEmbedRef.current?.();
+          } else {
+            setStatus('error');
+            setErrorMessage('تعذر التحقق من جلسة المشاهدة. أعد المحاولة.');
+          }
+          break;
+        }
+        case 'renewSourceRequired': {
+          const sessionId = activeSessionIdRef.current;
+          const playerWindow = iframeRef.current?.contentWindow;
+          if (!sessionId || !playerWindow || providerRef.current !== 'bunny-hls'
+            || sourceRenewalInFlightRef.current === playerWindow) break;
+          sourceRenewalInFlightRef.current = playerWindow;
+          void videoSessionService.renewPlaybackSource(sessionId, msg.data?.native === true)
+            .then(response => {
+              if (sessionId !== activeSessionIdRef.current || playerWindow !== iframeRef.current?.contentWindow) return;
+              sendCommand('renewSource', { ...response.data.data });
+            })
+            .catch((error: unknown) => {
+              if (sessionId !== activeSessionIdRef.current || playerWindow !== iframeRef.current?.contentWindow) return;
+              const status = (error as { response?: { status?: number } }).response?.status ?? 0;
+              sendCommand('sourceRenewalFailed', { status });
+            })
+            .finally(() => {
+              if (sourceRenewalInFlightRef.current === playerWindow) sourceRenewalInFlightRef.current = null;
+            });
+          break;
+        }
         case 'playerInteraction':
           handlePlayerInteraction();
           break;
@@ -669,7 +710,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             setProvider(loadedProvider);
           } else if (loadedProvider === 'bunny-hls') {
             providerRef.current = loadedProvider;
-            signedSourceExpiresAtRef.current = Number(msg.data?.signedSourceExpiresAtMs) || 0;
             serverCanResolveDurationRef.current = true;
             setProvider(loadedProvider);
           }
@@ -686,7 +726,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
           if (embedProvider === 'bunny-hls') {
-            signedSourceExpiresAtRef.current = Number(msg.data?.signedSourceExpiresAtMs) || 0;
           }
           providerRef.current = embedProvider;
           serverCanResolveDurationRef.current = embedProvider === 'bunny' || embedProvider === 'bunny-hls';
@@ -874,8 +913,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             }).catch(() => {
               // Playback errors must remain visible even if diagnostic delivery fails.
             });
-            if (isExpiredHlsSourceError(statusCode, signedSourceExpiresAtRef.current, Date.now())
-              && scheduleBunnyPlaybackRecovery()) break;
           }
           if (msg.data?.message === 'Session expired or invalid' && embedSessionRefreshCountRef.current < 1) {
             embedSessionRefreshCountRef.current += 1;
@@ -1090,6 +1127,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (progressRetryTimerRef.current) clearTimeout(progressRetryTimerRef.current);
     progressRetryTimerRef.current = null;
     progressRetryAtRef.current = 0;
+    const sessionId = activeSessionIdRef.current;
+    if (sessionId) clearVideoPlaybackCookies(sessionId);
   }, [lessonVideoId]);
 
   const flushTrackedProgress = useCallback((options: ProgressFlushOptions = {}): Promise<void> => {
@@ -1240,17 +1279,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [acknowledgeProgressResponse, lessonVideoId, stopSessionTracking]);
 
   flushTrackedProgressRef.current = flushTrackedProgress;
-
-  useEffect(() => {
-    if (status !== 'ready') return;
-    const renewal = setInterval(() => {
-      if (providerRef.current !== 'bunny-hls' || !isPlayingRef.current
-        || !shouldRenewHlsSource(signedSourceExpiresAtRef.current, sessionExpiresAtRef.current, Date.now())) return;
-      void flushTrackedProgressRef.current();
-      scheduleBunnyPlaybackRecovery();
-    }, 5_000);
-    return () => clearInterval(renewal);
-  }, [scheduleBunnyPlaybackRecovery, status]);
 
   const flushProgressForPageExit = useCallback((): Promise<void> => {
     if (!trackingEnabledRef.current) return Promise.resolve();
@@ -1490,6 +1518,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       isPlayingRef.current = false;
       setIsPlaying(false);
 
+      if (activeSessionIdRef.current) clearVideoPlaybackCookies(activeSessionIdRef.current);
       activeSessionIdRef.current = null;
       const response = await createVideoSessionWithRetry(lessonVideoId);
       const session = response.data.data;
@@ -1500,7 +1529,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       progressRetryTimerRef.current = null;
       const sessionExpiry = Date.parse(session.expiresAt);
       sessionExpiresAtRef.current = Number.isFinite(sessionExpiry) ? sessionExpiry : 0;
-      signedSourceExpiresAtRef.current = 0;
       consumedSessionIdRef.current = null;
       nextProgressSequenceRef.current = 1;
       activeProgressRequestRef.current = null;
@@ -1597,7 +1625,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       reloadSessionRef.current?.();
       return;
     }
-    signedSourceExpiresAtRef.current = 0;
     setStatus('loading');
     setEmbedRequest({ sessionId });
   };
@@ -1605,9 +1632,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   // Fast session responses can arrive before React commits the loading surface.
   // Mount after commit instead of losing the embed against a null container ref.
   useEffect(() => {
+    const abortController = new AbortController();
     if (embedRequest && !isExamLocked && !securitySuspendedRef.current) {
-      loadActiveEmbed(embedRequest.sessionId);
+      void loadActiveEmbed(embedRequest.sessionId, abortController.signal);
     }
+    return () => abortController.abort();
   }, [embedRequest, isExamLocked, loadActiveEmbed]);
 
   useEffect(() => {
@@ -1654,12 +1683,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     singleTapTimerRef.current = null;
   };
 
-  const queueSingleTapAction = () => {
+  const queueSingleTapAction = (pointerType: string) => {
     cancelSingleTapAction();
     singleTapTimerRef.current = setTimeout(() => {
       lastSeekTapRef.current = null;
       singleTapTimerRef.current = null;
-      setShowControls(visible => !visible);
+      if (pointerType === 'mouse') {
+        sendCommand(isPlayingRef.current ? 'pause' : 'play');
+      }
+      handlePlayerInteraction();
     }, DOUBLE_TAP_WINDOW_MS);
   };
 
@@ -1688,7 +1720,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     }
 
     lastSeekTapRef.current = currentTap;
-    queueSingleTapAction();
+    queueSingleTapAction(event.pointerType);
   };
 
   const cancelSeekTap = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -2174,13 +2206,23 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onMouseMove={handlePlayerInteraction}
         onFocus={handlePlayerInteraction}
         onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) return;
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            handlePlayerInteraction();
-          }
+          if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || status !== 'ready') return;
+          const target = event.target as HTMLElement;
+          if (target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')) return;
+          const isSpace = event.code === 'Space' || event.key === ' ';
+          const isToggleKey = event.code === 'KeyK' || event.key.toLowerCase() === 'k';
+          if (!isToggleKey && !(isSpace && !target.closest('button, a')) && !(event.key === 'Enter' && target === event.currentTarget)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          cancelSingleTapAction();
+          togglePlay();
+          handlePlayerInteraction();
         }}
-        onClick={() => setShowControls(visible => !visible)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget || status !== 'ready') return;
+          togglePlay();
+          handlePlayerInteraction();
+        }}
         onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
@@ -2195,6 +2237,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
+                if (event.pointerType === 'mouse') {
+                  event.currentTarget.closest<HTMLElement>('[aria-label="مشغل الفيديو"]')?.focus({ preventScroll: true });
+                }
                 event.currentTarget.setPointerCapture(event.pointerId);
                 seekPointerStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
               }}
@@ -2207,6 +2252,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
+                if (event.pointerType === 'mouse') {
+                  event.currentTarget.closest<HTMLElement>('[aria-label="مشغل الفيديو"]')?.focus({ preventScroll: true });
+                }
                 event.currentTarget.setPointerCapture(event.pointerId);
                 seekPointerStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
               }}

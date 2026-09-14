@@ -1,0 +1,1 @@
+{"type":"object","additionalProperties":false,"required":["summary","safeToDeploy","critical","reproduction","verification"],"properties":{"summary":{"type":"string"},"safeToDeploy":{"type":"boolean"},"critical":{"type":"boolean"},"reproduction":{"type":"string"},"verification":{"type":"string"}}}

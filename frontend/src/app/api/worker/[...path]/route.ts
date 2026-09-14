@@ -15,7 +15,7 @@ import { sanitizeAiJobStatus } from '@/lib/ai-job-status';
 const WORKER_URL = process.env.WORKER_URL || 'http://worker:3001';
 const WORKER_ADMIN_TOKEN = process.env.WORKER_ADMIN_TOKEN;
 const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
-const STAFF_ROLES = new Set(['Admin', 'Teacher']);
+const PRIVILEGED_ROLES = new Set(['Admin', 'Teacher']);
 
 function isAllowedWorkerRoute(method: string, path: string[]) {
   if (path.length === 2 && path[0] === 'status' && method === 'GET') return true;
@@ -24,10 +24,12 @@ function isAllowedWorkerRoute(method: string, path: string[]) {
   return false;
 }
 
-type CurrentUserResponse = {
-  roles?: string[];
+type CurrentSessionResponse = {
   data?: {
-    roles?: string[];
+    user?: {
+      roles?: string[];
+      permissions?: string[];
+    };
   };
 };
 
@@ -37,7 +39,7 @@ async function validateStaffAuthorization(authorization: string | null) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/auth/me`, {
+    const response = await fetch(`${API_URL}/auth/session`, {
       headers: { Authorization: authorization },
       cache: 'no-store',
     });
@@ -46,12 +48,13 @@ async function validateStaffAuthorization(authorization: string | null) {
       return { ok: false as const, status: 401, error: 'Authentication required' };
     }
 
-    const user = (await response.json()) as CurrentUserResponse;
-    const roles = user.roles ?? user.data?.roles ?? [];
-    const isStaff = roles.some((role) => STAFF_ROLES.has(role));
+    const session = (await response.json()) as CurrentSessionResponse;
+    const user = session.data?.user;
+    const isStaff = user?.roles?.some(role => PRIVILEGED_ROLES.has(role))
+      || user?.permissions?.some(permission => permission.toLowerCase() === 'content.manage');
 
     if (!isStaff) {
-      return { ok: false as const, status: 403, error: 'Staff role required' };
+      return { ok: false as const, status: 403, error: 'Content management permission required' };
     }
 
     return { ok: true as const };

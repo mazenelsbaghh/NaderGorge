@@ -79,6 +79,17 @@ def test_endpoint_inventory_markdown_includes_frontend_contract_sections():
     assert "No missing frontend-called backend routes." in markdown
 
 
+def test_same_origin_axios_override_is_a_next_route_while_default_video_calls_remain_backend_routes():
+    calls = [call for call in load_inventory()["frontendCalls"]
+             if call["source"]["file"] == "frontend/src/services/video-session-service.ts"]
+    browser_grants = [call for call in calls if call["path"] == "/api/video/session"]
+    assert browser_grants
+    assert all(call["origin"] == "next-api" for call in browser_grants)
+    backend_sessions = [call for call in calls if call["path"] == "/api/student/video-session"]
+    assert backend_sessions
+    assert all(call["origin"] == "backend-api" for call in backend_sessions)
+
+
 def test_internal_and_e2e_routes_are_classified_as_protected():
     endpoints = load_inventory()["endpoints"]
 

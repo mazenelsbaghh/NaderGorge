@@ -9,6 +9,7 @@ import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, 
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { formatCairoTimestamp } from '@/lib/cairo-time';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { StudentAssessmentHistory } from '@/components/admin/StudentAssessmentHistory';
 import {
@@ -1236,13 +1237,13 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                      <AdminStatCard
                        variant="light"
                        icon={Clock3}
-                       label="إجمالي زمن المشاهدة"
+                       label="إجمالي وقت احتساب المشاهدات"
                        value={formatDuration(studentData?.watchTracking?.totalWatchedSeconds || 0)}
                      />
                      <AdminStatCard
                        variant="muted"
                        icon={MonitorPlay}
-                       label="جلسات محتسبة"
+                       label="مشاهدات محتسبة"
                        value={studentData?.watchTracking?.activities?.reduce((sum, activity) => sum + activity.watchCount, 0) || 0}
                      />
                      <AdminStatCard
@@ -1253,7 +1254,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                      />
                   </div>
 
-                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                  <div className="bg-[var(--admin-bg)] p-3 sm:p-6 rounded-3xl shadow-sm">
                      <div className="mb-5">
                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
                        <p className="text-[var(--admin-muted)]">يشمل المحاضرات ذات نشاط فيديو أو امتحان أو واجب. حل الامتحان والواجب لا يثبت مشاهدة الفيديو، وغياب السجل لا يجزم بعدم المشاهدة.</p>
@@ -1332,7 +1333,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                        const termKey = `${pkg.packageName}-${term.termTitle}`;
                                        const isTermExpanded = !!expandedTerms[termKey];
                                        return (
-                                         <div key={term.termTitle} className="border border-[var(--admin-border)]/20 rounded-2xl overflow-hidden bg-[var(--admin-card-soft)]/50 mr-4">
+                                         <div key={term.termTitle} className="border border-[var(--admin-border)]/20 rounded-2xl overflow-hidden bg-[var(--admin-card-soft)]/50 sm:mr-4">
                                            {/* Term Row */}
                                            <div
                                              onClick={() => setExpandedTerms(prev => ({ ...prev, [termKey]: !prev[termKey] }))}
@@ -1353,7 +1354,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                  const lessonKey = `${termKey}-${lesson.lessonTitle}`;
                                                  const isLessonExpanded = !!expandedLessons[lessonKey];
                                                  return (
-                                                   <div key={lesson.lessonTitle} className="border border-[var(--admin-border)]/10 rounded-xl overflow-hidden mr-4 bg-[var(--admin-card-soft)]/20">
+                                                   <div key={lesson.lessonTitle} className="border border-[var(--admin-border)]/10 rounded-xl overflow-hidden sm:mr-4 bg-[var(--admin-card-soft)]/20">
                                                      {/* Lesson Row */}
                                                      <div
                                                        onClick={() => setExpandedLessons(prev => ({ ...prev, [lessonKey]: !prev[lessonKey] }))}
@@ -1369,9 +1370,9 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                      {isLessonExpanded && (
                                                        <div className="p-3 bg-[var(--admin-bg)] space-y-2 border-t border-[var(--admin-border)]/10">
                                                          {lesson.activities.map((activity) => (
-                                                           <div key={activity.lessonVideoId} className="flex flex-col items-stretch justify-between gap-4 rounded-xl border border-[var(--admin-border)]/20 bg-[var(--admin-card-soft)]/40 p-3 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-card-soft)] sm:flex-row sm:items-center mr-4">
+                                                           <div key={activity.lessonVideoId} className="flex min-w-0 flex-col items-stretch gap-3 rounded-xl border border-[var(--admin-border)]/20 bg-[var(--admin-card-soft)]/40 p-3 hover:bg-[var(--admin-card-soft)]">
                                                              {/* Video Details */}
-                                                             <div className="flex min-w-0 flex-1 items-start gap-2 sm:max-w-sm">
+                                                             <div className="flex min-w-0 items-start gap-2">
                                                                <MonitorPlay size={14} className="text-[var(--admin-primary)] shrink-0" />
                                                                <span className="whitespace-normal break-words text-xs font-medium leading-5 text-[var(--admin-text)]" title={activity.videoTitle}>{activity.videoTitle}</span>
                                                              </div>
@@ -1381,7 +1382,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                              )}
 
                                                              {/* Metrics */}
-                                                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--admin-muted)]">
+                                                             <div className="flex min-w-0 flex-wrap items-start gap-x-6 gap-y-3 break-words text-xs leading-6 text-[var(--admin-muted)]">
                                                                <div>
                                                                  <span className="font-bold">تقدم الفيديو:</span>{' '}
                                                                  {formatDuration(Math.floor(activity.learningWatchedSeconds ?? 0))} من{' '}
@@ -1390,37 +1391,38 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  {activity.isCompleted ? ' · مكتمل' : ''}
                                                                </div>
                                                                <div>
-                                                                 <span className="font-bold">وقت احتساب العدد:</span> {formatDuration(activity.watchedSeconds)}
+                                                                 <span className="font-bold">وقت احتساب المشاهدات التراكمي:</span> {formatDuration(activity.watchedSeconds)}
                                                                </div>
                                                                {!!activity.sessions?.length && (
-                                                                 <details className="w-full">
+                                                                 <details className="w-full min-w-0">
                                                                    <summary className="cursor-pointer font-bold">تفاصيل جلسات المشاهدة ({activity.sessions.length})</summary>
-                                                                   <p className="mt-2">الوقت الفعلي هو الوقت الذي قضاه الطالب، وقد يقل عن مدة الفيديو عند زيادة السرعة. الجلسة ليست بالضرورة مشاهدة محتسبة.</p>
+                                                                   <p className="mt-2">وقت الجلسة الفعلي هو مدة التشغيل المسجّلة فيها فقط. تقدم الفيديو ووقت احتساب المشاهدات تراكميان عبر الجلسات ويتأثران بسرعة التشغيل. فتح الفيديو وحده لا يعني مشاهدة محتسبة.</p>
                                                                    {activity.sessions.map((session) => (
                                                                      <div key={session.id} className="mt-2 rounded-lg border border-[var(--admin-border)]/20 p-2">
-                                                                       <span>{new Date(session.startedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}</span>
+                                                                       <span>بداية الجلسة بتوقيت القاهرة: <bdi>{formatCairoTimestamp(session.startedAt)}</bdi></span>
                                                                        <div>وقت المشاهدة الفعلي: {formatDuration(Math.floor(session.actualWatchedSeconds))} · مدة الفيديو: {session.durationSeconds ? formatDuration(session.durationSeconds) : 'غير متوفرة'}</div>
                                                                      </div>
                                                                    ))}
                                                                  </details>
                                                                )}
-                                                               <div dir="ltr">
-                                                                 <span className="font-bold" dir="rtl">متوسط السرعة:</span> {activity.averagePlaybackRate.toFixed(2).replace(/\.00$/, '')}×
+                                                               <div>
+                                                                 <span className="font-bold">متوسط سرعة احتساب المشاهدات:</span> <bdi dir="ltr">{activity.averagePlaybackRate.toFixed(2).replace(/\.00$/, '')}×</bdi>
                                                                </div>
                                                                {activity.playbackRateSeconds && Object.entries(activity.playbackRateSeconds).length > 0 && (
                                                                  <div className="w-full text-sm text-[var(--admin-muted)]">
-                                                                   <span className="font-bold">وقت كل سرعة:</span>{' '}
+                                                                   <span className="font-bold">الوقت الفعلي المحتسب لكل سرعة:</span>{' '}
                                                                    {Object.entries(activity.playbackRateSeconds)
                                                                      .sort(([first], [second]) => Number(first) - Number(second))
-                                                                     .map(([rate, seconds]) => `${rate}×: ${formatDuration(Math.round(seconds))}`)
-                                                                     .join(' · ')}
+                                                                     .map(([rate, seconds]) => (
+                                                                       <span key={rate} className="inline-block me-3"><bdi dir="ltr">{rate}×</bdi>: {formatDuration(Math.round(seconds))}</span>
+                                                                     ))}
                                                                  </div>
                                                                )}
                                                                <div>
-                                                                 <span className="font-bold">المشاهدات:</span> {activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}
+                                                                 <span className="font-bold">المشاهدات:</span> <bdi dir="ltr">{activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}</bdi>
                                                                </div>
                                                                <div>
-                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' }) : 'غير متوفر'}
+                                                                 <span className="font-bold">آخر تقدم مسجّل بتوقيت القاهرة:</span> <bdi>{activity.lastWatchedAt ? formatCairoTimestamp(activity.lastWatchedAt) : 'غير متوفر'}</bdi>
                                                                </div>
                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                  {activity.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
@@ -1443,7 +1445,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  setModalOpen('watchLimit');
                                                                }}
                                                                disabled={activity.maxWatchCount === 0}
-                                                               className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                                               className="flex min-h-10 self-start items-center gap-1.5 whitespace-nowrap rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                                                                title={activity.maxWatchCount === 0 ? 'المشاهدات غير محدودة' : 'إضافة مشاهدات مسموحة'}
                                                              >
                                                                <MonitorUp size={14} />

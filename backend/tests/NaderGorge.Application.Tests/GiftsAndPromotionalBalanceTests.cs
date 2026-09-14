@@ -312,6 +312,41 @@ public sealed class GiftsAndPromotionalBalanceTests
         Assert.Equal(1, recipient.UsesConsumed);
         Assert.False(recipient.AccessGrant!.IsActive);
         Assert.Equal(GiftRecipientStatus.Completed, recipient.Status);
+        var playback = await db.VideoPlaybackSessions.SingleAsync(x => x.Id == session.Data!.SessionId);
+        Assert.False(await access.HasAccessToVideoAsync(fixture.Student.Id, fixture.FirstVideo.Id));
+        Assert.True(await access.HasAccessToVideoSessionAsync(playback));
+    }
+
+    [Theory]
+    [InlineData("revoked-recipient")]
+    [InlineData("revoked-issuance")]
+    [InlineData("expired-grant")]
+    [InlineData("inactive-video")]
+    [InlineData("later-session")]
+    public async Task ExhaustedVideoGift_CannotAuthorizeRevokedContentOrANewSession(string denial)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedContentFixtureAsync(db);
+        var recipient = await SeedGiftVideoGrantAsync(db, fixture.Student.Id, fixture.FirstVideo.Id, maxUses: 1);
+        var access = new AccessCheckService(db);
+        var result = await new CreateVideoSessionCommandHandler(db, access, FakeEncryption.Instance, new GiftUsageService(db))
+            .Handle(new CreateVideoSessionCommand(fixture.FirstVideo.Id, fixture.Student.Id), CancellationToken.None);
+        Assert.True(result.Success, result.Message);
+        var playback = await db.VideoPlaybackSessions.SingleAsync(x => x.Id == result.Data!.SessionId);
+        switch (denial)
+        {
+            case "revoked-recipient":
+                recipient.Status = GiftRecipientStatus.Revoked;
+                recipient.RevokedAt = DateTime.UtcNow;
+                break;
+            case "revoked-issuance": recipient.GiftIssuance.Status = GiftIssuanceStatus.Revoked; break;
+            case "expired-grant": recipient.AccessGrant!.ExpiresAt = DateTime.UtcNow.AddMinutes(-1); break;
+            case "inactive-video": fixture.FirstVideo.IsActive = false; break;
+            case "later-session": playback.CreatedAt = DateTime.UtcNow.AddMinutes(1); break;
+        }
+        await db.SaveChangesAsync();
+
+        Assert.False(await access.HasAccessToVideoSessionAsync(playback));
     }
 
     [Fact]

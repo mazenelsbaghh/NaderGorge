@@ -404,7 +404,8 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
 
             // Delivery-billed batches were recorded by the audited confirmation endpoint.
             // Redeeming one of their codes must only grant access, never create a second due.
-            if (codeType != CodeType.Balance && accountingTrigger == TeacherAgreementTrigger.CodeActivation)
+            if (codeType != CodeType.Balance && !codeGroup.AccountingRecordedAt.HasValue && accountingTrigger == TeacherAgreementTrigger.CodeActivation
+                && !await CodeGroupAccountingGuard.HasBatchChargeAsync(_db, codeGroup.Id, ct))
             {
                 decimal itemPrice = 0;
                 switch (codeType)
@@ -456,13 +457,15 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                     CodeType.Exam => SalesTargetType.PublicExam,
                     _ => SalesTargetType.Platform
                 };
-                var targetId = codeGroup.PackageId
-                    ?? codeGroup.TermId
-                    ?? codeGroup.ContentSectionId
-                    ?? codeGroup.LessonId
-                    ?? codeGroup.PublicExamProductId
-                    ?? codeGroup.ExamId
-                    ?? codeGroup.Id;
+                var targetId = codeType switch
+                {
+                    CodeType.Package => codeGroup.PackageId ?? codeGroup.Id,
+                    CodeType.Term => codeGroup.TermId ?? codeGroup.Id,
+                    CodeType.Month => codeGroup.ContentSectionId ?? codeGroup.Id,
+                    CodeType.Lesson => codeGroup.LessonId ?? codeGroup.Id,
+                    CodeType.Exam => codeGroup.PublicExamProductId ?? codeGroup.ExamId ?? codeGroup.Id,
+                    _ => codeGroup.Id
+                };
                 var occurredAt = DateTime.UtcNow;
                 TeacherAgreementResolution? agreement = null;
                 if (teacherProfile != null)

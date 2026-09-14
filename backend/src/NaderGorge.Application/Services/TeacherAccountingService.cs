@@ -163,7 +163,7 @@ public class TeacherAccountingService
             .Where(a => a.TeacherFinancialEvent.StudentId == studentId
                 && a.TeacherFinancialEvent.TargetType == targetType
                 && a.TeacherFinancialEvent.TargetId == targetId
-                && a.TeacherShareAmount > 0m
+                && a.TeacherShareAmount > a.ReversedAmount
                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Reversed
                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Debt
                 && a.ReviewStatus != TeacherFinancialReviewStatus.Rejected
@@ -198,14 +198,15 @@ public class TeacherAccountingService
 
         foreach (var allocation in allocations)
         {
+            var remainingShare = allocation.TeacherShareAmount - allocation.ReversedAmount;
             reversalEvent.Allocations.Add(new TeacherFinancialAllocation
             {
                 Id = Guid.NewGuid(),
                 TeacherId = allocation.TeacherId,
                 AllocationMode = TeacherAllocationMode.Reversal,
-                AllocationValue = allocation.TeacherShareAmount,
+                AllocationValue = remainingShare,
                 GrossBasisAmount = -allocation.GrossBasisAmount,
-                TeacherShareAmount = -allocation.TeacherShareAmount,
+                TeacherShareAmount = -remainingShare,
                 PlatformShareAmount = -allocation.PlatformShareAmount,
                 StudentNameSnapshot = allocation.StudentNameSnapshot,
                 StudentPhoneSnapshot = allocation.StudentPhoneSnapshot,
@@ -225,7 +226,7 @@ public class TeacherAccountingService
                     TeacherId = allocation.TeacherId,
                     RelatedFinancialEventId = allocation.TeacherFinancialEventId,
                     RelatedPayoutId = allocation.PayoutId,
-                    Amount = -allocation.TeacherShareAmount,
+                    Amount = -remainingShare,
                     Reason = reason,
                     Status = TeacherPayoutAdjustmentStatus.Open
                 });
@@ -235,16 +236,17 @@ public class TeacherAccountingService
                 var account = await _db.TeacherAccounts.FirstOrDefaultAsync(a => a.TeacherId == allocation.TeacherId, ct);
                 if (account != null)
                 {
-                    account.TotalEarnings = Math.Max(0m, account.TotalEarnings - allocation.TeacherShareAmount);
-                    account.CurrentBalance = Math.Max(0m, account.CurrentBalance - allocation.TeacherShareAmount);
+                    account.TotalEarnings = Math.Max(0m, account.TotalEarnings - remainingShare);
+                    account.CurrentBalance = Math.Max(0m, account.CurrentBalance - remainingShare);
                     if (allocation.PayoutStatus == TeacherFinancialPayoutStatus.Reserved)
                     {
-                        account.ReservedBalance = Math.Max(0m, account.ReservedBalance - allocation.TeacherShareAmount);
+                        account.ReservedBalance = Math.Max(0m, account.ReservedBalance - remainingShare);
                     }
                     account.UpdatedAt = DateTime.UtcNow;
                 }
             }
 
+            allocation.ReversedAmount = allocation.TeacherShareAmount;
             allocation.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
             allocation.PayoutStatus = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid
                 ? TeacherFinancialPayoutStatus.Debt

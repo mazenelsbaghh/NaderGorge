@@ -7,6 +7,9 @@ public static class VideoPlaybackSessionPolicy
     public static readonly TimeSpan MaximumLifetime = TimeSpan.FromHours(8);
     private static readonly TimeSpan PlaybackMargin = TimeSpan.FromMinutes(30);
 
+    public static DateTime MediaExpiresAt(DateTime sessionExpiresAt, DateTime now) =>
+        sessionExpiresAt < now.AddMinutes(5) ? sessionExpiresAt : now.AddMinutes(5);
+
     public static TimeSpan ResolveLifetime(int? durationSeconds)
     {
         if (durationSeconds is null or <= 0)

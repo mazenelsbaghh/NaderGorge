@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, Clock3, Coffee, RefreshCw, Search, TimerOff, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AdminColumn, AdminDataTable, AdminPage, AdminStatCard } from '@/components/admin';
+import { isAxiosError } from 'axios';
+import { useAuthStore } from '@/stores/auth-store';
+import { isFullAdmin } from '@/packages/admin/route-permissions';
+import { AdminColumn, AdminDataTable, AdminModal, AdminPage, AdminStatCard } from '@/components/admin';
 import { AdminBreakSessionDto, AdminDailyAttendanceReportDto, hrService } from '@/services/hr-service';
 import { formatCairoDateTime, parseUtcDateTime } from '@/lib/cairo-time';
 
@@ -12,6 +15,10 @@ const cairoToday = () => new Intl.DateTimeFormat('en-CA', {
 }).format(new Date());
 
 export default function HrAdminPageClient() {
+  const canCancel = useAuthStore((state) => isFullAdmin(state.user));
+  const [cancellation, setCancellation] = useState<{ session: AdminBreakSessionDto; eventType: 'ClockIn' | 'ClockOut' } | null>(null);
+  const [reason, setReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const today = useMemo(cairoToday, []);
   const [sessions, setSessions] = useState<AdminBreakSessionDto[]>([]);
   const [dailyReport, setDailyReport] = useState<AdminDailyAttendanceReportDto[]>([]);
@@ -61,7 +68,7 @@ export default function HrAdminPageClient() {
     if (!query) return sessions;
     return sessions.filter((item) => item.employee.toLocaleLowerCase('ar').includes(query) || item.employeePhone.includes(query));
   }, [search, sessions]);
-  const active = sessions.filter((item) => !item.clockedOutAt);
+  const active = sessions.filter((item) => item.state !== 'Cancelled' && !item.clockedOutAt);
   const onBreak = active.filter((item) => item.openBreak);
   const late = sessions.filter((item) => item.lateMinutes > 0);
   const visibleDailyReport = useMemo(() => {
@@ -72,7 +79,7 @@ export default function HrAdminPageClient() {
 
   const elapsedTodayMinutes = (clockedInAt: string) =>
     Math.max(0, Math.floor((now - serverClockOffsetMs - parseUtcDateTime(clockedInAt).getTime()) / 60_000));
-  const durationMinutes = (row: AdminBreakSessionDto) => row.clockedOutAt
+  const durationMinutes = (row: AdminBreakSessionDto) => row.state === 'Cancelled' ? 0 : row.clockedOutAt
     ? row.workedMinutes
     : elapsedTodayMinutes(row.clockedInAt);
   const openBreakMinutes = (row: AdminDailyAttendanceReportDto) => row.openBreakStartedAt
@@ -86,11 +93,29 @@ export default function HrAdminPageClient() {
   const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} س ${Math.max(0, minutes % 60)} د`;
   const formatTime = (value: string) => formatCairoDateTime(value, { hour: '2-digit', minute: '2-digit' });
 
+  const cancelEvent = async () => {
+    if (!cancellation || !reason.trim() || cancelling) return;
+    setCancelling(true);
+    try {
+      const result = await hrService.cancelAttendanceEvent(cancellation.session.id, {
+        eventType: cancellation.eventType, expectedVersion: cancellation.session.version, reason: reason.trim(),
+      });
+      if (!result.success) { toast.error(result.message || 'تعذر إلغاء التسجيل'); return; }
+      toast.success(cancellation.eventType === 'ClockIn' ? 'تم إلغاء الحضور' : 'تم إلغاء الانصراف وإعادة فتح الجلسة');
+      setCancellation(null);
+      setReason('');
+      await load();
+    } catch (error) {
+      toast.error(isAxiosError(error) ? error.response?.data?.message || 'تعذر إلغاء التسجيل' : 'تعذر إلغاء التسجيل');
+      await load(true);
+    } finally { setCancelling(false); }
+  };
+
   const columns: AdminColumn<AdminBreakSessionDto>[] = [
     { key: 'employee', label: 'الموظف', render: (row) => <div><p className="font-black">{row.employee}</p><p className="mt-0.5 text-xs text-[var(--admin-muted)]" dir="ltr">{row.employeePhone}</p></div> },
     { key: 'workDate', label: 'اليوم', render: (row) => <span className="font-bold" dir="ltr">{row.workDate}</span> },
     { key: 'clockedInAt', label: 'حضور', render: (row) => <span className="font-bold">{formatTime(row.clockedInAt)}</span> },
-    { key: 'clockedOutAt', label: 'الحالة الآن', render: (row) => row.clockedOutAt
+    { key: 'clockedOutAt', label: 'الحالة الآن', render: (row) => row.state === 'Cancelled' ? <span className="font-bold text-rose-700">حضور ملغى</span> : row.clockedOutAt
       ? <span className="inline-flex rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">انصرف {formatTime(row.clockedOutAt)}</span>
       : row.openBreak
         ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800"><Coffee className="h-3.5 w-3.5" />في استراحة</span>
@@ -99,6 +124,12 @@ export default function HrAdminPageClient() {
     { key: 'lateMinutes', label: 'التأخير', render: (row) => row.lateMinutes > 0 ? <span className="font-black text-rose-700">{row.lateMinutes} د</span> : '—' },
     { key: 'overtimeMinutes', label: 'الإضافي', render: (row) => row.overtimeMinutes > 0 ? <span className="font-black text-emerald-700">{row.overtimeMinutes} د</span> : '—' },
   ];
+  if (canCancel) columns.push({
+    key: 'actions', label: 'تصحيح التسجيل', render: (row) => row.state === 'Cancelled' ? '—' : <div className="flex flex-wrap gap-2">
+      <button type="button" className="admin-btn-secondary min-h-11 text-rose-700" onClick={() => { setReason(''); setCancellation({ session: row, eventType: 'ClockIn' }); }}>إلغاء الحضور</button>
+      {row.clockedOutAt && <button type="button" className="admin-btn-secondary min-h-11" onClick={() => { setReason(''); setCancellation({ session: row, eventType: 'ClockOut' }); }}>إلغاء الانصراف</button>}
+    </div>,
+  });
   const dailyColumns: AdminColumn<AdminDailyAttendanceReportDto>[] = [
     { key: 'employee', label: 'الموظف', render: (row) => <div><p className="font-black">{row.employee}</p><p className="mt-0.5 text-xs text-[var(--admin-muted)]" dir="ltr">{row.employeePhone}</p></div> },
     { key: 'workDate', label: 'اليوم', render: (row) => <span className="font-bold" dir="ltr">{row.workDate}</span> },
@@ -129,5 +160,19 @@ export default function HrAdminPageClient() {
       <section className="space-y-3"><div><h2 className="text-lg font-black">تقرير دوام الموظفين اليومي</h2><p className="mt-1 text-sm font-bold text-[var(--admin-muted)]">وقت الحضور والانصراف وصافي مدة العمل لكل موظف في كل يوم.</p></div><AdminDataTable data={visibleDailyReport} columns={dailyColumns} loading={loading} rowKey={(row) => `${row.employeeId}-${row.workDate}`} emptyMessage="لا توجد بيانات دوام في الفترة المحددة." /></section>
       <section className="space-y-3"><div><h2 className="text-lg font-black">المتابعة اللحظية والجلسات</h2><p className="mt-1 text-sm font-bold text-[var(--admin-muted)]">تتحدث تلقائيًا لمتابعة الموظفين الموجودين حاليًا داخل الشفت أو الاستراحة.</p></div><AdminDataTable data={visibleSessions} columns={columns} loading={loading} rowKey={(row) => row.id} emptyMessage="لا توجد جلسات حضور في الفترة المحددة." /></section>
     </div>
+    <AdminModal open={!!cancellation} onClose={() => { if (!cancelling) setCancellation(null); }} title={cancellation?.eventType === 'ClockIn' ? 'إلغاء تسجيل الحضور' : 'إلغاء تسجيل الانصراف'}>
+      {cancellation && <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void cancelEvent(); }}>
+        <p className="font-bold">{cancellation.session.employee} · {cancellation.session.workDate}</p>
+        <p className="text-sm text-[var(--admin-muted)]">{cancellation.eventType === 'ClockIn'
+          ? 'سيُلغى حضور الجلسة بالكامل ولن تُحسب مدتها أو تأخيرها. سيظل السجل محفوظًا للمراجعة، ويمكن للموظف تسجيل حضور جديد.'
+          : 'سيُلغى وقت الانصراف وتعود الجلسة مفتوحة، حتى يسجل الموظف الانصراف الصحيح.'}</p>
+        <label className="block text-sm font-bold">سبب الإلغاء<textarea required maxLength={1000} value={reason} disabled={cancelling} onChange={(event) => setReason(event.target.value)} className="admin-input mt-2 w-full" rows={3} /></label>
+        <p className="text-xs text-[var(--admin-muted)]">سيُسجل اسمك وسبب الإلغاء في سجل المراجعة.</p>
+        <div className="flex gap-2">
+          <button type="submit" disabled={cancelling || !reason.trim()} className="admin-btn-primary min-h-11">{cancelling ? 'جارٍ الإلغاء…' : 'تأكيد إلغاء التسجيل'}</button>
+          <button type="button" disabled={cancelling} className="admin-btn-secondary min-h-11" onClick={() => setCancellation(null)}>رجوع</button>
+        </div>
+      </form>}
+    </AdminModal>
   </AdminPage>;
 }

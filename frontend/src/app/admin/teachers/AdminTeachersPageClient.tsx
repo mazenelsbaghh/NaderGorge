@@ -428,7 +428,8 @@ export default function AdminTeachersPageClient() {
   // Form states
   const [bio, setBio] = useState('');
   const [contactInfo, setContactInfo] = useState('');
-  const [commissionRate, setCommissionRate] = useState('0');
+  const [commissionRate, setCommissionRate] = useState('75');
+  const [financePreset, setFinancePreset] = useState<'Standard' | 'SandyAshraf' | 'Nader'>('Standard');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [showOnLanding, setShowOnLanding] = useState(true);
   const [isVisibleToStudents, setIsVisibleToStudents] = useState(true);
@@ -488,7 +489,8 @@ export default function AdminTeachersPageClient() {
       setPassword('');
       setBio(teacher.bio || '');
       setContactInfo(teacher.contactInfo || '');
-      setCommissionRate(String(teacher.commissionRate ?? 0));
+      setCommissionRate(String(teacher.commissionRate ?? 75));
+      setFinancePreset(teacher.financePreset ?? 'Standard');
       setProfileImageUrl(teacher.profileImageUrl || '');
       setShowOnLanding(teacher.showOnLanding);
       setIsVisibleToStudents(teacher.isVisibleToStudents);
@@ -518,7 +520,8 @@ export default function AdminTeachersPageClient() {
       setPassword('');
       setBio('');
       setContactInfo('');
-      setCommissionRate('0');
+      setCommissionRate('75');
+    setFinancePreset('Standard');
       setProfileImageUrl('');
       setShowOnLanding(true);
       setIsVisibleToStudents(true);
@@ -546,7 +549,8 @@ export default function AdminTeachersPageClient() {
     setPassword('');
     setBio('');
     setContactInfo('');
-    setCommissionRate('0');
+    setCommissionRate('75');
+    setFinancePreset('Standard');
     setProfileImageUrl('');
     setShowOnLanding(true);
     setIsVisibleToStudents(true);
@@ -659,7 +663,7 @@ export default function AdminTeachersPageClient() {
           const userId = userRes.data.id;
 
           const teacherRes = await teacherService.createTeacher({
-            userId,
+            userId, financePreset,
             bio: bio.trim(),
             specialization: gradesString, // Store selected grades as specialization
             commissionRate: Number(commissionRate) || 0,
@@ -1025,8 +1029,15 @@ export default function AdminTeachersPageClient() {
                       <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                     </div>
                   </div>
+                  {!editingTeacher && <div className="space-y-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 md:col-span-2">
+                    <label className="block text-sm font-bold">القواعد الافتراضية لنصيب المنصة<select value={financePreset} disabled={isSaving} onChange={(event) => setFinancePreset(event.target.value as typeof financePreset)} className="admin-input mt-2 w-full">
+                      <option value="Standard">المدرسون — القاعدة العامة</option><option value="SandyAshraf">استثناء ساندي وأشرف</option><option value="Nader">استثناء نادر</option>
+                    </select></label>
+                    <p className="text-sm">الحصة: {financePreset === 'SandyAshraf' ? '12.50' : '15'} جنيه · الشهر: {financePreset === 'Nader' ? '30' : financePreset === 'SandyAshraf' ? '50' : '60'} جنيه · {financePreset === 'Nader' ? 'الترم: 100 جنيه · السنة: 250 جنيه' : 'الترم والسنة: 25% من سعر البيع بعد الخصم'}</p>
+                    <p className="text-xs text-[var(--admin-muted)]">تُحفظ القواعد للمبيعات والأكواد، والباقي للمدرس. يمكن تعديل الاتفاقات من مركز حساب المدرس. {financePreset === 'Nader' ? 'أكواد نادر تُحسب عند أول استخدام فقط.' : 'الأكواد تُحسب عند التفعيل افتراضيًا، أو عند تأكيد التسليم حسب إعداد الدفعة.'}</p>
+                  </div>}
                   <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة عمولة المدرس (%)</label>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة المدرس للحالات خارج الاتفاقات (%)</label>
                     <input type="number" min="0" max="100" step="0.01" disabled={isSaving} value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition" />
                   </div>
 

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { databasePool } from '../config/database.js';
+import { inactiveStudentsSql, inactivityReason, resolveActiveWarningsSql } from './commitment-activity.js';
 dotenv.config();
 
 const pool = databasePool();
@@ -25,19 +26,11 @@ export async function runNightlySweep(context?: { signal: AbortSignal }) {
         context?.signal.throwIfAborted();
         await client.query('BEGIN');
         
-        // MVP Sweep Logic:
-        // 1. Identify students who haven't logged in for 7 days
-        // 2. Insert warning events for them
-        
-        const res = await client.query(`
-            SELECT "Id" FROM "users" 
-            WHERE "Id" IN (SELECT "UserId" FROM "user_roles" r JOIN "roles" rol ON r."RoleId" = rol."Id" WHERE rol."Name" = 'Student')
-            AND "Id" NOT IN (
-                SELECT "StudentId" FROM "student_status_trackers" 
-                WHERE "LastActiveAt" >= NOW() - INTERVAL '7 days'
-            )
-        `);
-        
+        // Serialize repeated/manual sweeps as well as the scheduled cluster job.
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('commitment-inactivity-sweep'))");
+        await client.query(resolveActiveWarningsSql, [inactivityReason]);
+        const res = await client.query(inactiveStudentsSql, [inactivityReason]);
+
         const inactiveStudents = res.rows;
         
         if (inactiveStudents.length > 0) {
@@ -52,7 +45,7 @@ export async function runNightlySweep(context?: { signal: AbortSignal }) {
                     INSERT INTO "warning_events" ("Id", "StudentId", "Severity", "TriggerReason", "IsResolved", "OccurrenceKey", "CreatedAt")
                     VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     ON CONFLICT ("OccurrenceKey") DO NOTHING
-                `, [warningId, student.Id, 1, 'Inactive for more than 7 days', false, occurrenceKey]);
+                `, [warningId, student.Id, 1, inactivityReason, false, occurrenceKey]);
             }
         } else {
             console.log('[CommitmentEngine] No inactive students found.');

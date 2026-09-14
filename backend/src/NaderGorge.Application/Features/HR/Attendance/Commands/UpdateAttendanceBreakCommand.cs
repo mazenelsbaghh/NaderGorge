@@ -38,6 +38,7 @@ public sealed class UpdateAttendanceBreakCommandHandler : IRequestHandler<Update
         var startedAt = ToUtc(request.StartedAt);
         DateTime? endedAt = request.EndedAt.HasValue ? ToUtc(request.EndedAt.Value) : null;
         var session = attendanceBreak.AttendanceSession!;
+        if (session.State == AttendanceSessionState.Cancelled) return ApiResponse<bool>.Fail("جلسة الحضور ملغاة", ["ATTENDANCE_CANCELLED"]);
         if (!IsValidRange(session, startedAt, endedAt)) return ApiResponse<bool>.Fail("وقت البريك خارج نطاق جلسة الدوام", ["BREAK_TIME_INVALID"]);
 
         var before = new { attendanceBreak.StartedAt, attendanceBreak.EndedAt, attendanceBreak.Version };

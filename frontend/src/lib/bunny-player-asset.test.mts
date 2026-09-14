@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
+const routePath = new URL('./video-embed-html.ts', import.meta.url);
 const securePlayerPath = new URL('../components/video/SecureVideoPlayer.tsx', import.meta.url);
 const playerBridgePath = new URL('../../public/vendor/playerjs/player-0.1.0.min.js', import.meta.url);
 

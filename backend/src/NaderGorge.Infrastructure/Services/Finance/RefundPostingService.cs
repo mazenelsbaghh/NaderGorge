@@ -17,7 +17,7 @@ public sealed class RefundPostingService(IAppDbContext db, IFinancialPostingServ
             : "1100";
         var lines = new List<FinancialPostingLine>
         {
-            new("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId),
+            new("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId),
             new(creditAccount, 0m, refund.TotalAmount, StudentId: refund.StudentId, TreasuryAccountId: refund.TreasuryAccountId)
         };
         if (refund.TeacherAmount > 0m)

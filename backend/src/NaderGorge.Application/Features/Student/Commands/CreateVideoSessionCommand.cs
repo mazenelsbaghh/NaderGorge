@@ -343,7 +343,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     video.BunnyStreamLibrary.HlsCdnHostname,
                     video.ProviderVideoId,
                     tokenKey,
-                    session.ExpiresAt);
+                    VideoPlaybackSessionPolicy.MediaExpiresAt(session.ExpiresAt, now));
                 sessionProvider = "bunny-hls";
             }
             catch (Exception exception) when (exception is CryptographicException or InvalidOperationException or ArgumentException)

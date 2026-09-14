@@ -188,6 +188,8 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             return ApiResponse<BulkGenerateCodesResponse>.Fail("Selected teacher does not match the selected content.");
 
         var groupTeacherId = targetTeacherId ?? explicitTeacherId;
+        var activationOnly = groupTeacherId.HasValue && await _db.TeacherProfiles.AnyAsync(x => x.Id == groupTeacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct);
+        var accountingTiming = activationOnly ? CodeAccountingTiming.OnActivation : request.AccountingTiming;
         var targetPricing = await ResolveTargetPricingAsync(request, ct);
 
         var scopeValidation = await ValidateAcademicTargetsHaveScopeAsync(request, ct);
@@ -253,7 +255,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             RevenueOwner = request.RevenueOwner,
             RevenueAllocationMode = request.RevenueAllocationMode,
             RevenueAllocationValue = request.RevenueAllocationValue,
-            AccountingTiming = request.AccountingTiming,
+            AccountingTiming = accountingTiming,
             ExpiresAt = expiresAt,
             ExpireActivatedAccess = request.ExpireActivatedAccess,
             CreatedByUserId = request.AdminId,
@@ -267,7 +269,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         {
             Id = Guid.NewGuid(),
             CodeGroupId = group.Id,
-            Trigger = request.AccountingTiming == CodeAccountingTiming.Immediate
+            Trigger = accountingTiming == CodeAccountingTiming.Immediate
                 ? TeacherAgreementTrigger.CodeDelivery
                 : TeacherAgreementTrigger.CodeActivation,
             UpdatedByUserId = request.AdminId

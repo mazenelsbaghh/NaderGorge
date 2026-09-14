@@ -26,6 +26,9 @@ public interface IAccessCheckService
     // Check lesson-level access or a direct grant to this video.
     Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default);
 
+    Task<bool> HasAccessToVideoSessionAsync(Entities.VideoPlaybackSession session, CancellationToken ct = default) =>
+        HasAccessToVideoAsync(session.UserId, session.LessonVideoId, ct);
+
     async Task<IReadOnlySet<Guid>> GetAccessibleVideoIdsAsync(
         Guid userId,
         IReadOnlyCollection<Guid> lessonVideoIds,

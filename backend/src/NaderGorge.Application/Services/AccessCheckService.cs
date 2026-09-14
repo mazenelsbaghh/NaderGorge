@@ -150,7 +150,13 @@ public class AccessCheckService : IAccessCheckService
             .ToHashSet();
     }
 
-    public async Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default)
+    public Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default) =>
+        HasVideoAccessAsync(userId, lessonVideoId, null, ct);
+
+    public Task<bool> HasAccessToVideoSessionAsync(Domain.Entities.VideoPlaybackSession session, CancellationToken ct = default) =>
+        HasVideoAccessAsync(session.UserId, session.LessonVideoId, session.CreatedAt, ct);
+
+    private async Task<bool> HasVideoAccessAsync(Guid userId, Guid lessonVideoId, DateTime? sessionStartedAt, CancellationToken ct)
     {
         if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Video, lessonVideoId, ct))
             return false;
@@ -185,10 +191,18 @@ public class AccessCheckService : IAccessCheckService
         var now = DateTime.UtcNow;
         var hasDirectVideoAccess = await _db.StudentAccessGrants.AnyAsync(g =>
             g.UserId == userId &&
-            g.IsActive &&
             g.GrantType == CodeType.Video &&
             (g.ExpiresAt == null || g.ExpiresAt > now) &&
-            (g.MaxUses == null || g.UsesConsumed < g.MaxUses) &&
+            ((g.IsActive && (g.MaxUses == null || g.UsesConsumed < g.MaxUses)) ||
+             // Starting the last gifted watch consumes the grant; that same session must still play.
+             (sessionStartedAt != null && !g.IsActive && g.LessonVideoId == lessonVideoId &&
+              g.MaxUses != null && g.UsesConsumed >= g.MaxUses && g.UpdatedAt >= sessionStartedAt &&
+              g.GiftRecipient != null && g.GiftRecipient.StudentId == userId &&
+              g.GiftRecipient.Status == GiftRecipientStatus.Completed && g.GiftRecipient.RevokedAt == null &&
+              g.GiftRecipient.UpdatedAt >= sessionStartedAt &&
+              g.GiftRecipient.GiftIssuance.Status != GiftIssuanceStatus.Revoked &&
+              g.GiftRecipient.GiftIssuance.Status != GiftIssuanceStatus.Expired &&
+              (g.GiftRecipient.GiftIssuance.ExpiresAt == null || g.GiftRecipient.GiftIssuance.ExpiresAt > now))) &&
             (
                 g.LessonVideoId == lessonVideoId ||
                 (

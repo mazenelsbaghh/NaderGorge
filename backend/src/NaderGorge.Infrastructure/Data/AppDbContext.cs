@@ -30,6 +30,10 @@ public class AppDbContext : DbContext, IAppDbContext
         _userSecurityStateCache = userSecurityStateCache;
     }
 
+    public DbSet<AutoRepairIncident> AutoRepairIncidents => Set<AutoRepairIncident>();
+    public DbSet<AutoRepairControl> AutoRepairControls => Set<AutoRepairControl>();
+    public DbSet<AutoRepairLogReceipt> AutoRepairLogReceipts => Set<AutoRepairLogReceipt>();
+    public DbSet<AutoRepairEvent> AutoRepairEvents => Set<AutoRepairEvent>();
     public DbSet<VideoLearningConfiguration> VideoLearningConfigurations => Set<VideoLearningConfiguration>();
     public DbSet<VideoLearningEntry> VideoLearningEntries => Set<VideoLearningEntry>();
     public DbSet<User> Users => Set<User>();
@@ -349,6 +353,16 @@ public class AppDbContext : DbContext, IAppDbContext
         if (Database.IsNpgsql())
             modelBuilder.HasSequence<long>("live_support_event_sequence");
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<AutoRepairIncident>(b =>
+        {
+            b.HasIndex(x => x.Fingerprint).IsUnique();
+            b.HasIndex(x => new { x.Status, x.FirstSeen });
+            b.Property(x => x.Fingerprint).HasMaxLength(64);
+            b.HasMany(x => x.Events).WithOne().HasForeignKey(x => x.IncidentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AutoRepairEvent>().HasIndex(x => new { x.IncidentId, x.Id });
+        modelBuilder.Entity<AutoRepairLogReceipt>().HasIndex(x => x.Timestamp);
+        modelBuilder.Entity<AutoRepairControl>().HasData(new AutoRepairControl());
         modelBuilder.Entity<VideoLearningConfiguration>(b =>
         {
             b.HasIndex(x => x.LessonVideoId).IsUnique();

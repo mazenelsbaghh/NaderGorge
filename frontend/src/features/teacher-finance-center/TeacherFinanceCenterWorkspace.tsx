@@ -106,7 +106,8 @@ const allocationLabels: Record<TeacherAgreementAllocationMode, string> = {
   Percentage: 'نسبة مئوية',
   FixedPerSale: 'مبلغ ثابت لكل بيع',
   FixedPerCode: 'مبلغ ثابت لكل كود',
-  FixedPerBatch: 'مبلغ ثابت للدفعة',
+  FixedPerBatch: 'مبلغ المدرس الثابت للدفعة',
+  PlatformFixedPerUnit: 'نصيب المنصة الثابت لكل بيع / كود',
 };
 
 const freshDraft = (): AgreementDraft => ({

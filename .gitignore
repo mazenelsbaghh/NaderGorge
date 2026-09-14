@@ -80,3 +80,6 @@ artifacts/production/legacy-authoritative-*/capture/*-assets.tar.gpg
 .env.production.local
 
 .env.prod
+
+# Raw production account export used only for local migration verification.
+artifacts/teacher-defaults/production-teachers.txt

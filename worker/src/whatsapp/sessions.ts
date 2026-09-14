@@ -3,6 +3,7 @@ import { pino } from 'pino';
 import QRCode from 'qrcode';
 import type { Pool } from 'pg';
 import { BaileysStateStore } from './store.js';
+import { currentWhatsAppVersion } from './version.js';
 
 const logger = pino({ level: 'silent' });
 type Session = { accountId: string; socket: WASocket; state: string; qr?: string; qrExpiresAt?: number; stopped: boolean; retries: number };
@@ -37,8 +38,9 @@ export class BaileysSessions {
     const accounts = await this.pool.query<{ Id: string }>('SELECT "Id" FROM live_support_whatsapp_accounts WHERE "InstanceName"=$1', [sessionId]);
     const account = accounts.rows[0];
     if (!account) throw new Error('Unknown account');
+    const version = await currentWhatsAppVersion();
     const auth = await this.store.auth(account.Id);
-    const socket = makeWASocket({ auth: auth.state, logger, markOnlineOnConnect: false,
+    const socket = makeWASocket({ version, auth: auth.state, logger, markOnlineOnConnect: false,
       syncFullHistory: false, shouldSyncHistoryMessage: () => false,
       shouldIgnoreJid: jid => jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@newsletter') });
     const session: Session = { accountId: account.Id, socket, state: 'connecting', stopped: false, retries: this.sessions.get(sessionId)?.retries ?? 0 };
@@ -118,7 +120,8 @@ export class BaileysSessions {
   async connection(sessionId: string): Promise<{ instance: { state: string }; base64?: string }> {
     const session = await this.start(sessionId);
     const deadline = Date.now() + 15_000;
-    while (!session.qr && session.state === 'connecting' && Date.now() < deadline)
+    while ((!session.qr || (session.qrExpiresAt ?? 0) <= Date.now())
+      && session.state === 'connecting' && Date.now() < deadline)
       await new Promise(resolve => setTimeout(resolve, 200));
     return { instance: { state: session.state }, ...(session.qr && (session.qrExpiresAt ?? 0) > Date.now() ? { base64: session.qr } : {}) };
   }

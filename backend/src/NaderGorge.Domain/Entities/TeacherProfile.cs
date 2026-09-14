@@ -9,6 +9,7 @@ public class TeacherProfile : BaseEntity
 
     public string Bio { get; set; } = string.Empty;
     public string Specialization { get; set; } = string.Empty;
+    public NaderGorge.Domain.Enums.TeacherFinancePreset FinancePreset { get; set; }
     public decimal CommissionRate { get; set; }
     public string? ProfileImageUrl { get; set; }
     public string ContactInfo { get; set; } = string.Empty;

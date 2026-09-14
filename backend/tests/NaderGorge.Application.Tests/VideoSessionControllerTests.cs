@@ -21,6 +21,7 @@ public sealed class VideoSessionControllerTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var session = ActiveSession();
+        await SeedPlaybackAccessAsync(db, session);
         session.IsConsumed = true;
         var encryption = new VideoEncryptionService();
         session.EncryptionKey = encryption.GenerateSessionKey();
@@ -29,14 +30,11 @@ public sealed class VideoSessionControllerTests
         db.PlatformSettings.Add(new PlatformSetting { Key = PlatformSettingKeys.WatermarkShowName, Value = "false" });
         await db.SaveChangesAsync();
 
-        var controller = new VideoSessionController(null!, db, NullLogger<VideoSessionController>.Instance)
-        {
-            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
-        };
+        var controller = StudentController(session.UserId, db, NullLogger<VideoSessionController>.Instance);
 
         var service = new VideoSessionMaterialService(db, encryption, new BunnyHlsUrlSigner(),
             new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider()));
-        var response = await controller.GetEmbedMaterial(session.Id, service, true, CancellationToken.None);
+        var response = await controller.GetEmbedMaterial(session.Id, service, new AccessCheckService(db), true, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(response);
         var material = Assert.IsType<VideoEmbedMaterialResponse>(ok.Value);
@@ -44,6 +42,8 @@ public sealed class VideoSessionControllerTests
         Assert.Equal(session.EncryptionKey, material.Key);
         Assert.Equal("false", material.WatermarkSettings?[PlatformSettingKeys.WatermarkShowName]);
         Assert.Equal(session.UserId.ToString(), material.StudentId);
+        Assert.Equal(session.ExpiresAt, material.ExpiresAt);
+        Assert.Equal("no-store", controller.Response.Headers.CacheControl);
     }
 
     [Fact]
@@ -55,11 +55,58 @@ public sealed class VideoSessionControllerTests
         db.VideoPlaybackSessions.Add(session);
         await db.SaveChangesAsync();
 
-        var controller = new VideoSessionController(null!, db, NullLogger<VideoSessionController>.Instance);
+        var controller = StudentController(session.UserId, db, NullLogger<VideoSessionController>.Instance);
 
-        var response = await controller.GetEmbedMaterial(session.Id, null!, false, CancellationToken.None);
+        var response = await controller.GetEmbedMaterial(session.Id, null!, new AccessCheckService(db), false, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(response);
+    }
+
+    [Theory]
+    [InlineData("different-user", 404)]
+    [InlineData("anonymous", 401)]
+    [InlineData("revoked-grant", 403)]
+    [InlineData("inactive-account", 403)]
+    [InlineData("expired", 404)]
+    public async Task GetEmbedMaterial_DeniesUnauthorizedSessionBeforeIssuingMaterial(string denial, int expectedStatus)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var session = ActiveSession();
+        var (user, grant) = await SeedPlaybackAccessAsync(db, session);
+        db.VideoPlaybackSessions.Add(session);
+        if (denial == "revoked-grant") grant.IsActive = false;
+        if (denial == "inactive-account") user.IsActive = false;
+        if (denial == "expired") session.ExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+        await db.SaveChangesAsync();
+        var controller = StudentController(denial == "different-user" ? Guid.NewGuid() : session.UserId,
+            db, NullLogger<VideoSessionController>.Instance);
+        if (denial == "anonymous") controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
+
+        var result = await controller.GetEmbedMaterial(session.Id, null!, new AccessCheckService(db), true, CancellationToken.None);
+
+        switch (expectedStatus)
+        {
+            case 401: Assert.IsType<UnauthorizedResult>(result); break;
+            case 403: Assert.IsType<ForbidResult>(result); break;
+            case 404: Assert.IsType<NotFoundObjectResult>(result); break;
+        }
+        Assert.Equal("no-store", controller.Response.Headers.CacheControl);
+    }
+
+    private static async Task<(User User, StudentAccessGrant Grant)> SeedPlaybackAccessAsync(
+        NaderGorge.Infrastructure.Data.AppDbContext db, VideoPlaybackSession session)
+    {
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Playback student", Guid.NewGuid().ToString());
+        session.UserId = user.Id;
+        var (packageId, _) = await TestAppDbContextFactory.SeedPackageAsync(db, "Playback package");
+        var term = new Term { Title = "Term", PackageId = packageId };
+        var section = new ContentSection { Title = "Section", Term = term };
+        var lesson = new Lesson { Title = "Lesson", Summary = "Lesson", ContentSection = section };
+        var video = new LessonVideo { Id = session.LessonVideoId, Title = "Video", Provider = "youtube", ProviderVideoId = "example", Lesson = lesson, IsActive = true };
+        var grant = new StudentAccessGrant { UserId = user.Id, GrantType = Domain.Enums.CodeType.Video, LessonVideoId = video.Id, IsActive = true };
+        db.AddRange(term, section, lesson, video, grant);
+        await db.SaveChangesAsync();
+        return (user, grant);
     }
 
     [Fact]

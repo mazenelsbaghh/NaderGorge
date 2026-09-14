@@ -152,7 +152,7 @@ public sealed class EndAttendanceBreakCommandHandler : IRequestHandler<EndAttend
     {
         var employeeId = await _db.EmployeeProfiles.Where(item => item.UserId == request.UserId).Select(item => item.Id).SingleAsync(ct);
         var attendanceBreak = await _db.AttendanceBreaks.Include(item => item.AttendanceSession).SingleOrDefaultAsync(item => item.Id == request.BreakId && item.AttendanceSession!.EmployeeId == employeeId, ct);
-        if (attendanceBreak is null || attendanceBreak.EndedAt.HasValue) return ApiResponse<Guid>.Fail("لا توجد استراحة مفتوحة", ["NO_OPEN_BREAK"]);
+        if (attendanceBreak is null || attendanceBreak.AttendanceSession!.State != AttendanceSessionState.Open || attendanceBreak.EndedAt.HasValue) return ApiResponse<Guid>.Fail("لا توجد استراحة مفتوحة", ["NO_OPEN_BREAK"]);
         attendanceBreak.EndedAt = request.OccurredAt.Kind == DateTimeKind.Utc ? request.OccurredAt : request.OccurredAt.ToUniversalTime(); attendanceBreak.Version++;
         _db.AttendanceAttempts.Add(new AttendanceAttempt { EmployeeId = employeeId, EventType = AttendanceEventType.BreakEnd, OccurredAt = attendanceBreak.EndedAt.Value, Accepted = true, DecisionCode = "ATTENDANCE_ACCEPTED", IdempotencyKey = request.IdempotencyKey, AttendanceSessionId = attendanceBreak.AttendanceSessionId });
         await _audit.WriteMutationAsync("AttendanceBreakEnd", nameof(AttendanceBreak), attendanceBreak.Id, new { endedAt = (DateTime?)null }, new { attendanceBreak.EndedAt }, "Employee break end", ct, request.UserId);

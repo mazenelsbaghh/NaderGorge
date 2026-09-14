@@ -35,7 +35,7 @@ public sealed class PayrollRunService(IAppDbContext db, PayrollCalculationEngine
         {
             var compensation = await db.EmployeeCompensations.Where(item => item.EmployeeId == employee.Id && item.EffectiveFrom <= periodEnd &&
                 (!item.EffectiveTo.HasValue || item.EffectiveTo >= periodStart)).OrderByDescending(item => item.EffectiveFrom).FirstOrDefaultAsync(ct);
-            var attendance = await db.AttendanceSessions.Where(item => item.EmployeeId == employee.Id && item.WorkDate >= periodStart && item.WorkDate <= periodEnd)
+            var attendance = await db.AttendanceSessions.Where(item => item.State != AttendanceSessionState.Cancelled && item.EmployeeId == employee.Id && item.WorkDate >= periodStart && item.WorkDate <= periodEnd)
                 .GroupBy(_ => 1).Select(group => new { Late = group.Sum(item => item.LateMinutes), EarlyLeave = group.Sum(item => item.EarlyLeaveMinutes), Overtime = group.Sum(item => item.OvertimeMinutes) }).SingleOrDefaultAsync(ct);
             var absenceDays = await db.WorkdayClassifications.CountAsync(item => item.EmployeeId == employee.Id && item.WorkDate >= periodStart && item.WorkDate <= periodEnd && item.Kind == WorkdayClassificationKind.Absence, ct);
             var baseSalary = compensation?.BaseSalary ?? employee.BasicSalary;

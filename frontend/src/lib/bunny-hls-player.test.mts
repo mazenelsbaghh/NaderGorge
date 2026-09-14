@@ -1,36 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
-import ts from 'typescript';
 import { isExpiredHlsSourceError } from './video-playback-recovery.ts';
 
-const routePath = new URL('../app/api/video/embed/route.ts', import.meta.url);
+import { generateBunnyHlsEmbedHtml } from './bunny-hls-embed.ts';
 
 type PlayerMessage = {
   source?: string;
   type?: string;
-  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number };
+  data?: { code?: number; message?: string; phase?: string; provider?: string; signedSourceExpiresAtMs?: number; native?: boolean; sourceRenewal?: string };
 };
 
 type HlsRuntime = 'hlsjs' | 'native-apple';
 
 async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '', signedSource = 'https://vz-example.b-cdn.net/signed/video/playlist.m3u8') {
-  const routeSource = await readFile(routePath, 'utf8');
-  const generatorStart = routeSource.indexOf('function generateBunnyHlsEmbedHtml');
-  const generatorEnd = routeSource.indexOf('function configuredLegacyBunnyLibraryId', generatorStart);
-  const escapeStart = routeSource.indexOf('function escapeHtml(');
-  const escapeEnd = routeSource.indexOf('function generateYouTubeEmbedHtml', escapeStart);
-  assert.ok(generatorStart >= 0 && generatorEnd > generatorStart && escapeStart >= 0);
-  // Run the real generator so template escaping matches the delivered HTML.
-  const compiled = ts.transpileModule(
-    routeSource.slice(generatorStart, generatorEnd) + routeSource.slice(escapeStart, escapeEnd),
-    { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
-  ).outputText;
-  const html: string = vm.runInNewContext(
-    compiled + `\ngenerateBunnyHlsEmbedHtml(${JSON.stringify(signedSource)}, "Test student", "", ${JSON.stringify(relaySource)})`,
-    { URL },
-  );
+  const html = generateBunnyHlsEmbedHtml(signedSource, 'Test student', '', relaySource);
   const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
   assert.doesNotMatch(playerScript, /\$\{/);
 
@@ -50,16 +34,27 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     playbackRate: 1,
     volume: 1,
     src: '',
+    loadCalls: 0,
+    removeAttribute(name: string) { if (name === 'src') this.src = ''; },
     addEventListener(eventName: string, callback: () => void) {
       videoListeners.set(eventName, callback);
     },
     canPlayType() { return runtime === 'native-apple' ? 'probably' : ''; },
-    load() { this.currentTime = 0; this.paused = true; },
+    load() { this.loadCalls += 1; this.currentTime = 0; this.paused = true; },
     pause() { this.paused = true; },
     play() { this.paused = false; return Promise.resolve(); },
   };
 
+  const networkRequests: string[] = [];
+  class NetworkLoader {
+    stats = {};
+    load(context: { url: string }) { networkRequests.push(context.url); }
+    abort() {}
+    destroy() {}
+  }
+
   class FakeHls {
+    static DefaultConfig = { loader: NetworkLoader };
     static Events = { ERROR: 'error', LEVEL_SWITCHED: 'levelSwitched', MANIFEST_PARSED: 'manifestParsed', LEVEL_LOADED: 'levelLoaded', FRAG_LOADING: 'fragmentLoading', FRAG_LOADED: 'fragmentLoaded' };
     static ErrorTypes = { MEDIA_ERROR: 'mediaError', NETWORK_ERROR: 'networkError' };
     static isSupported() { return true; }
@@ -168,7 +163,16 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
     interact(type: string) { documentListeners.get(type)?.({ type }); },
     messages,
     video,
-    command(type: string) { receiveCommand?.({ origin: windowLike.location.origin, source: parentWindow, data: { type } }); },
+    command(type: string, payload: Record<string, unknown> = {}) { receiveCommand?.({ origin: windowLike.location.origin, source: parentWindow, data: { type, ...payload } }); },
+    networkRequests,
+    requestResource(url: string) {
+      const loaderConstructor = hlsInstances.at(-1)?.config.loader as new () => NetworkLoader;
+      const loader = new loaderConstructor();
+      let rejectedStatus = 0;
+      const callbacks = { onError(error: { code: number }) { rejectedStatus = error.code; } };
+      (loader.load as (context: { url: string }, config: object, callbacks: object) => void)({ url }, {}, callbacks);
+      return { loader, rejectedStatus: () => rejectedStatus };
+    },
     setMediaTime(time: number) { video.currentTime = time; },
     advanceTime(milliseconds: number) {
       now += milliseconds;
@@ -569,4 +573,173 @@ test('recovery after metadata still has a bounded startup deadline', async () =>
   player.advanceTime(30000);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.hlsInstances.length, 2);
+});
+
+const renewableVideoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
+function signedPlaylist(expires: number, token = 'initial', videoId = renewableVideoId) {
+  return `https://vz-example.b-cdn.net/bcdn_token=${token}&expires=${expires}&token_path=%2F${videoId}%2F/${videoId}/playlist.m3u8`;
+}
+
+test('renewal updates future playlists, segments and keys without replacing the player or its playback state', async () => {
+  const initial = signedPlaylist(300);
+  const renewed = signedPlaylist(480, 'renewed');
+  const player = await runHlsPlayer('hlsjs', 200, '', initial);
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 87;
+  player.video.volume = 0.4;
+  player.video.playbackRate = 1.5;
+  player.video.paused = false;
+  player.hls()!.currentLevel = 2;
+  player.hls()!.nextLevel = 2;
+
+  player.advanceTime(180000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+  player.command('renewSource', { source: renewed, signedSourceExpiresAtMs: 480000 });
+  for (const resource of ['playlist.m3u8', '720p/video.m3u8', '720p/video0.ts', '720p/init.mp4', 'encryption.key']) {
+    player.requestResource(new URL(resource, initial).href);
+    assert.equal(player.networkRequests.at(-1), new URL(resource, renewed).href);
+  }
+  assert.equal(player.hlsInstances.length, 1);
+  assert.equal(player.hls()?.destroyCalls, 0);
+  assert.equal(player.hls()?.startLoadCalls, 0);
+  assert.equal(player.hls()?.currentLevel, 2);
+  assert.equal(player.hls()?.nextLevel, 2);
+  assert.equal(player.video.currentTime, 87);
+  assert.equal(player.video.volume, 0.4);
+  assert.equal(player.video.playbackRate, 1.5);
+  assert.equal(player.video.paused, false);
+  assert.equal(player.video.loadCalls, 0);
+  player.advanceTime(180000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+});
+
+test('requests after expiry wait for a renewed signature and aborted requests never resume', async () => {
+  const initial = signedPlaylist(300);
+  const player = await runHlsPlayer('hlsjs', 200, '', initial);
+  player.triggerVideoEvent('loadedmetadata');
+  player.advanceTime(300000);
+  player.requestResource(new URL('720p/video0.ts', initial).href);
+  const cancelled = player.requestResource(new URL('720p/video1.ts', initial).href);
+  cancelled.loader.abort();
+  assert.equal(player.networkRequests.length, 0);
+
+  player.command('renewSource', { source: signedPlaylist(600, 'fresh'), signedSourceExpiresAtMs: 600000 });
+  assert.deepEqual(player.networkRequests, [new URL('720p/video0.ts', signedPlaylist(600, 'fresh')).href]);
+  assert.equal(player.hlsInstances.length, 1);
+});
+
+test('a renewal cannot redirect the player or its authenticated resource requests outside the original video', async () => {
+  const initial = signedPlaylist(300);
+  for (const invalidSource of [
+    signedPlaylist(600, 'foreign', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+    signedPlaylist(600).replace('vz-example.b-cdn.net', 'other.b-cdn.net'),
+    signedPlaylist(600).replace('https:', 'http:'),
+    signedPlaylist(600).replace(`%2F${renewableVideoId}%2F`, '%2Faaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa%2F'),
+  ]) {
+    const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', initial);
+    player.command('renewSource', { source: invalidSource, signedSourceExpiresAtMs: 600000 });
+    assert.equal(player.messages.find(message => message.type === 'error')?.data?.phase, 'source_scope');
+    assert.equal(player.hlsInstances.length, 1);
+    assert.equal(player.networkRequests.length, 0);
+  }
+  const player = await runHlsPlayer('hlsjs', 200, '', initial);
+  for (const invalidResource of [
+    'https://other.b-cdn.net/segment.ts',
+    new URL('../another-video/segment.ts', initial).href,
+    new URL('segment.ts?token=untrusted', initial).href,
+    signedPlaylist(300, 'foreign', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  ]) {
+    assert.equal(player.requestResource(invalidResource).rejectedStatus(), 403);
+  }
+  assert.equal(player.networkRequests.length, 0);
+});
+
+test('renewal failure retries are bounded and authorization denial never triggers a bandwidth relay', async () => {
+  for (const status of [401, 403, 404, 410, 503]) {
+    const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', signedPlaylist(300));
+    player.triggerVideoEvent('loadedmetadata');
+    player.advanceTime(180000);
+    const attempts = status === 503 ? 4 : 1;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      player.command('sourceRenewalFailed', { status });
+      player.advanceTime(30000);
+    }
+    assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, attempts);
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+    assert.equal(player.hlsInstances.length, 1);
+    assert.equal(player.hls()?.destroyCalls, 1);
+    player.command('play');
+    assert.equal(player.video.paused, true);
+    player.advanceTime(300000);
+    assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, attempts);
+  }
+});
+
+test('native Safari receives a session-length grant before playback and refreshes access without a reload', async () => {
+  const player = await runHlsPlayer('native-apple', 200, '', signedPlaylist(300));
+  assert.equal(player.nativeRequests(), 0);
+  assert.equal(player.messages.find(message => message.type === 'renewSourceRequired')?.data?.native, true);
+  const nativeSource = signedPlaylist(3600, 'native');
+  player.command('renewSource', { source: nativeSource, signedSourceExpiresAtMs: 3600000 });
+  await new Promise<void>(resolve => setImmediate(resolve));
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 140;
+  player.video.paused = false;
+  assert.equal(player.nativeSource(), nativeSource);
+  assert.equal(player.video.loadCalls, 1);
+
+  player.advanceTime(180000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+  player.command('renewSource', { source: signedPlaylist(3600, 'native-updated'), signedSourceExpiresAtMs: 3600000 });
+  assert.equal(player.nativeRequests(), 1);
+  assert.equal(player.nativeSource(), nativeSource);
+  assert.equal(player.video.loadCalls, 1);
+  assert.equal(player.video.currentTime, 140);
+  assert.equal(player.video.paused, false);
+
+  player.advanceTime(180000);
+  player.command('sourceRenewalFailed', { status: 403 });
+  assert.equal(player.nativeSource(), '');
+  assert.equal(player.video.paused, true);
+});
+
+test('a signature capped at the watch-session end stays usable and cannot trigger a renewal loop', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', signedPlaylist(300));
+  player.triggerVideoEvent('loadedmetadata');
+  player.advanceTime(290000);
+  player.command('renewSource', {
+    source: signedPlaylist(300, 'last-ten-seconds'), signedSourceExpiresAtMs: 300000, sessionExpiresAtMs: 300500,
+  });
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+  player.advanceTime(9999);
+  player.command('play');
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+  player.advanceTime(1);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+  player.command('sourceRenewalFailed', { status: 404 });
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+});
+
+test('relay JWT expiry requests a parent auth refresh and resumes the same player with bounded retries', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', signedPlaylist(300));
+  player.triggerVideoEvent('loadedmetadata');
+  player.emitFatalNetworkError(0);
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 95;
+  player.video.paused = false;
+  const relay = player.hlsInstances[1];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    player.emitFatalNetworkError(401);
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+    player.command('renewSource', { source: signedPlaylist(600, 'refreshed'), signedSourceExpiresAtMs: 600000, sessionExpiresAtMs: 3600000 });
+    assert.equal(player.hlsInstances.length, 2);
+    assert.equal(relay.destroyCalls, 0);
+    assert.equal(player.video.currentTime, 95);
+    assert.equal(player.video.paused, false);
+  }
+  assert.equal(relay.startLoadCalls, 2);
+  player.emitFatalNetworkError(401);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
 });

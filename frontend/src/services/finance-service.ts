@@ -5,6 +5,7 @@ import type {
   SettlementPreview,
   TeacherAgreement,
   TeacherFinanceSummary,
+  TeacherCollections,
   TeacherSettlement,
 } from '@/features/teacher-finance-center/types';
 
@@ -203,11 +204,20 @@ export const financeService = {
     return res.data?.data ?? null;
   },
 
+  getTeacherCollections: async (teacherId: string, params: { page: number; pageSize: number; vodafoneOnly: boolean }): Promise<TeacherCollections> => {
+    const res = await apiClient.get<ApiResponse<TeacherCollections>>(
+      `/admin/teacher-finance-center/teachers/${teacherId}/collections`, { params },
+    );
+    if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل تحويلات المدرس');
+    return res.data.data;
+  },
+
   getTeacherLedger: async (teacherId: string, params?: { from?: string; to?: string; status?: string; page?: number; pageSize?: number }): Promise<PagedTeacherLedger> => {
     const res = await apiClient.get<ApiResponse<PagedTeacherLedger>>(
       `/admin/teacher-finance-center/teachers/${teacherId}/ledger`, { params },
     );
-    return res.data?.data ?? { items: [], total: 0, page: 1, pageSize: 50 };
+    if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل كشف حساب المدرس');
+    return res.data.data;
   },
 
   previewTeacherSettlement: async (payload: { teacherId: string; periodFrom: string; periodTo: string; note?: string; allocationIds?: string[] }): Promise<SettlementPreview> => {

@@ -180,6 +180,7 @@ public class TeacherAgreementResolver
             TeacherAgreementAllocationMode.Percentage => Math.Round(basis * agreement.AllocationValue / 100m, 2, MidpointRounding.AwayFromZero),
             TeacherAgreementAllocationMode.FixedPerSale or TeacherAgreementAllocationMode.FixedPerCode => agreement.AllocationValue * Math.Max(1, units),
             TeacherAgreementAllocationMode.FixedPerBatch => agreement.AllocationValue,
+            TeacherAgreementAllocationMode.PlatformFixedPerUnit => Math.Max(0m, netAfterDiscountAmount - agreement.AllocationValue * Math.Max(1, units)),
             _ => 0m
         };
         return (agreement.AllocationMode == TeacherAgreementAllocationMode.Percentage

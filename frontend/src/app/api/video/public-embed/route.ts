@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseBunnyPlayerPath } from '@/lib/bunny-video-reference';
-import { generateVideoEmbedHtml } from '../embed/route';
+import { generateVideoEmbedHtml } from '@/lib/video-embed-html';
 
 function errorPage(message: string, status = 400) {
   return new NextResponse(`<!DOCTYPE html><html lang="ar" dir="rtl"><body style="margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif;display:grid;place-items:center;height:100vh">${message}</body></html>`, {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   const parsed = parseVideoUrl(source);
   if (!parsed) return errorPage('رابط الفيديو غير مدعوم. استخدم رابط YouTube أو VK أو Bunny صحيح.');
 
-  const html = generateVideoEmbedHtml(parsed.provider, parsed.id, 'Massar Academy', '');
+  const html = generateVideoEmbedHtml(parsed.provider, parsed.id);
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

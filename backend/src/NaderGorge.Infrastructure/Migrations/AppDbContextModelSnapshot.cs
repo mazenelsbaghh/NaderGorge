@@ -2168,6 +2168,168 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairControl", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AutoDeploy")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("Heartbeat")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LogCursor")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Paused")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Runner")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AutoRepairControls");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AutoDeploy = false,
+                            Paused = true,
+                            Runner = ""
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("IncidentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId", "Id");
+
+                    b.ToTable("AutoRepairEvents");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairIncident", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApprovedHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("FirstSeen")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Occurrences")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProposalHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReleaseId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Fingerprint")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "FirstSeen");
+
+                    b.ToTable("AutoRepairIncidents");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairLogReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("AutoRepairLogReceipts");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.BalanceTransaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -13423,6 +13585,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("FacebookUrl")
                         .HasColumnType("text");
 
+                    b.Property<int>("FinancePreset")
+                        .HasColumnType("integer");
+
                     b.Property<string>("IntroVideoUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -15237,6 +15402,14 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("PerformedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairEvent", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AutoRepairIncident", null)
+                        .WithMany("Events")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.BalanceTransaction", b =>
@@ -18617,6 +18790,11 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceSession", b =>
                 {
                     b.Navigation("Breaks");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AutoRepairIncident", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyStreamLibrary", b =>

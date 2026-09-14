@@ -1,0 +1,26 @@
+[Unit]
+Description=Massar Codex incident repair supervisor
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=massar-ops
+WorkingDirectory=/opt/massar-auto-repair
+ExecStart=/usr/bin/python3 /opt/massar-auto-repair/runner.py /etc/massar/auto-repair.json
+EnvironmentFile=/etc/massar/auto-repair.env
+Restart=on-failure
+RestartSec=30
+UMask=0077
+KillMode=mixed
+TimeoutStopSec=infinity
+Nice=10
+CPUQuota=200%
+MemoryMax=2G
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

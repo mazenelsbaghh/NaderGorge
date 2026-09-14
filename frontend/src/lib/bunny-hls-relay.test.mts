@@ -1,12 +1,25 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import test from 'node:test';
+import test, { before, after } from 'node:test';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as relay from './bunny-hls-relay.ts';
 import * as material from './video-embed-material.ts';
 import * as guard from './video-embed-request-guard.ts';
+import * as playback from './video-playback-session.ts';
+
+const previousEnv = { secret: process.env.API_CALLBACK_SECRET, api: process.env.INTERNAL_API_URL };
+before(() => {
+  process.env.API_CALLBACK_SECRET = 'test-only-secret';
+  process.env.INTERNAL_API_URL = 'https://backend.example/api';
+});
+after(() => {
+  if (previousEnv.secret === undefined) delete process.env.API_CALLBACK_SECRET;
+  else process.env.API_CALLBACK_SECRET = previousEnv.secret;
+  if (previousEnv.api === undefined) delete process.env.INTERNAL_API_URL;
+  else process.env.INTERNAL_API_URL = previousEnv.api;
+});
 
 const sessionId = '00000000-0000-0000-0000-000000000001';
 const videoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
@@ -93,6 +106,7 @@ async function relayRoute() {
   const compiled = ts.transpileModule(sourceCode, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const modules: Record<string, unknown> = {
     '@/lib/bunny-hls-relay': relay, '@/lib/video-embed-material': material, '@/lib/video-embed-request-guard': guard,
+    '@/lib/video-playback-session': playback,
   };
   const exports: { GET?: (request: Request) => Promise<Response> } = {};
   vm.runInNewContext(compiled, {
@@ -104,8 +118,12 @@ async function relayRoute() {
 }
 
 function relayRequest(headers: Record<string, string> = {}) {
+  const authorization = new Request('https://app.massar-academy.net/api/video/session', {
+    headers: { Authorization: 'Bearer test.access.token', 'X-App-Surface': 'student' },
+  });
+  const cookie = playback.createPlaybackCookie(authorization, sessionId, new Date(Date.now() + 60_000).toISOString());
   return new Request(`https://app.massar-academy.net/api/video/hls?s=${sessionId}`, { headers: {
-    referer: `https://app.massar-academy.net/api/video/embed?s=${sessionId}`, 'sec-fetch-site': 'same-origin', ...headers,
+    referer: `https://app.massar-academy.net/api/video/embed?s=${sessionId}`, 'sec-fetch-site': 'same-origin', cookie, ...headers,
   } });
 }
 
@@ -113,12 +131,19 @@ test('expired or superseded session never reaches the CDN', async (context) => {
   let requests = 0;
   context.mock.method(globalThis, 'fetch', async (url: string) => {
     requests += 1;
-    assert.equal(url, `https://backend.example/api/v1/internal/video-sessions/${sessionId}/embed-material`);
+    assert.equal(url, `https://backend.example/api/v1/internal/video-sessions/${sessionId}/embed-material?includeWatermark=false&nativeHls=false`);
     return new Response(null, { status: 404 });
   });
   const get = await relayRoute();
-  assert.equal((await get(relayRequest())).status, 410);
+  assert.equal((await get(relayRequest())).status, 404);
   assert.equal(requests, 1);
+});
+
+test('a copied relay URL without its browser authorization never reaches the backend or CDN', async context => {
+  const upstream = context.mock.method(globalThis, 'fetch', async () => { throw new Error('No network expected'); });
+  const get = await relayRoute();
+  assert.equal((await get(relayRequest({ cookie: '' }))).status, 401);
+  assert.equal(upstream.mock.callCount(), 0);
 });
 
 test('cross-origin and direct navigation cannot use the relay even with a session ID', async (context) => {
@@ -136,7 +161,12 @@ test('active encrypted HLS session returns rewritten playlist without exposing i
   const encrypted = Buffer.concat([cipher.update(JSON.stringify({ Provider: 'bunny-hls', VideoId: source })), cipher.final()]);
   const token = Buffer.concat([iv, encrypted, cipher.getAuthTag()]).toString('base64');
   context.mock.method(globalThis, 'fetch', async (url: string | URL, options: RequestInit) => {
-    if (String(url).startsWith('https://backend.example')) return Response.json({ token, key: key.toString('base64') });
+    if (String(url).startsWith('https://backend.example')) {
+      const headers = new Headers(options.headers);
+      assert.equal(headers.get('authorization'), 'Bearer test.access.token');
+      assert.equal(headers.get('x-internal-token'), 'test-only-secret');
+      return Response.json({ token, key: key.toString('base64') });
+    }
     assert.equal(String(url), source);
     assert.deepEqual(options.headers, {});
     return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=300000\n720p/video.m3u8');

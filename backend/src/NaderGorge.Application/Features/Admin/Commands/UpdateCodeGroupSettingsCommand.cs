@@ -32,6 +32,7 @@ public class UpdateCodeGroupSettingsCommandHandler : IRequestHandler<UpdateCodeG
 
     public async Task<ApiResponse> Handle(UpdateCodeGroupSettingsCommand request, CancellationToken ct)
     {
+        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var expiresAt = request.ExpiresAt.HasValue ? CairoTime.ToUtc(request.ExpiresAt.Value) : (DateTime?)null;
         if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow)
             return ApiResponse.Fail("تاريخ انتهاء الأكواد يجب أن يكون في المستقبل.");
@@ -88,6 +89,14 @@ public class UpdateCodeGroupSettingsCommandHandler : IRequestHandler<UpdateCodeG
             && request.RevenueAllocationValue.Value > 100)
             return ApiResponse.Fail("النسبة لا يمكن أن تزيد عن 100%.");
 
+        if (request.AccountingTiming == CodeAccountingTiming.Immediate && await _db.TeacherProfiles.AnyAsync(x => x.Id == teacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct))
+            return ApiResponse.Fail("أكواد نادر تُحسب عند الاستخدام فقط.");
+        var financialTerms = await _db.CodeGroupFinancialTerms.FirstOrDefaultAsync(x => x.CodeGroupId == group.Id, ct);
+        var financialChange = teacherId != group.TeacherId || request.RevenueOwner != group.RevenueOwner
+            || request.RevenueAllocationMode != group.RevenueAllocationMode || request.RevenueAllocationValue != group.RevenueAllocationValue
+            || request.AccountingTiming != group.AccountingTiming;
+        if (financialChange && await CodeGroupAccountingGuard.HasStartedAsync(_db, group, ct))
+            return ApiResponse.Fail("لا يمكن تغيير الشروط المالية بعد بدء استخدام أو حساب دفعة الأكواد.");
         var oldValues = new
         {
             group.Name,
@@ -135,6 +144,13 @@ public class UpdateCodeGroupSettingsCommandHandler : IRequestHandler<UpdateCodeG
         group.AccountingTiming = group.AccountingRecordedAt.HasValue
             ? group.AccountingTiming
             : request.AccountingTiming;
+        if (financialTerms is not null && financialChange)
+        {
+            financialTerms.Trigger = group.AccountingTiming == CodeAccountingTiming.Immediate ? TeacherAgreementTrigger.CodeDelivery : TeacherAgreementTrigger.CodeActivation;
+            financialTerms.AgreementId = null;
+            financialTerms.UpdatedByUserId = request.AdminId;
+            financialTerms.UpdatedAt = DateTime.UtcNow;
+        }
         group.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -156,6 +172,7 @@ public class UpdateCodeGroupSettingsCommandHandler : IRequestHandler<UpdateCodeG
                 group.AccountingTiming
             });
 
+        await transaction.CommitAsync(ct);
         return ApiResponse.Ok();
     }
 }

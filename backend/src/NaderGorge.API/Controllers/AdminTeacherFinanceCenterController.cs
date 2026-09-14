@@ -34,6 +34,14 @@ public class AdminTeacherFinanceCenterController : ControllerBase
 
     private Guid ActorId() => User.RequireUserId();
 
+    [HttpGet("teachers/{teacherId:guid}/collections")]
+    public async Task<IActionResult> GetTeacherCollections(Guid teacherId, [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25, [FromQuery] bool vodafoneOnly = false, CancellationToken ct = default)
+    {
+        var response = await _mediator.Send(new GetTeacherCollectionsQuery(teacherId, page, pageSize, vodafoneOnly), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
     [HttpPost("shared-packages/{id:guid}/allocation-preview")]
     public async Task<IActionResult> PreviewSharedPackageAllocation(Guid id, [FromBody] SharedPackageAllocationPreviewRequestDto? dto, CancellationToken ct)
     {
@@ -114,9 +122,12 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         var debt = await _db.TeacherPayoutAdjustments.AsNoTracking()
             .Where(x => x.TeacherId == teacherId && x.Status == TeacherPayoutAdjustmentStatus.Open && x.Amount < 0m)
             .SumAsync(x => (decimal?)-x.Amount, ct) ?? 0m;
-        var paid = await _db.TeacherFinancialAllocations.AsNoTracking()
-            .Where(x => x.TeacherId == teacherId && x.PayoutStatus == TeacherFinancialPayoutStatus.Paid)
-            .SumAsync(x => (decimal?)x.TeacherShareAmount, ct) ?? 0m;
+        var paid = (await _db.TeacherSettlementPayments.AsNoTracking()
+            .Where(x => x.TeacherSettlement.TeacherId == teacherId && x.TeacherSettlement.Status == TeacherSettlementStatus.Paid)
+            .SumAsync(x => (decimal?)x.Amount, ct) ?? 0m)
+            + (await _db.TeacherPayouts.AsNoTracking()
+                .Where(x => x.TeacherId == teacherId && x.Status == PayoutStatus.Paid)
+                .SumAsync(x => (decimal?)x.Amount, ct) ?? 0m);
         return Ok(new
         {
             success = true,
@@ -241,43 +252,8 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         _ => BadRequest(new { success = false, message = response.Message })
     };
 
-    private async Task<SettlementPreview> BuildSettlementPreview(CreateSettlementDto dto, CancellationToken ct)
-    {
-        if (dto.TeacherId == Guid.Empty || dto.PeriodTo < dto.PeriodFrom ||
-            !await _db.TeacherProfiles.AnyAsync(x => x.Id == dto.TeacherId, ct))
-            return SettlementPreview.Invalid("بيانات التسوية أو المدرس غير صالحة");
-
-        var requestedIds = dto.AllocationIds?.Distinct().ToList();
-        if (dto.AllocationIds is not null && requestedIds!.Count != dto.AllocationIds.Count)
-            return SettlementPreview.Invalid("لا يمكن اختيار بند مرتين");
-        var allocationQuery = _db.TeacherFinancialAllocations
-            .Include(x => x.TeacherFinancialEvent)
-            .Where(x => x.TeacherId == dto.TeacherId && x.TeacherShareAmount > x.ReversedAmount
-                && x.PayoutStatus == TeacherFinancialPayoutStatus.Unpaid
-                && (x.ReviewStatus == TeacherFinancialReviewStatus.AutoApproved || x.ReviewStatus == TeacherFinancialReviewStatus.Approved)
-                && x.TeacherFinancialEvent.OccurredAt >= dto.PeriodFrom && x.TeacherFinancialEvent.OccurredAt <= dto.PeriodTo);
-        if (requestedIds is not null && requestedIds.Count > 0) allocationQuery = allocationQuery.Where(x => requestedIds.Contains(x.Id));
-        var allocations = await allocationQuery.OrderBy(x => x.TeacherFinancialEvent.OccurredAt).ToListAsync(ct);
-        if (requestedIds is not null && requestedIds.Count > 0 && allocations.Count != requestedIds.Count)
-            return SettlementPreview.Invalid("بعض البنود غير مؤهلة أو تم حجزها في تسوية أخرى");
-        var gross = allocations.Sum(x => x.TeacherShareAmount - x.ReversedAmount);
-
-        // Adjustments are consumed whole only. This prevents a single debt line from being accidentally
-        // marked paid in two settlements when the remaining payable amount is smaller than that debt.
-        var openAdjustments = await _db.TeacherPayoutAdjustments
-            .Where(x => x.TeacherId == dto.TeacherId && x.Status == TeacherPayoutAdjustmentStatus.Open && x.Amount < 0m)
-            .OrderBy(x => x.CreatedAt).ToListAsync(ct);
-        var adjustments = new List<TeacherPayoutAdjustment>();
-        var debt = 0m;
-        foreach (var adjustment in openAdjustments)
-        {
-            var amount = -adjustment.Amount;
-            if (debt + amount > gross) break;
-            debt += amount;
-            adjustments.Add(adjustment);
-        }
-        return new SettlementPreview(null, allocations, adjustments, gross, debt, gross - debt);
-    }
+    private Task<TeacherSettlementPreview> BuildSettlementPreview(CreateSettlementDto dto, CancellationToken ct) =>
+        _settlements.PreviewAsync(new(dto.TeacherId, dto.PeriodFrom, dto.PeriodTo, dto.Note, dto.AllocationIds), ct);
 
     private async Task<IActionResult> TransitionSettlement(Guid id, TeacherSettlementStatus expected, TeacherSettlementStatus next, CancellationToken ct)
     {
@@ -309,9 +285,3 @@ public record CreateReversalDto(IReadOnlyList<ReversalLineDto> Lines, string Rea
 public record SyncTeacherFinanceBunnyUsageDto(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh = false);
 public record SharedPackageAllocationPreviewRequestDto(IReadOnlyList<SharedPackageAllocationPreviewSelectionDto>? Selections = null);
 public record SharedPackageAllocationPreviewSelectionDto(Guid? SubjectId, Guid? TeacherId);
-
-public sealed record SettlementPreview(string? Error, List<TeacherFinancialAllocation> Allocations, List<TeacherPayoutAdjustment> Adjustments,
-    decimal GrossDueAmount, decimal DebtDeductionAmount, decimal NetPayableAmount)
-{
-    public static SettlementPreview Invalid(string error) => new(error, [], [], 0m, 0m, 0m);
-}

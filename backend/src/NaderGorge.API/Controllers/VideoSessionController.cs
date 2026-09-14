@@ -102,35 +102,62 @@ public class VideoSessionController : ControllerBase
         return BadRequest(result);
     }
 
-    [AllowAnonymous]
     [InternalTokenAuthorize("API_CALLBACK_SECRET", "AI_CALLBACK_SECRET")]
     [DisableRateLimiting]
     [HttpGet("{sessionId:guid}/embed-material")]
     [HttpGet("~/api/v1/internal/video-sessions/{sessionId:guid}/embed-material")]
     public async Task<IActionResult> GetEmbedMaterial(Guid sessionId,
         [FromServices] NaderGorge.Application.Services.VideoSessionMaterialService materialService,
+        [FromServices] IAccessCheckService accessService,
         [FromQuery] bool includeWatermark,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery] bool nativeHls = false)
     {
+        Response.Headers.CacheControl = "no-store";
+        var userIdClaim = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
         var session = await _db.VideoPlaybackSessions
-            .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsSuperseded && s.ExpiresAt > DateTime.UtcNow, ct);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId && !s.IsSuperseded && s.ExpiresAt > DateTime.UtcNow, ct);
 
         if (session == null)
         {
             return NotFound("Video session not found or expired.");
         }
 
-        Response.Headers.CacheControl = "no-store";
-        var token = await materialService.GetTokenAsync(session, ct);
+        if (!await CanReadPlaybackMaterialAsync(session, accessService, ct)) return Forbid();
+        string token;
+        string? bunnyEmbedQuery;
+        try
+        {
+            token = await materialService.GetTokenAsync(session, ct, nativeHls);
+            bunnyEmbedQuery = await materialService.GetBunnyEmbedQueryAsync(session, ct);
+        }
+        catch (Exception error) when (error is InvalidOperationException or System.Security.Cryptography.CryptographicException or ArgumentException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Video playback configuration is unavailable.");
+        }
         if (!includeWatermark)
         {
-            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey));
+            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, BunnyEmbedQuery: bunnyEmbedQuery));
         }
 
         var watermark = await _db.PlatformSettings.AsNoTracking()
             .Where(setting => setting.Key == "EnableWatermark" || setting.Key.StartsWith("Watermark"))
             .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct);
-        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, watermark, session.UserId.ToString()));
+        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery));
+    }
+
+    private async Task<bool> CanReadPlaybackMaterialAsync(Domain.Entities.VideoPlaybackSession session, IAccessCheckService access, CancellationToken ct)
+    {
+        if (!await _db.Users.AnyAsync(user => user.Id == session.UserId && user.IsActive && !user.IsDeleted, ct)) return false;
+        if (!VideoPlaybackAuthorization.CanPreview(User)) return await access.HasAccessToVideoSessionAsync(session, ct);
+        if (!User.IsInRole("Teacher") || User.IsInRole("Admin")) return true;
+        var lessonId = await _db.LessonVideos.Where(video => video.Id == session.LessonVideoId)
+            .Select(video => (Guid?)video.LessonId).SingleOrDefaultAsync(ct);
+        var teacherAuthorization = new NaderGorge.Application.Services.TeacherAuthorizationService(_db);
+        return lessonId.HasValue && await teacherAuthorization.GetWorkspaceAccessAsync(session.UserId, ct) is not null
+            && await teacherAuthorization.CanAccessLessonAsync(session.UserId, lessonId.Value, ct);
     }
 
     [HttpPost("{lessonVideoId}/track-progress")]
@@ -279,5 +306,5 @@ public sealed partial class VideoPlaybackClientEventRequest
     private static partial Regex SafePhasePattern();
 }
 
-public record VideoEmbedMaterialResponse(string Token, string Key,
-    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null);
+public record VideoEmbedMaterialResponse(string Token, string Key, DateTime ExpiresAt,
+    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null);

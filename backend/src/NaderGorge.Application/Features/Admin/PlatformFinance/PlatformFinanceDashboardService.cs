@@ -175,46 +175,9 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
     public async Task<IReadOnlyList<PlatformFinanceTeacherSummaryDto>> GetTeacherSummaryAsync(DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
-        var rows = await _db.JournalLines.AsNoTracking()
-            .Where(line => line.TeacherId.HasValue
-                && line.JournalEntry.Status == JournalEntryStatus.Posted
-                && line.JournalEntry.OccurredAt >= start
-                && line.JournalEntry.OccurredAt < end)
-            .GroupBy(line => new { TeacherId = line.TeacherId!.Value, line.FinancialAccount.Role, line.JournalEntry.SourceType })
-            .Select(group => new
-            {
-                group.Key.TeacherId,
-                group.Key.Role,
-                group.Key.SourceType,
-                Amount = group.Sum(line => line.Credit - line.Debit)
-            })
-            .ToListAsync(ct);
-
-        var teacherIds = rows.Select(item => item.TeacherId).Distinct().ToArray();
-        var names = await _db.TeacherProfiles.AsNoTracking()
-            .Where(teacher => teacherIds.Contains(teacher.Id))
-            .ToDictionaryAsync(teacher => teacher.Id, teacher => teacher.User.FullName, ct);
-
-        return rows.GroupBy(item => item.TeacherId)
-            .Select(group =>
-            {
-                decimal Amount(FinancialAccountRole role) => group.Where(item => item.Role == role).Sum(item => item.Amount);
-                var teacherShare = Amount(FinancialAccountRole.TeacherPayable);
-                var refunds = group.Where(item => item.Role == FinancialAccountRole.Refunds).Sum(item => -item.Amount);
-                var paid = group.Where(item => item.SourceType != "PlatformRefund").Sum(item => Math.Max(0m, item.Amount));
-                return new PlatformFinanceTeacherSummaryDto(
-                    group.Key,
-                    names.GetValueOrDefault(group.Key, "مدرس غير معروف"),
-                    paid + refunds,
-                    Amount(FinancialAccountRole.PlatformRevenue),
-                    teacherShare,
-                    refunds,
-                    paid,
-                    teacherShare);
-            })
-            .OrderByDescending(item => item.Outstanding)
-            .ToArray();
+        var summaries = await new Teachers.GetTeacherFinancialSummaryQuery(_db).GetAllAsync(from, to, ct);
+        return summaries.Select(x => new PlatformFinanceTeacherSummaryDto(x.TeacherId, x.TeacherName,
+            x.GrossSales, x.PlatformShare, x.TeacherShare, x.Refunds, x.Paid, x.Outstanding)).ToArray();
     }
 
     private static PlatformFinanceJournalDto MapEntry(Domain.Entities.JournalEntry entry) => new(

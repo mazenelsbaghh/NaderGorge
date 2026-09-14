@@ -7,6 +7,19 @@ namespace NaderGorge.Application.Tests.Finance;
 
 public sealed class TeacherFinanceAuthorityCommandTests
 {
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task Creating_teacher_rejects_out_of_range_percentage_without_writing_profile(int percentage)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01093000090");
+        var handler = new NaderGorge.Application.Features.Admin.Commands.CreateTeacherProfileCommandHandler(db);
+        var response = await handler.Handle(new(user.Id, "", "", percentage, null, "", [], null, null, null, null), CancellationToken.None);
+        Assert.False(response.Success);
+        Assert.Empty(await db.TeacherProfiles.ToListAsync());
+    }
+
     [Fact]
     public async Task Aggregate_and_specific_agreements_for_the_same_kind_can_coexist()
     {

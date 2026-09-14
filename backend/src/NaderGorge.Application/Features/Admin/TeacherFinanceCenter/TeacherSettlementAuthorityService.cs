@@ -14,8 +14,20 @@ public sealed record ReversalLineInput(Guid AllocationId, decimal Amount);
 public sealed record TeacherReversalInput(IReadOnlyList<ReversalLineInput> Lines, string Reason,
     TeacherReversalDisposition Disposition, string IdempotencyKey);
 
+public sealed record SettlementDebtPreview(Guid Id, decimal Amount, string Reason);
+public sealed record TeacherSettlementPreview(string? Error, List<TeacherFinancialAllocation> Allocations,
+    List<SettlementDebtPreview> Adjustments, decimal GrossDueAmount, decimal DebtDeductionAmount, decimal NetPayableAmount);
+
 public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
 {
+    public async Task<TeacherSettlementPreview> PreviewAsync(SettlementCreationInput input, CancellationToken ct)
+    {
+        var preview = await BuildPreviewAsync(input, ct);
+        return new(preview.Error, preview.Allocations, preview.Adjustments.Select(x =>
+            new SettlementDebtPreview(x.Adjustment.Id, -x.Deduction, x.Adjustment.Reason)).ToList(),
+            preview.Gross, preview.Debt, preview.Gross - preview.Debt);
+    }
+
     public async Task<TeacherFinanceCommandResult> CreateAsync(Guid actorId, SettlementCreationInput input, CancellationToken ct)
     {
         if (input.TeacherId == Guid.Empty || input.PeriodTo < input.PeriodFrom)
@@ -71,8 +83,24 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
         var adjustments = await db.TeacherPayoutAdjustments.Where(x => adjustmentIds.Contains(x.Id)).ToListAsync(ct);
         if (adjustments.Count != adjustmentIds.Count || adjustments.Any(x => x.Status != TeacherPayoutAdjustmentStatus.Open))
             return Conflict("تغيرت حالة مديونية التسوية؛ لا يمكن الدفع");
+        var deductions = settlement.Lines.Where(x => x.AdjustmentId.HasValue)
+            .GroupBy(x => x.AdjustmentId!.Value).ToDictionary(x => x.Key, x => -x.Sum(line => line.Amount));
+        if (adjustments.Any(x => deductions[x.Id] <= 0m || deductions[x.Id] > -x.Amount))
+            return Conflict("قيمة خصم المديونية تغيرت؛ أعد معاينة التسوية");
+        foreach (var adjustment in adjustments)
+        {
+            var remaining = -adjustment.Amount - deductions[adjustment.Id];
+            if (remaining > 0m)
+                db.TeacherPayoutAdjustments.Add(new TeacherPayoutAdjustment
+                {
+                    Id = Guid.NewGuid(), TeacherId = adjustment.TeacherId,
+                    RelatedFinancialEventId = adjustment.RelatedFinancialEventId, RelatedPayoutId = adjustment.RelatedPayoutId,
+                    Amount = -remaining, Reason = $"باقي مديونية {adjustment.Id}: {adjustment.Reason}",
+                    Status = TeacherPayoutAdjustmentStatus.Open
+                });
+            adjustment.Status = TeacherPayoutAdjustmentStatus.Applied;
+        }
         foreach (var allocation in allocations) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Paid;
-        foreach (var adjustment in adjustments) adjustment.Status = TeacherPayoutAdjustmentStatus.Applied;
         account.CurrentBalance -= settlement.GrossDueAmount; account.ReservedBalance -= settlement.GrossDueAmount; account.UpdatedAt = DateTime.UtcNow;
         settlement.Status = TeacherSettlementStatus.Paid; settlement.PaidByUserId = actorId; settlement.PaidAt = DateTime.UtcNow;
         db.TeacherSettlementPayments.Add(new TeacherSettlementPayment { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id,
@@ -141,7 +169,7 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
 
     private async Task<SettlementPreviewState> BuildPreviewAsync(SettlementCreationInput input, CancellationToken ct)
     {
-        if (!await db.TeacherProfiles.AnyAsync(x => x.Id == input.TeacherId, ct)) return SettlementPreviewState.Invalid("بيانات التسوية أو المدرس غير صالحة");
+        if (input.PeriodTo < input.PeriodFrom || !await db.TeacherProfiles.AnyAsync(x => x.Id == input.TeacherId, ct)) return SettlementPreviewState.Invalid("بيانات التسوية أو المدرس غير صالحة");
         var requested = input.AllocationIds?.Distinct().ToList();
         if (input.AllocationIds is not null && requested!.Count != input.AllocationIds.Count) return SettlementPreviewState.Invalid("لا يمكن اختيار بند مرتين");
         var query = db.TeacherFinancialAllocations.Include(x => x.TeacherFinancialEvent).Where(x => x.TeacherId == input.TeacherId && x.TeacherShareAmount > x.ReversedAmount && x.PayoutStatus == TeacherFinancialPayoutStatus.Unpaid && (x.ReviewStatus == TeacherFinancialReviewStatus.AutoApproved || x.ReviewStatus == TeacherFinancialReviewStatus.Approved) && x.TeacherFinancialEvent.OccurredAt >= input.PeriodFrom && x.TeacherFinancialEvent.OccurredAt <= input.PeriodTo);
@@ -149,9 +177,18 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
         var allocations = await query.OrderBy(x => x.TeacherFinancialEvent.OccurredAt).ToListAsync(ct);
         if (requested is { Count: > 0 } && allocations.Count != requested.Count) return SettlementPreviewState.Invalid("بعض البنود غير مؤهلة أو تم حجزها في تسوية أخرى");
         var gross = allocations.Sum(x => x.TeacherShareAmount - x.ReversedAmount);
-        var open = await db.TeacherPayoutAdjustments.Where(x => x.TeacherId == input.TeacherId && x.Status == TeacherPayoutAdjustmentStatus.Open && x.Amount < 0m).OrderBy(x => x.CreatedAt).ToListAsync(ct);
-        var selected = new List<TeacherPayoutAdjustment>(); var debt = 0m;
-        foreach (var adjustment in open) { var amount = -adjustment.Amount; if (debt + amount > gross) break; debt += amount; selected.Add(adjustment); }
+        var open = await db.TeacherPayoutAdjustments.Where(x => x.TeacherId == input.TeacherId && x.Status == TeacherPayoutAdjustmentStatus.Open && x.Amount < 0m
+            && !db.TeacherSettlementLines.Any(line => line.AdjustmentId == x.Id
+                && line.TeacherSettlement.Status != TeacherSettlementStatus.Cancelled
+                && line.TeacherSettlement.Status != TeacherSettlementStatus.Paid)).OrderBy(x => x.CreatedAt).ToListAsync(ct);
+        var selected = new List<SelectedDebt>(); var debt = 0m;
+        foreach (var adjustment in open)
+        {
+            if (debt >= gross) break;
+            var amount = Math.Min(-adjustment.Amount, gross - debt);
+            debt += amount;
+            selected.Add(new(adjustment, amount));
+        }
         return new(null, allocations, selected, gross, debt);
     }
 
@@ -160,12 +197,13 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
       Status = TeacherSettlementStatus.Draft, GrossDueAmount = preview.Gross, DebtDeductionAmount = preview.Debt,
       NetPayableAmount = preview.Gross - preview.Debt, Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim(), CreatedByUserId = actorId };
     private static void ReserveAllocations(TeacherSettlement settlement, SettlementPreviewState preview)
-    { foreach (var allocation in preview.Allocations) { var line = new TeacherSettlementLine { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AllocationId = allocation.Id, Amount = allocation.TeacherShareAmount - allocation.ReversedAmount, DescriptionSnapshot = allocation.ContentNameSnapshot }; settlement.Lines.Add(line); allocation.SettlementLineId = line.Id; allocation.PayoutStatus = TeacherFinancialPayoutStatus.Reserved; } foreach (var adjustment in preview.Adjustments) settlement.Lines.Add(new TeacherSettlementLine { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AdjustmentId = adjustment.Id, Amount = adjustment.Amount, DescriptionSnapshot = $"خصم مديونية: {adjustment.Reason}" }); }
+    { foreach (var allocation in preview.Allocations) { var line = new TeacherSettlementLine { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AllocationId = allocation.Id, Amount = allocation.TeacherShareAmount - allocation.ReversedAmount, DescriptionSnapshot = allocation.ContentNameSnapshot }; settlement.Lines.Add(line); allocation.SettlementLineId = line.Id; allocation.PayoutStatus = TeacherFinancialPayoutStatus.Reserved; } foreach (var adjustment in preview.Adjustments) settlement.Lines.Add(new TeacherSettlementLine { Id = Guid.NewGuid(), TeacherSettlementId = settlement.Id, AdjustmentId = adjustment.Adjustment.Id, Amount = -adjustment.Deduction, DescriptionSnapshot = $"خصم مديونية: {adjustment.Adjustment.Reason}" }); }
     private static FinancialInvoice NewInvoice(Guid actorId, TeacherSettlement s) => new() { Id = Guid.NewGuid(), Type = FinancialInvoiceType.TeacherSettlement, Status = FinancialInvoiceStatus.Draft, DocumentNumber = $"TS-{DateTime.UtcNow:yyyyMMdd}-{s.Id.ToString("N")[..8].ToUpperInvariant()}", Currency = s.Currency, Amount = s.NetPayableAmount, TeacherId = s.TeacherId, TeacherSettlementId = s.Id, Description = $"تسوية مستحقات مدرس للفترة {s.PeriodFrom:yyyy-MM-dd} إلى {s.PeriodTo:yyyy-MM-dd}", CreatedByUserId = actorId };
     private static TeacherFinancialEvent NewReversal(TeacherReversalInput input, List<TeacherFinancialAllocation> allocations, Dictionary<Guid, decimal> amounts) { var id = Guid.NewGuid(); return new() { Id = id, SourceType = TeacherFinancialSourceType.Refund, SourceId = id, TargetType = allocations[0].TeacherFinancialEvent.TargetType, TargetId = allocations[0].TeacherFinancialEvent.TargetId, GrossAmount = -amounts.Values.Sum(), PlatformShareAmount = 0m, IdempotencyKey = input.IdempotencyKey.Trim(), DetailsJson = JsonSerializer.Serialize(new { input.Reason, input.Disposition, allocationIds = amounts.Keys }), OccurredAt = DateTime.UtcNow, ReviewStatus = TeacherFinancialReviewStatus.Reversed, PayoutStatus = TeacherFinancialPayoutStatus.Reversed }; }
     private void ApplyReversal(TeacherReversalInput input, List<TeacherFinancialAllocation> allocations, Dictionary<Guid, decimal> amounts, TeacherAccount? account, TeacherFinancialEvent reversal) { foreach (var allocation in allocations) { var amount = amounts[allocation.Id]; allocation.ReversedAmount += amount; var paid = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid; if (!paid) { account!.CurrentBalance -= amount; account.TotalEarnings = Math.Max(0m, account.TotalEarnings - amount); account.UpdatedAt = DateTime.UtcNow; if (allocation.ReversedAmount == allocation.TeacherShareAmount) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Reversed; } else { db.TeacherPayoutAdjustments.Add(new TeacherPayoutAdjustment { Id = Guid.NewGuid(), TeacherId = allocation.TeacherId, RelatedFinancialEventId = allocation.TeacherFinancialEventId, RelatedPayoutId = allocation.PayoutId, Amount = -amount, Reason = $"[{input.Disposition}] {input.Reason.Trim()}", Status = TeacherPayoutAdjustmentStatus.Open }); if (allocation.ReversedAmount == allocation.TeacherShareAmount) allocation.PayoutStatus = TeacherFinancialPayoutStatus.Debt; } reversal.Allocations.Add(new TeacherFinancialAllocation { Id = Guid.NewGuid(), TeacherId = allocation.TeacherId, AllocationMode = TeacherAllocationMode.Reversal, AllocationValue = amount, GrossBasisAmount = -amount, TeacherShareAmount = -amount, PlatformShareAmount = 0m, StudentNameSnapshot = allocation.StudentNameSnapshot, StudentPhoneSnapshot = allocation.StudentPhoneSnapshot, ContentNameSnapshot = allocation.ContentNameSnapshot, ReviewStatus = TeacherFinancialReviewStatus.Reversed, PayoutStatus = paid ? TeacherFinancialPayoutStatus.Debt : TeacherFinancialPayoutStatus.Reversed }); } }
     private static TeacherFinanceCommandResult Invalid(string message) => new(TeacherFinanceCommandStatus.Invalid, Message: message);
     private static TeacherFinanceCommandResult Conflict(string message) => new(TeacherFinanceCommandStatus.Conflict, Message: message);
     private static TeacherFinanceCommandResult NotFound(string message) => new(TeacherFinanceCommandStatus.NotFound, Message: message);
-    private sealed record SettlementPreviewState(string? Error, List<TeacherFinancialAllocation> Allocations, List<TeacherPayoutAdjustment> Adjustments, decimal Gross, decimal Debt) { public static SettlementPreviewState Invalid(string error) => new(error, [], [], 0m, 0m); }
+    private sealed record SelectedDebt(TeacherPayoutAdjustment Adjustment, decimal Deduction);
+    private sealed record SettlementPreviewState(string? Error, List<TeacherFinancialAllocation> Allocations, List<SelectedDebt> Adjustments, decimal Gross, decimal Debt) { public static SettlementPreviewState Invalid(string error) => new(error, [], [], 0m, 0m); }
 }

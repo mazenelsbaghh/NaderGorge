@@ -9,7 +9,10 @@ export interface SubjectDto {
   description: string;
 }
 
+export type TeacherFinancePreset = 'Standard' | 'SandyAshraf' | 'Nader';
+
 export interface TeacherDto {
+  financePreset?: TeacherFinancePreset;
   id: string;
   userId: string;
   fullName: string;
@@ -183,6 +186,7 @@ export const teacherService = {
   getTeacherById: (id: string) =>
     apiClient.get<ApiResponse<TeacherDto>>(`/admin/teachers/${id}`).then((res) => res.data),
   createTeacher: (data: {
+    financePreset?: TeacherFinancePreset;
     userId: string;
     bio: string;
     specialization: string;

@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "263a3984af8e9ea183965887f6a1383d93762b00cf3aba1f884d7f510828e041"
+      "digest": "83312301fa8d4d81704b0417e1df35096060e476bc8fa293539849b406e647a8"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -3297,7 +3297,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-bunny-cost-report:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:211",
+      "id": "be:get:api-admin-teacher-finance-center-bunny-cost-report:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:222",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/bunny/cost-report",
@@ -3320,11 +3320,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 211
+        "line": 222
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-settlements-id:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:166",
+      "id": "be:get:api-admin-teacher-finance-center-settlements-id:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:177",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/settlements/{id}",
@@ -3347,11 +3347,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 166
+        "line": 177
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-agreements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:82",
+      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-agreements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:90",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/agreements",
@@ -3374,11 +3374,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 82
+        "line": 90
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-ledger:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:128",
+      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-ledger:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:139",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/ledger",
@@ -3401,11 +3401,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 128
+        "line": 139
       }
     },
     {
-      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:110",
+      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:118",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/summary",
@@ -3428,7 +3428,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 110
+        "line": 118
       }
     },
     {
@@ -4323,7 +4323,7 @@
       }
     },
     {
-      "id": "be:get:api-hr-admin-attendance-attempts:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:195",
+      "id": "be:get:api-hr-admin-attendance-attempts:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:205",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/hr/admin/attendance/attempts",
@@ -4346,11 +4346,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 195
+        "line": 205
       }
     },
     {
-      "id": "be:get:api-hr-admin-attendance-corrections:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:200",
+      "id": "be:get:api-hr-admin-attendance-corrections:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:210",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/hr/admin/attendance/corrections",
@@ -4373,11 +4373,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 200
+        "line": 210
       }
     },
     {
-      "id": "be:get:api-hr-admin-attendance-daily-report:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:133",
+      "id": "be:get:api-hr-admin-attendance-daily-report:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:143",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/hr/admin/attendance/daily-report",
@@ -4400,7 +4400,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 133
+        "line": 143
       }
     },
     {
@@ -4431,7 +4431,7 @@
       }
     },
     {
-      "id": "be:get:api-hr-admin-attendance-sessions:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:119",
+      "id": "be:get:api-hr-admin-attendance-sessions:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:129",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/hr/admin/attendance/sessions",
@@ -4454,7 +4454,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 119
+        "line": 129
       }
     },
     {
@@ -8766,7 +8766,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-bunny-usage-sync:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:223",
+      "id": "be:post:api-admin-teacher-finance-center-bunny-usage-sync:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:234",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/bunny/usage/sync",
@@ -8791,7 +8791,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 223
+        "line": 234
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
@@ -8826,7 +8826,7 @@
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-invoices-id-attachments:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:204",
+      "id": "be:post:api-admin-teacher-finance-center-invoices-id-attachments:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:215",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/invoices/{id}/attachments",
@@ -8851,12 +8851,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 204
+        "line": 215
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-reversals:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:194",
+      "id": "be:post:api-admin-teacher-finance-center-reversals:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:205",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/reversals",
@@ -8881,12 +8881,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 194
+        "line": 205
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-id-approve:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:177",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-id-approve:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:188",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/{id}/approve",
@@ -8911,12 +8911,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 177
+        "line": 188
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-id-cancel:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:187",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-id-cancel:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:198",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/{id}/cancel",
@@ -8941,12 +8941,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 187
+        "line": 198
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-id-pay:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:180",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-id-pay:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:191",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/{id}/pay",
@@ -8971,12 +8971,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 180
+        "line": 191
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-id-review:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:174",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-id-review:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:185",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/{id}/review",
@@ -9001,12 +9001,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 174
+        "line": 185
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements-preview:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:148",
+      "id": "be:post:api-admin-teacher-finance-center-settlements-preview:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:159",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/preview",
@@ -9031,12 +9031,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 148
+        "line": 159
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-settlements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:157",
+      "id": "be:post:api-admin-teacher-finance-center-settlements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:168",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements",
@@ -9061,12 +9061,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 157
+        "line": 168
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-shared-packages-id-allocation-preview:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:37",
+      "id": "be:post:api-admin-teacher-finance-center-shared-packages-id-allocation-preview:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:45",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/shared-packages/{id}/allocation-preview",
@@ -9091,12 +9091,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 37
+        "line": 45
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-teacher-finance-center-teachers-teacherid-agreements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:94",
+      "id": "be:post:api-admin-teacher-finance-center-teachers-teacherid-agreements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:102",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/agreements",
@@ -9121,7 +9121,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 94
+        "line": 102
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
@@ -10266,7 +10266,7 @@
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-hr-admin-attendance-corrections-correctionid-decision:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:206",
+      "id": "be:post:api-hr-admin-attendance-corrections-correctionid-decision:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:216",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/hr/admin/attendance/corrections/{correctionid}/decision",
@@ -10291,7 +10291,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 206
+        "line": 216
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -10356,7 +10356,7 @@
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-hr-admin-attendance-recalculate:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:215",
+      "id": "be:post:api-hr-admin-attendance-recalculate:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:225",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/hr/admin/attendance/recalculate",
@@ -10381,12 +10381,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 215
+        "line": 225
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-hr-admin-attendance-trusted-devices:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:224",
+      "id": "be:post:api-hr-admin-attendance-trusted-devices:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:234",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/hr/admin/attendance/trusted-devices",
@@ -10411,7 +10411,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 224
+        "line": 234
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -12036,7 +12036,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-hr-self-attendance-clock-out:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:109",
+      "id": "be:post:api-hr-self-attendance-clock-out:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:119",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/hr/self/attendance/clock-out",
@@ -12061,7 +12061,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 109
+        "line": 119
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -13326,7 +13326,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:put:api-admin-teacher-finance-center-agreements-agreementid:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:103",
+      "id": "be:put:api-admin-teacher-finance-center-agreements-agreementid:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:111",
       "kind": "backend-endpoint",
       "method": "PUT",
       "route": "/api/admin/teacher-finance-center/agreements/{agreementid}",
@@ -13351,7 +13351,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
-        "line": 103
+        "line": 111
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
@@ -13716,7 +13716,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:put:api-hr-admin-attendance-breaks-breakid:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:101",
+      "id": "be:put:api-hr-admin-attendance-breaks-breakid:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:111",
       "kind": "backend-endpoint",
       "method": "PUT",
       "route": "/api/hr/admin/attendance/breaks/{breakid}",
@@ -13741,7 +13741,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
-        "line": 101
+        "line": 111
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14076,7 +14076,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:279",
+      "id": "fe:delete:admin-finance-payroll-payrollid-adjustments-adjustmentid:frontend-src-services-finance-service-ts:289",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/finance/payroll/{payrollId}/adjustments/{adjustmentId}",
@@ -14101,7 +14101,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 279
+        "line": 289
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14286,7 +14286,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-subjects-id:frontend-src-services-teacher-service-ts:175",
+      "id": "fe:delete:admin-subjects-id:frontend-src-services-teacher-service-ts:178",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/subjects/{id}",
@@ -14311,7 +14311,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 175
+        "line": 178
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14844,6 +14844,60 @@
       }
     },
     {
+      "id": "fe:get:admin-auto-repair-id:frontend-src-services-auto-repair-service-ts:21",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/auto-repair/{id}",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/auto-repair-service.ts",
+        "line": 21
+      }
+    },
+    {
+      "id": "fe:get:admin-auto-repair:frontend-src-services-auto-repair-service-ts:18",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/auto-repair",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/auto-repair-service.ts",
+        "line": 18
+      }
+    },
+    {
       "id": "fe:get:admin-bunny-libraries-available:frontend-src-services-admin-service-ts:1754",
       "kind": "frontend-call",
       "method": "GET",
@@ -15195,7 +15249,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:321",
+      "id": "fe:get:admin-finance-code-accounting:frontend-src-services-finance-service-ts:331",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/code-accounting",
@@ -15218,7 +15272,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 321
+        "line": 331
       }
     },
     {
@@ -15249,7 +15303,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:294",
+      "id": "fe:get:admin-finance-payouts:frontend-src-services-finance-service-ts:304",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payouts",
@@ -15272,11 +15326,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 294
+        "line": 304
       }
     },
     {
-      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:249",
+      "id": "fe:get:admin-finance-payroll:frontend-src-services-finance-service-ts:259",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payroll",
@@ -15299,11 +15353,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 249
+        "line": 259
       }
     },
     {
-      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:334",
+      "id": "fe:get:admin-finance-teacher-events:frontend-src-services-finance-service-ts:344",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/teacher-events",
@@ -15326,7 +15380,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 334
+        "line": 344
       }
     },
     {
@@ -15627,7 +15681,7 @@
       }
     },
     {
-      "id": "fe:get:admin-hr-attendance:frontend-src-services-hr-service-ts:392",
+      "id": "fe:get:admin-hr-attendance:frontend-src-services-hr-service-ts:396",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/hr/attendance",
@@ -15650,7 +15704,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 392
+        "line": 396
       }
     },
     {
@@ -16761,7 +16815,7 @@
       }
     },
     {
-      "id": "fe:get:admin-subjects-id:frontend-src-services-teacher-service-ts:163",
+      "id": "fe:get:admin-subjects-id:frontend-src-services-teacher-service-ts:166",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/subjects/{id}",
@@ -16784,11 +16838,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 163
+        "line": 166
       }
     },
     {
-      "id": "fe:get:admin-subjects:frontend-src-services-teacher-service-ts:161",
+      "id": "fe:get:admin-subjects:frontend-src-services-teacher-service-ts:164",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/subjects",
@@ -16811,7 +16865,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 161
+        "line": 164
       }
     },
     {
@@ -16869,7 +16923,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:225",
+      "id": "fe:get:admin-teacher-finance-center-settlements-settlementid:frontend-src-services-finance-service-ts:235",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}",
@@ -16892,11 +16946,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 225
+        "line": 235
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:179",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:180",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -16919,11 +16973,38 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 179
+        "line": 180
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:207",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-collections:frontend-src-services-finance-service-ts:208",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/teacher-finance-center/teachers/{teacherId}/collections",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 208
+      }
+    },
+    {
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-ledger:frontend-src-services-finance-service-ts:216",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/ledger",
@@ -16946,11 +17027,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 207
+        "line": 216
       }
     },
     {
-      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:200",
+      "id": "fe:get:admin-teacher-finance-center-teachers-teacherid-summary:frontend-src-services-finance-service-ts:201",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/summary",
@@ -16973,11 +17054,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 200
+        "line": 201
       }
     },
     {
-      "id": "fe:get:admin-teachers-id:frontend-src-services-teacher-service-ts:184",
+      "id": "fe:get:admin-teachers-id:frontend-src-services-teacher-service-ts:187",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{id}",
@@ -17000,7 +17081,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 184
+        "line": 187
       }
     },
     {
@@ -17193,7 +17274,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teachers:frontend-src-services-teacher-service-ts:182",
+      "id": "fe:get:admin-teachers:frontend-src-services-teacher-service-ts:185",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers",
@@ -17216,7 +17297,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 182
+        "line": 185
       }
     },
     {
@@ -18435,7 +18516,7 @@
       }
     },
     {
-      "id": "fe:get:hr-admin-attendance-corrections:frontend-src-services-hr-service-ts:334",
+      "id": "fe:get:hr-admin-attendance-corrections:frontend-src-services-hr-service-ts:338",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/admin/attendance/corrections",
@@ -18458,11 +18539,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 334
+        "line": 338
       }
     },
     {
-      "id": "fe:get:hr-admin-attendance-daily-report:frontend-src-services-hr-service-ts:340",
+      "id": "fe:get:hr-admin-attendance-daily-report:frontend-src-services-hr-service-ts:344",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/admin/attendance/daily-report",
@@ -18485,7 +18566,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 340
+        "line": 344
       }
     },
     {
@@ -18516,7 +18597,7 @@
       }
     },
     {
-      "id": "fe:get:hr-admin-attendance-sessions:frontend-src-services-hr-service-ts:337",
+      "id": "fe:get:hr-admin-attendance-sessions:frontend-src-services-hr-service-ts:341",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/admin/attendance/sessions",
@@ -18539,7 +18620,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 337
+        "line": 341
       }
     },
     {
@@ -18570,7 +18651,7 @@
       }
     },
     {
-      "id": "fe:get:hr-admin-leave-config:frontend-src-services-hr-service-ts:356",
+      "id": "fe:get:hr-admin-leave-config:frontend-src-services-hr-service-ts:360",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/admin/leave/config",
@@ -18593,7 +18674,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 356
+        "line": 360
       }
     },
     {
@@ -18759,7 +18840,7 @@
       }
     },
     {
-      "id": "fe:get:hr-approvals-inbox:frontend-src-services-hr-service-ts:352",
+      "id": "fe:get:hr-approvals-inbox:frontend-src-services-hr-service-ts:356",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/approvals/inbox",
@@ -18782,11 +18863,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 352
+        "line": 356
       }
     },
     {
-      "id": "fe:get:hr-attendance-my:frontend-src-services-hr-service-ts:383",
+      "id": "fe:get:hr-attendance-my:frontend-src-services-hr-service-ts:387",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/attendance/my",
@@ -18809,7 +18890,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 383
+        "line": 387
       }
     },
     {
@@ -19137,7 +19218,7 @@
       }
     },
     {
-      "id": "fe:get:hr-self-leave-balances:frontend-src-services-hr-service-ts:346",
+      "id": "fe:get:hr-self-leave-balances:frontend-src-services-hr-service-ts:350",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/self/leave/balances",
@@ -19160,11 +19241,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 346
+        "line": 350
       }
     },
     {
-      "id": "fe:get:hr-self-leave-catalog:frontend-src-services-hr-service-ts:345",
+      "id": "fe:get:hr-self-leave-catalog:frontend-src-services-hr-service-ts:349",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/self/leave/catalog",
@@ -19187,11 +19268,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 345
+        "line": 349
       }
     },
     {
-      "id": "fe:get:hr-self-leave-requests:frontend-src-services-hr-service-ts:347",
+      "id": "fe:get:hr-self-leave-requests:frontend-src-services-hr-service-ts:351",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/hr/self/leave/requests",
@@ -19214,7 +19295,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 347
+        "line": 351
       }
     },
     {
@@ -20244,7 +20325,7 @@
       }
     },
     {
-      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:306",
+      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:305",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/settings",
@@ -20267,7 +20348,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 306
+        "line": 305
       }
     },
     {
@@ -20730,7 +20811,7 @@
       }
     },
     {
-      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:157",
+      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:175",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/video-session/{lessonVideoId}/request-status",
@@ -20753,11 +20834,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 157
+        "line": 175
       }
     },
     {
-      "id": "fe:get:teacher-activity:frontend-src-services-teacher-service-ts:272",
+      "id": "fe:get:teacher-activity:frontend-src-services-teacher-service-ts:276",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/activity",
@@ -20780,11 +20861,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 272
+        "line": 276
       }
     },
     {
-      "id": "fe:get:teacher-comments:frontend-src-services-teacher-service-ts:381",
+      "id": "fe:get:teacher-comments:frontend-src-services-teacher-service-ts:385",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/comments",
@@ -20807,11 +20888,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 381
+        "line": 385
       }
     },
     {
-      "id": "fe:get:teacher-community-comments-pending:frontend-src-services-teacher-service-ts:341",
+      "id": "fe:get:teacher-community-comments-pending:frontend-src-services-teacher-service-ts:345",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/community/comments/pending",
@@ -20834,11 +20915,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 341
+        "line": 345
       }
     },
     {
-      "id": "fe:get:teacher-community-posts:frontend-src-services-teacher-service-ts:335",
+      "id": "fe:get:teacher-community-posts:frontend-src-services-teacher-service-ts:339",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/community/posts",
@@ -20861,11 +20942,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 335
+        "line": 339
       }
     },
     {
-      "id": "fe:get:teacher-content-contenttype-id-subscribers-export:frontend-src-services-teacher-service-ts:295",
+      "id": "fe:get:teacher-content-contenttype-id-subscribers-export:frontend-src-services-teacher-service-ts:299",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/content/{contentType}/{id}/subscribers/export",
@@ -20888,11 +20969,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 295
+        "line": 299
       }
     },
     {
-      "id": "fe:get:teacher-content-contenttype-id-subscribers:frontend-src-services-teacher-service-ts:284",
+      "id": "fe:get:teacher-content-contenttype-id-subscribers:frontend-src-services-teacher-service-ts:288",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/content/{contentType}/{id}/subscribers",
@@ -20915,11 +20996,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 284
+        "line": 288
       }
     },
     {
-      "id": "fe:get:teacher-context:frontend-src-services-teacher-service-ts:274",
+      "id": "fe:get:teacher-context:frontend-src-services-teacher-service-ts:278",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/context",
@@ -20942,41 +21023,14 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 274
+        "line": 278
       }
     },
     {
-      "id": "fe:get:teacher-dashboard-stats:frontend-src-services-teacher-service-ts:233",
+      "id": "fe:get:teacher-dashboard-stats:frontend-src-services-teacher-service-ts:237",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/dashboard/stats",
-      "effect": "read",
-      "domain": "content",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 233
-      }
-    },
-    {
-      "id": "fe:get:teacher-essays:frontend-src-services-teacher-service-ts:237",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/teacher/essays",
       "effect": "read",
       "domain": "content",
       "risk": "none",
@@ -21000,7 +21054,34 @@
       }
     },
     {
-      "id": "fe:get:teacher-finance-account:frontend-src-services-finance-service-ts:369",
+      "id": "fe:get:teacher-essays:frontend-src-services-teacher-service-ts:241",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/teacher/essays",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-teacher-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-teacher-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 241
+      }
+    },
+    {
+      "id": "fe:get:teacher-finance-account:frontend-src-services-finance-service-ts:379",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/finance/account",
@@ -21023,11 +21104,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 369
+        "line": 379
       }
     },
     {
-      "id": "fe:get:teacher-finance-calendar-export:frontend-src-services-finance-service-ts:399",
+      "id": "fe:get:teacher-finance-calendar-export:frontend-src-services-finance-service-ts:409",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/finance/calendar/export",
@@ -21050,11 +21131,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 399
+        "line": 409
       }
     },
     {
-      "id": "fe:get:teacher-finance-calendar:frontend-src-services-finance-service-ts:391",
+      "id": "fe:get:teacher-finance-calendar:frontend-src-services-finance-service-ts:401",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/finance/calendar",
@@ -21077,11 +21158,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 391
+        "line": 401
       }
     },
     {
-      "id": "fe:get:teacher-finance-payouts:frontend-src-services-finance-service-ts:407",
+      "id": "fe:get:teacher-finance-payouts:frontend-src-services-finance-service-ts:417",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/finance/payouts",
@@ -21104,11 +21185,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 407
+        "line": 417
       }
     },
     {
-      "id": "fe:get:teacher-finance-transactions:frontend-src-services-finance-service-ts:380",
+      "id": "fe:get:teacher-finance-transactions:frontend-src-services-finance-service-ts:390",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/finance/transactions",
@@ -21131,11 +21212,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 380
+        "line": 390
       }
     },
     {
-      "id": "fe:get:teacher-lessons-lessonid-comments:frontend-src-services-teacher-service-ts:365",
+      "id": "fe:get:teacher-lessons-lessonid-comments:frontend-src-services-teacher-service-ts:369",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/lessons/{lessonId}/comments",
@@ -21158,11 +21239,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 365
+        "line": 369
       }
     },
     {
-      "id": "fe:get:teacher-profile-active-photo:frontend-src-services-teacher-service-ts:270",
+      "id": "fe:get:teacher-profile-active-photo:frontend-src-services-teacher-service-ts:274",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/profile/active-photo",
@@ -21185,11 +21266,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 270
+        "line": 274
       }
     },
     {
-      "id": "fe:get:teacher-profile:frontend-src-services-teacher-service-ts:244",
+      "id": "fe:get:teacher-profile:frontend-src-services-teacher-service-ts:248",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/profile",
@@ -21212,11 +21293,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 244
+        "line": 248
       }
     },
     {
-      "id": "fe:get:teacher-public-exams:frontend-src-services-teacher-service-ts:323",
+      "id": "fe:get:teacher-public-exams:frontend-src-services-teacher-service-ts:327",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/public-exams",
@@ -21239,11 +21320,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 323
+        "line": 327
       }
     },
     {
-      "id": "fe:get:teacher-staff:frontend-src-services-teacher-service-ts:306",
+      "id": "fe:get:teacher-staff:frontend-src-services-teacher-service-ts:310",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/staff",
@@ -21266,11 +21347,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 306
+        "line": 310
       }
     },
     {
-      "id": "fe:get:teacher-students:frontend-src-services-teacher-service-ts:235",
+      "id": "fe:get:teacher-students:frontend-src-services-teacher-service-ts:239",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/students",
@@ -21293,11 +21374,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 235
+        "line": 239
       }
     },
     {
-      "id": "fe:get:teacher-subjects:frontend-src-services-teacher-service-ts:276",
+      "id": "fe:get:teacher-subjects:frontend-src-services-teacher-service-ts:280",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/teacher/subjects",
@@ -21320,7 +21401,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 276
+        "line": 280
       }
     },
     {
@@ -21783,7 +21864,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:teacher-staff-staffmemberid-permissions:frontend-src-services-teacher-service-ts:318",
+      "id": "fe:patch:teacher-staff-staffmemberid-permissions:frontend-src-services-teacher-service-ts:322",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/teacher/staff/{staffMemberId}/permissions",
@@ -21808,12 +21889,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 318
+        "line": 322
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:teacher-staff-staffmemberid-status:frontend-src-services-teacher-service-ts:313",
+      "id": "fe:patch:teacher-staff-staffmemberid-status:frontend-src-services-teacher-service-ts:317",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/teacher/staff/{staffMemberId}/status",
@@ -21838,7 +21919,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 313
+        "line": 317
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -21869,6 +21950,36 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2078
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-auto-repair-id-decision:frontend-src-services-auto-repair-service-ts:27",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/auto-repair/{id}/decision",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/services/auto-repair-service.ts",
+        "line": 27
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -22503,7 +22614,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:305",
+      "id": "fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:315",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payouts/{payoutId}/resolve",
@@ -22528,12 +22639,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 305
+        "line": 315
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:257",
+      "id": "fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:267",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/generate",
@@ -22558,12 +22669,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 257
+        "line": 267
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:268",
+      "id": "fe:post:admin-finance-payroll-payrollid-adjustments:frontend-src-services-finance-service-ts:278",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/adjustments",
@@ -22588,12 +22699,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 268
+        "line": 278
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:286",
+      "id": "fe:post:admin-finance-payroll-payrollid-approve:frontend-src-services-finance-service-ts:296",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/payroll/{payrollId}/approve",
@@ -22618,12 +22729,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 286
+        "line": 296
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:348",
+      "id": "fe:post:admin-finance-teacher-events-allocationid-review:frontend-src-services-finance-service-ts:358",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/{allocationId}/review",
@@ -22648,12 +22759,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 348
+        "line": 358
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:360",
+      "id": "fe:post:admin-finance-teacher-events-manual-compensation:frontend-src-services-finance-service-ts:370",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/finance/teacher-events/manual-compensation",
@@ -22678,7 +22789,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 360
+        "line": 370
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24153,7 +24264,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-subjects:frontend-src-services-teacher-service-ts:165",
+      "id": "fe:post:admin-subjects:frontend-src-services-teacher-service-ts:168",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/subjects",
@@ -24178,7 +24289,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 165
+        "line": 168
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24213,7 +24324,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:244",
+      "id": "fe:post:admin-teacher-finance-center-code-groups-codegroupid-confirm-delivery:frontend-src-services-finance-service-ts:254",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/confirm-delivery",
@@ -24238,12 +24349,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 244
+        "line": 254
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:235",
+      "id": "fe:post:admin-teacher-finance-center-reversals:frontend-src-services-finance-service-ts:245",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/reversals",
@@ -24268,12 +24379,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 235
+        "line": 245
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:214",
+      "id": "fe:post:admin-teacher-finance-center-settlements-preview:frontend-src-services-finance-service-ts:224",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/preview",
@@ -24298,15 +24409,135 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 214
+        "line": 224
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:230",
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:240",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/{settlementId}/approve",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 240
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:241",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/teacher-finance-center/settlements/{settlementId}/cancel",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 241
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:242",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/teacher-finance-center/settlements/{settlementId}/pay",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 242
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:239",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/teacher-finance-center/settlements/{settlementId}/review",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 239
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:230",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/teacher-finance-center/settlements",
       "effect": "mutation",
       "domain": "finance",
       "risk": "strong",
@@ -24333,127 +24564,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-cancel:frontend-src-services-finance-service-ts:231",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/teacher-finance-center/settlements/{settlementId}/cancel",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 231
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-pay:frontend-src-services-finance-service-ts:232",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/teacher-finance-center/settlements/{settlementId}/pay",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 232
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-review:frontend-src-services-finance-service-ts:229",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/teacher-finance-center/settlements/{settlementId}/review",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 229
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-teacher-finance-center-settlements:frontend-src-services-finance-service-ts:220",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/teacher-finance-center/settlements",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/finance-service.ts",
-        "line": 220
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:186",
+      "id": "fe:post:admin-teacher-finance-center-teachers-teacherid-agreements:frontend-src-services-finance-service-ts:187",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/teachers/{teacherId}/agreements",
@@ -24478,7 +24589,7 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 186
+        "line": 187
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24573,7 +24684,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teachers:frontend-src-services-teacher-service-ts:200",
+      "id": "fe:post:admin-teachers:frontend-src-services-teacher-service-ts:204",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teachers",
@@ -24598,7 +24709,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 200
+        "line": 204
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25353,6 +25464,66 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:145",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/api/video/session",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 145
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:151",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/api/video/session",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 151
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "fe:post:chat-messages-messageid-pin:frontend-src-services-chat-service-ts:60",
       "kind": "frontend-call",
       "method": "POST",
@@ -26043,7 +26214,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-admin-attendance-corrections-id-decision:frontend-src-services-hr-service-ts:343",
+      "id": "fe:post:hr-admin-attendance-corrections-id-decision:frontend-src-services-hr-service-ts:347",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/admin/attendance/corrections/{id}/decision",
@@ -26068,7 +26239,7 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 343
+        "line": 347
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -26133,6 +26304,36 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "fe:post:hr-admin-attendance-sessions-sessionid-cancel:frontend-src-services-hr-service-ts:325",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/hr/admin/attendance/sessions/{sessionId}/cancel",
+      "effect": "mutation",
+      "domain": "hr",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "hr"
+      ],
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 325
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "fe:post:hr-admin-cases-id-decision:frontend-src-services-hr-performance-service-ts:11",
       "kind": "frontend-call",
       "method": "POST",
@@ -26193,7 +26394,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-admin-leave-policies:frontend-src-services-hr-service-ts:360",
+      "id": "fe:post:hr-admin-leave-policies:frontend-src-services-hr-service-ts:364",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/admin/leave/policies",
@@ -26218,12 +26419,12 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 360
+        "line": 364
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-admin-leave-types:frontend-src-services-hr-service-ts:358",
+      "id": "fe:post:hr-admin-leave-types:frontend-src-services-hr-service-ts:362",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/admin/leave/types",
@@ -26248,7 +26449,7 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 358
+        "line": 362
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -26613,100 +26814,10 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-approvals-definitions:frontend-src-services-hr-service-ts:364",
+      "id": "fe:post:hr-approvals-definitions:frontend-src-services-hr-service-ts:368",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/approvals/definitions",
-      "effect": "mutation",
-      "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "hr"
-      ],
-      "source": {
-        "file": "frontend/src/services/hr-service.ts",
-        "line": 364
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:hr-approvals-delegations:frontend-src-services-hr-service-ts:362",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/hr/approvals/delegations",
-      "effect": "mutation",
-      "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "hr"
-      ],
-      "source": {
-        "file": "frontend/src/services/hr-service.ts",
-        "line": 362
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:hr-approvals-instanceid-decision:frontend-src-services-hr-service-ts:354",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/hr/approvals/{instanceId}/decision",
-      "effect": "mutation",
-      "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "hr"
-      ],
-      "source": {
-        "file": "frontend/src/services/hr-service.ts",
-        "line": 354
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:hr-attendance-clock-in:frontend-src-services-hr-service-ts:368",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/hr/attendance/clock-in",
       "effect": "mutation",
       "domain": "hr",
       "risk": "ordinary",
@@ -26733,7 +26844,97 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-attendance-clock-out:frontend-src-services-hr-service-ts:375",
+      "id": "fe:post:hr-approvals-delegations:frontend-src-services-hr-service-ts:366",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/hr/approvals/delegations",
+      "effect": "mutation",
+      "domain": "hr",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "hr"
+      ],
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 366
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:hr-approvals-instanceid-decision:frontend-src-services-hr-service-ts:358",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/hr/approvals/{instanceId}/decision",
+      "effect": "mutation",
+      "domain": "hr",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "hr"
+      ],
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 358
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:hr-attendance-clock-in:frontend-src-services-hr-service-ts:372",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/hr/attendance/clock-in",
+      "effect": "mutation",
+      "domain": "hr",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "hr"
+      ],
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 372
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:hr-attendance-clock-out:frontend-src-services-hr-service-ts:379",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/attendance/clock-out",
@@ -26758,7 +26959,7 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 375
+        "line": 379
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -27123,7 +27324,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-self-attendance-clock-out:frontend-src-services-hr-service-ts:328",
+      "id": "fe:post:hr-self-attendance-clock-out:frontend-src-services-hr-service-ts:332",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/self/attendance/clock-out",
@@ -27148,12 +27349,12 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 328
+        "line": 332
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-self-attendance-corrections:frontend-src-services-hr-service-ts:331",
+      "id": "fe:post:hr-self-attendance-corrections:frontend-src-services-hr-service-ts:335",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/self/attendance/corrections",
@@ -27178,12 +27379,12 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 331
+        "line": 335
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-self-leave-requests-id-withdraw:frontend-src-services-hr-service-ts:351",
+      "id": "fe:post:hr-self-leave-requests-id-withdraw:frontend-src-services-hr-service-ts:355",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/self/leave/requests/{id}/withdraw",
@@ -27208,12 +27409,12 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 351
+        "line": 355
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:hr-self-leave-requests:frontend-src-services-hr-service-ts:349",
+      "id": "fe:post:hr-self-leave-requests:frontend-src-services-hr-service-ts:353",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/self/leave/requests",
@@ -27238,7 +27439,7 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 349
+        "line": 353
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -28593,7 +28794,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:153",
+      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:171",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{lessonVideoId}/request-extra",
@@ -28618,12 +28819,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 153
+        "line": 171
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:162",
+      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:180",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{requestlessonVideoId}/track-progress",
@@ -28648,12 +28849,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 162
+        "line": 180
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:170",
+      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:188",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{requestlessonVideoId}/track-progress",
@@ -28678,12 +28879,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 170
+        "line": 188
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:149",
+      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:167",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{sessionId}/client-event",
@@ -28708,12 +28909,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 149
+        "line": 167
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:145",
+      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:163",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{sessionId}/consume",
@@ -28738,12 +28939,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 145
+        "line": 163
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:139",
+      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:157",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session",
@@ -28768,12 +28969,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 139
+        "line": 157
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-comments-commentid-approve:frontend-src-services-teacher-service-ts:371",
+      "id": "fe:post:teacher-comments-commentid-approve:frontend-src-services-teacher-service-ts:375",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/comments/{commentId}/approve",
@@ -28798,12 +28999,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 371
+        "line": 375
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-comments-commentid-reject:frontend-src-services-teacher-service-ts:376",
+      "id": "fe:post:teacher-comments-commentid-reject:frontend-src-services-teacher-service-ts:380",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/comments/{commentId}/reject",
@@ -28828,12 +29029,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 376
+        "line": 380
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-comments-commentid-reply:frontend-src-services-teacher-service-ts:385",
+      "id": "fe:post:teacher-comments-commentid-reply:frontend-src-services-teacher-service-ts:389",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/comments/{commentId}/reply",
@@ -28858,12 +29059,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 385
+        "line": 389
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-community-comments-commentid-approve:frontend-src-services-teacher-service-ts:355",
+      "id": "fe:post:teacher-community-comments-commentid-approve:frontend-src-services-teacher-service-ts:359",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/community/comments/{commentId}/approve",
@@ -28888,12 +29089,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 355
+        "line": 359
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-community-comments-commentid-reject:frontend-src-services-teacher-service-ts:360",
+      "id": "fe:post:teacher-community-comments-commentid-reject:frontend-src-services-teacher-service-ts:364",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/community/comments/{commentId}/reject",
@@ -28918,12 +29119,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 360
+        "line": 364
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-community-posts-postid-approve:frontend-src-services-teacher-service-ts:345",
+      "id": "fe:post:teacher-community-posts-postid-approve:frontend-src-services-teacher-service-ts:349",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/community/posts/{postId}/approve",
@@ -28948,12 +29149,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 345
+        "line": 349
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-community-posts-postid-reject:frontend-src-services-teacher-service-ts:350",
+      "id": "fe:post:teacher-community-posts-postid-reject:frontend-src-services-teacher-service-ts:354",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/community/posts/{postId}/reject",
@@ -28978,12 +29179,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 350
+        "line": 354
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-essays-id-grade:frontend-src-services-teacher-service-ts:239",
+      "id": "fe:post:teacher-essays-id-grade:frontend-src-services-teacher-service-ts:243",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/essays/{id}/grade",
@@ -29008,12 +29209,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 239
+        "line": 243
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-finance-payouts:frontend-src-services-finance-service-ts:414",
+      "id": "fe:post:teacher-finance-payouts:frontend-src-services-finance-service-ts:424",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/finance/payouts",
@@ -29038,12 +29239,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 414
+        "line": 424
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-profile-upload-ai-photo:frontend-src-services-teacher-service-ts:265",
+      "id": "fe:post:teacher-profile-upload-ai-photo:frontend-src-services-teacher-service-ts:269",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/profile/upload-ai-photo",
@@ -29068,12 +29269,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 265
+        "line": 269
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-profile-upload-image:frontend-src-services-teacher-service-ts:260",
+      "id": "fe:post:teacher-profile-upload-image:frontend-src-services-teacher-service-ts:264",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/profile/upload-image",
@@ -29098,12 +29299,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 260
+        "line": 264
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-public-exams-new:frontend-src-services-teacher-service-ts:327",
+      "id": "fe:post:teacher-public-exams-new:frontend-src-services-teacher-service-ts:331",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/public-exams/new",
@@ -29128,12 +29329,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 327
+        "line": 331
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:teacher-staff:frontend-src-services-teacher-service-ts:308",
+      "id": "fe:post:teacher-staff:frontend-src-services-teacher-service-ts:312",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/teacher/staff",
@@ -29158,7 +29359,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 308
+        "line": 312
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -29369,6 +29570,36 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 1038
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:put:admin-auto-repair-control:frontend-src-services-auto-repair-service-ts:24",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/admin/auto-repair/control",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-auto-repair-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/services/auto-repair-service.ts",
+        "line": 24
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30063,7 +30294,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-subjects-id:frontend-src-services-teacher-service-ts:170",
+      "id": "fe:put:admin-subjects-id:frontend-src-services-teacher-service-ts:173",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/subjects/{id}",
@@ -30088,12 +30319,12 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 170
+        "line": 173
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:193",
+      "id": "fe:put:admin-teacher-finance-center-agreements-agreementid:frontend-src-services-finance-service-ts:194",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/agreements/{agreementId}",
@@ -30118,12 +30349,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 193
+        "line": 194
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:240",
+      "id": "fe:put:admin-teacher-finance-center-code-groups-codegroupid-financial-terms:frontend-src-services-finance-service-ts:250",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teacher-finance-center/code-groups/{codeGroupId}/financial-terms",
@@ -30148,12 +30379,12 @@
       ],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 240
+        "line": 250
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-teachers-id:frontend-src-services-teacher-service-ts:226",
+      "id": "fe:put:admin-teachers-id:frontend-src-services-teacher-service-ts:230",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/teachers/{id}",
@@ -30178,7 +30409,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 226
+        "line": 230
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30513,7 +30744,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:hr-admin-attendance-breaks-breakid:frontend-src-services-hr-service-ts:325",
+      "id": "fe:put:hr-admin-attendance-breaks-breakid:frontend-src-services-hr-service-ts:329",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/hr/admin/attendance/breaks/{breakId}",
@@ -30538,7 +30769,7 @@
       ],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
-        "line": 325
+        "line": 329
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30843,7 +31074,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:teacher-profile:frontend-src-services-teacher-service-ts:255",
+      "id": "fe:put:teacher-profile:frontend-src-services-teacher-service-ts:259",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/teacher/profile",
@@ -30868,7 +31099,7 @@
       ],
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 255
+        "line": 259
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30904,5 +31135,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "60f64653d95f0a5d5005a2586b91a294cfcb3bf4967f49203458b99e757c5990"
+  "digest": "05ee87c1ff534d4794b14b08cb1628e324592c3a178b9d930b69d601c787d5a4"
 }

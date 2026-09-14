@@ -77,6 +77,30 @@ public sealed class AdminFinanceCenterTests
         Assert.Equal(-25m, reversal.TeacherShareAmount);
     }
 
+    [Fact]
+    public async Task Cancelling_content_after_partial_paid_refund_does_not_charge_the_teacher_twice()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000049");
+        var teacher = await SeedTeacherAsync(db, "Teacher", "01000000048");
+        var allocation = await RecordAllocationAsync(db, teacher, 60m, "partial-then-cancel");
+        var original = await db.TeacherFinancialEvents.SingleAsync();
+        original.StudentId = student.Id;
+        allocation.PayoutStatus = TeacherFinancialPayoutStatus.Paid;
+        await db.SaveChangesAsync();
+        var settlement = new NaderGorge.Application.Features.Admin.TeacherFinanceCenter.TeacherSettlementAuthorityService(db);
+        var partial = await settlement.ReverseAsync(new([new(allocation.Id, 25m)], "partial",
+            TeacherReversalDisposition.NextSettlementDeduction, "partial-refund"), CancellationToken.None);
+        Assert.Equal(NaderGorge.Application.Features.Admin.TeacherFinanceCenter.TeacherFinanceCommandStatus.Success, partial.Status);
+
+        await new TeacherAccountingService(db).ReverseTargetAsync(student.Id, original.TargetType,
+            original.TargetId, Guid.NewGuid(), "cancel remaining", CancellationToken.None);
+
+        Assert.Equal(-60m, await db.TeacherPayoutAdjustments.SumAsync(x => x.Amount));
+        Assert.Equal(-60m, await db.TeacherFinancialAllocations.Where(x => x.TeacherShareAmount < 0).SumAsync(x => x.TeacherShareAmount));
+        Assert.Equal(60m, allocation.ReversedAmount);
+    }
+
     private static AdminTeacherFinanceCenterController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorId) => new(db, new NoopMediator())
     {
         ControllerContext = new ControllerContext

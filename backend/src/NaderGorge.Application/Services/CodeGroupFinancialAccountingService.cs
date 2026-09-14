@@ -20,6 +20,10 @@ public sealed class CodeGroupFinancialAccountingService
         if (group.CodeType == CodeType.Balance || !group.TeacherId.HasValue)
             return;
 
+        if (group.AccountingRecordedAt.HasValue || await CodeGroupAccountingGuard.HasBatchChargeAsync(_db, group.Id, ct)) return;
+        if (await CodeGroupAccountingGuard.HasActivationAsync(_db, group.Id, ct))
+            throw new InvalidOperationException("لا يمكن احتساب دفعة بدأ استخدامها عند التسليم");
+
         var (itemPrice, targetType, targetId, contentName) = await ResolvePricingAsync(group, ct);
         var gross = itemPrice * group.TotalCodes;
         var paid = gross * (1m - Math.Clamp(group.DiscountPercentage ?? 0m, 0m, 100m) / 100m);
@@ -68,27 +72,27 @@ public sealed class CodeGroupFinancialAccountingService
 
     private async Task<(decimal Price, SalesTargetType TargetType, Guid TargetId, string Name)> ResolvePricingAsync(CodeGroup group, CancellationToken ct)
     {
-        if (group.PackageId is Guid packageId)
+        if (group.CodeType == CodeType.Package && group.PackageId is Guid packageId)
         {
             var item = await _db.Packages.AsNoTracking().FirstOrDefaultAsync(x => x.Id == packageId, ct);
             if (item != null) return (item.Price, SalesTargetType.Package, item.Id, item.Name);
         }
-        if (group.TermId is Guid termId)
+        if (group.CodeType == CodeType.Term && group.TermId is Guid termId)
         {
             var item = await _db.Terms.AsNoTracking().FirstOrDefaultAsync(x => x.Id == termId, ct);
             if (item != null) return (item.Price, SalesTargetType.Term, item.Id, item.Title);
         }
-        if (group.ContentSectionId is Guid sectionId)
+        if (group.CodeType == CodeType.Month && group.ContentSectionId is Guid sectionId)
         {
             var item = await _db.ContentSections.AsNoTracking().FirstOrDefaultAsync(x => x.Id == sectionId, ct);
             if (item != null) return (item.Price, SalesTargetType.ContentSection, item.Id, item.Title);
         }
-        if (group.LessonId is Guid lessonId)
+        if (group.CodeType == CodeType.Lesson && group.LessonId is Guid lessonId)
         {
             var item = await _db.Lessons.AsNoTracking().FirstOrDefaultAsync(x => x.Id == lessonId, ct);
             if (item != null) return (item.Price, SalesTargetType.Lesson, item.Id, item.Title);
         }
-        if (group.PublicExamProductId is Guid productId)
+        if (group.CodeType == CodeType.Exam && group.PublicExamProductId is Guid productId)
         {
             var item = await _db.PublicExamProducts.AsNoTracking().Include(x => x.Exam).FirstOrDefaultAsync(x => x.Id == productId, ct);
             if (item != null) return (item.Price, SalesTargetType.PublicExam, item.Id, item.Exam.Title);

@@ -9,6 +9,7 @@ import {
 import { clearAccessToken, setAccessToken } from '@/lib/auth-memory';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
 import { platformQueryClient } from '@/lib/query-client';
+import { clearVideoPlaybackCookies } from '@/lib/video-playback-cleanup';
 
 interface User {
   id: string;
@@ -101,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   ...initialAuth,
 
   setAuth: (user, accessToken, rememberMe) => {
+    if (get().user?.id !== user.id) clearVideoPlaybackCookies();
     clearQueriesForBoundaryTransition(get().user, user);
     setAccessToken(accessToken);
     persistAuthSession({ user, accessToken }, rememberMe);
@@ -108,6 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearAuth: () => {
+    clearVideoPlaybackCookies();
     platformQueryClient.removeQueries();
     clearAccessToken();
     clearStoredAuth();
