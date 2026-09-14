@@ -82,7 +82,7 @@ def build_agent(source):
     with log.open('w') as stream:
         result = subprocess.run([*DOCKER, 'build', '--pull=false', '--network=default',
             '--build-arg', 'NODE_IMAGE=' + NODE, '--build-arg', 'DOTNET_IMAGE=' + SDK,
-            '--build-arg', 'CODEX_VERSION=0.147.0', '-f', str(context / 'deploy/auto-repair/Dockerfile'),
+            '--build-arg', 'CODEX_VERSION=0.154.0', '-f', str(context / 'deploy/auto-repair/Dockerfile'),
             '-t', 'massar/repair-agent:prepared', str(context)], stdout=stream, stderr=subprocess.STDOUT)
     if result.returncode:
         raise RuntimeError('Agent image build failed; inspect private agent-build.log')

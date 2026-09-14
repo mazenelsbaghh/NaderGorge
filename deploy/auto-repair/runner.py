@@ -162,6 +162,8 @@ class Runner:
             # the enforced read-only filesystem, mount boundary, network fence and resource caps;
             # nested bubblewrap namespaces are unavailable under the container's default seccomp.
             'codex', 'exec', '--ignore-user-config', '--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox',
+            '--model', 'gpt-6-astra', '-c', 'model_reasoning_effort="medium"',
+            '-c', 'service_tier="default"',
             '--json', '--output-schema', '/opt/repair/review-schema.json', '-o', '/workspace/.repair-response.json', '-']
         # The report remains outside the model's transcript; only bounded final evidence is published.
         errors = tempfile.TemporaryFile(mode='w+b')
