@@ -346,7 +346,7 @@ protected_rows_hash() {{
       "copy (select row_to_json(t)::text from user_roles t where \"UserId\" <>
        'd36c2e35-512c-497b-b8c7-43df9ac3b123' order by \"UserId\",\"RoleId\") to stdout;"
     psql_restore -c \
-      "copy (select row_to_json(t)::text from teacher_profiles t where \"Id\" <>
+      "copy (select $teacher_profile_projection from teacher_profiles t where \"Id\" <>
        'b4b82937-293e-48a3-a002-decf9a1efab8' order by \"Id\") to stdout;"
     psql_restore -c \
       "copy (select row_to_json(t)::text from teacher_subjects t where not
@@ -361,6 +361,16 @@ protected_rows_hash() {{
        ('Admin','Teacher','Assistant','Student') order by \"Id\") to stdout;"
   }} | sha256sum | awk '{{print $1}}'
 }}
+
+# Preserve every existing teacher field. The reviewed preset migration adds one
+# field whose expected values are validated separately after migration.
+pre_finance_preset_exists="$(psql_restore -c \
+  "select count(*) from information_schema.columns where table_schema='public'
+   and table_name='teacher_profiles' and column_name='FinancePreset';")"
+teacher_profile_projection="to_jsonb(t)::text"
+if test "$pre_finance_preset_exists" = 0; then
+  teacher_profile_projection="(to_jsonb(t) - 'FinancePreset')::text"
+fi
 
 pre_migration_hash="$(migration_hash)"
 source_table_counts_hash="$(table_counts_hash)"
@@ -424,6 +434,18 @@ test "$(
 )" = 0
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
+if test "$pre_finance_preset_exists" = 0; then
+  stage="finance-preset-validation"
+  test "$(psql_restore -c \
+    "select count(*) from \"__EFMigrationsHistory\" where \"MigrationId\" =
+     '20260914002010_TeacherPlatformFeeDefaults';")" = 1
+  test "$(psql_restore -c \
+    "select count(*) from teacher_profiles where \"FinancePreset\" is distinct from
+     case when \"Id\" in ('73cf9e05-d068-4a0c-b8e6-dcba16554417',
+       'ff2b0754-3dcd-4b33-85a9-f5869e0c2768') then 1
+     when \"Id\" = '2a0e7d2f-1dd7-4af0-9974-c999489899b2' then 2 else 0 end;")" = 0
+fi
+stage="post-migration-validation"
 test "$(
   psql_restore -c "
     select
