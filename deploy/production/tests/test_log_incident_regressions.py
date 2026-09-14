@@ -66,7 +66,7 @@ def test_video_embed_material_uses_the_https_exempt_internal_route() -> None:
     controller = (
         ROOT / "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs"
     ).read_text()
-    embed_route = (ROOT / "frontend/src/app/api/video/embed/route.ts").read_text()
+    playback_session = (ROOT / "frontend/src/lib/video-playback-session.ts").read_text()
     action_attributes = controller.split(
         "public async Task<IActionResult> GetEmbedMaterial", 1
     )[0].rsplit("\n\n", 1)[1]
@@ -79,7 +79,7 @@ def test_video_embed_material_uses_the_https_exempt_internal_route() -> None:
     assert "[DisableRateLimiting]" in action_attributes
     assert (
         "/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material"
-        in embed_route
+        in playback_session
     )
 
 

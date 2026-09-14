@@ -372,6 +372,17 @@ if test "$pre_finance_preset_exists" = 0; then
   teacher_profile_projection="(to_jsonb(t) - 'FinancePreset')::text"
 fi
 
+finance_activation_count() {{
+  psql_restore -c 'select count(*) from "__EFMigrationsHistory" where "MigrationId" = '\''20260914135411_ActivateTeacherPlatformFeeDefaults'\'';'
+}}
+financial_events_hash() {{
+  psql_restore -c 'copy (select row_to_json(t)::text from teacher_financial_events t order by "Id") to stdout;' |
+    sha256sum | awk '{{print $1}}'
+}}
+pre_fee_activation="$(finance_activation_count)"
+pre_agreement_count="$(psql_restore -c 'select count(*) from teacher_financial_agreements;')"
+pre_financial_events_hash="$(financial_events_hash)"
+
 pre_migration_hash="$(migration_hash)"
 source_table_counts_hash="$(table_counts_hash)"
 pre_unaffected_tables="$restore_root/pre-unaffected-tables.txt"
@@ -381,7 +392,8 @@ psql_restore -c "
   where schemaname='public'
     and tablename not in (
       '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
-      'teacher_profiles','teacher_subjects','subjects','thanaweya_results'
+      'teacher_profiles','teacher_subjects','subjects','thanaweya_results',
+      'teacher_financial_agreements'
     )
   order by tablename;" > "$pre_unaffected_tables"
 pre_unaffected_hash="$(unaffected_counts_hash)"
@@ -434,6 +446,40 @@ test "$(
 )" = 0
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
+# Agreement row growth is allowed only for the exact reviewed activation,
+# while historical monetary events must remain byte-for-byte unchanged.
+stage="finance-activation-validation"
+post_fee_activation="$(finance_activation_count)"
+expected_agreement_count="$pre_agreement_count"
+if test "$pre_fee_activation" = 0 && test "$post_fee_activation" = 1; then
+  new_default_count="$(psql_restore -c 'select COALESCE(sum(case when "FinancePreset" = 2 then 10 else 15 end), 0) from teacher_profiles;')"
+  expected_agreement_count="$((pre_agreement_count + new_default_count))"
+  default_mismatches="$(psql_restore <<'SQL'
+WITH expected AS (
+  SELECT t."Id" AS teacher_id, scope, trigger,
+    CASE WHEN scope IN (1,2) AND t."FinancePreset" <> 2 THEN 0 ELSE 4 END AS mode,
+    CASE WHEN scope IN (4,5) THEN CASE WHEN t."FinancePreset" = 1 THEN 12.5 ELSE 15 END
+      WHEN scope = 3 THEN CASE t."FinancePreset" WHEN 1 THEN 50 WHEN 2 THEN 30 ELSE 60 END
+      WHEN t."FinancePreset" = 2 THEN CASE scope WHEN 1 THEN 250 ELSE 100 END ELSE 75 END AS amount
+  FROM teacher_profiles t CROSS JOIN generate_series(1,5) scope CROSS JOIN generate_series(0,2) trigger
+  WHERE NOT (t."FinancePreset" = 2 AND trigger = 1)
+), actual AS (
+  SELECT "TeacherId", "ScopeType", "Trigger", "AllocationMode", "AllocationValue"
+  FROM teacher_financial_agreements WHERE "IsActive" AND "ScopeType" BETWEEN 1 AND 5
+), differences AS (
+  (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual)
+  UNION ALL (SELECT * FROM actual EXCEPT ALL SELECT * FROM expected)
+)
+SELECT count(*) FROM differences;
+SQL
+)"
+  test "$default_mismatches" = 0
+else
+  test "$post_fee_activation" = "$pre_fee_activation"
+fi
+test "$(psql_restore -c 'select count(*) from teacher_financial_agreements;')" = "$expected_agreement_count"
+test "$(financial_events_hash)" = "$pre_financial_events_hash"
+
 if test "$pre_finance_preset_exists" = 0; then
   stage="finance-preset-validation"
   test "$(psql_restore -c \

@@ -49,10 +49,11 @@ The PostgreSQL scenario requires `AUTO_REPAIR_TEST_DB` pointing to a dedicated l
 
 - 14 Python policy/source-isolation/container-log tests passed.
 - 12 C# transition/redaction/runner-auth tests passed.
-- The initial real PostgreSQL/Redis incident lifecycle test passed with real migrations. The expanded concurrent-claim rerun is blocked: local Docker storage reported an I/O error after the workstation ran out of disk; it has not passed yet.
+- The real PostgreSQL/Redis incident lifecycle and expanded concurrent-claim test passed after local Docker recovered (13 AutoRepair C# tests passed, none skipped). The rerun used disposable PostgreSQL/Redis containers bound only to loopback, with a dedicated `repair_test` database.
 - The phone report/approval browser contract passed with synthetic HTTP responses; a screenshot was inspected. This is not a live backend/browser acceptance result.
 - Frontend production build, focused ESLint, TypeScript and route-permission checks passed.
 - EF pending-model check passed. The new migration has not been applied to production by this task.
 - Initial production status passed on node-1, node-2 and node-3.
-- Native Codex CLI installation on node-3 succeeded; a dedicated ChatGPT device login was started. Do not store its one-time code in this repository.
+- Native Codex CLI installation on node-3 succeeded; the dedicated ChatGPT device login completed successfully, confirmed by the server CLI. Do not store its one-time code in this repository.
 - No supervisor activation or production application rollout was performed by this task.
+- Activation preflight at 13:34 UTC passed on all three nodes. `make ops-check` passed with 1,422 backend tests and 195 worker tests; three integration tests were skipped in that general run, and the dedicated AutoRepair integration rerun above passed separately. Frontend lint reported one existing chat-hook warning and no errors. The node-3 supervisor and internal repair network are still absent; activation remains pending provisioning and acceptance.
