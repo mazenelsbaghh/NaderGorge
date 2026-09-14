@@ -30,7 +30,7 @@ public sealed class RepairStore(AppDbContext db, IConnectionMultiplexer redis)
                 duplicate.Summary = $"تكرار محفوظ؛ المتابعة ضمن الحالة {canonical.Id}";
                 Event(duplicate, duplicate.Summary, "collector");
                 Event(canonical, $"جُمعت الحالة المكررة {duplicate.Id} مع الاحتفاظ بسجلها", "collector");
-                if (canonical.Status == "completed")
+                if (canonical.Status == "completed" && await AppearedAfterCompletion(canonical, duplicate.LastSeen, ct))
                 {
                     canonical.Status = "queued";
                     canonical.Attempts = 0;
@@ -107,13 +107,21 @@ public sealed class RepairStore(AppDbContext db, IConnectionMultiplexer redis)
         }
         incident.Occurrences++;
         incident.LastSeen = log.Timestamp > incident.LastSeen ? log.Timestamp : incident.LastSeen;
-        if (incident.Status == "completed")
+        if (incident.Status == "completed" && await AppearedAfterCompletion(incident, log.Timestamp, ct))
         {
             incident.Status = "queued";
             incident.Attempts = 0;
             incident.ApprovedHash = "";
             Event(incident, "ظهر الخطأ مجددًا بعد الإصلاح", "collector");
         }
+    }
+
+    private async Task<bool> AppearedAfterCompletion(AutoRepairIncident incident, DateTimeOffset timestamp, CancellationToken ct)
+    {
+        var completedAt = await db.AutoRepairEvents.Where(x => x.IncidentId == incident.Id && x.Status == "completed")
+            .MaxAsync(x => (DateTimeOffset?)x.Timestamp, ct);
+        // Legacy completed rows without completion evidence remain closed on replay.
+        return completedAt.HasValue && timestamp > completedAt.Value;
     }
 
     public static void Event(AutoRepairIncident incident, string detail, string actor) =>

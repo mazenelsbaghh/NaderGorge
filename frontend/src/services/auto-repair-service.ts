@@ -1,6 +1,6 @@
 import apiClient from './api-client';
 
-export type RepairStatus = 'queued' | 'diagnosing' | 'repairing' | 'testing' | 'ready' | 'deploying' | 'monitoring' | 'completed' | 'awaiting_approval' | 'failed' | 'rolled_back' | 'duplicate';
+export type RepairStatus = 'queued' | 'diagnosing' | 'repairing' | 'testing' | 'ready' | 'deploying' | 'monitoring' | 'completed' | 'awaiting_approval' | 'failed' | 'rolled_back' | 'duplicate' | 'dismissed';
 export interface RepairIncident {
   id: string; source: string; category: string; level: string; status: RepairStatus;
   occurrences: number; attempts: number; firstSeen: string; lastSeen: string; summary: string; releaseId: string;
@@ -33,6 +33,6 @@ export async function getRepair(id: string) {
 export async function setRepairControl(control: Pick<RepairControl, 'paused' | 'autoDeploy'>) {
   await apiClient.put('/admin/auto-repair/control', control);
 }
-export async function decideRepair(id: string, decision: { action: 'approve' | 'retry'; proposalHash?: string; confirmation?: string }) {
+export async function decideRepair(id: string, decision: { action: 'approve' | 'retry' | 'dismiss'; reason?: string; proposalHash?: string; confirmation?: string }) {
   await apiClient.post(`/admin/auto-repair/${id}/decision`, decision);
 }

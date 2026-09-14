@@ -120,4 +120,52 @@ public sealed class AutoRepairPostgresTests
         await controller.Claim(default);
         Assert.Equal(attempts, await db.AutoRepairIncidents.SumAsync(x => x.Attempts));
     }
+
+    [AutoRepairPostgresFact]
+    public async Task Archived_incidents_stay_out_of_work_and_cannot_interrupt_an_active_lease()
+    {
+        var connection = Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_DB")!;
+        var parsed = new NpgsqlConnectionStringBuilder(connection);
+        Assert.Equal("repair_test", parsed.Database);
+        Assert.Contains(parsed.Host, new[] { "localhost", "127.0.0.1" });
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options);
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.MigrateAsync();
+        await using var redis = await ConnectionMultiplexer.ConnectAsync(Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_REDIS")!);
+        var admin = new AdminAutoRepairController(db) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var store = new RepairStore(db, redis);
+        var stamp = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var log = new RepairStore.RepairLog(Guid.NewGuid(), stamp, "gateway", "ArchiveFixture", "error", "fixture failure", null);
+        await store.IngestExternal([log], default);
+        var incident = await db.AutoRepairIncidents.SingleAsync();
+        incident.LeaseToken = Guid.NewGuid();
+        incident.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(3);
+        await db.SaveChangesAsync();
+        Assert.IsType<ConflictObjectResult>(await admin.Decision(incident.Id, new("dismiss", null, null, "حالة معروفة لا تحتاج إصلاحًا"), default));
+        incident.LeaseToken = null;
+        incident.LeaseUntil = null;
+        await db.SaveChangesAsync();
+        Assert.IsType<BadRequestObjectResult>(await admin.Decision(incident.Id, new("dismiss", null, null, ""), default));
+        Assert.IsType<OkObjectResult>(await admin.Decision(incident.Id, new("dismiss", null, null, "حالة معروفة لا تحتاج إصلاحًا"), default));
+        await store.IngestExternal([log with { Id = Guid.NewGuid(), Timestamp = DateTimeOffset.UtcNow }], default);
+        Assert.Equal("dismissed", incident.Status);
+        Assert.Equal(2, incident.Occurrences);
+        static JsonElement Data(IActionResult result) => JsonSerializer.SerializeToElement(((OkObjectResult)result).Value).GetProperty("Data");
+        Assert.Empty(Data(await admin.List(null, 1, default)).GetProperty("incidents").EnumerateArray());
+        Assert.Single(Data(await admin.List("archive", 1, default)).GetProperty("incidents").EnumerateArray());
+        Assert.True(await db.AutoRepairEvents.AnyAsync(x => x.IncidentId == incident.Id && x.Status == "dismissed"));
+        Assert.IsType<OkObjectResult>(await admin.Decision(incident.Id, new("retry", null, null), default));
+        Assert.Equal("queued", incident.Status);
+        Assert.Single(Data(await admin.List(null, 1, default)).GetProperty("incidents").EnumerateArray());
+
+        incident.Status = "completed";
+        var completedAt = DateTimeOffset.UtcNow.AddSeconds(-20);
+        incident.Events.Add(new AutoRepairEvent { IncidentId = incident.Id, Status = "completed", Timestamp = completedAt, Detail = "Verified", Actor = "node-3" });
+        await db.SaveChangesAsync();
+        await store.IngestExternal([log with { Id = Guid.NewGuid(), Timestamp = completedAt.AddSeconds(-1) }], default);
+        Assert.Equal("completed", incident.Status);
+        Assert.Empty(Data(await admin.List(null, 1, default)).GetProperty("incidents").EnumerateArray());
+        await store.IngestExternal([log with { Id = Guid.NewGuid(), Timestamp = completedAt.AddSeconds(1) }], default);
+        Assert.Equal("queued", incident.Status);
+    }
 }
