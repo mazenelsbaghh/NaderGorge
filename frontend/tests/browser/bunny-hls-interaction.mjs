@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 import ts from 'typescript';
-import { webkit } from '@playwright/test';
+import { chromium, webkit } from '@playwright/test';
+
+function launchBrowser() {
+  return process.env.HLS_CHROME_EXECUTABLE
+    ? chromium.launch({ executablePath: process.env.HLS_CHROME_EXECUTABLE })
+    : webkit.launch();
+}
 
 async function generateBootstrap() {
   const source = await readFile(new URL('../../src/lib/video-player-response.ts', import.meta.url), 'utf8');
@@ -32,7 +38,7 @@ test(`${provider} iframe sends real mouse and touch interactions to its parent, 
   const embed = await generateEmbed(provider);
   const bootstrap = await generateBootstrap();
   const hls = await readFile(new URL('../../public/vendor/hlsjs/hls.min.js', import.meta.url));
-  const browser = await webkit.launch();
+  const browser = await launchBrowser();
   try {
     for (const hasTouch of [false, true]) {
       const context = await browser.newContext({ hasTouch, viewport: { width: hasTouch ? 768 : 1200, height: 800 } });
@@ -108,7 +114,7 @@ for (const device of [
 test(`YouTube direct input starts playback and resumes in fullscreen: ${device.name}`, { timeout: 30000 }, async () => {
   const embed = await generateEmbed('youtube');
   const bootstrap = await generateBootstrap();
-  const browser = await webkit.launch();
+  const browser = await launchBrowser();
   try {
     const context = await browser.newContext({ hasTouch: device.hasTouch, userAgent: device.userAgent, viewport: { width: 768, height: 900 } });
     const page = await context.newPage();
@@ -163,7 +169,7 @@ test(`YouTube direct input starts playback and resumes in fullscreen: ${device.n
 
 // The fixture is a two-second black H.264 segment generated with ffmpeg.
 // Discontinuities let the same media bytes model a long VOD without a large fixture.
-test('vendored HLS renews real playlist and segment requests while retaining its video and buffer', { timeout: 30000 }, async () => {
+test('vendored HLS tolerates device clock skew and renews requests while retaining its video and buffer', { timeout: 30000 }, async () => {
   const videoId = '4512bcd5-2688-4a53-bbd1-e41a20b8ce6c';
   const expires = Math.floor(Date.now() / 1000) + 300;
   const signedSource = token => `https://vz-example.b-cdn.net/bcdn_token=${token}&expires=${expires}&token_path=%2F${videoId}%2F/${videoId}/playlist.m3u8`;
@@ -171,11 +177,12 @@ test('vendored HLS renews real playlist and segment requests while retaining its
   const hls = await readFile(new URL('../../public/vendor/hlsjs/hls.min.js', import.meta.url));
   const segment = await readFile(new URL('../fixtures/hls-black-segment.bin', import.meta.url));
   const playlist = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n'
-    + Array.from({ length: 60 }, (_, index) => `#EXT-X-DISCONTINUITY\n#EXTINF:2.0,\nsegment${index}.ts\n`).join('') + '#EXT-X-ENDLIST\n';
+    + Array.from({ length: 600 }, (_, index) => `#EXT-X-DISCONTINUITY\n#EXTINF:2.0,\nsegment${index}.ts\n`).join('') + '#EXT-X-ENDLIST\n';
   const cdnRequests = [];
-  const browser = await webkit.launch();
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
+    await page.addInitScript(() => { const originalNow = Date.now; Date.now = () => originalNow() + 86400000; });
     page.setDefaultTimeout(8000);
     await page.route('**/*', route => {
       const url = new URL(route.request().url());
@@ -217,8 +224,8 @@ test('vendored HLS renews real playlist and segment requests while retaining its
     assert.equal(afterRenewal.emptied, 0);
     assert.ok(afterRenewal.time >= beforeRenewal.time);
     assert.ok(afterRenewal.buffered >= beforeRenewal.buffered);
-    await page.evaluate(() => { window.command('getQualityLevels'); window.command('seekTo', { time: 90 }); });
-    await frame.waitForFunction(() => document.querySelector('video').currentTime > 90.1);
+    await page.evaluate(() => { window.command('getQualityLevels'); window.command('seekTo', { time: 900 }); });
+    await frame.waitForFunction(() => document.querySelector('video').currentTime > 900.1);
     assert.ok(cdnRequests.some(url => url.includes('bcdn_token=renewed') && url.endsWith('.ts')));
     assert.equal(await page.evaluate(() => window.messages.filter(message => message.type === 'qualityLevels').at(-1).data.currentQuality), '1');
     assert.equal(await frame.evaluate(() => window.emptiedEvents), 0);

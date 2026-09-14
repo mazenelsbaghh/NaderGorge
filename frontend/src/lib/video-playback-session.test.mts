@@ -38,7 +38,7 @@ test('issued playback cookie hides credentials and binds the authorized browser 
   assert.equal(browser.authorization, authorization);
   assert.equal(browser.surface, 'student');
   assert.ok(browser.bootstrapExpiresAt <= Date.now() + 90_000);
-  assert.ok(browser.expiresAt <= Date.now() + 600_000);
+  assert.ok(browser.expiresAt <= Date.now() + 35 * 60_000);
   const swappedCookie = cookie.replace(playbackCookieName(sessionId), playbackCookieName(otherSessionId));
   assert.throws(() => readPlaybackSession(request(swappedCookie), otherSessionId), isUnauthorized);
 });

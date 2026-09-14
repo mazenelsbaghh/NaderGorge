@@ -107,8 +107,9 @@ test('video embed rejects a copied top-level URL even with a same-origin referre
   );
 });
 
-test('video embed rejects missing referrer or fetch-site metadata', () => {
+test('embedded browsers may omit referrer or fetch metadata before route authorization', () => {
   const incompleteHeaders = [
+    requestHeaders({}),
     requestHeaders({ 'sec-fetch-dest': 'iframe', 'sec-fetch-site': 'same-origin' }),
     requestHeaders({
       referer: 'https://app.massar-academy.net/student/lesson',
@@ -119,7 +120,7 @@ test('video embed rejects missing referrer or fetch-site metadata', () => {
   for (const headers of incompleteHeaders) {
     assert.equal(
       validateVideoEmbedNavigation('https://app.massar-academy.net/api/video/embed?s=x', headers),
-      'missing-context',
+      null,
     );
   }
 });
@@ -175,4 +176,9 @@ test('staff preview media accepts only the matching forwarded origin', () => {
       }),
     ), referer.startsWith('https://staff.massar-academy.net/') ? null : 'unauthorized-origin');
   }
+});
+
+test('an explicit foreign Origin is rejected even without Fetch Metadata or Referer', () => {
+  assert.equal(validateVideoMediaRequest('https://app.massar-academy.net/api/video/session',
+    requestHeaders({ origin: 'https://foreign.example' })), 'unauthorized-origin');
 });

@@ -149,9 +149,11 @@ test('a copied relay URL without its browser authorization never reaches the bac
 test('cross-origin and direct navigation cannot use the relay even with a session ID', async (context) => {
   context.mock.method(globalThis, 'fetch', async () => { throw new Error('No network expected'); });
   const get = await relayRoute();
-  for (const request of [relayRequest({ referer: 'https://evil.example', 'sec-fetch-site': 'cross-site' }),
-    new Request(`https://app.massar-academy.net/api/video/hls?s=${sessionId}`)]) {
-    assert.equal((await get(request)).status, 403);
+  for (const [request, expectedStatus] of [
+    [relayRequest({ referer: 'https://evil.example', 'sec-fetch-site': 'cross-site' }), 403],
+    [new Request(`https://app.massar-academy.net/api/video/hls?s=${sessionId}`), 401],
+  ] as const) {
+    assert.equal((await get(request)).status, expectedStatus);
   }
 });
 

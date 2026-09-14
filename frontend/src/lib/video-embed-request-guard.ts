@@ -26,23 +26,25 @@ export function validateVideoEmbedNavigation(
   requestUrl: string,
   headers: HeaderReader,
 ): VideoEmbedNavigationError | null {
-  if (headers.get('sec-fetch-dest') !== 'iframe') return 'missing-context';
+  const destination = headers.get('sec-fetch-dest');
+  if (destination && destination !== 'iframe') return 'missing-context';
   return validateVideoMediaRequest(requestUrl, headers);
 }
 
 export function validateVideoMediaRequest(requestUrl: string, headers: HeaderReader): VideoEmbedNavigationError | null {
   const fetchSite = headers.get('sec-fetch-site');
-  const referer = headers.get('referer');
-
-  if (!referer || !fetchSite) return 'missing-context';
-  if (fetchSite !== 'same-origin' && fetchSite !== 'same-site') {
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'same-site' && fetchSite !== 'none') {
     return 'unauthorized-origin';
   }
 
+  // Embedded browsers may omit Fetch Metadata and Referer. Authorization remains
+  // mandatory in each route through the signed cookie/JWT and backend access check.
+  const contexts = [headers.get('origin'), headers.get('referer')].filter(
+    (value): value is string => Boolean(value) && value !== 'null',
+  );
   try {
-    return requestOrigins(requestUrl, headers).has(new URL(referer).origin)
-      ? null
-      : 'unauthorized-origin';
+    const allowedOrigins = requestOrigins(requestUrl, headers);
+    return contexts.every(value => allowedOrigins.has(new URL(value).origin)) ? null : 'unauthorized-origin';
   } catch {
     return 'unauthorized-origin';
   }

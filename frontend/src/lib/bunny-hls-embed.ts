@@ -26,7 +26,9 @@ try {
 </html>`;
 }
 
-export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: string, studentPhone: string, relaySource = ''): string {
+export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName: string, studentPhone: string, options: { relaySource?: string; serverNowMs?: number } = {}): string {
+  const relaySource = options.relaySource ?? '';
+  const serverNowMs = options.serverNowMs ?? Date.now();
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(signedPlaylistUrl);
@@ -62,9 +64,11 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
 <script>
 (function(){
   'use strict';
+  var serverClock=${serverNowMs}; var serverClockStarted=performance.now();
+  function authorizationNow(){return serverClock+Math.max(0,performance.now()-serverClockStarted);}
   var source=${safeSource}; var signedSourceExpiresAtMs=${signedSourceExpiresAtMs}; var relaySource=${JSON.stringify(relaySource)}; var relayAttempted=false; var video=document.getElementById('video'); var hls=null; var readySent=false; var sourceReady=false; var relayResume=null;
   var nativeLevels=[]; var nativeCurrent='auto'; var masterSource=source; var mediaRecoveries=0; var terminalErrorSent=false; var nativePlayback=false; var loadDeadline=null; var playbackDeadline=null; var lastLoadPhase='bootstrap'; var lastMediaTime=0;
-  var nativeGrantReady=false; var lastRenewedAt=Date.now(); var sessionExpiresAtMs=0; var renewalTimer=null; var renewalPending=false; var renewalAttempts=0; var renewalRestart=false; var relayAuthRecoveries=0; var waitingLoaders=new Set();
+  var nativeGrantReady=false; var lastRenewedAt=authorizationNow(); var sessionExpiresAtMs=0; var renewalTimer=null; var renewalPending=false; var renewalAttempts=0; var renewalRestart=false; var relayAuthRecoveries=0; var directAuthRecoveries=0; var waitingLoaders=new Set();
   var signedScope=sourceScope(source); var originalScope=signedScope;
   var activeDownload=null; var observedDownloadBytes=0; var downloadProgressObserved=false; var playbackWaitStartedAt=null; var maxFragmentLoadMs=120000;
   // Relay headers arrive after session validation (15s) and the upstream playlist fetch (20s).
@@ -83,7 +87,7 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
   function canRecoverAuthorization(status){
     if(!canRenew())return false;
     if(relayAttempted&&status===401)return relayAuthRecoveries++<2;
-    return status===403&&Date.now()>=signedSourceExpiresAtMs;
+    return status===403&&directAuthRecoveries++<2;
   }
   function renewalDueAt(){
     if(nativePlayback||relayAttempted)return Math.min(lastRenewedAt+180000,sessionExpiresAtMs||Infinity);
@@ -93,7 +97,7 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
   }
   function scheduleRenewal(){
     clearRenewalTimer();if(!canRenew())return;
-    renewalTimer=setTimeout(requestSourceRenewal,Math.max(1000,renewalDueAt()-Date.now()));
+    renewalTimer=setTimeout(requestSourceRenewal,Math.max(1000,renewalDueAt()-authorizationNow()));
   }
   function requestSourceRenewal(){
     if(!canRenew()||renewalPending)return;
@@ -103,19 +107,21 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
   function sourceRenewalFailed(status){
     if(!renewalPending||terminalErrorSent)return;renewalPending=false;clearRenewalTimer();
     if(status===401||status===403||status===404||status===410){failHls(status,'انتهى تصريح مشاهدة الفيديو. أعد فتح الدرس للمتابعة.','source_authorization');return;}
-    if(renewalAttempts>=4){failHls(status,'تعذر تجديد تصريح الفيديو بسبب الاتصال. أعد المحاولة للمتابعة من مكانك.','source_renewal');return;}
+    if(renewalAttempts>=4){failHls(status,'تعذر تحديث رابط الفيديو. أعد المحاولة للمتابعة من مكانك.','source_renewal');return;}
     renewalTimer=setTimeout(requestSourceRenewal,Math.min(30000,5000*Math.pow(2,renewalAttempts-1)));
   }
   function renewSource(command){
     if(!canRenew())return;
     var replacement=sourceScope(command.source);
-    if(!replacement||!originalScope||replacement.origin!==originalScope.origin||replacement.video!==originalScope.video
-      ||replacement.expires!==Number(command.signedSourceExpiresAtMs)||replacement.expires<=Date.now()){
-      failHls(403,'تعذر التحقق من تصريح تشغيل الفيديو. أعد فتح الدرس.','source_scope');return;
+    if(!replacement||!originalScope||replacement.origin!==originalScope.origin||replacement.video!==originalScope.video){
+      // Ignore stale/mismatched replies; keep the current authorized stream and retry.
+      sourceRenewalFailed(0);return;
     }
+    if(Number.isFinite(command.serverNowMs)){serverClock=command.serverNowMs;serverClockStarted=performance.now();}
+    if(replacement.expires<=authorizationNow()){sourceRenewalFailed(0);return;}
     if(!relayAttempted){source=command.source;masterSource=source;}signedScope=replacement;signedSourceExpiresAtMs=replacement.expires;
-    var watchExpiry=Number(command.sessionExpiresAtMs);sessionExpiresAtMs=isFinite(watchExpiry)&&watchExpiry>Date.now()?watchExpiry:0;
-    renewalPending=false;renewalAttempts=0;lastRenewedAt=Date.now();scheduleRenewal();
+    var watchExpiry=Number(command.sessionExpiresAtMs);sessionExpiresAtMs=isFinite(watchExpiry)&&watchExpiry>authorizationNow()?watchExpiry:0;
+    renewalPending=false;renewalAttempts=0;lastRenewedAt=authorizationNow();scheduleRenewal();
     if(nativePlayback&&!nativeGrantReady){nativeGrantReady=true;loadStartedAt=Date.now();armLoadDeadline();startNativePlayer();}
     var loaders=Array.from(waitingLoaders);waitingLoaders.clear();loaders.forEach(function(loader){loader.resume();});
     if(renewalRestart&&hls){renewalRestart=false;if(!sourceReady)hls.loadSource(source);hls.startLoad(-1,true);if(!sourceReady){loadStartedAt=Date.now();armLoadDeadline();}}
@@ -136,7 +142,7 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
       }
       resume(){
         if(!this.pendingRequest||terminalErrorSent)return;
-        if(signedSourceExpiresAtMs<=Date.now()){waitingLoaders.add(this);requestSourceRenewal();return;}
+        if(signedSourceExpiresAtMs<=authorizationNow()){waitingLoaders.add(this);requestSourceRenewal();return;}
         var request=this.pendingRequest;this.pendingRequest=null;var rewritten=renewedResource(request.context.url);
         if(!rewritten){request.callbacks.onError({code:403,text:'HLS resource outside video scope'},request.context,null,this.stats);return;}
         request.context.url=rewritten;super.load(request.context,request.config,request.callbacks);
@@ -145,7 +151,7 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
       destroy(){waitingLoaders.delete(this);this.pendingRequest=null;super.destroy();}
     };
   }
-  function checkRenewal(){if(canRenew()&&Date.now()>=renewalDueAt())requestSourceRenewal();}
+  function checkRenewal(){if(canRenew()&&authorizationNow()>=renewalDueAt())requestSourceRenewal();}
   document.addEventListener('visibilitychange',function(){if(!document.hidden)checkRenewal();});
   window.addEventListener('online',checkRenewal);
   var lastInteractionAt=-Infinity;
@@ -220,7 +226,7 @@ export function generateBunnyHlsEmbedHtml(signedPlaylistUrl: string, studentName
       hls.on(window.Hls.Events.FRAG_LOADING,function(_,download){if(hls!==loadingInstance)return;activeDownload=download.part||download.frag;observedDownloadBytes=0;});
       hls.on(window.Hls.Events.MANIFEST_PARSED,function(){if(hls!==loadingInstance)return;loadProgress('manifest_parsed',20000);emitQuality();});
       if(window.Hls.Events.LEVEL_LOADED)hls.on(window.Hls.Events.LEVEL_LOADED,function(){if(hls===loadingInstance)loadProgress('level_loaded',40000);});
-      if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance){relayAuthRecoveries=0;loadProgress('fragment_loaded',20000);}});
+      if(window.Hls.Events.FRAG_LOADED)hls.on(window.Hls.Events.FRAG_LOADED,function(){if(hls===loadingInstance){relayAuthRecoveries=0;directAuthRecoveries=0;loadProgress('fragment_loaded',20000);}});
       hls.on(window.Hls.Events.LEVEL_SWITCHED,function(){emitQuality();});
       var instance=hls;
       hls.on(window.Hls.Events.ERROR,function(_,data){if(hls!==instance||!data||!data.fatal)return;if(data.type===window.Hls.ErrorTypes.MEDIA_ERROR&&mediaRecoveries<1){mediaRecoveries++;hls.recoverMediaError();return;}var status=data&&data.response?Number(data.response.code||data.response.status||0):0;var phase=data&&data.details?String(data.details):'network';if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&canRecoverAuthorization(status)){renewalRestart=true;if(loadDeadline)clearTimeout(loadDeadline);clearPlaybackDeadline();requestSourceRenewal();return;}if(data.type===window.Hls.ErrorTypes.NETWORK_ERROR&&tryRelay(status))return;failHls(status,hlsErrorMessage(status)+' ['+phase+']',phase);});

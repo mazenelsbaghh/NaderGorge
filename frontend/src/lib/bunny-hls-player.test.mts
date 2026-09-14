@@ -14,7 +14,7 @@ type PlayerMessage = {
 type HlsRuntime = 'hlsjs' | 'native-apple';
 
 async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus = 200, relaySource = '', signedSource = 'https://vz-example.b-cdn.net/signed/video/playlist.m3u8') {
-  const html = generateBunnyHlsEmbedHtml(signedSource, 'Test student', '', relaySource);
+  const html = generateBunnyHlsEmbedHtml(signedSource, 'Test student', '', { relaySource, serverNowMs: 0 });
   const playerScript = html.slice(html.indexOf('(function(){'), html.lastIndexOf('</script>'));
   assert.doesNotMatch(playerScript, /\$\{/);
 
@@ -23,6 +23,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   const videoListeners = new Map<string, () => void>();
   const documentListeners = new Map<string, (event: { type: string }) => void>();
   let now = 0;
+  let deviceClockOffset = 0;
   let nativeRequests = 0;
   const timers: Array<{ callback: () => void; active: boolean; due: number }> = [];
   const video = {
@@ -103,7 +104,8 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
 
   vm.runInNewContext(playerScript, {
     URL,
-    Date: { now: () => now },
+    Date: { now: () => now + deviceClockOffset },
+    performance: { now: () => now },
     clearTimeout(timer: { active: boolean }) { timer.active = false; },
     document: {
       addEventListener(name: string, listener: (event: { type: string }) => void) { documentListeners.set(name, listener); },
@@ -138,6 +140,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   });
 
   return {
+    setDeviceClockOffset(offset: number) { deviceClockOffset = offset; },
     emitFatalNetworkError(status: number) {
       hlsListeners.get('error')?.(null, {
         fatal: true,
@@ -638,7 +641,8 @@ test('a renewal cannot redirect the player or its authenticated resource request
   ]) {
     const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', initial);
     player.command('renewSource', { source: invalidSource, signedSourceExpiresAtMs: 600000 });
-    assert.equal(player.messages.find(message => message.type === 'error')?.data?.phase, 'source_scope');
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+    assert.equal(player.hls()?.destroyCalls, 0);
     assert.equal(player.hlsInstances.length, 1);
     assert.equal(player.networkRequests.length, 0);
   }
@@ -742,4 +746,70 @@ test('relay JWT expiry requests a parent auth refresh and resumes the same playe
   player.emitFatalNetworkError(401);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+});
+
+for (const offset of [-86400000, 86400000]) {
+  test(`incident 2026-09-14: device clock offset ${offset} does not reject valid playback renewals`, async () => {
+    const initial = signedPlaylist(300);
+    const player = await runHlsPlayer('hlsjs', 200, '', initial);
+    player.setDeviceClockOffset(offset);
+    player.triggerVideoEvent('loadedmetadata');
+    player.video.currentTime = 87;
+    player.video.paused = false;
+    player.advanceTime(180000);
+    assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 1);
+    player.command('renewSource', {
+      source: signedPlaylist(480, 'renewed'), serverNowMs: 180000,
+      signedSourceExpiresAtMs: 480999, // Redundant metadata is not an authorization authority.
+    });
+    player.requestResource(new URL('720p/video0.ts', initial).href);
+    assert.equal(player.networkRequests.at(-1), new URL('720p/video0.ts', signedPlaylist(480, 'renewed')).href);
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+    assert.equal(player.hlsInstances.length, 1);
+    assert.equal(player.video.currentTime, 87);
+    assert.equal(player.video.paused, false);
+    player.advanceTime(180000);
+    assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+  });
+}
+
+test('a delayed expired renewal retries without destroying playback', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', signedPlaylist(300));
+  player.triggerVideoEvent('loadedmetadata');
+  player.advanceTime(180000);
+  player.command('renewSource', { source: signedPlaylist(170, 'delayed'), serverNowMs: 180000 });
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+  assert.equal(player.hls()?.destroyCalls, 0);
+  player.advanceTime(5000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+  player.command('renewSource', { source: signedPlaylist(485, 'fresh'), serverNowMs: 185000 });
+  assert.equal(player.messages.filter(message => message.type === 'sourceRenewed').length, 1);
+});
+
+test('a mismatched renewal reply retries while retaining the original authorized video', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '', signedPlaylist(300));
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.currentTime = 77;
+  player.advanceTime(180000);
+  player.command('renewSource', { source: signedPlaylist(600, 'stale', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') });
+  assert.equal(player.hls()?.destroyCalls, 0);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+  player.advanceTime(5000);
+  assert.equal(player.messages.filter(message => message.type === 'renewSourceRequired').length, 2);
+  player.command('renewSource', { source: signedPlaylist(485, 'correct'), serverNowMs: 185000 });
+  assert.equal(player.messages.filter(message => message.type === 'sourceRenewed').length, 1);
+  assert.equal(player.video.currentTime, 77);
+});
+
+test('an early CDN rejection gets bounded source renewal without a bandwidth relay', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', signedPlaylist(1800));
+  player.triggerVideoEvent('loadedmetadata');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    player.emitFatalNetworkError(403);
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+    player.command('renewSource', { source: signedPlaylist(1800, `renewed-${attempt}`), serverNowMs: 0 });
+  }
+  player.emitFatalNetworkError(403);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  assert.equal(player.hlsInstances.length, 1);
 });

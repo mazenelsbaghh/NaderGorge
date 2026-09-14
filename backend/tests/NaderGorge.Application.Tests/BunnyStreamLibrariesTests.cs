@@ -1894,6 +1894,7 @@ public sealed class BunnyStreamLibrariesTests
     [InlineData(60, false)]
     [InlineData(60, true)]
     [InlineData(1, false)]
+    [InlineData(20, false)]
     public async Task RenewedHlsSession_BoundsSignatureLifetimeWithoutChangingWatchState(int sessionMinutes, bool nativeHls)
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -1922,8 +1923,8 @@ public sealed class BunnyStreamLibrariesTests
         var refreshed = encryption.DecryptVideoInfo(await service.GetTokenAsync(session, CancellationToken.None, nativeHls), session.EncryptionKey);
         var expiry = long.Parse(System.Text.RegularExpressions.Regex.Match(refreshed.ProviderVideoId, @"&expires=(\d+)&").Groups[1].Value);
         var watchExpiry = new DateTimeOffset(session.ExpiresAt).ToUnixTimeSeconds();
-        if (nativeHls || sessionMinutes < 5) Assert.Equal(watchExpiry, expiry);
-        else Assert.InRange(expiry, beforeRenewal.AddMinutes(5).ToUnixTimeSeconds(), DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds());
+        if (nativeHls || sessionMinutes < 30) Assert.Equal(watchExpiry, expiry);
+        else Assert.InRange(expiry, beforeRenewal.AddMinutes(30).ToUnixTimeSeconds(), DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds());
         Assert.True(expiry <= watchExpiry);
         Assert.EndsWith($"/{seeded.Video.ProviderVideoId}/playlist.m3u8", refreshed.ProviderVideoId);
         Assert.DoesNotContain(tokenKey, refreshed.ProviderVideoId);
@@ -1995,7 +1996,7 @@ public sealed class BunnyStreamLibrariesTests
         Assert.EndsWith($"/{VideoGuid}/playlist.m3u8", material.ProviderVideoId);
         Assert.DoesNotContain(tokenKey, material.ProviderVideoId, StringComparison.Ordinal);
         var signedExpiry = long.Parse(System.Text.RegularExpressions.Regex.Match(material.ProviderVideoId, @"&expires=(\d+)&").Groups[1].Value);
-        Assert.Equal(new DateTimeOffset(session.CreatedAt.AddMinutes(5)).ToUnixTimeSeconds(), signedExpiry);
+        Assert.Equal(new DateTimeOffset(session.CreatedAt.AddMinutes(30)).ToUnixTimeSeconds(), signedExpiry);
         Assert.True(signedExpiry < new DateTimeOffset(session.ExpiresAt).ToUnixTimeSeconds());
     }
 

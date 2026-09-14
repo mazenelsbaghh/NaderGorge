@@ -166,3 +166,24 @@ test('closing one player clears its cookie while another open lesson remains aut
   assert.match(response.headers.get('set-cookie') ?? '', /ng_video_11111111111141118111111111111111=;/);
   assert.doesNotMatch(response.headers.get('set-cookie') ?? '', /ng_video_222/);
 });
+
+test('in-app browser without optional metadata still needs an authorized playback cookie', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json(backendMaterial()));
+  const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+  const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
+  const embedRoute = loadModule(resolve(root, 'app/api/video/embed/route'));
+  const anonymous = await materialRoute.GET(new Request(`${origin}/api/video/material?s=${sessionId}`));
+  assert.equal(anonymous.status, 401);
+  const missingJwt = await sessionRoute.POST(new Request(`${origin}/api/video/session`, {
+    method: 'POST', body: JSON.stringify({ sessionId, purpose: 'start' }),
+  }));
+  assert.equal(missingJwt.status, 401);
+  const started = await sessionRoute.POST(new Request(`${origin}/api/video/session`, {
+    method: 'POST', headers: { Authorization: 'Bearer synthetic.access.token' },
+    body: JSON.stringify({ sessionId, purpose: 'start' }),
+  }));
+  assert.equal(started.status, 200);
+  const headers = { Cookie: started.headers.get('Set-Cookie')! };
+  assert.equal((await embedRoute.GET(new Request(`${origin}/api/video/embed?s=${sessionId}`, { headers }))).status, 200);
+  assert.equal((await materialRoute.GET(new Request(`${origin}/api/video/material?s=${sessionId}`, { headers }))).status, 200);
+});

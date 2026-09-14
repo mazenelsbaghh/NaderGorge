@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if (video.Provider?.toLowerCase() !== 'bunny-hls') throw new PlaybackRequestError(400);
     const signedSourceExpiresAtMs = Number(new URL(video.VideoId).pathname.match(/(?:^|&)expires=(\d+)(?:&|$)/)?.[1]) * 1000;
     if (!Number.isFinite(signedSourceExpiresAtMs) || signedSourceExpiresAtMs <= Date.now()) throw new PlaybackRequestError(410);
-    return Response.json({ data: { source: video.VideoId, signedSourceExpiresAtMs, sessionExpiresAtMs: Date.parse(expiresAt) } }, { headers });
+    return Response.json({ data: { source: video.VideoId, serverNowMs: Date.now(), signedSourceExpiresAtMs, sessionExpiresAtMs: Date.parse(expiresAt) } }, { headers });
   } catch (error) {
     return playbackErrorResponse(error instanceof SyntaxError ? new PlaybackRequestError(400) : error);
   }

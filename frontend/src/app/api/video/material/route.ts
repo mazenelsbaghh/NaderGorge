@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const name = video.StudentName || 'Massar Academy';
     const phone = video.StudentPhone || '';
     const html = provider === 'bunny-hls'
-      ? generateBunnyHlsEmbedHtml(video.VideoId, name, phone, `/api/video/hls?s=${encodeURIComponent(sessionId)}`)
+      ? generateBunnyHlsEmbedHtml(video.VideoId, name, phone, { relaySource: `/api/video/hls?s=${encodeURIComponent(sessionId)}` })
       : generateVideoEmbedHtml(provider, video.VideoId, {
         studentName: name, studentPhone: phone, bunnyEmbedQuery: material.bunnyEmbedQuery ?? material.BunnyEmbedQuery,
       });

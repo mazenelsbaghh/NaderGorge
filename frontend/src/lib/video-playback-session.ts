@@ -3,7 +3,8 @@ import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import type { VideoEmbedMaterial } from './video-embed-material';
 
 const BOOTSTRAP_LIFETIME_MS = 90_000;
-const MEDIA_COOKIE_LIFETIME_MS = 10 * 60_000;
+// Keep the browser grant alive through the 30-minute CDN signature renewal.
+const MEDIA_COOKIE_LIFETIME_MS = 35 * 60_000;
 const COOKIE_PURPOSE = 'massar-video-browser-session-v1';
 
 export type PlaybackMaterial = VideoEmbedMaterial & {

@@ -67,6 +67,7 @@ export interface VideoPlaybackClientEvent {
 }
 
 export interface VideoPlaybackSource {
+  serverNowMs: number;
   source: string;
   signedSourceExpiresAtMs: number;
   sessionExpiresAtMs: number;
