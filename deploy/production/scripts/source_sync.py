@@ -31,7 +31,7 @@ def git(repo: Path, *args: str) -> str:
         env['GIT_SSH_COMMAND'] = shlex.join(['ssh', '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes',
             '-o', 'StrictHostKeyChecking=yes', '-o', 'UserKnownHostsFile=' + config['known_hosts'],
             '-i', config['identity_file']])
-    argv = ['git', '-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false']
+    argv = ['git', '--literal-pathspecs', '-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false']
     if CONFIG.exists():
         argv += ['-c', 'url.ssh://git@github.com/.insteadOf=https://github.com/']
     result = subprocess.run([*argv, '-C', str(repo), *args], env=env,
@@ -157,7 +157,9 @@ def integrate(repo: Path, destination: Path):
     for relative in tracked:
         if relative and not (repo / relative).exists() and (destination / relative).is_file():
             (destination / relative).unlink()
-    git(destination, 'add', '-f', '--', *sorted(paths))
+    ordered_paths = sorted(paths)
+    for offset in range(0, len(ordered_paths), 100):
+        git(destination, 'add', '-f', '--', *ordered_paths[offset:offset + 100])
     git(destination, 'add', '-u')
     git(destination, '-c', 'user.name=Massar Local', '-c', 'user.email=local@localhost',
         'commit', '--allow-empty', '-qm', 'Private snapshot of current local work before synchronization')
