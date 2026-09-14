@@ -83,3 +83,6 @@ artifacts/production/legacy-authoritative-*/capture/*-assets.tar.gpg
 
 # Raw production account export used only for local migration verification.
 artifacts/teacher-defaults/production-teachers.txt
+
+# Synthetic PostgreSQL fixture for the staged finance migration regression.
+!deploy/production/tests/fixtures/finance-activation.sql
