@@ -16,3 +16,30 @@ INSERT INTO access_codes VALUES (gen_random_uuid(),'10000000-0000-0000-0000-0000
 CREATE TABLE access_code_activation_logs ("AccessCodeId" uuid);
 CREATE TABLE code_group_financial_terms ("CodeGroupId" uuid,"AgreementId" uuid,"Trigger" int);
 INSERT INTO code_group_financial_terms SELECT "Id",NULL,1 FROM code_groups;
+
+-- VERIFY MIGRATION
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM teacher_profiles WHERE "FinancePreset" = 0) <> 17
+     OR (SELECT count(*) FROM teacher_profiles WHERE "FinancePreset" = 1) <> 2
+     OR (SELECT count(*) FROM teacher_profiles WHERE "FinancePreset" = 2) <> 1 THEN
+    RAISE EXCEPTION 'Incorrect teacher preset mapping';
+  END IF;
+  IF (SELECT count(*) FROM teacher_financial_agreements WHERE "IsActive" AND "ScopeType" BETWEEN 1 AND 5) <> 295 THEN
+    RAISE EXCEPTION 'Missing default agreements';
+  END IF;
+  IF EXISTS (SELECT 1 FROM teacher_financial_agreements a JOIN teacher_profiles t ON t."Id" = a."TeacherId"
+    WHERE a."IsActive" AND t."FinancePreset" = 2 AND a."Trigger" = 1) THEN
+    RAISE EXCEPTION 'Nader has delivery billing';
+  END IF;
+  IF EXISTS (SELECT 1 FROM code_groups WHERE "Name" IN ('fixture-1','fixture-2') AND "AccountingTiming" <> 0)
+    OR EXISTS (SELECT 1 FROM code_group_financial_terms WHERE "CodeGroupId" IN ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002') AND "Trigger" <> 2) THEN
+    RAISE EXCEPTION 'Unbilled Nader codes were not switched to activation';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM code_groups WHERE "Name" = 'fixture-3' AND "AccountingTiming" = 1 AND "AccountingRecordedAt" IS NOT NULL) THEN
+    RAISE EXCEPTION 'Previously billed batch was changed';
+  END IF;
+  IF EXISTS (SELECT 1 FROM teacher_financial_events) THEN
+    RAISE EXCEPTION 'Migration created financial charges';
+  END IF;
+END $$;
