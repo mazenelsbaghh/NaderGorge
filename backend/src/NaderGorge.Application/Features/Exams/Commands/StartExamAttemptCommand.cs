@@ -93,7 +93,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 .OrderByDescending(l => l.Order)
                 .FirstOrDefaultAsync(ct);
 
-            if (previousLesson != null)
+            if (previousLesson != null &&
+                await _access.HasAccessToLessonAsync(request.UserId, previousLesson.Id, ct))
             {
                 // 1. Previous exam
                 if (previousLesson.ExamId.HasValue)

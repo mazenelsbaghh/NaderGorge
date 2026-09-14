@@ -124,11 +124,13 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         {
             var hasAccess = accessibleLessonIds.Contains(lesson.Id);
             var isCompleted = completedLessonIds.Contains(lesson.Id);
-            // Use the complete section, including hidden lessons, so prerequisites stay enforced.
+            // A separately purchased lesson must not require assessments from an unowned lesson.
             var previousLesson = section.Lessons
                 .Where(candidate => candidate.Order < lesson.Order)
                 .OrderByDescending(candidate => candidate.Order)
                 .FirstOrDefault();
+            if (previousLesson != null && !accessibleLessonIds.Contains(previousLesson.Id))
+                previousLesson = null;
             var blockingState = await GetBlockingStateAsync(lesson, previousLesson, request.UserId, passedExamIds, ct);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();

@@ -86,7 +86,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 .OrderByDescending(l => l.Order)
                 .FirstOrDefaultAsync(ct);
 
-            if (previousLesson != null)
+            if (previousLesson != null &&
+                await _access.HasAccessToLessonAsync(request.StudentId, previousLesson.Id, ct))
             {
                 // 1. Previous exam
                 if (previousLesson.ExamId.HasValue)

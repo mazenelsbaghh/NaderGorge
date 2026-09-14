@@ -301,7 +301,10 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .OrderByDescending(l => l.Order)
             .FirstOrDefaultAsync(ct);
 
-        if (previousLesson != null)
+        var hasPreviousLessonAccess = previousLesson != null &&
+            await _access.HasAccessToLessonAsync(request.UserId, previousLesson.Id, ct);
+
+        if (previousLesson != null && hasPreviousLessonAccess)
         {
             // 1. Check if previous lesson has an exam and if it is mandatory and passed
             if (!isLocked && previousLesson.ExamId.HasValue && await _archiveAccess.CanViewAsync(
@@ -581,7 +584,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         bool lessonExamLocked = false;
         string? examLockedReason = null;
 
-        if (lesson.ExamId.HasValue && previousLesson != null)
+        if (lesson.ExamId.HasValue && previousLesson != null && hasPreviousLessonAccess)
         {
             var prevHomework = await _db.Homeworks
                 .Where(h => h.LessonId == previousLesson.Id)
