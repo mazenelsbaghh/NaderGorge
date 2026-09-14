@@ -22,7 +22,9 @@ public sealed class AdminAutoRepairController(AppDbContext db) : ControllerBase
             .Select(x => new { x.Id, x.Source, x.Category, x.Level, x.Status, x.Occurrences, x.Attempts, x.FirstSeen, x.LastSeen, x.Summary, x.ReleaseId }).ToArrayAsync(ct);
         var counts = await db.AutoRepairIncidents.GroupBy(x => x.Status).Select(g => new { Status = g.Key, Count = g.Count() }).ToArrayAsync(ct);
         var control = await db.AutoRepairControls.AsNoTracking().SingleAsync(ct);
-        return Ok(ApiResponse<object>.Ok(new { control, incidents, counts, total = await query.CountAsync(ct) }));
+        return Ok(ApiResponse<object>.Ok(new { control, incidents, counts, total = await query.CountAsync(ct),
+            synchronization = await RepairSynchronization.Latest(db, ct),
+            lastSynchronized = await RepairSynchronization.Latest(db, ct, "ready") }));
     }
 
     [HttpGet("{id:guid}")]

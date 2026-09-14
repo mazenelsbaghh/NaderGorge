@@ -24,6 +24,18 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         return Ok(new { accepted = logs.Length });
     }
 
+    [HttpPost("synchronization")]
+    [RequestSizeLimit(8192)]
+    public async Task<IActionResult> Synchronization(RepairSynchronization.Snapshot request, CancellationToken ct)
+    {
+        if (!RepairSynchronization.Valid(request)) return BadRequest();
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(1700914)", ct);
+        await RepairSynchronization.Record(db, request, ct);
+        await tx.CommitAsync(ct);
+        return Ok(new { accepted = true });
+    }
+
     [HttpPost("claim")]
     public async Task<IActionResult> Claim(CancellationToken ct)
     {
@@ -43,7 +55,8 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
             RepairStore.Event(stale, "انتهى اتصال المنفذ؛ يلزم مراجعة الحالة الفعلية قبل إعادة المحاولة", "recovery");
         }
         var active = await db.AutoRepairIncidents.AnyAsync(x => x.LeaseUntil > DateTimeOffset.UtcNow && x.LeaseToken != null, ct);
-        var incident = control.Paused || active ? null : await db.AutoRepairIncidents
+        var synchronized = RepairSynchronization.AllowsClaim(await RepairSynchronization.Latest(db, ct));
+        var incident = control.Paused || active || !synchronized ? null : await db.AutoRepairIncidents
             .Where(x => (x.Status == "queued" && x.Attempts < 3) || (x.Status == "ready" && (control.AutoDeploy || x.ApprovedHash == x.ProposalHash)))
             .OrderBy(x => x.FirstSeen).FirstOrDefaultAsync(ct);
         if (incident is not null)

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw, ShieldCheck, Wrench } from 'lucide-react';
+import SynchronizationStatus from './SynchronizationStatus';
 import { AdminPage } from '@/components/admin';
 import { decideRepair, getRepair, getRepairs, setRepairControl, type RepairDetail, type RepairOverview, type RepairStatus } from '@/services/auto-repair-service';
 
@@ -20,6 +21,7 @@ export default function AutoRepairPageClient() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState('');
+  const [now, setNow] = useState(() => Date.now());
   const [updated, setUpdated] = useState<number | null>(null);
   const generation = useRef(0);
   const invalidate = useCallback(() => { generation.current++; }, []);
@@ -33,7 +35,7 @@ export default function AutoRepairPageClient() {
   }, [page, selected, status]);
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 15_000);
+    const timer = window.setInterval(() => { setNow(Date.now()); if (!document.hidden) void load(); }, 15_000);
     return () => { window.clearInterval(timer); invalidate(); };
   }, [load, invalidate]);
   const act = async (action: () => Promise<void>) => {
@@ -43,7 +45,7 @@ export default function AutoRepairPageClient() {
     finally { setBusy(false); }
   };
   const control = overview?.control;
-  const online = !!control?.heartbeat && updated !== null && updated - Date.parse(control.heartbeat) < 180_000;
+  const online = !!control?.heartbeat && updated !== null && now - Date.parse(control.heartbeat) < 180_000;
   return <AdminPage activePath="/admin/auto-repair" sectionLabel="المراقبة الفنية" pageTitle="الإصلاح التلقائي"
     subtitle="من اكتشاف المشكلة إلى التحقق من الإصدار على السيرفرات الثلاثة"
     action={<button className="admin-btn-ghost flex items-center gap-2" onClick={() => void load()} disabled={busy}><RefreshCw size={16} />تحديث التقرير</button>}>
@@ -62,6 +64,7 @@ export default function AutoRepairPageClient() {
           </div>
           <p className="w-full text-sm text-[var(--admin-text-muted)]">الإيقاف يمنع بدء عمليات جديدة. أي نشر جارٍ يُستكمل حتى نقطة آمنة لتجنب ترك السيرفرات بإصدارات مختلفة.</p>
         </section>
+        <SynchronizationStatus observation={overview.synchronization ?? null} lastReady={overview.lastSynchronized ?? null} now={now} reportUnavailable={!!error} />
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="إجمالي الحالات">{overview.counts.map(count => <span key={count.status}>{labels[count.status] ?? count.status}: <strong>{count.count}</strong></span>)}</div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm">الحالة<select className="admin-input min-h-11" value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}><option value="">كل الحالات</option>{Object.entries(labels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>

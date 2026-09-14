@@ -22,6 +22,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'production/scripts'))
 
+# Keep exceptions and supervisor imports identical when launched as a script.
+if __name__ == '__main__':
+    sys.modules['runner'] = sys.modules[__name__]
+
 from policy import assess_patch, patch_hash, redact, validate_review
 
 
@@ -343,15 +347,20 @@ class Runner:
             from collector import Collector
             collector = Collector(self.config, self.api)
             collector.thread.start()
+            from sync_monitor import SyncMonitor
+            synchronization = SyncMonitor(self.config, self.api)
+            synchronization.thread.start()
             while not self.stopping:
                 try:
                     self.run_one()
-                except (urllib.error.URLError, OSError, ValueError) as exc:
+                except (urllib.error.URLError, OSError, ValueError, RepairFailure, subprocess.SubprocessError) as exc:
                     print('Repair service unavailable: ' + type(exc).__name__, flush=True)
                 for _ in range(30):
                     if self.stopping:
                         break
                     time.sleep(1)
+            synchronization.stop.set()
+            synchronization.thread.join(timeout=35)
             collector.stop.set()
             collector.thread.join(timeout=35)
 

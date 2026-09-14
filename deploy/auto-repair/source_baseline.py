@@ -1,5 +1,4 @@
 """Bind a shared Git source to the live application and the verified dependency cache."""
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -7,13 +6,19 @@ from pathlib import Path
 LIVE_MANIFEST = Path('/opt/massar/current/manifest.json')
 
 
+def dependency_path(relative: str) -> bool:
+    path = Path(relative)
+    name = path.name.lower()
+    return (name in ('package.json', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock',
+                     '.npmrc', 'global.json', 'nuget.config', 'packages.lock.json')
+            or path.suffix.lower() in ('.csproj', '.fsproj', '.vbproj', '.props', '.targets')
+            or relative in ('deploy/auto-repair/Dockerfile', 'deploy/auto-repair/fonts.mjs'))
+
+
 def dependencies(repo: Path):
-    selected = [repo / project / name for project in ('frontend', 'worker')
-        for name in ('package.json', 'package-lock.json')]
-    selected += list((repo / 'backend').rglob('*.csproj'))
-    selected += [p for p in (repo / 'backend').rglob('*')
-        if p.is_file() and p.name in ('Directory.Packages.props', 'Directory.Build.props', 'NuGet.Config', 'nuget.config', 'global.json')]
-    return {str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in selected}
+    from release_images import release_source_entries
+    return {str(entry['path']): entry['sha256'] for entry in release_source_entries(repo)
+            if dependency_path(str(entry['path']))}
 
 
 def verify_baseline(checkout: Path, config: dict):

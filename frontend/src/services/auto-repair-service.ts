@@ -6,7 +6,17 @@ export interface RepairIncident {
   occurrences: number; attempts: number; firstSeen: string; lastSeen: string; summary: string; releaseId: string;
 }
 export interface RepairControl { paused: boolean; autoDeploy: boolean; heartbeat: string | null; runner: string }
+export interface RepairSynchronization {
+  checkedAt: string;
+  snapshot: {
+    state: 'ready' | 'pending_release' | 'dependencies_changed' | 'unavailable' | 'storage_low' | 'release_failed';
+    sharedCommit: string;
+    nodes: { nodeId: string; releaseId: string }[];
+  };
+}
 export interface RepairOverview {
+  synchronization: RepairSynchronization | null;
+  lastSynchronized: RepairSynchronization | null;
   control: RepairControl; incidents: RepairIncident[]; total: number;
   counts: { status: RepairStatus; count: number }[];
 }

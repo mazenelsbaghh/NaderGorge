@@ -17,6 +17,7 @@ public sealed class AutoRepairPostgresFactAttribute : FactAttribute
     {
         if (Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_DB") is null)
             Skip = "Requires isolated AUTO_REPAIR_TEST_DB and AUTO_REPAIR_TEST_REDIS.";
+
     }
 }
 
@@ -44,6 +45,13 @@ public sealed class AutoRepairPostgresTests
         var log = JsonSerializer.Serialize(new { id = Guid.NewGuid(), timestamp = DateTimeOffset.UtcNow,
             source = "backend", category = "RepairFixture", level = "error", message = "Null record 123", exception = "" });
         await redis.GetDatabase().ListRightPushAsync("system:logs:v1", new RedisValue[] { log, log });
+        Assert.IsType<OkObjectResult>(await controller.Claim(default));
+        Assert.All(await db.AutoRepairIncidents.ToListAsync(), x => Assert.Equal(0, x.Attempts));
+        var synchronized = new RepairSynchronization.Snapshot("ready", new string('a', 40),
+            [new("node-1", "git-" + new string('b', 40)), new("node-2", "git-" + new string('b', 40)), new("node-3", "git-" + new string('b', 40))]);
+        Assert.IsType<BadRequestResult>(await controller.Synchronization(synchronized with { Nodes = [synchronized.Nodes[0], synchronized.Nodes[0], synchronized.Nodes[0]] }, default));
+        Assert.Null(await RepairSynchronization.Latest(db, default));
+        Assert.IsType<OkObjectResult>(await controller.Synchronization(synchronized, default));
         await using var otherDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options);
         var competing = new AutoRepairRunnerController(otherDb, new RepairStore(otherDb, redis));
         var claims = await Task.WhenAll(controller.Claim(default), competing.Claim(default));
@@ -95,5 +103,21 @@ public sealed class AutoRepairPostgresTests
         db.ChangeTracker.Clear();
         Assert.Equal(5, (await db.AutoRepairIncidents.SingleAsync(x => x.Category == "Legacy" && x.Status == "queued")).Occurrences);
 
+        controls = await db.AutoRepairControls.SingleAsync();
+        controls.Paused = false;
+        await db.SaveChangesAsync();
+        var attempts = await db.AutoRepairIncidents.SumAsync(x => x.Attempts);
+        await controller.Synchronization(synchronized with { State = "pending_release" }, default);
+        await controller.Claim(default);
+        Assert.Equal(attempts, await db.AutoRepairIncidents.SumAsync(x => x.Attempts));
+        await using var reloaded = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options);
+        Assert.Equal("pending_release", (await RepairSynchronization.Latest(reloaded, default))!.Snapshot.State);
+        Assert.NotNull(await RepairSynchronization.Latest(reloaded, default, "ready"));
+        await controller.Synchronization(synchronized, default);
+        var observation = await db.AutoRepairEvents.Where(x => x.Actor == "synchronization").OrderByDescending(x => x.Id).FirstAsync();
+        observation.Timestamp = DateTimeOffset.UtcNow.AddMinutes(-4);
+        await db.SaveChangesAsync();
+        await controller.Claim(default);
+        Assert.Equal(attempts, await db.AutoRepairIncidents.SumAsync(x => x.Attempts));
     }
 }

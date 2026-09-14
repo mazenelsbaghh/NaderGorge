@@ -1048,15 +1048,8 @@ def main() -> int:
         )
     operation_id = str(uuid.uuid4())
     control = inventory.nodes[0]
-    lock = RolloutLock(
-        transport,
-        SshTarget(
-            control.id,
-            control.public_address,
-            inventory.cluster["ssh_user"],
-        ),
-        operation_id,
-    )
+    control_target = SshTarget(control.id, control.public_address, inventory.cluster["ssh_user"])
+    lock = RolloutLock(transport, control_target, operation_id)
     evidence: dict[str, str] = {}
     cleanup_evidence: dict[str, dict[str, object]] = {}
     advanced_nodes: list[str] = []
@@ -1064,21 +1057,23 @@ def main() -> int:
         rollback_gate if rollback_gate is not None else migration_gate
     )
     lock.acquire()
-    reconcile_inconsistent_ingress_traffic(
-        root=root,
-        inventory_path=args.inventory,
-        known_hosts=args.known_hosts,
-        identity=args.identity,
-        inventory=inventory,
-    )
     rollout_error: Exception | None = None
     rollback_attempted = False
     rollout_complete = False
     unadvanced_drained_node: str | None = None
     try:
+        reconcile_inconsistent_ingress_traffic(
+            root=root,
+            inventory_path=args.inventory,
+            known_hosts=args.known_hosts,
+            identity=args.identity,
+            inventory=inventory,
+        )
         if rollback_gate is None:
             from source_sync import assert_published
             assert_published(root, manifest)
+            from source_sync import record_publication
+            record_publication(transport, control_target, manifest.git_commit, 'deploying')
         completed_retry = not args.force_reconfigure and all_nodes_running_release(
             inventory, transport, args.release
         )
@@ -1297,6 +1292,15 @@ def main() -> int:
                     f"{safe_failure_marker(exc, 'DEPLOY')}; "
                     f"{safe_failure_marker(recovery_exc, 'RECOVERY')}"
                 )
+    try:
+        from source_sync import record_publication
+        observed_commit = current_manifest.git_commit if rollback_gate is not None else manifest.git_commit
+        phase = 'failed' if rollout_error is not None else ('rolled_back' if rollback_gate is not None else 'deployed')
+        if observed_commit is not None:
+            record_publication(transport, control_target, observed_commit, phase)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+        if rollout_error is None:
+            rollout_error = exc
     try:
         lock.release()
     except Exception as exc:

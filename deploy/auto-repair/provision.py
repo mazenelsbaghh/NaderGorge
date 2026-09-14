@@ -105,7 +105,7 @@ os.chmod(f,0o600)
 
 def provision_files(inv, ssh, builder):
     files = ['runner.py', 'policy.py', 'collector.py', 'release.py', 'verification.py', 'verify.sh',
-             'source_baseline.py', 'review-schema.json', 'SKILL.md', 'proxy.mjs', 'fonts.mjs', 'Dockerfile', 'prepare_runtime.py', 'acceptance.py']
+             'source_baseline.py', 'sync_monitor.py', 'review-schema.json', 'SKILL.md', 'proxy.mjs', 'fonts.mjs', 'Dockerfile', 'prepare_runtime.py', 'acceptance.py']
     with tempfile.TemporaryDirectory() as directory:
         env = Path(directory) / 'env'
         env.write_text(f'MASSAR_KNOWN_HOSTS_FILE={PRIVATE}/known_hosts\nMASSAR_SSH_IDENTITY_FILE={PRIVATE}/operations_ed25519\n')
@@ -114,6 +114,7 @@ def provision_files(inv, ssh, builder):
             for name in [*files, 'massar-auto-repair.service']:
                 bundle.add(ROOT / 'deploy/auto-repair' / name, arcname=name)
             bundle.add(ROOT / 'deploy/production/scripts/source_sync.py', arcname='source_sync.py')
+            bundle.add(ROOT / 'deploy/production/scripts/startup_check.py', arcname='startup_check.py')
             bundle.add(env, arcname='env')
         staged = PRIVATE + '/files-' + secrets.token_hex(8) + '.tar'
         ssh.copy(builder, archive, staged)

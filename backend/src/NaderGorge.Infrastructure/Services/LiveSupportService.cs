@@ -2315,12 +2315,15 @@ public sealed class LiveSupportService(
             .Select(x => x.GuestSessionId!.Value)
             .Distinct()
             .ToArray();
-        var userNames = await _db.Users.AsNoTracking()
+        var participantNames = await _db.Users.AsNoTracking()
             .Where(x => userIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.FullName, ct);
-        var guestNames = await _db.LiveSupportGuestSessions.AsNoTracking()
-            .Where(x => guestIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.DisplayName, ct);
+            .Select(x => new { x.Id, Name = x.FullName, IsGuest = false })
+            .Concat(_db.LiveSupportGuestSessions.AsNoTracking()
+                .Where(x => guestIds.Contains(x.Id))
+                .Select(x => new { x.Id, Name = x.DisplayName, IsGuest = true }))
+            .ToListAsync(ct);
+        var userNames = participantNames.Where(x => !x.IsGuest).ToDictionary(x => x.Id, x => x.Name);
+        var guestNames = participantNames.Where(x => x.IsGuest).ToDictionary(x => x.Id, x => x.Name);
         var conversationIds = conversations.Select(x => x.Id).ToArray();
         var externalBindings = await _db.LiveSupportWhatsAppBindings.AsNoTracking()
             .Where(x => conversationIds.Contains(x.ConversationId))

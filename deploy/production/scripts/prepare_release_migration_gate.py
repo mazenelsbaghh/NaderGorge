@@ -777,14 +777,23 @@ def main() -> int:
         }))
         return 0
     transport = StrictSshTransport(args.known_hosts, args.identity)
-    payload = prepare(
-        inventory=inventory,
-        transport=transport,
-        release_id=args.release,
-        manifest_path=args.manifest,
-        output=args.output,
-        compatibility_manifest_path=args.n_minus_one_manifest,
-    )
+    try:
+        payload = prepare(
+            inventory=inventory,
+            transport=transport,
+            release_id=args.release,
+            manifest_path=args.manifest,
+            output=args.output,
+            compatibility_manifest_path=args.n_minus_one_manifest,
+        )
+    except (GatePreparationError, ReleaseContractError, OSError, ValueError):
+        if re.fullmatch(r"git-[a-f0-9]{40}", args.release):
+            from source_sync import mark_failed
+            try:
+                mark_failed(Path(__file__).resolve().parents[3], args.release[4:])
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                print("Source failure observation unavailable; reconcile publication", file=sys.stderr)
+        raise
     print(json.dumps({
         "status": "success",
         "release": payload["releaseId"],

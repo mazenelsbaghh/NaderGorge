@@ -75,8 +75,7 @@ def publish(repo: Path, expected: str, branch: str) -> str:
     if git(repo, 'status', '--porcelain'):
         raise SourceSyncError('Commit the complete verified candidate before publication')
     ancestor(repo, expected, candidate)
-    from release_images import release_source_entries
-    approved = {str(e['path']) for e in release_source_entries(repo)}
+    approved = {str(e['path']) for e in publication_entries(repo)}
     if set(filter(None, git(repo, 'ls-files', '-z').split('\0'))) != approved:
         raise SourceSyncError('Publish only an exported source repository; local artifacts/history must stay private')
     if candidate != expected and git(repo, 'rev-list', '--parents', '-n', '1', candidate).split() != [candidate, expected]:
@@ -95,6 +94,39 @@ def publish(repo: Path, expected: str, branch: str) -> str:
     return candidate
 
 
+def record_publication(transport, host, commit: str, phase: str):
+    if not SHA.fullmatch(commit) or phase not in ('published', 'deploying', 'deployed', 'failed', 'rolled_back'):
+        raise SourceSyncError('Invalid publication observation')
+    script = """import json,os,uuid
+from pathlib import Path
+from datetime import datetime,timezone
+p=Path('/var/lib/massar/rollout-locks/source-publication.json')
+old=json.loads(p.read_text()) if p.exists() else None
+commit,phase=COMMIT,PHASE
+if (phase=='published' and old and old['commit']==commit) or (phase!='published' and old and old['commit']!=commit):
+ raise SystemExit(0)
+value={'commit':commit,'phase':phase,'observedAt':datetime.now(timezone.utc).isoformat()}
+tmp=p.with_name('source-publication-'+uuid.uuid4().hex+'.tmp')
+tmp.write_text(json.dumps(value));tmp.chmod(0o600);os.replace(tmp,p)
+""".replace('COMMIT', repr(commit)).replace('PHASE', repr(phase))
+    transport.run(host, ['python3', '-c', script])
+
+
+def mark_failed(repo: Path, expected: str):
+    from clusterctl import load_inventory, target, operator_transport
+    from deploy_release import RolloutLock
+    inventory = load_inventory(repo / 'deploy/production/inventory/production.yml', require_operator_files=True)
+    transport, host = operator_transport(inventory), target(inventory, inventory.nodes[0])
+    lock = RolloutLock(transport, host, str(uuid.uuid4()))
+    lock.acquire()
+    try:
+        if tip(repo) != expected:
+            raise SourceSyncError('Cannot mark a different shared publication failed')
+        record_publication(transport, host, expected, 'failed')
+    finally:
+        lock.release()
+
+
 def publish_locked(repo: Path, expected: str, branch: str) -> str:
     from clusterctl import load_inventory, target, operator_transport
     from deploy_release import RolloutLock
@@ -102,14 +134,21 @@ def publish_locked(repo: Path, expected: str, branch: str) -> str:
     lock = RolloutLock(operator_transport(inventory), target(inventory, inventory.nodes[0]), str(uuid.uuid4()))
     lock.acquire()
     try:
-        return publish(repo, expected, branch)
+        candidate = publish(repo, expected, branch)
+        record_publication(lock.transport, lock.target, candidate, 'published')
+        return candidate
     finally:
         lock.release()
 
 
-def copy_source(repo: Path, destination: Path):
+def publication_entries(repo: Path):
     from release_images import release_source_entries
-    entries = release_source_entries(repo)
+    # Generated previews and exports are local artifacts, never implicit public source.
+    return [entry for entry in release_source_entries(repo)
+            if Path(str(entry['path'])).parts[0] not in ('output', 'outputs', 'artifacts')]
+
+
+def copy_entries(repo: Path, destination: Path, entries):
     for entry in entries:
         source = repo / str(entry['path'])
         if hashlib.sha256(source.read_bytes()).hexdigest() != entry['sha256']:
@@ -118,6 +157,11 @@ def copy_source(repo: Path, destination: Path):
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, output)
     return entries
+
+
+def copy_source(repo: Path, destination: Path):
+    from release_images import release_source_entries
+    return copy_entries(repo, destination, release_source_entries(repo))
 
 
 def export_source(repo: Path, destination: Path, expected: str):
@@ -132,14 +176,15 @@ def export_source(repo: Path, destination: Path, expected: str):
     for child in destination.iterdir():
         if child.name != '.git':
             shutil.rmtree(child) if child.is_dir() and not child.is_symlink() else child.unlink()
-    entries = copy_source(repo, destination)
+    entries = copy_entries(repo, destination, publication_entries(repo))
     git(destination, 'add', '-f', '-A', '--', '.')
     git(destination, '-c', 'user.name=Massar Source', '-c', 'user.email=source@localhost',
         'commit', '--allow-empty', '-qm', 'Integrate reviewed local source with shared production')
-    # Bind the exported snapshot to the exact files inspected, not a changing worktree.
-    for entry in entries:
-        if hashlib.sha256((repo / str(entry['path'])).read_bytes()).hexdigest() != entry['sha256']:
-            raise SourceSyncError('Local files changed; discard candidate and prepare again')
+    # Compare the complete inventory, including additions/deletions and file modes.
+    if publication_entries(repo) != entries:
+        raise SourceSyncError('Local files changed; discard candidate and prepare again')
+    if tip(repo) != expected:
+        raise SourceSyncError('Shared source advanced during export; integrate again')
     return git(destination, 'rev-parse', 'HEAD')
 
 
@@ -178,7 +223,7 @@ def integrate(repo: Path, destination: Path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['status', 'integrate', 'export', 'publish'])
+    parser.add_argument('action', choices=['status', 'integrate', 'export', 'publish', 'mark-failed'])
     parser.add_argument('--repo', type=Path, default=Path.cwd())
     parser.add_argument('--destination', type=Path)
     parser.add_argument('--expected')
@@ -197,7 +242,12 @@ def main():
         raise SourceSyncError('Mutation requires --dry-run then --yes')
     if args.action in ('integrate', 'export') and args.destination is None:
         raise SourceSyncError('A new isolated destination is required')
-    if args.action == 'integrate':
+    if args.action == 'mark-failed':
+        if not args.expected:
+            raise SourceSyncError('Failure reconciliation requires the exact shared commit')
+        mark_failed(repo, args.expected)
+        print(json.dumps({'status': 'failed', 'sharedCommit': args.expected}))
+    elif args.action == 'integrate':
         print(json.dumps(integrate(repo, args.destination.resolve())))
     elif args.action == 'export':
         expected = args.expected or shared

@@ -72,7 +72,7 @@ if [ "$ready" != true ]; then tail -n 30 /tmp/repair-e2e-api.log; exit 1; fi
 export CI=1 PLAYWRIGHT_USE_PRODUCTION_BUILD=1 PLAYWRIGHT_JSON_OUTPUT_FILE=/tmp/repair-browser.json
 cd frontend
 ./node_modules/.bin/playwright test tests/e2e/auth.spec.ts tests/e2e/admin-users.spec.ts \
-  tests/e2e/parent-report.spec.ts tests/e2e/lesson-context-menu-guard.spec.ts \
+  tests/e2e/parent-report.spec.ts tests/e2e/lesson-context-menu-guard.spec.ts tests/e2e/auto-repair-sync.spec.ts \
   --project=chromium -g 'Phase 1|Parent report|lesson video context-menu guard' --reporter=json
 node - <<'JS'
 const report = require('/tmp/repair-browser.json');

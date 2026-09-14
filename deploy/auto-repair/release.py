@@ -43,7 +43,20 @@ def deploy_release(checkout: Path, config: dict, lease) -> str:
     from source_sync import publish_locked
     parent = (checkout.parent / 'shared-parent').read_text().strip()
     commit = publish_locked(checkout, parent, 'codex/repair/' + lease.incident['id'])
-    lease.report('deploying', 'حُفظ الإصلاح في GitHub قبل النشر. Commit: ' + commit + ' · codex/repair/' + lease.incident['id'])
+    try:
+        lease.report('deploying', 'حُفظ الإصلاح في GitHub قبل النشر. Commit: ' + commit + ' · codex/repair/' + lease.incident['id'])
+        return deploy_published(checkout, lease, expected)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        from source_sync import mark_failed
+        try:
+            mark_failed(checkout, commit)
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            print('Publication failure observation unavailable; reconcile the shared source', flush=True)
+        raise
+
+
+def deploy_published(checkout: Path, lease, expected: str):
+    from runner import RepairFailure
     cluster(checkout, ['status', '--node', 'all', '--evidence-dir', str(checkout / 'artifacts/production/repair-status')], lease)
     provenance = execute([sys.executable, '-c',
         'import sys,json; from pathlib import Path; sys.path.insert(0,"deploy/production/scripts"); from release_images import source_state; print(json.dumps(source_state(Path("."))))'], checkout, lease)

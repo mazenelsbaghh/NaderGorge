@@ -1,5 +1,9 @@
 # nader gorge Development Guidelines
 
+## Mandatory startup before edits
+
+Before editing project files, read `.agents/skills/massar-startup/SKILL.md` and follow its synchronization gate. This applies to every task, including small fixes, resumed work, and changes made with other skills. Run `python3 deploy/production/scripts/startup_check.py --repo "$PWD"` from the actual editing checkout before new work and again before commit/publication. If server fixes are missing, integrate them first without overwriting local changes and continue in the integrated workspace. A separate synchronized copy does not authorize edits in an old checkout. Failed/offline checks are not readiness. Apply ordinary agent-authored edits through `startup_edit.py` as specified by the skill; do not bypass rejected patches with direct writes. Read-only diagnosis and repairing the synchronization mechanism itself remain allowed; see the skill for the isolated repair-worker exception and full workflow.
+
 Auto-generated from all feature plans. Last updated: 2026-08-11
 
 ## Active Technologies

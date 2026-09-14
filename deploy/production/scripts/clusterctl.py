@@ -1013,6 +1013,12 @@ def main(argv: list[str] | None = None) -> int:
             status, reason = execute(args, inventory, targets)
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
             status, reason = "failed", str(exc)[:500]
+    if status == "failed" and args.yes and args.command in {"build", "migrate", "deploy"} and re.fullmatch(r"git-[a-f0-9]{40}", args.release or ""):
+        from source_sync import mark_failed
+        try:
+            mark_failed(SCRIPT_DIR.parents[2], args.release[4:])
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            reason = (reason or "Release failed") + "; source failure observation unavailable; reconcile publication"
     evidence = write_evidence(args.evidence_dir, args.command, targets, status, reason)
     print(json.dumps({
         "command": args.command,
