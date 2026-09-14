@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+LIVE_MANIFEST = Path('/opt/massar/current/manifest.json')
+
 
 def dependencies(repo: Path):
     selected = [repo / project / name for project in ('frontend', 'worker')
@@ -17,7 +19,7 @@ def dependencies(repo: Path):
 def verify_baseline(checkout: Path, config: dict):
     from source_sync import SourceSyncError
     from release import assert_current_release
-    manifest = json.loads(Path('/opt/massar/current/manifest.json').read_text())
+    manifest = json.loads(LIVE_MANIFEST.read_text())
     expected = {e['path']: e['sha256'] for e in manifest['sourcePaths']
         if e['path'].startswith(('backend/', 'frontend/', 'worker/'))}
     sys.path.insert(0, str(checkout / 'deploy/production/scripts'))
@@ -30,3 +32,11 @@ def verify_baseline(checkout: Path, config: dict):
         raise SourceSyncError('Shared dependencies changed; prepare and verify a new repair image before continuing')
     assert_current_release(checkout, manifest['releaseId'])
     return manifest['releaseId']
+
+
+def refresh_shared_source(config: dict):
+    from source_sync import fetch, git
+    repo = Path(config['source_repository'])
+    shared = fetch(repo)
+    git(repo, 'checkout', '--detach', shared)
+    verify_baseline(repo, config)

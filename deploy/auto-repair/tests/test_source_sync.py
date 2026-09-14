@@ -122,3 +122,27 @@ def test_dirty_parent_with_empty_gitlink_can_export_only_regular_source(reposito
     assert [entry['path'] for entry in entries] == ['README.md']
     assert (destination / 'README.md').read_text() == 'local source change\n'
     assert not (destination / 'unused-submodule').exists()
+
+
+def test_pending_operator_release_does_not_consume_incident_attempts(repositories, tmp_path, monkeypatch):
+    import json
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import source_baseline
+    from runner import Runner
+    local, _, _ = repositories
+    live = tmp_path / 'live.json'
+    live.write_text(json.dumps({'releaseId': 'git-' + 'a' * 40,
+        'sourcePaths': [{'path': 'frontend/src/live.ts', 'sha256': 'b' * 64}]}))
+    monkeypatch.setattr(source_baseline, 'LIVE_MANIFEST', live)
+    class MachineApi:
+        def post(self, path, body):
+            raise AssertionError('A pending source release must not claim an incident')
+    runner = Runner.__new__(Runner)
+    runner.root = tmp_path
+    # Disk capacity is an external prerequisite, not the source/claim behavior under test.
+    import shutil
+    monkeypatch.setattr(shutil, 'disk_usage', lambda _: SimpleNamespace(free=30 * 1024 ** 3))
+    runner.config = {'source_repository': str(local)}
+    runner.api = MachineApi()
+    with pytest.raises(sync.SourceSyncError, match='does not match the live'):
+        runner.run_one()

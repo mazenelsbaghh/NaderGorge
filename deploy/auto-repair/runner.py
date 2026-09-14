@@ -22,8 +22,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'production/scripts'))
 
-from source_sync import SourceSyncError
-
 from policy import assess_patch, patch_hash, redact, validate_review
 
 
@@ -314,6 +312,8 @@ class Runner:
     def run_one(self):
         if shutil.disk_usage(self.root).free < 20 * 1024 ** 3:
             raise RepairFailure('Less than 20 GiB free for isolated repair; service stopped')
+        from source_baseline import refresh_shared_source
+        refresh_shared_source(self.config)
         claimed = self.api.post('claim', {})
         incident = claimed['incident']
         if incident is None:
@@ -326,8 +326,6 @@ class Runner:
             else:
                 self.diagnose(incident, lease)
         except (RepairFailure, ValueError, OSError, urllib.error.URLError, subprocess.SubprocessError) as exc:
-            if isinstance(exc, SourceSyncError):
-                self.stopping = True
             try:
                 lease.report('failed', redact(str(exc)))
             except (RepairFailure, urllib.error.URLError, OSError):
