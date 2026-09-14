@@ -1,20 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { useHasPermission } from '@/hooks/useHasPermission';
 import { FormEvent, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { adminService, type AdminUserListDto, type StudentProfileExtendedDto } from '@/services/admin-service';
-import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow } from '@/services/platform-finance-service';
+import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, type RefundStudent } from '@/services/platform-finance-service';
 
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 
-export default function RefundManager() {
+export default function RefundManager({ staff = false }: { staff?: boolean }) {
+  const { hasPermission } = useHasPermission();
+  const canCreate = hasPermission('finance.refunds.create');
+  const canReverse = hasPermission('finance.refunds.post');
   const [rows, setRows] = useState<PlatformRefundRow[]>([]);
-  const [bootstrap, setBootstrap] = useState<FinanceBootstrap | null>(null);
+  const [bootstrap, setBootstrap] = useState<Pick<FinanceBootstrap, 'treasuryAccounts'> | null>(null);
   const [error, setError] = useState('');
   const [phone, setPhone] = useState('');
-  const [students, setStudents] = useState<AdminUserListDto[]>([]);
-  const [student, setStudent] = useState<StudentProfileExtendedDto | null>(null);
+  const [students, setStudents] = useState<Array<{ id: string; fullName: string; phoneNumber: string }>>([]);
+  const [student, setStudent] = useState<RefundStudent | null>(null);
   const [grantId, setGrantId] = useState('');
   const [treasuryId, setTreasuryId] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
@@ -25,7 +28,7 @@ export default function RefundManager() {
     try {
       const [refunds, financeBootstrap] = await Promise.all([
         platformFinanceService.getRefunds(),
-        platformFinanceService.bootstrap(),
+        platformFinanceService.refundBootstrap(),
       ]);
       setRows(refunds);
       setBootstrap(financeBootstrap);
@@ -37,12 +40,15 @@ export default function RefundManager() {
   useEffect(() => { void load(); }, []);
 
   async function searchStudent() {
-    const result = await adminService.listUsers(1, 10, phone.trim(), undefined, undefined, undefined, undefined, undefined, 'Student');
-    setStudents(result?.items || []);
+    try {
+      const matches = await platformFinanceService.findRefundStudents(phone.trim());
+      setStudents(matches);
+      if (matches.length === 0) toast.error('لا يوجد طالب بهذا الرقم');
+    } catch { toast.error('تعذر البحث؛ اكتب رقم الهاتف كاملًا وحاول مجددًا'); }
   }
 
   async function selectStudent(userId: string) {
-    setStudent(await adminService.getStudentProfile(userId));
+    setStudent(await platformFinanceService.getRefundStudent(userId));
     setGrantId('');
     setStudents([]);
   }
@@ -51,7 +57,7 @@ export default function RefundManager() {
     event.preventDefault();
     const selectedPackage = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
     const amount = Number(refundAmount);
-    if (!student || !selectedPackage?.purchaseOperationId || !treasuryId || !reason.trim() || amount <= 0 || amount > selectedPackage.paidAmount) return;
+    if (!canCreate || !student || !selectedPackage?.purchaseOperationId || !treasuryId || !reason.trim() || !Number.isFinite(amount) || amount <= 0 || amount > selectedPackage.paidAmount) return;
     const teacherRatio = selectedPackage.paidAmount > 0 ? selectedPackage.teacherShareAmount / selectedPackage.paidAmount : 0;
     const teacherAmount = Math.min(amount, Math.max(0, Number((amount * teacherRatio).toFixed(2))));
     setSubmitting(true);
@@ -67,7 +73,7 @@ export default function RefundManager() {
         reason: reason.trim(),
       });
       toast.success('تم إلغاء الباقة وتسجيل الاسترداد الخارجي في المركز المالي');
-      setStudent(await adminService.getStudentProfile(student.id));
+      setStudent(await platformFinanceService.getRefundStudent(student.id));
       setGrantId('');
       setRefundAmount('');
       setReason('');
@@ -94,7 +100,7 @@ export default function RefundManager() {
         <h2 className="text-lg font-black">استرداد خارجي لطالب</h2>
         <p className="mt-1 text-xs text-[var(--admin-muted)]">يلغي الباقة بدون إضافة رصيد للطالب، ويسجل المبلغ الخارج من الخزنة كاسترداد في المركز المالي.</p>
       </div>
-      <form onSubmit={createExternalRefund} className="grid gap-4 md:grid-cols-2">
+      {canCreate ? <form onSubmit={createExternalRefund} className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="mb-1 block text-xs font-bold">رقم هاتف الطالب</label>
           <div className="flex gap-2">
@@ -129,13 +135,13 @@ export default function RefundManager() {
         <div className="md:col-span-2 flex justify-end">
           <button className="admin-btn-primary" type="submit" disabled={submitting || !student || !grantId || !treasuryId}>{submitting ? 'جارٍ التنفيذ…' : 'إلغاء الباقة وتسجيل الاسترداد'}</button>
         </div>
-      </form>
+      </form> : <p className="text-sm">تحتاج إلى صلاحية إنشاء الاستردادات لتنفيذ استرداد.</p>}
     </section>
 
     <section className="admin-panel rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">سجل الاستردادات</h2><p className="mt-1 text-xs text-[var(--admin-muted)]">يشمل الاستردادات المسجلة بالمركز المالي واستردادات الرصيد القديمة تلقائياً.</p></div><button className="admin-btn-ghost" type="button" onClick={() => void load()}>تحديث</button></div>
       {error ? <p role="alert" className="mb-3 text-rose-600">{error}</p> : null}
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>السبب</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الإجمالي</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={`/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{!row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
+      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>السبب</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الإجمالي</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={staff ? `/assistant/students/${row.studentId}` : `/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{canReverse && !row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
     </section>
   </div>;
 }

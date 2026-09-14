@@ -222,7 +222,19 @@ public sealed class WhatsAppOutboundBackgroundService(
         try
         {
             if (!message.AttachmentId.HasValue)
+            {
+                if (message.ReplyToMessageId.HasValue)
+                {
+                    var reply = await context.Db.LiveSupportMessages.AsNoTracking().SingleAsync(item => item.Id == message.ReplyToMessageId, ct);
+                    var original = await context.Db.LiveSupportWhatsAppMessages.AsNoTracking().SingleOrDefaultAsync(item => item.LiveSupportMessageId == reply.Id, ct);
+                    var prefix = $"baileys:{account.InstanceName}:";
+                    if (original?.MetaMessageId is null || !original.MetaMessageId.StartsWith(prefix, StringComparison.Ordinal))
+                        return new(false, "تعذر العثور على رسالة واتساب المطلوب الرد عليها.", binding.PhoneNumber, null, 409, "WHATSAPP_REPLY_UNAVAILABLE");
+                    return await context.Baileys.SendReplyAsync(account.InstanceName,
+                        new(binding.WhatsAppUserId, message.Content, original.MetaMessageId[prefix.Length..], original.Direction == "Outbound", reply.Content), ct);
+                }
                 return await context.Baileys.SendTextAsync(account.InstanceName, binding.WhatsAppUserId, message.Content, ct);
+            }
             var attachment = await context.Db.LiveSupportAttachments.AsNoTracking().SingleAsync(item => item.Id == message.AttachmentId, ct);
             await using var source = await context.AttachmentStorage.OpenReadAsync(attachment.StoragePath, ct);
             var normalized = await context.MediaNormalizer.NormalizeAsync(new WhatsAppOutboundMediaSource(

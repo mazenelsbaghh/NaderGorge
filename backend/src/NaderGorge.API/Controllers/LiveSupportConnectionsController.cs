@@ -13,34 +13,45 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/live-support/connections")]
-[HasPermission("live_support.manage")]
+[Authorize(Roles = "Admin,Assistant,AssistantReviewer,Staff")]
 public sealed class LiveSupportConnectionsController(BaileysAccountService accounts, LiveSupportBlockingService blocking) : ControllerBase
 {
     [HttpGet("whatsapp")]
+    [HasPermission("live_support.manage")]
     public async Task<IActionResult> List(CancellationToken ct) => Ok(ApiResponse<IReadOnlyList<BaileysAccountDto>>.Ok(await accounts.ListAsync(ct)));
 
     [HttpPost("whatsapp")]
+    [HasPermission("live_support.manage")]
     public Task<IActionResult> Create(CreateWhatsAppAccountRequest request, CancellationToken ct) =>
         RespondAsync(() => accounts.CreateAsync(User.RequireUserId(), request.Name, ct));
 
     [HttpPost("whatsapp/{id:guid}/connect")]
+    [HasPermission("live_support.manage")]
     public Task<IActionResult> Connect(Guid id, CancellationToken ct) => RespondAsync(() => accounts.ConnectAsync(id, ct));
 
     [HttpPost("whatsapp/{id:guid}/refresh")]
+    [HasPermission("live_support.manage")]
     public Task<IActionResult> Refresh(Guid id, CancellationToken ct) => RespondAsync(() => accounts.RefreshAsync(id, ct));
 
     [HttpPost("whatsapp/{id:guid}/disconnect")]
+    [HasPermission("live_support.manage")]
     public Task<IActionResult> Disconnect(Guid id, CancellationToken ct) => RespondAsync(() => accounts.DisconnectAsync(id, ct));
 
     [HttpGet("conversations/{id:guid}/block")]
-    public Task<IActionResult> BlockStatus(Guid id, CancellationToken ct) => RespondAsync(() => blocking.GetAsync(id, ct));
+    public Task<IActionResult> BlockStatus(Guid id, CancellationToken ct) => RespondAsync(() => WithBlockAccessAsync(id, () => blocking.GetAsync(id, ct), ct));
 
     [HttpPut("conversations/{id:guid}/block")]
     public Task<IActionResult> Block(Guid id, SupportBlockRequest request, CancellationToken ct) =>
-        RespondAsync(() => blocking.SetAsync(id, User.RequireUserId(), request, ct));
+        RespondAsync(() => WithBlockAccessAsync(id, () => blocking.SetAsync(id, User.RequireUserId(), request, ct), ct));
 
     [HttpPost("conversations/{id:guid}/block/retry")]
-    public Task<IActionResult> RetryBlock(Guid id, CancellationToken ct) => RespondAsync(() => blocking.RetryAsync(id, ct));
+    public Task<IActionResult> RetryBlock(Guid id, CancellationToken ct) => RespondAsync(() => WithBlockAccessAsync(id, () => blocking.RetryAsync(id, ct), ct));
+
+    private async Task<T> WithBlockAccessAsync<T>(Guid id, Func<Task<T>> operation, CancellationToken ct)
+    {
+        await blocking.RequireStaffAccessAsync(id, User.RequireUserId(), User.IsInRole("Admin"), ct);
+        return await operation();
+    }
 
     private async Task<IActionResult> RespondAsync<T>(Func<Task<T>> operation)
     {
@@ -48,7 +59,7 @@ public sealed class LiveSupportConnectionsController(BaileysAccountService accou
         try { return Ok(ApiResponse<T>.Ok(await operation())); }
         catch (LiveSupportException exception)
         {
-            var status = exception.Code == "NOT_FOUND" ? 404 : exception.Code == "VALIDATION_ERROR" ? 400
+            var status = exception.Code == "FORBIDDEN" ? 403 : exception.Code == "NOT_FOUND" ? 404 : exception.Code == "VALIDATION_ERROR" ? 400
                 : exception.Code == "VERSION_CONFLICT" ? 409 : 502;
             return StatusCode(status, ApiResponse<object>.Fail(exception.Message, [exception.Code]));
         }

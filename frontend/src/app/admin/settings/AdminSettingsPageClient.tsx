@@ -76,6 +76,8 @@ interface NavOption {
 }
 
 const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
+  'finance.refunds.view': ['/admin/platform-finance/refunds', '/assistant/refunds'],
+  'finance.refunds.create': ['/admin/platform-finance/refunds', '/assistant/refunds'],
   'users.manage': [
     '/admin/students',
     '/admin/overrides',
@@ -297,6 +299,11 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     subItems: [
       { key: '/assistant/codes', label: 'إدارة مجموعات أكواد الوصول' }
     ]
+  },
+  {
+    key: '/assistant/refunds',
+    label: 'استردادات الطلاب',
+    subItems: [{ key: '/assistant/refunds', label: 'عرض الاستردادات وتسجيل المبلغ المرتجع للطالب' }]
   },
   {
     key: '/assistant/students',

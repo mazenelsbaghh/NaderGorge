@@ -12,7 +12,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId, string? Reason = null) : IRequest<ApiResponse>;
+public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId, string? Reason = null, TeacherRefundScope? RefundScope = null) : IRequest<ApiResponse>;
 
 public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGrantCommand, ApiResponse>
 {
@@ -131,7 +131,7 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
                 grantContext.TargetId,
                 grant.Id,
                 request.Reason ?? $"إلغاء اشتراك {contentName}",
-                cancellationToken);
+                cancellationToken, request.RefundScope);
         }
 
         var successMessage = refundedAmount > 0m

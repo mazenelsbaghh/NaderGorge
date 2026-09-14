@@ -117,7 +117,7 @@ export function resolveLiveSupportChannelCapabilities(
 ): LiveSupportChannelCapabilities {
   const channel = normalizeLiveSupportChannel(source.channel);
   const fallback = channel === 'WhatsApp' && source.whatsAppAccountId
-    ? { ...CHANNEL_CAPABILITY_FALLBACKS.WhatsApp, requiresCustomerServiceWindow: false, supportsTemplates: false }
+    ? { ...CHANNEL_CAPABILITY_FALLBACKS.WhatsApp, requiresCustomerServiceWindow: false, supportsTemplates: false, supportsMessageReply: true, supportsMessageMutation: true }
     : CHANNEL_CAPABILITY_FALLBACKS[channel];
   const customerServiceWindowOpen = fallback.requiresCustomerServiceWindow
     ? isWindowOpen(source.customerServiceWindowExpiresAt, currentTime)

@@ -34,7 +34,8 @@ public sealed class LiveSupportService(
     IMediator? mediator = null,
     ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null,
     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? aiVerificationService = null,
-    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator, ILiveSupportHumanConversationFactory
+    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null,
+    WhatsAppMessageMutationService? messageMutations = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator, ILiveSupportHumanConversationFactory
 {
     private const int MaxCannedReplies = 300;
     private readonly IAppDbContext _db = db;
@@ -1439,12 +1440,14 @@ public sealed class LiveSupportService(
 
     private async Task<LiveSupportMessageDto> UpdateMessageAsync(LiveSupportMessage message, string content, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
     {
-        await EnsureMessageIsNotExternalAsync(message.Id, ct);
+
         content = content.Trim();
         if (message.DeletedAt.HasValue) throw new LiveSupportException("MESSAGE_DELETED", "لا يمكن تعديل رسالة محذوفة.");
         if (message.Type != LiveSupportMessageType.Text || message.AttachmentId.HasValue) throw new LiveSupportException("VALIDATION_ERROR", "يمكن تعديل الرسائل النصية فقط.");
         if (content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "نص الرسالة يجب أن يكون بين 1 و4000 حرف.");
+        await MutateExternalMessageAsync(message, content, ct);
         message.Content = content;
+        message.UpdatedAt = DateTime.UtcNow;
         AddEvent(message.ConversationId, LiveSupportEventType.MessageEdited, actorUserId, actorGuestId, message.Id);
         await _db.SaveChangesAsync(ct);
         return ToDto(message);
@@ -1452,8 +1455,9 @@ public sealed class LiveSupportService(
 
     private async Task<LiveSupportMessageDto> DeleteMessageAsync(LiveSupportMessage message, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
     {
-        await EnsureMessageIsNotExternalAsync(message.Id, ct);
+
         if (message.DeletedAt.HasValue) return ToDto(message);
+        await MutateExternalMessageAsync(message, null, ct);
         message.Content = string.Empty;
         message.AttachmentId = null;
         message.DeletedAt = DateTime.UtcNow;
@@ -1644,7 +1648,11 @@ public sealed class LiveSupportService(
 
         var studentIds = items.Select(c => c.StudentUserId ?? c.LinkedStudentUserId).Where(id => id.HasValue).ToArray();
         var guestIds = items.Select(c => c.GuestSessionId).Where(id => id.HasValue).ToArray();
-        var phones = whatsAppBindings.Values.Select(binding => binding.WhatsAppUserId).ToArray();
+        var studentPhones = await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id))
+            .Select(user => new { user.Id, user.PhoneNumber }).ToListAsync(ct);
+        var normalizedPhones = studentPhones.Where(user => !string.IsNullOrWhiteSpace(user.PhoneNumber))
+            .ToDictionary(user => user.Id, user => LiveSupportBlockPolicy.NormalizePhone(user.PhoneNumber!));
+        var phones = whatsAppBindings.Values.Select(binding => binding.WhatsAppUserId).Concat(normalizedPhones.Values).Distinct().ToArray();
         var supportBlocks = await _db.LiveSupportContactBlocks.AsNoTracking().Where(block => block.UnblockedAt == null &&
             (block.StudentUserId != null && studentIds.Contains(block.StudentUserId) ||
              block.GuestSessionId != null && guestIds.Contains(block.GuestSessionId) ||
@@ -1672,7 +1680,8 @@ public sealed class LiveSupportService(
             var supportBlock = supportBlocks.FirstOrDefault(block =>
                 block.StudentUserId != null && block.StudentUserId == (c.StudentUserId ?? c.LinkedStudentUserId) ||
                 block.GuestSessionId != null && block.GuestSessionId == c.GuestSessionId ||
-                block.PhoneNumber != null && block.PhoneNumber == whatsAppBinding?.WhatsAppUserId);
+                block.PhoneNumber != null && (block.PhoneNumber == whatsAppBinding?.WhatsAppUserId ||
+                    (c.StudentUserId ?? c.LinkedStudentUserId) is Guid participantId && block.PhoneNumber == normalizedPhones.GetValueOrDefault(participantId)));
             var channel = messengerBinding is not null
                 ? "Messenger"
                 : whatsAppBinding is not null
@@ -2287,10 +2296,18 @@ public sealed class LiveSupportService(
     {
         if (conversations.Count == 0) return [];
 
+        var closedConversationIds = conversations.Where(c => IsTerminal(c.Status)).Select(c => c.Id).ToArray();
+        var lastOwners = await _db.LiveSupportAssignments.AsNoTracking()
+            .Where(assignment => closedConversationIds.Contains(assignment.ConversationId))
+            .GroupBy(assignment => assignment.ConversationId)
+            .Select(group => group.OrderByDescending(assignment => assignment.AssignmentSequence)
+                .ThenByDescending(assignment => assignment.Id).First())
+            .ToDictionaryAsync(assignment => assignment.ConversationId, assignment => assignment.StaffUserId, ct);
         var userIds = conversations
             .SelectMany(x => new[] { x.StudentUserId, x.CurrentOwnerUserId })
             .Where(x => x.HasValue)
             .Select(x => x!.Value)
+            .Concat(lastOwners.Values)
             .Distinct()
             .ToArray();
         var guestIds = conversations
@@ -2407,7 +2424,7 @@ public sealed class LiveSupportService(
                     : null;
             var ownerName = c.CurrentOwnerUserId.HasValue
                 ? userNames.GetValueOrDefault(c.CurrentOwnerUserId.Value)
-                : null;
+                : lastOwners.TryGetValue(c.Id, out var lastOwnerId) ? userNames.GetValueOrDefault(lastOwnerId) : null;
             externalBindings.TryGetValue(c.Id, out var externalBinding);
             var channel = externalBinding?.Channel ?? "Web";
             return new LiveSupportAdminConversationDto(
@@ -2550,10 +2567,15 @@ public sealed class LiveSupportService(
         string Status,
         string Channel);
 
-    private async Task EnsureMessageIsNotExternalAsync(Guid messageId, CancellationToken ct)
+    private async Task MutateExternalMessageAsync(LiveSupportMessage message, string? content, CancellationToken ct)
     {
+        var messageId = message.Id;
         if (await _db.LiveSupportWhatsAppMessages.AsNoTracking().AnyAsync(item => item.LiveSupportMessageId == messageId, ct))
-            throw new LiveSupportException(LiveSupportErrorCodes.WhatsAppMessageImmutable, "لا يمكن تعديل أو حذف رسالة واتساب بعد تسجيلها للإرسال أو الاستلام.");
+        {
+            if (messageMutations is null)
+                throw new LiveSupportException(LiveSupportErrorCodes.WhatsAppMessageImmutable, "تعديل رسائل واتساب غير متاح حاليًا.");
+            await messageMutations.ApplyAsync(message, content, ct);
+        }
         if (await _db.LiveSupportMessengerMessages.AsNoTracking().AnyAsync(item => item.LiveSupportMessageId == messageId, ct))
             throw new LiveSupportException("LIVE_SUPPORT_MESSENGER_MESSAGE_IMMUTABLE", "لا يمكن تعديل أو حذف رسالة ماسنجر بعد تسجيلها للإرسال أو الاستلام.");
     }

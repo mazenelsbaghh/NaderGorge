@@ -275,6 +275,7 @@ builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
 builder.Services.AddHttpClient<BaileysWhatsAppClient>();
+builder.Services.AddScoped<WhatsAppMessageMutationService>();
 builder.Services.AddScoped<BaileysAccountService>();
 builder.Services.AddScoped<BaileysWebhookService>();
 builder.Services.AddScoped<LiveSupportBlockingService>();

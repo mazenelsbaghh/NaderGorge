@@ -35,7 +35,7 @@ public sealed class HrShiftsController : ControllerBase
             item.Id, item.Code, item.Name, mode = item.Mode.ToString(), item.WorkCalendarId,
             item.GraceMinutes, item.MinimumBreakMinutes, item.OvertimeAfterMinutes, item.Version,
             segments = item.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
-            { segment.Id, segment.Sequence, segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
+            { segment.Id, segment.Sequence, dayOfWeek = (int?)segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
         }).ToListAsync(ct));
 
     [HttpPatch("admin/shifts/calendars/{calendarId:guid}")]
@@ -58,7 +58,7 @@ public sealed class HrShiftsController : ControllerBase
             item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.ShiftTemplateId,
             shift = item.ShiftTemplate!.Name, item.EffectiveFrom, item.EffectiveTo, status = item.Status.ToString(), item.Reason,
             segments = item.ShiftTemplate.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
-            { segment.Sequence, segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
+            { segment.Sequence, dayOfWeek = (int?)segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
         }).ToListAsync(ct));
 
     [HttpPatch("admin/shifts/assignments/{assignmentId:guid}")]

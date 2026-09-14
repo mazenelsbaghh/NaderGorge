@@ -242,7 +242,7 @@ export default function AdminLiveSupportPageClient() {
                   <td className="p-3 font-semibold text-[var(--admin-text)]">{statusLabels[item.status]}</td>
                   <td className="p-3 text-xs font-medium text-[var(--admin-text)]">{formatExternalWindow(item)}</td>
                   <td className="hidden p-3 text-[var(--admin-text)] lg:table-cell"><span className="font-semibold">{isMessenger ? 'موظفون فقط' : item.aiTurnStatus || 'بشري'}</span>{!isMessenger && item.aiTurnFailureCode && <bdi dir="ltr" className="mt-1 block break-all text-xs text-[var(--admin-danger)]">{item.aiTurnFailureCode}</bdi>}</td>
-                  <td className="p-3 text-[var(--admin-text)]">{item.ownerName || 'الطابور'}</td>
+                  <td className="p-3 text-[var(--admin-text)]">{item.ownerName || (item.status === 'Closed' || item.status === 'Abandoned' ? 'لم تُسند لموظف' : 'الطابور')}</td>
                   <td className="hidden p-3 text-[var(--admin-text)] xl:table-cell"><time dateTime={item.createdAt}>{formatCairoTimestamp(item.createdAt)}</time></td>
                   <td className="hidden p-3 text-[var(--admin-text)] md:table-cell">{formatDuration(item.waitSeconds)}</td>
                   <td className="sticky left-0 z-10 border-r border-[var(--admin-border)] bg-[var(--admin-card)] p-3"><button type="button" onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="min-h-10 rounded-lg bg-[var(--admin-primary)] px-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)]">فتح المحادثة</button></td>

@@ -99,6 +99,39 @@ public sealed class SupportBlockingTests
         Assert.Equal("WHATSAPP_BLOCK_NOT_CONFIRMED", error.ErrorCode);
     }
 
+    [Fact]
+    public async Task WhatsAppPhoneBlock_PreventsRegisteredStudentOpeningWebChat()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Blocked student", "01099999999");
+        db.LiveSupportContactBlocks.Add(new() { PhoneNumber = "201099999999", Reason = "إساءة", BlockedByUserId = LiveSupportTestData.AdminId });
+        await db.SaveChangesAsync();
+        var support = new LiveSupportService(db, new LiveSupportEnabledSettings());
+        var identity = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var error = await Assert.ThrowsAsync<LiveSupportException>(() => support.CreateConversationAsync(identity, "طلب جديد", null, CancellationToken.None));
+        Assert.Equal("SUPPORT_BLOCKED", error.Code);
+        Assert.Empty(db.LiveSupportConversations);
+    }
+
+    [Fact]
+    public async Task StaffCanBlockOwnedConversationButCannotBlockAnotherEmployeesConversation()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var actor = Guid.NewGuid();
+        var owned = LiveSupportTestData.Conversation();
+        owned.CurrentOwnerUserId = actor;
+        var other = LiveSupportTestData.Conversation();
+        other.Id = Guid.NewGuid();
+        other.CurrentOwnerUserId = Guid.NewGuid();
+        db.LiveSupportStaffConfigs.Add(new() { UserId = actor, IsEnabled = true });
+        db.LiveSupportConversations.AddRange(owned, other);
+        await db.SaveChangesAsync();
+        var blocking = new LiveSupportBlockingService(db, new LiveSupportEventWriter(db));
+        await blocking.RequireStaffAccessAsync(owned.Id, actor, false, CancellationToken.None);
+        var error = await Assert.ThrowsAsync<LiveSupportException>(() => blocking.RequireStaffAccessAsync(other.Id, actor, false, CancellationToken.None));
+        Assert.Equal("FORBIDDEN", error.Code);
+    }
+
     private sealed class RejectedMetaUser : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>

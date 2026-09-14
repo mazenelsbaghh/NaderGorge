@@ -1,3 +1,4 @@
+import type { StudentProfileExtendedDto } from '@/services/admin-service';
 import apiClient from '@/services/api-client';
 
 export type FinanceAccountBalance = {
@@ -75,7 +76,17 @@ export type PlatformRefundRow = { id: string; originalSourceId: string; original
 export type PlatformFinancialReport = { kind: string; from: string; to: string; totalDebit: number; totalCredit: number; rows: Array<{ code: string; name: string; type: number; debit: number; credit: number; balance: number }> };
 export type WalletFinanceReport = { wallets: Array<{ id: string; label: string; phoneNumber: string; currentBalance: number; incoming: number; outgoing: number; expenses: number; internalTransfers: number; transactions: number }>; teacherRechargeCards: Array<{ walletId: string; teacherName: string; amount: number; count: number }>; transactions: Array<{ id: string; walletId: string; receivedAt: string; amount: number; type: 'incoming' | 'outgoing'; phone?: string | null; body: string }> };
 
+export type RefundStudent = Pick<StudentProfileExtendedDto, 'id' | 'fullName' | 'phone' | 'packages'>;
+
 const platformFinanceService = {
+  async findRefundStudents(phone: string): Promise<Array<{ id: string; fullName: string; phoneNumber: string }>> {
+    const response = await apiClient.get('/admin/platform-finance/refunds/students', { params: { phone } });
+    return response.data;
+  },
+  async getRefundStudent(id: string): Promise<RefundStudent> {
+    const response = await apiClient.get<RefundStudent>(`/admin/platform-finance/refunds/students/${id}`);
+    return response.data;
+  },
   async getDashboard(from?: string, to?: string) {
     const response = await apiClient.get<PlatformFinanceDashboard>('/admin/platform-finance/dashboard', { params: { from, to } });
     return response.data;
@@ -90,6 +101,10 @@ const platformFinanceService = {
   },
   async getTeacherDetail(teacherId: string, from?: string, to?: string) {
     const response = await apiClient.get<FinanceTeacherSummary>(`/admin/platform-finance/teachers/${teacherId}/summary`, { params: { from, to } });
+    return response.data;
+  },
+  async refundBootstrap(): Promise<Pick<FinanceBootstrap, 'treasuryAccounts'>> {
+    const response = await apiClient.get<Pick<FinanceBootstrap, 'treasuryAccounts'>>('/admin/platform-finance/refunds/bootstrap');
     return response.data;
   },
   async bootstrap() {

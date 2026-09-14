@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 499,
+  "reachableFileCount": 500,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -1236,6 +1236,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/components/live-support/LiveSupportMessageActions.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/components/live-support/LiveSupportMessageContent.tsx",
       "route": null
     },
@@ -2000,7 +2004,7 @@
       "route": null
     }
   ],
-  "callCount": 600,
+  "callCount": 603,
   "calls": [
     {
       "method": "DELETE",
@@ -2764,7 +2768,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 96
+        "line": 111
       }
     },
     {
@@ -2773,7 +2777,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 145
+        "line": 160
       }
     },
     {
@@ -2782,7 +2786,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 80
+        "line": 91
       }
     },
     {
@@ -2791,7 +2795,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 106
+        "line": 121
       }
     },
     {
@@ -2800,7 +2804,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 84
+        "line": 95
       }
     },
     {
@@ -2809,7 +2813,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 160
+        "line": 175
       }
     },
     {
@@ -2827,7 +2831,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 157
+        "line": 172
       }
     },
     {
@@ -2836,7 +2840,34 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 136
+        "line": 151
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/refunds/bootstrap",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 107
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/refunds/students",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 83
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/platform-finance/refunds/students/{id}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 87
       }
     },
     {
@@ -2845,7 +2876,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 154
+        "line": 169
       }
     },
     {
@@ -2854,7 +2885,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 92
+        "line": 103
       }
     },
     {
@@ -2863,7 +2894,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 88
+        "line": 99
       }
     },
     {
@@ -2872,7 +2903,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 109
+        "line": 124
       }
     },
     {
@@ -2881,7 +2912,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 115
+        "line": 130
       }
     },
     {
@@ -4204,7 +4235,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 175
+        "line": 176
       }
     },
     {
@@ -5086,7 +5117,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 142
+        "line": 157
       }
     },
     {
@@ -5095,7 +5126,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 100
+        "line": 115
       }
     },
     {
@@ -5104,7 +5135,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 103
+        "line": 118
       }
     },
     {
@@ -5113,7 +5144,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 124
+        "line": 139
       }
     },
     {
@@ -5122,7 +5153,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 163
+        "line": 178
       }
     },
     {
@@ -5140,7 +5171,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 127
+        "line": 142
       }
     },
     {
@@ -5149,7 +5180,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 133
+        "line": 148
       }
     },
     {
@@ -5158,7 +5189,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 139
+        "line": 154
       }
     },
     {
@@ -5167,7 +5198,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 130
+        "line": 145
       }
     },
     {
@@ -5176,7 +5207,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 151
+        "line": 166
       }
     },
     {
@@ -5185,7 +5216,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 148
+        "line": 163
       }
     },
     {
@@ -5194,7 +5225,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 118
+        "line": 133
       }
     },
     {
@@ -5203,7 +5234,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 121
+        "line": 136
       }
     },
     {
@@ -5212,7 +5243,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 112
+        "line": 127
       }
     },
     {
@@ -5734,7 +5765,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 145
+        "line": 146
       }
     },
     {
@@ -5743,7 +5774,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 151
+        "line": 152
       }
     },
     {
@@ -6607,7 +6638,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 157
+        "line": 158
       }
     },
     {
@@ -6616,7 +6647,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 171
+        "line": 172
       }
     },
     {
@@ -6625,7 +6656,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 180
+        "line": 181
       }
     },
     {
@@ -6634,7 +6665,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 188
+        "line": 189
       }
     },
     {
@@ -6643,7 +6674,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 167
+        "line": 168
       }
     },
     {
@@ -6652,7 +6683,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 163
+        "line": 164
       }
     },
     {
@@ -7847,5 +7878,5 @@
       }
     }
   ],
-  "digest": "3fc7c4beac1513d0344339ae704df9913e9d1dbad228ca561dbbb33586e11f67"
+  "digest": "cf60c45f13b52a92150d2657acb677aafe75e58a25a10571ab96561b53d60f80"
 }

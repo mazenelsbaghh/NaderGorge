@@ -133,6 +133,8 @@ test('Baileys replies stay available after the Meta window expires and templates
   assert.equal(capabilities.canSendAttachments, true);
   assert.equal(capabilities.canSendTemplate, false);
   assert.equal(capabilities.requiresCustomerServiceWindow, false);
+  assert.equal(capabilities.supportsMessageReply, true);
+  assert.equal(capabilities.supportsMessageMutation, true);
 });
 
 test('support blocks override stale sending flags for every channel', () => {

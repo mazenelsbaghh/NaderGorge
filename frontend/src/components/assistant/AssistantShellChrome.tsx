@@ -40,7 +40,7 @@ export type AssistantShellRoute =
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
   | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/recharge-conflicts' | '/assistant/students' | '/assistant/reports'
-  | '/assistant/codes';
+  | '/assistant/codes' | '/assistant/refunds';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -70,6 +70,7 @@ const AssistantShellContext = createContext<{
 type AssistantNavItem = { href: AssistantShellRoute; label: string; icon: LucideIcon; group: 'operations' | 'learning' | 'communication' | 'employee'; permission?: string };
 
 const navItems: AssistantNavItem[] = [
+  { href: '/assistant/refunds', label: 'استردادات الطلاب', icon: WalletCards, group: 'operations', permission: 'finance.refunds.view' },
   { href: '/assistant/tasks', label: 'المهام والعمليات', icon: ClipboardList, group: 'operations', permission: 'tasks.manage' },
   { href: '/assistant/content', label: 'إدارة المحتوى التعليمي', icon: BookOpen, group: 'learning', permission: 'content.manage' },
   { href: '/assistant/codes', label: 'الأكواد', icon: KeyRound, group: 'operations', permission: 'codes.manage' },

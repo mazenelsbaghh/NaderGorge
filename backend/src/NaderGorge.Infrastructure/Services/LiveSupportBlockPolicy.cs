@@ -28,7 +28,14 @@ public static class LiveSupportBlockPolicy
         var phone = await db.LiveSupportWhatsAppBindings.AsNoTracking()
             .Where(binding => binding.ConversationId == conversation.Id)
             .Select(binding => binding.WhatsAppUserId).SingleOrDefaultAsync(ct);
-        return await ForParticipant(db, conversation.StudentUserId ?? conversation.LinkedStudentUserId, conversation.GuestSessionId, phone)
+        var studentId = conversation.StudentUserId ?? conversation.LinkedStudentUserId;
+        if (phone is null && studentId.HasValue)
+        {
+            var registeredPhone = await db.Users.AsNoTracking().Where(user => user.Id == studentId)
+                .Select(user => user.PhoneNumber).SingleOrDefaultAsync(ct);
+            if (!string.IsNullOrWhiteSpace(registeredPhone)) phone = NormalizePhone(registeredPhone);
+        }
+        return await ForParticipant(db, studentId, conversation.GuestSessionId, phone)
             .OrderByDescending(block => block.CreatedAt).FirstOrDefaultAsync(ct);
     }
 

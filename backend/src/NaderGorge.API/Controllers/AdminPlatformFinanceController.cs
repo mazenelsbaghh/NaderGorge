@@ -204,11 +204,31 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.refunds.create")]
     public async Task<ActionResult<object>> CreateExternalPackageRefund([FromBody] ExternalPackageRefundBody body, CancellationToken ct)
     {
-        var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var source = await db.SalesFinancialEffects.AsNoTracking()
+            .SingleOrDefaultAsync(effect => effect.PurchaseOperationId == body.PurchaseOperationId, ct);
+        var grant = await db.StudentAccessGrants.AsNoTracking().SingleOrDefaultAsync(item => item.Id == body.AccessGrantId, ct);
+        var amount = body.PlatformAmount + body.TeacherAmount;
+        if (source is null || grant is null || source.StudentId != body.StudentId || grant.UserId != source.StudentId ||
+            source.TargetId != (grant.GrantType switch
+            {
+                NaderGorge.Domain.Enums.CodeType.Package => grant.PackageId,
+                NaderGorge.Domain.Enums.CodeType.Term => grant.TermId,
+                NaderGorge.Domain.Enums.CodeType.Month => grant.ContentSectionId,
+                NaderGorge.Domain.Enums.CodeType.Lesson => grant.LessonId,
+                NaderGorge.Domain.Enums.CodeType.Video => grant.LessonVideoId,
+                NaderGorge.Domain.Enums.CodeType.Exam => grant.ExamId,
+                _ => null
+            }) ||
+            source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount ||
+            amount <= 0m || amount > source.PaidAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
+            return BadRequest(new { message = "بيانات الباقة أو مبلغ الاسترداد غير صالح." });
+        var fraction = amount / source.PaidAmount;
+        var teacherAmount = Math.Min(amount, Math.Max(0m, decimal.Round(source.TeacherShareImpact * fraction, 2)));
+        var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         try
         {
             var cancellation = await mediator.Send(
-                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason), ct);
+                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason, new TeacherRefundScope(source.PurchaseOperationId, fraction)), ct);
             if (!cancellation.Success)
             {
                 await transaction.RollbackAsync(ct);
@@ -219,9 +239,9 @@ public sealed class AdminPlatformFinanceController(
                 body.PurchaseOperationId,
                 "PurchaseOperation",
                 body.StudentId,
-                body.TeacherId,
-                body.PlatformAmount,
-                body.TeacherAmount,
+                source.TeacherId,
+                amount - teacherAmount,
+                teacherAmount,
                 (int)NaderGorge.Domain.Entities.PlatformRefundMethod.Cash,
                 body.TreasuryAccountId,
                 body.Reason,
@@ -321,6 +341,35 @@ public sealed class AdminPlatformFinanceController(
         var result = await mediator.Send(new ReversePlatformRefundCommand(refundId, CurrentUserId(), body.Reason), ct);
         return Ok(new { id = result.RecordId, status = NaderGorge.Domain.Entities.PlatformRefundStatus.Reversed, reversalId = result.ReversalId });
     }
+
+    [HttpGet("refunds/students")]
+    [HasPermission("finance.refunds.create")]
+    public async Task<ActionResult<object>> FindRefundStudent([FromQuery] string phone, CancellationToken ct)
+    {
+        var normalized = NaderGorge.Infrastructure.Services.LiveSupportBlockPolicy.NormalizePhone(phone ?? "");
+        if (normalized.Length < 10) return BadRequest(new { message = "اكتب رقم هاتف الطالب كاملًا." });
+        var localPhone = normalized.StartsWith("20", StringComparison.Ordinal) ? "0" + normalized[2..] : normalized;
+        return Ok(await db.Users.AsNoTracking().Where(user => user.StudentProfile != null &&
+            (user.PhoneNumber == normalized || user.PhoneNumber == localPhone || user.PhoneNumber == "+" + normalized))
+            .Take(10).Select(user => new { user.Id, user.FullName, user.PhoneNumber }).ToListAsync(ct));
+    }
+
+    [HttpGet("refunds/students/{studentId:guid}")]
+    [HasPermission("finance.refunds.create")]
+    public async Task<ActionResult<object>> RefundStudent(Guid studentId, CancellationToken ct)
+    {
+        if (!await db.Users.AnyAsync(user => user.Id == studentId && user.StudentProfile != null, ct)) return NotFound();
+        var student = await mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetStudentProfileDetailQuery(studentId), ct);
+        return Ok(new { student.Id, student.FullName, student.Phone, student.Packages });
+    }
+
+    [HttpGet("refunds/bootstrap")]
+    [HasPermission("finance.refunds.view")]
+    public async Task<ActionResult<object>> RefundBootstrap(CancellationToken ct) => Ok(new
+    {
+        treasuryAccounts = await db.TreasuryAccounts.AsNoTracking().Where(account => account.IsActive)
+            .OrderBy(account => account.Name).Select(account => new { account.Id, account.Name, account.Type, account.MaskedIdentifier }).ToListAsync(ct)
+    });
 
     [HttpGet("bootstrap")]
     [HasPermission("finance.dashboard.view")]
