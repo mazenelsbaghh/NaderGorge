@@ -1,5 +1,4 @@
-import { Redis } from 'ioredis';
-import { Pool } from 'pg';
+import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { Worker, Queue } from 'bullmq';
@@ -10,51 +9,73 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
-import { requireWorkerAdminToken, validateWorkerSecurityConfig } from './security.js';
-import { logQueueEvent } from './logging.js';
-import { markJobCancellation, clearJobCancellation } from './cancellation.js';
+import { validateWorkerSecurityConfig } from './security.js';
+import { installSystemLogCapture, logError, logInfo } from './logging.js';
+import { markJobCancellation } from './cancellation.js';
+import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAccess.js';
+import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
+import { resolveGenerationJob } from './queues/logicalJobResolver.js';
+import { claimStaleStreamMessages } from './queues/streamRecovery.js';
 import { readAIConfig } from './services/aiConfig.js';
-import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
 import { generateLiveSupportReply } from './services/geminiService.js';
 import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
+import { fetchWithTimeout } from './services/workerFetch.js';
+import { createRedisConnection, redisConnectionOptions } from './config/redis.js';
+import { monitorRedisSentinelAvailability } from './config/redisAvailabilityMonitor.js';
+import { scheduleClusterCron } from './scheduling/clusterCron.js';
+import { databasePool } from './config/database.js';
+import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
+import { delayUntilNextCairoMidnight } from './scheduling/cairoTime.js';
+import { publicJobFailureReason } from './server/jobStatus.js';
+import { directGenerationRetryDenied } from './server/generationRetryPolicy.js';
+import { reportTerminalVideoFailure } from './services/videoAnalysisFailureReporter.js';
+import { reportTerminalSingleMindmapFailure } from './services/mindmapFailureReporter.js';
+import { isTerminalJobFailure } from './utils/jobTempFiles.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
 let aiStartupReady = false;
 let liveSupportWorkerReady = false;
+let adminAIWorkerReady = false;
+const adminAIEnabled = process.env.ADMIN_AI_ENABLED?.trim().toLowerCase() === 'true';
 
 async function validateAIStartup() {
   const config = readAIConfig();
-  if (config.primaryProvider === 'vertex') {
-    await new TemporaryAudioStorage(config).validateAccess();
-  }
   aiStartupReady = true;
-  console.log('[AI startup] Provider and temporary-storage configuration validated.', {
+  console.log('[AI startup] Gemini Developer API configuration validated.', {
     provider: config.primaryProvider,
-    location: config.location,
   });
 }
 
-const DEFAULT_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const JOB_RETENTION_OPTIONS = {
   removeOnComplete: { count: 1000, age: 7 * 24 * 3600 },
   removeOnFail: { count: 500, age: 14 * 24 * 3600 },
 };
 
-const redis = new Redis(DEFAULT_REDIS_URL);
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.DB_CONNECTION_STRING || 'postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public'
-});
+const redis = createRedisConnection();
+installSystemLogCapture(redis);
+monitorRedisSentinelAvailability(redis);
+const pool = databasePool();
 
 // BullMQ Connection Shared config
-const connection = {
-  host: new URL(DEFAULT_REDIS_URL).hostname,
-  port: parseInt(new URL(DEFAULT_REDIS_URL).port) || 6379,
-  username: new URL(DEFAULT_REDIS_URL).username || undefined,
-  password: new URL(DEFAULT_REDIS_URL).password || undefined,
-};
+const connection = redisConnectionOptions();
 
-async function reportProgressToBackend(jobId: string, progress: any) {
+function jobGenerationRunId(jobPayload: unknown) {
+  if (!jobPayload || typeof jobPayload !== 'object') return undefined;
+  const payload = jobPayload as Record<string, unknown>;
+  const runId = payload.generationRunId || payload.GenerationRunId;
+  return typeof runId === 'string' && runId ? runId : undefined;
+}
+
+function jobLogicalId(jobPayload: unknown, fallbackJobId: string) {
+  if (!jobPayload || typeof jobPayload !== 'object') return fallbackJobId;
+  const payload = jobPayload as Record<string, unknown>;
+  return typeof payload.logicalJobId === 'string' && payload.logicalJobId
+    ? payload.logicalJobId
+    : fallbackJobId;
+}
+
+async function reportProgressToBackend(jobId: string, generationRunId: string | undefined, progress: any) {
   try {
     const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
     const apiKey = process.env.API_CALLBACK_SECRET;
@@ -68,7 +89,7 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       percentage = Number(progress) || 0;
     }
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+    const res = await fetchWithTimeout(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,6 +97,7 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       },
       body: JSON.stringify({
         jobId,
+        ...(generationRunId ? { generationRunId } : {}),
         progress: percentage,
         status: 'active',
         message: stage
@@ -85,16 +107,18 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       console.error(`[Worker] Progress callback failed for job ${jobId} with status ${res.status}`);
     }
   } catch (err) {
-    console.error(`[Worker] Failed to report progress for job ${jobId}:`, err);
+    console.error(`[Worker] Failed to report progress for job ${jobId}.`, {
+      errorName: err instanceof Error ? err.name : 'UnknownError',
+    });
   }
 }
 
-async function reportFailureToBackend(jobId: string, errorMsg: string) {
+async function reportFailureToBackend(jobId: string, generationRunId: string | undefined, errorMsg: string) {
   try {
     const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
     const apiKey = process.env.API_CALLBACK_SECRET;
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+    const res = await fetchWithTimeout(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -102,6 +126,7 @@ async function reportFailureToBackend(jobId: string, errorMsg: string) {
       },
       body: JSON.stringify({
         jobId,
+        ...(generationRunId ? { generationRunId } : {}),
         progress: 0,
         status: 'failed',
         message: errorMsg
@@ -111,7 +136,9 @@ async function reportFailureToBackend(jobId: string, errorMsg: string) {
       console.error(`[Worker] Failure callback failed for job ${jobId} with status ${res.status}`);
     }
   } catch (err) {
-    console.error(`[Worker] Failed to report failure for job ${jobId}:`, err);
+    console.error(`[Worker] Failed to report failure for job ${jobId}.`, {
+      errorName: err instanceof Error ? err.name : 'UnknownError',
+    });
   }
 }
 
@@ -132,24 +159,46 @@ async function startNotificationWorker() {
 }
 
 async function startAIWorker() {
+  const { sweepExpiredVideoAnalysisCheckpoints } = await import('./services/aiVideoCheckpoint.js');
+  const removedCheckpointCount = sweepExpiredVideoAnalysisCheckpoints();
+  if (removedCheckpointCount > 0) {
+    logInfo('ai-video-checkpoint', 'Expired crash-leftover checkpoints were removed.', {
+      removedCheckpointCount,
+    });
+  }
   const worker = new Worker('ai-video-chapters', async (job) => {
     // Dynamic import to avoid loading heavy modules if not needed immediately
     const processor = await import('./jobs/analyzeVideoChapters.js');
     return await processor.default(job);
-  }, { connection });
+  }, {
+    connection,
+    lockDuration: 10 * 60_000,
+    lockRenewTime: 30_000,
+    stalledInterval: 60_000,
+    maxStalledCount: 2,
+  });
 
   worker.on('progress', (job, progress) => {
-    reportProgressToBackend(job.id!, progress);
+    const logicalJobId = jobLogicalId(
+      job.data,
+      String(job.data.lessonVideoId || job.data.LessonVideoId || job.id),
+    );
+    reportProgressToBackend(logicalJobId, jobGenerationRunId(job.data), progress);
   });
 
   worker.on('completed', job => {
     console.log(`[AI Worker] Job ${job.id} has completed successfully!`);
   });
 
-  worker.on('failed', (job, err) => {
-    console.error(`[AI Worker] Job ${job?.id} has failed with ${err.message}`);
-    if (job) {
-      reportFailureToBackend(job.id!, err.message);
+  worker.on('failed', async (job, err) => {
+    logError('ai-video-worker', 'Video analysis job failed.', { jobId: job?.id, errorName: err.name });
+    try {
+      await reportTerminalVideoFailure(job, err);
+    } catch (callbackError) {
+      logError('ai-video-callback', 'Terminal failure callback exhausted its retry budget.', {
+        jobId: job?.id,
+        errorName: callbackError instanceof Error ? callbackError.name : 'UnknownError',
+      });
     }
   });
   
@@ -160,14 +209,14 @@ async function startEssayWorker() {
   const worker = new Worker('ai-essay-grading', async (job) => {
     const processor = await import('./jobs/evaluateEssay.js');
     return await processor.processEvaluateEssayJob(job);
-  }, { connection });
+  }, { connection, concurrency: 3 });
 
   worker.on('completed', job => {
     console.log(`[Essay Worker] Job ${job.id} has completed successfully!`);
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`[Essay Worker] Job ${job?.id} has failed with ${err.message}`);
+    logError('ai-essay-worker', 'Essay grading job failed.', { jobId: job?.id, errorName: err.name });
   });
   
   console.log('[Worker] AI Essay Grading BullMQ worker started on queue: ai-essay-grading');
@@ -180,19 +229,36 @@ async function startMindmapsWorker() {
   }, { connection });
 
   worker.on('progress', (job, progress) => {
-    reportProgressToBackend(job.id!, progress);
+    const videoId = job.data.lessonVideoId || job.data.LessonVideoId;
+    const logicalJobId = jobLogicalId(job.data, videoId ? `${videoId}_mindmaps` : String(job.id));
+    reportProgressToBackend(logicalJobId, jobGenerationRunId(job.data), progress);
   });
 
   worker.on('completed', job => {
     console.log(`[Mindmaps Worker] Job ${job.id} has completed successfully!`);
   });
 
-  worker.on('failed', (job, err) => {
-    console.error(`[Mindmaps Worker] Job ${job?.id} has failed with ${err.message}`);
-    const maxAttempts = job?.opts.attempts ?? 1;
-    const attemptsExhausted = job ? job.attemptsMade >= maxAttempts : true;
-    if (job && attemptsExhausted) {
-      reportFailureToBackend(job.id!, err.message);
+  worker.on('failed', async (job, err) => {
+    logError('mindmaps-worker', 'Mindmap generation job failed.', {
+      jobId: job?.id,
+      errorName: err.name,
+    });
+    if (job && isTerminalJobFailure(job, err)) {
+      const videoId = job.data.lessonVideoId || job.data.LessonVideoId;
+      const logicalJobId = jobLogicalId(job.data, videoId ? `${videoId}_mindmaps` : String(job.id));
+      await reportFailureToBackend(
+        logicalJobId,
+        jobGenerationRunId(job.data),
+        'تعذر إكمال توليد الخرائط الذهنية. ابدأ محاولة جديدة من لوحة التحكم.',
+      );
+      try {
+        await reportTerminalSingleMindmapFailure(job, err);
+      } catch (callbackError) {
+        logError('single-mindmap-failed', 'Terminal callback exhausted its retry budget.', {
+          jobId: job.id,
+          errorName: callbackError instanceof Error ? callbackError.name : 'UnknownError',
+        });
+      }
     }
   });
   
@@ -225,15 +291,62 @@ async function startLiveSupportWorker() {
   console.log('[Worker] Live Support BullMQ worker started on queue: ai-live-support-turns');
 }
 
+async function startAdminAIWorker() {
+  const worker = new Worker('ai-admin-agent-turns', async (job) => {
+    const processor = await import('./jobs/processAdminAITurn.js');
+    return processor.default(job);
+  }, {
+    connection,
+    concurrency: Math.max(1, Number.parseInt(process.env.AI_ADMIN_AGENT_CONCURRENCY || '2', 10) || 2),
+    lockDuration: 60_000,
+    stalledInterval: 30_000,
+    maxStalledCount: 1,
+  });
+  worker.on('completed', job => console.log(`[Admin AI Worker] Job ${job.id} completed.`));
+  worker.on('failed', (job, error) => console.error(`[Admin AI Worker] Job ${job?.id} failed.`, { name: error.name }));
+  adminAIWorkerReady = true;
+  const heartbeat = () => redis.set('admin-ai-worker:ready', new Date().toISOString(), 'EX', 60).catch(() => undefined);
+  await heartbeat(); setInterval(() => void heartbeat(), 30_000);
+  console.log('[Worker] Admin AI BullMQ worker started on queue: ai-admin-agent-turns');
+}
+
 async function startCronJobs() {
-    // Basic JS Interval as a mock Cron Job for MVP. 
-    // Usually BullMQ repeated jobs can handle this, but an interval works fine.
-    console.log('[Worker] Commitment Engine Nightly Sweep starting every 24 hours (simulated hourly for testing).');
-    setInterval(async () => {
-        try {
-            await runNightlySweep();
-        } catch(e) { console.error('Sweep failed', e); }
-    }, 1000 * 60 * 60); // Run every hour
+    const runAtNextCairoDay = () => {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(now);
+      const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+      const nextLocal = new Date(Date.UTC(value('year'), value('month') - 1, value('day') + 1, 2, 5));
+      const offsetName = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Africa/Cairo', timeZoneName: 'longOffset',
+      }).formatToParts(nextLocal).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT+00:00';
+      const offset = /GMT([+-])(\d{2}):(\d{2})/.exec(offsetName);
+      const offsetMilliseconds = offset
+        ? (Number(offset[2]) * 60 + Number(offset[3])) * 60_000 * (offset[1] === '+' ? 1 : -1)
+        : 0;
+      return Math.max(0, nextLocal.getTime() - offsetMilliseconds - now.getTime());
+    };
+    console.log('[Worker] Commitment Engine Nightly Sweep scheduled for 02:05 Africa/Cairo.');
+    scheduleClusterCron(pool, {
+      leaseName: 'commitment-engine-nightly',
+      ownerToken: crypto.randomUUID(),
+      leaseLifetimeMs: 3 * 60 * 60 * 1000,
+      delayUntilNextRun: runAtNextCairoDay,
+      task: runNightlySweep,
+    });
+
+    console.log('[Worker] Birthday celebration sweep scheduled for 00:00 Africa/Cairo.');
+    scheduleClusterCron(pool, {
+      leaseName: 'student-birthday-midnight',
+      ownerToken: crypto.randomUUID(),
+      leaseLifetimeMs: 30 * 60 * 1000,
+      delayUntilNextRun: delayUntilNextCairoMidnight,
+      task: async ({ signal }) => {
+        if (signal.aborted) return;
+        await runBirthdaySweep(pool);
+      },
+    });
 }
 
 async function startWorker() {
@@ -244,6 +357,7 @@ async function startWorker() {
   startMindmapsWorker();
   startEssayWorker();
   startLiveSupportWorker();
+  if (adminAIEnabled) startAdminAIWorker();
   startCronJobs();
   
   const aiQueue = new Queue('ai-video-chapters', { connection });
@@ -251,6 +365,9 @@ async function startWorker() {
   const notifQueue = new Queue('notifications', { connection });
   const essayQueue = new Queue('ai-essay-grading', { connection });
   const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
+  const adminAIQueue = new Queue('ai-admin-agent-turns', { connection });
+  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue, adminAIQueue };
+  const workerAdminGuard = createWorkerAdminGuard();
 
   const app = express();
   if (process.env.NODE_ENV !== 'production') {
@@ -259,7 +376,17 @@ async function startWorker() {
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
-  app.post('/internal/live-support/preview', requireWorkerAdminToken, async (req, res) => {
+  app.post('/internal/video-learning', workerAdminGuard, async (req, res) => {
+    const { mode, question, context } = req.body ?? {};
+    if (!['author', 'simplify', 'example', 'quiz', 'foundation', 'ask', 'note'].includes(mode) ||
+        typeof question !== 'string' || question.length > 1000 ||
+        typeof context !== 'string' || context.length === 0 || context.length > 24000)
+      return res.status(400).json({ error: 'INVALID_LEARNING_REQUEST' });
+    try { return res.json(await generateVideoLearning(mode, question, context)); }
+    catch { return res.status(503).json({ error: 'AI_UNAVAILABLE' }); }
+  });
+
+  app.post('/internal/live-support/preview', workerAdminGuard, async (req, res) => {
     const startedAt = Date.now();
     try {
       const context = req.body as LiveSupportClaimContext;
@@ -309,24 +436,34 @@ async function startWorker() {
 
     try {
       const base = (process.env.BACKEND_API_URL || 'http://localhost:5245').replace(/\/$/, '').replace(/\/api\/v1$/, '');
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2_000);
-      try {
-        const response = await fetch(`${base}/api/v1/internal/callbacks/live-support-ai/readiness`, { headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! }, signal: controller.signal });
-        callbackOk = response.ok;
-      } finally { clearTimeout(timer); }
+      const response = await fetchWithTimeout(`${base}/api/v1/internal/callbacks/live-support-ai/readiness`, {
+        headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! },
+        timeoutMs: 2_000,
+      });
+      callbackOk = response.ok;
     } catch {
       callbackOk = false;
     }
 
-    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || !callbackOk) {
+    let adminAICallbackOk = !adminAIEnabled;
+    if (adminAIEnabled) {
+      try {
+        const base = (process.env.BACKEND_API_URL || 'http://localhost:5245').replace(/\/$/, '').replace(/\/api\/v1$/, '');
+        const response = await fetchWithTimeout(`${base}/api/v1/internal/admin-ai/readiness`, { headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! }, timeoutMs: 2_000, maxResponseBytes: 16_384 });
+        adminAICallbackOk = response.ok;
+      } catch { adminAICallbackOk = false; }
+    }
+
+    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || (adminAIEnabled && (!adminAIWorkerReady || !adminAICallbackOk)) || !callbackOk) {
       return res.status(503).json({
         status: 'unhealthy',
         database: dbOk ? 'healthy' : 'unhealthy',
         redis: redisOk ? 'healthy' : 'unhealthy',
         ai: aiStartupReady ? 'healthy' : 'unhealthy',
         liveSupport: liveSupportWorkerReady ? 'healthy' : 'unhealthy',
+        adminAI: !adminAIEnabled ? 'disabled' : adminAIWorkerReady ? 'healthy' : 'unhealthy',
         callback: callbackOk ? 'healthy' : 'unhealthy',
+        adminAICallback: !adminAIEnabled ? 'disabled' : adminAICallbackOk ? 'healthy' : 'unhealthy',
       });
     }
 
@@ -336,19 +473,23 @@ async function startWorker() {
       redis: 'healthy',
       ai: 'healthy',
       liveSupport: 'healthy',
+      adminAI: adminAIEnabled ? 'healthy' : 'disabled',
       callback: 'healthy',
+      adminAICallback: adminAIEnabled ? 'healthy' : 'disabled',
       timestamp: new Date().toISOString()
     });
   });
   
   // Custom API endpoint to fetch Job Status directly for frontend
-  app.get('/api/status/:id', requireWorkerAdminToken, async (req, res) => {
+  app.get('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
-      }
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
       if (!job) {
           return res.json({ id: jobId, state: 'not_found', progress: 0 });
       }
@@ -357,183 +498,79 @@ async function startWorker() {
           ? job.progress 
           : { percentage: Number(job.progress) || 0, stage: 'جاري التحضير ووضع المهمة في الطابور...' };
       
-      const failedReason = job.failedReason || null;
+      const failedReason = publicJobFailureReason(job.failedReason, state);
       
-      return res.json({ id: job.id, state, progress, failedReason });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+      return res.json({ id: jobId, state, progress, failedReason });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_STATUS_UNAVAILABLE' });
     }
   });
 
   // Cancel Job endpoint
-  app.delete('/api/status/:id', requireWorkerAdminToken, async (req, res) => {
+  app.delete('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
-      }
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
       if (job) {
           const cancellation = await markJobCancellation(job);
           return res.json({
+            id: jobId,
             success: true,
             message: cancellation.removed ? 'Job cancelled' : 'Cancellation requested',
             state: cancellation.state
           });
       }
-      return res.status(404).json({ success: false, message: 'Job not found' });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+      return res.status(404).json({ id: jobId, success: false, message: 'Job not found' });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_CANCELLATION_UNAVAILABLE' });
     }
   });
 
   // Retry failed Job endpoint
-  app.post('/api/status/:id/retry', requireWorkerAdminToken, async (req, res) => {
+  app.post('/api/status/:id/retry', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
-      let job = await aiQueue.getJob(jobId);
-      if (!job) {
-          job = await mindmapsQueue.getJob(jobId);
+      const resolvedJob = await resolveGenerationJob(
+        redis,
+        { analysis: aiQueue, mindmaps: mindmapsQueue },
+        jobId,
+      );
+      const job = resolvedJob?.job;
+      if (job) {
+        const denied = directGenerationRetryDenied(jobId);
+        return res.status(denied.statusCode).json(denied.body);
       }
-      if (job && await job.getState() === 'failed') {
-          await clearJobCancellation(jobId);
-          await job.retry();
-          return res.json({ success: true, message: 'Job retried' });
-      }
-      return res.status(400).json({ success: false, message: 'Job not found or not in failed state' });
-    } catch (e: any) {
-        return res.status(500).json({ error: e.message });
+      return res.status(400).json({ id: jobId, success: false, message: 'Job not found or not in failed state' });
+    } catch {
+        return res.status(500).json({ error: 'WORKER_RETRY_UNAVAILABLE' });
     }
   });
 
-  // Setup Bull Board
-  const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/ui');
-  createBullBoard({
-    queues: [
-      new BullMQAdapter(aiQueue),
-      new BullMQAdapter(mindmapsQueue),
-      new BullMQAdapter(notifQueue),
-      new BullMQAdapter(essayQueue),
-      new BullMQAdapter(liveSupportQueue)
-    ],
-    serverAdapter: serverAdapter,
-  });
-
-  app.use('/ui', requireWorkerAdminToken, serverAdapter.getRouter());
-  app.listen(3001, () => {
-    console.log('[Worker] Bull Board Dashboard running on http://localhost:3001/ui');
-  });
-
-  async function handleStreamMessage(
-    messageStreamId: string,
-    fields: string[]
-  ) {
-      const obj: any = {};
-      for (let i = 0; i < fields.length; i += 2) {
-          const key = fields[i];
-          if (key !== undefined) {
-              obj[key] = fields[i + 1];
-          }
-      }
-
-      const { jobType, jobId, payload } = obj;
-      if (!jobType || !payload) {
-          console.warn(`[Worker] Invalid stream message: ${messageStreamId}`);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      let parsedPayload: any;
-      try {
-          parsedPayload = JSON.parse(payload);
-      } catch (err) {
-          console.error(`[Worker] Failed to parse payload for message ${messageStreamId}`, err);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      let targetQueue: Queue;
-      let bullmqJobName: string;
-      let targetJobId: string;
-
-      if (jobType === 'video analysis') {
-          targetQueue = aiQueue;
-          bullmqJobName = 'analyze';
-          targetJobId = jobId;
-      } else if (jobType === 'mind maps') {
-          targetQueue = mindmapsQueue;
-          bullmqJobName = 'generate';
-          const chapId = parsedPayload.chapterId || parsedPayload.ChapterId;
-          const vidId = parsedPayload.lessonVideoId || parsedPayload.LessonVideoId;
-          targetJobId = chapId ? `${vidId}_mindmap_${chapId}` : `${vidId}_mindmaps`;
-      } else if (jobType === 'essay') {
-          targetQueue = essayQueue;
-          bullmqJobName = 'evaluate';
-          targetJobId = jobId;
-      } else if (jobType === 'notification') {
-          targetQueue = notifQueue;
-          if (parsedPayload.WarningId) {
-              bullmqJobName = 'send-warning';
-          } else if (parsedPayload.ParentPush) {
-              bullmqJobName = 'parent-push';
-          } else {
-              bullmqJobName = 'chat-mention';
-          }
-          targetJobId = jobId;
-      } else if (jobType === 'live support turn') {
-          targetQueue = liveSupportQueue;
-          bullmqJobName = 'respond';
-          targetJobId = jobId;
-      } else {
-          console.warn(`[Worker] Unknown jobType: ${jobType}`);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      // Ensure BullMQ Job IDs never contain colons to avoid namespace/key errors
-      targetJobId = targetJobId.replace(/:/g, '-');
-
-      logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
-
-      // Remove any existing job with the same ID to allow re-running/retrying the job cleanly
-      try {
-          const existingJob = await targetQueue.getJob(targetJobId);
-          if (existingJob) {
-              await existingJob.remove();
-          }
-      } catch (err: any) {
-          console.warn(`[Worker] Failed to remove existing job ${targetJobId}:`, err.message);
-      }
-
-      // Clear any cancellation marker in Redis
-      try {
-          await clearJobCancellation(targetJobId);
-      } catch (err: any) {
-          console.warn(`[Worker] Failed to clear cancellation for job ${targetJobId}:`, err.message);
-      }
-
-      try {
-          const isLiveSupportTurn = jobType === 'live support turn';
-          await targetQueue.add(bullmqJobName, parsedPayload, {
-              jobId: targetJobId,
-              ...JOB_RETENTION_OPTIONS,
-              attempts: isLiveSupportTurn ? 4 : 5,
-              backoff: {
-                  type: 'exponential',
-                  delay: isLiveSupportTurn ? 2000 : 5000
-              }
-          });
-
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-      } catch (err: any) {
-          console.error(`[Worker] Failed to enqueue job ${targetJobId} into BullMQ: ${err.message}`);
-      }
+  if (isWorkerAdminEnabled()) {
+    const serverAdapter = new ExpressAdapter();
+    serverAdapter.setBasePath('/ui');
+    createBullBoard({
+      queues: [
+        new BullMQAdapter(aiQueue),
+        new BullMQAdapter(mindmapsQueue),
+        new BullMQAdapter(notifQueue),
+        new BullMQAdapter(essayQueue),
+        new BullMQAdapter(liveSupportQueue),
+        new BullMQAdapter(adminAIQueue)
+      ],
+      serverAdapter: serverAdapter,
+    });
+    app.use('/ui', workerAdminGuard, serverAdapter.getRouter());
   }
+
+  app.listen(3001, () => {
+    logInfo('worker', isWorkerAdminEnabled() ? 'Worker HTTP server running with admin UI enabled.' : 'Worker HTTP server running with admin UI disabled.', { port: 3001 });
+  });
 
   (async () => {
       const consumerName = `worker-consumer-${crypto.randomUUID().substring(0, 8)}`;
@@ -550,6 +587,7 @@ async function startWorker() {
 
       while (true) {
           try {
+              await claimStaleStreamMessages(redis, queues, consumerName);
               const pendingData = (await redis.xreadgroup(
                   'GROUP', 'worker-group', consumerName,
                   'COUNT', '10',
@@ -562,7 +600,7 @@ async function startWorker() {
                   if (messages && messages.length > 0) {
                       console.log(`[Worker] Processing ${messages.length} pending messages from backlog...`);
                       for (const [messageStreamId, fields] of messages) {
-                          await handleStreamMessage(messageStreamId, fields);
+                          await ingestStreamJob(redis, queues, messageStreamId, fields);
                       }
                       continue;
                   }
@@ -580,7 +618,7 @@ async function startWorker() {
                   const [_, messages] = newData[0];
                   if (messages && messages.length > 0) {
                       for (const [messageStreamId, fields] of messages) {
-                          await handleStreamMessage(messageStreamId, fields);
+                          await ingestStreamJob(redis, queues, messageStreamId, fields);
                       }
                   }
               }

@@ -1,7 +1,6 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
@@ -11,7 +10,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 // ---- Login Command ----
 public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress, string? AppSurface = null) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug, string[] AllowedDomains, string[] AllowedNavbarItems);
+public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug, string[] AllowedDomains, string[] AllowedNavbarItems, int AuthorizationVersion = 0);
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -27,14 +26,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 {
     private readonly IAppDbContext _db;
     private readonly ITokenService _tokens;
-    private readonly IConfiguration _config;
     private readonly ICachedPlatformSettingsReader _settingsReader;
 
-    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, IConfiguration config, ICachedPlatformSettingsReader settingsReader)
+    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, ICachedPlatformSettingsReader settingsReader)
     {
         _db = db;
         _tokens = tokens;
-        _config = config;
         _settingsReader = settingsReader;
     }
 
@@ -49,6 +46,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
+        var isDelegatedTeacher = user.UserRoles.Any(userRole => userRole.Role.Type == Domain.Enums.RoleType.Teacher)
+            && !user.UserRoles.Any(userRole => userRole.Role.Type is not Domain.Enums.RoleType.Teacher and not Domain.Enums.RoleType.Student)
+            && !await _db.TeacherProfiles.AnyAsync(profile => profile.UserId == user.Id, ct);
 
         var isStaffSurface = 
             string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase) ||
@@ -61,6 +61,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             if (!isStaff)
             {
                 throw new UnauthorizedAccessException("Invalid phone number or password");
+            }
+
+            if (isDelegatedTeacher && !await _db.TeacherStaffMembers.AnyAsync(member => member.UserId == user.Id && member.IsActive, ct))
+            {
+                throw new UnauthorizedAccessException("تم إيقاف حساب الاستاف أو إزالة ربطه بحساب المدرس.");
             }
         }
         else // student or landing
@@ -115,22 +120,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             {
                 var activeDeviceCount = user.Devices.Count(d => d.IsActive);
                 if (activeDeviceCount >= maxDevices)
-                    throw new InvalidOperationException($"Maximum device limit ({maxDevices}) reached. Contact admin to remove a device.");
+                    throw new InvalidOperationException($"وصلت للحد الأقصى للأجهزة المسجلة ({maxDevices}). استخدم جهازًا مسجلًا بالفعل أو تواصل مع الدعم لإزالة جهاز قديم.");
             }
 
             var (osName, browserName, deviceType) = UserAgentParser.Parse(request.DeviceName);
-            var newDevice = new Device
+            // A removed device still has a unique fingerprint row; reuse it after password and limit checks.
+            var newDevice = user.Devices.FirstOrDefault(d => d.DeviceFingerprint == request.DeviceFingerprint);
+            if (newDevice is null)
             {
-                UserId = user.Id,
-                DeviceFingerprint = request.DeviceFingerprint,
-                DeviceName = request.DeviceName,
-                IpAddress = request.IpAddress,
-                OsName = osName,
-                BrowserName = browserName,
-                DeviceType = deviceType,
-                LastUsedAt = DateTime.UtcNow
-            };
-            _db.Devices.Add(newDevice);
+                newDevice = new Device { UserId = user.Id, DeviceFingerprint = request.DeviceFingerprint };
+                _db.Devices.Add(newDevice);
+            }
+            newDevice.IsActive = true;
+            newDevice.DeviceName = request.DeviceName;
+            newDevice.IpAddress = request.IpAddress;
+            newDevice.OsName = osName;
+            newDevice.BrowserName = browserName;
+            newDevice.DeviceType = deviceType;
+            newDevice.LastUsedAt = DateTime.UtcNow;
         }
         else
         {
@@ -139,19 +146,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         }
 
         // --- Generate tokens ---
-        var accessToken = isStaff
-            ? _tokens.GenerateAccessToken(user, roles)
-            : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
+        var accessToken = _tokens.GenerateAccessToken(user, roles, AuthSessionPolicy.Lifetime);
         var refreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = isStaff
-            ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
-            : 365;
         _db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(refreshDays),
+            ExpiresAt = DateTime.UtcNow.Add(AuthSessionPolicy.Lifetime),
             DeviceFingerprint = request.DeviceFingerprint
         });
 
@@ -200,7 +202,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         var allowedDomains = allowedDomainsList.Distinct().ToArray();
         var allowedNavbarItems = allowedNavbarItemsList.Distinct().ToArray();
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems, user.SecurityStampVersion);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(accessToken, refreshToken, userDto));
     }
 }

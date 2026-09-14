@@ -17,12 +17,14 @@ import clsx from "clsx"
 import {
   AnimatePresence,
   motion,
+  useReducedMotion,
   useMotionTemplate,
   useMotionValue,
   type MotionStyle,
   type MotionValue,
   type Variants,
 } from "motion/react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // Types
@@ -360,7 +362,7 @@ function FeatureCard({
     >
       <div
         className={clsx(
-          "group relative w-full overflow-hidden rounded-[28px] sm:rounded-[36px] bg-clip-padding transition duration-300 ring-1 ring-[var(--admin-border)]",
+          "group relative w-full overflow-hidden rounded-2xl sm:rounded-2xl bg-clip-padding transition duration-300 ring-1 ring-[var(--admin-border)]",
           bgClass || "bg-[var(--admin-card)]"
         )}
       >
@@ -427,7 +429,7 @@ function Steps({
   if (steps.length <= 1) return null;
 
   return (
-    <nav aria-label="Progress" className="flex justify-center px-4">
+    <nav aria-label="مراحل العرض" className="flex justify-center px-4">
       <ol
         className="flex w-full flex-wrap items-start justify-start gap-2 sm:justify-center md:w-10/12 md:divide-y-0"
         role="list"
@@ -446,12 +448,14 @@ function Steps({
               variants={stepVariants}
               transition={{ duration: 0.3 }}
               className={cn(
-                "relative z-50 rounded-full px-2 py-1 transition-all duration-300 ease-in-out sm:px-3 md:flex",
+                "relative z-50 rounded-full px-2 py-1 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-in-out sm:px-3 md:flex",
                 isCompleted ? "bg-[var(--admin-primary-15)]" : "bg-[var(--admin-card-soft)]"
               )}
             >
               <button
                 type="button"
+                aria-label={`${step.name}، الخطوة ${stepIdx + 1} من ${steps.length}`}
+                aria-current={isCurrent ? "step" : undefined}
                 className={cn(
                   "group flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] sm:min-h-8 sm:min-w-0 sm:justify-start"
                 )}
@@ -520,17 +524,17 @@ function Steps({
 
 const defaultClasses = {
   step1img1:
-    "pointer-events-none w-[50%] border border-border-100/10 transition-all duration-500 dark:border-border-700/50 rounded-2xl",
+    "pointer-events-none w-[50%] border border-border-100/10 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 dark:border-border-700/50 rounded-2xl",
   step1img2:
-    "pointer-events-none w-[60%] border border-border-100/10 dark:border-border-700/50 transition-all duration-500 overflow-hidden rounded-2xl",
+    "pointer-events-none w-[60%] border border-border-100/10 dark:border-border-700/50 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden rounded-2xl",
   step2img1:
-    "pointer-events-none w-[50%] border border-border-100/10 transition-all duration-500 dark:border-border-700 rounded-2xl overflow-hidden",
+    "pointer-events-none w-[50%] border border-border-100/10 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 dark:border-border-700 rounded-2xl overflow-hidden",
   step2img2:
-    "pointer-events-none w-[40%] border border-border-100/10 dark:border-border-700 transition-all duration-500 rounded-2xl overflow-hidden",
+    "pointer-events-none w-[40%] border border-border-100/10 dark:border-border-700 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 rounded-2xl overflow-hidden",
   step3img:
-    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-all duration-500 overflow-hidden",
+    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden",
   step4img:
-    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-all duration-500 overflow-hidden",
+    "pointer-events-none w-[90%] border border-border-100/10 dark:border-border-700 rounded-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 overflow-hidden",
 } as const
 
 /**
@@ -554,11 +558,22 @@ export function FeatureCarousel({
   ...props
 }: FeatureCarouselProps) {
   const totalSteps = steps.length
+  const prefersReducedMotion = useReducedMotion()
+  const [isInteractionPaused, setIsInteractionPaused] = useState(false)
+  const [isDocumentHidden, setIsDocumentHidden] = useState(false)
   const {
     currentNumber: uncontrolledStep,
     setCurrentNumber,
     increment,
-  } = useNumberCycler(totalSteps, 3000, autoPlay && typeof controlledStep !== "number")
+  } = useNumberCycler(
+    totalSteps,
+    3000,
+    autoPlay &&
+      !prefersReducedMotion &&
+      !isInteractionPaused &&
+      !isDocumentHidden &&
+      typeof controlledStep !== "number"
+  )
   const [isAnimating, setIsAnimating] = useState(false)
   const step = typeof controlledStep === "number" ? controlledStep : uncontrolledStep
 
@@ -568,6 +583,18 @@ export function FeatureCarousel({
     }
   }, [controlledStep, setCurrentNumber])
 
+  useEffect(() => {
+    const updateVisibility = () => setIsDocumentHidden(document.hidden)
+    updateVisibility()
+    document.addEventListener("visibilitychange", updateVisibility)
+    return () =>
+      document.removeEventListener("visibilitychange", updateVisibility)
+  }, [])
+
+  useEffect(() => {
+    setIsAnimating(false)
+  }, [step])
+
   const handleIncrement = () => {
     if (isAnimating) return
     setIsAnimating(true)
@@ -576,6 +603,12 @@ export function FeatureCarousel({
       return
     }
     increment()
+  }
+
+  const handlePrevious = () => {
+    if (isAnimating) return
+    const previous = (step - 1 + totalSteps) % totalSteps
+    handleStepChange(previous)
   }
 
   const handleAnimationComplete = () => {
@@ -724,25 +757,74 @@ export function FeatureCarousel({
   }
 
   return (
-    <FeatureCard {...props} step={step} steps={steps}>
-      {props.children ? props.children : renderStepContent()}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="absolute inset-x-0 top-4 z-50 w-full"
-      >
-        <Steps current={step} onChange={handleStepChange} steps={steps} />
-      </motion.div>
-      {clickToAdvance ? (
+    <div
+      className="min-w-0 w-full"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="مراحل العرض"
+      tabIndex={0}
+      onMouseEnter={() => setIsInteractionPaused(true)}
+      onMouseLeave={() => setIsInteractionPaused(false)}
+      onFocusCapture={() => setIsInteractionPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsInteractionPaused(false)
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowRight") {
+          event.preventDefault()
+          handlePrevious()
+        }
+        if (event.key === "ArrowLeft") {
+          event.preventDefault()
+          handleIncrement()
+        }
+        if (event.key === "Home") {
+          event.preventDefault()
+          handleStepChange(0)
+        }
+        if (event.key === "End") {
+          event.preventDefault()
+          handleStepChange(Math.max(totalSteps - 1, 0))
+        }
+      }}
+    >
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {steps[step]?.name}، الخطوة {step + 1} من {totalSteps}
+      </p>
+      <FeatureCard {...props} step={step} steps={steps}>
+        {props.children ? props.children : renderStepContent()}
         <motion.div
-          className="absolute right-0 top-0 z-40 h-[80%] w-full cursor-pointer md:left-0"
-          onClick={handleIncrement}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        />
-      ) : null}
-    </FeatureCard>
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.2 }}
+          className="absolute inset-x-0 top-4 z-50 w-full"
+        >
+          <Steps current={step} onChange={handleStepChange} steps={steps} />
+        </motion.div>
+        {clickToAdvance && totalSteps > 1 ? (
+          <div className="absolute inset-x-4 bottom-4 z-50 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={handlePrevious}
+              aria-label="الخطوة السابقة"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleIncrement}
+              aria-label="الخطوة التالية"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
+        ) : null}
+      </FeatureCard>
+    </div>
   )
 }
 

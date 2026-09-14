@@ -9,6 +9,7 @@ import { AdminStatCard } from './AdminStatCard';
 import { AdminDataTable } from './AdminDataTable';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 interface LinkExamFormProps {
   lessonId: string;
@@ -19,12 +20,19 @@ interface LinkExamFormProps {
 export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFormProps) {
   const router = useRouter();
   const [examId, setExamId] = useState(currentExamId || '');
+  const [linkedExamId, setLinkedExamId] = useState(currentExamId || '');
   const [saving, setSaving] = useState(false);
   const [examData, setExamData] = useState<ExamDashboardDto | null>(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [unlinkConfirmationOpen, setUnlinkConfirmationOpen] = useState(false);
 
   useEffect(() => {
-    if (!currentExamId) {
+    setLinkedExamId(currentExamId || '');
+    setExamId(currentExamId || '');
+  }, [currentExamId]);
+
+  useEffect(() => {
+    if (!linkedExamId) {
       setExamData(null);
       return;
     }
@@ -32,7 +40,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
     const abortController = new AbortController();
     
     setLoadingData(true);
-    adminService.getExamDashboard(currentExamId)
+    adminService.getExamDashboard(linkedExamId)
       .then(data => {
         if (!abortController.signal.aborted) {
           setExamData(data);
@@ -50,7 +58,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       });
 
     return () => abortController.abort();
-  }, [currentExamId]);
+  }, [linkedExamId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +67,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
     try {
       setSaving(true);
       await adminService.linkLessonExam(lessonId, examId);
+      setLinkedExamId(examId);
       toast.success('تم ربط الامتحان بنجاح.');
       onSuccess?.();
     } catch {
@@ -69,12 +78,14 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
   }
 
   async function handleUnlink() {
-    if (!confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان؟')) return;
     try {
       setSaving(true);
       await adminService.linkLessonExam(lessonId, null);
       toast.success('تم إلغاء ربط الامتحان.');
+      setLinkedExamId('');
+      setExamData(null);
       setExamId('');
+      router.refresh();
       onSuccess?.();
     } catch {
       toast.error('حدث خطأ.');
@@ -85,7 +96,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
 
   return (
     <div className="space-y-6">
-      {currentExamId ? (
+      {linkedExamId ? (
         <div className="flex flex-col gap-4 rounded-2xl border border-[var(--admin-primary-15)] bg-[var(--admin-card)] p-6 shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-4 gap-4">
             <div className="flex items-center gap-4">
@@ -96,29 +107,29 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                 <h4 className="font-bold text-lg text-[var(--admin-text)]">
                   {loadingData ? 'جارٍ تحميل البيانات...' : (examData?.title || 'يوجد امتحان مرفق')}
                 </h4>
-                <p className="text-sm font-mono text-[var(--admin-muted)] mt-1 opacity-70">معرف: {currentExamId}</p>
+                <p className="text-sm font-mono text-[var(--admin-muted)] mt-1 opacity-70">معرف: {linkedExamId}</p>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${currentExamId}/dashboard`)}
-                className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+                onClick={() => router.push(`/admin/content/exams/${linkedExamId}/dashboard`)}
+                className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-sm hover:shadow-md transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5"
               >
                 <LayoutDashboard className="h-4 w-4 text-[var(--admin-primary)]" />
                 بروفايل الامتحان (الكامل)
               </button>
               <button
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${currentExamId}/add-question`)}
-                className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 font-bold text-white shadow-sm hover:bg-[var(--admin-primary)]/90 transition-all hover:-translate-y-0.5"
+                onClick={() => router.push(`/admin/content/exams/${linkedExamId}/add-question`)}
+                className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 font-bold text-white shadow-sm hover:bg-[var(--admin-primary)]/90 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5"
               >
                 <Plus className="h-4 w-4" />
                 إضافة أسئلة أُخرى
               </button>
               <button
                 type="button"
-                onClick={handleUnlink}
+                onClick={() => setUnlinkConfirmationOpen(true)}
                 disabled={saving}
                 className="flex items-center gap-2 rounded-xl bg-[var(--admin-danger-10)] px-4 py-2 font-bold text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)]/80 transition-colors"
                 title="إلغاء ربط الامتحان بالحصة"
@@ -144,7 +155,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                       <Users className="w-5 h-5 text-[var(--admin-primary)]" />
                       أحدث الطلاب المنضمين
                     </h5>
-                    <button onClick={() => router.push(`/admin/content/exams/${currentExamId}/dashboard`)} className="text-sm font-bold text-[var(--admin-primary)] hover:underline flex items-center gap-1">
+                    <button onClick={() => router.push(`/admin/content/exams/${linkedExamId}/dashboard`)} className="text-sm font-bold text-[var(--admin-primary)] hover:underline flex items-center gap-1">
                       عرض الكل <ArrowUpLeft className="w-4 h-4" />
                     </button>
                   </div>
@@ -189,7 +200,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                             </span>
                             {row.isTimeExpired && (
                               <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-[var(--admin-warning-10)] text-[var(--admin-warning)]" title="نفذ الوقت وتم التسليم تلقائياً">
-                                <AlertCircle className="w-3.5 h-3.5 mr-1" /> تأخير
+                                <AlertCircle className="w-3.5 h-3.5 me-1" /> تأخير
                               </span>
                             )}
                           </div>
@@ -216,7 +227,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                 value={examId}
                 onChange={(e) => setExamId(e.target.value)}
                 placeholder="أدخل معرف الامتحان المراد ربطه"
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow]"
                 required
               />
             </div>
@@ -237,6 +248,19 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
           </p>
         </form>
       )}
+      <AdminConfirmationDialog
+        open={unlinkConfirmationOpen}
+        onClose={() => setUnlinkConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleUnlink();
+          setUnlinkConfirmationOpen(false);
+        }}
+        title="إلغاء ربط الامتحان"
+        consequence="سيُزال الامتحان من هذه الحصة. لن تُحذف أسئلة الامتحان أو نتائج الطلاب، ويمكن ربطه بحصة أخرى لاحقًا."
+        confirmLabel="إلغاء ربط الامتحان"
+        variant="danger"
+        isConfirming={saving}
+      />
     </div>
   );
 }

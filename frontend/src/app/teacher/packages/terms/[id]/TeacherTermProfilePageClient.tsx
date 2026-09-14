@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Folder, ChevronRight, BookOpenText } from "lucide-react";
-import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { Folder, ChevronRight, BookOpenText, Users } from "lucide-react";
+import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from "@/components/admin";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, ContentSectionDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "sections";
+type ActiveTab = "overview" | "sections" | "subscribers";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "sections", label: "الشهور / الأقسام", icon: Folder },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
 ];
 
 export default function TeacherTermProfilePageClient(props: { params: { id: string } }) {
@@ -58,22 +59,22 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
 
   if (termLoading) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!term) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الترم غير موجود">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الترم غير موجود">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الترم المطلوب.</p>
           <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة
           </NeumorphButton>
         </div>
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
@@ -87,7 +88,7 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
   }));
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام"
       pageTitle={term.title}
@@ -136,8 +137,8 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
             addPlaceholder="اسم القسم، مثال: شهر أكتوبر..."
             onCreate={async ({ title, order, price, imageFile }) => {
               const sectionId = await adminService.createSection({ termId: params.id, title, order, price });
-              if (imageFile && sectionId?.id) {
-                await adminService.uploadContentImage("section", sectionId.id, imageFile);
+              if (imageFile && sectionId) {
+                await adminService.uploadContentImage("section", sectionId, imageFile);
               }
               toast.success("تمت إضافة القسم.");
               await loadSections();
@@ -150,6 +151,10 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
           />
         </div>
       )}
-    </TeacherShellChrome>
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="term" contentId={term.id} contentName={term.title} surface="teacher" />
+      )}
+    </TeacherPage>
   );
 }

@@ -1,14 +1,13 @@
-import { getStoredAccessToken } from '@/lib/auth-storage';
+import { getAccessToken } from '@/lib/auth-memory';
+import {
+  sanitizeAiJobStatus,
+  type SafeAiJobStatus,
+} from '@/lib/ai-job-status';
 
-export interface WorkerJobStatus {
-  id?: string;
-  state: 'waiting' | 'active' | 'completed' | 'failed' | 'not_found';
-  progress?: number | { percentage?: number; stage?: string };
-  failedReason?: string | null;
-}
+export type WorkerJobStatus = SafeAiJobStatus;
 
 async function workerRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getStoredAccessToken();
+  const token = getAccessToken();
   if (!token) {
     throw new Error('Authentication required');
   }
@@ -31,8 +30,11 @@ async function workerRequest<T>(path: string, init: RequestInit = {}): Promise<T
 }
 
 export const workerService = {
-  getWorkerJobStatus: (jobId: string) =>
-    workerRequest<WorkerJobStatus>(`status/${encodeURIComponent(jobId)}`),
+  getWorkerJobStatus: async (jobId: string) =>
+    sanitizeAiJobStatus(
+      await workerRequest<unknown>(`status/${encodeURIComponent(jobId)}`),
+      jobId,
+    ),
 
   cancelWorkerJob: (jobId: string) =>
     workerRequest<{ success?: boolean; message?: string }>(

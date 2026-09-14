@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -21,13 +22,12 @@ import { ARAB_NATIONALITIES } from '@/data/arab-nationalities';
 import { SCHOOL_TYPES } from '@/data/school-types';
 import { computeBirthdayInfo } from '@/utils/birthday-utils';
 import { useWhatsAppCheck } from '@/utils/whatsapp-utils';
-import { z } from 'zod';
+import { normalizeEgyptianMobileInput } from '@/utils/phone-utils';
+import type { ZodIssue } from 'zod';
 import Image from 'next/image';
 import { AVATAR_LIST } from '@/data/avatars';
 
-import { AcademicFields, requiresTrack } from '@/components/registration/AcademicFields';
-import type { AcademicData } from '@/components/registration/AcademicFields';
-import { FeatureCarousel } from '@/components/ui/feature-carousel';
+import type { AcademicData } from '@/lib/academic-labels';
 import { RadioGroup, Radio } from '@/components/ui/radio-group';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 
@@ -35,6 +35,25 @@ import { useAuthStore } from '@/stores/auth-store';
 import { getDistrictsForGovernorate } from '@/data/governorate-districts';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import {
+  getEducationStageLabel,
+  getGradeLevelLabel,
+  getStudyTrackLabel,
+  requiresTrack,
+} from '@/lib/academic-labels';
+import { getRegistrationApiErrors } from '@/lib/api-errors';
+import { cairoCurrentDate, cairoDateAfterDays } from '@/lib/cairo-time';
+
+const FeatureCarousel = dynamic(() =>
+  import('@/components/ui/feature-carousel').then(
+    (module) => module.FeatureCarousel,
+  ),
+);
+const AcademicFields = dynamic(() =>
+  import('@/components/registration/AcademicFields').then(
+    (module) => module.AcademicFields,
+  ),
+);
 
 const EGYPTIAN_GOVERNORATES = [
   'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحيرة', 'الفيوم',
@@ -45,10 +64,21 @@ const EGYPTIAN_GOVERNORATES = [
 ];
 
 const egyptianPhoneRegex = /^01[0125]\d{8}$/;
+const isPastCairoDate = (date: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date) && date < cairoCurrentDate();
 
-const schema = z
-  .object({
+type RegistrationSchema = {
+  safeParse: (value: unknown) =>
+    | { success: true; data: unknown }
+    | { success: false; error: { issues: ZodIssue[] } };
+};
+
+let registrationSchemaPromise: Promise<RegistrationSchema> | undefined;
+
+function getRegistrationSchema() {
+  registrationSchemaPromise ??= import('zod').then(({ z }) => z.object({
     fullName: z.string().min(5, 'يرجى إدخال اسمك رباعيًا')
+      .regex(/^[\u0621-\u064A\s]+$/, 'يرجى كتابة الاسم بالحروف العربية فقط')
       .refine((n) => n.trim().split(/\s+/).length >= 4, 'يرجى إدخال اسمك رباعيًا (مثال: أحمد محمد محمود علي)'),
     phoneNumber: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح، مثال: 01012345678'),
     secondaryPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح').optional().or(z.literal('')),
@@ -60,7 +90,7 @@ const schema = z
     district: z.string().min(1, 'يرجى اختيار المنطقة / الحي'),
     address: z.string().min(3, 'يرجى كتابة عنوانك بالتفصيل'),
     parentPhone: z.string().optional().or(z.literal('')),
-    secondaryParentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم ولي أمر إضافي بشكل صحيح'),
+    secondaryParentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم ولي أمر إضافي بشكل صحيح').optional().or(z.literal('')),
     motherPhone: z.string().optional().or(z.literal('')),
     isFatherAlive: z.boolean(),
     isMotherAlive: z.boolean(),
@@ -73,7 +103,7 @@ const schema = z
     studyTrack: z.string().optional(),
     password: z.string().min(8, 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل'),
     confirmPassword: z.string(),
-    avatarSlug: z.string().optional(),
+    avatarSlug: z.string().min(1, 'يرجى اختيار الأفاتار الخاص بك'),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'كلمتا المرور غير متطابقتين',
@@ -88,6 +118,10 @@ const schema = z
     return true;
   }, { message: 'يرجى إدخال تاريخ ميلاد الأب', path: ['fatherDateOfBirth'] })
   .refine((d) => {
+    if (d.fatherDateOfBirth && !isPastCairoDate(d.fatherDateOfBirth)) return false;
+    return true;
+  }, { message: 'تاريخ ميلاد الأب يجب أن يكون تاريخًا سابقًا لليوم', path: ['fatherDateOfBirth'] })
+  .refine((d) => {
     if (d.isMotherAlive && !d.motherPhone?.match(egyptianPhoneRegex)) return false;
     return true;
   }, { message: 'تأكد من كتابة رقم هاتف الأم بشكل صحيح', path: ['motherPhone'] })
@@ -96,12 +130,19 @@ const schema = z
     return true;
   }, { message: 'يرجى إدخال تاريخ ميلاد الأم', path: ['motherDateOfBirth'] })
   .refine((d) => {
+    if (d.motherDateOfBirth && !isPastCairoDate(d.motherDateOfBirth)) return false;
+    return true;
+  }, { message: 'تاريخ ميلاد الأم يجب أن يكون تاريخًا سابقًا لليوم', path: ['motherDateOfBirth'] })
+  .refine((d) => {
     if (requiresTrack(d.gradeLevel) && !d.studyTrack) return false;
     return true;
   }, {
     message: 'يرجى اختيار الشعبة / التخصص',
     path: ['studyTrack'],
-  });
+  }));
+
+  return registrationSchemaPromise;
+}
 
 type FormError = { field?: string; message: string };
 
@@ -137,17 +178,17 @@ type RegistrationFormState = typeof EMPTY_FORM;
 function normalizeFormData(data: Partial<RegistrationFormState>): RegistrationFormState {
   return {
     fullName: data.fullName ?? '',
-    phoneNumber: data.phoneNumber ?? '',
-    secondaryPhone: data.secondaryPhone ?? '',
+    phoneNumber: normalizeEgyptianMobileInput(data.phoneNumber ?? ''),
+    secondaryPhone: normalizeEgyptianMobileInput(data.secondaryPhone ?? ''),
     dateOfBirth: data.dateOfBirth ?? '',
     gender: data.gender ?? '',
     nationality: data.nationality ?? '',
     governorate: data.governorate ?? '',
     district: data.district ?? '',
     address: data.address ?? '',
-    parentPhone: data.parentPhone ?? '',
-    secondaryParentPhone: data.secondaryParentPhone ?? '',
-    motherPhone: data.motherPhone ?? '',
+    parentPhone: normalizeEgyptianMobileInput(data.parentPhone ?? ''),
+    secondaryParentPhone: normalizeEgyptianMobileInput(data.secondaryParentPhone ?? ''),
+    motherPhone: normalizeEgyptianMobileInput(data.motherPhone ?? ''),
     isFatherAlive: data.isFatherAlive ?? true,
     isMotherAlive: data.isMotherAlive ?? true,
     fatherDateOfBirth: data.fatherDateOfBirth ?? '',
@@ -220,6 +261,7 @@ const PANEL_ANIMATION = {
 export function RegistrationForm() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
+  const validationInFlight = useRef(false);
 
   const [formData, setFormData] = useState<RegistrationFormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -277,7 +319,7 @@ export function RegistrationForm() {
     );
   };
 
-  const mapIssuesToErrors = (issues: z.ZodIssue[]) =>
+  const mapIssuesToErrors = (issues: ZodIssue[]) =>
     issues.map((issue) => ({
       field: issue.path[0]?.toString(),
       message: issue.message,
@@ -289,7 +331,8 @@ export function RegistrationForm() {
     return index === -1 ? 0 : index;
   };
 
-  const validateStep = (stepIndex: number) => {
+  const validateStep = async (stepIndex: number) => {
+    const schema = await getRegistrationSchema();
     const result = schema.safeParse(formData);
     if (result.success) return true;
 
@@ -308,25 +351,38 @@ export function RegistrationForm() {
     return false;
   };
 
-  const goToNextStep = () => {
-    if (!validateStep(activeStep)) return;
-    setActiveStep((prev) => Math.min(prev + 1, REGISTRATION_STEPS.length - 1));
+  const goToNextStep = async () => {
+    if (validationInFlight.current) return;
+    validationInFlight.current = true;
+    try {
+      if (!(await validateStep(activeStep))) return;
+      setActiveStep((prev) => Math.min(prev + 1, REGISTRATION_STEPS.length - 1));
+    } finally {
+      validationInFlight.current = false;
+    }
   };
 
-  const goToStep = (stepIndex: number) => {
+  const goToStep = async (stepIndex: number) => {
     if (stepIndex <= activeStep) {
       setActiveStep(stepIndex);
       return;
     }
 
-    if (!validateStep(activeStep)) return;
-    setActiveStep(stepIndex);
+    if (validationInFlight.current) return;
+    validationInFlight.current = true;
+    try {
+      if (!(await validateStep(activeStep))) return;
+      setActiveStep(stepIndex);
+    } finally {
+      validationInFlight.current = false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
 
+    const schema = await getRegistrationSchema();
     const result = schema.safeParse(formData);
     if (!result.success) {
       const mappedErrors = mapIssuesToErrors(result.error.issues);
@@ -360,7 +416,7 @@ export function RegistrationForm() {
         educationStage: formData.educationStage as 'Secondary' | 'Baccalaureate' | 'Primary' | 'Preparatory' | 'Azhari' | 'American',
         gradeLevel: formData.gradeLevel,
         studyTrack: formData.studyTrack || undefined,
-        avatarSlug: formData.avatarSlug || undefined,
+        avatarSlug: formData.avatarSlug,
       });
 
       // Auto login after successful registration
@@ -392,36 +448,9 @@ export function RegistrationForm() {
       // Redirect directly to the student dashboard
       router.push('/student');
     } catch (err: unknown) {
-      const message =
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-          ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message as string)
-          : 'عذرًا، فشل إنشاء الحساب. يُرجى المحاولة مرة أخرى لاحقًا.';
-
-      const normalizedMessage = message.toLowerCase();
-      const isDuplicatePhoneError =
-        normalizedMessage.includes('phone number already registered') ||
-        normalizedMessage.includes('رقم الهاتف') ||
-        normalizedMessage.includes('مسجل بالفعل');
-
-      if (isDuplicatePhoneError) {
-        setActiveStep(0);
-        setErrors([
-          {
-            field: 'phoneNumber',
-            message: 'هذا الرقم مسجل مسبقًا. يمكنك تسجيل الدخول بدلاً من ذلك، أو تغيير الرقم.',
-          },
-        ]);
-        return;
-      }
-
-      setErrors([
-        {
-          message,
-        },
-      ]);
+      const localizedErrors = getRegistrationApiErrors(err);
+      setErrors(localizedErrors);
+      setActiveStep(findStepIndexForField(localizedErrors[0]?.field));
     } finally {
       setLoading(false);
     }
@@ -432,7 +461,7 @@ export function RegistrationForm() {
       case 0:
         return (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)] flex flex-col justify-between">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">بطاقة الطالب</p>
                 <div className="mt-4 flex items-center gap-3">
@@ -448,7 +477,7 @@ export function RegistrationForm() {
               </div>
             </div>
             <div className="grid gap-4">
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">المنطقة السكنية</p>
                 <p className="mt-2 text-xl font-black text-[var(--admin-text)]">{formData.district || 'اختر المنطقة السكنية'}</p>
               </div>
@@ -456,7 +485,7 @@ export function RegistrationForm() {
                 const info = computeBirthdayInfo(formData.dateOfBirth);
                 return (
                   <>
-                    <div className="rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                    <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-card-soft)]/90 p-5">
                       <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">سنك دلوقتي</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-primary)] flex flex-wrap gap-1 items-baseline">
                         {info.ageYears} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">سنة</span>
@@ -464,14 +493,14 @@ export function RegistrationForm() {
                         {info.ageDays > 0 && <> و {info.ageDays} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">يوم</span></>}
                       </p>
                     </div>
-                    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                       <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">عيد ميلادك 🎂</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-text)]">باقي {info.daysToNextBirthday} <span className="text-base font-bold text-[var(--admin-muted)]">يوم</span></p>
                     </div>
                   </>
                 );
               })() : (
-                <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                   <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">تاريخ الميلاد</p>
                   <p className="mt-2 text-xl font-black text-[var(--admin-muted)]/50">اختر تاريخ الميلاد</p>
                 </div>
@@ -482,17 +511,17 @@ export function RegistrationForm() {
       case 1:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جهة المتابعة</p>
               <h3 className="mt-4 text-2xl font-black text-[var(--admin-text)] tracking-wider">{formData.parentPhone || 'رقم هاتف ولي الأمر'}</h3>
               <p className="mt-2 text-sm text-[var(--admin-muted)] leading-7">هذا الرقم سيستخدم للتواصل والمتابعة عند الحاجة.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)]">الأب</p>
                 <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isFatherAlive ? 'على قيد الحياة' : 'متوفى'}</p>
               </div>
-              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5">
                 <p className="text-xs font-bold text-[var(--admin-muted)]">الأم</p>
                 <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isMotherAlive ? 'على قيد الحياة' : 'متوفاة'}</p>
               </div>
@@ -502,23 +531,23 @@ export function RegistrationForm() {
       case 2:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.educationStage === 'Secondary' ? 'ثانوية' : formData.educationStage === 'Baccalaureate' ? 'بكالوريا' : 'المرحلة الدراسية'}
+                  {formData.educationStage ? getEducationStageLabel(formData.educationStage) : 'المرحلة الدراسية'}
                 </span>
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.gradeLevel || 'الصف الدراسي'}
+                  {formData.gradeLevel ? getGradeLevelLabel(formData.gradeLevel) : 'الصف الدراسي'}
                 </span>
                 {requiresTrack(formData.gradeLevel) ? (
                   <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                    {formData.studyTrack || 'الشعبة / التخصص'}
+                    {formData.studyTrack ? getStudyTrackLabel(formData.studyTrack) : 'الشعبة / التخصص'}
                   </span>
                 ) : null}
               </div>
             </div>
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-6 backdrop-blur-sm">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-6">
               <p className="text-sm leading-7 text-[var(--admin-muted)] font-medium">
                 بمجرد تثبيت هذه الخطوة، النظام سيعرض لك الخطة والواجبات والاختبارات الملائمة تمامًا لمرحلتك.
               </p>
@@ -528,11 +557,11 @@ export function RegistrationForm() {
       default:
         return (
           <div className="space-y-4">
-            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جاهزية الحساب</p>
               <div className="mt-5 space-y-3">
                 {passwordChecklist.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4 backdrop-blur-md">
+                  <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4">
                     <span className="text-[0.85rem] font-bold text-[var(--admin-text)]">{item.label}</span>
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${item.valid ? 'bg-[var(--admin-primary)] text-[var(--admin-bg)]' : 'bg-[var(--admin-border)] text-[var(--admin-muted)]'}`}>
                       {item.valid ? <Check className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" />}
@@ -552,45 +581,57 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div>
-              <label className="auth-label">اختر الأفاتار الخاص بك (شخصيات تاريخية وعلماء)</label>
-              <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[var(--admin-border)] scrollbar-track-transparent">
-                {AVATAR_LIST.map((avatar, index) => {
-                  const isSelected = formData.avatarSlug === avatar.slug;
-                  return (
-                    <button
-                      key={avatar.slug}
-                      type="button"
-                      onClick={() => updateFieldValue('avatarSlug', avatar.slug)}
-                      className={`relative flex flex-col items-center gap-2 p-2 rounded-2xl border transition-all duration-300 flex-shrink-0 w-24 hover:scale-105 ${
-                        isSelected
-                          ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                          : 'border-[var(--admin-border)] bg-[var(--admin-bg)] hover:border-[var(--admin-text)]'
-                      }`}
-                    >
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden border border-[var(--admin-border)]">
-                        <Image
-                          src={avatar.imageUrl}
-                          alt={avatar.name}
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                          loading={index < 4 ? 'eager' : 'lazy'}
-                          priority={index === 0}
-                          unoptimized
-                        />
-                      </div>
-                      <span className="text-xs font-black text-[var(--admin-text)] text-center truncate w-full">
-                        {avatar.name}
-                      </span>
-                      {isSelected && (
-                        <span className="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md">
-                          <Check className="h-3 w-3" />
+              <label className="auth-label">اختر الأفاتار الخاص بك (مطلوب)</label>
+              <div className="relative min-w-0 max-w-full">
+                <div
+                  className="flex min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-3 pt-1 touch-pan-x [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]"
+                  role="radiogroup"
+                  aria-label="اختر الأفاتار الخاص بك"
+                >
+                  {AVATAR_LIST.map((avatar, index) => {
+                    const isSelected = formData.avatarSlug === avatar.slug;
+                    return (
+                      <button
+                        key={avatar.slug}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => updateFieldValue('avatarSlug', avatar.slug)}
+                        className={`relative flex w-[5.75rem] shrink-0 snap-start flex-col items-center gap-2 rounded-2xl border p-2 transition-[transform,border-color,background-color,box-shadow] duration-200 active:scale-[0.98] sm:w-24 sm:hover:-translate-y-0.5 ${
+                          isSelected
+                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-sm'
+                            : 'border-[var(--admin-border)] bg-[var(--admin-bg)] hover:border-[var(--admin-text)]'
+                        }`}
+                      >
+                        <div className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--admin-border)]">
+                          <Image
+                            src={avatar.imageUrl}
+                            alt={avatar.name}
+                            fill
+                            sizes="64px"
+                            className="object-cover"
+                            loading={index < 4 ? 'eager' : 'lazy'}
+                            priority={index === 0}
+                            unoptimized
+                          />
+                        </div>
+                        <span className="w-full truncate text-center text-xs font-black text-[var(--admin-text)]">
+                          {avatar.name}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
+                        {isSelected && (
+                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-xs font-bold text-[var(--admin-muted)] sm:hidden">
+                  اسحب يمينًا أو يسارًا لرؤية باقي الأفاتارات
+                </p>
               </div>
+              {fieldError('avatarSlug') ? <p className="mt-2 text-sm font-bold text-red-600" role="alert">{fieldError('avatarSlug')}</p> : null}
               
               {/* Selected Avatar Detailed Info Box */}
               {formData.avatarSlug && (
@@ -606,7 +647,7 @@ export function RegistrationForm() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <h5 className="text-[12px] font-black text-[var(--admin-primary-strong)]">
+                    <h5 className="text-sm font-black text-[var(--admin-primary-strong)]">
                       {AVATAR_LIST.find(a => a.slug === formData.avatarSlug)?.name}
                     </h5>
                     <p className="text-xs font-bold text-[var(--admin-muted)] leading-normal">
@@ -647,7 +688,7 @@ export function RegistrationForm() {
                 {fieldError('phoneNumber') && <p className="auth-field-error">{fieldError('phoneNumber')}</p>}
                 {/* WhatsApp auto-check indicator */}
                 {whatsAppState.status !== 'idle' && (
-                  <div className={`mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                  <div className={`mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                     whatsAppState.color === 'green' ? 'bg-emerald-500/10 text-emerald-600' :
                     whatsAppState.color === 'red' ? 'bg-red-500/10 text-red-500' :
                     whatsAppState.color === 'amber' ? 'bg-amber-500/10 text-amber-600' :
@@ -845,7 +886,8 @@ export function RegistrationForm() {
                 </div>
                 <div>
                   <label className="auth-label" htmlFor="reg-fatherDob">عيد ميلاد الأب</label>
-                  <input id="reg-fatherDob" name="fatherDateOfBirth" type="date" dir="ltr" className={inputCls('fatherDateOfBirth')} style={selectStyle} value={formData.fatherDateOfBirth ?? ''} onChange={handleChange} />
+                  <input id="reg-fatherDob" name="fatherDateOfBirth" type="date" dir="ltr" max={cairoDateAfterDays(-1)} className={inputCls('fatherDateOfBirth')} style={selectStyle} value={formData.fatherDateOfBirth ?? ''} onChange={handleChange} />
+                  {fieldError('fatherDateOfBirth') && <p className="auth-field-error">{fieldError('fatherDateOfBirth')}</p>}
                   {formData.fatherDateOfBirth && (
                     <span className="mt-1 inline-flex rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-bold text-[var(--admin-text)]">
                       باقي {computeBirthdayInfo(formData.fatherDateOfBirth).daysToNextBirthday} يوم على عيد ميلاد الأب
@@ -865,7 +907,8 @@ export function RegistrationForm() {
                 </div>
                 <div>
                   <label className="auth-label" htmlFor="reg-motherDob">عيد ميلاد الأم</label>
-                  <input id="reg-motherDob" name="motherDateOfBirth" type="date" dir="ltr" className={inputCls('motherDateOfBirth')} style={selectStyle} value={formData.motherDateOfBirth ?? ''} onChange={handleChange} />
+                  <input id="reg-motherDob" name="motherDateOfBirth" type="date" dir="ltr" max={cairoDateAfterDays(-1)} className={inputCls('motherDateOfBirth')} style={selectStyle} value={formData.motherDateOfBirth ?? ''} onChange={handleChange} />
+                  {fieldError('motherDateOfBirth') && <p className="auth-field-error">{fieldError('motherDateOfBirth')}</p>}
                   {formData.motherDateOfBirth && (
                     <span className="mt-1 inline-flex rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-bold text-[var(--admin-text)]">
                       باقي {computeBirthdayInfo(formData.motherDateOfBirth).daysToNextBirthday} يوم على عيد ميلاد الأم
@@ -877,8 +920,8 @@ export function RegistrationForm() {
 
             {/* ── Secondary parent phone ── */}
             <div>
-              <label className="auth-label" htmlFor="reg-secondaryParentPhone">رقم ولي أمر إضافي</label>
-              <input id="reg-secondaryParentPhone" name="secondaryParentPhone" type="tel" dir="ltr" className={inputCls('secondaryParentPhone')} placeholder="مثال: 01312345678" value={formData.secondaryParentPhone ?? ''} onChange={handleChange} />
+              <label className="auth-label" htmlFor="reg-secondaryParentPhone">رقم ولي أمر إضافي <span className="text-[var(--admin-muted)] text-xs">(اختياري)</span></label>
+              <input id="reg-secondaryParentPhone" name="secondaryParentPhone" type="tel" dir="ltr" className={inputCls('secondaryParentPhone')} placeholder="مثال: 01012345678" value={formData.secondaryParentPhone ?? ''} onChange={handleChange} />
               {fieldError('secondaryParentPhone') && <p className="auth-field-error">{fieldError('secondaryParentPhone')}</p>}
             </div>
           </div>
@@ -976,7 +1019,7 @@ export function RegistrationForm() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
               <p className="mb-3 text-sm font-bold text-[var(--admin-text)]">متطلبات إنشاء الحساب:</p>
               <div className="space-y-2">
                 {passwordChecklist.map((item) => (
@@ -1002,7 +1045,7 @@ export function RegistrationForm() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32 }}
-      className="relative flex min-h-[560px] w-full lg:min-h-[650px]"
+      className="relative flex min-h-[560px] min-w-0 w-full lg:min-h-[650px]"
     >
       <FeatureCarousel
         title={currentStep.title}
@@ -1012,13 +1055,13 @@ export function RegistrationForm() {
         onStepChange={goToStep}
         autoPlay={false}
         clickToAdvance={false}
-        bgClass="bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[560px] lg:min-h-[650px] shadow-[0_28px_70px_var(--admin-shadow)]"
-        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
-        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
-        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
-        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
+        bgClass="bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[560px] lg:min-h-[650px] shadow-sm"
+        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] shadow-sm"
+        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] shadow-sm"
+        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] shadow-sm"
+        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] shadow-sm"
+        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-sm"
+        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-sm"
         image={{
           step1light1: '/images/register-stage-1a.svg',
           step1light2: '/images/register-stage-1b.svg',
@@ -1030,9 +1073,9 @@ export function RegistrationForm() {
         }}
       >
         <div className="relative z-10 mt-4 w-full md:mt-10 md:pr-0">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start w-full">
+          <div className="flex min-w-0 w-full flex-col gap-6 min-[1100px]:flex-row min-[1100px]:items-start min-[1100px]:gap-10">
             {/* Right Side: Form Inputs */}
-            <div className="w-full lg:w-[50%] xl:w-[50%] flex flex-col gap-5">
+            <div className="order-2 flex min-w-0 w-full flex-col gap-5 min-[1100px]:order-1 min-[1100px]:w-[54%]">
               <AnimatePresence>
                 {errors.filter((e) => !e.field).map((err, index) => (
                   <motion.div
@@ -1049,7 +1092,7 @@ export function RegistrationForm() {
 
               <div className="min-h-[420px] w-full sm:min-h-[520px]">
                 <AnimatePresence mode="wait">
-                  <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
+                  <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 sm:rounded-2xl sm:p-7 shadow-sm">
                     {renderStepFields()}
                   </motion.div>
                 </AnimatePresence>
@@ -1085,13 +1128,16 @@ export function RegistrationForm() {
             </div>
 
             {/* Left Side: Live Preview Panel */}
-            <div className="hidden lg:block lg:w-[50%] xl:w-[45%] relative">
-               <AnimatePresence mode="wait">
-                 <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="sticky top-10">
-                   {renderPreviewPanel()}
-                 </motion.div>
-               </AnimatePresence>
-            </div>
+            <aside
+              className="relative order-2 hidden min-w-0 min-[1100px]:block min-[1100px]:w-[46%]"
+              aria-label="معاينة بيانات التسجيل"
+            >
+              <AnimatePresence mode="wait">
+                <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="sticky top-10">
+                  {renderPreviewPanel()}
+                </motion.div>
+              </AnimatePresence>
+            </aside>
           </div>
         </div>
       </FeatureCarousel>

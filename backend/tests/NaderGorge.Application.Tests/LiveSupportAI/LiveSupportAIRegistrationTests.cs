@@ -28,21 +28,21 @@ public sealed class LiveSupportAIRegistrationTests
 
     private sealed class FakeMediator(Guid? returnedUserId, bool success, string? errorMessage = null) : IMediator
     {
-        public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            if (request is RegisterCommand regCmd)
+            if (request is RegisterCommand)
             {
                 if (success)
                 {
                     var response = new RegisterResponse(returnedUserId ?? Guid.NewGuid(), "Success");
-                    return (TResponse)(object)ApiResponse<RegisterResponse>.Ok(response);
+                    return Task.FromResult((TResponse)(object)ApiResponse<RegisterResponse>.Ok(response));
                 }
                 else
                 {
-                    return (TResponse)(object)ApiResponse<RegisterResponse>.Fail(errorMessage ?? "Registration failed", ["REGISTRATION_FAILED"]);
+                    return Task.FromResult((TResponse)(object)ApiResponse<RegisterResponse>.Fail(errorMessage ?? "Registration failed", ["REGISTRATION_FAILED"]));
                 }
             }
-            return default(TResponse)!;
+            return Task.FromResult(default(TResponse)!);
         }
 
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest

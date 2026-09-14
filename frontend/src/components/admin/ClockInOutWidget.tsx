@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Play, Square, Clock, Loader2, Award, Zap } from 'lucide-react';
 import { hrService, AttendanceLogDto } from '@/services/hr-service';
 import toast from 'react-hot-toast';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
+import { formatCairoDateTime, parseUtcDateTime } from '@/lib/cairo-time';
 
 export function ClockInOutWidget() {
   const [activeSession, setActiveSession] = useState<AttendanceLogDto | null>(
@@ -13,10 +15,12 @@ export function ClockInOutWidget() {
   const [targetDailyHours, setTargetDailyHours] = useState<number>(8);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [clockOutConfirmationOpen, setClockOutConfirmationOpen] = useState(false);
 
   // Live Clock & Stopwatch states
   const [now, setNow] = useState<Date | null>(null);
   const [stopwatch, setStopwatch] = useState<string>('00:00:00');
+  const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
 
   // Load active session
   const checkActiveSession = async () => {
@@ -24,6 +28,7 @@ export function ClockInOutWidget() {
       const response = await hrService.getMyAttendance();
       setHasProfile(response.hasProfile);
       setTargetDailyHours(response.targetDailyHours ?? 8);
+      setServerClockOffsetMs(Date.now() - parseUtcDateTime(response.serverNowUtc).getTime());
       const active = response.logs.find((log) => !log.clockOut);
       setActiveSession(active || null);
     } catch {
@@ -54,8 +59,8 @@ export function ClockInOutWidget() {
     }
 
     const updateStopwatch = () => {
-      const clockInTime = new Date(activeSession.clockIn).getTime();
-      const diffMs = Date.now() - clockInTime;
+      const clockInTime = parseUtcDateTime(activeSession.clockIn).getTime();
+      const diffMs = Date.now() - serverClockOffsetMs - clockInTime;
       if (diffMs < 0) {
         setStopwatch('00:00:00');
         return;
@@ -72,7 +77,7 @@ export function ClockInOutWidget() {
     updateStopwatch();
     const interval = setInterval(updateStopwatch, 1000);
     return () => clearInterval(interval);
-  }, [activeSession]);
+  }, [activeSession, serverClockOffsetMs]);
 
   const handleClockIn = async () => {
     setActionLoading(true);
@@ -92,17 +97,6 @@ export function ClockInOutWidget() {
   };
 
   const handleClockOut = async () => {
-    if (activeSession) {
-      const clockInTime = new Date(activeSession.clockIn).getTime();
-      const elapsedMs = Date.now() - clockInTime;
-      const elapsedHours = elapsedMs / (1000 * 60 * 60);
-      if (elapsedHours < targetDailyHours) {
-        const confirmText = `تحذير: لم تكمل ساعات العمل المطلوبة اليوم بعد (${targetDailyHours} ساعات). هل أنت متأكد من تسجيل الانصراف؟`;
-        if (!window.confirm(confirmText)) {
-          return;
-        }
-      }
-    }
     setActionLoading(true);
     try {
       const res = await hrService.clockOut();
@@ -120,8 +114,19 @@ export function ClockInOutWidget() {
     }
   };
 
+  const requestClockOut = () => {
+    if (!activeSession) return;
+    const elapsedHours = (Date.now() - serverClockOffsetMs - parseUtcDateTime(activeSession.clockIn).getTime()) / (1000 * 60 * 60);
+    if (elapsedHours < targetDailyHours) {
+      setClockOutConfirmationOpen(true);
+      return;
+    }
+    void handleClockOut();
+  };
+
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('ar-EG', {
+    return date.toLocaleTimeString('ar-EG-u-nu-latn', {
+      timeZone: 'Africa/Cairo',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -129,7 +134,8 @@ export function ClockInOutWidget() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ar-EG', {
+    return date.toLocaleDateString('ar-EG-u-nu-latn', {
+      timeZone: 'Africa/Cairo',
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -139,9 +145,9 @@ export function ClockInOutWidget() {
 
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-muted)]">
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-muted)]">
         <Loader2 className="h-6 w-6 animate-spin text-[var(--admin-primary)]" />
-        <span className="mr-2 text-sm font-bold">
+        <span className="me-2 text-sm font-bold">
           جاري تحميل بيانات الحضور...
         </span>
       </div>
@@ -150,8 +156,8 @@ export function ClockInOutWidget() {
 
   if (!hasProfile) {
     return (
-      <div className="relative overflow-hidden rounded-[28px] border border-amber-500/30 bg-amber-500/5 p-6 shadow-md transition-all duration-300">
-        <div className="absolute -left-16 -top-16 h-32 w-32 rounded-full bg-amber-500/5 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 shadow-md transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300">
+        <div className="absolute -start-16 -top-16 h-32 w-32 rounded-full bg-amber-500/5 blur-2xl" />
         <div className="flex flex-col items-center text-center gap-3">
           <div className="flex items-center justify-center h-12 w-12 rounded-full bg-amber-500/10 text-amber-500">
             <Clock className="h-6 w-6" />
@@ -168,10 +174,10 @@ export function ClockInOutWidget() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-md transition-all duration-300 hover:shadow-lg">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-md transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 hover:shadow-lg">
       {/* Background patterns */}
-      <div className="absolute -left-16 -top-16 h-32 w-32 rounded-full bg-[var(--admin-primary)]/5 blur-2xl" />
-      <div className="absolute -bottom-16 -right-16 h-32 w-32 rounded-full bg-[var(--admin-primary)]/5 blur-2xl" />
+      <div className="absolute -start-16 -top-16 h-32 w-32 rounded-full bg-[var(--admin-primary)]/5 blur-2xl" />
+      <div className="absolute -bottom-16 -end-16 h-32 w-32 rounded-full bg-[var(--admin-primary)]/5 blur-2xl" />
 
       <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Time and Info Section */}
@@ -193,13 +199,13 @@ export function ClockInOutWidget() {
               <Zap className="h-3.5 w-3.5 animate-pulse" />
               <span>
                 بداية الوردية:{' '}
-                {new Date(activeSession.clockIn).toLocaleTimeString('ar-EG', {
+                {formatCairoDateTime(activeSession.clockIn, {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
               </span>
               {activeSession.lateMinutes > 0 && (
-                <span className="mr-2 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 px-2 py-0.5 text-xs">
+                <span className="me-2 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 px-2 py-0.5 text-xs">
                   متأخر {activeSession.lateMinutes} دقيقة
                 </span>
               )}
@@ -223,9 +229,9 @@ export function ClockInOutWidget() {
 
               <button
                 type="button"
-                onClick={handleClockOut}
+                onClick={requestClockOut}
                 disabled={actionLoading}
-                className="flex w-full md:w-44 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3.5 text-sm font-extrabold text-white transition-all hover:bg-red-600 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full md:w-44 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3.5 text-sm font-extrabold text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-red-600 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {actionLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -251,7 +257,7 @@ export function ClockInOutWidget() {
                 type="button"
                 onClick={handleClockIn}
                 disabled={actionLoading}
-                className="flex w-full md:w-44 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition-all hover:bg-[var(--admin-primary-strong)] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full md:w-44 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-strong)] hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {actionLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -264,6 +270,19 @@ export function ClockInOutWidget() {
           )}
         </div>
       </div>
+      <AdminConfirmationDialog
+        open={clockOutConfirmationOpen}
+        onClose={() => setClockOutConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleClockOut();
+          setClockOutConfirmationOpen(false);
+        }}
+        title="تأكيد تسجيل الانصراف المبكر"
+        consequence={`لم تُكمل ساعات العمل المستهدفة لليوم بعد (${targetDailyHours} ساعات). سيُسجَّل الانصراف الآن وفقًا للوقت الحالي.`}
+        confirmLabel="تسجيل الانصراف"
+        variant="danger"
+        isConfirming={actionLoading}
+      />
     </div>
   );
 }

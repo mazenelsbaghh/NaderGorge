@@ -5,11 +5,13 @@ import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { ScholarlyParticles } from '@/components/landing/ScholarlyParticles';
 
 const FALLBACK_REGISTERED_STUDENTS_COUNT = 0;
-const LANDING_STUDENTS_BASELINE = 5000;
+const LANDING_STUDENTS_BASELINE = 100_000;
 
 const API_BASE_URL =
-  process.env.INTERNAL_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
+  // The backend redirects direct HTTP container traffic to HTTPS. The public
+  // origin terminates TLS correctly, so it is the reliable server-render path.
+  process.env.INTERNAL_API_URL ||
   'http://localhost:5245/api';
 
 type PlatformStatsResponse = {
@@ -40,7 +42,7 @@ export async function LandingHome() {
   const registeredStudentsCount = await getRegisteredStudentsCount();
 
   return (
-    <main className="landing-page relative min-h-screen overflow-hidden">
+    <main className="landing-page relative min-h-[100dvh] overflow-x-clip">
       <ScholarlyParticles />
       <div className="landing-shell relative z-10">
         <HeroSection
@@ -54,4 +56,3 @@ export async function LandingHome() {
     </main>
   );
 }
-

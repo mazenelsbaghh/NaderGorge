@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "decision",
+    "evaluatedAt",
+    "reasons",
+    "evidenceDigests",
+    "signature"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "decision": {
+      "enum": [
+        "GO",
+        "NO-GO"
+      ]
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidenceDigests": {
+      "type": "object",
+      "minProperties": 0,
+      "maxProperties": 11,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

@@ -7,6 +7,8 @@ public class CommunityPost : BaseEntity
 {
     public Guid AuthorUserId { get; set; }
     public User AuthorUser { get; set; } = null!;
+    public Guid? TeacherId { get; set; }
+    public TeacherProfile? Teacher { get; set; }
 
     public string Body { get; set; } = string.Empty;
     public CommunityPostStatus Status { get; set; } = CommunityPostStatus.Pending;
@@ -27,6 +29,10 @@ public class CommunityPostComment : BaseEntity
 {
     public Guid PostId { get; set; }
     public CommunityPost Post { get; set; } = null!;
+
+    public Guid? ParentCommentId { get; set; }
+    public CommunityPostComment? ParentComment { get; set; }
+    public ICollection<CommunityPostComment> Replies { get; set; } = new List<CommunityPostComment>();
 
     public Guid AuthorUserId { get; set; }
     public User AuthorUser { get; set; } = null!;

@@ -1,12 +1,15 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record StudentHomeworkSubmissionSummaryDto(
+    Guid SubmissionId,
     Guid StudentId,
     string StudentName,
     string StudentPhone,
@@ -42,12 +45,15 @@ public record HomeworkDashboardDto(
     decimal TotalScore,
     decimal? PassingScore,
     bool IsMandatory,
+    bool IsActive,
     bool IsRandomized,
     List<StudentHomeworkSubmissionSummaryDto> Submissions,
-    List<HomeworkQuestionSummaryDto> Questions
+    List<HomeworkQuestionSummaryDto> Questions,
+    ContentArchiveMode ArchiveMode,
+    DateTime? ArchivedAt
 );
 
-public record GetHomeworkDashboardQuery(Guid HomeworkId) : IRequest<ApiResponse<HomeworkDashboardDto>>;
+public record GetHomeworkDashboardQuery(Guid HomeworkId, Guid ActorId) : IRequest<ApiResponse<HomeworkDashboardDto>>;
 
 public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashboardQuery, ApiResponse<HomeworkDashboardDto>>
 {
@@ -60,8 +66,11 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
 
     public async Task<ApiResponse<HomeworkDashboardDto>> Handle(GetHomeworkDashboardQuery request, CancellationToken cancellationToken)
     {
+        var target = new AssessmentTarget(AssessmentKind.Homework, request.HomeworkId, Guid.Empty, request.ActorId);
+        if (!await AssessmentAccess.Allowed(_context, new TeacherAuthorizationService(_context), target, cancellationToken))
+            return ApiResponse<HomeworkDashboardDto>.Fail("غير مصرح بعرض هذا الواجب.");
         var homework = await _context.Homeworks
-            .Include(h => h.Questions)
+            .Include(h => h.Questions.Where(q => !q.IsRetired))
             .Include(h => h.Submissions)
                 .ThenInclude(s => s.Student)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);
@@ -72,6 +81,7 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
         var submissionsDto = homework.Submissions
             .OrderByDescending(s => s.SubmittedAt ?? s.StartedAt)
             .Select(s => new StudentHomeworkSubmissionSummaryDto(
+                s.Id,
                 s.StudentId,
                 s.Student?.FullName ?? "طالب محذوف",
                 s.Student?.PhoneNumber ?? "غير متوفر",
@@ -109,9 +119,12 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
             homework.TotalScore,
             homework.PassingScoreThreshold,
             homework.IsMandatory,
+            homework.IsActive,
             homework.IsRandomized,
             submissionsDto,
-            questionsDto
+            questionsDto,
+            homework.ArchiveMode,
+            homework.ArchivedAt
         );
 
         return ApiResponse<HomeworkDashboardDto>.Ok(dto);

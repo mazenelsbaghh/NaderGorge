@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Student.Recharge;
@@ -18,15 +19,20 @@ namespace NaderGorge.API.Controllers;
 public class StudentRechargeController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<StudentRechargeController> _logger;
 
-    public StudentRechargeController(IMediator mediator) => _mediator = mediator;
+    public StudentRechargeController(IMediator mediator, ILogger<StudentRechargeController> logger)
+    {
+        _mediator = mediator;
+        _logger = logger;
+    }
 
     private Guid GetUserId() => User.RequireUserId();
 
     [HttpPost("initiate")]
     public async Task<IActionResult> InitiateRecharge([FromBody] InitiateRechargeRequestDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new InitiateRechargeCommand(GetUserId(), dto.Amount), ct);
+        var result = await _mediator.Send(new InitiateRechargeCommand(GetUserId(), dto.Amount, dto.TeacherId), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -37,35 +43,56 @@ public class StudentRechargeController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("requests/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelRequest(Guid id, CancelRechargeRequestDto dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CancelRechargeRequestCommand(GetUserId(), id, dto.Reason), ct);
+        return result.Success ? Ok(result) : Conflict(result);
+    }
+
     [HttpPost("submit")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> SubmitRecharge(
         [FromForm] Guid rechargeRequestId,
         [FromForm] string senderPhoneNumber,
-        [FromForm] IFormFile screenshot,
+        [FromForm] IFormFile? screenshot,
+        [FromForm] bool confirmSenderPhone,
         CancellationToken ct)
     {
-        if (screenshot == null || screenshot.Length == 0)
-        {
-            return BadRequest(ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة"));
-        }
-
-        if (screenshot.Length > 10 * 1024 * 1024)
+        if (screenshot is { Length: > 10 * 1024 * 1024 })
         {
             return BadRequest(ApiResponse<SubmitRechargeDto>.Fail("حجم الصورة يجب أن لا يتخطى 10 ميجا بايت"));
         }
 
         using var ms = new MemoryStream();
-        await screenshot.CopyToAsync(ms, ct);
+        if (screenshot is not null)
+            await screenshot.CopyToAsync(ms, ct);
         var screenshotBytes = ms.ToArray();
 
+        _logger.LogInformation(
+            "Recharge proof received: FileName={FileName}, ContentType={ContentType}, Length={Length}",
+            screenshot?.FileName ?? "existing-proof",
+            screenshot?.ContentType ?? "existing-proof",
+            screenshotBytes.Length);
+
         var result = await _mediator.Send(new SubmitRechargeCommand(
+            GetUserId(),
             rechargeRequestId,
             senderPhoneNumber,
-            screenshotBytes), ct);
+            screenshotBytes,
+            screenshot?.FileName ?? string.Empty,
+            screenshot?.ContentType,
+            confirmSenderPhone), ct);
 
-        return result.Success ? Ok(result) : BadRequest(result);
+        if (!result.Success)
+        {
+            _logger.LogWarning("Recharge proof rejected after validation: FileName={FileName}, ContentType={ContentType}", screenshot?.FileName ?? "existing-proof", screenshot?.ContentType ?? "existing-proof");
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 }
 
-public record InitiateRechargeRequestDto(decimal Amount);
+public record InitiateRechargeRequestDto(decimal Amount, Guid? TeacherId = null);
+public record CancelRechargeRequestDto(string Reason);

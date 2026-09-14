@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -170,11 +171,16 @@ public class UploadQuestionAudioCommandHandler : IRequestHandler<UploadQuestionA
 {
     private readonly IAppDbContext _db;
     private readonly TeacherAuthorizationService _auth;
+    private readonly ISharedFileStorage _sharedStorage;
 
-    public UploadQuestionAudioCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    public UploadQuestionAudioCommandHandler(
+        IAppDbContext db,
+        TeacherAuthorizationService auth,
+        ISharedFileStorage sharedStorage)
     {
         _db = db;
         _auth = auth;
+        _sharedStorage = sharedStorage;
     }
 
     public async Task<ApiResponse<string>> Handle(UploadQuestionAudioCommand request, CancellationToken ct)
@@ -192,12 +198,13 @@ public class UploadQuestionAudioCommandHandler : IRequestHandler<UploadQuestionA
         var uniqueFileName = $"{Guid.NewGuid():N}{extension}";
         var audioUrl = $"/uploads/audio/{uniqueFileName}";
 
-        var uploadsFolder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads", "audio");
-        System.IO.Directory.CreateDirectory(uploadsFolder);
-
-        var physicalPath = System.IO.Path.Combine(uploadsFolder, uniqueFileName);
         var bytes = Convert.FromBase64String(request.Base64Audio);
-        await System.IO.File.WriteAllBytesAsync(physicalPath, bytes, ct);
+        await using var content = new MemoryStream(bytes, writable: false);
+        await _sharedStorage.WriteAsync(
+            SharedFileArea.Public,
+            Path.Combine("uploads", "audio", uniqueFileName),
+            content,
+            ct);
 
         question.AudioUrl = audioUrl;
         await _db.SaveChangesAsync(ct);

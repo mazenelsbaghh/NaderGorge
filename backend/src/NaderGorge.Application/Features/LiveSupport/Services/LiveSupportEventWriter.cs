@@ -11,8 +11,11 @@ public sealed class LiveSupportEventWriter(IAppDbContext db) : ILiveSupportEvent
 {
     public async Task<long> AppendAsync(LiveSupportEventWriteRequest request, CancellationToken ct)
     {
-        var sequence = (await db.LiveSupportEvents.Where(x => x.ConversationId == request.ConversationId)
-            .MaxAsync(x => (long?)x.Sequence, ct) ?? 0) + 1;
+        var persistedSequence = await db.LiveSupportEvents.Where(x => x.ConversationId == request.ConversationId)
+            .MaxAsync(x => (long?)x.Sequence, ct) ?? 0;
+        var pendingSequence = db.LiveSupportEvents.Local.Where(x => x.ConversationId == request.ConversationId)
+            .Select(x => x.Sequence).DefaultIfEmpty(0).Max();
+        var sequence = Math.Max(persistedSequence, pendingSequence) + 1;
         var eventId = Guid.NewGuid();
         db.LiveSupportEvents.Add(new LiveSupportEvent
         {

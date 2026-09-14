@@ -1,0 +1,11 @@
+[Unit]
+Description=Monthly Massar isolated PostgreSQL PITR restore
+
+[Timer]
+OnCalendar=*-*-01 05:00:00 Africa/Cairo
+RandomizedDelaySec=20min
+Persistent=true
+Unit=massar-db-restore-scheduled.service
+
+[Install]
+WantedBy=timers.target

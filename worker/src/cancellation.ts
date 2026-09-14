@@ -1,9 +1,8 @@
-import { Job } from 'bullmq';
-import { Redis } from 'ioredis';
+import { Job, UnrecoverableError } from 'bullmq';
+import { createRedisConnection } from './config/redis.js';
 
-const DEFAULT_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const CANCELLATION_TTL_SECONDS = 24 * 60 * 60;
-const cancellationRedis = new Redis(DEFAULT_REDIS_URL, { lazyConnect: true });
+const cancellationRedis = createRedisConnection({ lazyConnect: true });
 
 function cancellationKey(jobId: string | number) {
   return `cancelled-jobs:${jobId}`;
@@ -11,6 +10,10 @@ function cancellationKey(jobId: string | number) {
 
 export async function markJobCancellation(job: Job) {
   const state = await job.getState();
+
+  if (job.id) {
+    await cancellationRedis.set(cancellationKey(job.id), '1', 'EX', CANCELLATION_TTL_SECONDS);
+  }
 
   if (state === 'waiting' || state === 'delayed' || state === 'prioritized') {
     await job.remove();
@@ -21,7 +24,6 @@ export async function markJobCancellation(job: Job) {
     return { removed: false, state };
   }
 
-  await cancellationRedis.set(cancellationKey(job.id), '1', 'EX', CANCELLATION_TTL_SECONDS);
   await job.updateData({ ...job.data, cancellationRequested: true });
   return { removed: false, state };
 }
@@ -31,8 +33,12 @@ export async function throwIfCancellationRequested(job: Job) {
 
   const isCancelled = await cancellationRedis.get(cancellationKey(job.id));
   if (isCancelled) {
-    throw new Error('Job cancellation requested');
+    throw new UnrecoverableError('Job cancellation requested');
   }
+}
+
+export async function isJobCancellationMarked(jobId: string | number) {
+  return Boolean(await cancellationRedis.get(cancellationKey(jobId)));
 }
 
 export async function clearJobCancellation(jobId: string | number) {

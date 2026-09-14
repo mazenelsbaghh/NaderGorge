@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -37,11 +38,20 @@ public class TokenService : ITokenService
             new(ClaimTypes.Name, user.FullName),
             new("phone", user.PhoneNumber),
             new("profileComplete", user.IsProfileComplete.ToString().ToLower()),
-            new("passwordResetVersion", user.PasswordResetVersion.ToString())
+            new("passwordResetVersion", user.PasswordResetVersion.ToString()),
+            new("securityStampVersion", user.SecurityStampVersion.ToString())
         };
 
         foreach (var role in roles)
             claims.Add(new Claim(ClaimTypes.Role, role));
+
+        var hasDelegatedAssistantRole = user.UserRoles?.Any(userRole =>
+            userRole.Role?.Type == RoleType.Assistant &&
+            string.Equals(userRole.Role.AllowedDomain, "assistant", StringComparison.OrdinalIgnoreCase)) == true;
+        if (hasDelegatedAssistantRole && !claims.Any(claim => claim.Type == ClaimTypes.Role && claim.Value == "Assistant"))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Assistant"));
+        }
 
         // Add permissions from user roles
         if (user.UserRoles != null)
@@ -61,7 +71,10 @@ public class TokenService : ITokenService
                             }
                         }
                     }
-                    catch { /* Ignore invalid JSON */ }
+                    catch (System.Text.Json.JsonException)
+                    {
+                        // Malformed persisted permissions fail closed.
+                    }
                 }
             }
         }
@@ -111,7 +124,7 @@ public class TokenService : ITokenService
         }
     }
 
-    public string GenerateParentToken(Guid studentId)
+    public string GenerateParentToken(User student, Guid studentProfileId)
     {
         var secret = _config["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured");
@@ -120,8 +133,11 @@ public class TokenService : ITokenService
 
         var claims = new[]
         {
+            new Claim(ClaimTypes.NameIdentifier, student.Id.ToString()),
             new Claim(ClaimTypes.Role, "Parent"),
-            new Claim("StudentId", studentId.ToString()),
+            new Claim("StudentId", studentProfileId.ToString()),
+            new Claim("passwordResetVersion", student.PasswordResetVersion.ToString()),
+            new Claim("securityStampVersion", student.SecurityStampVersion.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

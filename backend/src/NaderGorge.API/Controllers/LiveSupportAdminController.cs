@@ -23,6 +23,13 @@ public sealed class LiveSupportAdminController(ILiveSupportService service) : Co
         return Ok(ApiResponse.Ok("تم تحديث حالة الدعم المباشر."));
     }
 
+    [HttpPut("canned-replies")]
+    public async Task<IActionResult> CannedReplies(UpdateCannedRepliesRequest request, CancellationToken ct)
+    {
+        try { await service.UpdateCannedRepliesAsync(request.Replies, ct); return Ok(ApiResponse.Ok("تم حفظ الردود الثابتة.")); }
+        catch (LiveSupportException ex) { return BadRequest(ApiResponse<object>.Fail(ex.Message, [ex.Code])); }
+    }
+
     [HttpPut("staff/{staffUserId:guid}")]
     public async Task<IActionResult> Staff(Guid staffUserId, UpdateStaffConfigRequest request, CancellationToken ct)
     {
@@ -39,6 +46,10 @@ public sealed class LiveSupportAdminController(ILiveSupportService service) : Co
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard(CancellationToken ct) => Ok(ApiResponse<LiveSupportAdminDashboardDto>.Ok(await service.GetAdminDashboardAsync(ct)));
+
+    [HttpGet("ratings")]
+    public async Task<IActionResult> Ratings(DateTime? from, DateTime? to, CancellationToken ct) =>
+        Ok(ApiResponse<IReadOnlyList<LiveSupportRatingDto>>.Ok(await service.GetAdminRatingsAsync(from, to, ct)));
 
     [HttpGet("conversations/{conversationId:guid}/timeline")]
     public async Task<IActionResult> Timeline(Guid conversationId, CancellationToken ct)
@@ -60,5 +71,6 @@ public sealed class LiveSupportAdminController(ILiveSupportService service) : Co
 }
 
 public sealed record UpdateFeatureRequest(bool Enabled);
+public sealed record UpdateCannedRepliesRequest(IReadOnlyList<LiveSupportCannedReplyDto> Replies);
 public sealed record UpdateStaffConfigRequest(bool Enabled, int Capacity, long? ExpectedVersion, IReadOnlyList<LiveSupportScheduleWindowDto> Schedule);
 public sealed record AdminInterventionRequest(string Operation, Guid? TargetStaffUserId, string Reason);

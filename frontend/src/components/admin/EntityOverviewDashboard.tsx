@@ -65,8 +65,8 @@ export function EntityOverviewDashboard({ entityType, details, stats = [], loadi
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
       <div className="relative overflow-hidden rounded-3xl bg-[var(--admin-card-strong)] p-8 shadow-sm">
-        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary)] opacity-5 blur-3xl" />
-        <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-[var(--admin-accent)] opacity-5 blur-2xl" />
+        <div className="absolute -start-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary)] opacity-5 blur-3xl" />
+        <div className="absolute -end-10 -bottom-10 h-40 w-40 rounded-full bg-[var(--admin-accent)] opacity-5 blur-2xl" />
 
         <div className="relative z-10 grid grid-cols-1 gap-8 md:grid-cols-3">
           <div className="space-y-4 md:col-span-2">
@@ -119,7 +119,7 @@ export function EntityOverviewDashboard({ entityType, details, stats = [], loadi
                     {details.price && details.price > 0 ? (
                       <>
                         <span className="text-[var(--admin-primary)]">{details.price}</span>
-                        <span className="mr-1 text-lg text-[var(--admin-muted)]">ج.م</span>
+                        <span className="me-1 text-lg text-[var(--admin-muted)]">ج.م</span>
                       </>
                     ) : (
                       <span className="text-[var(--admin-success)]">مجانا</span>
@@ -168,9 +168,9 @@ export function EntityOverviewDashboard({ entityType, details, stats = [], loadi
               return (
                 <div
                   key={stat.label}
-                  className="group relative overflow-hidden rounded-3xl bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded-3xl bg-[var(--admin-card)] p-6 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:shadow-lg hover:-translate-y-0.5"
                 >
-                  <div className="absolute -right-6 -top-6 text-[var(--admin-primary-15)] opacity-30 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-125 pointer-events-none">
+                  <div className="absolute -end-6 -top-6 text-[var(--admin-primary-15)] opacity-30 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-125 pointer-events-none">
                     <Icon className="h-28 w-28" />
                   </div>
                   <div className="relative z-10">

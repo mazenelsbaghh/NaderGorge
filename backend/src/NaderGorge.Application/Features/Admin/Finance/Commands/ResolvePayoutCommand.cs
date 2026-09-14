@@ -28,6 +28,13 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
 
     public async Task<ApiResponse<bool>> Handle(ResolvePayoutCommand request, CancellationToken ct)
     {
+        return await SerializationRetryHelper.ExecuteAsync(
+            retryCt => HandleOnce(request, retryCt),
+            ct);
+    }
+
+    private async Task<ApiResponse<bool>> HandleOnce(ResolvePayoutCommand request, CancellationToken ct)
+    {
         if (request.Status == PayoutStatus.Pending)
         {
             return ApiResponse<bool>.Fail("لا يمكن تعديل حالة الطلب إلى معلق");
@@ -50,7 +57,7 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
                 return ApiResponse<bool>.Fail("طلب الدفعة غير موجود");
             }
 
-            if (payout.Status != PayoutStatus.Pending)
+            if (payout.Status == PayoutStatus.Paid || payout.Status == PayoutStatus.Rejected)
             {
                 return ApiResponse<bool>.Fail("تم البت في هذا الطلب مسبقاً");
             }
@@ -65,16 +72,52 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
 
             var oldStatus = payout.Status;
 
-            if (request.Status == PayoutStatus.Paid)
+            if (request.Status == PayoutStatus.Approved)
             {
-                if (payout.Amount > account.CurrentBalance)
+                if (payout.Status != PayoutStatus.Pending)
                 {
-                    return ApiResponse<bool>.Fail($"رصيد المعلم الحالي ({account.CurrentBalance} ج.م) لا يكفي لصرف الدفعة بقيمة ({payout.Amount} ج.م)");
+                    return ApiResponse<bool>.Fail("لا يمكن اعتماد طلب غير معلق");
                 }
 
-                // Deduct balance
+                if (payout.Amount > account.ReservedBalance)
+                {
+                    return ApiResponse<bool>.Fail($"رصيد المعلم المحجوز لا يكفي لاعتماد الدفعة بقيمة ({payout.Amount} ج.م)");
+                }
+
+                payout.ApprovedByUserId = request.AdminUserId;
+                payout.ApprovedAt = DateTime.UtcNow;
+            }
+            else if (request.Status == PayoutStatus.Paid)
+            {
+                if (payout.Status != PayoutStatus.Approved)
+                {
+                    return ApiResponse<bool>.Fail("يجب اعتماد طلب الدفعة قبل تسجيل الصرف الفعلي");
+                }
+
+                if (payout.Amount > account.ReservedBalance || payout.Amount > account.CurrentBalance)
+                {
+                    return ApiResponse<bool>.Fail($"رصيد المعلم المحجوز لا يكفي لصرف الدفعة بقيمة ({payout.Amount} ج.م)");
+                }
+
                 account.CurrentBalance -= payout.Amount;
+                account.ReservedBalance -= payout.Amount;
                 account.UpdatedAt = DateTime.UtcNow;
+                payout.PaidByUserId = request.AdminUserId;
+                payout.PaidAt = DateTime.UtcNow;
+            }
+            else if (request.Status == PayoutStatus.Rejected)
+            {
+                if (payout.Amount > account.ReservedBalance)
+                {
+                    return ApiResponse<bool>.Fail($"رصيد المعلم المحجوز لا يكفي لإلغاء حجز الدفعة بقيمة ({payout.Amount} ج.م)");
+                }
+
+                account.ReservedBalance -= payout.Amount;
+                account.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                return ApiResponse<bool>.Fail("حالة طلب الدفعة غير مدعومة");
             }
 
             payout.Status = request.Status;
@@ -98,9 +141,17 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
             };
             await _audit.AddAsync(auditEntry);
 
-            return ApiResponse<bool>.Ok(true, request.Status == PayoutStatus.Paid ? "تم صرف الدفعة بنجاح" : "تم رفض طلب الدفعة");
+            var message = request.Status switch
+            {
+                PayoutStatus.Approved => "تم اعتماد طلب الدفعة وأصبح جاهزاً للصرف",
+                PayoutStatus.Paid => "تم تسجيل صرف الدفعة بنجاح",
+                PayoutStatus.Rejected => "تم رفض طلب الدفعة",
+                _ => "تم تحديث طلب الدفعة"
+            };
+
+            return ApiResponse<bool>.Ok(true, message);
         }
-        catch (Exception ex) when (IsConcurrencyFailure(ex))
+        catch (Exception ex) when (!SerializationRetryHelper.IsSerializationFailure(ex) && IsConcurrencyFailure(ex))
         {
             return ApiResponse<bool>.Fail("تم إجراء عملية متزامنة على هذا الطلب. يرجى المحاولة مرة أخرى.");
         }
@@ -108,8 +159,7 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
 
     private static bool IsConcurrencyFailure(Exception ex)
     {
-        return ex.Message.Contains("could not serialize", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("concurrent update", StringComparison.OrdinalIgnoreCase)
+        return ex.Message.Contains("concurrent update", StringComparison.OrdinalIgnoreCase)
             || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
     }
 }

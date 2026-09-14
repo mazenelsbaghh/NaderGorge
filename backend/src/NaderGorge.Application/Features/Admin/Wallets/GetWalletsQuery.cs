@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -26,29 +27,36 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
             .OrderByDescending(w => w.CreatedAt)
             .ToListAsync(ct);
 
-        var egyptTime = DateTime.UtcNow.AddHours(3);
-        var today = egyptTime.Date;
-        var startOfMonth = new DateTime(egyptTime.Year, egyptTime.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var (dayStartUtc, dayEndUtc) = CairoTime.GetCurrentDayRangeUtc();
+        var (monthStartUtc, monthEndUtc) = CairoTime.GetCurrentMonthRangeUtc();
 
         var activeStatus = new[] { RechargeRequestStatus.Matched, RechargeRequestStatus.Approved };
 
         // Fetch successful recharge requests in this month for capacity calculation
         var rechargeRequests = await _db.RechargeRequests
-            .Where(r => activeStatus.Contains(r.Status) && r.ResolvedAt >= startOfMonth.AddHours(-3)) // Buffer to catch all local month starts
+            .Where(r => activeStatus.Contains(r.Status) && r.ResolvedAt >= monthStartUtc && r.ResolvedAt < monthEndUtc)
             .ToListAsync(ct);
+        var totalReceivedByWallet = await _db.RechargeRequests
+            .Where(r => activeStatus.Contains(r.Status))
+            .GroupBy(r => r.WalletId)
+            .Select(group => new { WalletId = group.Key, TotalReceived = group.Sum(item => item.Amount) })
+            .ToDictionaryAsync(item => item.WalletId, item => item.TotalReceived, ct);
 
         var walletDtos = new List<WalletDto>();
+        var now = DateTime.UtcNow;
 
         foreach (var w in wallets)
         {
+            var reportedBalance = await _db.ReadLatestReportedBalanceAsync(w.Id, ct);
+
             // Calculate Daily Received (resolved today in Egypt time)
             var dailyReceived = rechargeRequests
-                .Where(r => r.WalletId == w.Id && r.ResolvedAt.HasValue && r.ResolvedAt.Value.AddHours(3).Date == today)
+                .Where(r => r.WalletId == w.Id && r.ResolvedAt >= dayStartUtc && r.ResolvedAt < dayEndUtc)
                 .Sum(r => r.Amount);
 
             // Calculate Monthly Received (resolved this month in Egypt time)
             var monthlyReceived = rechargeRequests
-                .Where(r => r.WalletId == w.Id && r.ResolvedAt.HasValue && r.ResolvedAt.Value.AddHours(3) >= new DateTime(egyptTime.Year, egyptTime.Month, 1))
+                .Where(r => r.WalletId == w.Id)
                 .Sum(r => r.Amount);
 
             List<string> filters;
@@ -79,14 +87,18 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
                 Label = w.Label,
                 DailyLimit = w.DailyLimit,
                 MonthlyLimit = w.MonthlyLimit,
-                CurrentBalance = w.CurrentBalance,
+                CurrentBalance = reportedBalance ?? w.CurrentBalance,
                 PairingToken = w.PairingToken,
                 DeviceStatus = status,
                 LastSeenAt = w.LastSeenAt,
                 IsActive = w.IsActive,
+                IsRechargePaused = w.IsRechargePaused && (!w.RechargeResumeAt.HasValue || w.RechargeResumeAt > now),
+                RechargePauseMessage = w.RechargePauseMessage,
+                RechargeResumeAt = w.RechargeResumeAt,
                 SmsSenderFilters = filters,
                 DailyReceived = dailyReceived,
                 MonthlyReceived = monthlyReceived,
+                TotalReceived = totalReceivedByWallet.GetValueOrDefault(w.Id),
                 CreatedAt = w.CreatedAt
             });
         }

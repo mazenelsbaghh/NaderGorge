@@ -3,8 +3,15 @@ import * as signalR from '@microsoft/signalr';
 import { getBackendHubUrl } from '@/lib/backend-url';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
-import { invalidateMany } from '@/lib/cache-invalidation';
+import { invalidateCanonicalKeys, invalidateForStaffDataChanged, resetRealtimeEventDedupe } from '@/lib/realtime-invalidation-map';
+import { parseStaffDataChangedPayload } from '@/lib/data-changed-event';
+import { recordRealtimeMetric, recordReconnectDuration, recordSnapshotReconciliation } from '@/lib/realtime-observability';
 import type { StaffDataChangedPayload } from '@/lib/staff-realtime-scopes';
+import { devConsole } from '@/utils/dev-console';
+
+// Keep every platform event on the canonical scope-to-query mapping. Detail
+// keys remain supported by the adapter for entity-specific refreshes.
+const invalidateMany = (keys: readonly string[]) => invalidateCanonicalKeys(keys);
 
 export interface NotificationPayload {
   id: string;
@@ -53,9 +60,11 @@ export interface ResourceReadyPayload {
 }
 
 export interface ExtraWatchRequestPayload {
+  requestId?: string;
   videoId: string;
   status: string;
   allowedWatchCount: number;
+  reason?: string;
 }
 
 export interface AiJobProgressPayload {
@@ -63,6 +72,13 @@ export interface AiJobProgressPayload {
   progress: number;
   status: string;
   message: string;
+  failure?: AiPublicFailurePayload | null;
+}
+
+export interface AiPublicFailurePayload {
+  code: 'AI_VIDEO_ANALYSIS_FAILED' | 'AI_MINDMAP_GENERATION_FAILED';
+  message: string;
+  retryable: boolean;
 }
 
 export interface PackagePublishedPayload {
@@ -74,6 +90,7 @@ export interface VideoFailedPayload {
   lessonId: string;
   videoId: string;
   error: string;
+  failure?: AiPublicFailurePayload | null;
 }
 
 export interface ExamSubmittedPayload {
@@ -98,6 +115,7 @@ export interface AiJobCompletedPayload {
 export interface AiJobFailedPayload {
   jobId: string;
   error: string;
+  failure?: AiPublicFailurePayload | null;
 }
 
 export interface PackageArchivedPayload {
@@ -183,6 +201,7 @@ export interface ExamGradedPayload {
 }
 
 export interface PlatformEventHandlers {
+  onAdminAiEvent?: (payload: unknown) => void;
   onNotificationCreated?: (payload: NotificationPayload) => void;
   onBalanceChanged?: (payload: BalancePayload) => void;
   onCodeActivated?: (payload: CodeActivatedPayload) => void;
@@ -246,15 +265,17 @@ export interface PlatformEventHandlers {
 
 // Module-level connection to share across components
 let sharedConnection: signalR.HubConnection | null = null;
-let connectionPromise: Promise<signalR.HubConnection> | null = null;
+let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
 let activeHooksCount = 0;
 let latestAccessToken: string | null = null;
+let reconnectStartedAt: number | null = null;
 const connectionStatusListeners = new Set<(isConnected: boolean) => void>();
 const activePackages = new Set<string>();
 const activeLessons = new Set<string>();
 
 // Centralized listener registry
 const listeners = {
+  AdminAiEvent: new Set<(payload: unknown) => void>(),
   NotificationCreated: new Set<(payload: NotificationPayload) => void>(),
   BalanceChanged: new Set<(payload: BalancePayload) => void>(),
   CodeActivated: new Set<(payload: CodeActivatedPayload) => void>(),
@@ -325,7 +346,8 @@ if (typeof window !== 'undefined') {
 }
 
 export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isConnected, setIsConnected] = useState(
     sharedConnection ? sharedConnection.state === signalR.HubConnectionState.Connected : false
   );
@@ -578,6 +600,9 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     const onStaffDataChanged = (payload: StaffDataChangedPayload) => {
       handlersRef.current?.onStaffDataChanged?.(payload);
     };
+    const onAdminAiEvent = (payload: unknown) => {
+      handlersRef.current?.onAdminAiEvent?.(payload);
+    };
 
     // Add wrappers to registry sets
     listeners.NotificationCreated.add(onNotificationCreated);
@@ -639,15 +664,17 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     listeners.NotificationsCleared.add(onNotificationsCleared);
     listeners.ExamGraded.add(onExamGraded);
     listeners.StaffDataChanged.add(onStaffDataChanged);
+    listeners.AdminAiEvent.add(onAdminAiEvent);
 
     const initConnection = async () => {
       if (!sharedConnection) {
         const hubUrl = getBackendHubUrl('/hubs/platform');
 
         sharedConnection = new signalR.HubConnectionBuilder()
+          .configureLogging(signalR.LogLevel.None)
           .withUrl(hubUrl, {
             accessTokenFactory: () => latestAccessToken || '',
-            skipNegotiation: false,
+            skipNegotiation: true,
             transport: signalR.HttpTransportType.WebSockets
           })
           .withAutomaticReconnect()
@@ -656,18 +683,35 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
         // Register status change callbacks
         sharedConnection.onreconnecting((error) => {
           console.warn('Platform SignalR reconnecting:', error);
+          reconnectStartedAt ??= Date.now();
           connectionStatusListeners.forEach(listener => listener(false));
         });
 
         sharedConnection.onreconnected(async (connectionId) => {
-          console.log('Platform SignalR reconnected:', connectionId);
+          devConsole.log('Platform SignalR reconnected:', connectionId);
+          recordRealtimeMetric('reconnect');
+          if (reconnectStartedAt !== null) {
+            recordReconnectDuration(Date.now() - reconnectStartedAt);
+            reconnectStartedAt = null;
+          }
+          recordSnapshotReconciliation();
+          resetRealtimeEventDedupe();
+          invalidateCanonicalKeys([
+            'session',
+            'employees',
+            'hr:employees',
+            'operations:dashboard',
+            'student:shell',
+            'student:dashboard',
+            'student:quick-access',
+          ]);
           connectionStatusListeners.forEach(listener => listener(true));
 
           // Re-join active package groups
           for (const packageId of activePackages) {
             try {
               await sharedConnection?.invoke('JoinPackage', packageId);
-              console.log(`Re-joined package group on reconnect: ${packageId}`);
+              devConsole.log(`Re-joined package group on reconnect: ${packageId}`);
             } catch (err) {
               console.error(`Failed to re-join package group ${packageId} on reconnect:`, err);
             }
@@ -677,16 +721,23 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           for (const lessonId of activeLessons) {
             try {
               await sharedConnection?.invoke('JoinLesson', lessonId);
-              console.log(`Re-joined lesson group on reconnect: ${lessonId}`);
+              devConsole.log(`Re-joined lesson group on reconnect: ${lessonId}`);
             } catch (err) {
               console.error(`Failed to re-join lesson group ${lessonId} on reconnect:`, err);
             }
           }
         });
 
-        sharedConnection.onclose((error) => {
-          console.error('Platform SignalR closed:', error);
+        sharedConnection.onclose(() => {
+          // Closing is normal during sign-out, route/surface changes and after
+          // SignalR has exhausted its automatic reconnect policy. The next
+          // authenticated mount creates a fresh transport, so this must not
+          // surface as a production console error.
           connectionStatusListeners.forEach(listener => listener(false));
+        });
+
+        sharedConnection.on('AdminAIEvent', (payload: unknown) => {
+          listeners.AdminAiEvent.forEach(handler => handler(payload));
         });
 
         // Register universal connection event listeners exactly once
@@ -1141,6 +1192,24 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           }
         });
 
+        const onContentArchiveStateChanged = (payloadJson: string) => {
+          try {
+            JSON.parse(payloadJson);
+            invalidateMany([
+              'content:packages',
+              'content:lesson',
+              'student:dashboard',
+              'student:quick-access',
+              'student:exams',
+              'student:homeworks',
+            ]);
+          } catch (e) {
+            console.error('Error handling content archive state event:', e);
+          }
+        };
+        sharedConnection.on('ContentArchived', onContentArchiveStateChanged);
+        sharedConnection.on('ContentRestored', onContentArchiveStateChanged);
+
         sharedConnection.on('PackageAccessGranted', (payloadJson: string) => {
           try {
             const payload = JSON.parse(payloadJson) as PackageAccessGrantedPayload;
@@ -1273,12 +1342,34 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
 
         sharedConnection.on('StaffDataChanged', (payloadJson: string) => {
           try {
-            const payload = JSON.parse(payloadJson) as StaffDataChangedPayload;
+            const payload = parseStaffDataChangedPayload(JSON.parse(payloadJson));
+            if (!payload) return;
+            invalidateForStaffDataChanged(payload);
+            const currentUserId = useAuthStore.getState().user?.id;
+            if (currentUserId && (payload.entityIds?.includes(currentUserId) || payload.scopes.some((scope) => ['users', 'settings', 'hr'].includes(scope)))) {
+              void useAuthStore.getState().refreshCurrentSession();
+            }
             listeners.StaffDataChanged.forEach(handler => handler(payload));
           } catch (e) {
             console.error('Error handling StaffDataChanged event:', e);
           }
         });
+
+        const invalidateHrWorkspace = () => {
+          invalidateMany([
+            'employees',
+            'hr:employees',
+            'hr:approvals',
+            'hr:documents',
+            'hr:lifecycle',
+            'operations:dashboard',
+          ]);
+        };
+        sharedConnection.on('hr.approval.escalated', invalidateHrWorkspace);
+        sharedConnection.on('hr.document.expiring', invalidateHrWorkspace);
+        sharedConnection.on('hr.employee.hired', invalidateHrWorkspace);
+        sharedConnection.on('hr.employee.offboarded', invalidateHrWorkspace);
+        sharedConnection.on('hr.lifecycle.task.overdue', invalidateHrWorkspace);
 
         connectionPromise = sharedConnection.start()
           .then(async () => {
@@ -1289,7 +1380,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             for (const packageId of activePackages) {
               try {
                 await sharedConnection?.invoke('JoinPackage', packageId);
-                console.log(`Joined active package group on startup: ${packageId}`);
+                devConsole.log(`Joined active package group on startup: ${packageId}`);
               } catch (e) {
                 console.error(`Error joining package group ${packageId} on startup:`, e);
               }
@@ -1299,7 +1390,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             for (const lessonId of activeLessons) {
               try {
                 await sharedConnection?.invoke('JoinLesson', lessonId);
-                console.log(`Joined active lesson group on startup: ${lessonId}`);
+                devConsole.log(`Joined active lesson group on startup: ${lessonId}`);
               } catch (e) {
                 console.error(`Error joining lesson group ${lessonId} on startup:`, e);
               }
@@ -1308,12 +1399,15 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             return sharedConnection!;
           })
           .catch((err) => {
-            console.error('Platform SignalR Connection Error:', err);
+            const message = err instanceof Error ? err.message : String(err);
+            if (!message.includes('stopped during negotiation')) {
+              console.warn('Platform SignalR connection unavailable:', err);
+            }
             setIsConnected(false);
             connectionStatusListeners.forEach(listener => listener(false));
             sharedConnection = null;
             connectionPromise = null;
-            throw err;
+            return null;
           });
       } else {
         if (sharedConnection.state === signalR.HubConnectionState.Connected) {
@@ -1333,7 +1427,10 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       }
     };
 
-    void initConnection();
+    // Connection setup can be cancelled by React cleanup while SignalR is still
+    // negotiating. Consume that expected rejection so it never becomes a Next.js
+    // unhandled-rejection overlay; connection state is already reset above.
+    void initConnection().catch(() => undefined);
 
     return () => {
       activeHooksCount--;
@@ -1398,6 +1495,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       listeners.NotificationsCleared.delete(onNotificationsCleared);
       listeners.ExamGraded.delete(onExamGraded);
       listeners.StaffDataChanged.delete(onStaffDataChanged);
+      listeners.AdminAiEvent.delete(onAdminAiEvent);
 
       if (activeHooksCount <= 0 && sharedConnection) {
         const conn = sharedConnection;

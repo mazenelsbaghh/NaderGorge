@@ -1,0 +1,1134 @@
+openapi: 3.1.0
+info:
+  title: Massar Admin AI Agent API
+  version: 1.0.0
+  description: >
+    Planning contract for the private built-in-Admin-only AI workspace.
+    Every route requires a current PostgreSQL-backed Admin access and ownership
+    check. This contract does not authorize implementation.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: AdminAI Conversations
+  - name: AdminAI Turns
+  - name: AdminAI Proposals
+  - name: AdminAI Governance
+
+paths:
+  /admin/ai-agent/conversations:
+    get:
+      tags: [AdminAI Conversations]
+      operationId: listAdminAIConversations
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ConversationStatus'
+      responses:
+        '200':
+          description: Owner-only conversation page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationPageResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    post:
+      tags: [AdminAI Conversations]
+      operationId: createAdminAIConversation
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title:
+                  type: [string, 'null']
+                  maxLength: 160
+              required: [title]
+      responses:
+        '201':
+          description: Conversation created for the current Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /admin/ai-agent/conversations/{conversationId}:
+    get:
+      tags: [AdminAI Conversations]
+      operationId: getAdminAIConversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Owner-only conversation metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [AdminAI Conversations]
+      operationId: renameAdminAIConversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 160 }
+                expectedVersion: { type: integer, format: int64, minimum: 1 }
+              required: [title, expectedVersion]
+      responses:
+        '200':
+          description: Renamed conversation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/ai-agent/conversations/{conversationId}/archive:
+    post:
+      tags: [AdminAI Conversations]
+      operationId: archiveAdminAIConversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedVersionRequest'
+      responses:
+        '200':
+          description: Conversation archived; pending non-executing work is cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/ai-agent/conversations/{conversationId}/restore:
+    post:
+      tags: [AdminAI Conversations]
+      operationId: restoreAdminAIConversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedVersionRequest'
+      responses:
+        '200':
+          description: Conversation restored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/ai-agent/conversations/{conversationId}/snapshot:
+    get:
+      tags: [AdminAI Conversations]
+      operationId: getAdminAIConversationSnapshot
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - name: beforeSequence
+          in: query
+          schema: { type: integer, format: int64, minimum: 1 }
+          description: Load older messages strictly before this sequence.
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Authoritative owner-only snapshot used at open/reconnect/gap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/ai-agent/conversations/{conversationId}/turns:
+    post:
+      tags: [AdminAI Turns]
+      operationId: createAdminAITurn
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                message: { type: string, minLength: 1, maxLength: 8000 }
+                expectedConversationVersion: { type: integer, format: int64, minimum: 1 }
+              required: [message, expectedConversationVersion]
+      responses:
+        '202':
+          description: Durable turn admitted and queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+
+  /admin/ai-agent/conversations/{conversationId}/turns/{turnId}/cancel:
+    post:
+      tags: [AdminAI Turns]
+      operationId: cancelAdminAITurn
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/TurnId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expectedVersion: { type: integer, format: int64, minimum: 1 }
+              required: [expectedVersion]
+      responses:
+        '200':
+          description: Current authoritative cancellation outcome.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/ai-agent/proposals/{proposalId}:
+    get:
+      tags: [AdminAI Proposals]
+      operationId: getAdminAIProposal
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+      responses:
+        '200':
+          description: Owner-only proposal; strong phrase is returned only to its owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProposalResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/ai-agent/proposals/{proposalId}/confirm:
+    post:
+      tags: [AdminAI Proposals]
+      operationId: confirmAdminAIProposal
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expectedVersion: { type: integer, format: int64, minimum: 1 }
+                typedPhrase:
+                  type: [string, 'null']
+                  maxLength: 200
+                  description: Required only for TypedStrong; compared server-side.
+              required: [expectedVersion, typedPhrase]
+      responses:
+        '200':
+          description: Existing compatible terminal result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+        '202':
+          description: Confirmation accepted and authoritative execution started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /admin/ai-agent/proposals/{proposalId}/cancel:
+    post:
+      tags: [AdminAI Proposals]
+      operationId: cancelAdminAIProposal
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedVersionRequest'
+      responses:
+        '200':
+          description: Current authoritative proposal state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProposalResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/ai-agent/proposals/{proposalId}/secure-input-grants:
+    post:
+      tags: [AdminAI Proposals]
+      operationId: issueAdminAISecureInputGrant
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                inputKind:
+                  $ref: '#/components/schemas/SecureInputKind'
+                expectedProposalVersion: { type: integer, format: int64, minimum: 1 }
+              required: [inputKind, expectedProposalVersion]
+      responses:
+        '201':
+          description: Short-lived owner/proposal-bound grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureInputGrantResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /admin/ai-agent/secure-input-grants/{grantId}/submit:
+    post:
+      tags: [AdminAI Proposals]
+      operationId: submitAdminAISecureInput
+      description: >
+        Sensitive route. Request body logging, tracing capture, model context,
+        transcript persistence, browser caching, and realtime payload inclusion
+        are forbidden. File bytes use the existing private upload path and this
+        endpoint receives only its private object token.
+      x-admin-ai-never-log-body: true
+      parameters:
+        - name: grantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecureInputSubmission'
+      responses:
+        '200':
+          description: Secure value accepted and protected; raw value is never returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureInputGrantResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '410': { $ref: '#/components/responses/Gone' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /admin/ai-agent/capability-baseline:
+    get:
+      tags: [AdminAI Governance]
+      operationId: getAdminAICapabilityBaseline
+      responses:
+        '200':
+          description: Safe active baseline summary; no executable secrets or schemas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselineResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+
+  /admin/ai-agent/action-evidence:
+    get:
+      tags: [AdminAI Governance]
+      operationId: listAdminAIActionEvidence
+      description: >
+        Redacted action evidence available under existing Admin audit authority.
+        This does not return private conversation messages.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+        - name: capabilityKey
+          in: query
+          schema: { type: string, maxLength: 160 }
+        - name: actorAdminUserId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Redacted evidence page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePageResponse'
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TurnId:
+      name: turnId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProposalId:
+      name: proposalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 100 }
+      description: Stable for retries of one intent; different payload reuse conflicts.
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: [string, 'null'], maxLength: 300 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+
+  responses:
+    Unauthorized:
+      description: Authentication required or expired.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Current live Admin access or ownership check failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found within the caller's owner scope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Version, state, concurrency, or idempotency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unprocessable:
+      description: Closed validation, stale proposal, phrase, or capability rejection.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Distributed workload limit reached.
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unavailable:
+      description: Feature, baseline, queue, provider, or dependency unavailable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Gone:
+      description: Secure grant expired, consumed, or purged.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    ApiError:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum:
+            - ADMIN_AI_DISABLED
+            - ADMIN_AI_BASELINE_UNAVAILABLE
+            - UNAUTHORIZED
+            - ADMIN_REQUIRED
+            - ACCESS_REVOKED
+            - CONVERSATION_NOT_FOUND
+            - TRANSCRIPT_FORBIDDEN
+            - CONVERSATION_ARCHIVED
+            - VERSION_CONFLICT
+            - ACTIVE_TURN_EXISTS
+            - ACTIVE_TURN_LIMIT
+            - TURN_NOT_CANCELLABLE
+            - TURN_CANCELLED
+            - CAPABILITY_NOT_ALLOWED
+            - CAPABILITY_BASELINE_CHANGED
+            - REQUEST_AMBIGUOUS
+            - RESULT_LIMIT_EXCEEDED
+            - PROHIBITED_DATA_REQUEST
+            - PROPOSAL_NOT_CONFIRMABLE
+            - PROPOSAL_EXPIRED
+            - PROPOSAL_STALE
+            - PROPOSAL_INVALIDATED
+            - STRONG_CONFIRMATION_REQUIRED
+            - CONFIRMATION_PHRASE_MISMATCH
+            - CONFIRMATION_CHALLENGE_LOCKED
+            - SECURE_INPUT_REQUIRED
+            - SECURE_INPUT_EXPIRED
+            - IDEMPOTENCY_PAYLOAD_CONFLICT
+            - EXECUTION_ALREADY_STARTED
+            - EXECUTION_RECOVERY_REQUIRED
+            - RATE_LIMITED
+            - AI_PROVIDER_TIMEOUT
+            - AI_PROVIDER_FAILURE
+            - AI_INVALID_DECISION
+            - QUEUE_UNAVAILABLE
+            - DEPENDENCY_FAILURE
+            - UNKNOWN_SAFE_FAILURE
+        messageAr: { type: string, maxLength: 500 }
+        retryAfterSeconds: { type: [integer, 'null'], minimum: 1 }
+        traceId: { type: string, maxLength: 64 }
+        currentVersion: { type: [integer, 'null'], format: int64 }
+      required: [code, messageAr, retryAfterSeconds, traceId, currentVersion]
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: false }
+        error: { $ref: '#/components/schemas/ApiError' }
+      required: [success, error]
+
+    ConversationStatus:
+      type: string
+      enum: [Active, Archived]
+
+    Conversation:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 160 }
+        status: { $ref: '#/components/schemas/ConversationStatus' }
+        lastSequence: { type: integer, format: int64, minimum: 0 }
+        lastActivityAt: { type: string, format: date-time }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+      required: [id, title, status, lastSequence, lastActivityAt, archivedAt, version]
+
+    ConversationResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/Conversation' }
+      required: [success, data]
+
+    ConversationPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/Conversation' }
+        nextCursor: { type: [string, 'null'], maxLength: 300 }
+      required: [items, nextCursor]
+
+    ConversationPageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/ConversationPage' }
+      required: [success, data]
+
+    ExpectedVersionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedVersion: { type: integer, format: int64, minimum: 1 }
+      required: [expectedVersion]
+
+    MessageRole:
+      type: string
+      enum: [Admin, Assistant, Status]
+
+    Message:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        sequence: { type: integer, format: int64, minimum: 1 }
+        role: { $ref: '#/components/schemas/MessageRole' }
+        content: { type: string, maxLength: 16000 }
+        answer:
+          oneOf:
+            - $ref: '#/components/schemas/GroundedAnswer'
+            - type: 'null'
+        turnId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+      required: [id, sequence, role, content, answer, turnId, createdAt]
+
+    TurnStatus:
+      type: string
+      enum:
+        - Queued
+        - Planning
+        - Retrieving
+        - Answering
+        - WaitingClarification
+        - ProposalReady
+        - Completed
+        - CancelRequested
+        - Cancelled
+        - Failed
+        - AccessRevoked
+
+    Turn:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/TurnStatus' }
+        safeProgressLabelAr: { type: string, maxLength: 200 }
+        failureCode: { type: [string, 'null'], maxLength: 100 }
+        queuedAt: { type: string, format: date-time }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        canCancel: { type: boolean }
+        canRetry: { type: boolean }
+        version: { type: integer, format: int64, minimum: 1 }
+      required:
+        - id
+        - conversationId
+        - status
+        - safeProgressLabelAr
+        - failureCode
+        - queuedAt
+        - startedAt
+        - completedAt
+        - canCancel
+        - canRetry
+        - version
+
+    TurnResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/Turn' }
+      required: [success, data]
+
+    Evidence:
+      type: object
+      additionalProperties: false
+      properties:
+        capabilityKey: { type: string, maxLength: 160 }
+        capabilityVersion: { type: string, maxLength: 64 }
+        scope:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
+        filters:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 200 }
+        resultCount: { type: integer, minimum: 0 }
+        isComplete: { type: boolean }
+        isTruncated: { type: boolean }
+        dataAsOf: { type: string, format: date-time }
+        drillDown:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/DrillDownReference' }
+      required:
+        - capabilityKey
+        - capabilityVersion
+        - scope
+        - filters
+        - resultCount
+        - isComplete
+        - isTruncated
+        - dataAsOf
+        - drillDown
+
+    DrillDownReference:
+      type: object
+      additionalProperties: false
+      properties:
+        labelAr: { type: string, maxLength: 160 }
+        routeKey: { type: string, maxLength: 100 }
+        routeParams:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+      required: [labelAr, routeKey, routeParams]
+
+    GroundedAnswer:
+      type: object
+      additionalProperties: false
+      properties:
+        facts: { type: array, maxItems: 50, items: { type: string, maxLength: 1000 } }
+        calculations: { type: array, maxItems: 30, items: { type: string, maxLength: 1000 } }
+        inferences: { type: array, maxItems: 20, items: { type: string, maxLength: 1000 } }
+        limitations: { type: array, maxItems: 20, items: { type: string, maxLength: 1000 } }
+        suggestions: { type: array, maxItems: 20, items: { type: string, maxLength: 1000 } }
+        evidence: { type: array, maxItems: 6, items: { $ref: '#/components/schemas/Evidence' } }
+      required: [facts, calculations, inferences, limitations, suggestions, evidence]
+
+    RiskCategory:
+      type: string
+      enum:
+        - Ordinary
+        - Destructive
+        - Financial
+        - Permission
+        - Security
+        - AccountDisable
+        - Credential
+        - Bulk
+        - ExternalSideEffect
+
+    ConfirmationType:
+      type: string
+      enum: [Explicit, TypedStrong]
+
+    ProposalStatus:
+      type: string
+      enum:
+        - PendingSecureInput
+        - PendingConfirmation
+        - Confirming
+        - Executing
+        - Succeeded
+        - PartiallySucceeded
+        - Cancelled
+        - Expired
+        - Invalidated
+        - Rejected
+        - Failed
+        - RecoveryRequired
+
+    SafeFieldChange:
+      type: object
+      additionalProperties: false
+      properties:
+        labelAr: { type: string, maxLength: 160 }
+        currentValue: {}
+        requestedValue: {}
+        displayKind:
+          type: string
+          enum: [Text, Number, Date, Money, Boolean, Status, Count, Reference]
+      required: [labelAr, currentValue, requestedValue, displayKind]
+
+    BulkSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        selectionRuleAr: { type: string, maxLength: 1000 }
+        candidateCount: { type: integer, minimum: 0 }
+        excludedCount: { type: integer, minimum: 0 }
+        representativeItems:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
+        semantics:
+          type: string
+          enum: [Atomic, Partial]
+        partialFailureBehaviorAr: { type: string, maxLength: 1000 }
+      required:
+        - selectionRuleAr
+        - candidateCount
+        - excludedCount
+        - representativeItems
+        - semantics
+        - partialFailureBehaviorAr
+
+    Proposal:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        turnId: { type: string, format: uuid }
+        capabilityKey: { type: string, maxLength: 160 }
+        capabilityLabelAr: { type: string, maxLength: 200 }
+        targetLabelAr: { type: string, maxLength: 300 }
+        targetDrillDown:
+          oneOf:
+            - $ref: '#/components/schemas/DrillDownReference'
+            - type: 'null'
+        changes:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/SafeFieldChange' }
+        effectSummaryAr: { type: string, maxLength: 2000 }
+        consequenceAr: { type: [string, 'null'], maxLength: 2000 }
+        primaryRisk: { $ref: '#/components/schemas/RiskCategory' }
+        riskFlags:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/RiskCategory' }
+        confirmationType: { $ref: '#/components/schemas/ConfirmationType' }
+        strongConfirmationPhrase:
+          type: [string, 'null']
+          maxLength: 200
+          description: Owner-visible server phrase; null for Explicit.
+        validationSummary:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 500 }
+        bulk:
+          oneOf:
+            - $ref: '#/components/schemas/BulkSummary'
+            - type: 'null'
+        requiresSecureInput: { type: boolean }
+        secureInputKind:
+          oneOf:
+            - $ref: '#/components/schemas/SecureInputKind'
+            - type: 'null'
+        status: { $ref: '#/components/schemas/ProposalStatus' }
+        expiresAt: { type: string, format: date-time }
+        execution:
+          oneOf:
+            - $ref: '#/components/schemas/Execution'
+            - type: 'null'
+        version: { type: integer, format: int64, minimum: 1 }
+      required:
+        - id
+        - conversationId
+        - turnId
+        - capabilityKey
+        - capabilityLabelAr
+        - targetLabelAr
+        - targetDrillDown
+        - changes
+        - effectSummaryAr
+        - consequenceAr
+        - primaryRisk
+        - riskFlags
+        - confirmationType
+        - strongConfirmationPhrase
+        - validationSummary
+        - bulk
+        - requiresSecureInput
+        - secureInputKind
+        - status
+        - expiresAt
+        - execution
+        - version
+
+    ProposalResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/Proposal' }
+      required: [success, data]
+
+    ExecutionStatus:
+      type: string
+      enum: [Claimed, Executing, Succeeded, PartiallySucceeded, Rejected, Failed, RecoveryRequired]
+
+    ExecutionItem:
+      type: object
+      additionalProperties: false
+      properties:
+        safeReference: { type: string, maxLength: 200 }
+        status:
+          type: string
+          enum: [Succeeded, Skipped, ValidationFailed, AuthorizationFailed, Stale, DependencyFailed, SystemFailed]
+        safeMessageAr: { type: string, maxLength: 500 }
+      required: [safeReference, status, safeMessageAr]
+
+    Execution:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        proposalId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ExecutionStatus' }
+        safeSummaryAr: { type: string, maxLength: 2000 }
+        affectedCount: { type: [integer, 'null'], minimum: 0 }
+        succeededCount: { type: [integer, 'null'], minimum: 0 }
+        skippedCount: { type: [integer, 'null'], minimum: 0 }
+        failedCount: { type: [integer, 'null'], minimum: 0 }
+        items:
+          type: array
+          maxItems: 500
+          items: { $ref: '#/components/schemas/ExecutionItem' }
+        refreshScopes:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 100 }
+        failureCode: { type: [string, 'null'], maxLength: 100 }
+        traceId: { type: string, maxLength: 64 }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+      required:
+        - id
+        - proposalId
+        - status
+        - safeSummaryAr
+        - affectedCount
+        - succeededCount
+        - skippedCount
+        - failedCount
+        - items
+        - refreshScopes
+        - failureCode
+        - traceId
+        - startedAt
+        - completedAt
+
+    ExecutionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/Execution' }
+      required: [success, data]
+
+    SecureInputKind:
+      type: string
+      enum: [Password, PrivateFile, ProtectedToken, VerificationAnswer]
+
+    SecureInputSubmission:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          properties:
+            kind: { const: Password }
+            value: { type: string, minLength: 8, maxLength: 512, writeOnly: true }
+          required: [kind, value]
+        - type: object
+          additionalProperties: false
+          properties:
+            kind: { const: ProtectedToken }
+            value: { type: string, minLength: 1, maxLength: 4096, writeOnly: true }
+          required: [kind, value]
+        - type: object
+          additionalProperties: false
+          properties:
+            kind: { const: VerificationAnswer }
+            value: { type: string, minLength: 1, maxLength: 1000, writeOnly: true }
+          required: [kind, value]
+        - type: object
+          additionalProperties: false
+          properties:
+            kind: { const: PrivateFile }
+            privateObjectToken: { type: string, minLength: 16, maxLength: 500, writeOnly: true }
+          required: [kind, privateObjectToken]
+
+    SecureInputGrant:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        proposalId: { type: string, format: uuid }
+        inputKind: { $ref: '#/components/schemas/SecureInputKind' }
+        status:
+          type: string
+          enum: [Issued, Submitted, Consumed, Cancelled, Expired, Purged]
+        safeMetadata:
+          type: object
+          additionalProperties: false
+          properties:
+            fileName: { type: [string, 'null'], maxLength: 255 }
+            mimeType: { type: [string, 'null'], maxLength: 100 }
+            sizeBytes: { type: [integer, 'null'], minimum: 0 }
+          required: [fileName, mimeType, sizeBytes]
+        expiresAt: { type: string, format: date-time }
+      required: [id, proposalId, inputKind, status, safeMetadata, expiresAt]
+
+    SecureInputGrantResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/SecureInputGrant' }
+      required: [success, data]
+
+    Snapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        conversation: { $ref: '#/components/schemas/Conversation' }
+        messages:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/Message' }
+        activeTurns:
+          type: array
+          maxItems: 1
+          items: { $ref: '#/components/schemas/Turn' }
+        proposals:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/Proposal' }
+        nextBeforeSequence: { type: [integer, 'null'], format: int64 }
+        latestSequence: { type: integer, format: int64, minimum: 0 }
+        baselineVersion: { type: string, maxLength: 64 }
+        sensitivePolicyVersion: { type: string, maxLength: 64 }
+        serverTime: { type: string, format: date-time }
+      required:
+        - conversation
+        - messages
+        - activeTurns
+        - proposals
+        - nextBeforeSequence
+        - latestSequence
+        - baselineVersion
+        - sensitivePolicyVersion
+        - serverTime
+
+    SnapshotResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/Snapshot' }
+      required: [success, data]
+
+    BaselineSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        version: { type: string, maxLength: 64 }
+        manifestHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        sourceRevision: { type: string, maxLength: 100 }
+        readCount: { type: integer, minimum: 0 }
+        actionCount: { type: integer, minimum: 0 }
+        exclusionCount: { type: integer, minimum: 0 }
+        activatedAt: { type: string, format: date-time }
+      required: [version, manifestHash, sourceRevision, readCount, actionCount, exclusionCount, activatedAt]
+
+    BaselineResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/BaselineSummary' }
+      required: [success, data]
+
+    AuditEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        eventId: { type: string, format: uuid }
+        eventType: { type: string, maxLength: 100 }
+        actorAdminUserId: { type: [string, 'null'], format: uuid }
+        capabilityKey: { type: [string, 'null'], maxLength: 160 }
+        safeTargetReference: { type: [string, 'null'], maxLength: 200 }
+        risk:
+          oneOf:
+            - $ref: '#/components/schemas/RiskCategory'
+            - type: 'null'
+        confirmationStatus: { type: [string, 'null'], maxLength: 100 }
+        resultStatus: { type: [string, 'null'], maxLength: 100 }
+        safeSummaryAr: { type: string, maxLength: 2000 }
+        traceId: { type: string, maxLength: 64 }
+        occurredAt: { type: string, format: date-time }
+      required:
+        - eventId
+        - eventType
+        - actorAdminUserId
+        - capabilityKey
+        - safeTargetReference
+        - risk
+        - confirmationStatus
+        - resultStatus
+        - safeSummaryAr
+        - traceId
+        - occurredAt
+
+    EvidencePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/AuditEvidence' }
+        nextCursor: { type: [string, 'null'], maxLength: 300 }
+      required: [items, nextCursor]
+
+    EvidencePageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success: { const: true }
+        data: { $ref: '#/components/schemas/EvidencePage' }
+      required: [success, data]

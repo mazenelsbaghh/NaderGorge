@@ -20,10 +20,12 @@ public record ApproveCommunityPostCommand(Guid PostId, Guid ReviewerUserId)
 public class ApproveCommunityPostCommandHandler : IRequestHandler<ApproveCommunityPostCommand, ApiResponse<ModerateCommunityPostResponse>>
 {
     private readonly IAppDbContext _context;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public ApproveCommunityPostCommandHandler(IAppDbContext context)
+    public ApproveCommunityPostCommandHandler(IAppDbContext context, IAcademicScopeService? academicScope = null)
     {
         _context = context;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<ModerateCommunityPostResponse>> Handle(ApproveCommunityPostCommand request, CancellationToken cancellationToken)
@@ -36,6 +38,20 @@ public class ApproveCommunityPostCommandHandler : IRequestHandler<ApproveCommuni
 
         if (post.Status != CommunityPostStatus.Pending)
             return ApiResponse<ModerateCommunityPostResponse>.Fail("Post is already resolved", new List<string> { "ALREADY_RESOLVED" });
+
+        if (_academicScope != null && !post.TeacherId.HasValue)
+        {
+            var scopeResult = await _academicScope.ValidateTargetHasScopeAsync(
+                StudentFacingScopeOwnerType.CommunityPost,
+                post.Id,
+                cancellationToken);
+            if (!scopeResult.IsEligible)
+            {
+                return ApiResponse<ModerateCommunityPostResponse>.Fail(
+                    scopeResult.Message ?? "منشور المجتمع يجب أن يكون مربوطا بنطاق أكاديمي صالح قبل النشر.",
+                    new List<string> { scopeResult.ErrorCode ?? "ACADEMIC_SCOPE_TARGET_UNSCOPED" });
+            }
+        }
 
         post.Status = CommunityPostStatus.Approved;
         post.ReviewedAt = DateTime.UtcNow;

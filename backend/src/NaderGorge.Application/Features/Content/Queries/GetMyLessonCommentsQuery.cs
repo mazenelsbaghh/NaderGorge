@@ -34,6 +34,7 @@ public class GetMyLessonCommentsQueryHandler : IRequestHandler<GetMyLessonCommen
             .Include(c => c.AuthorUser)
             .Where(c => c.LessonId == request.LessonId &&
                         c.AuthorUserId == request.UserId &&
+                        c.ParentCommentId == null &&
                         c.Status != LessonCommentStatus.Rejected)
             .OrderByDescending(c => c.CreatedAt)
             .Select(c => new LessonCommentDto(
@@ -44,7 +45,9 @@ public class GetMyLessonCommentsQueryHandler : IRequestHandler<GetMyLessonCommen
                 c.Status.ToString(),
                 c.CreatedAt,
                 true,
-                c.AuthorUser.StudentProfile != null ? c.AuthorUser.StudentProfile.AvatarSlug : null
+                c.AuthorUser.StudentProfile != null ? c.AuthorUser.StudentProfile.AvatarSlug : null,
+                c.ParentCommentId,
+                c.Replies.Count(r => r.Status == LessonCommentStatus.Approved)
             ))
             .ToListAsync(ct);
 

@@ -2,54 +2,101 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
+import type { ReactNode } from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  BookCheck, 
-  FileQuestion, 
-  GraduationCap, 
-  LayoutList, 
-  Timer, 
-  Plus, 
-  BarChart3, 
-  Trash2, 
-  Edit, 
-  User as UserIcon, 
-  Save, 
-  X,
+import {
+  BookCheck,
+  FileQuestion,
+  GraduationCap,
+  LayoutList,
+  Timer,
+  Plus,
+  BarChart3,
+  Trash2,
+  Edit,
+  User as UserIcon,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  ArrowRight
 } from 'lucide-react';
-import { 
-  AdminShellChrome, 
-  AdminStatCard, 
-  AdminPageSkeleton, 
-  AdminBackButton 
+import {
+  AdminPage,
+  AdminStatCard,
+  AdminPageSkeleton,
+  AdminBackButton,
+  ContentInternalCode,
 } from '@/components/admin';
-import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
+import type { AdminShellRoute } from '@/components/admin/AdminShellChrome';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
+import { ExamAttemptReviewButton } from '@/components/admin/ExamAttemptReviewButton';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 
-export default function ExamProfilePageClient({ id }: { id: string }) {
+export default function ExamProfilePageClient({
+  id,
+  activePath = '/admin/content',
+  sectionLabel = 'إدارة المحتوى ▸ بروفايل الامتحان',
+  surface = 'admin',
+}: {
+  id: string;
+  activePath?: AdminShellRoute;
+  sectionLabel?: string;
+  surface?: 'admin' | 'teacher';
+}) {
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Tabs: 'questions' | 'attempts'
   const [activeTab, setActiveTab] = useState<'questions' | 'attempts'>('questions');
-  
+
   // Search query for student attempts
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Editing state
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [editingQuestionData, setEditingQuestionData] = useState<InlineExamQuestionDto | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const editorPath = `${assessmentContentPath(pathname, surface)}/exams/${id}/add-question`;
+  const handleAddQuestionClick = () => router.push(editorPath);
+  const isTeacherSurface = surface === 'teacher';
+  const backAction = isTeacherSurface ? (
+    <button type="button" onClick={() => window.history.back()} className="admin-btn-ghost inline-flex items-center gap-2">
+      <ArrowRight className="h-4 w-4" />
+      رجوع
+    </button>
+  ) : (
+    <AdminBackButton />
+  );
 
-  // Adding question state
-  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [addingQuestionData, setAddingQuestionData] = useState<InlineExamQuestionDto | null>(null);
-  const [savingAdd, setSavingAdd] = useState(false);
+  const renderChrome = (children: ReactNode, pageTitle: string, subtitle: string, action?: ReactNode) => {
+    if (isTeacherSurface) {
+      return (
+        <TeacherShellChrome
+          activePath="/teacher/packages"
+          sectionLabel="المحتوى الدراسي ▸ بروفايل الامتحان"
+          pageTitle={pageTitle}
+          subtitle={subtitle}
+          action={action}
+        >
+          {children}
+        </TeacherShellChrome>
+      );
+    }
+
+    return (
+      <AdminPage
+        activePath={activePath}
+        sectionLabel={sectionLabel}
+        pageTitle={pageTitle}
+        subtitle={subtitle}
+        action={action}
+      >
+        {children}
+      </AdminPage>
+    );
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -80,203 +127,32 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
     if (!data?.attempts) return [];
     if (!searchQuery.trim()) return data.attempts;
     const q = searchQuery.toLowerCase().trim();
-    return data.attempts.filter(a => 
-      a.studentName?.toLowerCase().includes(q) || 
+    return data.attempts.filter(a =>
+      a.studentName?.toLowerCase().includes(q) ||
       a.studentPhone?.toLowerCase().includes(q)
     );
   }, [data?.attempts, searchQuery]);
 
-  // Map backend DTO to QuestionEditor DTO
-  const mapDtoToQuestion = (q: any, order: number): InlineExamQuestionDto => ({
-    text: q.text,
-    type: q.type === 'MCQ' || q.type === 'Essay' || q.type === 'FindTheMistake' ? q.type : 'MCQ',
-    points: q.points,
-    order: order,
-    options: q.options ? q.options.map((o: any) => ({ text: o.text, isCorrect: o.isCorrect })) : [],
-    audioUrl: q.audioUrl || '',
-    imageUrl: q.imageUrl || '',
-    writtenCorrection: q.writtenCorrection || '',
-    hintText: q.hintText || '',
-    baseText: q.baseText || '',
-    mistakeStartIndex: q.mistakeStartIndex,
-    mistakeEndIndex: q.mistakeEndIndex
-  });
-
-  const handleEditClick = (q: any, idx: number) => {
-    setEditingQuestionId(q.examQuestionId);
-    setEditingQuestionData(mapDtoToQuestion(q, idx + 1));
-  };
-
-  const handleEditCancel = () => {
-    setEditingQuestionId(null);
-    setEditingQuestionData(null);
-  };
-
-  const handleEditSave = async (questionBankItemId: string) => {
-    if (!editingQuestionData || !editingQuestionId) return;
-
-    if (editingQuestionData.type !== 'FindTheMistake' && !editingQuestionData.text.trim()) {
-      toast.error('يرجى كتابة نص السؤال');
-      return;
-    }
-
-    try {
-      setSavingEdit(true);
-
-      let finalAudioUrl = editingQuestionData.audioUrl;
-      // 1. Upload audio if new audio file is selected
-      if (editingQuestionData.audioFile) {
-        toast.loading('جاري رفع الملف الصوتي للسؤال...', { id: 'audio-upload' });
-        try {
-          const uploadedUrl = await adminService.uploadQuestionAudio(questionBankItemId, editingQuestionData.audioFile);
-          finalAudioUrl = uploadedUrl;
-          toast.success('تم رفع الملف الصوتي بنجاح', { id: 'audio-upload' });
-        } catch {
-          toast.error('فشل رفع الملف الصوتي، سيتم المتابعة بدون تحديث الصوت', { id: 'audio-upload' });
-        }
-      }
-
-      // 2. Map payload
-      const payload = {
-        text: editingQuestionData.text,
-        points: editingQuestionData.points,
-        audioUrl: finalAudioUrl,
-        imageUrl: editingQuestionData.imageUrl,
-        writtenCorrection: editingQuestionData.writtenCorrection,
-        hintText: editingQuestionData.hintText,
-        baseText: editingQuestionData.baseText,
-        mistakeStartIndex: editingQuestionData.mistakeStartIndex,
-        mistakeEndIndex: editingQuestionData.mistakeEndIndex,
-        options: editingQuestionData.options
-      };
-
-      await adminService.updateExamQuestion(id, editingQuestionId, payload);
-      toast.success('تم حفظ تعديلات السؤال بنجاح');
-      
-      setEditingQuestionId(null);
-      setEditingQuestionData(null);
-      
-      // Refresh dashboard
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق حفظ تعديلات السؤال');
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
-  const handleDeleteQuestion = async (examQuestionId: string) => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا السؤال نهائياً من الامتحان؟')) return;
-
-    try {
-      await adminService.deleteExamQuestion(id, examQuestionId);
-      toast.success('تم حذف السؤال بنجاح');
-      // Refresh dashboard
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق حذف السؤال');
-    }
-  };
-
-  const handleAddQuestionClick = () => {
-    const nextOrder = (data?.questionCount || 0) + 1;
-    setAddingQuestionData({
-      text: '',
-      type: 'MCQ',
-      points: 1,
-      order: nextOrder,
-      options: [
-        { text: '', isCorrect: true },
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false },
-      ],
-    });
-    setIsAddingQuestion(true);
-  };
-
-  const handleAddQuestionCancel = () => {
-    setIsAddingQuestion(false);
-    setAddingQuestionData(null);
-  };
-
-  const handleAddQuestionSave = async () => {
-    if (!addingQuestionData) return;
-
-    if (addingQuestionData.type !== 'FindTheMistake' && !addingQuestionData.text.trim()) {
-      toast.error('يرجى كتابة نص السؤال');
-      return;
-    }
-
-    try {
-      setSavingAdd(true);
-      
-      // We will first add the question to get an ID if we wanted to upload audio, 
-      // but since adding expects questions payload, we add questions first.
-      // If we want audio, we upload it after or just use a standard flow.
-      // For addQuestionsToExam, we can send the clean question first:
-      const cleanQuestion = { ...addingQuestionData };
-      delete cleanQuestion.audioFile;
-
-      // Call addQuestionsToExam
-      await adminService.addQuestionsToExam(id, { questions: [cleanQuestion] });
-      toast.success('تمت إضافة السؤال بنجاح');
-      
-      setIsAddingQuestion(false);
-      setAddingQuestionData(null);
-
-      // Refresh dashboard to display the new question
-      const refreshed = await adminService.getExamDashboard(id);
-      setData(refreshed || null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'أخفق إضافة السؤال الجديد');
-    } finally {
-      setSavingAdd(false);
-    }
-  };
-
   if (loading) {
-    return (
-      <AdminShellChrome
-        activePath="/admin/content"
-        sectionLabel="إدارة المحتوى"
-        pageTitle="بروفايل الامتحان التفصيلي"
-        subtitle="جاري تحميل البيانات..."
-      >
-        <AdminPageSkeleton />
-      </AdminShellChrome>
-    );
+    return renderChrome(<AdminPageSkeleton />, 'بروفايل الامتحان التفصيلي', 'جاري تحميل البيانات...');
   }
 
   if (!data) {
-    return (
-      <AdminShellChrome
-        activePath="/admin/content"
-        sectionLabel="إدارة المحتوى"
-        pageTitle="الامتحان غير موجود"
-        subtitle="أخفق العثور على الامتحان المطلوب"
-        action={<AdminBackButton />}
-      >
+    return renderChrome(
         <div className="rounded-3xl border border-red-200 bg-red-50 p-8 shadow-sm text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
           <p className="text-red-700 font-bold">لم يتم العثور على تفاصيل الامتحان أو ليس لديك الصلاحيات اللازمة للوصول إليه.</p>
-        </div>
-      </AdminShellChrome>
+        </div>,
+        'الامتحان غير موجود',
+        'أخفق العثور على الامتحان المطلوب',
+        backAction,
     );
   }
 
-  return (
-    <AdminShellChrome
-      activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ بروفايل الامتحان"
-      pageTitle={data.title}
-      subtitle={data.description || 'استعراض تحليلات الامتحان، إحصائيات الأسئلة، ومحاولات الطلاب بالكامل.'}
-      action={<AdminBackButton />}
-    >
+  const content = (
       <div className="space-y-8">
-        
+        <ContentInternalCode code={data.internalCode} label="كود الامتحان الداخلي" />
+
         {/* Statistics Cards */}
         <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <AdminStatCard variant="light" icon={FileQuestion} label="عدد الأسئلة" value={data.questionCount} />
@@ -291,7 +167,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
         <div className="flex border-b border-[var(--admin-border)] gap-2">
           <button
             onClick={() => setActiveTab('questions')}
-            className={`pb-3 px-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 font-bold text-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] border-b-2 flex items-center gap-2 ${
               activeTab === 'questions'
                 ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
                 : 'border-transparent text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -302,7 +178,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
           </button>
           <button
             onClick={() => setActiveTab('attempts')}
-            className={`pb-3 px-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${
+            className={`pb-3 px-4 font-bold text-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] border-b-2 flex items-center gap-2 ${
               activeTab === 'attempts'
                 ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
                 : 'border-transparent text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
@@ -320,7 +196,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
               <h3 className="text-lg font-bold text-[var(--admin-text)]">
                 الأسئلة المرفقة وإحصائيات الطلاب عليها
               </h3>
-              {!isAddingQuestion && (
+              {(
                 <NeumorphButton
                   type="button"
                   onClick={handleAddQuestionClick}
@@ -328,109 +204,22 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                   size="md"
                   pill
                 >
-                  <Plus className="w-4 h-4 ml-2" /> إضافة سؤال جديد
+                  <Plus className="w-4 h-4 ml-2" /> تعديل الإعدادات والأسئلة
                 </NeumorphButton>
               )}
             </div>
-
-            {/* Inline Adding Question Form */}
-            {isAddingQuestion && addingQuestionData && (
-              <div className="rounded-2xl border border-[var(--admin-primary)] bg-[var(--admin-card)] shadow-md overflow-hidden animate-in slide-in-from-top-4 duration-300">
-                <div className="bg-[var(--admin-primary)]/10 px-6 py-4 border-b border-[var(--admin-primary)]/20 flex justify-between items-center">
-                  <span className="font-bold text-[var(--admin-primary)]">إضافة سؤال جديد للامتحان</span>
-                  <button onClick={handleAddQuestionCancel} className="text-[var(--admin-muted)] hover:text-red-500">
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="p-6">
-                  <QuestionEditor
-                    question={addingQuestionData}
-                    index={data.questionCount}
-                    onChange={(_, q) => setAddingQuestionData(q)}
-                    onRemove={handleAddQuestionCancel}
-                  />
-                  <div className="flex justify-end gap-3 mt-6">
-                    <NeumorphButton
-                      type="button"
-                      onClick={handleAddQuestionCancel}
-                      intent="ghost"
-                      size="md"
-                      pill
-                    >
-                      إلغاء
-                    </NeumorphButton>
-                    <NeumorphButton
-                      type="button"
-                      onClick={handleAddQuestionSave}
-                      disabled={savingAdd}
-                      loading={savingAdd}
-                      intent="primary"
-                      size="md"
-                      pill
-                    >
-                      <Save className="w-4 h-4 ml-2" /> حفظ وإضافة السؤال
-                    </NeumorphButton>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Questions List */}
             <div className="space-y-4">
               {data.questions && data.questions.length > 0 ? (
                 data.questions.map((q, idx) => {
-                  const isEditing = editingQuestionId === q.examQuestionId;
-
-                  if (isEditing && editingQuestionData) {
-                    return (
-                      <div key={q.examQuestionId} className="rounded-2xl border border-amber-500 bg-[var(--admin-card)] shadow-md overflow-hidden animate-in zoom-in-95">
-                        <div className="bg-amber-500/10 px-6 py-4 border-b border-amber-500/20 flex justify-between items-center">
-                          <span className="font-bold text-amber-600 dark:text-amber-400">تعديل السؤال رقم {idx + 1}</span>
-                          <button onClick={handleEditCancel} className="text-[var(--admin-muted)] hover:text-red-500">
-                            <X size={20} />
-                          </button>
-                        </div>
-                        <div className="p-6">
-                          <QuestionEditor
-                            question={editingQuestionData}
-                            index={idx}
-                            onChange={(_, updated) => setEditingQuestionData(updated)}
-                            onRemove={handleEditCancel}
-                          />
-                          <div className="flex justify-end gap-3 mt-6">
-                            <NeumorphButton
-                              type="button"
-                              onClick={handleEditCancel}
-                              intent="ghost"
-                              size="md"
-                              pill
-                            >
-                              إلغاء
-                            </NeumorphButton>
-                            <NeumorphButton
-                              type="button"
-                              onClick={() => handleEditSave(q.questionBankItemId)}
-                              disabled={savingEdit}
-                              loading={savingEdit}
-                              intent="primary"
-                              size="md"
-                              pill
-                            >
-                              <Save className="w-4 h-4 ml-2" /> حفظ التعديلات
-                            </NeumorphButton>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
                   return (
-                    <div 
-                      key={q.examQuestionId} 
-                      className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                    <div
+                      key={q.examQuestionId}
+                      className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                     >
                       <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
-                        
+
                         {/* Question Details */}
                         <div className="flex gap-4 flex-1">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--admin-card-strong)] text-sm font-bold text-[var(--admin-text)] shadow-sm">
@@ -448,9 +237,9 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                                 />
                               </div>
                             )}
-                            
+
                             {q.baseText && (
-                              <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3 bg-[var(--admin-background)] py-1 rounded">
+                              <p className="mt-2 rounded-lg bg-[var(--admin-card-soft)] px-3 py-2 text-sm italic text-[var(--admin-muted)]">
                                 {q.baseText}
                               </p>
                             )}
@@ -459,11 +248,11 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                             {q.type === 'MCQ' && q.options && q.options.length > 0 && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 pl-4">
                                 {q.options.map((opt: any) => (
-                                  <div 
-                                    key={opt.id} 
+                                  <div
+                                    key={opt.id}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${
-                                      opt.isCorrect 
-                                        ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400' 
+                                      opt.isCorrect
+                                        ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
                                         : 'bg-[var(--admin-background)] border-[var(--admin-border)] text-[var(--admin-muted)]'
                                     }`}
                                   >
@@ -524,12 +313,12 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                                   <span className="font-bold text-green-600 dark:text-green-400">{q.correctPercentage}%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-[var(--admin-bg)] rounded-full overflow-hidden border border-[var(--admin-border)]">
-                                  <div 
-                                    className="h-full bg-green-500 rounded-full" 
+                                  <div
+                                    className="h-full bg-green-500 rounded-full"
                                     style={{ width: `${q.correctPercentage}%` }}
                                   />
                                 </div>
-                                <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
+                                <div className="grid grid-cols-3 gap-1 text-sm font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
                                   <div>
                                     <div className="font-bold text-green-600 dark:text-green-400">{q.correctCount}</div>
                                     <div>صح</div>
@@ -547,7 +336,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                             ) : (
                               <div className="space-y-2">
                                 <p className="text-xs font-bold text-[var(--admin-muted)]">لا توجد إحصائيات</p>
-                                <p className="text-[10px] leading-relaxed text-[var(--admin-muted)] opacity-70">
+                                <p className="text-sm leading-relaxed text-[var(--admin-muted)] opacity-70">
                                   لم يقم أي طالب بإرسال إجابة على هذا السؤال بعد.
                                 </p>
                               </div>
@@ -557,14 +346,14 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                           {/* Action Buttons */}
                           <div className="flex justify-end gap-2 border-t border-[var(--admin-border)]/30 pt-3">
                             <button
-                              onClick={() => handleEditClick(q, idx)}
+                              onClick={() => router.push(`${editorPath}?question=${encodeURIComponent(q.examQuestionId)}`)}
                               className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20"
                             >
                               <Edit size={14} />
                               تعديل
                             </button>
                             <button
-                              onClick={() => handleDeleteQuestion(q.examQuestionId)}
+                              onClick={() => router.push(`${editorPath}?question=${encodeURIComponent(q.examQuestionId)}`)}
                               className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20"
                             >
                               <Trash2 size={14} />
@@ -599,7 +388,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
         {/* Attempts Tab */}
         {activeTab === 'attempts' && (
           <div className="space-y-6">
-            
+
             {/* Search Box */}
             <div className="flex items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-2.5 w-full max-w-md shadow-sm">
               <UserIcon className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
@@ -626,11 +415,12 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                         <th className="p-4 text-center">التقييم</th>
                         <th className="p-4 text-center">انتهى الوقت</th>
                         <th className="p-4">تاريخ المحاولة</th>
+                        <th className="p-4">الإجابات</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--admin-border)]">
                       {filteredAttempts.map((attempt, index) => (
-                        <tr 
+                        <tr
                           key={`${attempt.studentId}-${index}`}
                           className="text-sm text-[var(--admin-text)] hover:bg-[var(--admin-background)]/50 transition-colors"
                         >
@@ -661,8 +451,9 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                             )}
                           </td>
                           <td className="p-4 text-xs text-[var(--admin-muted)] font-medium">
-                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG') : '—'}
+                            {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }) : '—'}
                           </td>
+                          <td className="p-4"><ExamAttemptReviewButton examId={id} attemptId={attempt.attemptId} studentName={attempt.studentName} onChanged={loadData} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -677,6 +468,12 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
           </div>
         )}
       </div>
-    </AdminShellChrome>
+  );
+
+  return renderChrome(
+    content,
+    data.title,
+    data.description || 'استعراض تحليلات الامتحان، إحصائيات الأسئلة، ومحاولات الطلاب بالكامل.',
+    backAction,
   );
 }

@@ -20,13 +20,25 @@ services:
   redis:
     image: redis:7.2.4-alpine
     container_name: massar_redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-localdevredispassword_32_chars_minimum_change_before_prod}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - "${REDIS_PASSWORD:-localdevredispassword_32_chars_minimum_change_before_prod}"
+      - --maxmemory
+      - "${REDIS_MAXMEMORY:-256mb}"
+      - --maxmemory-policy
+      - "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}"
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
       - massar_redisdata:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 5

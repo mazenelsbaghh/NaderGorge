@@ -39,29 +39,35 @@ public class PlatformHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
+        try
         {
-            Context.Abort();
-            return;
-        }
-
-        // Join personal user group
-        await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");
-
-        // Join role group
-        var role = GetUserRole();
-        if (!string.IsNullOrEmpty(role))
-        {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"Role_{role}");
-
-            if (StaffRoles.Contains(role))
+            var userId = GetUserId();
+            if (userId == Guid.Empty)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "Role_Staff");
+                Context.Abort();
+                return;
             }
-        }
 
-        await base.OnConnectedAsync();
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}", Context.ConnectionAborted);
+
+            var role = GetUserRole();
+            if (!string.IsNullOrEmpty(role))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"Role_{role}", Context.ConnectionAborted);
+
+                if (StaffRoles.Contains(role))
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, "Role_Staff", Context.ConnectionAborted);
+                }
+            }
+
+            await base.OnConnectedAsync();
+        }
+        catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
+        {
+            // The browser disconnected while the handshake was completing.
+            // This is a normal lifecycle event, not a hub failure.
+        }
     }
 
     public async Task JoinPackage(string packageIdString)

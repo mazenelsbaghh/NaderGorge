@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Content;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Content.Queries;
@@ -31,15 +32,15 @@ public class GetPackageStatsQueryHandler : IRequestHandler<GetPackageStatsQuery,
         if (!packageExists)
             return ApiResponse<PackageStatsDto>.Fail("Package not found");
 
-        // Enrolled students: distinct users with active Package-level access grants
-        var enrolledStudentsCount = await _db.StudentAccessGrants
-            .Where(sag => sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId == request.PackageId && sag.IsActive)
-            .Select(sag => sag.UserId)
-            .Distinct()
-            .CountAsync(ct);
+        var acquisitionFacts = await new ContentGrantFactSource(_db).LoadAsync(
+            new ContentGrantFactScope([request.PackageId]),
+            ct);
+        var enrolledStudentsCount = ContentAcquisitionCalculator
+            .SummarizePackages([request.PackageId], acquisitionFacts)[request.PackageId]
+            .Overall.Total;
 
         var termsCount = await _db.Terms
-            .CountAsync(t => t.PackageId == request.PackageId, ct);
+            .CountAsync(t => t.PackageId == request.PackageId && !t.IsSystemContainer, ct);
 
         // Collect term IDs for downstream queries
         var termIds = await _db.Terms
@@ -48,18 +49,25 @@ public class GetPackageStatsQueryHandler : IRequestHandler<GetPackageStatsQuery,
             .ToListAsync(ct);
 
         var sectionsCount = await _db.ContentSections
-            .CountAsync(cs => termIds.Contains(cs.TermId), ct);
+            .CountAsync(cs => termIds.Contains(cs.TermId) && !cs.IsSystemContainer, ct);
 
-        var sectionIds = await _db.ContentSections
-            .Where(cs => termIds.Contains(cs.TermId))
-            .Select(cs => cs.Id)
+        var rootTermIds = await _db.Terms
+            .Where(term => term.PackageId == request.PackageId && term.IsSystemContainer)
+            .Select(term => term.Id)
+            .ToListAsync(ct);
+
+        var allPackageSectionIds = await _db.ContentSections
+            .Where(section =>
+                (termIds.Contains(section.TermId) && !section.IsSystemContainer) ||
+                rootTermIds.Contains(section.TermId))
+            .Select(section => section.Id)
             .ToListAsync(ct);
 
         var lessonsCount = await _db.Lessons
-            .CountAsync(l => sectionIds.Contains(l.ContentSectionId), ct);
+            .CountAsync(l => allPackageSectionIds.Contains(l.ContentSectionId), ct);
 
         var lessonIds = await _db.Lessons
-            .Where(l => sectionIds.Contains(l.ContentSectionId))
+            .Where(l => allPackageSectionIds.Contains(l.ContentSectionId))
             .Select(l => l.Id)
             .ToListAsync(ct);
 
@@ -68,7 +76,7 @@ public class GetPackageStatsQueryHandler : IRequestHandler<GetPackageStatsQuery,
 
         // Count exams linked to lessons (via ExamId on Lesson)
         var examsCount = await _db.Lessons
-            .CountAsync(l => sectionIds.Contains(l.ContentSectionId) && l.ExamId != null, ct);
+            .CountAsync(l => allPackageSectionIds.Contains(l.ContentSectionId) && l.ExamId != null, ct);
 
         // Watch stats: sum across all videos in this package's lessons
         var videoIds = await _db.LessonVideos

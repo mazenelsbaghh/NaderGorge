@@ -33,7 +33,7 @@ class StorageService(context: Context) {
 
     fun saveLinkedStudents(students: List<LinkedStudent>) {
         val json = gson.toJson(students)
-        sharedPreferences.edit().putString(studentsKey, json).apply()
+        sharedPreferences.edit().putString(studentsKey, json).commit()
     }
 
     fun addLinkedStudent(student: LinkedStudent) {
@@ -42,9 +42,7 @@ class StorageService(context: Context) {
         current.removeAll { it.studentId == student.studentId }
         current.add(student)
         saveLinkedStudents(current)
-        if (getActiveStudentId() == null) {
-            setActiveStudentId(student.studentId)
-        }
+        setActiveStudentId(student.studentId)
     }
 
     fun removeLinkedStudent(studentId: String) {
@@ -62,14 +60,22 @@ class StorageService(context: Context) {
 
     fun setActiveStudentId(studentId: String?) {
         if (studentId == null) {
-            sharedPreferences.edit().remove(activeStudentIdKey).apply()
+            sharedPreferences.edit().remove(activeStudentIdKey).commit()
         } else {
-            sharedPreferences.edit().putString(activeStudentIdKey, studentId).apply()
+            sharedPreferences.edit().putString(activeStudentIdKey, studentId).commit()
         }
     }
 
     fun getActiveStudent(): LinkedStudent? {
-        val activeId = getActiveStudentId() ?: return null
-        return getLinkedStudents().firstOrNull { it.studentId == activeId }
+        val students = getLinkedStudents()
+        if (students.isEmpty()) return null
+
+        val activeId = getActiveStudentId()
+        val active = students.firstOrNull { it.studentId == activeId }
+        if (active != null) return active
+
+        val fallback = students.first()
+        setActiveStudentId(fallback.studentId)
+        return fallback
     }
 }

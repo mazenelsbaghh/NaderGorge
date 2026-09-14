@@ -2,29 +2,36 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers, Eye, EyeOff } from 'lucide-react';
+import { Archive, Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers } from 'lucide-react';
 import {
-  AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
+  AdminPage, AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary, ContentImageUpload,
-  ContentSubscribersTab
+  ContentSubscribersTab, PackageDirectContentPanel, ContentArchiveControl
 } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
-import { contentService, TermDto } from '@/services/content-service';
+import { contentService, getContentRootLabel, TermDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-type ActiveTab = 'overview' | 'terms' | 'subscribers' | 'codeProfile';
+type ActiveTab = 'overview' | 'terms' | 'direct' | 'subscribers' | 'codeProfile';
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'terms', label: 'الأترام', icon: Calendar },
+  { key: 'direct', label: 'المحتوى المباشر', icon: Layers },
   { key: 'subscribers', label: 'الطلاب المشتركين', icon: Users },
   { key: 'codeProfile', label: 'صفحة الأكواد', icon: KeyRound },
 ];
+
+function getPackageTabs(contentMode: string): AdminTab<ActiveTab>[] {
+  return contentMode === 'TermWithSections'
+    ? TABS
+    : TABS.filter((tab) => tab.key !== 'terms');
+}
 
 function formatWatchTime(seconds?: number): string {
   if (!seconds || seconds <= 0) return '0 دقيقة';
@@ -38,7 +45,7 @@ function formatWatchTime(seconds?: number): string {
 export default function PackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('terms');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [pkg, setPkg] = useState<any>(null);
   const [pkgLoading, setPkgLoading] = useState(true);
   const [codeProfileSummary, setCodeProfileSummary] = useState<PackageCodeProfileSummary | null>(null);
@@ -51,7 +58,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   // Stats state
   const [stats, setStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [togglingActive, setTogglingActive] = useState(false);
+  const packageContentMode = pkg?.contentMode;
 
   const loadPkg = useCallback(async () => {
     try {
@@ -91,46 +98,32 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   }, [params.id]);
 
   useEffect(() => { void loadPkg(); }, [loadPkg]);
-  useEffect(() => { void loadTerms(); }, [loadTerms]);
-  useEffect(() => { void loadStats(); }, [loadStats]);
-
-  const handleToggleActive = async () => {
-    if (!pkg || togglingActive) return;
-    setTogglingActive(true);
-    try {
-      await adminService.updatePackage(pkg.id, {
-        name: pkg.name,
-        description: pkg.description,
-        price: pkg.price,
-        isActive: !pkg.isActive,
-      });
-      setPkg((prev: any) => ({ ...prev, isActive: !prev.isActive }));
-      toast.success(pkg.isActive ? 'تم إخفاء الباقة عن الطلاب' : 'تم إظهار الباقة للطلاب');
-    } catch {
-      toast.error('تعذر تغيير حالة الباقة');
-    } finally {
-      setTogglingActive(false);
+  useEffect(() => {
+    if (pkgLoading) return;
+    if (packageContentMode === 'TermWithSections' || packageContentMode == null) {
+      void loadTerms();
     }
-  };
+  }, [loadTerms, packageContentMode, pkgLoading]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   if (pkgLoading) {
     return (
-      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <AdminPage activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
   if (!pkg) {
     return (
-      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
+      <AdminPage activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الباقة المطلوبة.</p>
           <NeumorphButton onClick={() => router.push('/admin/content')} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة للباقات
           </NeumorphButton>
         </div>
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
@@ -141,14 +134,29 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     price: t.price,
     imageUrl: t.imageUrl,
     href: `/admin/content/terms/${t.id}`,
+    archiveMode: t.archiveMode,
+    archivedAt: t.archivedAt,
+    archiveTargetType: 'Term',
   }));
+  const contentMode = packageContentMode ?? 'TermWithSections';
+  const contentRootLabel = getContentRootLabel(contentMode);
+  const packageTabs = getPackageTabs(contentMode);
+  const directSections = pkg.directSections ?? [];
+  const directLessons = pkg.directLessons ?? [];
+  const hierarchyStat = contentMode === 'TermWithSections'
+    ? { icon: Calendar, label: 'عدد الأترام', value: terms.length }
+    : contentMode === 'SectionWithLessons'
+      ? { icon: Layers, label: 'عدد الأقسام', value: directSections.length }
+      : { icon: BookOpenText, label: 'عدد الحصص', value: directLessons.length };
 
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
   if (stats) {
     overviewStats.push(
-      { label: 'الطلاب المشتركين', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
-      { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' },
+      { label: 'طلاب اقتنوا محتوى داخل الباقة (تاريخي)', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
+      contentMode === 'TermWithSections'
+        ? { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' }
+        : { label: 'الحصص', value: directLessons.length, icon: BookOpenText, tone: 'muted' },
       { label: 'الأقسام', value: stats.sectionsCount ?? 0, icon: Layers, tone: 'muted' },
       { label: 'الحصص', value: stats.lessonsCount ?? 0, icon: BookOpenText, tone: 'muted' },
       { label: 'الفيديوهات', value: stats.videosCount ?? 0, icon: Video, tone: 'success' },
@@ -158,16 +166,19 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ الباقات"
+      sectionLabel={`إدارة المحتوى ▸ ${contentRootLabel}`}
       pageTitle={pkg.name}
-      subtitle={pkg.description || 'إدارة محتويات وإعدادات الباقة'}
+      subtitle={pkg.description || `إدارة محتوى وإعدادات ${contentRootLabel}`}
       action={
-        <NeumorphButton onClick={() => router.push('/admin/content')} intent="ghost" size="md" pill>
-          <ChevronRight className="h-4 w-4" />
-          الباقات
-        </NeumorphButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <ContentArchiveControl targetType="Package" targetId={pkg.id} title={pkg.name} archiveMode={pkg.archiveMode} onChanged={loadPkg} />
+          <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
+            <ChevronRight className="h-4 w-4" />
+            الرجوع خطوة
+          </NeumorphButton>
+        </div>
       }
     >
       {/* Always visible package image upload at the top */}
@@ -176,37 +187,30 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           entityId={pkg.id}
           contentType="package"
           imageUrl={pkg.imageUrl}
-          label="صورة الباقة"
+          label={`صورة ${contentRootLabel}`}
           onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
         />
       </div>
 
       {/* Stats */}
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <button
-          type="button"
-          onClick={handleToggleActive}
-          disabled={togglingActive}
-          className={`rounded-2xl border p-4 text-center transition-all hover:brightness-95 active:scale-[0.98] cursor-pointer ${
-            pkg.isActive !== false
-              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30'
-              : 'border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30'
-          } ${togglingActive ? 'opacity-50' : ''}`}
-        >
+        <div className={`rounded-2xl border p-4 text-center ${pkg.archiveMode === 'HiddenFromEveryone' ? 'border-red-300 bg-red-50 dark:border-red-800/40 dark:bg-red-950/30' : pkg.archiveMode === 'ActiveSubscribersOnly' ? 'border-amber-300 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30'}`}>
           <div className="flex items-center justify-center gap-2">
-            {pkg.isActive !== false
-              ? <Eye className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              : <EyeOff className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            }
-            <span className={`text-lg font-black ${pkg.isActive !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-              {pkg.isActive !== false ? 'نشطة' : 'مخفية'}
+            <Archive className="h-5 w-5 text-[var(--admin-primary)]" />
+            <span className="text-lg font-black text-[var(--admin-text)]">
+              {pkg.archiveMode === 'HiddenFromEveryone' ? 'مخفية عن الجميع' : pkg.archiveMode === 'ActiveSubscribersOnly' ? 'للمشتركين الحاليين' : 'محتوى حالي'}
             </span>
           </div>
           <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
-            {pkg.isActive !== false ? 'ظاهرة للطلاب — اضغط للإخفاء' : 'مخفية عن الطلاب — اضغط للإظهار'}
+            غيّر حالة الأرشفة من زر الأرشفة أعلى الصفحة.
           </p>
-        </button>
-        <AdminStatCard variant="light"  icon={Calendar}      label="عدد الأترام"  value={terms.length} />
+        </div>
+        <AdminStatCard
+          variant="light"
+          icon={hierarchyStat.icon}
+          label={hierarchyStat.label}
+          value={hierarchyStat.value}
+        />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard
           variant="light"
@@ -223,7 +227,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
 
       {/* Tabs */}
       <div className="mb-8">
-        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+        <AdminTabBar tabs={packageTabs} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {/* Terms tab — uses shared ContentHierarchyPanel */}
@@ -246,6 +250,11 @@ export default function PackageProfilePageClient(props: { params: { id: string }
               toast.success('تمت إضافة الترم.');
               await loadTerms();
             }}
+            onUpdate={async (id, { title, order, price }) => {
+              await adminService.updateTerm(id, { title, order, price });
+              toast.success('تم تحديث الترم.');
+              await loadTerms();
+            }}
             onImageUpload={async (id, file) => {
               await adminService.uploadContentImage('term', id, file);
               await loadTerms();
@@ -257,6 +266,28 @@ export default function PackageProfilePageClient(props: { params: { id: string }
             }}
             deleteConfirmText={(item) => `سيتم حذف الترم "${item.title}" وجميع أقسامه ودروسه وفيديوهاته بشكل دائم.`}
             onRetry={loadTerms}
+            onArchiveChanged={loadTerms}
+          />
+        </div>
+      )}
+
+      {activeTab === 'direct' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى {contentRootLabel}</h3>
+            <p className="mt-2 text-sm text-[var(--admin-muted)]">
+              أضف الأقسام أو الحصص مباشرة حسب نوع الكورس المختار عند إنشائه.
+            </p>
+          </div>
+          <PackageDirectContentPanel
+            packageId={params.id}
+            mode={contentMode}
+            rootTermId={pkg.rootTermId}
+            rootSectionId={pkg.rootSectionId}
+            sections={pkg.directSections}
+            lessons={pkg.directLessons}
+            basePath="/admin/content"
+            onChanged={loadPkg}
           />
         </div>
       )}
@@ -264,7 +295,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <EntityOverviewDashboard 
-            entityType="باقة" 
+            entityType={contentRootLabel}
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }}
             stats={overviewStats}
             loading={statsLoading}
@@ -274,10 +305,12 @@ export default function PackageProfilePageClient(props: { params: { id: string }
               <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
                 <h3 className="mb-5 text-lg font-black text-[var(--admin-text)]">ملخص هيكل المحتوى</h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
-                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.termsCount ?? terms.length}</p>
-                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">ترم</p>
-                  </div>
+                  {contentMode === 'TermWithSections' && (
+                    <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                      <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.termsCount ?? terms.length}</p>
+                      <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">ترم</p>
+                    </div>
+                  )}
                   <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
                     <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.sectionsCount ?? 0}</p>
                     <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">قسم</p>
@@ -292,13 +325,15 @@ export default function PackageProfilePageClient(props: { params: { id: string }
                   </div>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setActiveTab('terms')}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    إدارة الأترام
-                  </button>
+                  {contentMode === 'TermWithSections' && (
+                    <button
+                      onClick={() => setActiveTab('terms')}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      إدارة الأترام
+                    </button>
+                  )}
                   <button
                     onClick={() => setActiveTab('codeProfile')}
                     className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
@@ -311,8 +346,8 @@ export default function PackageProfilePageClient(props: { params: { id: string }
             )}
           </EntityOverviewDashboard>
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
-            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
-            <PackageDetailsForm pkg={pkg} />
+            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات {contentRootLabel} الأساسية</h3>
+            <PackageDetailsForm pkg={pkg} onSuccess={loadPkg} />
           </div>
         </div>
       )}
@@ -336,6 +371,6 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           />
         </div>
       )}
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

@@ -21,51 +21,60 @@ public class SetWatchCountCommandHandler : IRequestHandler<SetWatchCountCommand,
         if (request.NewWatchCount < 0)
             return ApiResponse.Fail("Watch count cannot be negative.");
 
+        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
+        if (video == null) return ApiResponse.Fail("Video not found.");
+
         var watchEvent = await _db.VideoWatchEvents
             .FirstOrDefaultAsync(e => e.LessonVideoId == request.LessonVideoId && e.UserId == request.StudentId, ct);
 
         if (watchEvent == null)
-            return ApiResponse.Fail("No watch record found for this student/video combination.");
+        {
+            watchEvent = new VideoWatchEvent
+            {
+                Id = Guid.NewGuid(),
+                UserId = request.StudentId,
+                LessonVideoId = request.LessonVideoId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            _db.VideoWatchEvents.Add(watchEvent);
+        }
 
         var oldCount = watchEvent.WatchCount;
         watchEvent.WatchCount = request.NewWatchCount;
 
-        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
-        if (video != null)
+        int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
+        if (maxLimit > 0)
         {
-            int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
-            if (maxLimit > 0)
-            {
-                watchEvent.IsLocked = request.NewWatchCount >= maxLimit;
-            }
+            watchEvent.IsLocked = request.NewWatchCount >= maxLimit;
+        }
 
-            if (!watchEvent.IsLocked)
-            {
-                // Automatically approve any pending extra watch request for this video/student since they are now unlocked
-                var pendingRequests = await _db.ExtraWatchRequests
-                    .Where(r => r.UserId == request.StudentId && r.LessonVideoId == request.LessonVideoId && r.Status == NaderGorge.Domain.Enums.RequestStatus.Pending)
-                    .ToListAsync(ct);
+        if (!watchEvent.IsLocked)
+        {
+            // Automatically approve any pending extra watch request for this video/student since they are now unlocked
+            var pendingRequests = await _db.ExtraWatchRequests
+                .Where(r => r.UserId == request.StudentId && r.LessonVideoId == request.LessonVideoId && r.Status == NaderGorge.Domain.Enums.RequestStatus.Pending)
+                .ToListAsync(ct);
 
-                foreach (var req in pendingRequests)
+            foreach (var req in pendingRequests)
+            {
+                req.Status = NaderGorge.Domain.Enums.RequestStatus.Approved;
+                req.ResolvedAt = DateTime.UtcNow;
+                req.RejectionReason = "تم فتح الفيديو يدويًا عن طريق تعديل عدد المشاهدات";
+
+                var outboxEvent = new OutboxEvent
                 {
-                    req.Status = NaderGorge.Domain.Enums.RequestStatus.Approved;
-                    req.ResolvedAt = DateTime.UtcNow;
-                    req.RejectionReason = "تم فتح الفيديو يدويًا عن طريق تعديل عدد المشاهدات";
-
-                    var outboxEvent = new OutboxEvent
+                    Type = "ExtraWatchRequestUpdated",
+                    TargetUserId = req.UserId.ToString(),
+                    PayloadJson = JsonSerializer.Serialize(new
                     {
-                        Type = "ExtraWatchRequestUpdated",
-                        TargetUserId = req.UserId.ToString(),
-                        PayloadJson = JsonSerializer.Serialize(new
-                        {
-                            lessonId = video.LessonId,
-                            videoId = req.LessonVideoId,
-                            status = "Approved",
-                            allowedWatchCount = maxLimit
-                        })
-                    };
-                    _db.OutboxEvents.Add(outboxEvent);
-                }
+                        lessonId = video.LessonId,
+                        videoId = req.LessonVideoId,
+                        status = "Approved",
+                        allowedWatchCount = maxLimit
+                    })
+                };
+                _db.OutboxEvents.Add(outboxEvent);
             }
         }
 

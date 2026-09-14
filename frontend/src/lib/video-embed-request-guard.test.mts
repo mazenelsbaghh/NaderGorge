@@ -1,0 +1,184 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { validateVideoEmbedNavigation, validateVideoMediaRequest } from './video-embed-request-guard.ts';
+
+function requestHeaders(values: Record<string, string>) {
+  const normalized = new Map(
+    Object.entries(values).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  return {
+    get(name: string) {
+      return normalized.get(name.toLowerCase()) ?? null;
+    },
+  } as Pick<Headers, 'get'>;
+}
+
+test('video embed accepts a same-origin iframe navigation', () => {
+  const result = validateVideoEmbedNavigation(
+    'https://app.massar-academy.net/api/video/embed?s=session-id',
+    requestHeaders({
+      referer: 'https://app.massar-academy.net/student/packages/1/lessons/2',
+      'sec-fetch-dest': 'iframe',
+      'sec-fetch-site': 'same-origin',
+    }),
+  );
+
+  assert.equal(result, null);
+});
+
+test('2026-09-02 Safari same-site metadata accepts the exact application origin', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://app.massar-academy.net/student/packages/1/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'app.massar-academy.net',
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    null,
+  );
+});
+
+test('forwarded headers cannot authorize an unapproved host', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://evil.example/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'evil.example',
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    'unauthorized-origin',
+  );
+});
+
+test('staff, admin and teacher video previews accept their exact forwarded application origin', () => {
+  for (const surface of ['admin', 'teacher', 'staff']) {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: `https://${surface}.massar-academy.net/lessons/2`,
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': `${surface}.massar-academy.net`,
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    null,
+  );
+  }
+});
+
+test('same-site metadata cannot authorize an unapproved Massar sibling surface', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'http://frontend:3000/api/video/embed?s=session-id',
+      requestHeaders({
+        referer: 'https://assets.massar-academy.net/lessons/2',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'assets.massar-academy.net',
+        'x-forwarded-proto': 'https',
+      }),
+    ),
+    'unauthorized-origin',
+  );
+});
+
+test('video embed rejects a copied top-level URL even with a same-origin referrer', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'https://app.massar-academy.net/api/video/embed?s=x',
+      requestHeaders({
+        referer: 'https://app.massar-academy.net/student/lesson',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-site': 'same-origin',
+      }),
+    ),
+    'missing-context',
+  );
+});
+
+test('embedded browsers may omit referrer or fetch metadata before route authorization', () => {
+  const incompleteHeaders = [
+    requestHeaders({}),
+    requestHeaders({ 'sec-fetch-dest': 'iframe', 'sec-fetch-site': 'same-origin' }),
+    requestHeaders({
+      referer: 'https://app.massar-academy.net/student/lesson',
+      'sec-fetch-dest': 'iframe',
+    }),
+  ];
+
+  for (const headers of incompleteHeaders) {
+    assert.equal(
+      validateVideoEmbedNavigation('https://app.massar-academy.net/api/video/embed?s=x', headers),
+      null,
+    );
+  }
+});
+
+test('video embed uses exact hosts and rejects lookalike or malformed referrers', () => {
+  for (const referer of [
+    'https://app.massar-academy.net.evil.example/lesson',
+    'https://evil.example/?next=app.massar-academy.net',
+    'http://app.massar-academy.net/student/lesson',
+    'not-a-url',
+  ]) {
+    assert.equal(
+      validateVideoEmbedNavigation(
+        'https://app.massar-academy.net/api/video/embed?s=x',
+        requestHeaders({
+          referer,
+          'sec-fetch-dest': 'iframe',
+          'sec-fetch-site': 'same-origin',
+        }),
+      ),
+      'unauthorized-origin',
+    );
+  }
+});
+
+test('video embed rejects cross-site fetch metadata even with a forged same-host referrer', () => {
+  assert.equal(
+    validateVideoEmbedNavigation(
+      'https://app.massar-academy.net/api/video/embed?s=x',
+      requestHeaders({
+        referer: 'https://app.massar-academy.net/student/lesson',
+        'sec-fetch-dest': 'iframe',
+        'sec-fetch-site': 'cross-site',
+      }),
+    ),
+    'unauthorized-origin',
+  );
+});
+
+test('staff preview media accepts only the matching forwarded origin', () => {
+  for (const referer of [
+    'https://staff.massar-academy.net/api/video/embed?s=session-id',
+    'https://admin.massar-academy.net/api/video/embed?s=session-id',
+    'https://staff.massar-academy.net.evil.example/api/video/embed',
+  ]) {
+    assert.equal(validateVideoMediaRequest(
+      'http://frontend:3000/api/video/bunny-hls/segment',
+      requestHeaders({
+        referer,
+        'sec-fetch-site': 'same-site',
+        'x-forwarded-host': 'staff.massar-academy.net',
+        'x-forwarded-proto': 'https',
+      }),
+    ), referer.startsWith('https://staff.massar-academy.net/') ? null : 'unauthorized-origin');
+  }
+});
+
+test('an explicit foreign Origin is rejected even without Fetch Metadata or Referer', () => {
+  assert.equal(validateVideoMediaRequest('https://app.massar-academy.net/api/video/session',
+    requestHeaders({ origin: 'https://foreign.example' })), 'unauthorized-origin');
+});

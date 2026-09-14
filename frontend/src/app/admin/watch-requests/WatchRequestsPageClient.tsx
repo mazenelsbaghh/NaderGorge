@@ -3,10 +3,11 @@
 import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { adminService, type AdminWatchRequestDto } from '@/services/admin-service';
-import { Check, X, Clock, AlertCircle } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, BookOpen, GraduationCap, History, MessageSquareText, Timer } from 'lucide-react';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import { 
-  AdminShellChrome, 
+  AdminPage,
   AdminDataTable, 
   AdminColumn,
   AdminPageSkeleton,
@@ -31,13 +32,40 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
   const [editStatus, setEditStatus] = useState<1 | 2>(1);
   const [addedViews, setAddedViews] = useState<number>(1);
 
+  const formatDuration = (seconds?: number | null) => {
+    if (!seconds || seconds < 0) return 'غير متاحة';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return hours > 0
+      ? `${hours} س ${minutes} د ${remainingSeconds} ث`
+      : `${minutes} د ${remainingSeconds} ث`;
+  };
+
+  const RequestDetails = ({ request }: { request: AdminWatchRequestDto }) => (
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+      <h3 className="mb-3 text-sm font-black text-[var(--admin-text)]">تفاصيل الطلب</h3>
+      <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+        <div className="rounded-xl bg-[var(--admin-card)] p-3 sm:col-span-2"><span className="text-[var(--admin-muted)]">سبب طلب الطالب</span><p className="mt-1 whitespace-pre-wrap font-bold leading-relaxed text-[var(--admin-text)]">{request.studentReason || 'لم يُسجل سبب'}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">الفيديو</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.videoTitle}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="inline-flex items-center gap-1 text-[var(--admin-muted)]"><Timer className="h-3.5 w-3.5" />مدة الفيديو</span><p className="mt-1 font-bold text-[var(--admin-text)]">{formatDuration(request.videoDurationSeconds)}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">المدرس</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.teacherName || 'غير محدد'}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">الكورس / الباقة</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.packageName || 'غير محددة'}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">الترم</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.termTitle || 'غير محدد'}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">الحصة</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.lessonTitle || 'غير محددة'}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="text-[var(--admin-muted)]">العدد الأساسي للمشاهدات</span><p className="mt-1 font-bold text-[var(--admin-text)]">{request.baseWatchCount === 0 ? 'غير محدود' : request.baseWatchCount}</p></div>
+        <div className="rounded-xl bg-[var(--admin-card)] p-3"><span className="inline-flex items-center gap-1 text-[var(--admin-muted)]"><History className="h-3.5 w-3.5" />هل طلب سابقاً؟</span><p className={`mt-1 font-bold ${request.hasPreviousRequest ? 'text-amber-600' : 'text-emerald-600'}`}>{request.hasPreviousRequest ? 'نعم، له طلب سابق لهذا الفيديو' : 'لا، هذا أول طلب'}</p></div>
+      </div>
+    </section>
+  );
+
   useEffect(() => {
     fetchRequests();
   }, []);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError('');
       const response = await adminService.getWatchRequests();
       setRequests(response.data || []);
@@ -45,9 +73,31 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
       devConsole.error(err);
       setError('فشل في تحميل الطلبات.');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
+
+  usePlatformEvents({
+    onExtraWatchRequestCreated: () => {
+      void fetchRequests(false);
+    },
+    onExtraWatchRequestUpdated: (payload) => {
+      if (!payload.requestId) {
+        void fetchRequests(false);
+        return;
+      }
+      setRequests((current) => current.map((request) => request.id === payload.requestId
+        ? {
+            ...request,
+            status: payload.status === 'Approved' ? 1 : 2,
+            reason: payload.reason ?? request.reason,
+            resolvedAt: new Date().toISOString(),
+            maxWatchCount: payload.status === 'Approved' ? payload.allowedWatchCount : request.maxWatchCount,
+            reachedLimit: payload.status === 'Approved' ? false : request.reachedLimit,
+          }
+        : request));
+    },
+  });
 
   const handleApproveClick = (req: AdminWatchRequestDto) => {
     setSelectedRequest(req);
@@ -55,6 +105,23 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
     setAddedViews(1);
     setValidationError('');
     setActiveModal('approve');
+  };
+
+  const updateRequestImmediately = (requestId: string, status: 1 | 2, reason: string, viewIncrease = 0) => {
+    setRequests((current) => current.map((request) => {
+      if (request.id !== requestId) return request;
+      const nextMax = status === 1 && request.maxWatchCount > 0
+        ? request.maxWatchCount + viewIncrease
+        : request.maxWatchCount;
+      return {
+        ...request,
+        status,
+        reason,
+        resolvedAt: new Date().toISOString(),
+        maxWatchCount: nextMax,
+        reachedLimit: status === 1 ? false : request.reachedLimit,
+      };
+    }));
   };
 
   const handleRejectClick = (req: AdminWatchRequestDto) => {
@@ -81,7 +148,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
     setActiveModal(null);
     try {
       await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim(), addedViews);
-      await fetchRequests();
+      updateRequestImmediately(selectedRequest.id, 1, reasonText.trim() || 'تمت الموافقة بواسطة الإدارة', addedViews);
       toast.success('تم قبول طلب المشاهدة الإضافية.');
     } catch (err) {
       devConsole.error(err);
@@ -107,7 +174,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
     setActiveModal(null);
     try {
       await adminService.rejectWatchRequest(selectedRequest.id, reasonText.trim());
-      await fetchRequests();
+      updateRequestImmediately(selectedRequest.id, 2, reasonText.trim());
       toast.success('تم رفض طلب المشاهدة الإضافية.');
     } catch (err) {
       devConsole.error(err);
@@ -133,12 +200,13 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
     try {
       if (editStatus === 1) {
         await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim(), addedViews);
+        updateRequestImmediately(selectedRequest.id, 1, reasonText.trim() || 'تمت الموافقة بواسطة الإدارة', addedViews);
         toast.success('تم تعديل القرار إلى مقبول وزيادة المشاهدات.');
       } else {
         await adminService.rejectWatchRequest(selectedRequest.id, reasonText.trim());
+        updateRequestImmediately(selectedRequest.id, 2, reasonText.trim());
         toast.success('تم تعديل القرار إلى مرفوض.');
       }
-      await fetchRequests();
     } catch (err) {
       devConsole.error(err);
       toast.error('فشل في تعديل القرار');
@@ -166,11 +234,34 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
       )
     },
     {
-      key: 'video',
-      label: 'الفيديو',
+      key: 'academicContext',
+      label: 'المحتوى الدراسي',
       render: (req) => (
-        <div className="text-sm font-bold text-[var(--admin-text)] max-w-sm truncate whitespace-normal leading-relaxed">
-          {req.videoTitle}
+        <div className="min-w-72 space-y-1 text-sm leading-relaxed">
+          <div className="flex items-center gap-1.5 font-bold text-[var(--admin-text)]">
+            <GraduationCap className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+            <span>{req.teacherName || 'مدرس غير محدد'}</span>
+          </div>
+          <div className="text-xs font-semibold text-[var(--admin-text)]">
+            {req.packageName || 'باقة غير محددة'} <span className="text-[var(--admin-muted)]">•</span> {req.termTitle || 'ترم غير محدد'}
+          </div>
+          <div className="text-xs text-[var(--admin-muted)]">
+            {req.sectionTitle || 'قسم غير محدد'} <span>•</span> {req.lessonTitle || 'حصة غير محددة'}
+          </div>
+          <div className="flex items-start gap-1.5 pt-1 font-bold text-[var(--admin-text)]">
+            <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--admin-primary)]" />
+            <span>{req.videoTitle}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'studentReason',
+      label: 'سبب الطالب',
+      render: (req) => (
+        <div className="flex max-w-60 items-start gap-2 text-sm text-[var(--admin-text)]">
+          <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+          <span className="line-clamp-3 leading-relaxed" title={req.studentReason}>{req.studentReason || 'لم يُسجل سبب'}</span>
         </div>
       )
     },
@@ -189,7 +280,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
               {req.currentWatchCount} / {isUnlimited ? '∞' : req.maxWatchCount}
             </span>
             {req.reachedLimit && (
-              <span className="text-[10px] text-rose-500 font-bold">وصل للحد الأقصى</span>
+              <span className="text-sm text-rose-500 font-bold">وصل للحد الأقصى</span>
             )}
           </div>
         );
@@ -297,15 +388,16 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
     }
   ];
 
-  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminPage;
   const shellActivePath = mode === 'assistant' ? '/assistant/watch-requests' : '/admin/watch-requests';
+  const isAssistantWorkspace = mode === 'assistant';
 
   return (
     <Shell
       activePath={shellActivePath as any}
-      sectionLabel="المحتوى الأكاديمي"
+      sectionLabel={isAssistantWorkspace ? 'طلبات الطلاب' : 'المحتوى الأكاديمي'}
       pageTitle="طلبات المشاهدة الإضافية"
-      subtitle="مراجعة ومعالجة طلبات الطلاب لزيادة مرات مشاهدة الفيديوهات المقفلة."
+      subtitle="راجع سبب الطالب وسياق الفيديو كاملاً قبل اعتماد زيادة المشاهدات أو رفضها."
     >
       {error && (
         <div className="mb-6 bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-xl flex items-center shadow-sm">
@@ -379,6 +471,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
           } 
           className="space-y-5 text-right"
         >
+          {selectedRequest && <RequestDetails request={selectedRequest} />}
           {activeModal === 'edit' ? (
             // Edit Decision Modal
             <div className="space-y-4">
@@ -423,7 +516,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                     min={1}
                     value={addedViews}
                     onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm font-bold"
                   />
                 </div>
               )}
@@ -443,7 +536,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                   placeholder={editStatus === 2 ? "اكتب سبب الرفض بالتفصيل هنا..." : "اكتب ملاحظة أو سبب الموافقة..."}
                   className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
                     validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
-                  } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                  } outline-none focus:ring-2 resize-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm`}
                   required={editStatus === 2}
                 />
                 {validationError && (
@@ -472,7 +565,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                     min={1}
                     value={addedViews}
                     onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm font-bold"
                   />
                 </div>
               )}
@@ -493,7 +586,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                 placeholder={activeModal === 'reject' ? "اكتب سبب الرفض بالتفصيل هنا ليظهر للطالب..." : "اكتب ملاحظة أو سبب الموافقة..."}
                 className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
                   validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
-                } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                } outline-none focus:ring-2 resize-none transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 text-sm`}
                 required={activeModal === 'reject'}
               />
               {validationError && (
@@ -523,7 +616,7 @@ export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'as
                 (activeModal === 'reject' && !reasonText.trim()) || 
                 (activeModal === 'edit' && editStatus === 2 && !reasonText.trim())
               }
-              className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-all duration-200 ${
+              className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 ${
                 activeModal === 'approve' || (activeModal === 'edit' && editStatus === 1)
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] disabled:opacity-50'
                   : 'bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_12px_rgba(244,63,94,0.15)] disabled:opacity-50 disabled:cursor-not-allowed'

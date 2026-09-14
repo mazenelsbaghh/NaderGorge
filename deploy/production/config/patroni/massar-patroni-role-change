@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+role="${1:-unknown}"
+cluster="${2:-unknown}"
+member="${3:-unknown}"
+logger --tag massar-patroni-role-change -- "role=${role} cluster=${cluster} member=${member}"

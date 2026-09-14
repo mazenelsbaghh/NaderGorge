@@ -1,6 +1,6 @@
-using Microsoft.Extensions.FileProviders;
-using Microsoft.AspNetCore.Hosting;
 using NaderGorge.API.Services;
+using NaderGorge.Application.Interfaces;
+using NaderGorge.Infrastructure.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -17,7 +17,7 @@ public class ContentImageStorageTests
 
         try
         {
-            var storage = new ContentImageStorage(new TestWebHostEnvironment(webRoot));
+            var storage = new ContentImageStorage(CreateSharedStorage(webRoot));
             await using var pngStream = new MemoryStream();
             using (var sourceImage = new Image<Rgba32>(8, 8))
             {
@@ -38,13 +38,30 @@ public class ContentImageStorageTests
         }
     }
 
-    private sealed class TestWebHostEnvironment(string webRootPath) : IWebHostEnvironment
+    [Fact]
+    public async Task SpoofedImageBytes_AreRejectedByImageDecoder()
     {
-        public string ApplicationName { get; set; } = "NaderGorge.Tests";
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-        public string WebRootPath { get; set; } = webRootPath;
-        public string EnvironmentName { get; set; } = "Test";
-        public string ContentRootPath { get; set; } = Path.GetDirectoryName(webRootPath)!;
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+        var temporaryRoot = Path.Combine(Path.GetTempPath(), $"content-image-{Guid.NewGuid():N}");
+        var webRoot = Path.Combine(temporaryRoot, "wwwroot");
+        Directory.CreateDirectory(webRoot);
+
+        try
+        {
+            var storage = new ContentImageStorage(CreateSharedStorage(webRoot));
+            await using var spoofedStream = new MemoryStream("<html>not an image</html>"u8.ToArray());
+
+            await Assert.ThrowsAsync<UnknownImageFormatException>(() =>
+                storage.SaveAsWebpAsync(spoofedStream, "package", CancellationToken.None));
+        }
+        finally
+        {
+            Directory.Delete(temporaryRoot, recursive: true);
+        }
     }
+
+    private static SharedFileStorage CreateSharedStorage(string webRoot) =>
+        new(new Dictionary<SharedFileArea, string>
+        {
+            [SharedFileArea.Public] = webRoot
+        });
 }

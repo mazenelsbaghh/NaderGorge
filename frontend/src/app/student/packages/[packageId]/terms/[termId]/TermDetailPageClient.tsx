@@ -28,30 +28,8 @@ import {
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
+import { GRADE_LEVEL_LABELS } from "@/lib/academic-labels";
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي',
-  SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي',
-  FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا',
-  PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي',
-  PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي',
-  PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي',
-  PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي',
-  PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري',
-  AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري',
-  AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10',
-  AmericanGrade11: 'Grade 11',
-  AmericanGrade12: 'Grade 12',
-};
 import {
   contentService,
   type ContentSectionDto,
@@ -59,9 +37,12 @@ import {
   type PackageDto,
   type TermDto,
 } from "@/services/content-service";
+import { hasStudentTermAccess } from "@/lib/content-access";
 
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { registerCacheStore } from "@/lib/cache-invalidation";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
+
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
 /* ─── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
@@ -99,7 +80,7 @@ export default function TermDetailPageClient() {
       const [pkgRes, sectRes, termsRes] = await Promise.all([
         contentService.getPackages(),
         contentService.getSections(termId),
-        contentService.getTerms(packageId),
+        contentService.getTerms(packageId, true),
       ]);
       setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()) ?? null);
       setSections(sectRes.data?.data ?? []);
@@ -114,23 +95,20 @@ export default function TermDetailPageClient() {
   useEffect(() => {
     void load();
     if (termId) {
-      registerCacheStore(`content:term:${termId}`, () => {}, load);
-      return () => {
-        unregisterCacheStore(`content:term:${termId}`);
-      };
+      const cleanupCacheStore = registerCacheStore(`content:term:${termId}`, () => {}, load);
+      return cleanupCacheStore;
     }
   }, [load, termId]);
 
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
-  const isTermPurchased = term?.isPurchased ?? false;
-  const hasAccess = hasDirectPackageAccess || isTermPurchased;
+  const hasAccess = hasStudentTermAccess(pkg, term);
 
   /* ── Loading skeleton ── */
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse pb-10">
         <div className="h-9 w-48 rounded-full bg-[var(--admin-card-strong)]" />
-        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-2xl" />
+        <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)] sm:rounded-2xl" />
         <div className="h-6 w-2/3 rounded-xl bg-[var(--admin-card-strong)]" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -211,7 +189,7 @@ export default function TermDetailPageClient() {
       {error && (
         <motion.div
           variants={fadeUp}
-          className="flex flex-col items-center gap-4 rounded-[2rem] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
+          className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-10 text-center"
         >
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-card)] text-[var(--admin-danger)]">
             <TriangleAlert className="h-7 w-7" />
@@ -246,7 +224,7 @@ export default function TermDetailPageClient() {
           {!error && (
             <div>
               {sections.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
                   <BookOpen className="mb-4 h-10 w-10 text-[var(--admin-muted)] opacity-40" />
                   <p className="font-bold text-[var(--admin-muted)]">لا توجد أقسام في هذا الترم بعد.</p>
                 </div>
@@ -268,7 +246,7 @@ export default function TermDetailPageClient() {
                       <Link
                           href={`/student/packages/${packageId}/terms/${termId}/sections/${section.id}`}
                           prefetch={false}
-                          className="group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-md hover:-translate-y-1.5 hover:shadow-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                          className="group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-md hover:-translate-y-1.5 hover:shadow-2xl transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
                           style={{
                             boxShadow: `0 4px 20px color-mix(in srgb, ${pal.from} 15%, transparent)`,
                           }}
@@ -369,7 +347,7 @@ export default function TermDetailPageClient() {
                               ) : (
                                 <span />
                               )}
-                              <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
+                              <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-[color,background-color,border-color,opacity,transform,box-shadow] group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
                             </div>
                           </div>
                       </Link>
@@ -399,28 +377,21 @@ export default function TermDetailPageClient() {
                 );
               })()}
             </div>
-            
+
             {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !hasDirectPackageAccess ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'هذه الباقة مفعّلة في حسابك بالفعل.' : 'هذا الترم مفعّل في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
                   {term != null ? ((term.price ?? 0) > 0 ? 'شراء الترم' : 'تفعيل الترم مجاناً') : 'شراء الباقة'}
                 </button>
-                <Link
-                  href="/student/code-redemption"
-                  prefetch={false}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] active:scale-[0.98]"
-                >
-                  لدي كود تفعيل
-                </Link>
               </div>
             )}
           </div>

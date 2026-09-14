@@ -3,20 +3,23 @@
 import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
+import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
+import { TeacherAccountSummary } from '@/features/teacher-finance-center/TeacherAccountSummary';
+import { TeacherCollectionsPanel } from '@/features/teacher-finance-center/TeacherCollectionsPanel';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, ArrowLeft, Download, X, Check,
+  FileText, ArrowLeft, Download, X, Check, Eye,
   Image as ImageIcon, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
+import { GRADE_LEVEL_LABELS, TEACHER_GRADE_GROUPS } from '@/lib/academic-labels';
 
 /* ─── Social Media Icons (reused from AdminTeachersPageClient) ─── */
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -37,73 +40,8 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-/* ─── Grade name map ─── */
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي', SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي', FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا', PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي', PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي', PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي', PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي', PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري', AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري', AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10', AmericanGrade11: 'Grade 11', AmericanGrade12: 'Grade 12',
-};
-
-const GRADE_GROUPS = [
-  {
-    label: 'المرحلة الثانوية العامة',
-    grades: [
-      { value: 'FirstSecondary', label: 'الأول الثانوي' },
-      { value: 'SecondSecondary', label: 'الثاني الثانوي' },
-      { value: 'SecondaryGrade3', label: 'الثالث الثانوي' },
-    ]
-  },
-  {
-    label: 'بكالوريا',
-    grades: [
-      { value: 'FirstBaccalaureate', label: 'الأول بكالوريا' },
-      { value: 'SecondBaccalaureate', label: 'الثاني بكالوريا' },
-    ]
-  },
-  {
-    label: 'المرحلة الإعدادية',
-    grades: [
-      { value: 'PrepGrade1', label: 'الأول الإعدادي' },
-      { value: 'PrepGrade2', label: 'الثاني الإعدادي' },
-      { value: 'PrepGrade3', label: 'الثالث الإعدادي' },
-    ]
-  },
-  {
-    label: 'المرحلة الابتدائية',
-    grades: [
-      { value: 'PrimaryGrade1', label: 'الأول الابتدائي' },
-      { value: 'PrimaryGrade2', label: 'الثاني الابتدائي' },
-      { value: 'PrimaryGrade3', label: 'الثالث الابتدائي' },
-      { value: 'PrimaryGrade4', label: 'الرابع الابتدائي' },
-      { value: 'PrimaryGrade5', label: 'الخامس الابتدائي' },
-      { value: 'PrimaryGrade6', label: 'السادس الابتدائي' },
-    ]
-  },
-  {
-    label: 'التعليم الأزهري',
-    grades: [
-      { value: 'AzhariPrimary1', label: 'الأول الابتدائي الأزهري' },
-      { value: 'AzhariPrep1', label: 'الأول الإعدادي الأزهري' },
-      { value: 'AzhariSecondary1', label: 'الأول الثانوي الأزهري' },
-    ]
-  },
-  {
-    label: 'التعليم الأمريكي (American)',
-    grades: [
-      { value: 'AmericanGrade9', label: 'Grade 9' },
-      { value: 'AmericanGrade10', label: 'Grade 10' },
-      { value: 'AmericanGrade11', label: 'Grade 11' },
-      { value: 'AmericanGrade12', label: 'Grade 12' },
-    ]
-  }
-];
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
+const GRADE_GROUPS = TEACHER_GRADE_GROUPS;
 
 /* ─── Helpers ─── */
 const translateAction = (action: string): string => {
@@ -163,7 +101,12 @@ const renderChangedValues = (oldVal?: string, newVal?: string) => {
 
 const formatDate = (d?: string | null) => {
   if (!d) return 'غير متوفر';
-  return new Date(d).toLocaleDateString('en-GB');
+  return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
+};
+
+const csvEscape = (value: unknown): string => {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
 /* ─── Tab type ─── */
@@ -175,6 +118,47 @@ const toArray = (v: unknown): any[] => {
   if (v && typeof v === 'object' && 'items' in (v as any) && Array.isArray((v as any).items)) return (v as any).items;
   if (v && typeof v === 'object' && 'data' in (v as any) && Array.isArray((v as any).data)) return (v as any).data;
   return [];
+};
+
+type TeacherStudentPackageMembership = {
+  packageId?: string;
+  packageName: string;
+  price?: number;
+  enrolledAt?: string;
+};
+
+const getStudentPackageMemberships = (student: any): TeacherStudentPackageMembership[] => {
+  if (Array.isArray(student.packages) && student.packages.length > 0) {
+    return student.packages.filter((item: any) => typeof item?.packageName === 'string' && item.packageName.length > 0);
+  }
+  const packageName = student.packageName || student.activatedPackageName;
+  return packageName
+    ? [{ packageName, price: student.price, enrolledAt: student.enrolledAt || student.activatedAt || student.grantedAt }]
+    : [];
+};
+
+const getPackageMembershipKey = (membership: TeacherStudentPackageMembership): string =>
+  membership.packageId ? `id:${membership.packageId}` : `legacy-name:${membership.packageName}`;
+
+const filterStudentPackageMemberships = (student: any, packageKey: string) => {
+  const memberships = getStudentPackageMemberships(student);
+  return packageKey === 'all'
+    ? memberships
+    : memberships.filter((membership) => getPackageMembershipKey(membership) === packageKey);
+};
+
+const studentBelongsToPackage = (student: any, packageKey: string) =>
+  filterStudentPackageMemberships(student, packageKey).length > 0;
+
+type PackageSalesBreakdown = {
+  packageId: string;
+  packageName: string;
+  packageBuyers: number;
+  termBuyers: number;
+  sectionBuyers: number;
+  lessonBuyers: number;
+  purchasedStudents: number;
+  giftStudents: number;
 };
 
 /* ──────────────────────────────────────────────────────────────────
@@ -203,12 +187,19 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
 
   const [bio, setBio] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [showOnLanding, setShowOnLanding] = useState(true);
+  const [isVisibleToStudents, setIsVisibleToStudents] = useState(true);
+  const [isContentVisibleToStudents, setIsContentVisibleToStudents] = useState(true);
   const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [youtubeUrl, setYouTubeUrl] = useState('');
   const [telegramUrl, setTelegramUrl] = useState('');
+  const [introVideoUrl, setIntroVideoUrl] = useState('');
   const [commissionRate, setCommissionRate] = useState<number>(0);
 
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
@@ -247,7 +238,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         adminService.getTeacherEssays(id).catch(() => []),
         adminService.getTeacherActivations(id).catch(() => []),
         adminService.getFinancePayouts(id).catch(() => []),
-        adminService.listCodeGroups({ force: true }).catch(() => []),
+        adminService.listCodeGroups().catch(() => []),
         (t as TeacherDto)?.userId
           ? adminService.getUserAuditLogs((t as TeacherDto).userId).catch(() => [])
           : Promise.resolve([]),
@@ -279,13 +270,20 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
   const handleOpenModal = () => {
     if (!teacher) return;
+    setFullName(teacher.fullName || '');
+    setPhoneNumber(teacher.phoneNumber || '');
+    setNewPassword('');
     setBio(teacher.bio || '');
     setContactInfo(teacher.contactInfo || '');
     setProfileImageUrl(teacher.profileImageUrl || '');
+    setShowOnLanding(teacher.showOnLanding);
+    setIsVisibleToStudents(teacher.isVisibleToStudents);
+    setIsContentVisibleToStudents(teacher.isContentVisibleToStudents);
     setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
     setFacebookUrl(teacher.facebookUrl || '');
     setYouTubeUrl(teacher.youtubeUrl || '');
     setTelegramUrl(teacher.telegramUrl || '');
+    setIntroVideoUrl(teacher.introVideoUrl || '');
     setCommissionRate(teacher.commissionRate || 0);
     setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
     setSelectedSubjectIds(teacher.subjectIds || []);
@@ -301,7 +299,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacher) return;
-    
+
     if (selectedSubjectIds.length === 0) {
       toast.error('يرجى تحديد مادة دراسية واحدة على الأقل');
       return;
@@ -315,6 +313,9 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     try {
       const gradesString = selectedGrades.join(',');
       const res = await teacherService.updateTeacher(teacher.id, {
+        fullName: fullName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        newPassword: newPassword.trim() || undefined,
         bio: bio.trim(),
         specialization: gradesString,
         commissionRate,
@@ -325,6 +326,10 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         facebookUrl: facebookUrl.trim() || undefined,
         youtubeUrl: youtubeUrl.trim() || undefined,
         telegramUrl: telegramUrl.trim() || undefined,
+        introVideoUrl: introVideoUrl.trim() || undefined,
+        showOnLanding,
+        isVisibleToStudents,
+        isContentVisibleToStudents,
       });
 
       if (res.success) {
@@ -375,8 +380,67 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     </div>
   );
 
+  const PackageSalesCards = () => {
+    const packageSales = toArray(stats?.packageSales) as PackageSalesBreakdown[];
+
+    return (
+      <section aria-labelledby="package-sales-title">
+        <div className="mb-4">
+          <h3 id="package-sales-title" className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+            تفاصيل الطلاب لكل باقة
+          </h3>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">كل طالب يُحسب مرة واحدة داخل الباقة؛ وأي شراء يجعله «مشتريًا» بدل «هدية فقط».</p>
+        </div>
+
+        {packageSales.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-8 text-center text-sm font-bold text-[var(--admin-muted)]">
+            لا توجد باقات أو اشتراكات مسجلة لهذا المدرس.
+          </div>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {packageSales.map((item) => (
+              <article key={item.packageId} className="overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-bg)]">
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-border)] px-5 py-4">
+                  <h4 className="min-w-0 truncate text-base font-black text-[var(--admin-text)]">{item.packageName}</h4>
+                  <span className="shrink-0 rounded-full bg-[var(--admin-primary-15)] px-3 py-1 text-xs font-black text-[var(--admin-primary)]">
+                    {item.purchasedStudents + item.giftStudents} طالب
+                  </span>
+                </div>
+
+                <dl className="grid grid-cols-2 gap-px bg-[var(--admin-border)] sm:grid-cols-4">
+                  {[
+                    ['الباقة كاملة', item.packageBuyers],
+                    ['الترم', item.termBuyers],
+                    ['القسم / الشهر', item.sectionBuyers],
+                    ['الحصة', item.lessonBuyers],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="bg-[var(--admin-bg)] px-4 py-4 text-right">
+                      <dt className="text-sm font-bold text-[var(--admin-muted)]">{label}</dt>
+                      <dd className="mt-1 text-2xl font-black tabular-nums text-[var(--admin-text)]">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <dl className="grid grid-cols-2 border-t border-[var(--admin-border)]">
+                  <div className="px-5 py-3">
+                    <dt className="text-sm font-bold text-[var(--admin-muted)]">شراء</dt>
+                    <dd className="mt-0.5 text-lg font-black tabular-nums text-emerald-700">{item.purchasedStudents}</dd>
+                  </div>
+                  <div className="border-r border-[var(--admin-border)] px-5 py-3">
+                    <dt className="text-sm font-bold text-[var(--admin-muted)]">هدية فقط</dt>
+                    <dd className="mt-0.5 text-lg font-black tabular-nums text-amber-700">{item.giftStudents}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/teachers"
       sectionLabel="المستخدمين"
       pageTitle="ملف المعلم الشامل"
@@ -439,16 +503,20 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             ══════════════════════════════════════════ */}
         {activeTab === 'overview' && (
           <div className="flex flex-col gap-8">
+            <TeacherCollectionsPanel key={`collections-${id}`} teacherId={id} />
+            <TeacherAccountSummary key={id} teacherId={id} />
             {/* Stat cards */}
             <div>
               <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">ملخص الإحصاءات</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                <AdminStatCard variant="accent" icon={Users} label="عدد الطلاب" value={stats?.studentsCount ?? students.length ?? 0} />
+                <AdminStatCard variant="accent" icon={Users} label="طلاب اقتنوا محتوى (تاريخي)" value={stats?.studentsCount ?? 0} />
                 <AdminStatCard variant="light" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? 0} />
                 <AdminStatCard variant="muted" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? 0} />
                 <AdminStatCard variant="accent" icon={PenLine} label="مقالات قيد التصحيح" value={stats?.pendingEssaysCount ?? essays.length ?? 0} />
               </div>
             </div>
+
+            <PackageSalesCards />
 
             {/* Personal info */}
             <SectionCard icon={User} title="البيانات الشخصية">
@@ -579,9 +647,11 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         {activeTab === 'students' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب المسجلين" value={students.length} />
-              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={students.filter((s: any) => s.isActive !== false).length} />
+              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب تاريخيًا" value={stats?.studentsCount ?? 0} />
+              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={stats?.activeStudentsCount ?? 0} />
             </div>
+
+            <PackageSalesCards />
 
             <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
               {/* Header with title + download button */}
@@ -592,17 +662,20 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                 </div>
                 <button
                   onClick={() => {
-                    const filtered = studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter);
+                    const filtered = studentPackageFilter === 'all' ? students : students.filter((student: any) => studentBelongsToPackage(student, studentPackageFilter));
                     const csv = [
-                      ['اسم الطالب', 'رقم الهاتف', 'الباقة', 'السعر', 'تاريخ التفعيل', 'الحالة'].join(','),
-                      ...filtered.map((s: any) => [
-                        s.fullName || s.studentName || '',
-                        s.phone || s.phoneNumber || '',
-                        s.packageName || s.activatedPackageName || '',
-                        s.price ?? '',
-                        s.enrolledAt || s.activatedAt || s.grantedAt || '',
-                        s.isActive !== false ? 'نشط' : 'غير نشط',
-                      ].join(','))
+                      ['اسم الطالب', 'رقم الهاتف', 'الباقة', 'السعر الحالي للمحتوى', 'تاريخ التفعيل', 'الحالة'].map(csvEscape).join(','),
+                      ...filtered.map((student: any) => {
+                        const memberships = filterStudentPackageMemberships(student, studentPackageFilter);
+                        return [
+                          student.fullName || student.studentName || '',
+                          student.phone || student.phoneNumber || '',
+                          memberships.map((membership) => membership.packageName).join(' | '),
+                          memberships.map((membership) => membership.price ?? '').join(' | '),
+                          memberships.map((membership) => membership.enrolledAt ?? '').join(' | '),
+                          student.isActive !== false ? 'نشط' : 'غير نشط',
+                        ].map(csvEscape).join(',');
+                      })
                     ].join('\n');
                     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
                     const url = URL.createObjectURL(blob);
@@ -613,7 +686,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     URL.revokeObjectURL(url);
                     toast.success('تم تحميل الملف بنجاح');
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-[var(--admin-primary-15)] text-[var(--admin-text)] hover:bg-[var(--admin-primary-15)]/80 transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-[var(--admin-primary-15)] text-[var(--admin-text)] hover:bg-[var(--admin-primary-15)]/80 transition-[color,background-color,border-color,opacity,transform,box-shadow] active:scale-95"
                 >
                   <Download size={16} />
                   تنزيل CSV
@@ -622,25 +695,32 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
               {/* Package filter pills */}
               {(() => {
-                const packages = [...new Set(students.map((s: any) => s.packageName || s.activatedPackageName).filter(Boolean))];
+                const packagesByKey = new Map<string, { key: string; name: string }>();
+                students.forEach((student: any) => {
+                  getStudentPackageMemberships(student).forEach((membership) => {
+                    const key = getPackageMembershipKey(membership);
+                    if (!packagesByKey.has(key)) packagesByKey.set(key, { key, name: membership.packageName });
+                  });
+                });
+                const packages = [...packagesByKey.values()];
                 if (packages.length <= 1) return null;
                 return (
                   <div className="flex flex-wrap gap-2 mb-5">
                     <button
                       onClick={() => setStudentPackageFilter('all')}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === 'all' ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === 'all' ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
                     >
                       الكل ({students.length})
                     </button>
-                    {packages.map((pkg: string) => {
-                      const count = students.filter((s: any) => (s.packageName || s.activatedPackageName) === pkg).length;
+                    {packages.map((pkg) => {
+                      const count = students.filter((student: any) => studentBelongsToPackage(student, pkg.key)).length;
                       return (
                         <button
-                          key={pkg}
-                          onClick={() => setStudentPackageFilter(pkg)}
-                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === pkg ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                          key={pkg.key}
+                          onClick={() => setStudentPackageFilter(pkg.key)}
+                          className={`px-4 py-2 rounded-full text-xs font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${studentPackageFilter === pkg.key ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
                         >
-                          {pkg} ({count})
+                          {pkg.name} ({count})
                         </button>
                       );
                     })}
@@ -657,12 +737,14 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     <span className="font-mono text-sm text-[var(--admin-text)] tracking-wide" dir="ltr">{row.phone || row.phoneNumber || '—'}</span>
                   )},
                   { key: 'packageName', label: 'الباقة', render: (row) => (
-                    <span className="text-sm text-[var(--admin-text)]">{row.packageName || row.activatedPackageName || '—'}</span>
+                    <span className="text-sm text-[var(--admin-text)]">{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => membership.packageName).join('، ') || '—'}</span>
                   )},
-                  { key: 'price', label: 'السعر', render: (row) => (
-                    <span className="font-mono font-bold text-sm text-[var(--admin-text)]">{row.price != null ? `${row.price} ج.م` : '—'}</span>
+                  { key: 'price', label: 'السعر الحالي للمحتوى', render: (row) => (
+                    <span className="font-mono font-bold text-sm text-[var(--admin-text)]">{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => membership.price != null ? `${membership.price} ج.م` : '—').join('، ') || '—'}</span>
                   )},
-                  { key: 'enrolledAt', label: 'تاريخ التفعيل', render: (row) => formatDate(row.enrolledAt || row.activatedAt || row.grantedAt) },
+                  { key: 'enrolledAt', label: 'تاريخ التفعيل', render: (row) => (
+                    <span>{filterStudentPackageMemberships(row, studentPackageFilter).map((membership) => formatDate(membership.enrolledAt)).join('، ') || '—'}</span>
+                  )},
                   { key: 'status', label: 'الحالة', render: (row) => {
                     const active = row.isActive !== false;
                     return (
@@ -673,7 +755,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     );
                   }},
                 ]}
-                data={studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter)}
+                data={studentPackageFilter === 'all' ? students : students.filter((student: any) => studentBelongsToPackage(student, studentPackageFilter))}
                 rowKey={(row) => row.id || row.studentId || row.fullName}
                 emptyMessage="لا يوجد طلاب مسجلين حالياً"
               />
@@ -729,6 +811,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             ══════════════════════════════════════════ */}
         {activeTab === 'financials' && (
           <div className="flex flex-col gap-6">
+            <TeacherCollectionsPanel key={`collections-${id}`} teacherId={id} />
+            <TeacherAccountSummary key={id} teacherId={id} />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <AdminStatCard variant="accent" icon={Wallet} label="نسبة العمولة" value={`${teacher?.commissionRate ?? 0}%`} />
               <AdminStatCard variant="light" icon={DollarSign} label="عدد التحويلات" value={payouts.length} />
@@ -758,7 +842,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       {row.status || 'مكتمل'}
                     </span>
                   )},
-                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'createdAt', label: 'التاريخ', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={payouts}
                 rowKey={(row) => row.id || `${row.amount}-${row.createdAt}`}
@@ -778,7 +862,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   { key: 'studentName', label: 'الطالب', render: (row) => <span className="font-bold text-[var(--admin-text)]">{row.studentName || '—'}</span> },
                   { key: 'packageName', label: 'الباقة', render: (row) => <span className="text-sm text-[var(--admin-text)]">{row.packageName || '—'}</span> },
                   { key: 'code', label: 'الكود', render: (row) => <span className="font-mono text-sm text-[var(--admin-text)]">{row.code || '—'}</span> },
-                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => row.activatedAt ? new Date(row.activatedAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' }) : '—' },
                 ]}
                 data={activations}
                 rowKey={(row) => row.id || `${row.code}-${row.activatedAt}`}
@@ -840,7 +924,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       {/* Edit Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
               onClick={handleCloseModal}
@@ -867,12 +951,12 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
               </p>
 
               <form onSubmit={handleSave} className="mt-6 space-y-6">
-                
+
                 {/* Account Details (Readonly) */}
                 <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
                     <User className="h-4 w-4 text-[var(--admin-primary)]" />
-                    بيانات حساب الدخول للمنصة (للقراءة فقط)
+                    بيانات حساب الدخول للمنصة
                   </h4>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -880,9 +964,9 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الاسم الكامل</label>
                       <input
                         type="text"
-                        disabled
-                        value={teacher?.fullName || ''}
-                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none"
                       />
                     </div>
 
@@ -891,15 +975,53 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       <div className="relative">
                         <input
                           type="tel"
-                          disabled
-                          value={teacher?.phoneNumber || ''}
+                          value={phoneNumber}
+                          onChange={(event) => setPhoneNumber(event.target.value)}
                           dir="ltr"
-                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] outline-none"
                         />
                         <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                       </div>
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">كلمة مرور جديدة (اختياري)</label>
+                    <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="اتركها فارغة بدون تغيير" className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none" autoComplete="new-password" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
+                      <Eye className="h-4 w-4 text-[var(--admin-primary)]" />
+                      إظهار في الصفحة الرئيسية
+                    </h4>
+                    <p className="mt-1 text-xs leading-6 text-[var(--admin-muted)]">
+                      يظهر المعلم في شريط المدرسين المتحرك في صفحة الهبوط.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOnLanding}
+                    aria-label="إظهار المعلم في الصفحة الرئيسية"
+                    disabled={isSaving}
+                    onClick={() => setShowOnLanding((value) => !value)}
+                    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 disabled:opacity-60 ${showOnLanding ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'}`}
+                  >
+                    <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${showOnLanding ? '-translate-x-1' : '-translate-x-7'}`} />
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <button type="button" role="switch" aria-checked={isVisibleToStudents} onClick={() => setIsVisibleToStudents(value => !value)} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-right">
+                    <span className="block text-sm font-black text-[var(--admin-text)]">ظهور المدرس للطلاب والزوار</span>
+                    <span className="text-xs text-[var(--admin-muted)]">{isVisibleToStudents ? 'ظاهر' : 'مخفي'}</span>
+                  </button>
+                  <button type="button" role="switch" aria-checked={isContentVisibleToStudents} onClick={() => setIsContentVisibleToStudents(value => !value)} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-right">
+                    <span className="block text-sm font-black text-[var(--admin-text)]">محتوى المدرس للطلاب والزوار</span>
+                    <span className="text-xs text-[var(--admin-muted)]">{isContentVisibleToStudents ? 'ظاهر' : 'مخفي'}</span>
+                  </button>
                 </div>
 
                 {/* Photo Upload Section */}
@@ -1063,6 +1185,29 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   </div>
                 </div>
 
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الفيديو التعريفي للمدرس</label>
+                    <p className="mb-3 text-xs font-bold leading-6 text-[var(--admin-muted)]">
+                      سيظهر في بروفايل المدرس العام داخل مشغل المنصة.
+                    </p>
+                    <input
+                      type="url"
+                      dir="ltr"
+                      disabled={isSaving}
+                      value={introVideoUrl}
+                      onChange={(e) => setIntroVideoUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=... أو رابط ملف الفيديو"
+                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                    />
+                  </div>
+                  {introVideoUrl ? (
+                    <a href={introVideoUrl} target="_blank" rel="noreferrer" className="admin-btn-secondary inline-flex w-fit items-center gap-2">
+                      معاينة الرابط الحالي
+                    </a>
+                  ) : null}
+                </div>
+
                 {/* Grade levels checkbox checklist */}
                 <div>
                   <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المراحل والصفوف الدراسية التي يدرّسها المعلم *</label>
@@ -1074,7 +1219,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                           {group.grades.map((grade) => {
                             const isChecked = selectedGrades.includes(grade.value);
                             const toggleGrade = () => {
-                              setSelectedGrades(prev => 
+                              setSelectedGrades(prev =>
                                 prev.includes(grade.value)
                                   ? prev.filter(v => v !== grade.value)
                                   : [...prev, grade.value]
@@ -1121,7 +1266,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       {subjects.map((sub) => {
                         const isChecked = selectedSubjectIds.includes(sub.id);
                         const toggleSubject = () => {
-                          setSelectedSubjectIds(prev => 
+                          setSelectedSubjectIds(prev =>
                             prev.includes(sub.id)
                               ? prev.filter(id => id !== sub.id)
                               : [...prev, sub.id]
@@ -1184,6 +1329,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           </div>
         )}
       </AnimatePresence>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

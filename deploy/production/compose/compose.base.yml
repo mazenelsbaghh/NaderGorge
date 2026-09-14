@@ -1,0 +1,38 @@
+name: massar_production
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  init: true
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+  security_opt:
+    - no-new-privileges:true
+  labels:
+    net.massar.node: ${MASSAR_NODE_ID:?MASSAR_NODE_ID is required}
+    net.massar.release: ${MASSAR_RELEASE_ID:?MASSAR_RELEASE_ID is required}
+
+services:
+  release-evidence:
+    <<: *service-defaults
+    image: busybox:1.37.0
+    command: ["sh", "-c", "test -n \"$$MASSAR_NODE_ID\" && test -n \"$$MASSAR_RELEASE_ID\" && exec tail -f /dev/null"]
+    environment:
+      MASSAR_NODE_ID: ${MASSAR_NODE_ID}
+      MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+    networks: [massar_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+
+networks:
+  massar_internal:
+    name: massar_internal
+    driver: bridge
+    internal: true
+  massar_egress:
+    name: massar_egress
+    driver: bridge

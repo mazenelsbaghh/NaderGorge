@@ -24,8 +24,11 @@ export function resolveMediaUrl(url?: string | null): string {
       !backendOrigin.includes('127.0.0.1') &&
       !backendOrigin.includes('backend:5245');
 
-    const base = isProduction ? 'https://assets.massar-academy.net' : backendOrigin;
     const path = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    // Mind maps are written by the AI worker directly to the API's wwwroot.
+    // They are not mirrored to the assets host, so always request them from API.
+    const isMindmap = path.startsWith('/mindmaps/');
+    const base = isProduction && !isMindmap ? 'https://assets.massar-academy.net' : backendOrigin;
     return `${base}${path}`;
   } catch {
     return normalized;

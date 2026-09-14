@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "measurement": {
+    "resourceSizes": "brotli",
+    "productionBuildRequired": true,
+    "rawChunkTotalsAreDiagnosticOnly": true
+  },
+  "routes": {
+    "/login": {
+      "minimumInitialReductionFromBaseline": 0.25,
+      "maximumSharedIncreaseFromBaseline": 0,
+      "maximumDeferredBrotliBytes": 120000,
+      "maximumDuplicateEligibleReads": 0
+    },
+    "/register": {
+      "minimumInitialReductionFromBaseline": 0.25,
+      "maximumSharedIncreaseFromBaseline": 0,
+      "maximumDeferredBrotliBytes": 160000,
+      "maximumDuplicateEligibleReads": 0,
+      "maximumInteractionLongTaskMs": 50
+    },
+    "/student": {
+      "minimumInitialReductionFromBaseline": 0.25,
+      "maximumSharedIncreaseFromBaseline": 0,
+      "maximumDeferredBrotliBytes": 180000,
+      "maximumWarmNavigationP75Ms": 300,
+      "maximumDuplicateEligibleReads": 0
+    }
+  },
+  "workflows": {
+    "auth-to-dashboard": {
+      "maximumP75Ms": 1500
+    },
+    "routine-read": {
+      "maximumP95Ms": 250
+    },
+    "data-heavy-read": {
+      "maximumP95Ms": 500
+    },
+    "admin-student-search": {
+      "maximumPayloadBytes": 102400,
+      "maximumCurrentRequests": 1
+    },
+    "live-support-admin": {
+      "maximumDatabaseCommands": 12
+    }
+  },
+  "productionRum": {
+    "blocksDeployment": false,
+    "alwaysReportSampleCount": true,
+    "targets": {
+      "LCP_P75_MS": 2000,
+      "INP_P75_MS": 200,
+      "CLS_P75": 0.1
+    }
+  }
+}

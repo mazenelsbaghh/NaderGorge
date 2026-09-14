@@ -15,6 +15,9 @@ public class DigitalWallet : BaseEntity
     public string DeviceStatus { get; set; } = "Disconnected";
     public DateTime? LastSeenAt { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsRechargePaused { get; set; }
+    public string RechargePauseMessage { get; set; } = string.Empty;
+    public DateTime? RechargeResumeAt { get; set; }
     
     /// <summary>
     /// Configurable SMS sender names to listen for. Stored as JSON array, e.g. ["VodafoneCash","VF-Cash"]

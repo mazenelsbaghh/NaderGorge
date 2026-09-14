@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sanitizeAiJobStatus } from '@/lib/ai-job-status';
 
 /**
  * Next.js API proxy for the worker service (BullMQ status API).
@@ -14,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const WORKER_URL = process.env.WORKER_URL || 'http://worker:3001';
 const WORKER_ADMIN_TOKEN = process.env.WORKER_ADMIN_TOKEN;
 const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
-const STAFF_ROLES = new Set(['Admin', 'Teacher']);
+const PRIVILEGED_ROLES = new Set(['Admin', 'Teacher']);
 
 function isAllowedWorkerRoute(method: string, path: string[]) {
   if (path.length === 2 && path[0] === 'status' && method === 'GET') return true;
@@ -23,10 +24,12 @@ function isAllowedWorkerRoute(method: string, path: string[]) {
   return false;
 }
 
-type CurrentUserResponse = {
-  roles?: string[];
+type CurrentSessionResponse = {
   data?: {
-    roles?: string[];
+    user?: {
+      roles?: string[];
+      permissions?: string[];
+    };
   };
 };
 
@@ -36,7 +39,7 @@ async function validateStaffAuthorization(authorization: string | null) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/auth/me`, {
+    const response = await fetch(`${API_URL}/auth/session`, {
       headers: { Authorization: authorization },
       cache: 'no-store',
     });
@@ -45,12 +48,13 @@ async function validateStaffAuthorization(authorization: string | null) {
       return { ok: false as const, status: 401, error: 'Authentication required' };
     }
 
-    const user = (await response.json()) as CurrentUserResponse;
-    const roles = user.roles ?? user.data?.roles ?? [];
-    const isStaff = roles.some((role) => STAFF_ROLES.has(role));
+    const session = (await response.json()) as CurrentSessionResponse;
+    const user = session.data?.user;
+    const isStaff = user?.roles?.some(role => PRIVILEGED_ROLES.has(role))
+      || user?.permissions?.some(permission => permission.toLowerCase() === 'content.manage');
 
     if (!isStaff) {
-      return { ok: false as const, status: 403, error: 'Staff role required' };
+      return { ok: false as const, status: 403, error: 'Content management permission required' };
     }
 
     return { ok: true as const };
@@ -58,6 +62,28 @@ async function validateStaffAuthorization(authorization: string | null) {
     console.error('[worker-proxy] Failed to validate staff authorization:', error);
     return { ok: false as const, status: 503, error: 'Authentication service unavailable' };
   }
+}
+
+function getWorkerActionSuccess(method: string) {
+  if (method === 'DELETE') {
+    return { success: true, message: 'تم إرسال طلب إلغاء المعالجة.' };
+  }
+
+  return { success: true, message: 'تم إرسال طلب إعادة المحاولة.' };
+}
+
+function createWorkerProxyFailure(status: number) {
+  return NextResponse.json(
+    { error: 'تعذر تنفيذ طلب معالجة الفيديو حاليًا. حاول مرة أخرى بعد قليل.' },
+    { status },
+  );
+}
+
+function confirmsSuccessfulWorkerAction(payload: unknown) {
+  return typeof payload === 'object'
+    && payload !== null
+    && 'success' in payload
+    && payload.success === true;
 }
 
 async function proxyToWorker(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -99,24 +125,36 @@ async function proxyToWorker(request: NextRequest, { params }: { params: Promise
 
     const response = await fetch(targetUrl, fetchOptions);
     
-    const contentType = response.headers.get('content-type') || '';
-    
-    if (contentType.includes('application/json')) {
-      const data = await response.json();
-      return NextResponse.json(data, { status: response.status });
+    if (!response.ok) {
+      return createWorkerProxyFailure(response.status);
     }
-    
-    const text = await response.text();
-    return new NextResponse(text, {
-      status: response.status,
-      headers: { 'Content-Type': contentType },
-    });
+
+    if (request.method === 'GET' && path[0] === 'status') {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return createWorkerProxyFailure(502);
+      }
+
+      const workerStatusPayload: unknown = await response.json();
+      return NextResponse.json(sanitizeAiJobStatus(workerStatusPayload, path[1]), { status: 200 });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return createWorkerProxyFailure(502);
+    }
+
+    const actionPayload: unknown = await response.json();
+    if (!confirmsSuccessfulWorkerAction(actionPayload)) {
+      return createWorkerProxyFailure(502);
+    }
+
+    // Mutation response fields are intentionally allowlisted so worker
+    // diagnostics can never cross the staff-facing API boundary.
+    return NextResponse.json(getWorkerActionSuccess(request.method), { status: 200 });
   } catch (error) {
     console.error(`[worker-proxy] Failed to reach worker at ${targetUrl}:`, error);
-    return NextResponse.json(
-      { error: 'Worker service unavailable' },
-      { status: 503 }
-    );
+    return createWorkerProxyFailure(503);
   }
 }
 

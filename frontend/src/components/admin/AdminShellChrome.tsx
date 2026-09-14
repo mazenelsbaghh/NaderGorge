@@ -1,8 +1,18 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BookOpenText,
   Briefcase,
@@ -13,6 +23,7 @@ import {
   Menu,
   MessageSquareText,
   Settings,
+  MessageSquarePlus,
   Shield,
   Sparkles,
   Star,
@@ -22,14 +33,42 @@ import {
   PhoneCall,
   Video,
   BarChart3,
+  Bot,
   Library,
   GraduationCap,
   Coins,
   Users,
   ChevronDown,
   ArrowRight,
+  BadgePercent,
+  Building2,
+  CalendarCheck2,
+  CalendarClock,
+  ChartNoAxesCombined,
+  CircleDollarSign,
+  ClockArrowUp,
+  BadgeDollarSign,
+  DatabaseZap,
+  FileCheck2,
   Headphones,
+  IdCard,
+  Inbox,
+  Network,
+  ShieldCheck,
+  Scale,
+  UserRoundCheck,
+  UserRoundPlus,
   Wallet,
+  WalletCards,
+  Gift,
+  Tags,
+  PanelRightClose,
+  PanelRightOpen,
+  Search,
+  Coffee,
+  ScrollText,
+  ClipboardCheck,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -39,29 +78,78 @@ import { useAuthStore } from '@/stores/auth-store';
 import { AdminBreadcrumbs } from './AdminBreadcrumbs';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import { walletService, type WalletDto } from '@/services/wallet-service';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
+import { IntentLink } from '@/components/navigation/IntentLink';
+import {
+  NavigationFocusManager,
+  SkipToContentLink,
+} from '@/components/navigation/NavigationFocusManager';
+import { useShellNavigationState } from '@/hooks/useShellNavigationState';
+import { canAccessAdminRoute } from '@/packages/admin/route-permissions';
 
-type AdminShellRoute =
+export type AdminShellRoute =
   | '/admin'
+  | '/admin/ai-agent'
   | '/admin/users'
   | '/admin/students'
   | '/admin/assistants'
   | '/admin/admins'
   | '/admin/teachers'
   | '/admin/content'
+  | '/admin/content/video-types'
+  | '/admin/gifts'
   | '/admin/subjects'
   | '/admin/ai-monitor'
   | '/admin/codes'
+  | '/admin/codes/templates'
+  | '/admin/sales'
+  | '/admin/public-exams'
   | '/admin/community'
+  | '/admin/comments'
+  | '/admin/learning-center'
   | '/admin/questions'
   | '/admin/overrides'
   | '/admin/watch-requests'
   | '/admin/forms'
   | '/admin/hr'
   | '/admin/hr/my-attendance'
+  | '/admin/hr/organization'
+  | '/admin/hr/employees'
+  | '/admin/hr/shifts'
+  | '/admin/hr/attendance-policies'
+  | '/admin/hr/breaks'
+  | '/admin/hr/attendance-corrections'
+  | '/admin/hr/attendance-adjustments'
+  | '/admin/hr/leave'
+  | '/admin/hr/approvals'
+  | '/admin/hr/payroll'
+  | '/admin/hr/performance'
+  | '/admin/hr/cases'
+  | '/admin/hr/recruitment'
+  | '/admin/hr/lifecycle'
+  | '/admin/hr/migration'
+  | '/admin/hr/reports'
   | '/admin/operations'
   | '/admin/finance'
+  | '/admin/platform-finance'
+  | '/admin/platform-finance/operations'
+  | '/admin/platform-finance/planning'
+  | '/admin/platform-finance/expenses'
+  | '/admin/platform-finance/refunds'
+  | '/admin/platform-finance/reports'
+  | '/admin/platform-finance/wallets'
+  | '/admin/platform-finance/treasury'
+  | '/admin/platform-finance/migration'
+  | '/admin/teacher-finance'
+  | '/admin/shared-packages'
   | '/admin/wallets'
   | '/admin/recharge-verification'
+  | '/admin/wallet-messages'
+  | '/admin/recharge-shift-review'
+  | '/admin/recharge-conflicts'
   | '/teacher'
   | '/teacher/packages'
   | '/teacher/codes'
@@ -75,7 +163,12 @@ type AdminShellRoute =
   | '/admin/reports'
   | '/admin/media'
   | '/admin/live-support'
-  | '/admin/live-support/ai';
+  | '/admin/live-support/ratings'
+  | '/admin/live-support/ai'
+  | '/admin/settings'
+  | '/admin/system-logs'
+  | '/admin/auto-repair'
+  | '/admin/popup';
 
 type AdminShellChromeProps = {
   activePath: AdminShellRoute;
@@ -87,14 +180,149 @@ type AdminShellChromeProps = {
   subNav?: ReactNode;
   children: ReactNode;
   floatingAction?: ReactNode;
+  persistentRoot?: boolean;
 };
 
-const navItems: Array<{
+export type AdminPageDescriptor = Omit<
+  AdminShellChromeProps,
+  'children' | 'persistentRoot'
+>;
+
+type RegisteredAdminPage = {
+  pathname: string;
+  descriptor: AdminPageDescriptor;
+};
+
+const AdminShellContext = createContext<{
+  registerPage: (page: RegisteredAdminPage | null) => void;
+} | null>(null);
+
+type AdminNavItem = {
   href: AdminShellRoute;
   label: string;
   icon: typeof UserCog;
   permission?: string;
-}> = [
+  adminOnly?: boolean;
+};
+
+const HR_NAV_ITEMS = [
+  {
+    href: '/admin/hr',
+    label: 'لوحة الموارد البشرية',
+    icon: Users,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/my-attendance',
+    label: 'حضوري',
+    icon: CalendarCheck2,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/organization',
+    label: 'الهيكل والموظفون',
+    icon: Network,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/shifts',
+    label: 'الشفتات',
+    icon: CalendarClock,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/attendance-policies',
+    label: 'سياسات الحضور',
+    icon: ShieldCheck,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/breaks',
+    label: 'متابعة البريك والإذن',
+    icon: Coffee,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/attendance-corrections',
+    label: 'تصحيحات الحضور',
+    icon: ClockArrowUp,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/attendance-adjustments',
+    label: 'بدلات وخصومات الحضور',
+    icon: BadgeDollarSign,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/leave',
+    label: 'الإجازات والأرصدة',
+    icon: IdCard,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/approvals',
+    label: 'الموافقات',
+    icon: Inbox,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/payroll',
+    label: 'رواتب الموظفين',
+    icon: CircleDollarSign,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/performance',
+    label: 'الأداء والتقييمات',
+    icon: ChartNoAxesCombined,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/cases',
+    label: 'قضايا الموظفين',
+    icon: Scale,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/recruitment',
+    label: 'التوظيف',
+    icon: UserRoundPlus,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/lifecycle',
+    label: 'دورة حياة الموظف',
+    icon: UserRoundCheck,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/migration',
+    label: 'الترحيل والتشغيل',
+    icon: DatabaseZap,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr/reports',
+    label: 'أداء فريق الدعم',
+    icon: FileCheck2,
+    permission: 'hr.manage',
+  },
+] satisfies AdminNavItem[];
+
+const navItems: AdminNavItem[] = [
+  {
+    href: '/admin/ai-agent',
+    label: 'وكيل الإدارة AI',
+    icon: Bot,
+    adminOnly: true,
+  },
+  {
+    href: '/admin/comments',
+    label: 'تعليقات الطلاب',
+    icon: MessageSquareText,
+    permission: 'comments.manage',
+  },
   {
     href: '/admin/students',
     label: 'الطلاب',
@@ -103,7 +331,7 @@ const navItems: Array<{
   },
   {
     href: '/admin/assistants',
-    label: 'المساعدين',
+    label: 'الموظفون والمساعدون',
     icon: Briefcase,
     permission: 'users.manage',
   },
@@ -124,6 +352,12 @@ const navItems: Array<{
     label: 'المحتوى',
     icon: BookOpenText,
     permission: 'content.manage',
+  },
+  {
+    href: '/admin/content/video-types',
+    label: 'أنواع الفيديو',
+    icon: Tags,
+    adminOnly: true,
   },
   {
     href: '/admin/subjects',
@@ -150,10 +384,34 @@ const navItems: Array<{
     permission: 'codes.manage',
   },
   {
+    href: '/admin/gifts',
+    label: 'الهدايا',
+    icon: Gift,
+    permission: 'gifts.manage',
+  },
+  {
+    href: '/admin/sales',
+    label: 'الخصومات',
+    icon: BadgePercent,
+    permission: 'sales.manage',
+  },
+  {
+    href: '/admin/learning-center',
+    label: 'التقييم والمتابعة',
+    icon: BarChart3,
+    adminOnly: true,
+  },
+  {
     href: '/admin/questions',
     label: 'الأسئلة',
     icon: Shield,
     permission: 'exams.manage',
+  },
+  {
+    href: '/admin/public-exams',
+    label: 'الامتحانات العامة',
+    icon: ClipboardList,
+    permission: 'public_exams.manage',
   },
   {
     href: '/admin/overrides',
@@ -179,17 +437,78 @@ const navItems: Array<{
     icon: Briefcase,
     permission: 'hr.manage',
   },
-  {
-    href: '/admin/hr',
-    label: 'الموارد البشرية',
-    icon: Users,
-    permission: 'hr.manage',
-  },
+  ...HR_NAV_ITEMS,
   {
     href: '/admin/finance',
     label: 'المالية والرواتب',
     icon: Coins,
-    permission: 'users.manage',
+    permission: 'finance.manage',
+  },
+  {
+    href: '/admin/platform-finance',
+    label: 'المركز المالي العام',
+    icon: WalletCards,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/operations',
+    label: 'العمليات والمصروفات والمرتجعات',
+    icon: Briefcase,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/planning',
+    label: 'الميزانيات والتحويلات',
+    icon: ChartNoAxesCombined,
+    permission: 'finance.budgets.manage',
+  },
+  {
+    href: '/admin/platform-finance/expenses',
+    label: 'مصروفات المنصة',
+    icon: Coins,
+    permission: 'finance.expenses.view',
+  },
+  {
+    href: '/admin/platform-finance/refunds',
+    label: 'استردادات الطلاب',
+    icon: BadgeDollarSign,
+    permission: 'finance.refunds.view',
+  },
+  {
+    href: '/admin/platform-finance/reports',
+    label: 'التقارير والإقفال',
+    icon: BarChart3,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/wallets',
+    label: 'تقارير المحافظ',
+    icon: WalletCards,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/treasury',
+    label: 'الخزائن والمطابقة',
+    icon: Wallet,
+    permission: 'finance.treasury.manage',
+  },
+  {
+    href: '/admin/platform-finance/migration',
+    label: 'ترحيل التاريخ المالي',
+    icon: DatabaseZap,
+    permission: 'finance.migration.manage',
+  },
+  {
+    href: '/admin/teacher-finance',
+    label: 'مركز مالية المدرسين',
+    icon: BadgeDollarSign,
+    permission: 'finance.manage',
+  },
+  {
+    href: '/admin/shared-packages',
+    label: 'الباكدجات المشتركة',
+    icon: BookOpenText,
+    permission: 'content.manage',
   },
   {
     href: '/admin/wallets',
@@ -204,9 +523,33 @@ const navItems: Array<{
     permission: 'payments.manage',
   },
   {
+    href: '/admin/wallet-messages',
+    label: 'رسائل المحافظ',
+    icon: MessageSquareText,
+    permission: 'payments.manage',
+  },
+  {
+    href: '/admin/recharge-shift-review',
+    label: 'مراجعة شحن الشيفت',
+    icon: ClipboardCheck,
+    permission: 'payments.manage',
+  },
+  {
+    href: '/admin/recharge-conflicts',
+    label: 'تعارضات الشحن',
+    icon: AlertTriangle,
+    permission: 'payments.manage',
+  },
+  {
     href: '/admin/live-support',
-    label: 'الدعم المباشر',
+    label: 'CRM واتساب والدعم',
     icon: Headphones,
+    permission: 'live_support.manage',
+  },
+  {
+    href: '/admin/live-support/ratings',
+    label: 'تقييمات الدعم',
+    icon: Star,
     permission: 'live_support.manage',
   },
   {
@@ -234,13 +577,65 @@ const navItems: Array<{
   },
   {
     href: '/admin/reports',
-    label: 'سجل الأمان والتقارير',
+    label: 'مركز التقارير',
     icon: BarChart3,
     permission: 'reports.manage',
   },
+  { href: '/admin/auto-repair', label: 'الإصلاح التلقائي', icon: ScrollText, adminOnly: true },
+  {
+    href: '/admin/system-logs',
+    label: 'سجل النظام',
+    icon: ScrollText,
+    adminOnly: true,
+  },
+  {
+    href: '/admin/settings',
+    label: 'الإعدادات',
+    icon: Settings,
+    permission: 'settings.manage',
+  },
+  {
+    href: '/admin/popup',
+    label: 'Popup المنصة',
+    icon: MessageSquarePlus,
+    permission: 'settings.manage',
+  },
 ];
 
+export function resolveAdminShellRoute(pathname: string): AdminShellRoute {
+  if (pathname === '/admin') return '/admin';
+
+  return (
+    [...navItems]
+      .sort((left, right) => right.href.length - left.href.length)
+      .find(
+        (item) =>
+          pathname === item.href || pathname.startsWith(`${item.href}/`)
+      )?.href ?? '/admin'
+  );
+}
+
+export function getAdminShellDefaults(
+  pathname: string
+): AdminPageDescriptor {
+  const activePath = resolveAdminShellRoute(pathname);
+  const item = navItems.find((candidate) => candidate.href === activePath);
+
+  return {
+    activePath,
+    sectionLabel: 'لوحة الإدارة',
+    pageTitle:
+      activePath === '/admin' ? 'الرئيسية' : item?.label ?? 'لوحة الإدارة',
+  };
+}
+
 const GROUP_CONFIG = [
+  {
+    id: 'admin_ai_agent',
+    label: 'وكيل الإدارة AI',
+    icon: Bot,
+    hrefs: ['/admin/ai-agent'],
+  },
   {
     id: 'users',
     label: 'شؤون الأعضاء',
@@ -251,33 +646,107 @@ const GROUP_CONFIG = [
     id: 'academic',
     label: 'التعليم والمحتوى',
     icon: Library,
-    hrefs: ['/admin/subjects', '/admin/content', '/admin/questions', '/admin/forms'],
+    hrefs: ['/admin/subjects', '/admin/content', '/admin/content/video-types', '/admin/shared-packages', '/admin/questions', '/admin/learning-center', '/admin/public-exams', '/admin/forms'],
+  },
+  {
+    id: 'hr',
+    label: 'الموارد البشرية',
+    icon: Building2,
+    hrefs: HR_NAV_ITEMS.map(({ href }) => href),
   },
   {
     id: 'operations',
     label: 'العمليات والتحكم',
     icon: Wrench,
-    hrefs: ['/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/community', '/admin/media'],
+    hrefs: ['/admin/operations', '/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/gifts', '/admin/sales', '/admin/community', '/admin/comments', '/admin/media'],
   },
   {
-    id: 'admin_hr_finance',
-    label: 'الإدارة والمالية',
-    icon: Briefcase,
-    hrefs: ['/admin/operations', '/admin/hr', '/admin/finance', '/admin/wallets', '/admin/recharge-verification'],
+    id: 'finance',
+    label: 'الحسابات والميزانيات',
+    icon: CircleDollarSign,
+    hrefs: [
+      '/admin/platform-finance',
+      '/admin/platform-finance/operations',
+      '/admin/platform-finance/planning',
+      '/admin/platform-finance/expenses',
+      '/admin/platform-finance/refunds',
+      '/admin/platform-finance/reports',
+      '/admin/platform-finance/wallets',
+      '/admin/platform-finance/treasury',
+      '/admin/platform-finance/migration',
+      '/admin/finance',
+      '/admin/teacher-finance',
+    ],
+  },
+  {
+    id: 'payments',
+    label: 'الشحن والمحافظ',
+    icon: Wallet,
+    hrefs: [
+      '/admin/wallets',
+      '/admin/recharge-verification',
+      '/admin/wallet-messages',
+      '/admin/recharge-shift-review',
+      '/admin/recharge-conflicts',
+    ],
   },
   {
     id: 'crm_chat',
     label: 'الاتصال والتواصل',
     icon: PhoneCall,
-    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat', '/admin/live-support', '/admin/live-support/ai'],
+    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat', '/admin/live-support', '/admin/live-support/ratings', '/admin/live-support/ai'],
   },
   {
     id: 'reports',
-    label: 'التقارير والمراقبة',
+    label: 'التقارير والمتابعة',
     icon: BarChart3,
-    hrefs: ['/admin/ai-monitor', '/admin/reports'],
+    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs', '/admin/auto-repair'],
+  },
+  {
+    id: 'admin_tools',
+    label: 'أدوات الإدارة',
+    icon: Settings,
+    hrefs: ['/admin/settings', '/admin/popup'],
   },
 ];
+
+const MOBILE_QUICK_ROUTE_ORDER: AdminShellRoute[] = [
+  '/admin/ai-agent',
+  '/admin/hr',
+  '/admin/platform-finance',
+  '/admin/content',
+  '/admin/students',
+  '/admin/live-support',
+];
+
+const ADMIN_RECENT_ROUTES_KEY = 'massar-admin-recent-routes';
+const ADMIN_PINNED_ROUTES_KEY = 'massar-admin-pinned-routes';
+
+function readStoredAdminRoutes(storageKey: string): AdminShellRoute[] {
+  try {
+    const storedRoutes = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as unknown;
+    if (!Array.isArray(storedRoutes)) return [];
+    const allowedRoutes = new Set(navItems.map((navItem) => navItem.href));
+    return storedRoutes.filter((route): route is AdminShellRoute =>
+      typeof route === 'string' && allowedRoutes.has(route as AdminShellRoute)
+    );
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof DOMException) return [];
+    throw error;
+  }
+}
+
+function storeAdminRoutes(storageKey: string, routes: AdminShellRoute[]): void {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(routes));
+  } catch (error) {
+    if (error instanceof DOMException) {
+      console.warn('تعذر حفظ اختصارات تنقل الإدارة محليًا.', error.name);
+      return;
+    }
+    throw error;
+  }
+}
 
 const formatWalletAmount = (amount: number) => {
   const formatter = new Intl.NumberFormat('en-US', {
@@ -288,34 +757,27 @@ const formatWalletAmount = (amount: number) => {
   return formatter.format(amount);
 };
 
-function AdminWalletBalanceBadge() {
+function AdminWalletBalanceBadge({ compact = false }: { compact?: boolean }) {
   const [wallets, setWallets] = useState<WalletDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadWallets = useCallback(async () => {
+    if (hasLoaded || isLoading) return;
 
-    walletService
-      .getWallets()
-      .then((data) => {
-        if (!isMounted) return;
-        setWallets(data);
-        setHasError(false);
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setHasError(true);
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setIsLoading(true);
+    try {
+      const data = await walletService.getWallets();
+      setWallets(data);
+      setHasLoaded(true);
+      setHasError(false);
+    } catch {
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasLoaded, isLoading]);
 
   const activeWallets = wallets.filter((wallet) => wallet.isActive);
   const totalBalance = activeWallets.reduce(
@@ -324,33 +786,40 @@ function AdminWalletBalanceBadge() {
   );
 
   return (
-    <Link
+    <IntentLink
       href="/admin/wallets"
-      prefetch={false}
-      className="flex min-h-14 w-full items-center justify-start gap-3 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-2 text-[var(--admin-text)] transition-all duration-300 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+      onMouseEnter={() => void loadWallets()}
+      onFocus={() => void loadWallets()}
+      className="flex min-h-14 w-full items-center justify-start gap-3 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-2 text-[var(--admin-text)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
       aria-label="رصيد محافظ الشحن"
       title="رصيد محافظ الشحن"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
         <Wallet className="h-4.5 w-4.5" />
       </span>
-      <span className="hidden min-w-0 flex-1 group-hover/sidebar:block">
+      {!compact && <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-black text-[var(--admin-text)]">
           {isLoading
             ? 'جار تحميل الرصيد'
             : hasError
               ? 'تعذر تحميل الرصيد'
-              : `${formatWalletAmount(totalBalance)} ج.م`}
+              : hasLoaded
+                ? `${formatWalletAmount(totalBalance)} ج.م`
+                : 'محافظ الشحن'}
         </span>
-        <span className="block truncate text-[11px] font-bold text-[var(--admin-muted)]">
-          {hasError ? 'افتح المحافظ للمراجعة' : `${activeWallets.length} محفظة نشطة`}
+        <span className="block truncate text-sm font-bold text-[var(--admin-muted)]">
+          {hasError
+            ? 'افتح المحافظ للمراجعة'
+            : hasLoaded
+              ? `${activeWallets.length} محفظة نشطة`
+              : 'يتم تحديثها عند الحاجة'}
         </span>
-      </span>
-    </Link>
+      </span>}
+    </IntentLink>
   );
 }
 
-export function AdminShellChrome({
+function AdminPageRegistration({
   activePath,
   sectionLabel,
   pageTitle,
@@ -360,14 +829,172 @@ export function AdminShellChrome({
   subNav,
   children,
   floatingAction,
+}: AdminPageDescriptor & { children: ReactNode }) {
+  const pathname = usePathname();
+  const context = useContext(AdminShellContext);
+
+  useEffect(() => {
+    if (!context) return;
+
+    context.registerPage({
+      pathname,
+      descriptor: {
+        activePath,
+        sectionLabel,
+        pageTitle,
+        subtitle,
+        action,
+        headerAccessory,
+        subNav,
+        floatingAction,
+      },
+    });
+
+    return () => context.registerPage(null);
+  }, [
+    action,
+    activePath,
+    context,
+    floatingAction,
+    headerAccessory,
+    pageTitle,
+    pathname,
+    sectionLabel,
+    subNav,
+    subtitle,
+  ]);
+
+  return <>{children}</>;
+}
+
+export function AdminPage(
+  props: AdminPageDescriptor & { children: ReactNode }
+) {
+  const pathname = usePathname();
+
+  // Detailed content routes are shared with the assistant surface. Keep their
+  // page metadata while allowing the assistant layout to remain the frame owner.
+  if (pathname.startsWith('/assistant/content')) {
+    return (
+      <AssistantShellChrome
+        activePath="/assistant/content"
+        sectionLabel={props.sectionLabel}
+        pageTitle={props.pageTitle}
+        subtitle={props.subtitle}
+        action={props.action}
+        headerAccessory={props.headerAccessory}
+      >
+        {props.subNav}
+        {props.children}
+        {props.floatingAction}
+      </AssistantShellChrome>
+    );
+  }
+
+  if (pathname.startsWith('/teacher/packages')) {
+    return (
+      <TeacherShellChrome
+        activePath="/teacher/packages"
+        sectionLabel={props.sectionLabel}
+        pageTitle={props.pageTitle}
+        subtitle={props.subtitle}
+        action={props.action}
+        headerAccessory={props.headerAccessory}
+        subNav={props.subNav}
+        floatingAction={props.floatingAction}
+      >
+        {props.children}
+      </TeacherShellChrome>
+    );
+  }
+
+  return <AdminPageRegistration {...props} />;
+}
+
+export function AdminShellChrome(props: AdminShellChromeProps) {
+  const context = useContext(AdminShellContext);
+
+  if (context && !props.persistentRoot) {
+    return <AdminPageRegistration {...props} />;
+  }
+
+  return <AdminShellFrame {...props} />;
+}
+
+function AdminShellFrame({
+  activePath: fallbackActivePath,
+  sectionLabel: fallbackSectionLabel,
+  pageTitle: fallbackPageTitle,
+  subtitle: fallbackSubtitle,
+  action: fallbackAction,
+  headerAccessory: fallbackHeaderAccessory,
+  subNav: fallbackSubNav,
+  children,
+  floatingAction: fallbackFloatingAction,
 }: AdminShellChromeProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const shellInstanceId = useId();
+  const [registeredPage, setRegisteredPage] =
+    useState<RegisteredAdminPage | null>(null);
+  const fallbackDescriptor = useMemo<AdminPageDescriptor>(
+    () => ({
+      activePath: fallbackActivePath,
+      sectionLabel: fallbackSectionLabel,
+      pageTitle: fallbackPageTitle,
+      subtitle: fallbackSubtitle,
+      action: fallbackAction,
+      headerAccessory: fallbackHeaderAccessory,
+      subNav: fallbackSubNav,
+      floatingAction: fallbackFloatingAction,
+    }),
+    [
+      fallbackAction,
+      fallbackActivePath,
+      fallbackFloatingAction,
+      fallbackHeaderAccessory,
+      fallbackPageTitle,
+      fallbackSectionLabel,
+      fallbackSubNav,
+      fallbackSubtitle,
+    ]
+  );
+  const descriptor =
+    registeredPage?.pathname === pathname
+      ? registeredPage.descriptor
+      : fallbackDescriptor;
+  const {
+    activePath,
+    sectionLabel,
+    pageTitle,
+    subtitle,
+    action,
+    headerAccessory,
+    subNav,
+    floatingAction,
+  } = descriptor;
+  const shellContext = useMemo(
+    () => ({ registerPage: setRegisteredPage }),
+    []
+  );
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const roles = user?.roles || [];
   const { hasPermission } = useHasPermission();
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const isHrSurface = activePath === '/admin/hr' || activePath.startsWith('/admin/hr/');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileExpandedGroup, setMobileExpandedGroup] = useState<string | null>(() =>
+    GROUP_CONFIG.find((group) => group.hrefs.includes(activePath))?.id ?? null
+  );
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [navQuery, setNavQuery] = useState('');
+  const [mobileNavQuery, setMobileNavQuery] = useState('');
+  const [recentRoutes, setRecentRoutes] = useState<AdminShellRoute[]>([]);
+  const [pinnedRoutes, setPinnedRoutes] = useState<AdminShellRoute[]>([]);
+  const navSearchRef = useRef<HTMLInputElement>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     GROUP_CONFIG.forEach((group) => {
@@ -379,15 +1006,49 @@ export function AdminShellChrome({
   });
 
   const toggleGroup = (groupId: string) => {
+    if (isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
     setExpandedGroups((prev) => ({
       ...prev,
-      [groupId]: !prev[groupId],
+      [groupId]: isSidebarCollapsed ? true : !prev[groupId],
     }));
   };
 
   useRootOverscrollBackground();
+  useShellNavigationState({
+    surface: 'admin',
+    pathname,
+    scrollRef: mainScrollRef,
+    sidebarCollapsed: isSidebarCollapsed,
+    setSidebarCollapsed: setIsSidebarCollapsed,
+    expandedGroups,
+    setExpandedGroups,
+  });
 
-  const resolvedNavItems = navItems.map((item) => {
+  useEffect(() => {
+    const focusNavigationSearch = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, select, [contenteditable="true"]')) return;
+
+      event.preventDefault();
+      setIsSidebarCollapsed(false);
+      requestAnimationFrame(() => navSearchRef.current?.focus());
+    };
+
+    window.addEventListener('keydown', focusNavigationSearch);
+    return () => window.removeEventListener('keydown', focusNavigationSearch);
+  }, []);
+
+  const resolvedNavItems = navItems
+    .filter(
+      (item) =>
+        (!roles.includes('Admin') ||
+          item.href !== '/admin/hr/my-attendance') &&
+        canAccessAdminRoute(item.href, user)
+    )
+    .map((item) => {
     if (item.href === '/admin/crm') {
       const isCrmAgent =
         user?.roles?.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff')) &&
@@ -399,26 +1060,71 @@ export function AdminShellChrome({
     return item;
   });
 
-  let filteredNavItems = resolvedNavItems.filter((item) =>
-    hasPermission(item.permission)
-  );
+  const filteredNavItems = resolvedNavItems;
 
-  const allowedNavbarItems = user?.allowedNavbarItems;
-  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
-    filteredNavItems = filteredNavItems.filter((item) =>
-      allowedNavbarItems.some(allowedPath =>
-        allowedPath === item.href || allowedPath.startsWith(item.href + '/')
-      )
+  useEffect(() => {
+    const storedRecentRoutes = readStoredAdminRoutes(ADMIN_RECENT_ROUTES_KEY);
+    const nextRecentRoutes = navItems.some((navItem) => navItem.href === activePath)
+      ? [activePath, ...storedRecentRoutes.filter((route) => route !== activePath)].slice(0, 5)
+      : storedRecentRoutes;
+    setRecentRoutes(nextRecentRoutes);
+    setPinnedRoutes(readStoredAdminRoutes(ADMIN_PINNED_ROUTES_KEY));
+    storeAdminRoutes(ADMIN_RECENT_ROUTES_KEY, nextRecentRoutes);
+  }, [activePath]);
+
+  const togglePinnedRoute = (route: AdminShellRoute) => {
+    setPinnedRoutes((currentRoutes) => {
+      const nextRoutes = currentRoutes.includes(route)
+        ? currentRoutes.filter((currentRoute) => currentRoute !== route)
+        : [route, ...currentRoutes].slice(0, 5);
+      storeAdminRoutes(ADMIN_PINNED_ROUTES_KEY, nextRoutes);
+      return nextRoutes;
+    });
+  };
+
+  const quickAdminItems = [...pinnedRoutes, ...recentRoutes]
+    .filter((route, index, routes) => routes.indexOf(route) === index)
+    .map((route) => filteredNavItems.find((navItem) => navItem.href === route))
+    .filter((navItem): navItem is AdminNavItem => Boolean(navItem))
+    .slice(0, 5);
+  const canPinActivePath = filteredNavItems.some((navItem) => navItem.href === activePath);
+  const isActivePathPinned = pinnedRoutes.includes(activePath);
+
+  const mobilePrimaryItems = [...filteredNavItems]
+    .sort((left, right) => {
+      const leftPriority = MOBILE_QUICK_ROUTE_ORDER.indexOf(left.href);
+      const rightPriority = MOBILE_QUICK_ROUTE_ORDER.indexOf(right.href);
+      return (leftPriority === -1 ? Number.MAX_SAFE_INTEGER : leftPriority) -
+        (rightPriority === -1 ? Number.MAX_SAFE_INTEGER : rightPriority);
+    })
+    .slice(0, 3);
+  const mobileMoreItems = filteredNavItems.filter((item) => !mobilePrimaryItems.includes(item));
+  const isMoreActive = mobileMoreItems.some((item) => item.href === activePath);
+  const normalizedNavQuery = navQuery.trim().toLocaleLowerCase('ar');
+  const normalizedMobileNavQuery = mobileNavQuery.trim().toLocaleLowerCase('ar');
+  const navGroups = useMemo(() => GROUP_CONFIG.map((group) => {
+    const queryMatchesGroup = group.label.toLocaleLowerCase('ar').includes(normalizedNavQuery);
+    const items = filteredNavItems.filter((item) =>
+      group.hrefs.includes(item.href) &&
+      (!normalizedNavQuery || queryMatchesGroup || item.label.toLocaleLowerCase('ar').includes(normalizedNavQuery))
     );
-  }
-
-  const navGroups = GROUP_CONFIG.map((group) => {
-    const items = filteredNavItems.filter((item) => group.hrefs.includes(item.href));
     return {
       ...group,
       items,
     };
-  }).filter((group) => group.items.length > 0);
+  }).filter((group) => group.items.length > 0), [filteredNavItems, normalizedNavQuery]);
+
+  const mobileNavGroups = useMemo(() => GROUP_CONFIG.map((group) => ({
+    ...group,
+    items: mobileMoreItems.filter((item) =>
+      group.hrefs.includes(item.href) &&
+      (
+        !normalizedMobileNavQuery ||
+        group.label.toLocaleLowerCase('ar').includes(normalizedMobileNavQuery) ||
+        item.label.toLocaleLowerCase('ar').includes(normalizedMobileNavQuery)
+      )
+    ),
+  })).filter((group) => group.items.length > 0), [mobileMoreItems, normalizedMobileNavQuery]);
 
   const handleLogout = () => {
     void logout().finally(() => {
@@ -426,65 +1132,138 @@ export function AdminShellChrome({
     });
   };
 
-  const mobilePrimaryItems = filteredNavItems.slice(0, 3);
-  const mobileMoreItems = filteredNavItems.slice(3);
-  const isMoreActive = mobileMoreItems.some((item) => item.href === activePath);
+  // Content management is shared with staff, but it must keep the staff
+  // workspace chrome when rendered through the assistant route aliases.
+  if (pathname.startsWith('/assistant/content')) {
+    return (
+      <AssistantShellChrome
+        activePath="/assistant/content"
+        sectionLabel={sectionLabel}
+        pageTitle={pageTitle}
+        subtitle={subtitle}
+        action={action}
+        headerAccessory={headerAccessory}
+      >
+        {subNav}
+        {children}
+        {floatingAction}
+      </AssistantShellChrome>
+    );
+  }
 
   return (
-    <div
-      dir="rtl"
-      className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
-      style={themeVars}
-    >
+    <AdminShellContext.Provider value={shellContext}>
+      <div
+        data-testid="admin-shell"
+        data-shell-instance={shellInstanceId}
+        className={`relative h-dvh max-h-dvh overflow-x-clip bg-[var(--admin-bg)] text-[var(--admin-text)] ${isHrSurface ? 'hr-theme' : ''}`}
+        style={themeVars}
+      >
       <aside
-        className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64"
+        className={`fixed start-0 top-0 z-50 hidden h-full flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 lg:flex transition-[width] duration-200 ease-out ${
+          isSidebarCollapsed ? 'w-20' : 'w-72'
+        }`}
         role="navigation"
         aria-label="القائمة الرئيسية"
       >
         <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex justify-start pr-5 items-center transition-all duration-300 mb-7 flex-shrink-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-lg flex-shrink-0">
+          <div className={`mb-5 flex items-center ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-between px-5'} flex-shrink-0`}>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] flex-shrink-0">
               <BookOpenText className="h-5 w-5" />
+              </div>
+              {!isSidebarCollapsed && (
+                <span className="text-sm font-bold text-[var(--admin-text)] truncate whitespace-nowrap">
+                  منصة مسار
+                </span>
+              )}
             </div>
-            <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] self-center mr-3 truncate whitespace-nowrap">
-              منصة مسار
-            </span>
+            {!isSidebarCollapsed && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                aria-label="طي القائمة الجانبية"
+                title="طي القائمة الجانبية"
+              >
+                <PanelRightClose className="h-5 w-5" />
+              </button>
+            )}
+            {isSidebarCollapsed && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="absolute top-5 end-[-1.25rem] flex h-10 w-10 items-center justify-center rounded-e-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                aria-label="توسيع القائمة الجانبية"
+                title="توسيع القائمة الجانبية"
+              >
+                <PanelRightOpen className="h-5 w-5" />
+              </button>
+            )}
           </div>
 
-          <nav className="space-y-3 px-3 overflow-y-auto flex-1 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <Link
+          {!isSidebarCollapsed && (
+            <label className="relative mx-4 mb-4 block flex-shrink-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <input
+                ref={navSearchRef}
+                value={navQuery}
+                onChange={(event) => setNavQuery(event.target.value)}
+                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
+                placeholder="ابحث عن صفحة أو أداة (Ctrl K)"
+                aria-label="ابحث في صفحات الإدارة"
+              />
+            </label>
+          )}
+
+          <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
+            <IntentLink
               href="/admin"
-              prefetch={false}
               aria-label="الرئيسية"
               aria-current={activePath === '/admin' ? 'page' : undefined}
-              className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${
+              className={`flex h-11 items-center rounded-xl transition-colors gap-3 ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'} ${
                 activePath === '/admin'
-                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                  ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
                   : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
               }`}
             >
               <Home className="h-5 w-5 flex-shrink-0" />
-              <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                الرئيسية
-              </span>
-            </Link>
+              {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">الرئيسية</span>}
+            </IntentLink>
+
+            {!isSidebarCollapsed && quickAdminItems.length > 0 && !normalizedNavQuery && (
+              <div className="rounded-xl bg-[var(--admin-hover)] p-2">
+                <p className="px-2 pb-1 text-sm font-black text-[var(--admin-muted)]">اختصاراتي</p>
+                {quickAdminItems.slice(0, 3).map((navItem) => {
+                  const Icon = navItem.icon;
+                  return (
+                    <IntentLink
+                      key={navItem.href}
+                      href={navItem.href}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs font-bold text-[var(--admin-text)] hover:bg-[var(--admin-card)]"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+                      <span className="min-w-0 flex-1 truncate">{navItem.label}</span>
+                      {pinnedRoutes.includes(navItem.href) && <Star className="h-3.5 w-3.5 fill-current text-[var(--admin-accent)]" />}
+                    </IntentLink>
+                  );
+                })}
+              </div>
+            )}
 
             {(roles.includes('Assistant') || roles.includes('Staff') || user?.allowedDomains?.includes('assistant')) && (
-              <Link
+              <IntentLink
                 href="/assistant/dashboard"
-                prefetch={false}
-                className="flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 text-emerald-500 hover:bg-emerald-500/10 font-bold border border-emerald-500/20"
+                className={`flex h-11 items-center rounded-xl transition-colors gap-3 font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'}`}
               >
                 <ArrowRight className="h-5 w-5 flex-shrink-0" />
-                <span className="hidden group-hover/sidebar:block text-sm truncate whitespace-nowrap">
-                  مساحة المساعدين
-                </span>
-              </Link>
+                {!isSidebarCollapsed && <span className="text-sm truncate whitespace-nowrap">مساحة المساعدين</span>}
+              </IntentLink>
             )}
 
             {navGroups.map((group) => {
               const GroupIcon = group.icon;
-              const isExpanded = !!expandedGroups[group.id];
+              const isExpanded = normalizedNavQuery.length > 0 || !!expandedGroups[group.id];
               const isGroupActive = group.hrefs.includes(activePath);
 
               return (
@@ -492,40 +1271,37 @@ export function AdminShellChrome({
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
-                    className={`flex h-12 w-full items-center justify-between pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 outline-none ${
+                    className={`flex h-11 w-full items-center rounded-xl transition-colors gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-between px-3'} ${
                       isGroupActive
-                        ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold border border-[var(--admin-primary)]/10 shadow-[0_2px_8px_var(--admin-shadow)]'
+                        ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
                     title={group.label}
                   >
                     <div className="flex items-center gap-3">
                       <GroupIcon className="h-5 w-5 flex-shrink-0" />
-                      <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                        {group.label}
-                      </span>
+                      {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">{group.label}</span>}
                     </div>
                     <ChevronDown
-                      className={`hidden group-hover/sidebar:block h-4 w-4 transition-transform duration-200 flex-shrink-0 ${
+                      className={`h-4 w-4 transition-transform duration-200 flex-shrink-0 ${isSidebarCollapsed ? 'hidden' : ''} ${
                         isExpanded ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
-                  {isExpanded && (
-                    <div className="space-y-1 mt-1 transition-all duration-300 pr-3 group-hover/sidebar:pr-5">
+                  {isExpanded && !isSidebarCollapsed && (
+                    <div className="mt-1 space-y-1 ps-4">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const isActive = item.href === activePath;
 
                         return (
-                          <Link
+                          <IntentLink
                             key={item.href}
                             href={item.href}
-                            prefetch={false}
-                            className={`flex h-10 items-center justify-start pr-[14px] pl-4 rounded-full transition-all duration-300 gap-3 ${
+                            className={`flex h-10 items-center justify-start px-3 rounded-lg transition-colors gap-3 ${
                               isActive
-                                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_4px_12px_var(--admin-shadow)]'
+                                ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
                                 : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                             }`}
                             title={item.label}
@@ -533,10 +1309,8 @@ export function AdminShellChrome({
                             aria-current={isActive ? 'page' : undefined}
                           >
                             <Icon className="h-4.5 w-4.5 flex-shrink-0" />
-                            <span className="hidden group-hover/sidebar:block text-xs font-bold truncate whitespace-nowrap">
-                              {item.label}
-                            </span>
-                          </Link>
+                            <span className="text-xs font-bold truncate whitespace-nowrap">{item.label}</span>
+                          </IntentLink>
                         );
                       })}
                     </div>
@@ -547,9 +1321,22 @@ export function AdminShellChrome({
           </nav>
         </div>
 
-        <div className="space-y-3 px-3 flex-shrink-0 mt-4">
-          {hasPermission('payments.manage') && <AdminWalletBalanceBadge />}
-          <div className="flex justify-start px-1 items-center transition-all duration-300">
+        <div className={`space-y-2 flex-shrink-0 mt-4 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
+          {hasPermission('payments.manage') && <AdminWalletBalanceBadge compact={isSidebarCollapsed} />}
+          <div
+            className={`flex min-h-12 items-center gap-3 rounded-xl bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-2' : 'px-3'}`}
+            title={user?.fullName || 'الحساب الحالي'}
+            aria-label={`الحساب الحالي: ${user?.fullName || 'مستخدم'}`}
+          >
+            <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'مستخدم'} size="sm" />
+            {!isSidebarCollapsed && (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'مستخدم'}</p>
+                <p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p>
+              </div>
+            )}
+          </div>
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-start'} px-1`}>
             <AnimatedThemeToggler
               checked={isDark}
               onToggle={toggleTheme}
@@ -561,38 +1348,36 @@ export function AdminShellChrome({
               }
               className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
             />
-            <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-muted)] self-center mr-3 truncate whitespace-nowrap">
+            {!isSidebarCollapsed && <span className="ms-3 self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)]">
               {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
-            </span>
+            </span>}
           </div>
           {hasPermission('settings.manage') && (
             <Link
               href="/admin/settings"
-              className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
+              className={`flex h-11 w-full items-center rounded-xl text-[var(--admin-muted)] transition-colors gap-3 hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'}`}
               aria-label="الإعدادات"
               title="الإعدادات"
             >
               <Settings className="h-5 w-5 flex-shrink-0" />
-              <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                الإعدادات
-              </span>
+              {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">الإعدادات</span>}
             </Link>
           )}
           <button
             onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
+            className={`flex h-11 w-full items-center rounded-xl text-[var(--admin-danger)] transition-colors gap-3 hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'}`}
             title="تسجيل الخروج"
             aria-label="تسجيل الخروج"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
-            <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-              تسجيل الخروج
-            </span>
+            {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">تسجيل الخروج</span>}
           </button>
         </div>
       </aside>
 
-      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-4 py-6 pb-28 lg:mr-24 lg:px-7 lg:py-8 lg:pb-8">
+      <SkipToContentLink />
+      <NavigationFocusManager />
+      <main ref={mainScrollRef} id="main-content" className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:px-7 lg:py-8 lg:pb-10 transition-[margin] duration-200 ${isSidebarCollapsed ? 'lg:ms-20' : 'lg:ms-72'}`}>
         <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
@@ -639,7 +1424,7 @@ export function AdminShellChrome({
 
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">
+                <p className="mb-1 text-xs font-black text-[var(--admin-primary)]">
                   {sectionLabel}
                 </p>
                 <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-4xl">
@@ -651,6 +1436,18 @@ export function AdminShellChrome({
                   </p>
                 ) : null}
               </div>
+              {canPinActivePath && (
+                <button
+                  type="button"
+                  onClick={() => togglePinnedRoute(activePath)}
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-primary)]"
+                  aria-pressed={isActivePathPinned}
+                  aria-label={isActivePathPinned ? 'إزالة الصفحة من المثبتة' : 'تثبيت الصفحة في الاختصارات'}
+                >
+                  <Star className={`h-4 w-4 ${isActivePathPinned ? 'fill-current text-[var(--admin-accent)]' : ''}`} />
+                  <span className="hidden sm:inline">{isActivePathPinned ? 'مثبتة' : 'تثبيت الصفحة'}</span>
+                </button>
+              )}
               {headerAccessory}
             </div>
           </div>
@@ -662,7 +1459,7 @@ export function AdminShellChrome({
 
         {children}
 
-        <footer className="mt-14 flex flex-col items-center opacity-60 select-none">
+        <footer className="mt-10 flex flex-col items-center opacity-60 select-none">
           <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
           <p className="text-xs font-bold text-[var(--admin-muted)]">
             منصة مسار
@@ -671,18 +1468,18 @@ export function AdminShellChrome({
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)]/90 px-3 py-3 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-2 py-2 lg:hidden"
         role="navigation"
         aria-label="القائمة السفلية"
       >
-        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-0.5">
           <Link
             href="/admin"
             aria-current={activePath === '/admin' ? 'page' : undefined}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
+            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
               activePath === '/admin'
-                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
-                : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                : 'text-[var(--admin-muted)]'
             }`}
           >
             <Home className="h-5 w-5" />
@@ -700,10 +1497,10 @@ export function AdminShellChrome({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
+                className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
                   isActive
-                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
-                    : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                    : 'text-[var(--admin-muted)]'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -714,14 +1511,17 @@ export function AdminShellChrome({
             );
           })}
           <button
+            ref={mobileMenuTriggerRef}
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-xs font-black transition-all ${
+            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-sm font-black transition-colors sm:text-xs ${
               isMoreActive || isMobileMenuOpen
-                ? 'border-transparent bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md'
-                : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
+                ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                : 'text-[var(--admin-muted)]'
             }`}
             aria-label="المزيد من صفحات الإدارة"
+            aria-current={isMoreActive ? 'page' : undefined}
+            aria-expanded={isMobileMenuOpen}
           >
             <Menu className="h-5 w-5" />
             <span className="truncate w-full" style={{ lineHeight: 1 }}>
@@ -731,18 +1531,15 @@ export function AdminShellChrome({
         </div>
       </nav>
 
-      {isMobileMenuOpen ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm lg:hidden"
-            aria-label="إغلاق قائمة الإدارة"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <aside
-            className="fixed bottom-0 right-0 z-[60] w-full max-h-[80vh] overflow-y-auto rounded-t-[24px] border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_70px_var(--admin-shadow)] lg:hidden"
-            aria-label="قائمة الإدارة الإضافية"
-          >
+      <AccessibleOverlay
+        open={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        label="قائمة الإدارة الإضافية"
+        triggerRef={mobileMenuTriggerRef}
+        layerClassName="lg:hidden"
+        className="bottom-0 start-0 max-h-[80vh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
+        testId="admin-mobile-drawer"
+      >
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-black text-[var(--admin-text)]">
                 صفحات الإدارة
@@ -756,28 +1553,100 @@ export function AdminShellChrome({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {mobileMoreItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.href === activePath;
-
+            <label className="relative mb-4 block">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <input
+                value={mobileNavQuery}
+                onChange={(event) => setMobileNavQuery(event.target.value)}
+                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-2 ps-10 pe-3 text-sm font-medium text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)]"
+                placeholder="ابحث عن صفحة أو أداة"
+                aria-label="ابحث في صفحات الإدارة"
+              />
+            </label>
+            {quickAdminItems.length > 0 && !normalizedMobileNavQuery && (
+              <section className="mb-4" aria-labelledby="admin-quick-routes-title">
+                <h2 id="admin-quick-routes-title" className="mb-2 text-sm font-black text-[var(--admin-text)]">
+                  المثبتة والمستخدمة حديثًا
+                </h2>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {quickAdminItems.map((navItem) => {
+                    const Icon = navItem.icon;
+                    return (
+                      <Link
+                        key={navItem.href}
+                        href={navItem.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex min-h-12 min-w-36 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-hover)] px-3 text-sm font-bold text-[var(--admin-text)]"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
+                        <span className="min-w-0 flex-1 truncate">{navItem.label}</span>
+                        {pinnedRoutes.includes(navItem.href) && <Star className="h-3.5 w-3.5 fill-current text-[var(--admin-accent)]" />}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            <div className="space-y-5">
+              {mobileNavGroups.map((group) => {
+                const GroupIcon = group.icon;
+                const isExpanded = Boolean(normalizedMobileNavQuery) || mobileExpandedGroup === group.id;
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex min-h-12 items-center gap-3 rounded-[16px] border px-3 py-2 text-sm font-bold transition ${
-                      isActive
-                        ? 'border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                        : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span className="min-w-0 truncate">{item.label}</span>
-                  </Link>
+                  <section key={group.id} aria-label={group.label}>
+                    <button
+                      type="button"
+                      onClick={() => setMobileExpandedGroup((current) => current === group.id ? null : group.id)}
+                      className="mb-1 flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-sm font-black text-[var(--admin-text)] hover:bg-[var(--admin-hover)]"
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="flex items-center gap-2">
+                        <GroupIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                        {group.label}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExpanded && <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = item.href === activePath;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => {
+                              setMobileExpandedGroup(group.id);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`flex min-h-12 items-center gap-3 rounded-xl border px-3 py-2 text-sm font-bold transition-colors ${
+                              isActive
+                                ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                                : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                            }`}
+                          >
+                            <Icon className="h-5 w-5 shrink-0" />
+                            <span className="min-w-0 truncate">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>}
+                  </section>
                 );
               })}
+              {mobileNavGroups.length === 0 && (
+                <p className="rounded-xl bg-[var(--admin-hover)] px-3 py-4 text-sm font-medium text-[var(--admin-muted)]">
+                  لا توجد صفحات مطابقة للبحث.
+                </p>
+              )}
+            </div>
+            <div className="mt-5 flex items-center gap-3 rounded-xl bg-[var(--admin-hover)] p-3">
+              <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'مستخدم'} size="sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'مستخدم'}</p>
+                <p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
               {hasPermission('settings.manage') && (
                 <Link
                   href="/admin/settings"
@@ -797,11 +1666,10 @@ export function AdminShellChrome({
                 <span>تسجيل الخروج</span>
               </button>
             </div>
-          </aside>
-        </>
-      ) : null}
+      </AccessibleOverlay>
 
-      {floatingAction}
-    </div>
+        {floatingAction}
+      </div>
+    </AdminShellContext.Provider>
   );
 }

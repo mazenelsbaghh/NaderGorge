@@ -1,22 +1,28 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
+import { ContentArchiveControl } from './ContentArchiveControl';
 import toast from 'react-hot-toast';
-import { adminService, type VideoProvider } from '@/services/admin-service';
+import { adminService, type LessonCockpitVideoDto } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
-import NeumorphButton from '@/components/ui/neumorph-button';
-import { Dropdown } from '@/components/ui/dropdown';
-import { NumberField } from '@/components/ui/number-field';
 import { ImageZoomModal } from './ImageZoomModal';
+import { ContentInternalCode } from './ContentInternalCode';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
+import { aiJobStatusFromProgressEvent } from '@/lib/ai-job-status';
+import { extractApiErrorMessages, getApiErrorSummary } from '@/lib/api-errors';
+import { AddVideoForm } from './AddVideoForm';
+import { bunnyPlaybackSelection } from '@/lib/bunny-playback-mode';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [statusUnavailable, setStatusUnavailable] = useState(false);
+  const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const isFinishedRef = useRef(false);
 
@@ -26,15 +32,8 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
 
   const handleAiJobProgress = (payload: { jobId: string; progress: number; status: string; message: string }) => {
     if (payload.jobId === videoId) {
-      setStatus({
-        id: payload.jobId,
-        state: payload.progress >= 100 ? 'completed' : payload.progress < 0 ? 'failed' : 'active',
-        progress: {
-          percentage: payload.progress,
-          stage: payload.message || payload.status,
-        },
-        failedReason: payload.progress < 0 ? payload.message : null,
-      } as any);
+      setStatusUnavailable(false);
+      setStatus(aiJobStatusFromProgressEvent(payload));
 
       if (payload.progress >= 100) {
         isFinishedRef.current = true;
@@ -55,17 +54,18 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
     const checkStatus = async () => {
       if (isCancelling || isFinishedRef.current) return;
       try {
-        const data = await workerService.getWorkerJobStatus(videoId);
-        setStatus(data);
+        const workerStatus = await workerService.getWorkerJobStatus(videoId);
+        setStatusUnavailable(false);
+        setStatus(workerStatus);
 
-        if (data.state === 'completed' || data.state === 'not_found') {
+        if (workerStatus.state === 'completed' || workerStatus.state === 'not_found') {
           isFinishedRef.current = true;
           timeout = setTimeout(() => {
             if (onCompleteRef.current) onCompleteRef.current();
           }, 2000);
         }
       } catch {
-        // silently ignore fetch errors
+        setStatusUnavailable(true);
       }
     };
 
@@ -79,18 +79,16 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   }, [videoId, isCancelling, isConnected]);
 
   const handleCancel = async () => {
-    if (!confirm('هل أنت متأكد من إلغاء العملية؟')) return;
     setIsCancelling(true);
     try {
-      await workerService.cancelWorkerJob(videoId);
       const realId = videoId.replace('_mindmaps', '');
-      
+
       if (isMindmap) {
         await adminService.cancelMindmapGeneration(realId);
       } else {
         await adminService.cancelVideoAiAnalysis(realId);
       }
-      
+
       toast.success('تم إلغاء العملية بنجاح');
       onComplete();
     } catch {
@@ -102,21 +100,15 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      // If there's an active job, retry it; otherwise re-trigger analysis
-      if (status?.state === 'failed') {
-        await workerService.retryWorkerJob(videoId);
-        toast.success('جاري إعادة المحاولة...');
-        setStatus(null);
+      const realId = videoId.replace('_mindmaps', '');
+      if (isMindmap) {
+        await adminService.generateVideoMindmaps(realId);
       } else {
-        const realId = videoId.replace('_mindmaps', '');
-        if (isMindmap) {
-          await adminService.generateVideoMindmaps(realId);
-        } else {
-          await adminService.triggerVideoAiAnalysis(realId);
-        }
-        toast.success('تم إعادة تشغيل العملية');
-        setStatus(null);
+        await adminService.triggerVideoAiAnalysis(realId);
       }
+      toast.success('تم إعادة تشغيل العملية');
+      setStatusUnavailable(false);
+      setStatus(null);
     } catch {
       toast.error('تعذر إعادة المحاولة');
     } finally {
@@ -125,10 +117,8 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   };
 
   // Derive display values
-  const progressVal = status?.progress
-    ? (typeof status.progress === 'object' ? status.progress.percentage : Number(status.progress)) || 0
-    : 0;
-  const progressText = status?.progress && typeof status.progress === 'object' && status.progress.stage
+  const progressVal = status?.progress.percentage ?? 0;
+  const progressText = status?.progress.stage
     ? status.progress.stage
     : status?.state === 'waiting'
       ? 'في الطابور...'
@@ -141,7 +131,7 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   const isWorking = status?.state === 'active' || status?.state === 'waiting';
 
   return (
-    <div className="flex flex-col gap-1 items-end px-1 py-0.5 min-w-[180px]">
+    <div className="flex w-full min-w-0 flex-col items-end gap-1 px-1 py-0.5 sm:w-[260px]">
       {/* Status text + spinner */}
       <div className="flex items-center gap-1.5 font-bold text-[var(--admin-primary)] w-full justify-end">
         {(isWorking || !status) && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
@@ -158,66 +148,97 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
       {(isWorking || (!status && !isFailed)) && (
         <div className="w-full h-1 rounded-full overflow-hidden border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/10">
           <div
-            className="h-full bg-[var(--admin-primary)] transition-all duration-[800ms] ease-out"
+            className="h-full bg-[var(--admin-primary)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-[800ms] ease-out"
             style={{ width: `${Math.max(4, progressVal)}%` }}
           />
         </div>
       )}
 
-      {/* Failed reason snippet */}
-      {isFailed && status.failedReason && (
-        <span className="text-xs text-red-400 truncate w-full" title={status.failedReason}>
-          {status.failedReason}
-        </span>
+      {/* Public failure guidance. Technical worker diagnostics never render here. */}
+      {isFailed && status.failure && (
+        <div
+          role="alert"
+          dir="rtl"
+          className="w-full rounded-lg border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-2.5 py-2 text-start text-xs leading-5 text-[var(--admin-danger)]"
+        >
+          {status.failure.message}
+        </div>
+      )}
+
+      {statusUnavailable && !isFailed && (
+        <div
+          role="status"
+          dir="rtl"
+          className="w-full rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-start text-xs leading-5 text-amber-700 dark:text-amber-300"
+        >
+          تعذر تحديث حالة التحليل حاليًا. سنحاول التحقق مرة أخرى تلقائيًا.
+        </div>
       )}
 
       {/* Action buttons */}
       {!isCompleted && (
-        <div className="flex items-center gap-1.5 mt-0.5">
-          {/* Copy error (failed only) */}
-        {isFailed && (
-          <button
-            onClick={() => {
-              if (status.failedReason) {
-                navigator.clipboard.writeText(status.failedReason);
-                toast.success('تم نسخ الخطأ');
-              }
-            }}
-            title="نسخ رسالة الخطأ"
-            className="flex items-center justify-center h-6 w-6 rounded text-red-400 bg-red-500/10 hover:bg-red-500/20 transition"
-          >
-            <Copy className="h-3 w-3" />
-          </button>
-        )}
+        <div className="mt-1 flex w-full flex-wrap items-center justify-end gap-2">
+          {isFailed && status.failure?.retryable && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              disabled={isRetrying || isCancelling}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--admin-primary)] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+              {isRetrying ? 'جاري إعادة التشغيل...' : 'إعادة المحاولة'}
+            </button>
+          )}
 
-        {/* Retry button — always shown when processing or failed */}
-        <button
-          onClick={handleRetry}
-          disabled={isRetrying || isCancelling}
-          title="إعادة التحليل من البداية"
-          className="flex h-8 w-8 items-center justify-center rounded text-[var(--admin-primary)] bg-[var(--admin-primary)]/10 transition hover:bg-[var(--admin-primary)]/20 disabled:opacity-40"
-        >
-          <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
-        </button>
-
-        {/* Cancel button — always shown */}
-        <button
-          onClick={handleCancel}
-          disabled={isCancelling || isRetrying}
-          title="إيقاف وإلغاء التحليل"
-          className="flex items-center justify-center h-6 w-6 rounded text-red-500 bg-red-500/10 hover:bg-red-500/20 transition disabled:opacity-40"
-        >
-          {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-        </button>
-      </div>
+          {!isFailed && (
+            <button
+              type="button"
+              onClick={() => setCancelConfirmationOpen(true)}
+              disabled={isCancelling || isRetrying}
+              title="إيقاف وإلغاء التحليل"
+              aria-label="إيقاف وإلغاء التحليل"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-[var(--admin-danger-10)] text-[var(--admin-danger)] transition hover:bg-[var(--admin-danger-20)] disabled:opacity-40"
+            >
+              {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
       )}
+      <AdminConfirmationDialog
+        open={cancelConfirmationOpen}
+        onClose={() => setCancelConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleCancel();
+          setCancelConfirmationOpen(false);
+        }}
+        title="إلغاء التحليل"
+        consequence="سيتم إيقاف التحليل أو إنشاء الخريطة الذهنية الجاري الآن. قد لا تُحفظ أي نتائج لم تكتمل بعد."
+        confirmLabel="إلغاء العملية"
+        variant="danger"
+        isConfirming={isCancelling}
+      />
     </div>
   );
 }
 
 // ── Chapters inline panel ───────────────────────────────────────────────────
-function ChaptersInline({ chapters }: { chapters: any[] }) {
+function ChaptersInline({ chapters, onRefresh }: { chapters: any[]; onRefresh?: () => void }) {
   const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
+  const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
+
+  const handleRegenerateMindmap = async (chapter: any) => {
+    if (!chapter?.id) return;
+    setRegeneratingChapterId(chapter.id);
+    try {
+      await adminService.regenerateChapterMindmap(chapter.id);
+      toast.success(chapter.mindmapImageUrl ? 'جاري إعادة تصميم صورة الشابتر' : 'جاري توليد صورة الشابتر');
+      onRefresh?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'تعذر تشغيل توليد صورة الشابتر');
+    } finally {
+      setRegeneratingChapterId(null);
+    }
+  };
 
   if (!chapters || chapters.length === 0) {
     return (
@@ -230,8 +251,20 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
         <div key={ch.id} className="flex items-start gap-2.5 rounded-lg bg-[var(--admin-bg)] border border-[var(--admin-border)] px-3 py-2">
           <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-[var(--admin-text)] truncate">{ch.title}</div>
-            {ch.summaryText && <div className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
+            <div className="truncate text-start text-xs font-bold text-[var(--admin-text)]" dir="auto">{ch.title}</div>
+            {ch.summaryText && <div className="mt-0.5 line-clamp-2 text-start text-xs text-[var(--admin-muted)]" dir="auto">{ch.summaryText}</div>}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleRegenerateMindmap(ch)}
+                disabled={regeneratingChapterId === ch.id}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--admin-primary)]/25 bg-[var(--admin-primary-15)] px-2.5 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                title={ch.mindmapImageUrl ? 'إعادة تصميم صورة هذا الشابتر فقط' : 'توليد صورة لهذا الشابتر فقط'}
+              >
+                {regeneratingChapterId === ch.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {ch.mindmapImageUrl ? 'إعادة تصميم' : 'توليد صورة'}
+              </button>
+            </div>
             {ch.mindmapImageUrl && (
               <div className="mt-2 space-y-1">
                 <button
@@ -242,7 +275,7 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
                   <ImageIcon className="w-3.5 h-3.5" />
                   رؤية وتنزيل الخريطة الذهنية
                 </button>
-                <div 
+                <div
                   onClick={() => setZoomImage({ url: ch.mindmapImageUrl, title: ch.title })}
                   className="cursor-zoom-in relative overflow-hidden rounded border border-[var(--admin-border)] hover:border-teal-500 transition-colors w-fit group max-w-[200px]"
                 >
@@ -254,7 +287,7 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
                     unoptimized
                     className="h-auto w-full max-w-[200px] transition-transform duration-200 group-hover:scale-[1.03]"
                   />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] gap-1 font-bold">
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-sm gap-1 font-bold">
                     <ZoomIn className="w-3.5 h-3.5" />
                     تكبير
                   </div>
@@ -281,24 +314,44 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
 }
 
 interface LessonVideoListProps {
-  videos: any[];
+  videos: LessonCockpitVideoDto[];
   onRefresh?: () => void;
   lessonId: string;
+  readOnly?: boolean;
+  showProviderDetails?: boolean;
 }
 
-export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
+function bunnyAssetIsProcessing(status?: string | null) {
+  const normalizedStatus = status?.toLowerCase();
+  return Boolean(
+    normalizedStatus
+    && normalizedStatus !== 'ready'
+    && normalizedStatus !== 'failed'
+    && normalizedStatus !== 'unknown',
+  );
+}
+
+export function LessonVideoList({ videos, onRefresh, lessonId, readOnly = false, showProviderDetails = true }: LessonVideoListProps) {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [videoPendingDeletion, setVideoPendingDeletion] = useState<LessonCockpitVideoDto | null>(null);
   const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editProvider, setEditProvider] = useState<VideoProvider>('YouTube');
-  const [editUrlOrEmbedCode, setEditUrlOrEmbedCode] = useState('');
-  const [editOrder, setEditOrder] = useState(1);
-  const [editMaxWatchCount, setEditMaxWatchCount] = useState(3);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
+  const [bunnyReplacementPendingCancellation, setBunnyReplacementPendingCancellation] = useState<{ assetId: string; videoTitle: string } | null>(null);
+  const [cancellingBunnyReplacementId, setCancellingBunnyReplacementId] = useState<string | null>(null);
+
+  const hasPendingBunnyVideo = videos.some((video) => {
+    return (video.provider.toLowerCase() === 'bunny' && bunnyAssetIsProcessing(video.bunnyStatus))
+      || bunnyAssetIsProcessing(video.pendingBunnyReplacement?.status);
+  });
+
+  useEffect(() => {
+    if (!hasPendingBunnyVideo || !onRefresh) return;
+    const interval = window.setInterval(onRefresh, 15_000);
+    return () => window.clearInterval(interval);
+  }, [hasPendingBunnyVideo, onRefresh]);
 
   const toggleChapters = (videoId: string) =>
     setExpandedChapters(prev => prev === videoId ? null : videoId);
@@ -329,44 +382,11 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const startEditVideo = (video: any) => {
+  const startEditVideo = (video: LessonCockpitVideoDto) => {
     setEditingVideoId(video.id);
-    setEditTitle(video.title || '');
-    setEditProvider((video.provider || 'YouTube') as VideoProvider);
-    setEditUrlOrEmbedCode(video.url || video.providerVideoId || '');
-    setEditOrder(video.order || 1);
-    setEditMaxWatchCount(video.maxWatchCount || 3);
   };
 
-  const handleUpdateVideo = async (videoId: string) => {
-    const trimmedTitle = editTitle.trim();
-    const trimmedUrl = editUrlOrEmbedCode.trim();
-
-    if (!trimmedTitle || !trimmedUrl || editOrder < 1 || editMaxWatchCount < 1) {
-      toast.error('بيانات التعديل غير صالحة');
-      return;
-    }
-
-    try {
-      setUpdatingId(videoId);
-      await adminService.updateVideo(videoId, {
-        title: trimmedTitle,
-        provider: editProvider,
-        urlOrEmbedCode: trimmedUrl,
-        order: editOrder,
-        limit: editMaxWatchCount,
-      });
-      toast.success('تم تعديل الفيديو بنجاح');
-      setEditingVideoId(null);
-      onRefresh?.();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'تعذر تعديل الفيديو');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleToggleActive = async (video: any) => {
+  const handleToggleActive = async (video: LessonCockpitVideoDto) => {
     try {
       setTogglingActiveId(video.id);
       await adminService.toggleVideoActive(video.id);
@@ -379,9 +399,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const handleDeleteVideo = async (video: any) => {
-    if (!window.confirm(`حذف الفيديو "${video.title}"؟`)) return;
-
+  const handleDeleteVideo = async (video: LessonCockpitVideoDto) => {
     try {
       setDeletingId(video.id);
       await adminService.deleteVideo(video.id);
@@ -394,6 +412,26 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
+  const handleCancelBunnyReplacement = async (assetId: string) => {
+    try {
+      setCancellingBunnyReplacementId(assetId);
+      await adminService.cancelBunnyVideoReplacement(assetId);
+      toast.success('تم إلغاء استبدال Bunny. ما زال مصدر الفيديو السابق يعمل.');
+      onRefresh?.();
+      return true;
+    } catch (error: unknown) {
+      if (extractApiErrorMessages(error).includes('BUNNY_REPLACEMENT_NOT_PENDING')) {
+        toast.success('تم تحديث حالة استبدال Bunny. تحقق من المصدر الحالي للفيديو.');
+        onRefresh?.();
+        return true;
+      }
+      toast.error(getApiErrorSummary(error, 'تعذر إلغاء استبدال Bunny'));
+      return false;
+    } finally {
+      setCancellingBunnyReplacementId(null);
+    }
+  };
+
   if (!videos || videos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] p-12 text-center">
@@ -402,14 +440,16 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
         </div>
         <h4 className="mb-2 text-lg font-bold text-[var(--admin-text)]">لا يوجد فيديو بعد</h4>
         <p className="max-w-md text-sm text-[var(--admin-muted)] mb-6">
-          أضف الفيديو الأول من النموذج أدناه لتبدأ في بث محتوى هذه الحصة.
+          {readOnly ? 'لم تضف الإدارة فيديوهات لهذه الحصة بعد.' : 'أضف الفيديو الأول من النموذج أدناه لتبدأ في بث محتوى هذه الحصة.'}
         </p>
-        <a
-          href="#add-video-form"
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-        >
-          + أضف فيديو
-        </a>
+        {!readOnly && (
+          <a
+            href="#add-video-form"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+          >
+            + أضف فيديو
+          </a>
+        )}
       </div>
     );
   }
@@ -418,12 +458,49 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     <div className="space-y-3">
       {videos.map((video) => {
         const isGoogleDrive = video.provider === 'google_drive';
-        const hasChapters = !isGoogleDrive && video.chapters && video.chapters.length > 0;
+        const normalizedBunnyStatus = video.bunnyStatus?.toLowerCase();
+        const normalizedPendingReplacementStatus = video.pendingBunnyReplacement?.status.toLowerCase();
+        const normalizedLastReplacementOutcomeStatus = video.lastBunnyReplacementOutcome?.status.toLowerCase();
+        const bunnyManagedNotReady = video.provider.toLowerCase() === 'bunny'
+          && Boolean(normalizedBunnyStatus)
+          && normalizedBunnyStatus !== 'ready';
+        const chapterCount = video.chapters?.length ?? 0;
+        const hasChapters = !isGoogleDrive && chapterCount > 0;
+
+        if (readOnly) {
+          return (
+            <div
+              key={video.id}
+              className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-primary)]">
+                    <PlaySquare className="h-4 w-4" />
+                  </div>
+                  <h4 className="truncate text-sm font-black text-[var(--admin-text)]">{video.title}</h4>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={`معاينة الفيديو ${video.title}`}
+                  onClick={() => setPreviewVideoId(video.id)}
+                  disabled={bunnyManagedNotReady}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={bunnyManagedNotReady ? 'فيديو Bunny ما زال قيد التجهيز' : 'فتح البلاير'}
+                >
+                  <Play className="h-4 w-4" />
+                  البلاير
+                </button>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div
             key={video.id}
-            className={`rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden transition-all ${
+            className={`rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
               !video.isActive ? 'opacity-60 border-dashed bg-[var(--admin-bg)]' : ''
             }`}
           >
@@ -438,9 +515,75 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                 <div>
                   <h4 className="font-bold text-[var(--admin-text)]">{video.title}</h4>
                   <div className="mt-2 sm:mt-1 flex flex-wrap items-center gap-2 text-xs sm:text-xs font-mono text-[var(--admin-muted)]">
-                    <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
-                      {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
+                    <ContentInternalCode code={video.internalCode} label="كود الفيديو الداخلي" compact />
+                    <span className="rounded bg-[var(--admin-primary-15)] px-1.5 py-0.5 font-sans font-bold text-[var(--admin-primary)]">
+                      {video.videoType.name}
                     </span>
+                    {showProviderDetails && (
+                      <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
+                        {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
+                      </span>
+                    )}
+                    {video.provider.toLowerCase() === 'bunny' && video.bunnyLibrary && (
+                      <span className="rounded border border-[var(--admin-primary)]/20 bg-[var(--admin-primary-15)] px-1.5 py-0.5 font-sans font-bold text-[var(--admin-primary)]">
+                        مكتبة: {video.bunnyLibrary.name} · {video.bunnyLibrary.libraryId}
+                      </span>
+                    )}
+                    {video.provider.toLowerCase() === 'bunny' && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-black ${bunnyPlaybackSelection(video.bunnyPlaybackMode) === 1
+                        ? 'border-teal-500/25 bg-teal-500/10 text-teal-700 dark:text-teal-300'
+                        : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'
+                      }`}>
+                        المشغل: {bunnyPlaybackSelection(video.bunnyPlaybackMode) === 1 ? 'المنصة HLS' : 'Bunny الأصلي'}
+                      </span>
+                    )}
+                    {video.provider.toLowerCase() === 'bunny' && video.bunnyStatus && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedBunnyStatus === 'ready'
+                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : normalizedBunnyStatus === 'failed' || normalizedBunnyStatus === 'unknown'
+                          ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                          : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {normalizedBunnyStatus === 'ready'
+                          ? 'Bunny جاهز'
+                          : normalizedBunnyStatus === 'failed' || normalizedBunnyStatus === 'unknown'
+                            ? 'تعذر تجهيز فيديو Bunny'
+                            : `Bunny قيد التجهيز${video.bunnyEncodeProgress != null ? ` · ${video.bunnyEncodeProgress}%` : ''}`}
+                      </span>
+                    )}
+                    {video.pendingBunnyReplacement && (
+                      <>
+                        <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedPendingReplacementStatus === 'failed' || normalizedPendingReplacementStatus === 'unknown'
+                          ? 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                          : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                        }`}>
+                          {normalizedPendingReplacementStatus === 'failed' || normalizedPendingReplacementStatus === 'unknown'
+                            ? 'تعذر تجهيز مصدر Bunny الجديد'
+                            : `يتم تجهيز مصدر Bunny جديد${video.pendingBunnyReplacement.encodeProgress != null ? ` · ${video.pendingBunnyReplacement.encodeProgress}%` : ''}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setBunnyReplacementPendingCancellation({
+                            assetId: video.pendingBunnyReplacement!.assetId,
+                            videoTitle: video.title,
+                          })}
+                          disabled={cancellingBunnyReplacementId === video.pendingBunnyReplacement.assetId}
+                          className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 font-sans text-xs font-bold text-amber-800 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-200"
+                        >
+                          {cancellingBunnyReplacementId === video.pendingBunnyReplacement.assetId ? 'جارٍ الإلغاء...' : 'إلغاء الاستبدال'}
+                        </button>
+                      </>
+                    )}
+                    {!video.pendingBunnyReplacement && video.lastBunnyReplacementOutcome && (
+                      <span className={`rounded border px-1.5 py-0.5 font-sans font-bold ${normalizedLastReplacementOutcomeStatus === 'cancelled'
+                        ? 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'
+                        : 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
+                      }`}>
+                        {normalizedLastReplacementOutcomeStatus === 'cancelled'
+                          ? 'تم إلغاء آخر استبدال Bunny؛ المصدر السابق مستمر'
+                          : 'لم يكتمل آخر استبدال Bunny؛ المصدر السابق مستمر'}
+                      </span>
+                    )}
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       مشاهدة: {video.maxWatchCount === 0 ? 'غير محدود' : `${video.maxWatchCount}×`}
                     </span>
@@ -474,15 +617,15 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                         ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] border border-[var(--admin-primary)]/30'
                         : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] border border-transparent'
                       }`}
-                    title={`${video.chapters.length} فصل — انقر للعرض`}
+                    title={`${chapterCount} فصل — انقر للعرض`}
                   >
                     <BookOpen className="h-3.5 w-3.5" />
-                    <span>{video.chapters.length}</span>
+                    <span>{chapterCount}</span>
                     <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${expandedChapters === video.id ? 'rotate-180' : ''}`} />
                   </button>
                 )}
 
-                {!isGoogleDrive && (
+                {!readOnly && !isGoogleDrive && (
                   <div className="relative group/ai">
                     {video.isProcessingAI ? (
                       <AIProgressTracker videoId={video.id} onComplete={() => onRefresh && onRefresh()} />
@@ -518,7 +661,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                               : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary)]/10'
                             }`}
                           aria-label="استخراج الفصول بالذكاء الاصطناعي"
-                          title={video.chapters?.length > 0 ? 'إعادة توليد الفصول' : 'استخراج فصول الفيديو بالذكاء الاصطناعي'}
+                          title={chapterCount > 0 ? 'إعادة توليد الفصول' : 'استخراج فصول الفيديو بالذكاء الاصطناعي'}
                         >
                           {triggeringId === video.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -536,158 +679,81 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     type="button"
                     aria-label="معاينة الفيديو"
                     onClick={() => setPreviewVideoId(video.id)}
-                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors"
-                    title="معاينة الفيديو كطالب"
+                    disabled={bunnyManagedNotReady}
+                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+                    title={bunnyManagedNotReady ? 'انتظر حتى يكتمل تجهيز فيديو Bunny' : 'معاينة الفيديو كطالب'}
                   >
                     <Play className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="relative group/toggle-active">
-                  <button
-                    type="button"
-                    aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
-                    onClick={() => handleToggleActive(video)}
-                    disabled={togglingActiveId === video.id}
-                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
-                    title={video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
-                  >
-                    {togglingActiveId === video.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : video.isActive ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                {!readOnly && (
+                  <>
+                    <ContentArchiveControl targetType="Video" targetId={video.id} title={video.title} archiveMode={video.archiveMode} onChanged={onRefresh} compact />
+                    <div className="relative group/toggle-active">
+                      <button
+                        type="button"
+                        aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
+                        onClick={() => handleToggleActive(video)}
+                        disabled={togglingActiveId === video.id || bunnyManagedNotReady}
+                        className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
+                        title={bunnyManagedNotReady ? 'يتفعّل تلقائيًا بعد اكتمال تجهيز Bunny' : video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
+                      >
+                        {togglingActiveId === video.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : video.isActive ? (
+                          <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
 
-                <div className="relative group/edit">
-                  <button
-                    type="button"
-                    aria-label="تعديل الفيديو"
-                    onClick={() => startEditVideo(video)}
-                    disabled={updatingId === video.id || deletingId === video.id}
-                    className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {updatingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="relative group/del">
-                  <button
-                    type="button"
-                    aria-label="حذف الفيديو"
-                    onClick={() => handleDeleteVideo(video)}
-                    disabled={deletingId === video.id || updatingId === video.id}
-                    className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {deletingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </button>
-                </div>
+                    <div className="relative group/edit">
+                      <button
+                        type="button"
+                        aria-label="تعديل الفيديو"
+                        onClick={() => startEditVideo(video)}
+                        disabled={deletingId === video.id}
+                        className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="relative group/del">
+                      <button
+                        type="button"
+                        aria-label="حذف الفيديو"
+                        onClick={() => setVideoPendingDeletion(video)}
+                        disabled={deletingId === video.id}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {deletingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Inline Edit Form */}
-            {editingVideoId === video.id && (
-              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4 space-y-4" dir="rtl">
-                <div className="text-sm font-bold text-[var(--admin-text)]">تعديل بيانات الفيديو</div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="flex-1 space-y-2 min-w-[200px]">
-                    <label className="text-xs font-bold text-[var(--admin-muted)]">عنوان الفيديو</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="مثال: الدرس الأول - مراجعة"
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-                      required
-                    />
-                  </div>
-                  <div className="w-40 space-y-2">
-                    <Dropdown
-                      label="المنصة"
-                      value={editProvider}
-                      onChange={(v) => setEditProvider(v as VideoProvider)}
-                      size="sm"
-                      options={[
-                        { value: 'YouTube', label: 'YouTube' },
-                        { value: 'vk', label: 'VK (فيكونتاكتي)' },
-                        { value: 'bunny', label: 'Bunny.net' },
-                      ]}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2 min-w-[200px]">
-                    <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>
-                    <input
-                      type="text"
-                      value={editUrlOrEmbedCode}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
-                          setEditProvider('vk');
-                        } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
-                          setEditProvider('YouTube');
-                        } else if (val.includes('mediadelivery.net')) {
-                          setEditProvider('bunny');
-                        }
-                        setEditUrlOrEmbedCode(val);
-                      }}
-                      placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : editProvider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
-                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="w-32">
-                    <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
-                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">ترتيب العرض</NumberField.Label>
-                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
-                        <NumberField.DecrementButton />
-                        <NumberField.Input className="bg-[var(--admin-bg)]" />
-                        <NumberField.IncrementButton />
-                      </NumberField.Group>
-                    </NumberField>
-                  </div>
-                  <div className="w-40">
-                    <NumberField value={editMaxWatchCount} onChange={setEditMaxWatchCount} minValue={1}>
-                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">الحد الأقصى للمشاهدات</NumberField.Label>
-                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
-                        <NumberField.DecrementButton />
-                        <NumberField.Input className="bg-[var(--admin-bg)]" />
-                        <NumberField.IncrementButton />
-                      </NumberField.Group>
-                    </NumberField>
-                  </div>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <NeumorphButton
-                      type="button"
-                      onClick={() => setEditingVideoId(null)}
-                      intent="ghost"
-                      size="md"
-                      pill
-                    >
-                      إلغاء
-                    </NeumorphButton>
-                    <NeumorphButton
-                      type="button"
-                      onClick={() => handleUpdateVideo(video.id)}
-                      disabled={updatingId === video.id || !editTitle.trim() || !editUrlOrEmbedCode.trim()}
-                      loading={updatingId === video.id}
-                      intent="primary"
-                      size="md"
-                      pill
-                    >
-                      حفظ التعديلات
-                    </NeumorphButton>
-                  </div>
-                </div>
+            {!readOnly && editingVideoId === video.id && (
+              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4" dir="rtl">
+                <AddVideoForm
+                  lessonId={lessonId}
+                  editingVideo={video}
+                  onCancel={() => setEditingVideoId(null)}
+                  onSuccess={() => {
+                    setEditingVideoId(null);
+                    onRefresh?.();
+                  }}
+                />
               </div>
             )}{/* end row */}
 
             {/* Chapters panel */}
             {hasChapters && expandedChapters === video.id && (
-              <ChaptersInline chapters={video.chapters ?? []} />
+              <ChaptersInline chapters={video.chapters ?? []} onRefresh={onRefresh} />
             )}
           </div>
         );
@@ -696,7 +762,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
       {/* Video Preview Modal */}
       {previewVideoId && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 md:p-8"
           role="dialog"
           aria-modal="true"
           aria-labelledby="lesson-video-preview-title"
@@ -728,6 +794,34 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
           </div>
         </div>
       )}
+      <AdminConfirmationDialog
+        open={videoPendingDeletion !== null}
+        onClose={() => setVideoPendingDeletion(null)}
+        onConfirm={async () => {
+          if (!videoPendingDeletion) return;
+          await handleDeleteVideo(videoPendingDeletion);
+          setVideoPendingDeletion(null);
+        }}
+        title="حذف الفيديو"
+        consequence={`سيُحذف الفيديو «${videoPendingDeletion?.title ?? ''}» نهائيًا من الحصة، ولن يعود متاحًا للطلاب.`}
+        confirmLabel="حذف الفيديو نهائيًا"
+        variant="danger"
+        isConfirming={deletingId === videoPendingDeletion?.id}
+      />
+      <AdminConfirmationDialog
+        open={bunnyReplacementPendingCancellation !== null}
+        onClose={() => setBunnyReplacementPendingCancellation(null)}
+        onConfirm={async () => {
+          if (!bunnyReplacementPendingCancellation) return;
+          if (await handleCancelBunnyReplacement(bunnyReplacementPendingCancellation.assetId)) {
+            setBunnyReplacementPendingCancellation(null);
+          }
+        }}
+        title="إلغاء استبدال Bunny"
+        consequence={`سيبقى الفيديو «${bunnyReplacementPendingCancellation?.videoTitle ?? ''}» على مصدره السابق. لن يُحذف ملف Bunny الذي بدأ تجهيزه تلقائيًا، وقد تحتاج لمراجعته لاحقًا.`}
+        confirmLabel="إلغاء الاستبدال"
+        isConfirming={cancellingBunnyReplacementId === bunnyReplacementPendingCancellation?.assetId}
+      />
     </div>
   );
 }

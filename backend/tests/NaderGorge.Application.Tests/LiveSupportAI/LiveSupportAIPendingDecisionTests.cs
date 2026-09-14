@@ -108,7 +108,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -154,7 +154,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id
         };
         db.LiveSupportAIPolicyVersions.Add(policy);
@@ -179,7 +179,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student1.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -221,7 +221,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id
         };
         db.LiveSupportAIPolicyVersions.Add(policy);
@@ -255,7 +255,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -294,7 +294,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id
         };
         db.LiveSupportAIPolicyVersions.Add(policy);
@@ -319,7 +319,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(-5), // Expired!
@@ -375,7 +375,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = Guid.NewGuid(),
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -427,7 +427,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = Guid.NewGuid(),
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.Succeeded, // Already Succeeded!
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -462,7 +462,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id
         };
         db.LiveSupportAIPolicyVersions.Add(policy);
@@ -497,7 +497,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -552,7 +552,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id
         };
         db.LiveSupportAIPolicyVersions.Add(policy);
@@ -576,7 +576,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -647,7 +647,7 @@ public sealed class LiveSupportAIPendingDecisionTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),

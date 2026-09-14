@@ -3,13 +3,12 @@
 import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable, AdminPageSkeleton } from '@/components/admin';
+import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable, AdminPageSkeleton } from '@/components/admin';
 import { adminService, type AdminUserListDto, type UserAuditLogDto } from '@/services/admin-service';
 import {
   hrService,
   type EmployeeDto,
   type AdminAttendanceLogDto,
-  type AdminVacationDto,
 } from '@/services/hr-service';
 import {
   Users,
@@ -22,18 +21,17 @@ import {
   Power,
   Briefcase,
   CalendarClock,
-  FileText,
   ListTodo,
   BookOpenCheck,
   ShieldAlert,
   Building2,
   DollarSign,
-  CheckCircle,
-  XCircle,
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { formatCairoDateTime } from '@/lib/cairo-time';
+import { translateRole } from '@/packages/brand';
 
 // ── Types for new endpoints (wrapped in try/catch) ──────────────────────
 interface AssistantStatsDto {
@@ -98,6 +96,7 @@ function translateAction(action: string): string {
     RejectWatchRequest: 'رفض طلب مشاهدة إضافية',
     CreateEmployeeProfile: 'إنشاء ملف موظف',
     UpdateEmployeeProfile: 'تحديث ملف الموظف',
+    UpdateStaffProfile: 'تحديث بيانات المساعد',
   };
   return map[action] || action;
 }
@@ -186,7 +185,6 @@ export default function AssistantProfilePageClient() {
   const [assistant, setAssistant] = useState<AdminUserListDto | null>(null);
   const [employeeProfile, setEmployeeProfile] = useState<EmployeeDto | null>(null);
   const [attendance, setAttendance] = useState<AdminAttendanceLogDto[]>([]);
-  const [vacations, setVacations] = useState<AdminVacationDto[]>([]);
   const [auditLogs, setAuditLogs] = useState<UserAuditLogDto[]>([]);
 
   // New endpoint data (graceful fallback)
@@ -196,7 +194,7 @@ export default function AssistantProfilePageClient() {
   const [warningsResolved, setWarningsResolved] = useState<WarningResolvedDto[]>([]);
 
   // ── Form states ──
-  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [editFields, setEditFields] = useState({ fullName: '', phoneNumber: '' });
   const [passwordInput, setPasswordInput] = useState('');
   const [hrFields, setHrFields] = useState({ salary: '0', startTime: '09:00:00', dailyHours: '8' });
   const [taskFilter, setTaskFilter] = useState<string>('all');
@@ -215,8 +213,8 @@ export default function AssistantProfilePageClient() {
     try {
       setLoading(true);
       // 1. Load assistant from users list
-      const usersData = await adminService.listUsers(1, 1000, '');
-      const user = usersData.items.find((u) => u.id === id);
+      const users = await adminService.listAllUsers({ staffOnly: true });
+      const user = users.find((u) => u.id === id);
       if (!user) {
         toast.error('المساعد غير موجود');
         router.push('/admin/assistants');
@@ -240,11 +238,7 @@ export default function AssistantProfilePageClient() {
       const attData = await hrService.getAttendance(user.phoneNumber);
       setAttendance(attData.filter((a) => a.employeePhone === user.phoneNumber));
 
-      // 4. Load vacations
-      const vacData = await hrService.getVacations(user.phoneNumber);
-      setVacations(vacData.filter((v) => v.employeePhone === user.phoneNumber));
-
-      // 5. Load audit logs
+      // 4. Load audit logs
       const logs = await adminService.getUserAuditLogs(id);
       setAuditLogs(logs || []);
 
@@ -303,8 +297,7 @@ export default function AssistantProfilePageClient() {
     if (submitting || !assistant) return;
     setSubmitting(true);
     try {
-      // Use the same update endpoint — we update the user profile
-      await adminService.updateStudentProfile(id, editFields);
+      await adminService.updateStaffProfile(id, editFields);
       toast.success('تم تحديث البيانات');
       setModalOpen('none');
       fetchAssistant();
@@ -363,51 +356,16 @@ export default function AssistantProfilePageClient() {
     }
   };
 
-  const handleApproveVacation = async (vacId: string) => {
-    try {
-      const res = await hrService.approveVacation(vacId);
-      if (res.success) {
-        toast.success('تمت الموافقة على الإجازة');
-        if (assistant) {
-          const vacData = await hrService.getVacations(assistant.phoneNumber);
-          setVacations(vacData.filter((v) => v.employeePhone === assistant.phoneNumber));
-        }
-      }
-    } catch {
-      toast.error('فشل في الموافقة على الإجازة');
-    }
-  };
-
-  const handleRejectVacation = async (vacId: string) => {
-    try {
-      const res = await hrService.rejectVacation(vacId);
-      if (res.success) {
-        toast.success('تم رفض الإجازة');
-        if (assistant) {
-          const vacData = await hrService.getVacations(assistant.phoneNumber);
-          setVacations(vacData.filter((v) => v.employeePhone === assistant.phoneNumber));
-        }
-      }
-    } catch {
-      toast.error('فشل في رفض الإجازة');
-    }
-  };
-
   // ── Helpers ────────────────────────────────────────────────────────────
   const formatDate = (d?: string | null) => {
     if (!d) return 'غير متوفر';
-    return new Date(d).toLocaleDateString('en-GB');
+    return new Date(d).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' });
   };
 
   const mapRole = (roles: string[]) => {
     const filtered = roles.filter(r => r !== 'Assistant');
     if (filtered.length === 0) return 'مساعد تعليمي عام';
-    const map: Record<string, string> = {
-      Admin: 'مدير النظام',
-      Teacher: 'مدرس',
-      Moderator: 'مشرف',
-    };
-    return filtered.map(r => map[r] || r).join('، ');
+    return filtered.map(translateRole).join('، ');
   };
 
   const filteredTasks = taskFilter === 'all'
@@ -429,21 +387,21 @@ export default function AssistantProfilePageClient() {
 
   if (loading) {
     return (
-      <AdminShellChrome
+      <AdminPage
         activePath="/admin/assistants"
         sectionLabel="المساعدين"
         pageTitle="الملف التعريفي للمساعد"
         subtitle="جاري تحميل التفاصيل..."
       >
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
   if (!assistant) return null;
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/assistants"
       sectionLabel="المساعدين"
       pageTitle="ملف المساعد الشامل"
@@ -454,7 +412,7 @@ export default function AssistantProfilePageClient() {
             onClick={() => {
               setEditFields({
                 fullName: assistant.fullName || '',
-                phone: assistant.phoneNumber || '',
+                phoneNumber: assistant.phoneNumber || '',
               });
               setModalOpen('editProfile');
             }}
@@ -654,8 +612,8 @@ export default function AssistantProfilePageClient() {
                       {translateTaskStatus(row.status)}
                     </span>
                   )},
-                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB') : '—' },
-                  { key: 'completedAt', label: 'تاريخ الاكتمال', render: (row) => row.completedAt ? new Date(row.completedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
+                  { key: 'completedAt', label: 'تاريخ الاكتمال', render: (row) => row.completedAt ? new Date(row.completedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={filteredTasks}
                 rowKey={(row) => row.id}
@@ -705,7 +663,7 @@ export default function AssistantProfilePageClient() {
                       {row.status === 'Graded' ? 'مصحح' : row.status}
                     </span>
                   )},
-                  { key: 'gradedAt', label: 'تاريخ التصحيح', render: (row) => row.gradedAt ? new Date(row.gradedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'gradedAt', label: 'تاريخ التصحيح', render: (row) => row.gradedAt ? new Date(row.gradedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={homeworkReviews}
                 rowKey={(row) => row.id}
@@ -741,8 +699,8 @@ export default function AssistantProfilePageClient() {
                   { key: 'resolutionNotes', label: 'ملاحظات الحل', render: (row) => (
                     <span className="text-sm text-[var(--admin-text)]">{row.resolutionNotes || '—'}</span>
                   )},
-                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB') : '—' },
-                  { key: 'resolvedAt', label: 'تاريخ الحل', render: (row) => row.resolvedAt ? new Date(row.resolvedAt).toLocaleDateString('en-GB') : '—' },
+                  { key: 'createdAt', label: 'تاريخ الإنشاء', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
+                  { key: 'resolvedAt', label: 'تاريخ الحل', render: (row) => row.resolvedAt ? new Date(row.resolvedAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : '—' },
                 ]}
                 data={warningsResolved}
                 rowKey={(row) => row.id}
@@ -769,7 +727,7 @@ export default function AssistantProfilePageClient() {
                 </div>
                 <button
                   onClick={() => setModalOpen('hrSettings')}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-all duration-300 shadow-sm"
+                  className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 shadow-sm"
                 >
                   <PenLine size={14} />
                   تعديل الإعدادات الوظيفية
@@ -822,18 +780,18 @@ export default function AssistantProfilePageClient() {
                 columns={[
                   { key: 'date', label: 'التاريخ', render: (a) => (
                     <span className="font-bold text-[var(--admin-text)]">
-                      {new Date(a.date).toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
+                      {new Date(a.date).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium' })}
                     </span>
                   )},
                   { key: 'clockIn', label: 'وقت الحضور', render: (a) => (
                     <span className="font-mono text-sm">
-                      {new Date(a.clockIn).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                      {formatCairoDateTime(a.clockIn, { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )},
                   { key: 'clockOut', label: 'وقت الانصراف', render: (a) =>
                     a.clockOut ? (
                       <span className="font-mono text-sm">
-                        {new Date(a.clockOut).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                        {formatCairoDateTime(a.clockOut, { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     ) : (
                       <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">
@@ -874,77 +832,6 @@ export default function AssistantProfilePageClient() {
               />
             </div>
 
-            {/* Vacations Section */}
-            <div className="rounded-3xl bg-[var(--admin-bg)] p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
-                  <FileText size={20} />
-                </div>
-                <div>
-                  <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">طلبات الإجازات</h3>
-                  <p className="text-[var(--admin-muted)] text-sm">إدارة طلبات الإجازة والموافقة أو الرفض</p>
-                </div>
-              </div>
-
-              {vacations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-[var(--admin-muted)] bg-[var(--admin-card-soft)] rounded-3xl">
-                  <span className="text-5xl mb-4">🏖️</span>
-                  <p className="font-bold text-[var(--admin-text)]">لا توجد طلبات إجازة مقدمة</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {vacations.map((v) => (
-                    <div
-                      key={v.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/10 gap-3"
-                    >
-                      <div>
-                        <p className="text-xs text-[var(--admin-muted)] font-bold">فترة الإجازة:</p>
-                        <p className="text-sm font-bold text-[var(--admin-text)] mt-0.5">
-                          من {new Date(v.startDate).toLocaleDateString('ar-EG')}{' '}
-                          إلى {new Date(v.endDate).toLocaleDateString('ar-EG')}
-                        </p>
-                        <p className="text-xs text-[var(--admin-muted)] mt-1">السبب: {v.reason}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {v.status === 'Pending' ? (
-                          <>
-                            <button
-                              onClick={() => handleApproveVacation(v.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-600 rounded-xl text-xs font-bold transition-all duration-200"
-                            >
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              موافقة
-                            </button>
-                            <button
-                              onClick={() => handleRejectVacation(v.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-xl text-xs font-bold transition-all duration-200"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              رفض
-                            </button>
-                          </>
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold ${
-                            v.status === 'Approved'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
-                          }`}>
-                            {v.status === 'Approved' ? (
-                              <CheckCircle className="h-3.5 w-3.5" />
-                            ) : (
-                              <XCircle className="h-3.5 w-3.5" />
-                            )}
-                            {v.status === 'Approved' ? 'مقبولة' : 'مرفوضة'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -1004,7 +891,7 @@ export default function AssistantProfilePageClient() {
         <form onSubmit={handleEditProfileSubmit} className="flex flex-col gap-4">
           {[
             { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
-            { key: 'phone', label: 'رقم الهاتف', type: 'text' },
+            { key: 'phoneNumber', label: 'رقم الهاتف', type: 'text' },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">{f.label}</label>
@@ -1012,14 +899,14 @@ export default function AssistantProfilePageClient() {
                 type={f.type}
                 disabled={submitting}
                 className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
-                value={String(editFields[f.key] ?? '')}
+                value={editFields[f.key as keyof typeof editFields]}
                 onChange={e => setEditFields(p => ({ ...p, [f.key]: e.target.value }))}
               />
             </div>
           ))}
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
             </button>
           </div>
@@ -1044,7 +931,7 @@ export default function AssistantProfilePageClient() {
           </div>
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
             </button>
           </div>
@@ -1068,7 +955,7 @@ export default function AssistantProfilePageClient() {
             <button
               disabled={submitting}
               onClick={handleStatusToggle}
-              className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power size={16} />}
               {submitting ? 'جاري الإيقاف...' : 'تأكيد الإيقاف'}
@@ -1124,12 +1011,12 @@ export default function AssistantProfilePageClient() {
           </div>
           <div className="flex gap-4 mt-4">
             <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             </button>
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

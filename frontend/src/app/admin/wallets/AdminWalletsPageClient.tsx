@@ -1,25 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Smartphone, 
-  Activity, 
-  TrendingUp, 
-  Copy, 
+import {
+  Plus,
+  Smartphone,
+  Activity,
+  TrendingUp,
+  Copy,
   FileText,
-  RefreshCw, 
-  Edit2, 
+  RefreshCw,
+  Edit2,
   Wifi,
-  WifiOff
+  WifiOff,
+  PauseCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { 
-  AdminShellChrome, 
-  AdminDataTable, 
+import {
+  AdminPage,
+  AdminDataTable,
   AdminColumn,
   AdminStatCard,
-  AdminModal
+  AdminModal,
+  AdminConfirmationDialog
 } from '@/components/admin';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -34,6 +36,15 @@ const SMS_SENDER_OPTIONS = [
   { value: 'InstaPay', label: 'InstaPay', hint: 'إنستاباي' },
 ];
 
+const DEFAULT_RECHARGE_PAUSE_MESSAGE = 'التحويل متوقف مؤقتًا لحين تفعيل رقم التحويل الجديد. متوقع رجوع الخدمة خلال 24 ساعة. يرجى المحاولة لاحقًا.';
+
+const toLocalDateTimeInput = (dateTimeValue?: string) => {
+  if (!dateTimeValue) return '';
+  const date = new Date(dateTimeValue);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
+
 export default function AdminWalletsPageClient() {
   const [wallets, setWallets] = useState<WalletDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +54,7 @@ export default function AdminWalletsPageClient() {
   // Modals state
   const [activeModal, setActiveModal] = useState<'add' | 'edit' | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<WalletDto | null>(null);
+  const [walletPendingTokenReset, setWalletPendingTokenReset] = useState<WalletDto | null>(null);
 
   // Form states
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -50,6 +62,9 @@ export default function AdminWalletsPageClient() {
   const [dailyLimit, setDailyLimit] = useState(30000);
   const [monthlyLimit, setMonthlyLimit] = useState(100000);
   const [smsSenderFilters, setSmsSenderFilters] = useState<string[]>(['VF-Cash', 'VodafoneCash']);
+  const [isRechargePaused, setIsRechargePaused] = useState(false);
+  const [rechargePauseMessage, setRechargePauseMessage] = useState(DEFAULT_RECHARGE_PAUSE_MESSAGE);
+  const [rechargeResumeAt, setRechargeResumeAt] = useState('');
 
   const toggleSmsSenderFilter = (value: string) => {
     setSmsSenderFilters((prev) =>
@@ -82,7 +97,7 @@ export default function AdminWalletsPageClient() {
     try {
       const newStatus = !currentStatus;
       await walletService.toggleWallet(walletId, newStatus);
-      setWallets(prev => 
+      setWallets(prev =>
         prev.map(w => w.id === walletId ? { ...w, isActive: newStatus } : w)
       );
       toast.success(newStatus ? 'تم تفعيل المحفظة بنجاح.' : 'تم إيقاف تفعيل المحفظة.');
@@ -95,14 +110,11 @@ export default function AdminWalletsPageClient() {
   };
 
   const handleRegenerateToken = async (walletId: string) => {
-    if (!confirm('هل أنت متأكد من إعادة توليد كود الربط؟ سيؤدي هذا إلى فصل التطبيق الحالي المرتبط بهذه المحفظة.')) {
-      return;
-    }
     setActionLoading(walletId);
     try {
       const response = await walletService.regenerateToken(walletId);
       if (response.success) {
-        setWallets(prev => 
+        setWallets(prev =>
           prev.map(w => w.id === walletId ? { ...w, pairingToken: response.data, deviceStatus: 'Disconnected' } : w)
         );
         toast.success('تم إعادة توليد كود الربط بنجاح.');
@@ -123,6 +135,9 @@ export default function AdminWalletsPageClient() {
     setDailyLimit(30000);
     setMonthlyLimit(100000);
     setSmsSenderFilters(['VF-Cash', 'VodafoneCash']);
+    setIsRechargePaused(false);
+    setRechargePauseMessage(DEFAULT_RECHARGE_PAUSE_MESSAGE);
+    setRechargeResumeAt('');
     setActiveModal('add');
   };
 
@@ -132,6 +147,9 @@ export default function AdminWalletsPageClient() {
     setDailyLimit(wallet.dailyLimit);
     setMonthlyLimit(wallet.monthlyLimit);
     setSmsSenderFilters(wallet.smsSenderFilters?.length ? wallet.smsSenderFilters : ['VF-Cash', 'VodafoneCash']);
+    setIsRechargePaused(wallet.isRechargePaused);
+    setRechargePauseMessage(wallet.rechargePauseMessage || DEFAULT_RECHARGE_PAUSE_MESSAGE);
+    setRechargeResumeAt(toLocalDateTimeInput(wallet.rechargeResumeAt));
     setActiveModal('edit');
   };
 
@@ -192,6 +210,9 @@ export default function AdminWalletsPageClient() {
       dailyLimit,
       monthlyLimit,
       smsSenderFilters,
+      isRechargePaused,
+      rechargePauseMessage: isRechargePaused ? rechargePauseMessage.trim() : undefined,
+      rechargeResumeAt: isRechargePaused && rechargeResumeAt ? new Date(rechargeResumeAt).toISOString() : undefined,
     };
 
     try {
@@ -221,7 +242,8 @@ export default function AdminWalletsPageClient() {
   const totalWallets = wallets.length;
   const activeWallets = wallets.filter(w => w.isActive).length;
   const connectedDevices = wallets.filter(w => w.deviceStatus === 'Connected').length;
-  const totalBalance = wallets.reduce((acc, w) => acc + w.currentBalance, 0);
+  const totalReceivedToday = wallets.reduce((total, wallet) => total + Number(wallet.dailyReceived), 0);
+  const totalReceived = wallets.reduce((total, wallet) => total + Number(wallet.totalReceived), 0);
 
   const columns: AdminColumn<WalletDto>[] = [
     {
@@ -247,8 +269,8 @@ export default function AdminWalletsPageClient() {
         return (
           <div className="flex flex-col items-start gap-1">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-              isConnected 
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' 
+              isConnected
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'
             }`}>
               {isConnected ? (
@@ -262,7 +284,7 @@ export default function AdminWalletsPageClient() {
               )}
             </span>
             {w.lastSeenAt && (
-              <span className="text-[10px] text-[var(--admin-muted)]">
+              <span className="text-sm text-[var(--admin-muted)]">
                 نشط {formatRelativeDate(w.lastSeenAt)}
               </span>
             )}
@@ -283,8 +305,8 @@ export default function AdminWalletsPageClient() {
               <span className="text-[var(--admin-muted)] font-mono">/ {w.dailyLimit} ج.م</span>
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
+              <div
+                className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
                 style={{ width: `${Math.min(100, ratio)}%` }}
@@ -307,8 +329,8 @@ export default function AdminWalletsPageClient() {
               <span className="text-[var(--admin-muted)] font-mono">/ {w.monthlyLimit} ج.م</span>
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
+              <div
+                className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
                 style={{ width: `${Math.min(100, ratio)}%` }}
@@ -335,7 +357,7 @@ export default function AdminWalletsPageClient() {
           <code className="bg-[var(--admin-card-strong)] border border-[var(--admin-border)] px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-[var(--admin-primary)] tracking-wider">
             {w.pairingToken}
           </code>
-          <button 
+          <button
             type="button"
             onClick={() => copyToClipboard(w.pairingToken)}
             title="نسخ الكود"
@@ -343,9 +365,9 @@ export default function AdminWalletsPageClient() {
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
-          <button 
+          <button
             type="button"
-            onClick={() => handleRegenerateToken(w.id)}
+            onClick={() => setWalletPendingTokenReset(w)}
             disabled={actionLoading === w.id}
             title="إعادة توليد كود الربط"
             className="p-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:text-amber-500 hover:bg-[var(--admin-hover)] transition-colors disabled:opacity-50"
@@ -356,19 +378,33 @@ export default function AdminWalletsPageClient() {
       )
     },
     {
+      key: 'rechargeStatus',
+      label: 'استقبال الطلاب',
+      render: (w) => (
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+          w.isRechargePaused
+            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+        }`}>
+          {w.isRechargePaused ? <PauseCircle className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}
+          {w.isRechargePaused ? 'متوقف مؤقتًا' : 'متاح'}
+        </span>
+      )
+    },
+    {
       key: 'isActive',
       label: 'التفعيل',
       render: (w) => (
         <div className="flex items-center justify-center">
           <label className="relative inline-flex items-center cursor-pointer select-none">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               className="sr-only peer"
               checked={w.isActive}
               disabled={actionLoading === w.id}
               onChange={() => handleToggleActive(w.id, w.isActive)}
             />
-            <div className="w-11 h-6 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--admin-primary-15)] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-[var(--admin-muted)] peer-checked:after:bg-[var(--admin-primary)] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--admin-primary-15)] peer-checked:border-[var(--admin-primary)] disabled:opacity-50"></div>
+            <div className="w-11 h-6 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--admin-primary-15)] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-[var(--admin-muted)] peer-checked:after:bg-[var(--admin-primary)] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-[color,background-color,border-color,opacity,transform,box-shadow] peer-checked:bg-[var(--admin-primary-15)] peer-checked:border-[var(--admin-primary)] disabled:opacity-50"></div>
           </label>
         </div>
       )
@@ -392,7 +428,7 @@ export default function AdminWalletsPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/wallets"
       sectionLabel="المالية والمدفوعات"
       pageTitle="إدارة المحافظ الرقمية"
@@ -416,7 +452,7 @@ export default function AdminWalletsPageClient() {
       <div className="flex flex-col gap-6">
         {/* Stats */}
         {loading && wallets.length === 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-28 animate-pulse rounded-2xl bg-[var(--admin-card)] border border-[var(--admin-border)]" />
             ))}
@@ -447,17 +483,24 @@ export default function AdminWalletsPageClient() {
             <AdminStatCard
               variant="accent"
               icon={TrendingUp}
-              label="إجمالي الأرصدة"
-              value={`${totalBalance.toLocaleString('en-US')} ج.م`}
-              subtitle="الرصيد الكلي المسجل بالمحافظ"
+              label="إجمالي المحصل اليوم"
+              value={`${totalReceivedToday.toLocaleString('en-US')} ج.م`}
+              subtitle="مجموع التحويلات المعتمدة في كل المحافظ"
+            />
+            <AdminStatCard
+              variant="accent"
+              icon={TrendingUp}
+              label="إجمالي المحصل الكلي"
+              value={`${totalReceived.toLocaleString('en-US')} ج.م`}
+              subtitle="كل التحويلات المعتمدة والمطابقة منذ بداية النظام"
             />
           </div>
         )}
 
         {/* Table/Content */}
-        <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
+        <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-sm">
           <h2 className="text-xl font-black text-[var(--admin-text)] mb-4">قائمة المحافظ المتصلة</h2>
-          
+
           <AdminDataTable
             data={wallets}
             columns={columns}
@@ -480,8 +523,8 @@ export default function AdminWalletsPageClient() {
         <form onSubmit={handleAddSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">رقم الهاتف (الخاص بالمحفظة) *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: 01012345678"
               value={phoneNumber}
@@ -492,8 +535,8 @@ export default function AdminWalletsPageClient() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">الاسم التعريفي للمحفظة *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: محفظة فودافون كاش الرئيسية"
               value={label}
@@ -505,8 +548,8 @@ export default function AdminWalletsPageClient() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد اليومي (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(Number(e.target.value))}
@@ -515,8 +558,8 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد الشهري (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(Number(e.target.value))}
@@ -545,27 +588,27 @@ export default function AdminWalletsPageClient() {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{option.label}</span>
-                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                    <span className="block text-sm font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
                   </span>
                 </label>
               ))}
             </div>
-            <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
+            <span className="text-sm text-[var(--admin-muted)] leading-relaxed">
               اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <NeumorphButton 
-              type="button" 
+            <NeumorphButton
+              type="button"
               intent="ghost"
               onClick={() => setActiveModal(null)}
               disabled={loading}
             >
               إلغاء
             </NeumorphButton>
-            <NeumorphButton 
-              type="submit" 
+            <NeumorphButton
+              type="submit"
               intent="primary"
               loading={loading}
             >
@@ -585,8 +628,8 @@ export default function AdminWalletsPageClient() {
         <form onSubmit={handleEditSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">الاسم التعريفي للمحفظة *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: محفظة فودافون كاش الرئيسية"
               value={label}
@@ -598,8 +641,8 @@ export default function AdminWalletsPageClient() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد اليومي (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(Number(e.target.value))}
@@ -608,14 +651,39 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد الشهري (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(Number(e.target.value))}
                 className="admin-input font-mono"
               />
             </div>
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${isRechargePaused ? 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10' : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)]'}`}>
+            <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4">
+              <span>
+                <span className="block text-sm font-black text-[var(--admin-text)]">إيقاف استقبال تحويلات الطلاب مؤقتًا</span>
+                <span className="mt-1 block text-sm font-semibold text-[var(--admin-muted)]">المحفظة ستظل مفعلة للرسائل والمراجعة، لكن لن تستقبل طلبات دفع جديدة.</span>
+              </span>
+              <input type="checkbox" checked={isRechargePaused} onChange={(event) => setIsRechargePaused(event.target.checked)} className="h-5 w-5 shrink-0 accent-amber-600" />
+            </label>
+            {isRechargePaused && (
+              <div className="mt-4 space-y-4 border-t border-amber-300/70 pt-4 dark:border-amber-500/30">
+                <label className="block text-sm font-bold text-[var(--admin-text)]">
+                  الرسالة التي ستظهر للطالب
+                  <textarea required maxLength={500} value={rechargePauseMessage} onChange={(event) => setRechargePauseMessage(event.target.value)} rows={4} className="admin-input mt-2 resize-y" />
+                </label>
+                <label className="block text-sm font-bold text-[var(--admin-text)]">
+                  العودة التلقائية (اختياري)
+                  <input type="datetime-local" value={rechargeResumeAt} onChange={(event) => setRechargeResumeAt(event.target.value)} className="admin-input mt-2 font-mono" />
+                </label>
+                <button type="button" onClick={() => setRechargeResumeAt(toLocalDateTimeInput(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()))} className="min-h-11 rounded-xl border border-amber-400 bg-white px-4 text-sm font-black text-amber-800 hover:bg-amber-100 dark:bg-transparent dark:text-amber-200">
+                  ضبط العودة بعد 24 ساعة
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -638,27 +706,27 @@ export default function AdminWalletsPageClient() {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-black">{option.label}</span>
-                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                    <span className="block text-sm font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
                   </span>
                 </label>
               ))}
             </div>
-            <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
+            <span className="text-sm text-[var(--admin-muted)] leading-relaxed">
               اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <NeumorphButton 
-              type="button" 
+            <NeumorphButton
+              type="button"
               intent="ghost"
               onClick={() => setActiveModal(null)}
               disabled={loading}
             >
               إلغاء
             </NeumorphButton>
-            <NeumorphButton 
-              type="submit" 
+            <NeumorphButton
+              type="submit"
               intent="primary"
               loading={loading}
             >
@@ -667,6 +735,20 @@ export default function AdminWalletsPageClient() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+      <AdminConfirmationDialog
+        open={walletPendingTokenReset !== null}
+        onClose={() => setWalletPendingTokenReset(null)}
+        onConfirm={async () => {
+          if (!walletPendingTokenReset) return;
+          await handleRegenerateToken(walletPendingTokenReset.id);
+          setWalletPendingTokenReset(null);
+        }}
+        title="إعادة توليد كود الربط"
+        consequence={`سيتم فصل التطبيق المتصل بمحفظة «${walletPendingTokenReset?.label ?? ''}» فورًا، ولن يعمل مرة أخرى قبل إدخال الكود الجديد.`}
+        confirmLabel="إعادة توليد الكود وفصل الجهاز"
+        variant="danger"
+        isConfirming={actionLoading === walletPendingTokenReset?.id}
+      />
+    </AdminPage>
   );
 }

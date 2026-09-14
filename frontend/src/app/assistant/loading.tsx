@@ -1,17 +1,13 @@
-'use client';
-
 import { AdminPageSkeleton } from '@/components/admin';
-import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AsyncRegionState } from '@/components/ui/AsyncRegionState';
 
 export default function AssistantLoading() {
   return (
-    <AssistantShellChrome
-      activePath="/assistant/dashboard"
-      sectionLabel="مساحة المساعدين"
-      pageTitle="جاري تحميل الصفحة"
-      subtitle="يتم تجهيز بيانات القسم الآن."
+    <AsyncRegionState
+      status="loading"
+      message="جاري تحميل محتوى المساعد"
     >
       <AdminPageSkeleton />
-    </AssistantShellChrome>
+    </AsyncRegionState>
   );
 }

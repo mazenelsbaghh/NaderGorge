@@ -17,6 +17,7 @@ type Props = {
   mouseInteraction?: boolean;
   mouseInteractionRadius?: number;
   animationSpeed?: number;
+  active?: boolean;
   className?: string; // Support className for positioning
 };
 
@@ -52,6 +53,7 @@ export const RippleGrid: React.FC<Props> = ({
   mouseInteraction = true,
   mouseInteractionRadius = 1,
   animationSpeed = 0.35,
+  active = true,
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,7 @@ export const RippleGrid: React.FC<Props> = ({
   const uniformsRef = useRef<Record<string, { value: unknown }> | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !active) return;
 
     const container = containerRef.current;
     let renderer: Renderer | null = null;
@@ -314,7 +316,7 @@ void main() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [active]);
 
   useEffect(() => {
     if (!uniformsRef.current) return;

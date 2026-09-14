@@ -10,6 +10,10 @@ public record ModerationLessonCommentDto(
     Guid Id,
     Guid LessonId,
     string LessonTitle,
+    string TeacherName,
+    string PackageName,
+    string TermTitle,
+    string SectionTitle,
     Guid StudentId,
     string StudentName,
     string Body,
@@ -17,7 +21,11 @@ public record ModerationLessonCommentDto(
     DateTime CreatedAt,
     DateTime? ReviewedAt,
     string? ReviewedByName
-);
+)
+{
+    public Guid? ParentCommentId { get; init; }
+    public string? ParentBody { get; init; }
+}
 
 public record GetLessonCommentsForModerationQuery(Guid LessonId, string? Status = null)
     : IRequest<ApiResponse<List<ModerationLessonCommentDto>>>;
@@ -70,6 +78,10 @@ public class GetLessonCommentsForModerationQueryHandler
                 c.Id,
                 c.LessonId,
                 lesson.Title,
+                c.Lesson.ContentSection.Term.Package.Teacher.User.FullName,
+                c.Lesson.ContentSection.Term.Package.Name,
+                c.Lesson.ContentSection.Term.Title,
+                c.Lesson.ContentSection.Title,
                 c.AuthorUserId,
                 c.AuthorUser.FullName,
                 c.Body,
@@ -77,7 +89,7 @@ public class GetLessonCommentsForModerationQueryHandler
                 c.CreatedAt,
                 c.ReviewedAt,
                 c.ReviewedByUser != null ? c.ReviewedByUser.FullName : null
-            ))
+            ) { ParentCommentId = c.ParentCommentId, ParentBody = c.ParentComment != null ? c.ParentComment.Body : null })
             .ToListAsync(cancellationToken);
 
         return ApiResponse<List<ModerationLessonCommentDto>>.Ok(comments);

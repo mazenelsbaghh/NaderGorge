@@ -9,6 +9,8 @@ public class VideoChapter : BaseEntity
     public int EndTime { get; set; }
     public string SummaryText { get; set; } = string.Empty;
     public string? MindmapImageUrl { get; set; }
+    public bool IsRegeneratingMindmap { get; set; }
+    public Guid? CurrentMindmapGenerationRunId { get; set; }
     public int Order { get; set; }
 
     public Guid LessonVideoId { get; set; }

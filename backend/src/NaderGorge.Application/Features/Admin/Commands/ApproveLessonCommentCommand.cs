@@ -30,6 +30,7 @@ public class ApproveLessonCommentCommandHandler
     public async Task<ApiResponse<ModerateLessonCommentResponse>> Handle(ApproveLessonCommentCommand request, CancellationToken cancellationToken)
     {
         var comment = await _context.LessonComments
+            .Include(c => c.ParentComment)
             .FirstOrDefaultAsync(c => c.Id == request.CommentId, cancellationToken);
 
         if (comment == null)
@@ -37,6 +38,9 @@ public class ApproveLessonCommentCommandHandler
 
         if (comment.Status != LessonCommentStatus.Pending)
             return ApiResponse<ModerateLessonCommentResponse>.Fail("Comment is already resolved", new List<string> { "ALREADY_RESOLVED" });
+
+        if (comment.ParentComment != null && comment.ParentComment.Status != LessonCommentStatus.Approved)
+            return ApiResponse<ModerateLessonCommentResponse>.Fail("انشر التعليق الأصلي أولًا قبل نشر الرد.", new List<string> { "PARENT_NOT_APPROVED" });
 
         comment.Status = LessonCommentStatus.Approved;
         comment.ReviewedAt = DateTime.UtcNow;

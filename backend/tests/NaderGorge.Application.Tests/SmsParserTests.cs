@@ -43,6 +43,16 @@ public class SmsParserTests
         Assert.Equal(208.93m, result.CurrentBalance);
     }
 
+    [Fact]
+    public void Production_2026_08_09_balance_inquiry_extracts_current_wallet_balance()
+    {
+        const string body = "رصيد حسابك فى فودافون كاش الحالي90718.95 جنيه؛ تاريخ العملية 14:38 26-08-09 رقم العملية022523021340.";
+
+        var parsedSms = SmsParser.Parse(body);
+
+        Assert.Equal(90718.95m, parsedSms.CurrentBalance);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -56,5 +66,16 @@ public class SmsParserTests
 
         // Assert
         Assert.False(result.IsParsedSuccessfully);
+    }
+
+    [Theory]
+    [InlineData("تم استلام مبلغ 120 جنيه من رقم 01012345678", true)]
+    [InlineData("You have received EGP 120 from 01012345678", true)]
+    [InlineData("رصيدك الحالي 120 جنيه ورقم محفظتك 01012345678", false)]
+    [InlineData("تم خصم 120 جنيه وتحويلها إلى 01012345678", false)]
+    [InlineData("عرض حصري: اشحن 120 جنيه على 01012345678", false)]
+    public void Incoming_transfer_filter_keeps_receipts_only(string body, bool expected)
+    {
+        Assert.Equal(expected, SmsParser.IsIncomingTransfer(body));
     }
 }

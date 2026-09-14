@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -16,21 +17,33 @@ public record ResolveRechargeRequestCommand(
     bool Approve,
     Guid AdminId,
     string? RejectionReason = null,
-    Guid? SmsLogId = null) : IRequest<ApiResponse<bool>>;
+    Guid? SmsLogId = null,
+    Guid? WalletId = null) : IRequest<ApiResponse<bool>>;
 
 public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRechargeRequestCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
     private readonly BalanceService _balanceService;
+    private readonly IFinancialPostingService? _financialPosting;
 
-    public ResolveRechargeRequestCommandHandler(IAppDbContext db, BalanceService balanceService)
+    public ResolveRechargeRequestCommandHandler(IAppDbContext db, BalanceService balanceService, IFinancialPostingService? financialPosting = null)
     {
         _db = db;
         _balanceService = balanceService;
+        _financialPosting = financialPosting;
     }
 
     public async Task<ApiResponse<bool>> Handle(ResolveRechargeRequestCommand request, CancellationToken ct)
     {
+        return await SerializationRetryHelper.ExecuteAsync(
+            retryCt => HandleOnce(request, retryCt),
+            ct);
+    }
+
+    private async Task<ApiResponse<bool>> HandleOnce(ResolveRechargeRequestCommand request, CancellationToken ct)
+    {
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
+
         var rechargeRequest = await _db.RechargeRequests
             .Include(r => r.Wallet)
             .FirstOrDefaultAsync(r => r.Id == request.RechargeRequestId, ct);
@@ -38,20 +51,41 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
         if (rechargeRequest == null)
             return ApiResponse<bool>.Fail("طلب الشحن غير موجود");
 
-        if (rechargeRequest.Status != RechargeRequestStatus.Pending)
-            return ApiResponse<bool>.Fail("طلب الشحن هذا غير معلق أو تم معالجته مسبقاً");
+        if (rechargeRequest.Status == RechargeRequestStatus.Approved
+            && request.Approve
+            && request.WalletId.HasValue
+            && request.WalletId.Value != rechargeRequest.WalletId)
+        {
+            return await CorrectApprovedWalletAsync(rechargeRequest, request.WalletId.Value, request.AdminId, ct);
+        }
+
+        var canResolve = rechargeRequest.Status is RechargeRequestStatus.Pending or RechargeRequestStatus.Rejected
+            || (!request.Approve && rechargeRequest.Status == RechargeRequestStatus.Expired);
+        if (!canResolve)
+            return ApiResponse<bool>.Fail("لا يمكن تعديل قرار طلب الشحن في حالته الحالية.");
+
+        if (!request.Approve && string.IsNullOrWhiteSpace(request.RejectionReason))
+            return ApiResponse<bool>.Fail("سبب رفض طلب الشحن مطلوب.");
+
+        if (request.Approve && !rechargeRequest.TeacherId.HasValue)
+            return ApiResponse<bool>.Fail("لا يمكن قبول طلب شحن عام للمنصة. ارفض الطلب ليُنشئ الطالب طلباً مخصصاً لمدرس.");
+
+        var evidenceMissing = string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl)
+            || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber);
+        if (request.Approve && evidenceMissing && !request.SmsLogId.HasValue)
+            return ApiResponse<bool>.Fail("للموافقة قبل رفع الإثبات يجب ربط رسالة تحويل مستلمة فعلياً بالطلب.");
 
         var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
-        var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
 
         try
         {
-            rechargeRequest.ResolvedByUserId = request.AdminId;
-            rechargeRequest.ResolvedAt = DateTime.UtcNow;
+            var resolvedAt = DateTime.UtcNow;
 
             if (request.Approve)
             {
                 IncomingSmsLog? smsLog = null;
+                DigitalWallet targetWallet = rechargeRequest.Wallet;
 
                 if (request.SmsLogId.HasValue)
                 {
@@ -62,30 +96,92 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                     if (smsLog.IsMatched)
                         return ApiResponse<bool>.Fail("تم مطابقة رسالة التأكيد هذه مع طلب آخر مسبقاً");
 
+                    if (evidenceMissing && smsLog.ParsedAmount != rechargeRequest.Amount)
+                        return ApiResponse<bool>.Fail("مبلغ رسالة التحويل لا يطابق مبلغ طلب الشحن.");
+
+                    if (request.WalletId.HasValue && request.WalletId.Value != smsLog.WalletId)
+                        return ApiResponse<bool>.Fail("المحفظة المختارة لا تطابق المحفظة التي استقبلت رسالة التأكيد.");
+
+                    targetWallet = await _db.DigitalWallets.FirstAsync(wallet => wallet.Id == smsLog.WalletId, ct);
+
                     smsLog.IsMatched = true;
                     smsLog.MatchedRechargeRequestId = rechargeRequest.Id;
                     rechargeRequest.MatchedSmsLogId = smsLog.Id;
+                    if (string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber)
+                        && !string.IsNullOrWhiteSpace(smsLog.ParsedSenderPhone))
+                    {
+                        rechargeRequest.SenderPhoneNumber = smsLog.ParsedSenderPhone;
+                    }
+                }
+                else if (request.WalletId.HasValue && request.WalletId.Value != rechargeRequest.WalletId)
+                {
+                    targetWallet = await _db.DigitalWallets
+                        .FirstOrDefaultAsync(wallet => wallet.Id == request.WalletId.Value && wallet.IsActive, ct)
+                        ?? throw new InvalidOperationException("المحفظة المختارة غير موجودة أو غير نشطة.");
                 }
 
-                rechargeRequest.Status = RechargeRequestStatus.Approved;
-                var linkedSmsBalance = smsLog == null ? null : SmsParser.Parse(smsLog.Body).CurrentBalance;
-                rechargeRequest.Wallet.CurrentBalance = linkedSmsBalance ?? rechargeRequest.Wallet.CurrentBalance + rechargeRequest.Amount;
+                rechargeRequest.WalletId = targetWallet.Id;
+                rechargeRequest.Wallet = targetWallet;
+
+                var transition = await TryTransitionRechargeAsync(
+                    rechargeRequest,
+                    RechargeRequestStatus.Approved,
+                    request.AdminId,
+                    resolvedAt,
+                    smsLog?.Id,
+                    null,
+                    ct);
+                if (!transition.Success)
+                    return transition;
+
+                // SMS ingestion already applied the physical wallet movement. Linking that SMS
+                // only assigns the student/accounting owner; direct approvals without an SMS are
+                // the only path that adds a wallet movement here.
+                if (smsLog is null)
+                    targetWallet.CurrentBalance += rechargeRequest.Amount;
 
                 await _db.SaveChangesAsync(ct);
 
-                // Credit the student's balance
-                await _balanceService.AddCredit(
-                    rechargeRequest.UserId,
-                    rechargeRequest.Amount,
-                    $"شحن رصيد يدوي - موافقة الإدارة (محفظة {rechargeRequest.Wallet.Label})",
-                    rechargeRequest.Id,
-                    "DigitalRecharge",
-                    ct);
+                if (rechargeRequest.TeacherId.HasValue)
+                {
+                    await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value,
+                        rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
+                        request.AdminId, rechargeRequest.Id, ct);
+                }
+                else
+                {
+                    await _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
+                        $"شحن رصيد عام - موافقة الإدارة (محفظة {targetWallet.Label})",
+                        rechargeRequest.Id, "RechargeCredit", ct);
+                }
+
+                if (_financialPosting is not null)
+                {
+                    var treasuryCode = await (from treasury in _db.TreasuryAccounts
+                                              join account in _db.FinancialAccounts on treasury.FinancialAccountId equals account.Id
+                                              where treasury.DigitalWalletId == targetWallet.Id
+                                              select account.Code).SingleOrDefaultAsync(ct) ?? "1000";
+                    await _financialPosting.PostAsync(new FinancialPostingRequest(
+                        "RechargeRequest", rechargeRequest.Id, "RechargeReceived", $"recharge:{rechargeRequest.Id:N}:approved",
+                        rechargeRequest.TeacherId.HasValue ? "شحن رصيد مدرس" : "شحن رصيد عام",
+                        resolvedAt, request.AdminId,
+                        [new FinancialPostingLine(treasuryCode, rechargeRequest.Amount, 0m, StudentId: rechargeRequest.UserId),
+                         new FinancialPostingLine(rechargeRequest.TeacherId.HasValue ? "1110" : "1100", 0m, rechargeRequest.Amount, StudentId: rechargeRequest.UserId, TeacherId: rechargeRequest.TeacherId)]), ct);
+                }
             }
             else
             {
-                rechargeRequest.Status = RechargeRequestStatus.Rejected;
-                rechargeRequest.RejectionReason = request.RejectionReason ?? "تم الرفض بواسطة الإدارة";
+                var transition = await TryTransitionRechargeAsync(
+                    rechargeRequest,
+                    RechargeRequestStatus.Rejected,
+                    request.AdminId,
+                    resolvedAt,
+                    null,
+                    request.RejectionReason!.Trim(),
+                    ct);
+                if (!transition.Success)
+                    return transition;
+
                 await _db.SaveChangesAsync(ct);
             }
 
@@ -96,6 +192,14 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 
             return ApiResponse<bool>.Ok(true, request.Approve ? "تمت الموافقة على طلب الشحن بنجاح" : "تم رفض طلب الشحن");
         }
+        catch (Exception ex) when (SerializationRetryHelper.IsSerializationFailure(ex))
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(ct);
+            }
+            throw;
+        }
         catch (Exception ex)
         {
             if (transaction != null)
@@ -103,6 +207,79 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                 await transaction.RollbackAsync(ct);
             }
             return ApiResponse<bool>.Fail($"فشل في معالجة طلب الشحن: {ex.Message}");
+        }
+    }
+
+    private async Task<ApiResponse<bool>> TryTransitionRechargeAsync(
+        RechargeRequest rechargeRequest,
+        RechargeRequestStatus nextStatus,
+        Guid adminId,
+        DateTime resolvedAt,
+        Guid? matchedSmsLogId,
+        string? rejectionReason,
+        CancellationToken ct)
+    {
+        if (_db is DbContext efDb && efDb.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            var allowExpiredRejection = nextStatus == RechargeRequestStatus.Rejected;
+            var affectedRows = await _db.RechargeRequests
+                .Where(row => row.Id == rechargeRequest.Id
+                    && (row.Status == RechargeRequestStatus.Pending
+                        || row.Status == RechargeRequestStatus.Rejected
+                        || (allowExpiredRejection && row.Status == RechargeRequestStatus.Expired)))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(row => row.Status, nextStatus)
+                    .SetProperty(row => row.ResolvedByUserId, adminId)
+                    .SetProperty(row => row.ResolvedAt, resolvedAt)
+                    .SetProperty(row => row.MatchedSmsLogId, matchedSmsLogId)
+                    .SetProperty(row => row.RejectionReason, rejectionReason), ct);
+
+            if (affectedRows != 1)
+                return ApiResponse<bool>.Fail("طلب الشحن هذا غير معلق أو تم معالجته مسبقاً");
+        }
+
+        rechargeRequest.Status = nextStatus;
+        rechargeRequest.ResolvedByUserId = adminId;
+        rechargeRequest.ResolvedAt = resolvedAt;
+        rechargeRequest.MatchedSmsLogId = matchedSmsLogId;
+        rechargeRequest.RejectionReason = rejectionReason;
+        return ApiResponse<bool>.Ok(true);
+    }
+
+    private async Task<ApiResponse<bool>> CorrectApprovedWalletAsync(
+        RechargeRequest rechargeRequest,
+        Guid walletId,
+        Guid adminId,
+        CancellationToken ct)
+    {
+        if (rechargeRequest.MatchedSmsLogId.HasValue)
+            return ApiResponse<bool>.Fail("الطلب المرتبط برسالة SMS يأخذ محفظته من الرسالة ولا يمكن تغييرها يدوياً.");
+
+        var targetWallet = await _db.DigitalWallets
+            .FirstOrDefaultAsync(wallet => wallet.Id == walletId && wallet.IsActive, ct);
+        if (targetWallet == null)
+            return ApiResponse<bool>.Fail("المحفظة المختارة غير موجودة أو غير نشطة.");
+
+        var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
+        await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        try
+        {
+            rechargeRequest.Wallet.CurrentBalance = Math.Max(0m, rechargeRequest.Wallet.CurrentBalance - rechargeRequest.Amount);
+            targetWallet.CurrentBalance += rechargeRequest.Amount;
+            rechargeRequest.WalletId = targetWallet.Id;
+            rechargeRequest.Wallet = targetWallet;
+            rechargeRequest.ResolvedByUserId = adminId;
+            rechargeRequest.ResolvedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            if (transaction != null)
+                await transaction.CommitAsync(ct);
+            return ApiResponse<bool>.Ok(true, "تم تصحيح محفظة التحويل للطلب المقبول يدوياً.");
+        }
+        catch
+        {
+            if (transaction != null)
+                await transaction.RollbackAsync(ct);
+            throw;
         }
     }
 }

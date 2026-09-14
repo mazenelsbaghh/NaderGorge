@@ -13,7 +13,9 @@ public record ListUsersQuery(
     string? GradeLevel = null,
     string? StudyTrack = null,
     string? Gender = null,
-    string? Governorate = null
+    string? Governorate = null,
+    string? Role = null,
+    bool StaffOnly = false
 ) : IRequest<ApiResponse<PagedResult<AdminUserListDto>>>;
 
 public record AdminUserListDto(
@@ -26,6 +28,7 @@ public record AdminUserListDto(
     DateTime CreatedAt,
     string[] Roles,
     string StudentCode,
+    string ParentTrackingCode,
     DateTime? DateOfBirth,
     string Gender,
     string EducationStage,
@@ -44,7 +47,15 @@ public record AdminUserListDto(
     DateTime? FatherDateOfBirth,
     DateTime? MotherDateOfBirth,
     string? SuspensionReason,
-    decimal CurrentBalance
+    string? AvatarSlug,
+    decimal CurrentBalance,
+    List<AdminStudentScopedBalanceDto> ScopedBalances
+);
+
+public record AdminStudentScopedBalanceDto(
+    Guid? TeacherId,
+    string TeacherName,
+    decimal AvailableAmount
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -60,18 +71,42 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
 
     public async Task<ApiResponse<PagedResult<AdminUserListDto>>> Handle(ListUsersQuery request, CancellationToken ct)
     {
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+        var normalizedSearch = request.Search?.Trim();
+
         var query = _db.Users
+            .Where(u => !u.IsDeleted)
+            .AsNoTracking()
             .Include(u => u.StudentProfile)
             .Include(u => u.StudentBalance)
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
-            query = query.Where(u => u.PhoneNumber.Contains(request.Search) ||
-                                     u.FullName.Contains(request.Search) ||
-                                     (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
+            query = query.Where(u => u.PhoneNumber.Contains(normalizedSearch) ||
+                                     u.FullName.Contains(normalizedSearch) ||
+                                     (u.StudentProfile != null && (
+                                         (u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(normalizedSearch)) ||
+                                         (u.StudentProfile.ParentTrackingCode != null && u.StudentProfile.ParentTrackingCode.Contains(normalizedSearch)))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Role))
+        {
+            var normalizedRole = request.Role.Trim();
+            query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Name == normalizedRole));
+        }
+
+        if (request.StaffOnly)
+        {
+            query = query.Where(u => u.UserRoles.Any(ur =>
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Assistant ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.AssistantReviewer ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.AssistantAcademic ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Supervisor ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Staff));
         }
 
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
@@ -103,9 +138,42 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
 
         var users = await query
             .OrderByDescending(u => u.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .ThenBy(u => u.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
+
+        var userIds = users.Select(u => u.Id).ToArray();
+        var now = DateTime.UtcNow;
+        var scopedBalanceRows = await _db.PromotionalBalanceAllocations
+            .AsNoTracking()
+            .Where(allocation =>
+                userIds.Contains(allocation.StudentId) &&
+                allocation.AvailableAmount > 0 &&
+                (allocation.ExpiresAt == null || allocation.ExpiresAt > now))
+            .Select(allocation => new
+            {
+                allocation.StudentId,
+                allocation.TeacherId,
+                TeacherName = allocation.Teacher != null
+                    ? allocation.Teacher.User.FullName
+                    : "رصيد مخصص عام",
+                allocation.AvailableAmount
+            })
+            .ToListAsync(ct);
+
+        var scopedBalancesByStudent = scopedBalanceRows
+            .GroupBy(row => row.StudentId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .GroupBy(row => new { row.TeacherId, row.TeacherName })
+                    .Select(balanceGroup => new AdminStudentScopedBalanceDto(
+                        balanceGroup.Key.TeacherId,
+                        balanceGroup.Key.TeacherName,
+                        balanceGroup.Sum(row => row.AvailableAmount)))
+                    .OrderBy(balance => balance.TeacherName)
+                    .ToList());
 
         var dtos = users.Select(u => new AdminUserListDto(
             u.Id,
@@ -117,6 +185,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.CreatedAt,
             u.UserRoles.Select(ur => ur.Role.Name).ToArray(),
             u.StudentProfile?.StudentCode ?? "",
+            u.StudentProfile?.ParentTrackingCode ?? "",
             u.StudentProfile?.DateOfBirth,
             u.StudentProfile?.Gender.ToString() ?? "Unknown",
             u.StudentProfile?.EducationStage.ToString() ?? "N/A",
@@ -135,9 +204,11 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.FatherDateOfBirth,
             u.StudentProfile?.MotherDateOfBirth,
             u.SuspensionReason,
-            u.StudentBalance?.CurrentBalance ?? 0m
+            u.StudentProfile?.AvatarSlug,
+            u.StudentBalance?.CurrentBalance ?? 0m,
+            scopedBalancesByStudent.GetValueOrDefault(u.Id) ?? []
         )).ToList();
 
-        return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, request.Page, request.PageSize));
+        return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, page, pageSize));
     }
 }

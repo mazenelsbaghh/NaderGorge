@@ -59,6 +59,14 @@ jobs:
       working-directory: worker
       run: npm ci
 
+    - name: Run Phase 0 verification contract
+      env:
+        API_CALLBACK_SECRET: ci_api_callback_secret_value_1234567890
+        AI_CALLBACK_SECRET: ci_ai_callback_secret_value_1234567890
+        WORKER_ADMIN_TOKEN: ci_worker_admin_token_value_1234567890
+        PARENT_REPORT_SIGNING_SECRET: ci_parent_report_secret_value_1234567890
+      run: make verify
+
     - name: Run Worker Tests
       working-directory: worker
       env:

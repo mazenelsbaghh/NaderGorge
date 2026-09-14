@@ -14,10 +14,12 @@ public record LessonCommentDto(
     string Status,
     DateTime CreatedAt,
     bool IsOwnComment,
-    string? AuthorAvatarSlug
+    string? AuthorAvatarSlug,
+    Guid? ParentCommentId = null,
+    int ReplyCount = 0
 );
 
-public record GetLessonCommentsQuery(Guid LessonId, Guid UserId, int Offset = 0, int Limit = 50) : IRequest<ApiResponse<List<LessonCommentDto>>>;
+public record GetLessonCommentsQuery(Guid LessonId, Guid UserId, int Offset = 0, int Limit = 50, Guid? ParentCommentId = null) : IRequest<ApiResponse<List<LessonCommentDto>>>;
 
 public class GetLessonCommentsQueryHandler : IRequestHandler<GetLessonCommentsQuery, ApiResponse<List<LessonCommentDto>>>
 {
@@ -40,13 +42,22 @@ public class GetLessonCommentsQueryHandler : IRequestHandler<GetLessonCommentsQu
         if (!lessonExists)
             return ApiResponse<List<LessonCommentDto>>.Fail("Lesson not found", new List<string> { "NOT_FOUND" });
 
-        var comments = await _db.LessonComments
+        if (request.ParentCommentId.HasValue && !await _db.LessonComments.AnyAsync(
+            c => c.Id == request.ParentCommentId && c.LessonId == request.LessonId
+                && c.ParentCommentId == null && c.Status == LessonCommentStatus.Approved, ct))
+            return ApiResponse<List<LessonCommentDto>>.Fail("التعليق غير متاح.", new List<string> { "NOT_FOUND" });
+
+        var query = _db.LessonComments
             .AsNoTracking()
-            .Include(c => c.AuthorUser)
-            .Where(c => c.LessonId == request.LessonId && c.Status == LessonCommentStatus.Approved)
-            .OrderByDescending(c => c.CreatedAt)
-            .Skip(request.Offset)
-            .Take(request.Limit)
+            .Where(c => c.LessonId == request.LessonId && c.ParentCommentId == request.ParentCommentId
+                && (c.Status == LessonCommentStatus.Approved || (request.ParentCommentId != null
+                    && c.AuthorUserId == request.UserId && c.Status == LessonCommentStatus.Pending)));
+        var ordered = request.ParentCommentId.HasValue
+            ? query.OrderBy(c => c.CreatedAt).ThenBy(c => c.Id)
+            : query.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id);
+        var comments = await ordered
+            .Skip(Math.Max(0, request.Offset))
+            .Take(Math.Clamp(request.Limit, 1, 100))
             .Select(c => new LessonCommentDto(
                 c.Id,
                 c.LessonId,
@@ -55,7 +66,10 @@ public class GetLessonCommentsQueryHandler : IRequestHandler<GetLessonCommentsQu
                 c.Status.ToString(),
                 c.CreatedAt,
                 c.AuthorUserId == request.UserId,
-                c.AuthorUser.StudentProfile != null ? c.AuthorUser.StudentProfile.AvatarSlug : null
+                c.AuthorUser.StudentProfile != null ? c.AuthorUser.StudentProfile.AvatarSlug : null,
+                c.ParentCommentId,
+                c.Replies.Count(r => r.Status == LessonCommentStatus.Approved
+                    || (r.AuthorUserId == request.UserId && r.Status == LessonCommentStatus.Pending))
             ))
             .ToListAsync(ct);
 

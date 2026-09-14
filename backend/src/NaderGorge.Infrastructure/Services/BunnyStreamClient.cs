@@ -1,10 +1,8 @@
-using System.Globalization;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -25,13 +23,55 @@ public sealed class BunnyStreamClient : IBunnyStreamClient
     private readonly long _libraryId;
     private readonly string _apiKey;
 
-    public BunnyStreamClient(HttpClient httpClient, IConfiguration configuration)
+    public BunnyStreamClient(HttpClient httpClient, long libraryId, string apiKey)
     {
         _httpClient = httpClient;
-        _libraryId = long.TryParse(configuration["BunnyStream:LibraryId"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var libraryId)
-            ? libraryId
-            : 0;
-        _apiKey = configuration["BunnyStream:ApiKey"] ?? string.Empty;
+        _libraryId = libraryId;
+        _apiKey = apiKey;
+    }
+
+    public long LibraryId => _libraryId;
+
+    public async Task<BunnyStreamValidationResult> ValidateLibraryAccessAsync(CancellationToken cancellationToken)
+    {
+        if (_libraryId <= 0 || string.IsNullOrWhiteSpace(_apiKey))
+        {
+            return new BunnyStreamValidationResult(false, "BUNNY_CREDENTIALS_REQUIRED", "Library ID and API key are required.");
+        }
+
+        using var request = CreateRequest(HttpMethod.Get, $"{StreamBaseUrl}/library/{_libraryId}/videos?page=1&itemsPerPage=1");
+        try
+        {
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return new BunnyStreamValidationResult(true, null, null);
+            }
+
+            var code = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "BUNNY_API_KEY_INVALID",
+                System.Net.HttpStatusCode.NotFound => "BUNNY_LIBRARY_NOT_FOUND",
+                _ when (int)response.StatusCode >= 500 => "BUNNY_VALIDATION_UNAVAILABLE",
+                _ => "BUNNY_VALIDATION_FAILED"
+            };
+            var message = code switch
+            {
+                "BUNNY_API_KEY_INVALID" => "مفتاح API غير صالح لهذه المكتبة.",
+                "BUNNY_LIBRARY_NOT_FOUND" => "رقم مكتبة Bunny غير موجود.",
+                "BUNNY_VALIDATION_UNAVAILABLE" => "خدمة Bunny غير متاحة للتحقق الآن. حاول مرة أخرى.",
+                _ => "تعذر التحقق من إعدادات مكتبة Bunny."
+            };
+            return new BunnyStreamValidationResult(false, code, message);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new BunnyStreamValidationResult(false, "BUNNY_VALIDATION_UNAVAILABLE", "انتهت مهلة التحقق من Bunny. حاول مرة أخرى.");
+        }
+        catch (HttpRequestException)
+        {
+            return new BunnyStreamValidationResult(false, "BUNNY_VALIDATION_UNAVAILABLE", "تعذر الاتصال بخدمة Bunny للتحقق من المكتبة.");
+        }
     }
 
     public async Task<BunnyStreamVideoDto> CreateVideoAsync(string title, string? collectionId, CancellationToken cancellationToken)
@@ -48,26 +88,46 @@ public sealed class BunnyStreamClient : IBunnyStreamClient
         return model.ToDto();
     }
 
-    public async Task<BunnyFetchVideoResultDto> FetchVideoAsync(string url, string title, string? collectionId, CancellationToken cancellationToken)
+    public async Task<BunnyFetchVideoResultDto> FetchVideoAsync(string videoGuid, string url, CancellationToken cancellationToken)
     {
         EnsureConfigured();
-        var endpoint = $"{StreamBaseUrl}/library/{_libraryId}/videos/fetch";
-        if (!string.IsNullOrWhiteSpace(collectionId))
-        {
-            endpoint += $"?collectionId={Uri.EscapeDataString(collectionId)}";
-        }
+        var endpoint = $"{StreamBaseUrl}/library/{_libraryId}/videos/{Uri.EscapeDataString(videoGuid)}/fetch";
 
         using var request = CreateRequest(HttpMethod.Post, endpoint);
-        request.Content = JsonContent.Create(new { url, title, headers = new Dictionary<string, string>() }, options: JsonOptions);
+        request.Content = JsonContent.Create(new { url, headers = new Dictionary<string, string>() }, options: JsonOptions);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
-        var result = await response.Content.ReadFromJsonAsync<BunnyApiResultResponse>(JsonOptions, cancellationToken);
+        BunnyApiResultResponse? result = null;
+        try
+        {
+            result = await response.Content.ReadFromJsonAsync<BunnyApiResultResponse>(JsonOptions, cancellationToken);
+        }
+        catch (JsonException)
+        {
+            // Some Bunny edge errors return an HTML or empty body. The HTTP status below
+            // remains authoritative and no response body is copied into logs or clients.
+        }
         if (!response.IsSuccessStatusCode)
         {
             return new BunnyFetchVideoResultDto(false, result?.Message ?? response.ReasonPhrase, (int)response.StatusCode);
         }
 
         return new BunnyFetchVideoResultDto(result?.Success ?? true, result?.Message, result?.StatusCode ?? (int)response.StatusCode);
+    }
+
+    public async Task DeleteVideoAsync(string videoGuid, CancellationToken cancellationToken)
+    {
+        EnsureConfigured();
+        using var request = CreateRequest(
+            HttpMethod.Delete,
+            $"{StreamBaseUrl}/library/{_libraryId}/videos/{Uri.EscapeDataString(videoGuid)}");
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task<BunnyStreamVideoDto?> GetVideoAsync(string videoGuid, CancellationToken cancellationToken)
@@ -77,6 +137,11 @@ public sealed class BunnyStreamClient : IBunnyStreamClient
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            response.EnsureSuccessStatusCode();
             return null;
         }
 
@@ -101,6 +166,11 @@ public sealed class BunnyStreamClient : IBunnyStreamClient
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            response.EnsureSuccessStatusCode();
             return null;
         }
 
@@ -160,7 +230,7 @@ public sealed class BunnyStreamClient : IBunnyStreamClient
     {
         if (_libraryId <= 0 || string.IsNullOrWhiteSpace(_apiKey))
         {
-            throw new InvalidOperationException("Bunny Stream is not configured. Set BunnyStream:LibraryId and BunnyStream:ApiKey.");
+            throw new InvalidOperationException("Bunny Stream library credentials are not configured.");
         }
     }
 

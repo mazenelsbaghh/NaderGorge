@@ -10,10 +10,20 @@ import { fadeSlideUp } from "@/lib/motion";
 import { AVATAR_LIST } from "@/data/avatars";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import {
+  getEducationStageLabel,
+  getGradeLevelLabel,
+  getStudyTrackLabel,
+  GRADES_BY_STAGE,
+  requiresTrack,
+  STAGE_OPTIONS,
+  TRACKS_BY_GRADE,
+  type EducationStage,
+  type GradeLevel,
+} from "@/lib/academic-labels";
 
 export default function StudentProfilePageClient() {
   const {
-    isReady,
     isSavingPreferences,
     selectedLightPaletteId,
     selectedDarkPaletteId,
@@ -38,6 +48,10 @@ export default function StudentProfilePageClient() {
   const [secondaryParentPhone, setSecondaryParentPhone] = useState("");
   const [motherPhone, setMotherPhone] = useState("");
   const [schoolName, setSchoolName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [educationStage, setEducationStage] = useState("");
+  const [gradeLevel, setGradeLevel] = useState("");
+  const [studyTrack, setStudyTrack] = useState("");
 
   useEffect(() => {
     studentService.getProfile()
@@ -49,6 +63,10 @@ export default function StudentProfilePageClient() {
         setSecondaryParentPhone(res.secondaryParentPhone || "");
         setMotherPhone(res.motherPhone || "");
         setSchoolName(res.schoolName || "");
+        setFullName(res.fullName || "");
+        setEducationStage(res.educationStage || "");
+        setGradeLevel(res.gradeLevel || "");
+        setStudyTrack(res.studyTrack || "");
       })
       .catch((err) => console.error("Error fetching profile:", err))
       .finally(() => setLoading(false));
@@ -60,12 +78,16 @@ export default function StudentProfilePageClient() {
     setMessage(null);
 
     const payload: UpdateStudentProfileDto = {
+      fullName: fullName.trim(),
       address,
       secondaryPhone: secondaryPhone || null,
       parentPhone: parentPhone || null,
       secondaryParentPhone: secondaryParentPhone || null,
       motherPhone: motherPhone || null,
       schoolName: schoolName || null,
+      educationStage,
+      gradeLevel,
+      studyTrack: studyTrack || null,
     };
 
     try {
@@ -102,107 +124,25 @@ export default function StudentProfilePageClient() {
     );
   }
 
-  // Helper translations for stages/grades
-  const translateStage = (stage: string) => {
-    if (!stage) return "";
-    const key = stage.toLowerCase().trim();
-    const stageMap: Record<string, string> = {
-      secondary: "المرحلة الثانوية",
-      baccalaureate: "بكالوريا",
-      primary: "المرحلة الابتدائية",
-      preparatory: "المرحلة الإعدادية",
-      azhari: "أزهري",
-      american: "أمريكي",
-    };
-    return stageMap[key] || stage;
-  };
-
-  const translateGrade = (grade: string) => {
-    if (!grade) return "";
-    const key = grade.toLowerCase().trim();
-    const gradeMap: Record<string, string> = {
-      // Secondary
-      firstsecondary: "الصف الأول الثانوي",
-      secondsecondary: "الصف الثاني الثانوي",
-      secondarygrade3: "الصف الثالث الثانوي",
-      // Baccalaureate
-      firstbaccalaureate: "الأول بكالوريا",
-      secondbaccalaureate: "الثاني بكالوريا",
-      // Primary
-      primarygrade1: "الصف الأول الابتدائي",
-      primarygrade2: "الصف الثاني الابتدائي",
-      primarygrade3: "الصف الثالث الابتدائي",
-      primarygrade4: "الصف الرابع الابتدائي",
-      primarygrade5: "الصف الخامس الابتدائي",
-      primarygrade6: "الصف السادس الابتدائي",
-      // Preparatory
-      prepgrade1: "الصف الأول الإعدادي",
-      prepgrade2: "الصف الثاني الإعدادي",
-      prepgrade3: "الصف الثالث الإعدادي",
-      // Azhari
-      azhariprimary1: "الصف الأول الابتدائي الأزهري",
-      azhariprimary2: "الصف الثاني الابتدائي الأزهري",
-      azhariprimary3: "الصف الثالث الابتدائي الأزهري",
-      azhariprimary4: "الصف الرابع الابتدائي الأزهري",
-      azhariprimary5: "الصف الخامس الابتدائي الأزهري",
-      azhariprimary6: "الصف السادس الابتدائي الأزهري",
-      azhariprep1: "الصف الأول الإعدادي الأزهري",
-      azhariprep2: "الصف الثاني الإعدادي الأزهري",
-      azhariprep3: "الصف الثالث الإعدادي الأزهري",
-      azharisecondary1: "الصف الأول الثانوي الأزهري",
-      azharisecondary2: "الصف الثاني الثانوي الأزهري",
-      azharisecondary3: "الصف الثالث الثانوي الأزهري",
-      // American
-      americangrade1: "Grade 1",
-      americangrade2: "Grade 2",
-      americangrade3: "Grade 3",
-      americangrade4: "Grade 4",
-      americangrade5: "Grade 5",
-      americangrade6: "Grade 6",
-      americangrade7: "Grade 7",
-      americangrade8: "Grade 8",
-      americangrade9: "Grade 9",
-      americangrade10: "Grade 10",
-      americangrade11: "Grade 11",
-      americangrade12: "Grade 12",
-      // Old compatibility values
-      first: "الصف الأول",
-      second: "الصف الثاني",
-      third: "الصف الثالث",
-    };
-    return gradeMap[key] || grade;
-  };
-
-  const translateTrack = (track: string | null) => {
-    if (!track) return "";
-    const key = track.toLowerCase().trim();
-    const trackMap: Record<string, string> = {
-      arts: "أدبي",
-      science: "علمي",
-      medicineandlifesciences: "الطب وعلوم الحياة",
-      engineeringandcomputerscience: "الهندسة وعلوم الحاسب",
-      business: "قطاع الأعمال",
-      artsandhumanities: "الآداب والفنون",
-      general: "عام",
-      literary: "أدبي",
-      scientificmath: "علمي رياضة",
-      scientificscience: "علمي علوم",
-    };
-    return trackMap[key] || track;
-  };
+  const gradeGroups = educationStage
+    ? GRADES_BY_STAGE[educationStage as EducationStage] ?? []
+    : [];
+  const needsStudyTrack = gradeLevel
+    ? requiresTrack(gradeLevel as GradeLevel)
+    : false;
+  const studyTrackOptions = gradeLevel ? TRACKS_BY_GRADE[gradeLevel] ?? [] : [];
 
   return (
     <motion.div
       className="space-y-8 max-w-5xl mx-auto"
       variants={fadeSlideUp}
-      initial="hidden"
-      animate={isReady ? "show" : undefined}
+      initial={false}
+      animate="visible"
       dir="rtl"
     >
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="rounded-2xl bg-[var(--admin-card-soft)] p-6 md:p-8">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-1 text-xs font-black text-[var(--admin-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
@@ -212,7 +152,7 @@ export default function StudentProfilePageClient() {
               إعدادات حسابك الشخصي
             </h1>
             <p className="mt-2 text-sm text-[var(--admin-muted)]">
-              راجع بيانات تسجيلك الأكاديمي وقم بتحديث معلومات الاتصال والمدارس الخاصة بك.
+              راجع وعدّل بياناتك الشخصية والدراسية، ومعلومات الاتصال والمدرسة.
             </p>
           </div>
         </div>
@@ -232,12 +172,12 @@ export default function StudentProfilePageClient() {
       )}
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 p-1.5 rounded-2xl border border-[var(--admin-border)]/50 bg-[var(--admin-card)]/50 backdrop-blur-md w-fit">
+      <div className="flex w-fit gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1.5">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] flex items-center gap-2",
             activeTab === 'profile'
               ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
               : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
@@ -250,7 +190,7 @@ export default function StudentProfilePageClient() {
           type="button"
           onClick={() => setActiveTab('appearance')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] flex items-center gap-2",
             activeTab === 'appearance'
               ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
               : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
@@ -265,7 +205,7 @@ export default function StudentProfilePageClient() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column: Read-Only Registration Info & Devices */}
         <div className="space-y-6 lg:col-span-1">
-          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+          <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
             <div className="text-center pb-6 border-b border-[var(--admin-border)]">
               <div className="inline-flex p-4 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] mb-3">
                 <User className="h-10 w-10" />
@@ -276,20 +216,20 @@ export default function StudentProfilePageClient() {
 
             {/* Academic Info */}
             <div className="space-y-4">
-              <h4 className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider">البيانات الأكاديمية</h4>
+              <h4 className="text-xs font-black text-[var(--admin-muted)]">البيانات الأكاديمية</h4>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                   <span className="text-[var(--admin-muted)]">المرحلة الدراسية:</span>
-                  <span className="font-semibold text-[var(--admin-text)]">{translateStage(profile.educationStage)}</span>
+                  <span className="font-semibold text-[var(--admin-text)]">{getEducationStageLabel(profile.educationStage)}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                   <span className="text-[var(--admin-muted)]">الصف الدراسي:</span>
-                  <span className="font-semibold text-[var(--admin-text)]">{translateGrade(profile.gradeLevel)}</span>
+                  <span className="font-semibold text-[var(--admin-text)]">{getGradeLevelLabel(profile.gradeLevel)}</span>
                 </div>
                 {profile.studyTrack && (
                   <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                     <span className="text-[var(--admin-muted)]">التخصص/الشعبة:</span>
-                    <span className="font-semibold text-[var(--admin-text)]">{translateTrack(profile.studyTrack)}</span>
+                    <span className="font-semibold text-[var(--admin-text)]">{getStudyTrackLabel(profile.studyTrack)}</span>
                   </div>
                 )}
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
@@ -311,7 +251,7 @@ export default function StudentProfilePageClient() {
 
             {/* Device Limits */}
             <div className="pt-6 border-t border-[var(--admin-border)] space-y-3">
-              <h4 className="text-xs font-black text-[var(--admin-muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="flex items-center gap-1.5 text-xs font-black text-[var(--admin-muted)]">
                 <Smartphone className="h-4 w-4 text-[var(--admin-primary)]" />
                 الأجهزة النشطة والحد المسموح
               </h4>
@@ -322,7 +262,7 @@ export default function StudentProfilePageClient() {
                 </div>
                 <div className="w-full bg-[var(--admin-border)] h-2 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
+                    className={`h-full rounded-full transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500 ${
                       profile.deviceCount >= profile.maxDevices ? "bg-amber-500" : "bg-[var(--admin-primary)]"
                     }`}
                     style={{ width: `${Math.min(100, (profile.deviceCount / profile.maxDevices) * 100)}%` }}
@@ -338,10 +278,88 @@ export default function StudentProfilePageClient() {
 
         {/* Right Column: Editable Contact & Parent Info Forms & Customize settings */}
         <div className="lg:col-span-2 space-y-8">
-          <form onSubmit={handleSubmit} className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
-            <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)]">تحديث معلومات الاتصال والمدارس</h3>
+          <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)]">تحديث بياناتك الشخصية والدراسية</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-xs font-black text-[var(--admin-text)] flex items-center gap-1">
+                  <User className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+                  الاسم بالكامل <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full bg-[var(--admin-bg)] border border-[var(--admin-border)] rounded-2xl px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] focus:outline-none focus:border-[var(--admin-primary)] transition"
+                  placeholder="اكتب الاسم بالكامل"
+                />
+                <p className="text-xs text-[var(--admin-muted)]">رقم الهاتف الأساسي لا يتغير من هنا لحماية الحساب.</p>
+              </div>
+
+              <div className="md:col-span-2 pt-2 border-t border-[var(--admin-border)]">
+                <p className="text-xs font-black text-[var(--admin-muted)]">البيانات الدراسية</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-[var(--admin-text)]">المرحلة الدراسية <span className="text-rose-500">*</span></label>
+                <select
+                  required
+                  value={educationStage}
+                  onChange={(e) => {
+                    setEducationStage(e.target.value);
+                    setGradeLevel("");
+                    setStudyTrack("");
+                  }}
+                  className="w-full bg-[var(--admin-bg)] border border-[var(--admin-border)] rounded-2xl px-4 py-3 text-sm text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] transition"
+                >
+                  <option value="" disabled>اختر المرحلة الدراسية</option>
+                  {STAGE_OPTIONS.map((stage) => <option key={stage.value} value={stage.value}>{stage.label}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-[var(--admin-text)]">الصف الدراسي <span className="text-rose-500">*</span></label>
+                <select
+                  required
+                  disabled={!educationStage}
+                  value={gradeLevel}
+                  onChange={(e) => {
+                    setGradeLevel(e.target.value);
+                    setStudyTrack("");
+                  }}
+                  className="w-full disabled:opacity-50 bg-[var(--admin-bg)] border border-[var(--admin-border)] rounded-2xl px-4 py-3 text-sm text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] transition"
+                >
+                  <option value="" disabled>اختر الصف الدراسي</option>
+                  {gradeGroups.map((group, groupIndex) => group.groupLabel ? (
+                    <optgroup key={group.groupLabel} label={group.groupLabel}>
+                      {group.grades.map((grade) => <option key={grade.value} value={grade.value}>{grade.label}</option>)}
+                    </optgroup>
+                  ) : group.grades.map((grade) => <option key={`${groupIndex}-${grade.value}`} value={grade.value}>{grade.label}</option>))}
+                </select>
+              </div>
+
+              {needsStudyTrack && (
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-black text-[var(--admin-text)]">الشعبة الدراسية <span className="text-rose-500">*</span></label>
+                  <select
+                    required
+                    value={studyTrack}
+                    onChange={(e) => setStudyTrack(e.target.value)}
+                    className="w-full bg-[var(--admin-bg)] border border-[var(--admin-border)] rounded-2xl px-4 py-3 text-sm text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] transition"
+                  >
+                    <option value="" disabled>اختر الشعبة الدراسية</option>
+                    {studyTrackOptions.map((track) => <option key={track.value} value={track.value}>{track.label}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div className="md:col-span-2 pt-2 border-t border-[var(--admin-border)]">
+                <p className="text-xs font-black text-[var(--admin-muted)]">بيانات التواصل والمدرسة</p>
+              </div>
+
               {/* Address */}
               <div className="md:col-span-2 space-y-2">
                 <label className="text-xs font-black text-[var(--admin-text)] flex items-center gap-1">
@@ -453,7 +471,7 @@ export default function StudentProfilePageClient() {
       ) : (
         <div className="max-w-4xl mx-auto">
           {/* ── Appearance & Theme Settings ── */}
-          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+          <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
             <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)] flex items-center gap-2">
               <Palette className="h-5 w-5 text-[var(--admin-primary)]" />
               تخصيص مظهر حسابك وألوانه
@@ -461,8 +479,8 @@ export default function StudentProfilePageClient() {
 
             {/* Avatar Selection Section */}
             <section className="space-y-4">
-              <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
-                شخصيتك الكارتونية (علماء ومفكرون)
+              <h4 className="text-xs font-black text-[var(--admin-muted)]">
+                شخصيتك الكارتونية (كورة وعلوم وفن)
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {AVATAR_LIST.map((avatar) => {
@@ -526,7 +544,7 @@ export default function StudentProfilePageClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[var(--admin-border)]">
               {/* Light Mode Palettes */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                <h4 className="text-xs font-black text-[var(--admin-muted)]">
                   ألوان الوضع الفاتح
                 </h4>
                 <div className="grid grid-cols-1 gap-3">
@@ -582,7 +600,7 @@ export default function StudentProfilePageClient() {
 
               {/* Dark Mode Palettes */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                <h4 className="text-xs font-black text-[var(--admin-muted)]">
                   ألوان الوضع الداكن
                 </h4>
                 <div className="grid grid-cols-1 gap-3">

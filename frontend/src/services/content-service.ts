@@ -1,6 +1,48 @@
 import apiClient from './api-client';
-import { registerCacheStore } from '@/lib/cache-invalidation';
 import type { AxiosResponse } from 'axios';
+import type { AiOutputLanguage } from '@/lib/ai-output-language';
+import { isFullPackagePurchaseDisabled } from '@/lib/content-access';
+
+export type { AiOutputLanguage } from '@/lib/ai-output-language';
+
+export const CONTENT_CACHE_KEYS = {
+  packages: 'content:packages',
+  lessons: 'content:lessons',
+} as const;
+
+export type PackageContentMode =
+  | 'TermWithSections'
+  | 'SectionWithLessons'
+  | 'LessonsOnly'
+  | 'SingleLesson';
+
+export type ContentArchiveMode = 'None' | 'ActiveSubscribersOnly' | 'HiddenFromEveryone';
+
+export type ContentRootLabel = 'باقة' | 'ترم' | 'قسم' | 'حصة';
+
+export type PackageContentModeOption = {
+  value: PackageContentMode;
+  entityLabel: ContentRootLabel;
+  label: string;
+  description: string;
+};
+
+const PACKAGE_CONTENT_MODE_OPTION_MAP: Record<PackageContentMode, PackageContentModeOption> = {
+  TermWithSections: { value: 'TermWithSections', entityLabel: 'باقة', label: 'باقة كاملة: باقة ← ترم ← قسم ← حصص', description: 'أنشئ باقة كاملة، ثم أضف داخلها ترمات وأقسامًا وحصصًا.' },
+  SectionWithLessons: { value: 'SectionWithLessons', entityLabel: 'ترم', label: 'ترم مستقل: ترم ← قسم ← حصص', description: 'أنشئ ترمًا للبيع مباشرة، ثم أضف داخله الأقسام والحصص.' },
+  LessonsOnly: { value: 'LessonsOnly', entityLabel: 'قسم', label: 'قسم مستقل: قسم ← حصص', description: 'أنشئ قسمًا للبيع مباشرة، ثم أضف داخله الحصص.' },
+  SingleLesson: { value: 'SingleLesson', entityLabel: 'حصة', label: 'حصة مستقلة', description: 'أنشئ حصة مستقلة جاهزة لإضافة الفيديوهات والملفات.' },
+};
+
+export const PACKAGE_CONTENT_MODE_OPTIONS = Object.values(PACKAGE_CONTENT_MODE_OPTION_MAP);
+
+export function getContentRootOption(contentMode: PackageContentMode): PackageContentModeOption {
+  return PACKAGE_CONTENT_MODE_OPTION_MAP[contentMode];
+}
+
+export function getContentRootLabel(contentMode: PackageContentMode): ContentRootLabel {
+  return getContentRootOption(contentMode).entityLabel;
+}
 
 export interface PackageDto {
   id: string;
@@ -10,6 +52,7 @@ export interface PackageDto {
   programId: string;
   isEnrolled: boolean;
   hasDirectPackageAccess?: boolean;
+  hasRootContentAccess?: boolean;
   imageUrl?: string;
   teacherId?: string;
   subjectId?: string;
@@ -19,6 +62,39 @@ export interface PackageDto {
   teacherBio?: string;
   teacherSpecialization?: string;
   targetGrade?: string;
+  aiOutputLanguage?: AiOutputLanguage;
+  contentMode?: PackageContentMode;
+  allowFullPackagePurchase?: boolean;
+  rootTermId?: string;
+  rootSectionId?: string;
+  directSections?: PackageDirectSectionDto[];
+  directLessons?: PackageDirectLessonDto[];
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+}
+
+export type ContentRootPurchaseReference = {
+  contentType: 'Package' | 'Term' | 'Month' | 'Lesson';
+  contentId: string;
+};
+
+export function getContentRootPurchaseReference(pkg: PackageDto): ContentRootPurchaseReference | null {
+  if (isFullPackagePurchaseDisabled(pkg)) {
+    return null;
+  }
+
+  switch (pkg.contentMode ?? 'TermWithSections') {
+    case 'SectionWithLessons':
+      return pkg.rootTermId ? { contentType: 'Term', contentId: pkg.rootTermId } : null;
+    case 'LessonsOnly':
+      return pkg.rootSectionId ? { contentType: 'Month', contentId: pkg.rootSectionId } : null;
+    case 'SingleLesson':
+      return pkg.directLessons?.[0]
+        ? { contentType: 'Lesson', contentId: pkg.directLessons[0].id }
+        : null;
+    default:
+      return { contentType: 'Package', contentId: pkg.id };
+  }
 }
 
 export interface TermDto {
@@ -28,6 +104,8 @@ export interface TermDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface ContentSectionDto {
@@ -37,6 +115,30 @@ export interface ContentSectionDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+}
+
+export interface PackageDirectSectionDto {
+  id: string;
+  title: string;
+  order: number;
+  price?: number;
+  imageUrl?: string;
+  isPurchased?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+}
+
+export interface PackageDirectLessonDto {
+  id: string;
+  title: string;
+  summary: string;
+  order: number;
+  price?: number;
+  hasAccess?: boolean;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface LessonSummaryDto {
@@ -51,6 +153,21 @@ export interface LessonSummaryDto {
   lockedReason?: string;
   blockingExamId?: string;
   blockingHomeworkLessonId?: string;
+  videos?: LessonVideoSummaryDto[];
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+}
+
+export interface LessonVideoSummaryDto {
+  id: string;
+  title: string;
+  order: number;
+  hasAccess: boolean;
+  isUnlockedByCode?: boolean;
+  videoTypeId?: string;
+  videoTypeName?: string;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
 }
 
 export interface VideoChapterDto {
@@ -71,7 +188,14 @@ export interface VideoDto {
   limit: number;
   watched: number;
   isLocked: boolean;
+  hasAccess?: boolean;
+  isUnlockedByCode?: boolean;
+  unlockLabel?: string;
+  videoTypeId?: string;
+  videoTypeName?: string;
   watchedSeconds: number;
+  learningWatchedSeconds?: number;
+  durationSeconds?: number | null;
   lastWatchedAt?: string;
   subtitleUrl?: string;
   isProcessingAI?: boolean;
@@ -116,6 +240,7 @@ export interface HomeworkDto {
 }
 
 export interface LessonDetailDto {
+  isCompleted?: boolean;
   id: string;
   title: string;
   summary: string;
@@ -137,12 +262,16 @@ export interface LessonDetailDto {
   examLockedReason?: string;
   examStatus?: string;
   homeworkStatus?: string;
+  homeworkComingSoonOn?: string | null;
   termId?: string;
   sectionId?: string;
+  isVideoOnlyAccess?: boolean;
 }
 
 
 export interface LessonCommentDto {
+  parentCommentId?: string | null;
+  replyCount?: number;
   id: string;
   lessonId: string;
   authorName: string;
@@ -191,62 +320,87 @@ interface ContentApiResponse<T> {
   data?: T;
 }
 
-const PACKAGES_CACHE_TTL_MS = 10_000;
+export interface ContentAcquisitionCountDto {
+  purchased: number;
+  gifts: number;
+}
+
+export interface ContentPackageSummaryDto {
+  packageId: string;
+  packageName: string;
+  teacherName: string;
+  package: ContentAcquisitionCountDto;
+  term: ContentAcquisitionCountDto;
+  section: ContentAcquisitionCountDto;
+  lesson: ContentAcquisitionCountDto;
+  purchasedStudents: number;
+  giftStudents: number;
+  totalStudents: number;
+}
+
+export interface PackageCombinationSummaryDto {
+  packageIds: string[];
+  packageNames: string[];
+  studentsCount: number;
+}
+
+export interface ContentSummaryDto {
+  fromUtc?: string | null;
+  toUtc?: string | null;
+  packages: ContentPackageSummaryDto[];
+  packageCombinations: PackageCombinationSummaryDto[];
+}
+
+export interface ContentSummaryTeacherDto {
+  id: string;
+  fullName: string;
+  profileImageUrl?: string;
+  specialization: string;
+  subjectIds: string[];
+  subjectNames: string[];
+  packagesCount: number;
+}
+
+export interface ContentSummaryRequest {
+  teacherId?: string;
+  fromUtc?: string;
+  toUtc?: string;
+  signal?: AbortSignal;
+}
+
+type ContentListApiResponse<T> = Omit<ContentApiResponse<T[]>, 'data'> & { data: T[] };
+
 type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
 
-let packagesInFlight: Promise<PackagesResponse> | null = null;
-let packagesCache: PackagesResponse | null = null;
-let packagesCacheAt = 0;
-
-const readPackagesFromCache = () => packagesCache?.data?.data ?? [];
-
 export const contentService = {
-  clearPackagesCache: () => {
-    packagesCache = null;
-    packagesCacheAt = 0;
-    packagesInFlight = null;
+  // Kept source-compatible for callers that still pass force while the old
+  // module-level cache is retired. Every request now reads current server data.
+  getPackages: (options?: { force?: boolean; signal?: AbortSignal }): Promise<PackagesResponse> => {
+    return apiClient.get('/content/packages', { signal: options?.signal });
   },
-  getPackages: (options?: { force?: boolean }) => {
-    const force = options?.force ?? false;
-    const isCacheFresh = !force && packagesCache && Date.now() - packagesCacheAt < PACKAGES_CACHE_TTL_MS;
-
-    if (isCacheFresh && packagesCache) {
-      return Promise.resolve(packagesCache);
-    }
-
-    if (!force && packagesInFlight) {
-      return packagesInFlight;
-    }
-
-    packagesInFlight = apiClient.get('/content/packages').then((response) => {
-      packagesCache = response;
-      packagesCacheAt = Date.now();
-      return response;
-    }).finally(() => {
-      packagesInFlight = null;
-    });
-
-    return packagesInFlight;
-  },
-  peekCachedPackageById: (packageId: string) => {
-    if (!packageId) return null;
-    return readPackagesFromCache().find((pkg) => pkg.id === packageId) ?? null;
-  },
-  getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
+  getTerms: (packageId: string, includeSystemContainers = false) =>
+    apiClient.get<ContentListApiResponse<TermDto>>(`/content/packages/${packageId}/terms`, {
+      params: includeSystemContainers ? { includeSystemContainers: true } : undefined,
+    }),
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
-  getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
-  getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),
-  getLessonDetail: (lessonId: string) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`),
+  getSections: (termId: string) => apiClient.get<ContentListApiResponse<ContentSectionDto>>(`/content/terms/${termId}/sections`),
+  getLessons: (sectionId: string) => apiClient.get<ContentListApiResponse<LessonSummaryDto>>(`/content/sections/${sectionId}/lessons`),
+  getLessonDetail: (lessonId: string, signal?: AbortSignal) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`, { signal }),
   getLessonComments: (lessonId: string, offset = 0, limit = 50) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments?offset=${offset}&limit=${limit}`),
+  getLessonReplies: (lessonId: string, parentCommentId: string, offset = 0) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments`, { params: { parentCommentId, offset, limit: 20 } }),
   getLessonResources: (lessonId: string) => apiClient.get<ContentApiResponse<ResourceDto[]>>(`/content/lessons/${lessonId}/resources`),
   getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
-  createLessonComment: (lessonId: string, body: string) =>
-    apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
+  createLessonComment: (lessonId: string, body: string, parentCommentId?: string) =>
+    apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body, parentCommentId }),
+  getContentSummaryTeachers: (signal?: AbortSignal) =>
+    apiClient.get<ContentApiResponse<ContentSummaryTeacherDto[]>>('/admin/content/summary/teachers', { signal }),
+  getContentSummary: (scope: 'admin' | 'teacher', options: ContentSummaryRequest = {}) =>
+    apiClient.get<ContentApiResponse<ContentSummaryDto>>(`/${scope}/content/summary`, {
+      params: {
+        teacherId: scope === 'admin' ? options.teacherId : undefined,
+        fromUtc: options.fromUtc,
+        toUtc: options.toUtc,
+      },
+      signal: options.signal,
+    }),
 };
-
-// Register with centralized cache invalidation registry
-registerCacheStore(
-  'content:packages',
-  () => contentService.clearPackagesCache(),
-  () => void contentService.getPackages({ force: true })
-);

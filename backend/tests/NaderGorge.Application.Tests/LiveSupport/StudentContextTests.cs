@@ -1,5 +1,7 @@
 using NaderGorge.Infrastructure.Services;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
@@ -14,7 +16,8 @@ public sealed class StudentContextTests
         var context = await service.GetStudentContextAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, CancellationToken.None);
         Assert.Equal(LiveSupportTestData.StudentId, context.UserId);
         Assert.Equal("طالب الاختبار", context.FullName);
-        await Assert.ThrowsAsync<NaderGorge.Application.Features.LiveSupport.Interfaces.LiveSupportException>(() => service.GetStudentContextAsync(LiveSupportTestData.StaffBId, false, LiveSupportTestData.Conversation().Id, CancellationToken.None));
+        var forbidden = await Assert.ThrowsAsync<NaderGorge.Application.Features.LiveSupport.Interfaces.LiveSupportException>(() => service.GetStudentContextAsync(LiveSupportTestData.StaffBId, false, LiveSupportTestData.Conversation().Id, CancellationToken.None));
+        Assert.Equal(LiveSupportErrorCodes.Forbidden, forbidden.Code);
     }
 
     [Fact]
@@ -50,5 +53,83 @@ public sealed class StudentContextTests
         var context = await service.GetStudentContextAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, CancellationToken.None);
         Assert.NotNull(context);
         Assert.Equal(LiveSupportTestData.StudentId, context.UserId);
+    }
+
+    [Fact]
+    public async Task LinkReplacementAndUnlinkChangeWhichStudentContextIsVisible()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var replacement = LiveSupportTestData.User(Guid.NewGuid(), "طالب بديل", "01000000999");
+        fixture.Db.Users.Add(replacement);
+        fixture.Db.StudentProfiles.Add(new NaderGorge.Domain.Entities.StudentProfile { UserId = replacement.Id, StudentCode = "ALT-142" });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var conversationId = LiveSupportTestData.Conversation().Id;
+        var linked = await service.ChangeStudentLinkAsync(LiveSupportTestData.StaffAId, false, conversationId, replacement.Id, "استبدال الربط", 1, CancellationToken.None);
+        Assert.Equal(replacement.Id, linked.LinkedStudentUserId);
+        var replacementContext = await service.GetStudentContextAsync(LiveSupportTestData.StaffAId, false, conversationId, CancellationToken.None);
+        Assert.Equal(replacement.Id, replacementContext.UserId);
+        Assert.Equal("طالب بديل", replacementContext.FullName);
+
+        var unlinked = await service.ChangeStudentLinkAsync(LiveSupportTestData.StaffAId, false, conversationId, null, "إلغاء الربط", 2, CancellationToken.None);
+        Assert.Null(unlinked.LinkedStudentUserId);
+        var notLinked = await Assert.ThrowsAsync<NaderGorge.Application.Features.LiveSupport.Interfaces.LiveSupportException>(() => service.GetStudentContextAsync(LiveSupportTestData.StaffAId, false, conversationId, CancellationToken.None));
+        Assert.Equal("STUDENT_NOT_LINKED", notLinked.Code);
+        Assert.Equal(2, await fixture.Db.LiveSupportStudentLinkHistories.CountAsync(x => x.ConversationId == conversationId));
+    }
+
+    [Fact]
+    public async Task StudentContextSectionRequiresLinkAndReturnsRequestedSection()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var section = await service.GetStudentContextSectionAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, "basic", CancellationToken.None);
+
+        Assert.Equal("basic", section.Section);
+        Assert.Equal("طالب الاختبار", section.Data.GetProperty("fullName").GetString());
+    }
+
+    [Fact]
+    public async Task CurrentOwnerCanReadAllLinkedStudentHistoryIncludingClosedConversation()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var oldConversation = new NaderGorge.Domain.Entities.LiveSupport.LiveSupportConversation
+        {
+            Id = Guid.NewGuid(),
+            ParticipantType = LiveSupportParticipantType.Student,
+            StudentUserId = LiveSupportTestData.StudentId,
+            LinkedStudentUserId = LiveSupportTestData.StudentId,
+            Status = LiveSupportConversationStatus.Closed,
+            Subject = "مشكلة سابقة",
+            ClosedAt = DateTime.UtcNow.AddDays(-1),
+            LastMessageAt = DateTime.UtcNow.AddDays(-1),
+            Version = 1
+        };
+        fixture.Db.LiveSupportConversations.Add(oldConversation);
+        fixture.Db.LiveSupportMessages.Add(new NaderGorge.Domain.Entities.LiveSupport.LiveSupportMessage
+        {
+            ConversationId = oldConversation.Id,
+            SenderType = LiveSupportSenderType.Staff,
+            ClientMessageId = "old-history-message",
+            Type = LiveSupportMessageType.Text,
+            Content = "تم حل المشكلة السابقة.",
+            SentAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var currentConversationId = LiveSupportTestData.Conversation().Id;
+        var history = await service.GetStudentSupportHistoryAsync(LiveSupportTestData.StaffAId, false, currentConversationId, CancellationToken.None);
+
+        var historicItem = Assert.Single(history, item => item.ConversationId == oldConversation.Id);
+        Assert.Equal(LiveSupportConversationStatus.Closed, historicItem.Status);
+        Assert.Equal(1, historicItem.MessageCount);
+        var messages = await service.GetStudentHistoryMessagesAsync(LiveSupportTestData.StaffAId, false, currentConversationId, oldConversation.Id, 100, CancellationToken.None);
+        Assert.Equal("تم حل المشكلة السابقة.", Assert.Single(messages).Content);
+
+        var forbidden = await Assert.ThrowsAsync<NaderGorge.Application.Features.LiveSupport.Interfaces.LiveSupportException>(
+            () => service.GetStudentSupportHistoryAsync(LiveSupportTestData.StaffBId, false, currentConversationId, CancellationToken.None));
+        Assert.Equal(LiveSupportErrorCodes.Forbidden, forbidden.Code);
     }
 }

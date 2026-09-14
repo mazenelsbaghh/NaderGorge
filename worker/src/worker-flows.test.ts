@@ -4,12 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Redis } from 'ioredis';
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions/index.js';
 import child_process from 'child_process';
 
 let bunnyExecCalled = false;
 let bunnyCapturedArgs: any[] = [];
+let vkExecCalled = false;
+let vkCapturedArgs: any[] = [];
 const originalExecFile = child_process.execFile;
 
 // Override child_process.execFile to mock Bunny Stream yt-dlp execution
@@ -26,7 +26,15 @@ child_process.execFile = function(file: any, args: any, options: any, callback?:
       fs.writeFileSync(outputPath, 'mock bunny audio content');
     }
     
-    if (cb) cb(null, { stdout: 'mock bunny download', stderr: '' });
+    if (cb) cb(null, 'mock bunny download', '');
+    return {} as any;
+  }
+  if (typeof file === 'string' && (file.includes('yt-dlp') || file.includes('youtube-dl')) && args[0]?.startsWith('https://vk.com/video')) {
+    vkExecCalled = true;
+    vkCapturedArgs = args;
+    const outputIndex = args.indexOf('-o');
+    fs.writeFileSync(`${args[outputIndex + 1]}.mp3`, 'mock vk audio content');
+    if (cb) cb(null, 'mock vk download', '');
     return {} as any;
   }
   return originalExecFile(file, args, options, callback);
@@ -38,9 +46,9 @@ import { extractAudioFromVideo } from './utils/audioExtractor.js';
 
 // Setup basic E2e test environment variables
 process.env.GEMINI_API_KEY = 'mock_gemini_api_key_value_1234567890';
-process.env.AI_PRIMARY_PROVIDER = 'developer';
 process.env.BACKEND_API_URL = 'http://localhost:5245/api/v1';
 process.env.AI_CALLBACK_SECRET = 'E2eOnlyAiCallbackSecretValue1234567890';
+process.env.AI_MEDIA_RELAY_SECRET = 'E2eOnlyAiMediaRelaySecretValue1234567890';
 
 test('Job cancellation flow works correctly', async () => {
   const mockStore = new Map<string, string>();
@@ -77,15 +85,7 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
     if (urlString.includes('callbacks/essay-graded')) {
       calledUrl = urlString;
       calledBody = JSON.parse(options?.body as string);
-      return {
-        ok: true,
-        status: 200,
-        headers: {
-          get: (n: string) => null,
-          entries: () => []
-        },
-        text: async () => 'OK'
-      } as unknown as Response;
+      return Response.json({ success: true, data: { essaySubmissionId: 'sub-789', status: 'TeacherGraded' } });
     } else {
       // Gemini API mock response
       const geminiResponse = {
@@ -122,11 +122,15 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
     id: 'essay-job-456',
     data: {
       essaySubmissionId: 'sub-789',
+      questionText: 'ما المقصود بالتشبيه؟',
       answerText: 'إجابة الطالب',
       expectedAnswer: 'الإجابة النموذجية'
     },
     updateProgress: async (p: any) => {
       progressCalls.push(p);
+    },
+    updateData: async (data: unknown) => {
+      dummyJob.data = data;
     }
   };
 
@@ -186,107 +190,91 @@ test('processEvaluateEssayJob throws error to trigger queue retry if callback fa
     id: 'essay-job-retry',
     data: {
       essaySubmissionId: 'sub-retry',
-      answerText: 'wrong answer'
+      answerText: 'wrong answer', questionText: 'Question', expectedAnswer: 'Correct answer'
     },
-    updateProgress: async () => {}
+    updateProgress: async () => {},
+    updateData: async (data: unknown) => { dummyJob.data = data; }
   };
 
   await assert.rejects(async () => {
     await processEvaluateEssayJob(dummyJob);
-  }, /Webhook failed with status 500/);
+  }, /Essay callback failed with status 500/);
 });
 
-test('extractAudioFromVideo calls Telegram client download flow when configured', async () => {
-  // Generate a valid string session starting with '1' and valid base64 representation
-  const dcBuffer = Buffer.from([1]);
-  const addressBuffer = Buffer.from("127.0.0.1");
-  const addressLengthBuffer = Buffer.alloc(2);
-  addressLengthBuffer.writeInt16BE(addressBuffer.length, 0);
-  const portBuffer = Buffer.alloc(2);
-  portBuffer.writeInt16BE(443, 0);
-  const key = Buffer.alloc(256);
-  const encoded = Buffer.concat([
-    dcBuffer,
-    addressLengthBuffer,
-    addressBuffer,
-    portBuffer,
-    key,
-  ]).toString('base64');
-
-  process.env.TELEGRAM_API_ID = '123456';
-  process.env.TELEGRAM_API_HASH = 'mock_hash';
-  process.env.TELEGRAM_STRING_SESSION = '1' + encoded;
-
-  (TelegramClient.prototype as any).connect = async () => true;
-  (TelegramClient.prototype as any).disconnect = async () => {};
-  (TelegramClient.prototype as any).getEntity = async (username: string) => ({ username } as any);
-  (TelegramClient.prototype as any).sendMessage = async (entity: any, options: any) => ({ } as any);
-  (TelegramClient.prototype as any).addEventHandler = function(handler: any) {
-    setTimeout(() => {
-      handler({
-        message: {
-          senderId: '123',
-          message: 'Here is your audio',
-          getSender: async () => ({ username: 'utubebot' }),
-          media: {
-            document: {
-              attributes: [
-                {
-                  className: 'DocumentAttributeFilename',
-                  fileName: 'audio.mp3'
-                }
-              ]
-            }
-          }
-        }
-      });
-    }, 50);
-  } as any;
-  (TelegramClient.prototype as any).removeEventHandler = () => {};
-  (TelegramClient.prototype as any).downloadMedia = async function(media: any, options: any) {
-    fs.writeFileSync(options.outputFile, 'mock mp3 data');
-    return Buffer.from('mock');
-  } as any;
-
-  const result = await extractAudioFromVideo('https://youtube.com/watch?v=mock_video', 'mock_audio_tg');
-  assert.ok(result.endsWith('mock_audio_tg.mp3'));
-  assert.ok(fs.existsSync(result));
-
-  try {
-    fs.unlinkSync(result);
-  } catch {}
+test('extractAudioFromVideo refuses to route YouTube through third-party downloaders', async () => {
+  bunnyExecCalled = false;
+  await assert.rejects(
+    extractAudioFromVideo('https://www.youtube.com/watch?v=AbCdEf12_-3', 'youtube-must-be-direct'),
+    /YouTube/,
+  );
+  assert.equal(bunnyExecCalled, false);
 });
 
-test('extractAudioFromVideo detects Bunny Stream GUIDs, skips Telegram/Cobalt, constructs correct URL and referer', async () => {
+test('extractAudioFromVideo detects Bunny Stream GUIDs and constructs the correct URL and referer', async () => {
   const oldLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
   process.env.BUNNY_STREAM_LIBRARY_ID = '99999';
-
-  const oldSession = process.env.TELEGRAM_STRING_SESSION;
-  delete process.env.TELEGRAM_STRING_SESSION;
+  let outputPath: string | undefined;
 
   bunnyExecCalled = false;
   bunnyCapturedArgs = [];
 
   try {
     const bunnyGuid = '12345678-abcd-1234-abcd-123456789abc';
-    const result = await extractAudioFromVideo(bunnyGuid, 'mock_bunny_test');
+    outputPath = await extractAudioFromVideo(bunnyGuid, 'mock_bunny_test');
 
     assert.ok(bunnyExecCalled, 'execFile should have been intercepted');
-    assert.ok(result.endsWith('mock_bunny_test.mp3'), 'should return expected mp3 path');
-    assert.ok(fs.existsSync(result), 'output file should exist');
+    assert.ok(outputPath.endsWith('mock_bunny_test.mp3'), 'should return expected mp3 path');
+    assert.ok(fs.existsSync(outputPath), 'output file should exist');
 
     assert.strictEqual(bunnyCapturedArgs[0], `https://iframe.mediadelivery.net/embed/99999/${bunnyGuid}`);
     const refererIndex = bunnyCapturedArgs.indexOf('--referer');
     assert.ok(refererIndex !== -1, '--referer arg must be passed');
     assert.strictEqual(bunnyCapturedArgs[refererIndex + 1], 'https://admin.massar-academy.net/');
 
-    try {
-      fs.unlinkSync(result);
-    } catch {}
   } finally {
-    process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
-    if (oldSession) {
-      process.env.TELEGRAM_STRING_SESSION = oldSession;
-    }
+    if (outputPath) fs.rmSync(outputPath, { force: true });
+    if (oldLibraryId === undefined) delete process.env.BUNNY_STREAM_LIBRARY_ID;
+    else process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
+  }
+});
+
+test('extractAudioFromVideo uses the library scoped in a Bunny source instead of the legacy environment', async () => {
+  const oldLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
+  process.env.BUNNY_STREAM_LIBRARY_ID = '99999';
+  bunnyExecCalled = false;
+  bunnyCapturedArgs = [];
+  let outputPath: string | undefined;
+
+  try {
+    const bunnyGuid = '12345678-abcd-1234-abcd-123456789abc';
+    outputPath = await extractAudioFromVideo(
+      `740801/${bunnyGuid}`,
+      'mock_bunny_scoped_library_test',
+    );
+
+    assert.equal(bunnyExecCalled, true);
+    assert.equal(
+      bunnyCapturedArgs[0],
+      `https://iframe.mediadelivery.net/embed/740801/${bunnyGuid}`,
+    );
+    assert.equal(fs.existsSync(outputPath), true);
+  } finally {
+    if (outputPath) fs.rmSync(outputPath, { force: true });
+    if (oldLibraryId === undefined) delete process.env.BUNNY_STREAM_LIBRARY_ID;
+    else process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
+  }
+});
+
+test('extractAudioFromVideo normalizes the stored VK identifier before download', async () => {
+  vkExecCalled = false;
+  vkCapturedArgs = [];
+  const result = await extractAudioFromVideo('oid=-22822305&id=456241864', 'mock-vk-stored-id');
+
+  try {
+    assert.equal(vkExecCalled, true);
+    assert.equal(vkCapturedArgs[0], 'https://vk.com/video-22822305_456241864');
+    assert.equal(fs.existsSync(result), true);
+  } finally {
+    fs.rmSync(result, { force: true });
   }
 });

@@ -1,0 +1,1 @@
+massar-ops ALL=(root) NOPASSWD: /usr/sbin/gluster volume heal massar-shared info summary, /usr/sbin/gluster volume heal massar-shared info split-brain

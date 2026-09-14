@@ -36,6 +36,8 @@ import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { QuestionImage } from '@/components/assessment/QuestionImage';
+import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 // ─── Result Panel ───────────────────────────────────────────────────────────────
 
@@ -44,17 +46,22 @@ export function ExamResultPanel({
   packageId,
   lessonId,
   onRestart,
+  onResultRefresh,
+  returnHref,
+  returnLabel,
 }: {
   result: ExamResultDto;
   packageId?: string;
   lessonId?: string;
   onRestart?: () => Promise<void> | void;
+  onResultRefresh?: (result: ExamResultDto) => void;
+  returnHref?: string;
+  returnLabel?: string;
 }) {
   const router = useRouter();
   const reviewedQuestions = result.questions ?? [];
   const resolvedPackageId = packageId ?? result.packageId;
   const resolvedLessonId = lessonId ?? result.lessonId;
-  const wrongQuestions = reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect);
   const answeredCount = reviewedQuestions.filter((q) => q.isAnswered).length;
   const skippedCount = reviewedQuestions.filter((q) => !q.isAnswered).length;
   const accuracy =
@@ -62,6 +69,13 @@ export function ExamResultPanel({
   const hasReviewData = reviewedQuestions.length > 0;
   const [gradingStatus, setGradingStatus] = useState<ExamAttemptGradingStatusDto | null>(null);
   const [gradingError, setGradingError] = useState('');
+  const [gradingRefreshVersion, setGradingRefreshVersion] = useState(0);
+  usePlatformEvents({
+    onExamResultReady: ({ attemptId }) => {
+      if (attemptId === result.attemptId && result.resultState !== 'Completed')
+        setGradingRefreshVersion(version => version + 1);
+    },
+  });
 
   useEffect(() => {
     if (result.resultState === 'Completed') {
@@ -77,7 +91,12 @@ export function ExamResultPanel({
         if (isCancelled) return;
         setGradingStatus(response.data.data);
         setGradingError('');
-        if (response.data.data.resultState !== 'Completed') {
+        if (response.data.data.resultState === 'Completed' && result.resultState !== 'Completed') {
+          const resultResponse = await examService.getAttemptResult(result.attemptId);
+          if (!isCancelled) {
+            onResultRefresh?.(resultResponse.data.data);
+          }
+        } else if (response.data.data.resultState !== 'Completed' && response.data.data.resultState !== 'RequiresCompletion') {
           timeoutId = setTimeout(() => { void loadGradingStatus(); }, 5000);
         }
       } catch {
@@ -91,7 +110,7 @@ export function ExamResultPanel({
       isCancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [result.attemptId, result.resultState]);
+  }, [onResultRefresh, result.attemptId, result.resultState, gradingRefreshVersion]);
 
   const effectiveResultState = gradingStatus?.resultState ?? result.resultState;
   const essayStatusLabels: Record<string, string> = {
@@ -100,6 +119,54 @@ export function ExamResultPanel({
     WaitTeacher: 'بانتظار المعلم',
     TeacherGraded: 'اكتمل التصحيح',
   };
+  const isFinalResult = effectiveResultState === 'Completed';
+  const needsTeacherReview = effectiveResultState === 'PartiallyGraded';
+  const pendingEssayCount = gradingStatus?.essays.filter((essay) => essay.status !== 'TeacherGraded').length ?? 0;
+  const wrongQuestions = isFinalResult
+    ? reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect)
+    : [];
+
+  if (effectiveResultState === 'RequiresCompletion') {
+    return (
+      <section className="mx-auto max-w-2xl space-y-4 rounded-xl border border-border bg-card p-6 text-start" dir="rtl" aria-live="polite">
+        <h2 className="text-xl font-bold text-foreground">فيه أسئلة مضافة تحتاج استكمالها</h2>
+        <p className="text-sm leading-7 text-muted-foreground">إجاباتك السابقة محفوظة. استكمل الأسئلة الجديدة علشان تظهر النتيجة المحدثة.</p>
+        <button type="button" onClick={() => onRestart ? void onRestart() : router.refresh()}
+          className="min-h-11 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          استكمال الأسئلة
+        </button>
+      </section>
+    );
+  }
+
+  if (!isFinalResult) {
+    return (
+      <section className="mx-auto flex min-h-[420px] max-w-2xl flex-col items-center justify-center rounded-3xl border border-amber-200/70 bg-amber-50/70 p-8 text-center dark:border-amber-800/40 dark:bg-amber-950/20" dir="rtl" aria-live="polite">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+          <RefreshCw className={`h-10 w-10 ${needsTeacherReview ? '' : 'animate-spin'}`} aria-hidden="true" />
+        </div>
+        <p className="mt-6 text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">{needsTeacherReview ? 'بانتظار مراجعة المدرس' : 'جاري التصحيح بالذكاء الاصطناعي'}</p>
+        <h2 className="mt-3 text-2xl font-black text-foreground">{needsTeacherReview ? 'إجاباتك المقالية محفوظة للمراجعة' : 'بنراجع إجاباتك المقالية الآن'}</h2>
+        <p className="mt-3 max-w-md text-sm font-bold leading-7 text-muted-foreground">
+          {needsTeacherReview
+            ? 'بعض الإجابات محتاجة مراجعة المدرس. النتيجة النهائية هتظهر تلقائيًا بعد اكتمال التصحيح.'
+            : 'النتيجة النهائية هتظهر تلقائيًا فور الانتهاء. لو التصحيح اتعطل، النظام هيعيد المحاولة تلقائيًا. تقدر تخرج وترجع في أي وقت.'}
+        </p>
+        <p className="mt-4 rounded-full bg-background/70 px-4 py-2 text-sm font-black text-amber-700 dark:text-amber-400">
+          {pendingEssayCount > 0 ? `${needsTeacherReview ? 'بانتظار مراجعة' : 'جاري تصحيح'} ${pendingEssayCount} سؤال مقالي` : 'جاري تجهيز النتيجة'}
+        </p>
+        {gradingError && <p className="mt-4 text-sm font-bold text-destructive">{gradingError}</p>}
+        <button
+          type="button"
+          onClick={() => router.push(returnHref ?? (resolvedLessonId && resolvedPackageId ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}` : resolvedPackageId ? `/student/packages/${resolvedPackageId}` : '/student'))}
+          className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-border bg-background px-6 py-3 text-sm font-black text-foreground transition hover:bg-muted"
+        >
+          العودة الآن
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </section>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-16" dir="rtl">
@@ -230,7 +297,7 @@ export function ExamResultPanel({
 
         {/* CTA buttons */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-          {!result.isPassed && (
+          {isFinalResult && !result.isPassed && onRestart && (
             <button
               type="button"
               onClick={() => { void onRestart?.(); }}
@@ -244,20 +311,46 @@ export function ExamResultPanel({
             type="button"
             onClick={() =>
               router.push(
-                resolvedLessonId && resolvedPackageId
+                returnHref ??
+                (resolvedLessonId && resolvedPackageId
                   ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}`
                   : resolvedPackageId
                     ? `/student/packages/${resolvedPackageId}`
-                    : '/student'
+                    : '/student')
               )
             }
-            className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_8px_24px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary"
           >
-            العودة للحصة
+            {returnLabel ?? 'العودة للحصة'}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </motion.div>
+
+      {!isFinalResult && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-6 sm:p-8 dark:border-amber-800/40 dark:bg-amber-950/20"
+        >
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                تحليل الإجابات المقالية
+              </p>
+              <h3 className="text-xl font-black text-foreground">يتم تحليل إجاباتك بالذكاء الاصطناعي الآن</h3>
+              <p className="text-sm leading-7 text-muted-foreground">
+                النتيجة النهائية ونقاط الضعف هتظهر تلقائيًا بعد ما يراجع النظام الأسئلة المقالية.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-background/70 px-4 py-3 text-sm font-black text-amber-700 dark:border-amber-800/50 dark:text-amber-400">
+              <RefreshCw className="h-5 w-5 animate-spin" />
+              {pendingEssayCount > 0 ? `${pendingEssayCount} سؤال قيد التحليل` : 'جاري التحليل'}
+            </div>
+          </div>
+        </motion.section>
+      )}
 
       {/* ─── Wrong answers summary ─── */}
       {wrongQuestions.length > 0 && (
@@ -306,6 +399,7 @@ export function ExamResultPanel({
                     الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
                   </p>
                 )}
+                <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
               </article>
             ))}
           </div>
@@ -313,18 +407,19 @@ export function ExamResultPanel({
       )}
 
       {/* ─── Full review ─── */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
-        className="rounded-3xl border border-border bg-card p-6 sm:p-8"
-      >
-        <h3 className="text-xl font-black text-foreground">مراجعة الورقة كاملة</h3>
-        <p className="mt-1 text-sm text-muted-foreground">كل سؤال بإجابتك وحالته النهائية.</p>
+      {isFinalResult && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-3xl border border-border bg-card p-6 sm:p-8"
+        >
+          <h3 className="text-xl font-black text-foreground">مراجعة الورقة كاملة</h3>
+          <p className="mt-1 text-sm text-muted-foreground">كل سؤال بإجابتك وحالته النهائية.</p>
 
-        {hasReviewData ? (
-          <div className="mt-5 space-y-3">
-            {reviewedQuestions.map((q) => (
+          {hasReviewData ? (
+            <div className="mt-5 space-y-3">
+              {reviewedQuestions.map((q) => (
               <article
                 key={q.examQuestionId}
                 className={`rounded-2xl border p-5 transition-colors ${
@@ -387,64 +482,34 @@ export function ExamResultPanel({
                         الإجابة الصحيحة
                       </p>
                       <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
-                      {q.writtenCorrection && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            التصحيح
-                          </p>
-                          <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-6 text-foreground">
-                            {q.writtenCorrection}
-                          </p>
-                        </div>
-                      )}
-                      {q.audioUrl && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            تصحيح صوتي
-                          </p>
-                          <audio controls className="h-9 w-full" preload="none">
-                            <source src={resolveMediaUrl(q.audioUrl)} />
-                          </audio>
-                        </div>
-                      )}
+                      <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
                     </div>
                   ) : (
                     <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         ملاحظات
                       </p>
-                      {q.writtenCorrection ? (
-                        <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-6 text-foreground">
-                          {q.writtenCorrection}
-                        </p>
+                      {q.writtenCorrection || q.audioUrl ? (
+                        <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
                       ) : (
                         <p className="mt-1.5 text-sm font-bold leading-6 text-muted-foreground">
                           لا توجد ملاحظات.
                         </p>
                       )}
-                      {q.audioUrl && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            تصحيح صوتي
-                          </p>
-                          <audio controls className="h-9 w-full" preload="none">
-                            <source src={resolveMediaUrl(q.audioUrl)} />
-                          </audio>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               </article>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-10 text-center">
-            <BookOpen className="mx-auto mb-3 h-8 w-8 text-primary/40" />
-            <p className="text-sm font-bold text-muted-foreground">لا توجد تفاصيل أسئلة متاحة لهذه النتيجة بعد.</p>
-          </div>
-        )}
-      </motion.section>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-10 text-center">
+              <BookOpen className="mx-auto mb-3 h-8 w-8 text-primary/40" />
+              <p className="text-sm font-bold text-muted-foreground">لا توجد تفاصيل أسئلة متاحة لهذه النتيجة بعد.</p>
+            </div>
+          )}
+        </motion.section>
+      )}
     </div>
   );
 }
@@ -545,14 +610,14 @@ function QuestionCard({
                 if (res.data.data) onUseFiftyFifty(res.data.data);
               } catch { /* ignore */ }
             }}
-            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
               hasUsedFiftyFifty
                 ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
-                : 'border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                : 'border-amber-300/50 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:hover:bg-amber-900/40'
             }`}
           >
             <Split className="h-3.5 w-3.5" />
-            ٥٠/٥٠
+            حذف إجابتين
           </button>
         )}
 
@@ -561,7 +626,7 @@ function QuestionCard({
             type="button"
             disabled={(hasUsedHint && !hintRevealed) || loading}
             onClick={() => { if (!hasUsedHint) onUseHint(q.id); }}
-            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
               hasUsedHint && !hintRevealed
                 ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
                 : 'border-primary/30 bg-primary/5 text-primary hover:bg-primary/10'
@@ -576,7 +641,7 @@ function QuestionCard({
           type="button"
           disabled={hasUsedSwap || loading || hasAnswer}
           onClick={() => { if (!hasUsedSwap) onUseSwap(q.id); }}
-          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
             hasUsedSwap || hasAnswer
               ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
               : 'border-blue-300/50 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
@@ -688,7 +753,7 @@ function QuestionCard({
                   />
                   <label
                     htmlFor={`audio-upload-${q.id}`}
-                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-all duration-200"
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200"
                   >
                     <span className="text-sm font-bold text-muted-foreground group-hover:text-primary">
                       اختر ملف صوتي للرفع
@@ -706,9 +771,9 @@ function QuestionCard({
               return (
                 <label
                   key={opt.id}
-                  className={`group flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 ${
+                  className={`group flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 hover:border-primary/40 hover:bg-primary/5 ${
                     isSelected
-                      ? 'border-primary bg-primary/8 shadow-[0_2px_16px_color-mix(in_srgb,var(--primary)_12%,transparent)]'
+                      ? 'border-primary bg-primary/8 shadow-sm'
                       : 'border-border bg-background/50'
                   }`}
                 >
@@ -755,6 +820,8 @@ export function ExamViewer({
   packageId,
   lessonId,
   onRestart,
+  resultReturnHref,
+  resultReturnLabel,
 }: {
   examId: string;
   examTitle: string;
@@ -763,8 +830,11 @@ export function ExamViewer({
   packageId?: string;
   lessonId?: string;
   onRestart?: () => Promise<void> | void;
+  resultReturnHref?: string;
+  resultReturnLabel?: string;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const draftId = `${attempt.attemptId}${attempt.revisionId ? `_${attempt.revisionId}` : ''}`;
   const [audioAnswers, setAudioAnswers] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -791,19 +861,32 @@ export function ExamViewer({
 
   // Restore draft answers from localStorage
   useEffect(() => {
+    setAnswers({});
+    setAudioAnswers({});
+    setSkipped(new Set());
+    setHiddenOptions(new Set());
+    setHasUsedFiftyFifty(false);
+    setHasUsedHint(false);
+    setRevealedHintId(null);
+    setHasUsedSwap(false);
+    setCurrentIdx(0);
+    setDirection(1);
+    setError('');
+    setResult(null);
+
     try {
-      const saved = localStorage.getItem('exam_answers_' + attempt.attemptId);
+      const saved = localStorage.getItem('exam_answers_' + draftId);
       if (saved) {
         setAnswers(JSON.parse(saved));
       }
-      const savedAudio = localStorage.getItem('exam_audio_answers_' + attempt.attemptId);
+      const savedAudio = localStorage.getItem('exam_audio_answers_' + draftId);
       if (savedAudio) {
         setAudioAnswers(JSON.parse(savedAudio));
       }
     } catch {
       // ignore JSON parse or localStorage errors
     }
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
   useEffect(() => {
@@ -822,7 +905,7 @@ export function ExamViewer({
         const next = { ...prev };
         delete next[qId];
         try {
-          localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
         } catch { /* ignore */ }
         return next;
       });
@@ -830,12 +913,12 @@ export function ExamViewer({
       setAnswers((prev) => {
         const next = { ...prev, [qId]: value };
         try {
-          localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+          localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
         } catch { /* ignore */ }
         return next;
       });
     }
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const handleAudioAnswer = useCallback((qId: string, value: string) => {
     setAudioAnswers((prev) => {
@@ -846,11 +929,11 @@ export function ExamViewer({
         next[qId] = value;
       }
       try {
-        localStorage.setItem('exam_audio_answers_' + attempt.attemptId, JSON.stringify(next));
+        localStorage.setItem('exam_audio_answers_' + draftId, JSON.stringify(next));
       } catch { /* ignore */ }
       return next;
     });
-  }, [attempt.attemptId]);
+  }, [draftId]);
 
   const handleSwap = async (qId: string) => {
     if (hasUsedSwap) return;
@@ -873,7 +956,7 @@ export function ExamViewer({
           const next = {...prev};
           delete next[qId];
           try {
-            localStorage.setItem('exam_answers_' + attempt.attemptId, JSON.stringify(next));
+            localStorage.setItem('exam_answers_' + draftId, JSON.stringify(next));
           } catch { /* ignore */ }
           return next;
         });
@@ -903,7 +986,7 @@ export function ExamViewer({
 
     const allQuestionIds = Array.from(new Set([...Object.keys(answers), ...Object.keys(audioAnswers)]));
     const submissions: AnswerSubmissionDto[] = allQuestionIds.map((qId) => {
-      const q = attempt.questions.find((x) => x.id === qId);
+      const q = shuffledQuestions.find((x) => x.id === qId);
       if (q?.type === 'Essay') {
         return {
           examQuestionId: qId,
@@ -916,10 +999,10 @@ export function ExamViewer({
     });
 
     try {
-      const res = await examService.submitExam(examId, attempt.attemptId, submissions);
+      const res = await examService.submitExam(examId, attempt.attemptId, submissions, attempt.revisionId);
       try {
-        localStorage.removeItem('exam_answers_' + attempt.attemptId);
-        localStorage.removeItem('exam_audio_answers_' + attempt.attemptId);
+        localStorage.removeItem('exam_answers_' + draftId);
+        localStorage.removeItem('exam_audio_answers_' + draftId);
       } catch { /* ignore */ }
       setResult(res.data.data);
     } catch (err: unknown) {
@@ -935,6 +1018,7 @@ export function ExamViewer({
     setCurrentIdx(idx);
   };
 
+
   if (result) {
     return (
       <ExamResultPanel
@@ -942,6 +1026,9 @@ export function ExamViewer({
         packageId={packageId ?? attempt.packageId}
         lessonId={lessonId ?? attempt.lessonId}
         onRestart={onRestart}
+        onResultRefresh={setResult}
+        returnHref={resultReturnHref}
+        returnLabel={resultReturnLabel}
       />
     );
   }
@@ -976,6 +1063,11 @@ export function ExamViewer({
       {/* ─── Exam header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{examTitle}</h1>
+        {attempt.revisionId && (
+          <p role="status" className="mt-3 rounded-xl bg-muted p-3 text-sm leading-7 text-foreground">
+            استكمال الأسئلة المضافة فقط. إجاباتك السابقة محفوظة، والدرجة النهائية تشمل المحاولة كاملة.
+          </p>
+        )}
         {examDescription && (
           <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{examDescription}</p>
         )}
@@ -1012,7 +1104,7 @@ export function ExamViewer({
           aria-valuetext={`${answeredCount} من ${totalQ} أسئلة تمت الإجابة عنها`}
         >
           <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -1050,7 +1142,7 @@ export function ExamViewer({
                   title={`سؤال ${idx + 1}: ${stateLabel}`}
                   aria-label={`سؤال ${idx + 1}: ${stateLabel}`}
                   aria-current={isCurrent ? 'step' : undefined}
-                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
                     isCurrent
                       ? 'scale-110 bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_30%,transparent)]'
                       : hasAns
@@ -1134,7 +1226,7 @@ export function ExamViewer({
             type="button"
             onClick={() => navigateTo(currentIdx + 1)}
             disabled={loading}
-            className="flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_4px_16px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
           >
             التالي
             <ChevronLeft className="h-4 w-4" />
@@ -1144,7 +1236,7 @@ export function ExamViewer({
             type="button"
             onClick={() => handleSubmit(false)}
             disabled={loading}
-            className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-[0_4px_20px_color-mix(in_srgb,var(--foreground)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-sm transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
           >
             {loading ? (
               'جاري التسليم...'

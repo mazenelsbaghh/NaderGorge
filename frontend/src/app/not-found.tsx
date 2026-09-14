@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
@@ -15,14 +15,25 @@ export default function NotFoundPage() {
   const { isDark, themeVars } = useAuthTheme();
   useRootOverscrollBackground();
 
-  const { user, loadFromStorage } = useAuthStore();
-  const surface = getSurfaceName();
+  const { user: storedUser, loadFromStorage } = useAuthStore();
+  const [runtimeReady, setRuntimeReady] = useState(false);
 
   useEffect(() => {
     loadFromStorage();
+    setRuntimeReady(true);
   }, [loadFromStorage]);
 
-  const origins = getSurfaceOrigins();
+  // The server cannot infer the browser subdomain in this client component.
+  // Keep server and first-client render deterministic, then resolve the
+  // surface after mount to avoid a hydration mismatch on rewritten 404 pages.
+  const surface = runtimeReady ? getSurfaceName() : 'all';
+  const origins = runtimeReady
+    ? getSurfaceOrigins()
+    : { landing: '', student: '', admin: '', teacher: '', assistant: '', mainDomain: '' };
+  // Zustand can already contain a browser session when this route is reached
+  // through a client-side navigation. Do not allow that browser-only snapshot
+  // to alter the hydration render of Next's global not-found boundary.
+  const user = runtimeReady ? storedUser : null;
   const roles = user?.roles || [];
   const allowedDomains = user?.allowedDomains || [];
 
@@ -86,7 +97,7 @@ export default function NotFoundPage() {
           <PlatformLogo variant="mark" size="lg" tone={isDark ? 'light' : 'dark'} priority />
         </div>
 
-        <div className="space-y-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:p-10 backdrop-blur-md sm:rounded-[28px] shadow-[0_12px_40px_var(--admin-shadow)]">
+        <div className="space-y-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:p-10 backdrop-blur-md sm:rounded-2xl shadow-sm">
           <div className="space-y-3">
             <span className="inline-block px-3 py-1 text-xs font-bold tracking-wider rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]">
               {portalTitle}

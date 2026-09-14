@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { UserCheck, X, Headphones } from 'lucide-react';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import { getLiveSupportApiError } from '@/services/live-support-service';
 
 interface AIHandoffConfirmationProps {
@@ -59,7 +60,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
   };
 
   return (
-    <div dir="rtl" role="region" aria-label="التحويل لموظف بشري" className="my-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+    <div dir="rtl" role="region" aria-label="التحويل لموظف بشري" className="my-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:shadow-md">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800">
           <Headphones size={20} />
@@ -72,7 +73,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
             <br />
             هل توافق على التحويل؟
           </p>
-          <p className="mt-2 text-xs text-slate-500">ينتهي الطلب: <time dateTime={action.expiresAt}>{new Date(action.expiresAt).toLocaleTimeString('ar-EG')}</time></p>
+          <p className="mt-2 text-xs text-slate-500">ينتهي الطلب: <time dateTime={action.expiresAt}>{formatCairoDateTime(action.expiresAt, { hour: '2-digit', minute: '2-digit' })}</time></p>
         </div>
       </div>
 

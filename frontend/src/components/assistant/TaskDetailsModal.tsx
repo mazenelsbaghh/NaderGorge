@@ -6,6 +6,7 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { assistantService, TaskDetailsDto } from '@/services/assistant-service';
 import { Clock, Send, Paperclip, Check, X as CloseIcon, HelpCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 interface TaskDetailsModalProps {
   taskId: string | null;
@@ -26,6 +27,7 @@ export default function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const [details, setDetails] = useState<TaskDetailsDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [showAttachmentInput, setShowAttachmentInput] = useState(false);
@@ -38,6 +40,7 @@ export default function TaskDetailsModal({
   const fetchDetails = useCallback(async () => {
     if (!taskId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await assistantService.getOperationsTaskDetails(taskId);
       if (res.data?.success) {
@@ -66,10 +69,12 @@ export default function TaskDetailsModal({
           task: normalizedTask
         });
       } else {
-        toast.error(res.data?.message || 'تعذر تحميل تفاصيل المهمة');
+        setDetails(null);
+        setLoadError(res.data?.message || 'تعذر تحميل تفاصيل المهمة');
       }
     } catch {
-      toast.error('حدث خطأ أثناء تحميل تفاصيل المهمة');
+      setDetails(null);
+      setLoadError('تعذر تحميل تفاصيل المهمة. تحقق من اتصالك ثم حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -85,6 +90,7 @@ export default function TaskDetailsModal({
       setRejectionReason('');
     } else {
       setDetails(null);
+      setLoadError(null);
     }
   }, [open, taskId, fetchDetails]);
 
@@ -218,6 +224,13 @@ export default function TaskDetailsModal({
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-[var(--admin-primary)]" />
         </div>
+      ) : loadError ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-4 px-6 text-center" role="alert">
+          <p className="text-sm font-bold text-rose-600">{loadError}</p>
+          <NeumorphButton onClick={() => void fetchDetails()} intent="primary" size="sm">
+            إعادة المحاولة
+          </NeumorphButton>
+        </div>
       ) : details ? (
         <div className="space-y-6 text-right" dir="rtl">
           {/* Top Metadata Cards */}
@@ -241,7 +254,7 @@ export default function TaskDetailsModal({
             <div>
               <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">تاريخ الاستحقاق</span>
               <span className="text-xs font-bold text-[var(--admin-text)] block mt-1 font-mono">
-                {details.task.dueDate ? new Date(details.task.dueDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}
+                {details.task.dueDate ? formatCairoDateTime(details.task.dueDate, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}
               </span>
             </div>
           </div>
@@ -257,7 +270,7 @@ export default function TaskDetailsModal({
           {/* Status Transitions for Assignee / Staff */}
           {isAssignee && details.task.status !== 4 && details.task.status !== 3 && (
             <div className="flex flex-wrap items-center gap-2 bg-[var(--admin-primary-15)] p-4 rounded-2xl border border-[var(--admin-primary)]/20">
-              <span className="text-xs font-bold text-[var(--admin-primary)] ml-auto">إجراءات الموظف المسند إليه:</span>
+              <span className="text-xs font-bold text-[var(--admin-primary)] ms-auto">إجراءات الموظف المسند إليه:</span>
               <div className="flex gap-2">
                 {details.task.status === 1 && (
                   <NeumorphButton onClick={() => handleUpdateStatus(2)} disabled={updatingStatus} intent="primary" size="sm" className="font-bold text-xs">
@@ -322,11 +335,11 @@ export default function TaskDetailsModal({
               ) : (
                 <div className="flex gap-2 justify-end">
                   <NeumorphButton onClick={() => handleResolveApproval(true)} disabled={!!resolvingId} intent="primary" size="sm" className="!bg-emerald-500 !text-white hover:!bg-emerald-600 text-xs font-bold">
-                    <Check className="h-3.5 w-3.5 inline ml-1" />
+                    <Check className="h-3.5 w-3.5 inline ms-1" />
                     الموافقة والإغلاق
                   </NeumorphButton>
                   <NeumorphButton onClick={() => setShowRejectForm(true)} disabled={!!resolvingId} intent="danger" size="sm" className="text-xs font-bold">
-                    <CloseIcon className="h-3.5 w-3.5 inline ml-1" />
+                    <CloseIcon className="h-3.5 w-3.5 inline ms-1" />
                     رفض وإرجاع للعمل
                   </NeumorphButton>
                 </div>
@@ -344,7 +357,7 @@ export default function TaskDetailsModal({
             </h4>
 
             {/* Comments List */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-60 overflow-y-auto pe-1">
               {details.comments.length === 0 ? (
                 <p className="text-xs text-[var(--admin-muted)] italic text-center py-4">لا توجد تعليقات أو نقاشات حول هذه المهمة بعد.</p>
               ) : (
@@ -354,8 +367,8 @@ export default function TaskDetailsModal({
                       <span className="font-extrabold text-[var(--admin-text)]">{comment.userName}</span>
                       <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 font-mono">
                         <Clock className="h-3 w-3" />
-                        {new Date(comment.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}{' '}
-                        {new Date(comment.createdAt).toLocaleDateString('ar-EG')}
+                        {formatCairoDateTime(comment.createdAt, { hour: '2-digit', minute: '2-digit' })}{' '}
+                        {formatCairoDateTime(comment.createdAt)}
                       </span>
                     </div>
                     <p className="text-sm text-[var(--admin-text)] mt-1 whitespace-pre-line leading-relaxed">{comment.content}</p>

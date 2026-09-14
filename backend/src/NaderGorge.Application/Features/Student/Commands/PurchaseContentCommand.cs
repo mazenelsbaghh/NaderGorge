@@ -2,6 +2,7 @@ using System.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -9,33 +10,64 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
 
-public record PurchaseContentCommand(Guid StudentId, CodeType ContentType, Guid ContentId) : IRequest<ApiResponse<bool>>;
+public record PurchaseContentCommand(Guid StudentId, CodeType ContentType, Guid ContentId, IReadOnlyList<string>? CouponCodes = null, IReadOnlyList<string>? PrintableCodes = null) : IRequest<ApiResponse<bool>>;
 
 public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
     private readonly BalanceService _balanceService;
+    private readonly IPromotionalBalanceService _promotionalBalance;
+    private readonly ISalesTargetResolver _targetResolver;
+    private readonly IDiscountEngine _discountEngine;
+    private readonly TeacherAccountingService _teacherAccounting;
+    private readonly TeacherAgreementResolver _agreementResolver;
+    private readonly IAcademicScopeService? _academicScope;
+    private readonly IFinancialPostingService? _financialPosting;
 
-    public PurchaseContentCommandHandler(IAppDbContext db, BalanceService balanceService)
+    public PurchaseContentCommandHandler(
+        IAppDbContext db,
+        BalanceService balanceService,
+        IPromotionalBalanceService promotionalBalance,
+        ISalesTargetResolver targetResolver,
+        IDiscountEngine discountEngine,
+        TeacherAccountingService? teacherAccounting = null,
+        TeacherAgreementResolver? agreementResolver = null,
+        IAcademicScopeService? academicScope = null,
+        IFinancialPostingService? financialPosting = null)
     {
         _db = db;
         _balanceService = balanceService;
+        _promotionalBalance = promotionalBalance;
+        _targetResolver = targetResolver;
+        _discountEngine = discountEngine;
+        _teacherAccounting = teacherAccounting ?? new TeacherAccountingService(db);
+        _agreementResolver = agreementResolver ?? new TeacherAgreementResolver(db);
+        _academicScope = academicScope;
+        _financialPosting = financialPosting;
     }
 
     public async Task<ApiResponse<bool>> Handle(PurchaseContentCommand request, CancellationToken ct)
     {
         try
         {
+            await using var purchaseTransaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
             // 1. Validate content exists and get its price
             decimal price = 0;
             string contentName = "";
+            PublicExamProduct? publicExamProduct = null;
 
             switch (request.ContentType)
             {
                 case CodeType.Package:
                     var pkg = await _db.Packages.FirstOrDefaultAsync(p => p.Id == request.ContentId, ct);
                     if (pkg == null) return ApiResponse<bool>.Fail("الباقة غير موجودة");
+                    if (FullPackagePurchasePolicy.IsDisabled(pkg))
+                    {
+                        return ApiResponse<bool>.Fail(
+                            FullPackagePurchasePolicy.ErrorMessage,
+                            [FullPackagePurchasePolicy.ErrorCode]);
+                    }
                     price = pkg.Price;
                     contentName = pkg.Name;
                     break;
@@ -57,9 +89,83 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     price = lesson.Price;
                     contentName = lesson.Title;
                     break;
+                case CodeType.Exam:
+                    publicExamProduct = await _db.PublicExamProducts
+                        .Include(x => x.Exam)
+                        .FirstOrDefaultAsync(x => x.Id == request.ContentId || x.ExamId == request.ContentId, ct);
+                    if (publicExamProduct == null) return ApiResponse<bool>.Fail("الامتحان العام غير موجود");
+                    if (!publicExamProduct.IsPublished || publicExamProduct.DisabledAt != null)
+                        return ApiResponse<bool>.Fail("الامتحان العام غير متاح للشراء حالياً.");
+                    if (publicExamProduct.AvailableFrom.HasValue && publicExamProduct.AvailableFrom.Value > DateTime.UtcNow)
+                        return ApiResponse<bool>.Fail("الامتحان العام لم يبدأ بعد.");
+                    if (publicExamProduct.AvailableUntil.HasValue && publicExamProduct.AvailableUntil.Value <= DateTime.UtcNow)
+                        return ApiResponse<bool>.Fail("انتهت صلاحية الامتحان العام.");
+                    price = publicExamProduct.IsPaid ? publicExamProduct.Price : 0;
+                    contentName = publicExamProduct.Exam.Title;
+                    break;
                 default:
                     return ApiResponse<bool>.Fail("نوع المحتوى غير مدعوم للشراء.");
             }
+
+            var target = request.ContentType == CodeType.Exam && publicExamProduct != null
+                ? await _targetResolver.ResolveAsync(SalesTargetType.PublicExam, publicExamProduct.Id, ct)
+                : await _targetResolver.ResolveFromCodeTypeAsync(request.ContentType, request.ContentId, ct);
+            if (target == null)
+                return ApiResponse<bool>.Fail("تعذر تحديد هدف البيع.");
+            if (!target.IsSaleEligible)
+                return ApiResponse<bool>.Fail("المحتوى مؤرشف وغير متاح لعمليات شراء جديدة.");
+            if (request.ContentType != CodeType.Exam)
+                price = target.Price;
+
+            if (target.TeacherId.HasValue)
+            {
+                var contentVisible = await _db.TeacherProfiles
+                    .Where(t => t.Id == target.TeacherId.Value)
+                    .Select(t => (bool?)t.IsContentVisibleToStudents)
+                    .FirstOrDefaultAsync(ct);
+                if (contentVisible == false)
+                    return ApiResponse<bool>.Fail("المحتوى غير متاح للشراء حالياً.");
+            }
+
+            if (_academicScope != null)
+            {
+                var (ownerType, ownerId) = ResolveAcademicOwner(request.ContentType, request.ContentId, publicExamProduct);
+                if (ownerType.HasValue)
+                {
+                    var academicResult = await _academicScope.ValidateStudentCanUseTargetAsync(
+                        ownerType.Value,
+                        ownerId,
+                        request.StudentId,
+                        ct);
+                    if (!academicResult.IsEligible)
+                    {
+                        _db.AuditLogs.Add(new AuditLog
+                        {
+                            Action = "AcademicScopeDeniedPurchase",
+                            EntityType = request.ContentType.ToString(),
+                            EntityId = ownerId,
+                            PerformedByUserId = request.StudentId,
+                            NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                request.ContentType,
+                                request.ContentId,
+                                ownerType = ownerType.Value.ToString(),
+                                ownerId,
+                                academicResult.ErrorCode
+                            }),
+                            CreatedAt = DateTime.UtcNow
+                        });
+                        await _db.SaveChangesAsync(ct);
+                        await purchaseTransaction.CommitAsync(ct);
+                        return ApiResponse<bool>.Fail(
+                            academicResult.Message ?? "هذا المحتوى غير متاح لنطاقك الدراسي الحالي.",
+                            new List<string> { academicResult.ErrorCode ?? "ACADEMIC_SCOPE_DENIED" });
+                    }
+                }
+            }
+
+            var purchaseOperationId = Guid.NewGuid();
+            var grossPrice = price;
 
             // Check if this is a repurchase of a lesson with exhausted/locked video views or rejected watch requests
             bool isRepurchase = false;
@@ -109,6 +215,14 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 case CodeType.Lesson:
                     alreadyPurchased = await _db.StudentAccessGrants.AnyAsync(g => g.UserId == request.StudentId && g.GrantType == request.ContentType && g.LessonId == request.ContentId && g.IsActive, ct);
                     break;
+                case CodeType.Exam:
+                    var productId = publicExamProduct?.Id ?? request.ContentId;
+                    alreadyPurchased = await _db.StudentAccessGrants.AnyAsync(g =>
+                        g.UserId == request.StudentId &&
+                        g.GrantType == CodeType.Exam &&
+                        g.PublicExamProductId == productId &&
+                        g.IsActive, ct);
+                    break;
             }
 
             if (alreadyPurchased && !isRepurchase)
@@ -127,6 +241,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 };
                 _db.OutboxEvents.Add(failEvent);
                 await _db.SaveChangesAsync(ct);
+                await purchaseTransaction.CommitAsync(ct);
                 return ApiResponse<bool>.Fail("تم شراء هذا المحتوى مسبقاً");
             }
 
@@ -217,13 +332,32 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 return ApiResponse<bool>.Fail($"أنت مشترك بالفعل في {coveredBy} — لا يمكن شراء {contentName} بشكل منفصل لأنها مغطاة بالاشتراك الحالي.");
             }
 
-            if (price > 0)
+            var discount = await _discountEngine.CommitAsync(
+                request.StudentId,
+                target,
+                new DiscountInput(request.CouponCodes ?? Array.Empty<string>(), request.PrintableCodes ?? Array.Empty<string>()),
+                purchaseOperationId,
+                ct);
+            if (!discount.Success)
+                return ApiResponse<bool>.Fail(discount.Error ?? "تعذر تطبيق الخصم.");
+            price = Math.Max(0, price - discount.TotalDiscountAmount);
+
+            var teacherId = await _promotionalBalance.ResolveTeacherIdAsync(request.ContentType, request.ContentId, ct);
+            var funding = await _promotionalBalance.ConsumeAsync(
+                request.StudentId,
+                teacherId,
+                request.ContentType,
+                request.ContentId,
+                price,
+                ct);
+
+            if (funding.PaidAmount > 0)
             {
                 try
                 {
                     await _balanceService.DeductBalance(
                         request.StudentId,
-                        price,
+                        funding.PaidAmount,
                         $"شراء {contentName} ({request.ContentType})",
                         request.ContentId,
                         ct);
@@ -244,7 +378,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     };
                     _db.OutboxEvents.Add(failEvent);
                     await _db.SaveChangesAsync(ct);
-                    return ApiResponse<bool>.Fail($"رصيدك الحالي لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
+                    await purchaseTransaction.RollbackAsync(ct);
+                    return ApiResponse<bool>.Fail($"الرصيد المتاح لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
                 }
             }
 
@@ -298,9 +433,125 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     }
                     break;
                 }
+                case CodeType.Exam:
+                    grant.PublicExamProductId = publicExamProduct?.Id ?? request.ContentId;
+                    grant.ExamId = publicExamProduct?.ExamId ?? request.ContentId;
+                    break;
             }
 
             _db.StudentAccessGrants.Add(grant);
+            decimal teacherShareImpact = 0m;
+            decimal platformShareImpact = funding.PaidAmount;
+
+            if (target.TeacherId.HasValue)
+            {
+                var teacherProfile = await _db.TeacherProfiles
+                    .FirstOrDefaultAsync(t => t.Id == target.TeacherId.Value, ct);
+                var student = await _db.Users
+                    .FirstOrDefaultAsync(u => u.Id == request.StudentId, ct);
+
+                if (teacherProfile != null)
+                {
+                    var occurredAt = DateTime.UtcNow;
+                    var scopes = await _agreementResolver.BuildScopesAsync(
+                        target.TargetType, target.TargetId ?? request.ContentId, ct);
+                    var agreement = await _agreementResolver.ResolveAsync(
+                        teacherProfile.Id, TeacherAgreementTrigger.ContentSale, scopes, occurredAt, ct);
+                    var (allocationMode, teacherShare, basisAmount) = TeacherAgreementResolver.CalculateAllocation(
+                        agreement, grossPrice, funding.PaidAmount);
+                    teacherShareImpact = teacherShare;
+                    // A negative platform share is intentional: it exposes a deliberately generous agreement
+                    // instead of silently hiding a platform loss in an otherwise successful sale.
+                    platformShareImpact = funding.PaidAmount - teacherShareImpact;
+
+                    await _teacherAccounting.RecordEventAsync(new TeacherFinancialEventInput(
+                        request.ContentType == CodeType.Exam
+                            ? TeacherFinancialSourceType.PublicExamPurchase
+                            : TeacherFinancialSourceType.DirectPurchase,
+                        purchaseOperationId,
+                        request.StudentId,
+                        target.TargetType,
+                        target.TargetId ?? request.ContentId,
+                        grossPrice,
+                        discount.TotalDiscountAmount,
+                        funding.PaidAmount,
+                        funding.PromotionalAmount,
+                        platformShareImpact,
+                        $"purchase:{purchaseOperationId}",
+                        System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            request.ContentType,
+                            request.ContentId,
+                            contentName,
+                            discountedPrice = price,
+                            discountLines = discount.Lines,
+                            fundingOperationId = funding.OperationId
+                        }),
+                        occurredAt,
+                        TeacherFinancialReviewStatus.AutoApproved,
+                        new[]
+                        {
+                            new TeacherFinancialAllocationInput(
+                                teacherProfile.Id,
+                                allocationMode,
+                                agreement.AllocationValue,
+                                basisAmount,
+                                teacherShareImpact,
+                                platformShareImpact,
+                                student?.FullName,
+                                student?.PhoneNumber,
+                                contentName,
+                                AgreementId: agreement.AgreementId,
+                                AgreementScopeType: agreement.ScopeType,
+                                AgreementScopeId: agreement.ScopeId,
+                                AgreementAllocationMode: agreement.AllocationMode,
+                                PriceBasis: agreement.PriceBasis)
+                        }), ct);
+                }
+            }
+
+            _db.SalesFinancialEffects.Add(new SalesFinancialEffect
+            {
+                PurchaseOperationId = purchaseOperationId,
+                StudentId = request.StudentId,
+                TargetType = target.TargetType,
+                TargetId = target.TargetId ?? request.ContentId,
+                GrossAmount = grossPrice,
+                CouponDiscountAmount = discount.CouponDiscountAmount,
+                PrintableCodeDiscountAmount = discount.PrintableCodeDiscountAmount,
+                PromotionalAmount = funding.PromotionalAmount,
+                PaidAmount = funding.PaidAmount,
+                TeacherId = target.TeacherId,
+                TeacherShareImpact = teacherShareImpact,
+                PlatformShareImpact = platformShareImpact,
+                DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    request.ContentType,
+                    request.ContentId,
+                    discountedPrice = price,
+                    discountLines = discount.Lines
+                })
+            });
+
+            if (_financialPosting is not null && (funding.PaidAmount > 0m || (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)))
+            {
+                var lines = new List<FinancialPostingLine>();
+                if (funding.PaidAmount > 0m)
+                {
+                    lines.Add(new FinancialPostingLine("1100", funding.PaidAmount, 0m, StudentId: request.StudentId));
+                    AddSignedCreditLine(lines, "4000", platformShareImpact, request.StudentId, null, "حصة المنصة من عملية الشراء");
+                    if (teacherShareImpact != 0m)
+                        AddSignedCreditLine(lines, "2000", teacherShareImpact, request.StudentId, target.TeacherId, "مستحق المدرس من عملية الشراء");
+                }
+                if (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)
+                {
+                    lines.Add(new FinancialPostingLine("1110", funding.PromotionalAmount, 0m, StudentId: request.StudentId, TeacherId: target.TeacherId));
+                    lines.Add(new FinancialPostingLine("2000", 0m, funding.PromotionalAmount, StudentId: request.StudentId, TeacherId: target.TeacherId, Memo: "تسوية رصيد مدرس مخصص"));
+                }
+                await _financialPosting.PostAsync(new FinancialPostingRequest(
+                    "Purchase", purchaseOperationId, "PurchaseRecognized", $"purchase:{purchaseOperationId:N}",
+                    $"شراء {contentName}", DateTime.UtcNow, request.StudentId, lines), ct);
+            }
 
             if (request.ContentType == CodeType.Package)
             {
@@ -326,7 +577,13 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     studentId = request.StudentId,
                     contentType = request.ContentType.ToString(),
                     contentId = request.ContentId,
-                    price = price
+                    price,
+                    grossAmount = grossPrice,
+                    couponDiscountAmount = discount.CouponDiscountAmount,
+                    printableCodeDiscountAmount = discount.PrintableCodeDiscountAmount,
+                    promotionalAmount = funding.PromotionalAmount,
+                    paidAmount = funding.PaidAmount,
+                    fundingOperationId = funding.OperationId
                 })
             };
             _db.OutboxEvents.Add(purchaseCompletedEvent);
@@ -376,6 +633,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             }
 
             await _db.SaveChangesAsync(ct);
+            await purchaseTransaction.CommitAsync(ct);
 
             return ApiResponse<bool>.Ok(true, "تم الشراء بنجاح");
         }
@@ -392,5 +650,29 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             || ex.Message.Contains("transaction is aborted", StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("25P02", StringComparison.OrdinalIgnoreCase)
             || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
+    }
+
+    private static void AddSignedCreditLine(List<FinancialPostingLine> lines, string accountCode, decimal amount, Guid? studentId, Guid? teacherId, string memo)
+    {
+        if (amount > 0m)
+            lines.Add(new FinancialPostingLine(accountCode, 0m, amount, StudentId: studentId, TeacherId: teacherId, Memo: memo));
+        else if (amount < 0m)
+            lines.Add(new FinancialPostingLine(accountCode, -amount, 0m, StudentId: studentId, TeacherId: teacherId, Memo: memo));
+    }
+
+    private static (StudentFacingScopeOwnerType? OwnerType, Guid OwnerId) ResolveAcademicOwner(
+        CodeType contentType,
+        Guid contentId,
+        PublicExamProduct? publicExamProduct)
+    {
+        return contentType switch
+        {
+            CodeType.Package => (StudentFacingScopeOwnerType.Package, contentId),
+            CodeType.Term => (StudentFacingScopeOwnerType.Term, contentId),
+            CodeType.Month => (StudentFacingScopeOwnerType.ContentSection, contentId),
+            CodeType.Lesson => (StudentFacingScopeOwnerType.Lesson, contentId),
+            CodeType.Exam => (StudentFacingScopeOwnerType.PublicExamProduct, publicExamProduct?.Id ?? contentId),
+            _ => (null, contentId)
+        };
     }
 }

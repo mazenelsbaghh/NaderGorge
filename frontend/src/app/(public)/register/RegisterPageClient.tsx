@@ -17,33 +17,35 @@
 import '../auth.css';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import dynamic from 'next/dynamic';
 const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
-import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { useConstrainedMotion } from '@/hooks/useConstrainedMotion';
 import { Info } from 'lucide-react';
+
+const RegistrationInstructionsModal = dynamic(
+  () =>
+    import('@/components/registration/RegistrationInstructionsModal').then(
+      (module) => module.RegistrationInstructionsModal,
+    ),
+  { ssr: false },
+);
 
 export default function RegisterPageClient() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
-  const [showInstructions, setShowInstructions] = useState(false);
-
-  useEffect(() => {
-    const hasSeen = localStorage.getItem('hasSeenRegisterInstructions');
-    if (!hasSeen) {
-      setShowInstructions(true);
-    }
-  }, []);
+  const { allowEnhancedMotion, isPageVisible } = useConstrainedMotion();
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const handleCloseInstructions = () => {
     setShowInstructions(false);
-    localStorage.setItem('hasSeenRegisterInstructions', 'true');
   };
+  const rippleGridColor = isDark ? '#36d6d6' : '#0e8f8f'; // design-token-allow: WebGL uniform requires a concrete color value.
 
   return (
     <div 
@@ -52,16 +54,19 @@ export default function RegisterPageClient() {
     >
 
       {/* ── Ripple Interactive Background ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <RippleGrid
-          gridColor={isDark ? '#64748b' : '#94a3b8'}
-          rippleIntensity={0.05}
-          gridSize={10}
-          gridThickness={isDark ? 15 : 12}
-          mouseInteraction={true}
-          mouseInteractionRadius={1.2}
-          opacity={isDark ? 0.8 : 0.4}
-        />
+      <div className="auth-shell__static-grid absolute inset-0 z-0 pointer-events-none">
+        {allowEnhancedMotion ? (
+          <RippleGrid
+            active={isPageVisible}
+            gridColor={rippleGridColor}
+            rippleIntensity={0.05}
+            gridSize={10}
+            gridThickness={isDark ? 15 : 12}
+            mouseInteraction
+            mouseInteractionRadius={1.2}
+            opacity={isDark ? 0.45 : 0.25}
+          />
+        ) : null}
       </div>
 
       {/* ── Ambient Glow Orbs ── */}
@@ -83,7 +88,7 @@ export default function RegisterPageClient() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
+      <main className="relative z-10 w-full max-w-7xl px-2.5 pb-6 pt-3 sm:px-5 sm:py-16 m-auto">
 
         {/* Logo Avatar */}
         <div className="auth-avatar">
@@ -91,22 +96,22 @@ export default function RegisterPageClient() {
         </div>
 
         {/* Heading */}
-        <div className="mx-auto mb-8 max-w-3xl text-center flex flex-col items-center">
+        <div className="mx-auto mb-4 flex max-w-3xl flex-col items-center text-center sm:mb-8">
           <h1
-            className="text-3xl font-extrabold tracking-tight sm:text-4xl"
+            className="text-2xl font-extrabold tracking-tight sm:text-4xl"
             style={{ color: 'var(--admin-text)' }}
           >
             افتح حسابك خطوة بخطوة
           </h1>
           <p
-            className="mt-2 text-sm font-light"
+            className="mt-1 max-w-[22rem] text-sm font-light leading-6 sm:mt-2"
             style={{ color: 'var(--admin-muted)' }}
           >
             اكتب البيانات المطلوبة فقط ليظهر لك المسار الدراسي الصحيح.
           </p>
           <button
             onClick={() => setShowInstructions(true)}
-            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-xs font-black text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] active:scale-[0.98] cursor-pointer shadow-sm"
+            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-xs font-black text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] active:scale-[0.98] cursor-pointer shadow-sm sm:mt-4"
           >
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>تعليمات التسجيل</span>
@@ -114,7 +119,7 @@ export default function RegisterPageClient() {
         </div>
 
         {/* ── Glass Card ── */}
-        <div className="auth-card p-3 sm:p-4 lg:p-5">
+        <div className="auth-card p-2 sm:p-4 lg:p-5">
           <RegistrationForm />
 
           {/* Divider + Login link */}
@@ -137,7 +142,12 @@ export default function RegisterPageClient() {
         </p>
       </main>
 
-      <RegistrationInstructionsModal open={showInstructions} onClose={handleCloseInstructions} />
+      {showInstructions ? (
+        <RegistrationInstructionsModal
+          open
+          onClose={handleCloseInstructions}
+        />
+      ) : null}
     </div>
   );
 }

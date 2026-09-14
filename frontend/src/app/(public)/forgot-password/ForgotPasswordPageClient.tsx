@@ -53,6 +53,11 @@ export default function ForgotPasswordPageClient() {
   const selectStyle = { backgroundColor: 'var(--admin-card-soft)', color: 'var(--admin-text)' };
   const optionStyle = { background: 'var(--admin-bg)', color: 'var(--admin-text)' };
 
+  const formattedDateOfBirth = useMemo(() => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
+    return match ? `${match[3]} / ${match[2]} / ${match[1]}` : '';
+  }, [dateOfBirth]);
+
   // Load districts dynamically when governorate changes
   const districts = useMemo(() => {
     return governorate ? getDistrictsForGovernorate(governorate) : [];
@@ -143,7 +148,7 @@ export default function ForgotPasswordPageClient() {
       {/* ── Ripple Interactive Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <RippleGrid
-          gridColor={isDark ? '#64748b' : '#94a3b8'}
+          gridColor="var(--admin-primary)"
           rippleIntensity={0.05}
           gridSize={10}
           gridThickness={isDark ? 15 : 12}
@@ -196,7 +201,7 @@ export default function ForgotPasswordPageClient() {
         </div>
 
         {/* Glass Card */}
-        <div className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
+        <div className="space-y-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 sm:rounded-2xl sm:p-7 shadow-sm">
           
           {error && <div className="auth-error-banner mb-2">{error}</div>}
 
@@ -233,10 +238,13 @@ export default function ForgotPasswordPageClient() {
                   <input
                     id="reset-dob"
                     type="date"
+                    lang="en-GB"
+                    dir="ltr"
                     required
-                    className="auth-input"
+                    className="auth-input auth-date-input"
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
+                    min="1900-01-01"
                     style={{ 
                       paddingRight: '2.75rem',
                       colorScheme: isDark ? 'dark' : 'light'
@@ -246,6 +254,14 @@ export default function ForgotPasswordPageClient() {
                     <Calendar size={15} />
                   </span>
                 </div>
+                {formattedDateOfBirth && (
+                  <p className="mt-2 text-xs font-medium text-[var(--admin-muted)]">
+                    التاريخ المختار:{' '}
+                    <bdi dir="ltr" className="font-bold text-[var(--admin-text)]">
+                      {formattedDateOfBirth}
+                    </bdi>
+                  </p>
+                )}
               </div>
 
               {/* ── Governorate Dropdown ── */}

@@ -15,9 +15,13 @@ public record WalletDto
     public string DeviceStatus { get; set; } = string.Empty;
     public DateTime? LastSeenAt { get; set; }
     public bool IsActive { get; set; }
+    public bool IsRechargePaused { get; set; }
+    public string RechargePauseMessage { get; set; } = string.Empty;
+    public DateTime? RechargeResumeAt { get; set; }
     public List<string> SmsSenderFilters { get; set; } = new();
     
     public decimal DailyReceived { get; set; }
     public decimal MonthlyReceived { get; set; }
+    public decimal TotalReceived { get; set; }
     public DateTime CreatedAt { get; set; }
 }

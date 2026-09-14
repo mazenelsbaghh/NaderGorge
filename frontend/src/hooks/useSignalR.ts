@@ -28,7 +28,8 @@ export const useSignalR = (
   onMessageReceived?: (message: SignalRMessage) => void,
   onUserTyping?: (roomId: string, userId: string, userName: string) => void
 ) => {
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -56,11 +57,12 @@ export const useSignalR = (
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: () => accessToken,
-        skipNegotiation: false,
+        skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets
       })
       .withAutomaticReconnect()
       .build();
+    let disposed = false;
 
     connection.on('ReceiveMessage', (message: SignalRMessage) => {
       onMessageReceivedRef.current?.(message);
@@ -82,8 +84,9 @@ export const useSignalR = (
       toast.error(errorMsg);
     });
 
-    connection.start()
+    const startPromise = connection.start()
       .then(() => {
+        if (disposed) return;
         setIsConnected(true);
         connectionRef.current = connection;
       })
@@ -93,11 +96,16 @@ export const useSignalR = (
       });
 
     return () => {
-      if (connectionRef.current) {
-        void connectionRef.current.stop();
+      disposed = true;
+      if (connectionRef.current === connection) {
         connectionRef.current = null;
-        setIsConnected(false);
       }
+      setIsConnected(false);
+      void startPromise.finally(async () => {
+        if (connection.state !== signalR.HubConnectionState.Disconnected) {
+          await connection.stop().catch(() => undefined);
+        }
+      });
     };
   }, [accessToken, isAuthenticated]);
 

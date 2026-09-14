@@ -147,7 +147,7 @@ export const TermListManager = forwardRef<TermListManagerRef, TermListManagerPro
           {terms.map((term) => (
             <div
               key={term.id}
-              className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm transition-all hover:border-[var(--admin-primary-15)]"
+              className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary-15)]"
             >
               <div className="flex items-center gap-4">
                 <div className="flex cursor-grab items-center px-1 text-[var(--admin-muted)] opacity-50 hover:opacity-100">
@@ -190,7 +190,7 @@ export const TermListManager = forwardRef<TermListManagerRef, TermListManagerPro
                   >
                     <Edit3 className="h-4 w-4" />
                   </NeumorphButton>
-                  <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">
+                  <span className="pointer-events-none absolute -top-8 end-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">
                     قريباً
                   </span>
                 </div>

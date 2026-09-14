@@ -19,6 +19,8 @@ import {
   MediaPipelineDto
 } from '@/services/media-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { registerCacheStore } from '@/lib/cache-invalidation';
+import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
 
 const YoutubeIcon = (props: any) => (
   <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -85,8 +87,10 @@ export default function SocialPlannerView() {
   const fetchPlans = useCallback(async () => {
     try {
       // Fetch plans for current month
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      // Date-only values are Cairo calendar dates; the backend converts their boundaries to UTC.
+      const start = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      const end = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
       
       const data = await mediaService.getSocialPlans({ startDate: start, endDate: end });
       setPlans(data || []);
@@ -108,6 +112,8 @@ export default function SocialPlannerView() {
   useEffect(() => {
     fetchPlans();
     fetchPipelines();
+    const cleanupCacheStore = registerCacheStore('media:social-plans', () => setPlans([]), fetchPlans);
+    return cleanupCacheStore;
   }, [fetchPlans, fetchPipelines]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -124,7 +130,7 @@ export default function SocialPlannerView() {
         script: formData.script || undefined,
         platform: formData.platform,
         status: formData.status,
-        scheduledDate: new Date(formData.scheduledDate).toISOString(),
+        scheduledDate: cairoDateTimeLocalToUtcISOString(formData.scheduledDate),
         mediaProductionPipelineId: formData.mediaProductionPipelineId || undefined
       });
 
@@ -217,7 +223,7 @@ export default function SocialPlannerView() {
       </div>
 
       {/* Calendar Controls */}
-      <div className="flex items-center justify-between mb-6 p-4 rounded-3xl bg-[var(--admin-card-soft)] border border-[var(--admin-border)] backdrop-blur-md">
+      <div className="flex items-center justify-between mb-6 p-4 rounded-3xl bg-[var(--admin-card-soft)] border border-[var(--admin-border)]">
         <div className="flex items-center gap-3">
           <CalendarIcon className="h-5 w-5 text-[var(--admin-primary)]" />
           <span className="font-bold text-lg text-[var(--admin-text)]">
@@ -238,7 +244,7 @@ export default function SocialPlannerView() {
       </div>
 
       {/* Calendar Grid - Desktop Only */}
-      <div className="hidden md:block rounded-[28px] border border-[var(--admin-border)] overflow-hidden bg-[var(--admin-card)] shadow-lg">
+      <div className="hidden md:block rounded-2xl border border-[var(--admin-border)] overflow-hidden bg-[var(--admin-card)] shadow-lg">
         {/* Days of Week Header */}
         <div className="grid grid-cols-7 border-b border-[var(--admin-border)] bg-[var(--admin-hover)] text-center py-3">
           {daysOfWeekArabic.map(day => (
@@ -259,7 +265,7 @@ export default function SocialPlannerView() {
             return (
               <div 
                 key={cell.toString()} 
-                className={`p-2 min-h-[100px] flex flex-col gap-1.5 transition-all ${
+                className={`p-2 min-h-[100px] flex flex-col gap-1.5 transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                   isToday ? 'bg-[var(--admin-primary-10)]/20 border-2 border-[var(--admin-primary)]' : 'hover:bg-[var(--admin-hover)]/30'
                 }`}
               >
@@ -271,7 +277,7 @@ export default function SocialPlannerView() {
                 </span>
 
                 {/* Plans inside this day */}
-                <div className="flex flex-col gap-1 overflow-y-auto max-h-[120px] no-scrollbar">
+                <div className="flex max-h-[120px] flex-col gap-1 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
                   {cellPlans.map(plan => {
                     const platInfo = PLATFORM_INFOS[plan.platform] || PLATFORM_INFOS.YouTube;
                     const PlatIcon = platInfo.icon;
@@ -279,7 +285,7 @@ export default function SocialPlannerView() {
                     return (
                       <div 
                         key={plan.id}
-                        className={`p-1.5 rounded-xl border border-[var(--admin-border)] flex flex-col gap-1 text-xs bg-[var(--admin-card)] hover:border-[var(--admin-primary-30)] transition-all`}
+                        className={`p-1.5 rounded-xl border border-[var(--admin-border)] flex flex-col gap-1 text-xs bg-[var(--admin-card)] hover:border-[var(--admin-primary-30)] transition-[color,background-color,border-color,opacity,transform,box-shadow]`}
                         title={`${plan.title} - ${STATUS_LABELS[plan.status]}`}
                       >
                         <div className="flex items-center justify-between gap-1">
@@ -331,12 +337,12 @@ export default function SocialPlannerView() {
               return (
                 <div 
                   key={plan.id}
-                  className="p-4 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] flex flex-col gap-3 shadow-sm"
+                  className="p-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] flex flex-col gap-3 shadow-sm"
                 >
                   <div className="flex items-center justify-between">
                     {/* Date/Time Badge */}
                     <span className="text-xs font-extrabold text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full">
-                      {planDate.getDate()} {monthNamesArabic[planDate.getMonth()]} - {planDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                      {planDate.getDate()} {monthNamesArabic[planDate.getMonth()]} - {planDate.toLocaleTimeString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {/* Platform */}
                     <span className={`flex items-center gap-1.5 text-xs font-bold ${platInfo.color}`}>
@@ -373,8 +379,8 @@ export default function SocialPlannerView() {
 
       {/* CREATE MODAL */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in" dir="rtl">
             <h3 className="text-lg font-bold text-[var(--admin-text)] mb-4">جدولة منشور وقناة نشر جديدة</h3>
             
             <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">

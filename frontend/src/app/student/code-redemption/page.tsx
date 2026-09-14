@@ -1,5 +1,5 @@
-import CodeRedemptionPageClient from "./CodeRedemptionPageClient";
+import StudentBalancePageClient from '../balance/StudentBalancePageClient';
 
 export default function CodeRedemptionPage() {
-  return <CodeRedemptionPageClient />;
+  return <StudentBalancePageClient />;
 }

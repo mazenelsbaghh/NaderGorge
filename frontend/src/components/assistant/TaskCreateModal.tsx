@@ -7,6 +7,8 @@ import { hrService, EmployeeDto } from '@/services/hr-service';
 import { assistantService } from '@/services/assistant-service';
 import toast from 'react-hot-toast';
 import { Dropdown } from '@/components/ui/dropdown';
+import { translateRole } from '@/packages/brand';
+import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
 
 interface TaskCreateModalProps {
   open: boolean;
@@ -67,7 +69,7 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
 
     setSubmitting(true);
     try {
-      const formattedDueDate = dueDate ? new Date(dueDate).toISOString() : undefined;
+      const formattedDueDate = dueDate ? cairoDateTimeLocalToUtcISOString(dueDate) : undefined;
       const res = await assistantService.createAdminOperationsTask({
         title,
         description,
@@ -129,7 +131,7 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
               placeholder={loadingEmployees ? 'جاري تحميل الموظفين...' : 'اختر الموظف...'}
               options={employees.map((emp) => ({
                 value: emp.userId,
-                label: `${emp.fullName} (${emp.roles.join(', ')})`,
+                label: `${emp.fullName} (${emp.roles.map(translateRole).join('، ')})`,
               }))}
             />
           </div>

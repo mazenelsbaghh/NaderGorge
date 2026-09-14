@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -29,9 +30,23 @@ public class UseFiftyFiftyCommandHandler : IRequestHandler<UseFiftyFiftyCommand,
         if (attempt == null)
             return ApiResponse<List<Guid>>.Fail("Attempt not found");
 
-        var exam = await _db.Exams.FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
+        if (attempt.Evaluation != null || attempt.IsPassed)
+            return ApiResponse<List<Guid>>.Fail("Attempt already submitted");
+
+        var revision = attempt.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+        if (revision?.Revision?.RequiresCompletion == true && (revision.CompletionStartedAt is null
+            || !revision.Revision.Answers.Any(a => a.QuestionId == request.QuestionId && a.RequiresCompletion && !a.Excluded)))
+            return ApiResponse<List<Guid>>.Fail("المساعدة متاحة للأسئلة المضافة فقط بعد بدء الاستكمال.");
+
+        var exam = await _db.Exams
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired)).ThenInclude(q => q.Question)
+            .ThenInclude(q => q.Options.Where(o => !o.IsRetired))
+            .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
         if (exam == null)
             return ApiResponse<List<Guid>>.Fail("Exam not found");
+
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         if (exam.DurationMinutes.HasValue && attempt.StartedAt.HasValue)
         {
@@ -39,7 +54,7 @@ public class UseFiftyFiftyCommandHandler : IRequestHandler<UseFiftyFiftyCommand,
             var timeTaken = DateTime.UtcNow - attempt.StartedAt.Value;
             if (timeTaken > timeAllowed)
             {
-                if (attempt.Evaluation == null)
+                if (attempt.Evaluation == null && revision?.Revision?.RequiresCompletion != true)
                 {
                     attempt.IsTimeExpired = true;
                     attempt.ScoreAchieved = 0;
@@ -51,10 +66,7 @@ public class UseFiftyFiftyCommandHandler : IRequestHandler<UseFiftyFiftyCommand,
             }
         }
 
-        var examQuestion = await _db.ExamQuestions
-            .Include(eq => eq.Question)
-            .ThenInclude(q => q.Options)
-            .FirstOrDefaultAsync(eq => eq.Id == request.QuestionId && eq.ExamId == request.ExamId, cancellationToken);
+        var examQuestion = exam.ExamQuestions.FirstOrDefault(eq => eq.Id == request.QuestionId);
 
         if (examQuestion == null)
             return ApiResponse<List<Guid>>.Fail("Question not found");
@@ -64,23 +76,9 @@ public class UseFiftyFiftyCommandHandler : IRequestHandler<UseFiftyFiftyCommand,
 
         var answer = await _db.FindStudentAnswerAsync(request.AttemptId, request.QuestionId, cancellationToken);
         if (answer == null)
-        {
-            answer = new NaderGorge.Domain.Entities.StudentAnswer
-            {
-                Id = Guid.NewGuid(),
-                StudentExamAttemptId = attempt.Id,
-                ExamQuestionId = examQuestion.Id,
-                HintUsed = true,
-                IsCorrect = false,
-                PointsAwarded = 0
-            };
+            return ApiResponse<List<Guid>>.Fail("Question is not part of your active attempt");
 
-            _db.StudentAnswers.Add(answer);
-        }
-        else
-        {
-            answer.HintUsed = true;
-        }
+        answer.HintUsed = true;
 
         await _db.SaveChangesAsync(cancellationToken);
 

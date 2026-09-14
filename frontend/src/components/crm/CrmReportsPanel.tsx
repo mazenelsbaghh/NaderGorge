@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BarChart3, Users, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import { crmService, CrmPerformanceReportDto } from "@/services/crm-service";
 import toast from "react-hot-toast";
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export const CrmReportsPanel: React.FC = () => {
   const [report, setReport] = useState<CrmPerformanceReportDto | null>(null);
@@ -22,6 +23,11 @@ export const CrmReportsPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const cleanupCacheStore = registerCacheStore('crm:reports', () => {}, () => void loadReport());
+    return cleanupCacheStore;
+  }, []);
 
   if (loading) {
     return (

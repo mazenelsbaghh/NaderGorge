@@ -31,6 +31,7 @@ public class EssaySubmission : BaseEntity
     // AI grading fields
     public decimal? AiInitialScore { get; set; }
     public string? AiFeedback { get; set; }
+    public DateTime? AiNextRetryAt { get; set; }
 
     // Teacher grading fields
     public decimal? TeacherFinalScore { get; set; }

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "restoreId", "backupId", "isolatedTarget", "startedAt", "completedAt", "integrityOk", "productionTarget", "destroyedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "restoreId": { "type": "string", "format": "uuid" },
+    "backupId": { "type": "string", "minLength": 1 },
+    "isolatedTarget": { "type": "string", "minLength": 1 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "integrityOk": { "type": "boolean" },
+    "migrationStateOk": { "type": "boolean" },
+    "loginSmokeOk": { "type": "boolean" },
+    "fileSampleOk": { "type": "boolean" },
+    "productionTarget": { "const": false },
+    "destroyedAt": { "type": "string", "format": "date-time" }
+  }
+}

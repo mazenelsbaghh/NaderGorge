@@ -19,7 +19,13 @@ public record AdminCreateUserCommand(
     List<Guid>? PackageIds  // optional, for Student role
 ) : IRequest<ApiResponse<AdminCreateUserResult>>;
 
-public record AdminCreateUserResult(Guid Id, string FullName, string PhoneNumber, string Role);
+public record AdminCreateUserResult(
+    Guid Id,
+    string FullName,
+    string PhoneNumber,
+    string Role,
+    int AuthorizationVersion = 0,
+    DateTime? EmployeeUpdatedAt = null);
 
 public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserCommand, ApiResponse<AdminCreateUserResult>>
 {
@@ -131,7 +137,13 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<AdminCreateUserResult>.Ok(
-            new AdminCreateUserResult(user.Id, user.FullName, user.PhoneNumber, request.Role),
+            new AdminCreateUserResult(
+                user.Id,
+                user.FullName,
+                user.PhoneNumber,
+                roleEntity.Name,
+                user.SecurityStampVersion,
+                user.EmployeeProfile?.UpdatedAt),
             "تم إنشاء المستخدم بنجاح");
     }
 }

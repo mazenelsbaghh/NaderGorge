@@ -22,12 +22,15 @@ import {
   Camera,
   Loader2,
   Image as ImageIcon,
+  Pencil,
 } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { NumberField } from '@/components/ui/number-field';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import toast from 'react-hot-toast';
+import { ContentArchiveControl } from './ContentArchiveControl';
+import type { ContentArchiveMode, ContentArchiveTargetType } from '@/services/admin-service';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -41,6 +44,9 @@ export interface HierarchyItem {
   subtitle?: string;
   /** URL to navigate when clicking the item row */
   href?: string;
+  archiveMode?: ContentArchiveMode;
+  archivedAt?: string | null;
+  archiveTargetType?: ContentArchiveTargetType;
 }
 
 export interface ContentHierarchyPanelProps {
@@ -62,8 +68,12 @@ export interface ContentHierarchyPanelProps {
   hasSummary?: boolean;
   /** Whether the panel supports uploading/displaying images */
   hasImage?: boolean;
+  /** Whether new child items can be added from this panel */
+  canCreate?: boolean;
   /** Called with { title, order, price, summary, imageFile } to create a new child */
   onCreate: (data: { title: string; order: number; price: number; summary?: string; imageFile?: File | null }) => Promise<void>;
+  /** Optional inline update for existing rows */
+  onUpdate?: (id: string, data: { title: string; order: number; price: number; summary?: string }) => Promise<void>;
   /** Optional callback to upload an image for an existing item */
   onImageUpload?: (id: string, file: File) => Promise<void>;
   /** Called when deleting an item */
@@ -72,6 +82,8 @@ export interface ContentHierarchyPanelProps {
   deleteConfirmText?: (item: HierarchyItem) => string;
   /** Retry loading */
   onRetry: () => void;
+  /** Reload after an item is archived or restored. */
+  onArchiveChanged?: () => void | Promise<void>;
 }
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
@@ -103,11 +115,14 @@ export function ContentHierarchyPanel({
   addPlaceholder,
   hasSummary = false,
   hasImage = false,
+  canCreate = true,
   onCreate,
+  onUpdate,
   onImageUpload,
   onDelete,
   deleteConfirmText,
   onRetry,
+  onArchiveChanged,
 }: ContentHierarchyPanelProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -118,10 +133,20 @@ export function ContentHierarchyPanel({
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [rowUploadingId, setRowUploadingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState<HierarchyItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSummary, setEditSummary] = useState('');
+  const [editOrder, setEditOrder] = useState(1);
+  const [editPrice, setEditPrice] = useState(0);
+  const [updating, setUpdating] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<HierarchyItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [contentView, setContentView] = useState<'current' | 'archived'>('current');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentItems = items.filter((item) => (item.archiveMode ?? 'None') === 'None');
+  const archivedItems = items.filter((item) => (item.archiveMode ?? 'None') !== 'None');
+  const visibleItems = contentView === 'current' ? currentItems : archivedItems;
 
   // Auto-set order to next available
   useEffect(() => {
@@ -169,6 +194,39 @@ export function ContentHierarchyPanel({
       setIsAdding(false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEditing(item: HierarchyItem) {
+    setEditingItem(item);
+    setEditTitle(item.title);
+    setEditSummary(item.subtitle ?? '');
+    setEditOrder(item.order);
+    setEditPrice(item.price ?? 0);
+  }
+
+  function cancelEditing() {
+    setEditingItem(null);
+    setEditTitle('');
+    setEditSummary('');
+    setEditOrder(1);
+    setEditPrice(0);
+  }
+
+  async function handleUpdate() {
+    if (!editingItem || !onUpdate || !editTitle.trim()) return;
+    if (hasSummary && !editSummary.trim()) return;
+    try {
+      setUpdating(true);
+      await onUpdate(editingItem.id, {
+        title: editTitle.trim(),
+        order: editOrder,
+        price: editPrice,
+        summary: editSummary.trim() || undefined,
+      });
+      cancelEditing();
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -235,7 +293,7 @@ export function ContentHierarchyPanel({
             )}
           </div>
 
-          {!isAdding && (
+          {canCreate && !isAdding && (
             <NeumorphButton
               onClick={() => setIsAdding(true)}
               intent="primary"
@@ -248,28 +306,132 @@ export function ContentHierarchyPanel({
           )}
         </div>
 
+        <div className="mb-4 grid grid-cols-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-1" role="tablist" aria-label="حالة المحتوى">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contentView === 'current'}
+            onClick={() => setContentView('current')}
+            className={`min-h-11 rounded-lg px-3 text-sm font-black transition ${contentView === 'current' ? 'bg-[var(--admin-primary)] text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+          >
+            المحتوى الحالي ({currentItems.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contentView === 'archived'}
+            onClick={() => setContentView('archived')}
+            className={`min-h-11 rounded-lg px-3 text-sm font-black transition ${contentView === 'archived' ? 'bg-amber-700 text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'}`}
+          >
+            المؤرشف ({archivedItems.length})
+          </button>
+        </div>
+
         {/* Empty state */}
-        {items.length === 0 && !isAdding && (
+        {visibleItems.length === 0 && !isAdding && (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-strong)]/40 py-14 text-center">
             <div className="mb-4 rounded-full bg-[var(--admin-primary-15)] p-4 text-[var(--admin-primary)]">
               {icon}
             </div>
-            <p className="mb-1 font-bold text-[var(--admin-text)]">لا يوجد {label} بعد</p>
-            <p className="mb-6 max-w-xs text-sm text-[var(--admin-muted)]">{emptyDescription}</p>
-            <NeumorphButton onClick={() => setIsAdding(true)} intent="primary" size="md" pill>
-              <Plus className="h-4 w-4" />
-              إضافة أول {label.replace('ال', '')}
-            </NeumorphButton>
+            <p className="mb-1 font-bold text-[var(--admin-text)]">{contentView === 'archived' ? `لا يوجد ${label} مؤرشف` : `لا يوجد ${label} بعد`}</p>
+            <p className="mb-6 max-w-xs text-sm text-[var(--admin-muted)]">{contentView === 'archived' ? 'عند أرشفة أي عنصر سيظهر هنا مع إمكانية إعادته للمحتوى الحالي.' : emptyDescription}</p>
+            {canCreate && contentView === 'current' && (
+              <NeumorphButton onClick={() => setIsAdding(true)} intent="primary" size="md" pill>
+                <Plus className="h-4 w-4" />
+                إضافة أول {label.replace('ال', '')}
+              </NeumorphButton>
+            )}
           </div>
         )}
 
         {/* Item list */}
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const isDeleting = deletingId === item.id;
+          const isEditing = editingItem?.id === item.id;
+
+          if (isEditing) {
+            return (
+              <div key={item.id} className="rounded-2xl border-2 border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/25 p-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_112px_128px_auto] lg:items-end">
+                  <label className="space-y-1.5">
+                    <span className="text-xs font-bold text-[var(--admin-muted)]">الاسم</span>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="admin-input"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !hasSummary) {
+                          e.preventDefault();
+                          void handleUpdate();
+                        }
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                    />
+                  </label>
+
+                  <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
+                    <NumberField.Label className="mb-1.5 block text-xs font-bold text-[var(--admin-muted)]">الترتيب</NumberField.Label>
+                    <NumberField.Group className="h-11">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
+
+                  <NumberField value={editPrice} onChange={setEditPrice} minValue={0}>
+                    <NumberField.Label className="mb-1.5 block text-xs font-bold text-[var(--admin-muted)]">السعر (ج)</NumberField.Label>
+                    <NumberField.Group className="h-11">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      disabled={updating}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-muted)] transition hover:bg-[var(--admin-card-strong)] disabled:opacity-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      إلغاء
+                    </button>
+                    <NeumorphButton
+                      onClick={() => void handleUpdate()}
+                      disabled={updating || !editTitle.trim() || (hasSummary && !editSummary.trim())}
+                      loading={updating}
+                      intent="primary"
+                      size="md"
+                      pill
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      حفظ
+                    </NeumorphButton>
+                  </div>
+                </div>
+
+                {hasSummary && (
+                  <label className="mt-3 block space-y-1.5">
+                    <span className="text-xs font-bold text-[var(--admin-muted)]">نبذة الحصة</span>
+                    <textarea
+                      value={editSummary}
+                      onChange={(e) => setEditSummary(e.target.value)}
+                      rows={2}
+                      className="admin-input resize-none"
+                    />
+                  </label>
+                )}
+              </div>
+            );
+          }
+
           const Row = (
             <div
               key={item.id}
-              className={`group flex items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3.5 shadow-sm transition-all ${
+              className={`group flex items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3.5 shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                 item.href
                   ? 'cursor-pointer hover:border-[var(--admin-primary)] hover:shadow-[0_0_0_1px_var(--admin-primary)] hover:bg-[var(--admin-card)]'
                   : ''
@@ -353,8 +515,36 @@ export function ContentHierarchyPanel({
               )}
 
               {/* Actions */}
+              {item.archiveTargetType && (
+                <ContentArchiveControl
+                  targetType={item.archiveTargetType}
+                  targetId={item.id}
+                  title={item.title}
+                  archiveMode={item.archiveMode}
+                  onChanged={onArchiveChanged}
+                  compact
+                />
+              )}
+
               {item.href && (
                 <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              )}
+
+              {onUpdate && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startEditing(item);
+                  }}
+                  disabled={isDeleting}
+                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] group-hover:opacity-100 disabled:opacity-40"
+                  title="تعديل"
+                  aria-label={`تعديل ${item.title}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
               )}
 
               {onDelete && (
@@ -362,7 +552,7 @@ export function ContentHierarchyPanel({
                   type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!isDeleting) setConfirmTarget(item); }}
                   disabled={isDeleting}
-                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
                   title="حذف"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -381,7 +571,7 @@ export function ContentHierarchyPanel({
         })}
 
         {/* Inline add row */}
-        {isAdding && (
+        {isAdding && contentView === 'current' && (
           <div className="rounded-2xl border-2 border-dashed border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/30 p-4 space-y-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 space-y-2">

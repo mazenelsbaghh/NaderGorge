@@ -1,9 +1,13 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
+
+const invalidateCrm = (keys: string[] = ['crm:queues', 'crm:calls', 'crm:reports']) => invalidateMany(keys);
 
 export interface CrmStudentDto {
   studentId: string;
   studentName: string;
   studentPhone: string;
+  parentTrackingCode?: string | null;
   crmStatus: string;
   assignedAgentId?: string;
   assignedAgentName?: string;
@@ -87,13 +91,17 @@ export const crmService = {
       .then(r => r.data.data);
   },
 
-  assignStudent: (studentId: string, payload: AssignStudentPayload) =>
-    apiClient.post<ApiResponse<void>>(`/crm/students/${studentId}/assign`, payload)
-      .then(r => r.data),
+  assignStudent: async (studentId: string, payload: AssignStudentPayload) => {
+    const response = await apiClient.post<ApiResponse<void>>(`/crm/students/${studentId}/assign`, payload);
+    invalidateCrm();
+    return response.data;
+  },
 
-  logCall: (studentId: string, payload: LogCallPayload) =>
-    apiClient.post<ApiResponse<void>>(`/crm/students/${studentId}/calls`, payload)
-      .then(r => r.data),
+  logCall: async (studentId: string, payload: LogCallPayload) => {
+    const response = await apiClient.post<ApiResponse<void>>(`/crm/students/${studentId}/calls`, payload);
+    invalidateCrm(['crm:queues', 'crm:calls', 'crm:reports']);
+    return response.data;
+  },
 
   getCallHistory: (studentId: string) =>
     apiClient.get<ApiResponse<CrmCallLogDto[]>>(`/crm/students/${studentId}/history`)

@@ -19,10 +19,12 @@ public record ToggleCommunityPostLikeCommand(Guid PostId, Guid UserId)
 public class ToggleCommunityPostLikeCommandHandler : IRequestHandler<ToggleCommunityPostLikeCommand, ApiResponse<ToggleCommunityPostLikeResponse>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public ToggleCommunityPostLikeCommandHandler(IAppDbContext db)
+    public ToggleCommunityPostLikeCommandHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<ToggleCommunityPostLikeResponse>> Handle(ToggleCommunityPostLikeCommand request, CancellationToken ct)
@@ -32,6 +34,17 @@ public class ToggleCommunityPostLikeCommandHandler : IRequestHandler<ToggleCommu
 
         if (post == null || post.Status != CommunityPostStatus.Approved)
             return ApiResponse<ToggleCommunityPostLikeResponse>.Fail("Post not found", new List<string> { "NOT_FOUND" });
+
+        if (!post.TeacherId.HasValue && _academicScope != null && !await _academicScope.IsOwnerEligibleForStudentAsync(
+                StudentFacingScopeOwnerType.CommunityPost,
+                request.PostId,
+                request.UserId,
+                ct))
+        {
+            return ApiResponse<ToggleCommunityPostLikeResponse>.Fail(
+                "This post is not available for your academic scope.",
+                new List<string> { "ACADEMIC_SCOPE_DENIED" });
+        }
 
         var existingLike = await _db.CommunityPostLikes
             .FirstOrDefaultAsync(l => l.PostId == request.PostId && l.UserId == request.UserId, ct);

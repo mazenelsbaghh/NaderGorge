@@ -31,14 +31,14 @@ public static class Seeder
             { 
                 Name = "Supervisor", 
                 Type = RoleType.Supervisor,
-                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\",\"live_support.manage\"]",
+                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\",\"live_support.manage\",\"whatsapp_campaigns.manage\"]",
                 AllowedDomain = "admin"
             },
             new Role 
             { 
                 Name = "Staff", 
                 Type = RoleType.Staff,
-                PermissionsJson = "[\"users.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\"]",
+                PermissionsJson = "[\"users.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"reports.manage\"]",
                 AllowedDomain = "assistant"
             }
         };
@@ -53,7 +53,11 @@ public static class Seeder
             }
             else
             {
-                if (existingRole.AllowedDomain != defaultRole.AllowedDomain)
+                // Existing roles are editable configuration. Only backfill the
+                // portal for legacy rows that still have the migration default;
+                // never overwrite permissions or a domain chosen by an admin.
+                if (existingRole.AllowedDomain == "all" &&
+                    defaultRole.AllowedDomain != "all")
                 {
                     existingRole.AllowedDomain = defaultRole.AllowedDomain;
                     addedAny = true;

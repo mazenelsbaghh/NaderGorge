@@ -20,6 +20,7 @@ import {
 } from '@/services/media-service';
 import { hrService, EmployeeDto } from '@/services/hr-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 const STAGES: { key: MediaStage; label: string; color: string; bg: string; border: string }[] = [
   { key: 'Preparation', label: 'تحضير', color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-100/50 dark:bg-slate-900/40', border: 'border-slate-300/45 dark:border-slate-700/45' },
@@ -74,6 +75,8 @@ export default function MediaPipelineBoard() {
 
   useEffect(() => {
     fetchData();
+    const cleanupCacheStore = registerCacheStore('media:pipelines', () => setPipelines([]), fetchData);
+    return cleanupCacheStore;
   }, [fetchData]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -248,7 +251,7 @@ export default function MediaPipelineBoard() {
           return (
             <div 
               key={stageInfo.key} 
-              className={`rounded-3xl border ${stageInfo.border} ${stageInfo.bg} backdrop-blur-md p-3 flex flex-col min-h-[500px] w-full min-w-[220px]`}
+              className={`rounded-3xl border ${stageInfo.border} ${stageInfo.bg} p-3 flex flex-col min-h-[500px] w-full min-w-[220px]`}
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-4 border-b border-dashed border-[var(--admin-border)] pb-2">
@@ -259,7 +262,7 @@ export default function MediaPipelineBoard() {
               </div>
 
               {/* Column Content */}
-              <div className="flex flex-col gap-3 flex-1 overflow-y-auto max-h-[600px] no-scrollbar">
+              <div className="flex max-h-[600px] flex-1 flex-col gap-3 overflow-y-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin]">
                 {stageItems.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-[var(--admin-border)] rounded-2xl opacity-40">
                     <span className="text-xs text-[var(--admin-muted)]">فارغ</span>
@@ -272,14 +275,14 @@ export default function MediaPipelineBoard() {
                     return (
                       <div 
                         key={item.id}
-                        className="p-3.5 rounded-2xl bg-[var(--admin-card)] border border-[var(--admin-border)] shadow-md hover:shadow-lg hover:border-[var(--admin-primary-30)] transition-all flex flex-col gap-2.5 relative group"
+                        className="p-3.5 rounded-2xl bg-[var(--admin-card)] border border-[var(--admin-border)] shadow-md hover:shadow-lg hover:border-[var(--admin-primary-30)] transition-[color,background-color,border-color,opacity,transform,box-shadow] flex flex-col gap-2.5 relative group"
                       >
                         {/* Title and Edit Button */}
                         <div className="flex items-start justify-between gap-1">
                           <h4 className="font-bold text-xs text-[var(--admin-text)] leading-relaxed break-all pr-1">{item.title}</h4>
                           <button 
                             onClick={() => handleOpenEdit(item)} 
-                            className="p-1 rounded-lg text-[var(--admin-muted)] hover:text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1 rounded-lg text-[var(--admin-muted)] hover:text-[var(--admin-primary)] hover:bg-[var(--admin-hover)] transition-[color,background-color,border-color,opacity,transform,box-shadow] opacity-0 group-hover:opacity-100"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
@@ -339,7 +342,7 @@ export default function MediaPipelineBoard() {
                           {next && (
                             <button
                               onClick={() => handleStageTransition(item, next)}
-                              className={`text-xs font-bold flex items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
+                              className={`text-xs font-bold flex items-center gap-0.5 px-2 py-1 rounded-xl transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                                 next === 'Published' 
                                   ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                                   : next === 'Review'
@@ -364,8 +367,8 @@ export default function MediaPipelineBoard() {
 
       {/* CREATE MODAL */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in zoom-in-95" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in zoom-in-95" dir="rtl">
             <h3 className="text-lg font-bold text-[var(--admin-text)] mb-4">إضافة مادة مرئية جديدة للإنتاج</h3>
             
             <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
@@ -433,8 +436,8 @@ export default function MediaPipelineBoard() {
 
       {/* EDIT MODAL */}
       {editingPipeline && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl" dir="rtl">
             <h3 className="text-lg font-bold text-[var(--admin-text)] mb-4">تعديل مادة الإنتاج المرئي</h3>
             
             <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
@@ -525,8 +528,8 @@ export default function MediaPipelineBoard() {
 
       {/* SELECT SUPERVISOR MODAL FOR REVIEW STAGE */}
       {reviewPipeline && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-2xl animate-in fade-in" dir="rtl">
             <div className="flex items-center gap-3 text-rose-500 mb-3">
               <UserCheck className="h-6 w-6" />
               <h3 className="text-lg font-bold text-[var(--admin-text)]">طلب تدقيق ومراجعة المادة</h3>

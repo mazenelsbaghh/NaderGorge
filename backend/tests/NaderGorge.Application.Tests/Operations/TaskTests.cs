@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Operations.Commands;
 using NaderGorge.Application.Features.Operations.Queries;
 using NaderGorge.Domain.Entities;
@@ -104,7 +105,7 @@ public class TaskTests
         var handler = new UpdateTaskStatusCommandHandler(db);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        var exception = await Assert.ThrowsAsync<ForbiddenException>(async () =>
         {
             await handler.Handle(
                 new UpdateTaskStatusCommand(task.Id, TaskStatus.InProgress, assistantUser.Id),
@@ -139,7 +140,7 @@ public class TaskTests
         var handler = new UpdateTaskStatusCommandHandler(db);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        var exception = await Assert.ThrowsAsync<ForbiddenException>(async () =>
         {
             await handler.Handle(
                 new UpdateTaskStatusCommand(task.Id, TaskStatus.Completed, assistantUser.Id),
@@ -261,7 +262,7 @@ public class TaskTests
         var handler = new GetTaskDetailsQueryHandler(db);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
         {
             await handler.Handle(new GetTaskDetailsQuery(task.Id, assistantUser.Id, IsAdminOrSupervisor: false), CancellationToken.None);
         });
@@ -292,7 +293,7 @@ public class TaskTests
         var handler = new AddTaskCommentCommandHandler(db);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
         {
             await handler.Handle(new AddTaskCommentCommand(task.Id, assistantUser.Id, "Hello"), CancellationToken.None);
         });
@@ -323,7 +324,7 @@ public class TaskTests
         var handler = new UpdateTaskStatusCommandHandler(db);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
         {
             await handler.Handle(new UpdateTaskStatusCommand(task.Id, TaskStatus.Review, assistantUser.Id), CancellationToken.None);
         });

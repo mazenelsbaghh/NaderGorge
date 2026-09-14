@@ -15,6 +15,13 @@ public class CodeGroup : BaseEntity
     public Guid? ContentSectionId { get; set; }
     public Guid? LessonId { get; set; }
     public Guid? ExamId { get; set; }
+    public Guid? PublicExamProductId { get; set; }
+    public Guid? VideoTypeId { get; set; }
+    /// <summary>
+    /// When a video-type code is redeemed, also grant access to videos of that type
+    /// that are added after the code group was created. Defaults to true for existing groups.
+    /// </summary>
+    public bool IncludeFutureVideos { get; set; } = true;
 
     // --- Balance code fields ---
     public decimal? BalanceAmount { get; set; }
@@ -22,13 +29,22 @@ public class CodeGroup : BaseEntity
     // --- Discount & expiration ---
     public decimal? DiscountPercentage { get; set; }
     public DateTime? ExpiresAt { get; set; }
+    /// <summary>Whether students who redeemed before the code expiry lose access at that date.</summary>
+    public bool ExpireActivatedAccess { get; set; } = true;
     public bool QrDataGenerated { get; set; } = false;
+
+    // --- Finance rules ---
+    public SalesOwnerType? RevenueOwner { get; set; }
+    public TeacherAllocationMode? RevenueAllocationMode { get; set; }
+    public decimal? RevenueAllocationValue { get; set; }
+    public CodeAccountingTiming AccountingTiming { get; set; } = CodeAccountingTiming.OnActivation;
+    public DateTime? AccountingRecordedAt { get; set; }
 
     public Guid CreatedByUserId { get; set; }
     public User CreatedByUser { get; set; } = null!;
 
-    public Guid TeacherId { get; set; }
-    public TeacherProfile Teacher { get; set; } = null!;
+    public Guid? TeacherId { get; set; }
+    public TeacherProfile? Teacher { get; set; }
 
     // Navigation
     public ICollection<AccessCode> AccessCodes { get; set; } = new List<AccessCode>();
@@ -64,12 +80,20 @@ public class StudentAccessGrant : BaseEntity
     public Guid? ContentSectionId { get; set; }
     public Guid? LessonId { get; set; }
     public Guid? LessonVideoId { get; set; }
+    public Guid? VideoTypeId { get; set; }
     public Guid? ExamId { get; set; }
 
     public CodeType GrantType { get; set; } = CodeType.Package;
 
     public Guid? AccessCodeId { get; set; }
     public AccessCode? AccessCode { get; set; }
+
+    public Guid? GiftRecipientId { get; set; }
+    public GiftRecipient? GiftRecipient { get; set; }
+    public Guid? PublicExamProductId { get; set; }
+    public PublicExamProduct? PublicExamProduct { get; set; }
+    public int? MaxUses { get; set; }
+    public int UsesConsumed { get; set; }
 
     public DateTime GrantedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; }

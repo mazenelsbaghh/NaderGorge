@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
 import { assistantService, TaskDetailsDto } from '@/services/assistant-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { Clock, Send, Paperclip, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 import toast from 'react-hot-toast';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 export default function TaskDetailPageClient() {
   const params = useParams();
@@ -166,7 +167,7 @@ export default function TaskDetailPageClient() {
 
   return (
     <NavRouteGuard routePath="/assistant/tasks" permission="tasks.manage">
-      <AssistantShellChrome
+      <AssistantPage
       activePath="/assistant/tasks"
       sectionLabel="المهام"
       pageTitle={details?.task.title ?? 'تفاصيل المهمة'}
@@ -204,7 +205,7 @@ export default function TaskDetailPageClient() {
             <div>
               <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">تاريخ الاستحقاق</span>
               <span className="text-xs font-bold text-[var(--admin-text)] block mt-1 font-mono">
-                {details.task.dueDate ? new Date(details.task.dueDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}
+                {details.task.dueDate ? formatCairoDateTime(details.task.dueDate, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}
               </span>
             </div>
           </div>
@@ -271,8 +272,8 @@ export default function TaskDetailPageClient() {
                       <span className="font-extrabold text-[var(--admin-text)]">{comment.userName}</span>
                       <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 font-mono">
                         <Clock className="h-3 w-3" />
-                        {new Date(comment.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}{' '}
-                        {new Date(comment.createdAt).toLocaleDateString('ar-EG')}
+                        {formatCairoDateTime(comment.createdAt, { hour: '2-digit', minute: '2-digit' })}{' '}
+                        {formatCairoDateTime(comment.createdAt)}
                       </span>
                     </div>
                     <p className="text-sm text-[var(--admin-text)] mt-1 whitespace-pre-line leading-relaxed">{comment.content}</p>
@@ -342,7 +343,7 @@ export default function TaskDetailPageClient() {
           <p className="text-sm text-[var(--admin-muted)] mt-1">تأكد من الرابط الصحيح أو من أن المهمة مسندة إليك.</p>
         </div>
       )}
-    </AssistantShellChrome>
+    </AssistantPage>
     </NavRouteGuard>
   );
 }

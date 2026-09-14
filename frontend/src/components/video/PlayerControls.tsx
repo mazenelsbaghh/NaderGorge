@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Play, Pause, Volume2, Volume1, VolumeX, Maximize } from "lucide-react";
+import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { VIDEO_PLAYBACK_RATES } from "@/lib/video-player-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -11,12 +12,14 @@ const CustomSlider = ({
   onChange,
   className,
   chapters,
+  keyboardStepPercent,
   ariaLabel = "شريط التقدم",
 }: {
   value: number;
   onChange: (value: number) => void;
   className?: string;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
+  keyboardStepPercent?: number;
   ariaLabel?: string;
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -42,45 +45,59 @@ const CustomSlider = ({
     return percentage;
   }, [chapters]);
 
-  const updateProgressLocally = useCallback((clientX: number) => {
+  const pointerPercentage = useCallback((clientX: number, clientY: number) => {
+    const slider = containerRef.current;
+    if (!slider) return 0;
+    const rect = slider.getBoundingClientRect();
+    const rotated = Boolean(slider.closest('.secure-video-force-landscape')) && window.matchMedia('(orientation: portrait)').matches;
+    const distance = rotated ? clientY - rect.top : clientX - rect.left;
+    const length = rotated ? rect.height : rect.width;
+    return length > 0 ? Math.min(Math.max(distance / length * 100, 0), 100) : 0;
+  }, []);
+
+  const updateProgressLocally = useCallback((clientX: number, clientY: number) => {
     if (!containerRef.current) return undefined;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    let percentage = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+    let percentage = pointerPercentage(clientX, clientY);
     if (chapters) percentage = snapToChapter(percentage);
     setLocalValue(percentage);
     return percentage;
-  }, [chapters, snapToChapter]);
+  }, [chapters, snapToChapter, pointerPercentage]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
     setIsDragging(true);
     containerRef.current.setPointerCapture(e.pointerId);
-    updateProgressLocally(e.clientX);
+    updateProgressLocally(e.clientX, e.clientY);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+    const percentage = pointerPercentage(e.clientX, e.clientY);
     setHoverPercent(chapters ? snapToChapter(percentage) : percentage);
 
     if (isDragging) {
-      updateProgressLocally(e.clientX);
+      updateProgressLocally(e.clientX, e.clientY);
     }
   };
 
   const handlePointerLeave = () => setHoverPercent(null);
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (!containerRef.current?.hasPointerCapture(e.pointerId)) return;
     setIsDragging(false);
-    if (containerRef.current && containerRef.current.hasPointerCapture(e.pointerId)) {
-      containerRef.current.releasePointerCapture(e.pointerId);
-    }
-    const finalPercent = updateProgressLocally(e.clientX);
+    containerRef.current.releasePointerCapture(e.pointerId);
+    const finalPercent = updateProgressLocally(e.clientX, e.clientY);
     if (finalPercent !== undefined) {
       onChange(finalPercent);
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    setHoverPercent(null);
+    setLocalValue(value);
+    if (containerRef.current?.hasPointerCapture(e.pointerId)) {
+      containerRef.current.releasePointerCapture(e.pointerId);
     }
   };
 
@@ -92,7 +109,7 @@ const CustomSlider = ({
   }, [chapters, onChange, snapToChapter]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = e.shiftKey ? 10 : 5;
+    const step = keyboardStepPercent ?? (e.shiftKey ? 10 : 5);
     let nextValue: number | null = null;
 
     switch (e.key) {
@@ -148,28 +165,27 @@ const CustomSlider = ({
       aria-valuenow={Math.round(localValue)}
       aria-valuetext={`${Math.round(localValue)}%`}
       className={cn(
-        "relative flex h-2 w-full cursor-pointer touch-none items-center rounded-full bg-transparent focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
+        "relative flex h-11 w-full cursor-pointer touch-none items-center rounded-full bg-transparent focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
         className
       )}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onKeyDown={handleKeyDown}
     >
       {/* Tooltip */}
       {hoverPercent !== null && hoveredChapter && hoveredChapter.title && (
         <div 
-          className="absolute bottom-full mb-3 transform -translate-x-1/2 p-2 bg-[#111111ee] backdrop-blur-lg rounded-xl border border-[#EBE2D4]/20 shadow-xl whitespace-nowrap z-50 pointer-events-none"
-          style={{ left: `${hoverPercent}%` }}
+          className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-lg bg-black/90 p-2 text-center [overflow-wrap:anywhere] pointer-events-none"
         >
           <div className="text-[#EBE2D4] text-xs font-bold">{hoveredChapter.title}</div>
         </div>
       )}
 
       {/* Background Track with Chapter Gaps */}
-      <div className="absolute inset-0 flex gap-[3px] overflow-hidden rounded-full">
+      <div className="absolute inset-x-0 top-1/2 flex h-2 -translate-y-1/2 gap-[3px] overflow-hidden rounded-full">
         {displayChapters.map((ch, i) => {
           const widthPercent = ch.endPercent - ch.startPercent;
 
@@ -184,7 +200,7 @@ const CustomSlider = ({
           return (
             <div
               key={ch.id || i}
-              className="h-full bg-white/20 relative overflow-hidden backdrop-blur-sm transition-all duration-300"
+              className="h-full bg-white/20 relative overflow-hidden backdrop-blur-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300"
               style={{ width: `${widthPercent}%` }}
             >
               {/* Filled progress bar */}
@@ -223,9 +239,15 @@ interface PlayerControlsProps {
   currentTimeFormatted: string;
   onPlaybackRateChange?: (rate: number) => void;
   visible: boolean;
+  compact?: boolean;
   provider?: string;
   onControlHover?: (hovering: boolean) => void;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
+  durationSeconds?: number;
+  qualityLevels?: { id: string; label: string; height?: number; bitrate?: number }[];
+  currentQuality?: string;
+  onHide?: () => void;
+  onQualityChange?: (quality: string) => void;
 }
 
 export default function PlayerControls({
@@ -242,12 +264,19 @@ export default function PlayerControls({
   currentTimeFormatted,
   onPlaybackRateChange,
   visible,
+  compact = false,
   provider,
   onControlHover,
-  chapters
+  chapters,
+  durationSeconds,
+  qualityLevels = [],
+  currentQuality = 'auto',
+  onQualityChange,
+  onHide,
 }: PlayerControlsProps) {
 
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const setSpeed = (speed: number) => {
     setPlaybackSpeed(speed);
     if (onPlaybackRateChange) onPlaybackRateChange(speed);
@@ -258,22 +287,58 @@ export default function PlayerControls({
     return chapters.find(ch => progress >= ch.startPercent && progress <= ch.endPercent) || chapters[chapters.length - 1];
   }, [chapters, progress]);
 
+  if (compact) {
+    if (!visible) return null;
+    const seekBy = (seconds: number) => {
+      if (durationSeconds && Number.isFinite(durationSeconds) && durationSeconds > 0) {
+        onSeek(Math.max(0, Math.min(100, progress + seconds / durationSeconds * 100)));
+      }
+    };
+    const action = "flex size-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white";
+    return <div className="pointer-events-none absolute inset-0 z-[var(--z-modal)]" dir="ltr">
+      <div className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-5" onClick={e => e.stopPropagation()}>
+        <button type="button" className={`${action} bg-black/65`} aria-label="ترجيع 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(-10)}>↶10</button>
+        <button type="button" className={`${action} size-14 bg-black/65`} aria-label={isPlaying ? 'إيقاف الفيديو مؤقتًا' : 'تشغيل الفيديو'} onClick={onTogglePlay}>{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" fill="currentColor" />}</button>
+        <button type="button" className={`${action} bg-black/65`} aria-label="تقديم 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(10)}>10↷</button>
+      </div>
+      {onHide && <button type="button" className={`pointer-events-auto absolute left-2 top-2 ${action} bg-black/65`} aria-label="إخفاء عناصر التحكم" onClick={e => { e.stopPropagation(); onHide(); }}>×</button>}
+      <div className="secure-player-controls pointer-events-auto absolute inset-x-0 bottom-0 bg-black/80 px-2 text-white" onClick={e => e.stopPropagation()}>
+        <div className="flex min-w-0 items-center gap-2 text-[11px] tabular-nums">
+          <span className="shrink-0">{currentTimeFormatted}</span>
+          <CustomSlider value={Number.isFinite(progress) ? progress : 0} onChange={onSeek} className="min-w-0 flex-1" chapters={chapters} ariaLabel="تقدم الفيديو" keyboardStepPercent={durationSeconds ? 1000 / durationSeconds : undefined} />
+          <span className="shrink-0">{durationFormatted}</span>
+        </div>
+        <div className="flex h-11 items-center justify-end gap-1">
+          <button type="button" className={action} aria-label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'} onClick={onToggleMute}>{isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}</button>
+          {provider !== 'vk' && <select aria-label="سرعة التشغيل" value={playbackSpeed} onChange={e => setSpeed(Number(e.target.value))} className="h-11 w-16 bg-black text-xs text-white">{VIDEO_PLAYBACK_RATES.map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>}
+          {qualityLevels.length > 0 && onQualityChange && <select aria-label="جودة الفيديو" value={currentQuality} onChange={e => onQualityChange(e.target.value)} className="h-11 max-w-24 bg-black text-xs text-white">{[{ id: 'auto', label: 'تلقائي' }, ...qualityLevels.filter(level => level.id !== 'auto')].map(level => <option key={level.id} value={level.id}>{level.label}</option>)}</select>}
+          <button type="button" className={action} aria-label="ملء الشاشة" onClick={onToggleFullscreen}><Maximize className="size-4" /></button>
+        </div>
+      </div>
+    </div>;
+  }
+
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="absolute bottom-0 mx-auto max-w-[90%] md:max-w-xl left-0 right-0 p-4 mb-4 bg-[#11111198] backdrop-blur-md rounded-2xl z-[100]"
-          initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-          exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-          transition={{ duration: 0.6, ease: "circInOut", type: "spring" }}
+          className={cn(
+            "secure-player-controls absolute bottom-0 left-0 right-0 z-[var(--z-modal)] mx-auto bg-black/80",
+            compact
+              ? "mb-0 max-w-full rounded-none px-2 py-1 sm:mb-2 sm:max-w-2xl sm:rounded-xl sm:px-3 sm:py-2"
+              : "mb-4 max-w-[90%] rounded-2xl p-4 md:max-w-xl"
+          )}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
           dir="ltr"
           onClick={(e) => e.stopPropagation()} // Prevent toggling the video player behind
           onMouseEnter={() => { if (onControlHover) onControlHover(true); }}
           onMouseLeave={() => { if (onControlHover) onControlHover(false); }}
         >
-          <div className="flex items-center gap-3 mb-3 px-1">
-            <span className="text-white text-xs font-medium w-10 text-center shrink-0">
+          <div className="flex items-center gap-2 px-1">
+            <span className="min-w-9 shrink-0 text-center text-xs font-medium tabular-nums text-white">
               {currentTimeFormatted}
             </span>
             <CustomSlider
@@ -281,15 +346,16 @@ export default function PlayerControls({
               onChange={onSeek}
               className="flex-1"
               chapters={chapters}
+              keyboardStepPercent={durationSeconds && durationSeconds > 0 ? (10 / durationSeconds) * 100 : undefined}
               ariaLabel="تقدم الفيديو"
             />
-            <span className="text-white text-xs font-medium w-10 text-center shrink-0">
+            <span className="min-w-9 shrink-0 text-center text-xs font-medium tabular-nums text-white">
               {durationFormatted}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-white flex-1 min-w-0">
+          <div className={cn("flex items-center justify-between", compact ? "gap-1" : "gap-2")}>
+            <div className={cn("flex min-w-0 flex-1 items-center text-white", compact ? "gap-1" : "gap-2")}>
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Button
                   onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
@@ -297,17 +363,17 @@ export default function PlayerControls({
                   size="icon"
                   aria-label={isPlaying ? "إيقاف الفيديو مؤقتًا" : "تشغيل الفيديو"}
                   aria-pressed={isPlaying}
-                  className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                 >
                   {isPlaying ? (
-                    <Pause className="h-5 w-5" fill="currentColor" />
+                    <Pause className={cn(compact ? "size-4" : "h-5 w-5")} fill="currentColor" />
                   ) : (
-                    <Play className="h-5 w-5" fill="currentColor" />
+                    <Play className={cn(compact ? "size-4" : "h-5 w-5")} fill="currentColor" />
                   )}
                 </Button>
               </motion.div>
 
-              <div className="flex items-center gap-x-2 w-24 sm:w-32 ml-1 shrink-0">
+              <div className="flex shrink-0 items-center gap-1 sm:w-28">
                 <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                   <Button
                     onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
@@ -315,19 +381,19 @@ export default function PlayerControls({
                     size="icon"
                     aria-label={isMuted || volume === 0 ? "تشغيل الصوت" : "كتم الصوت"}
                     aria-pressed={isMuted || volume === 0}
-                    className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full shrink-0"
+                    className={cn("shrink-0 rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                   >
                     {isMuted || volume === 0 ? (
-                      <VolumeX className="h-5 w-5" />
+                      <VolumeX className={cn(compact ? "size-4" : "h-5 w-5")} />
                     ) : volume > 50 ? (
-                      <Volume2 className="h-5 w-5" />
+                      <Volume2 className={cn(compact ? "size-4" : "h-5 w-5")} />
                     ) : (
-                      <Volume1 className="h-5 w-5" />
+                      <Volume1 className={cn(compact ? "size-4" : "h-5 w-5")} />
                     )}
                   </Button>
                 </motion.div>
 
-                <div className="w-full">
+                <div className="hidden w-full sm:block">
                   <CustomSlider
                     value={isMuted ? 0 : volume}
                     onChange={onVolumeChange}
@@ -337,7 +403,7 @@ export default function PlayerControls({
               </div>
 
               {currentChapter ? (
-                <div className="flex items-center gap-2 ml-2 sm:ml-4 text-white font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden min-w-0">
+                <div className="hidden sm:flex items-center gap-2 ml-2 text-white font-bold text-xs whitespace-nowrap overflow-hidden min-w-0">
                   <span className="w-2 h-2 rounded-full bg-[#0E8F8F] shadow-[0_0_8px_rgba(14,143,143,0.75)] shrink-0"></span>
                   <span className="truncate min-w-0 leading-relaxed block mask-image-fade">{(currentChapter as any).title || (currentChapter as any).name || 'الفصل الحالي'}</span>
                 </div>
@@ -350,7 +416,32 @@ export default function PlayerControls({
               )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="relative flex items-center gap-1 shrink-0">
+              {qualityLevels.length > 0 && onQualityChange && (
+                <div className="relative">
+                  <Button
+                    type="button"
+                    onClick={(event) => { event.stopPropagation(); setQualityMenuOpen((open) => !open); }}
+                    variant="ghost"
+                    aria-label="اختيار جودة الفيديو"
+                    aria-haspopup="listbox"
+                    aria-expanded={qualityMenuOpen}
+                    className="min-h-11 min-w-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white"
+                  >
+                    <Settings2 className="size-4 sm:me-1" />
+                    <span className="hidden sm:inline">{currentQuality === 'auto' ? 'تلقائي' : qualityLevels.find((level) => level.id === currentQuality)?.label ?? 'الجودة'}</span>
+                  </Button>
+                  {qualityMenuOpen && (
+                    <div role="listbox" aria-label="جودة الفيديو" className="absolute bottom-full right-0 z-50 mb-2 min-w-32 overflow-hidden rounded-xl border border-white/15 bg-[#111]/95 p-1.5 text-right shadow-2xl backdrop-blur-xl">
+                      {[{ id: 'auto', label: 'تلقائي' }, ...qualityLevels].map((level) => (
+                        <button key={level.id} type="button" role="option" aria-selected={currentQuality === level.id} onClick={(event) => { event.stopPropagation(); onQualityChange(level.id); setQualityMenuOpen(false); }} className={cn("flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-sm font-bold text-white hover:bg-white/10", currentQuality === level.id && "bg-white/15 text-[#57d4d4]")}>
+                          <span>{level.label}</span><span aria-hidden>{currentQuality === level.id ? '✓' : ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {provider !== 'vk' && (
                 <>
                   <div
@@ -358,7 +449,7 @@ export default function PlayerControls({
                     role="group"
                     aria-label="سرعة تشغيل الفيديو"
                   >
-                    {[0.5, 1, 1.5, 2].map((speed) => (
+                    {VIDEO_PLAYBACK_RATES.map((speed) => (
                       <motion.div
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -385,12 +476,12 @@ export default function PlayerControls({
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const next = playbackSpeed === 1 ? 1.5 : playbackSpeed === 1.5 ? 2 : playbackSpeed === 2 ? 0.5 : 1;
+                        const next = VIDEO_PLAYBACK_RATES[(VIDEO_PLAYBACK_RATES.indexOf(playbackSpeed) + 1) % VIDEO_PLAYBACK_RATES.length];
                         setSpeed(next);
                       }}
                       variant="ghost"
                       aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
-                      className="text-white hover:bg-[#111111d1] hover:text-white h-8 px-2 text-xs font-bold rounded-full"
+                      className={cn("min-h-11 min-w-11 rounded-full px-2 text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact && "text-sm")}
                     >
                       {playbackSpeed}x
                     </Button>
@@ -406,9 +497,9 @@ export default function PlayerControls({
                   variant="ghost"
                   size="icon"
                   aria-label="تبديل وضع ملء الشاشة"
-                  className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-11")}
                 >
-                  <Maximize className="h-5 w-5" />
+                  <Maximize className={cn(compact ? "size-4" : "h-5 w-5")} />
                 </Button>
               </motion.div>
             </div>

@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
@@ -7,7 +8,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers) : IRequest<ApiResponse<ExamResultDto>>;
+public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers, Guid? RevisionId = null) : IRequest<ApiResponse<ExamResultDto>>;
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid? SelectedOptionId, string? AnswerText, string? SelectedText = null, string? AudioUrl = null);
 
@@ -41,9 +42,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     {
         var exam = await _db.Exams
             .AsNoTracking()
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
             .ThenInclude(eq => eq.Question)
-            .ThenInclude(q => q.Options)
+            .ThenInclude(q => q.Options.Where(o => !o.IsRetired))
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, ct);
 
         if (exam == null)
@@ -57,6 +58,16 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         if (attempt == null)
         {
             return ApiResponse<ExamResultDto>.Fail("Attempt not found or invalid.");
+        }
+
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
+
+        if (attempt.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)
+        {
+            var completed = await new ExamRevisionCompletion(_db).Submit(request, ct);
+            if (!completed.Success) return ApiResponse<ExamResultDto>.Fail(completed.Message ?? "تعذر حفظ الاستكمال.");
+            return await new Queries.GetExamAttemptResultQueryHandler(_db).Handle(new(attempt.Id, request.UserId), ct);
         }
 
         var alreadySubmitted = attempt.Evaluation != null
@@ -191,6 +202,19 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             };
             _db.OutboxEvents.Add(examSubmittedEvent);
 
+            // Persist the AI work alongside the submitted attempt. The outbox worker
+            // dispatches it independently of this HTTP request, so closing the page
+            // cannot cancel or lose essay grading.
+            var submittedEssays = _db.EssaySubmissions.Local
+                .Where(essay => essay.StudentExamAttemptId == attempt.Id)
+                .ToList();
+            foreach (var essay in submittedEssays)
+            {
+                var examQuestion = exam.ExamQuestions.FirstOrDefault(question => question.Question.Id == essay.QuestionId);
+                if (examQuestion is not null)
+                    EssayEvaluationQueue.Enqueue(_db, essay, examQuestion.Question.Text, examQuestion.Question.WrittenCorrection);
+            }
+
             if (!hasEssayQuestions)
             {
                 var examGradedEvent = new OutboxEvent
@@ -279,24 +303,6 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 ParentPush = true
             });
 
-            var pendingEssays = _db.EssaySubmissions.Local
-                .Where(essay => essay.StudentExamAttemptId == attempt.Id)
-                .ToList();
-
-            foreach (var essay in pendingEssays)
-            {
-                var examQuestion = exam.ExamQuestions.FirstOrDefault(x => x.Question.Id == essay.QuestionId);
-                var expectedAnswer = examQuestion?.Question?.WrittenCorrection ?? string.Empty;
-
-                await _jobEnqueuer.EnqueueJobAsync("bullmq-bridge-ingest", "evaluateEssay", new
-                {
-                    essaySubmissionId = essay.Id,
-                    questionId = essay.QuestionId,
-                    studentId = essay.StudentId,
-                    answerText = essay.AnswerText,
-                    expectedAnswer
-                });
-            }
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -366,7 +372,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             lesson?.ContentSection?.Term?.PackageId,
             questionSnapshotsByQuestion,
             revealCorrectAnswers: true,
-            resultState: hasEssayQuestions ? "Pending" : "Completed");
+            resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id)));
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
     }
@@ -514,7 +520,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IEnumerable<EssaySubmission> essays,
         Exam exam)
     {
-        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers);
+        var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
         var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
 
         foreach (var essay in essays)

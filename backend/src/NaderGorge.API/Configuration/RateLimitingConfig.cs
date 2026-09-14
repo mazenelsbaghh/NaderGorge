@@ -7,6 +7,15 @@ namespace NaderGorge.API.Configuration;
 
 public static class RateLimitingConfig
 {
+    public sealed record AdminAIRatePolicy(string Name, int PermitLimit, TimeSpan Window, bool LimitByUser);
+    public const int AdminAIActiveTurnLimit = 2;
+    public static IReadOnlyList<AdminAIRatePolicy> AdminAIPolicies { get; } =
+    [
+        new("admin-ai-turn", 10, TimeSpan.FromMinutes(1), true),
+        new("admin-ai-confirmation", 20, TimeSpan.FromMinutes(1), true),
+        new("admin-ai-secure-input", 5, TimeSpan.FromMinutes(1), true),
+        new("admin-ai-internal", 120, TimeSpan.FromMinutes(1), false)
+    ];
     public static IServiceCollection AddRateLimitingPolicies(this IServiceCollection services)
     {
         var isE2e = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "E2e";
@@ -53,6 +62,16 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
+            options.AddPolicy("video-progress", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
             // AI Analysis: 5 requests per minute per user
             options.AddPolicy("ai-analysis", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
@@ -75,7 +94,6 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
-            // General API: 1000 requests per minute per IP
             options.AddPolicy("public-whatsapp", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -106,6 +124,16 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
+            options.AddPolicy("web-vitals", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
             options.AddPolicy("live-support-public", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -132,13 +160,19 @@ public static class RateLimitingConfig
             AddLiveSupportPolicy(options, "live-support-ai-registration", isE2e ? 100000 : 5, ParticipantKey);
             AddLiveSupportPolicy(options, "live-support-ai-admin-preview", isE2e ? 100000 : 10, context => context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown");
             AddLiveSupportPolicy(options, "live-support-ai-callback", isE2e ? 100000 : 120, context => context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            foreach (var policy in AdminAIPolicies)
+                AddLiveSupportPolicy(options, policy.Name, isE2e ? 100000 : policy.PermitLimit,
+                    context => policy.LimitByUser
+                        ? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown"
+                        : context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
+            // General API: 20000 requests per minute per IP
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = isE2e ? 100000 : 1000,
+                        PermitLimit = isE2e ? 100000 : 20000,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));

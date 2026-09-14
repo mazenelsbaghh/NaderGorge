@@ -133,12 +133,12 @@ public class GetAdminKpiDashboardQueryHandler : IRequestHandler<GetAdminKpiDashb
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             taskQuery = taskQuery.Where(t => t.CreatedAt >= startUtc);
         }
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             taskQuery = taskQuery.Where(t => t.CreatedAt <= endUtc);
         }
         if (targetUserId.HasValue)
@@ -166,12 +166,12 @@ public class GetAdminKpiDashboardQueryHandler : IRequestHandler<GetAdminKpiDashb
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             crmQuery = crmQuery.Where(c => c.CallDate >= startUtc);
         }
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             crmQuery = crmQuery.Where(c => c.CallDate <= endUtc);
         }
         if (targetUserId.HasValue)
@@ -204,12 +204,12 @@ public class GetAdminKpiDashboardQueryHandler : IRequestHandler<GetAdminKpiDashb
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             mediaQuery = mediaQuery.Where(m => m.CreatedAt >= startUtc);
         }
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             mediaQuery = mediaQuery.Where(m => m.CreatedAt <= endUtc);
         }
         if (targetUserId.HasValue)
@@ -249,13 +249,13 @@ public class GetAdminKpiDashboardQueryHandler : IRequestHandler<GetAdminKpiDashb
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             btQuery = btQuery.Where(t => t.CreatedAt >= startUtc);
             codQuery = codQuery.Where(c => c.ActivatedAt >= startUtc);
         }
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             btQuery = btQuery.Where(t => t.CreatedAt <= endUtc);
             codQuery = codQuery.Where(c => c.ActivatedAt <= endUtc);
         }
@@ -272,12 +272,12 @@ public class GetAdminKpiDashboardQueryHandler : IRequestHandler<GetAdminKpiDashb
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             payrollQuery = payrollQuery.Where(p => p.CreatedAt >= startUtc);
         }
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             payrollQuery = payrollQuery.Where(p => p.CreatedAt <= endUtc);
         }
         if (request.EmployeeId.HasValue && request.EmployeeId.Value != Guid.Empty)

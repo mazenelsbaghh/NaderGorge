@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.API.Controllers;
 
@@ -23,10 +25,90 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("canned-replies")]
+    public async Task<IActionResult> CannedReplies(CancellationToken ct) => Ok(ApiResponse<IReadOnlyList<LiveSupportCannedReplyDto>>.Ok(await _service.GetStaffCannedRepliesAsync(UserId(), ct)));
+
+    [HttpPut("canned-replies")]
+    public async Task<IActionResult> UpdateCannedReplies(UpdateStaffCannedRepliesRequest request, CancellationToken ct)
+    {
+        try { await _service.UpdateStaffCannedRepliesAsync(UserId(), request.Replies, ct); return Ok(ApiResponse.Ok("تم حفظ ردودك الثابتة.")); }
+        catch (LiveSupportException ex) { return BadRequest(ApiResponse<object>.Fail(ex.Message, [ex.Code])); }
+    }
+
     [HttpPost("conversations/{conversationId:guid}/messages")]
     public async Task<IActionResult> Send(Guid conversationId, SendMessageRequest request, CancellationToken ct)
     {
-        try { return StatusCode(StatusCodes.Status201Created, ApiResponse<LiveSupportSendResultDto>.Ok(await _service.SendStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.Content ?? string.Empty, ct))); }
+        try
+        {
+            if (!request.AttachmentId.HasValue && request.Type != LiveSupportMessageType.Text)
+                return UnprocessableEntity(ApiResponse<object>.Fail("نوع الرسالة غير مدعوم بدون مرفق.", ["VALIDATION_ERROR"]));
+            var result = request.AttachmentId.HasValue
+                ? await _service.SendStaffAttachmentMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.AttachmentId.Value, request.Content, request.Type, ct)
+                : await _service.SendStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.Content ?? string.Empty, request.ReplyToMessageId, ct);
+            return StatusCode(StatusCodes.Status201Created, ApiResponse<LiveSupportSendResultDto>.Ok(result));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpPost("conversations/{conversationId:guid}/whatsapp-template")]
+    public async Task<IActionResult> SendWhatsAppTemplate(Guid conversationId, SendLiveSupportWhatsAppTemplateRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var command = new SendLiveSupportWhatsAppTemplateCommand(UserId(), User.IsInRole("Admin"), conversationId, request);
+            return StatusCode(StatusCodes.Status201Created, ApiResponse<LiveSupportSendResultDto>.Ok(await _service.SendStaffWhatsAppTemplateAsync(command, ct)));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpPatch("conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> UpdateMessage(Guid conversationId, Guid messageId, UpdateLiveSupportMessageDto request, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.UpdateStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, messageId, request.Content, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpDelete("conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> DeleteMessage(Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.DeleteStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, messageId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpPost("conversations/{conversationId:guid}/attachments")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> Upload(Guid conversationId, [FromForm] IFormFile file, CancellationToken ct)
+    {
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            return StatusCode(201, ApiResponse<LiveSupportAttachmentDto>.Ok(await _service.SaveStaffAttachmentAsync(UserId(), User.IsInRole("Admin"), conversationId, stream, file.FileName, file.ContentType, file.Length, ct)));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/attachments/{attachmentId:guid}")]
+    public async Task<IActionResult> Download(Guid conversationId, Guid attachmentId, CancellationToken ct)
+    {
+        try
+        {
+            var item = await _service.OpenStaffAttachmentAsync(UserId(), User.IsInRole("Admin"), conversationId, attachmentId, ct);
+            Response.Headers.ContentDisposition = $"inline; filename=\"{Uri.EscapeDataString(item.FileName)}\"";
+            return File(item.Content, item.ContentType, enableRangeProcessing: true);
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/whatsapp-thread/attachments/{attachmentId:guid}")]
+    public async Task<IActionResult> DownloadWhatsAppThreadAttachment(Guid conversationId, Guid attachmentId, CancellationToken ct)
+    {
+        try
+        {
+            var query = new LiveSupportStaffWhatsAppAttachmentQuery(UserId(), User.IsInRole("Admin"), conversationId, attachmentId);
+            var item = await _service.OpenStaffWhatsAppThreadAttachmentAsync(query, ct);
+            Response.Headers.ContentDisposition = $"inline; filename=\"{Uri.EscapeDataString(item.FileName)}\"";
+            return File(item.Content, item.ContentType, enableRangeProcessing: true);
+        }
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
@@ -34,6 +116,17 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     public async Task<IActionResult> Messages(Guid conversationId, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         try { return Ok(ApiResponse<IReadOnlyList<LiveSupportMessageDto>>.Ok(await _service.GetStaffMessagesAsync(UserId(), User.IsInRole("Admin"), conversationId, pageSize, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/whatsapp-thread/messages")]
+    public async Task<IActionResult> WhatsAppThreadMessages(Guid conversationId, [FromQuery] int pageSize = 50, [FromQuery] string? cursor = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var query = new LiveSupportStaffWhatsAppThreadQuery(UserId(), User.IsInRole("Admin"), conversationId, pageSize, cursor);
+            return Ok(ApiResponse<LiveSupportWhatsAppThreadPageDto>.Ok(await _service.GetStaffWhatsAppThreadAsync(query, ct)));
+        }
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
@@ -79,10 +172,38 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("conversations/{conversationId:guid}/student-history")]
+    public async Task<IActionResult> StudentHistory(Guid conversationId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<IReadOnlyList<LiveSupportStudentSupportHistoryDto>>.Ok(await _service.GetStudentSupportHistoryAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/student-history/{historyConversationId:guid}/messages")]
+    public async Task<IActionResult> StudentHistoryMessages(Guid conversationId, Guid historyConversationId, [FromQuery] int pageSize = 100, CancellationToken ct = default)
+    {
+        try { return Ok(ApiResponse<IReadOnlyList<LiveSupportMessageDto>>.Ok(await _service.GetStudentHistoryMessagesAsync(UserId(), User.IsInRole("Admin"), conversationId, historyConversationId, pageSize, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpGet("conversations/{conversationId:guid}/actions")]
     public async Task<IActionResult> ActionCatalog(Guid conversationId, CancellationToken ct)
     {
         try { return Ok(ApiResponse<IReadOnlyList<LiveSupportActionDefinitionDto>>.Ok(await _actions.GetCatalogAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/actions/context")]
+    public async Task<IActionResult> StudentActionContext(Guid conversationId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<JsonElement>.Ok(await _actions.GetStudentActionContextAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/actions/{actionKey}/draft")]
+    public async Task<IActionResult> ActionDraft(Guid conversationId, string actionKey, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<JsonElement>.Ok(await _actions.GetDraftAsync(UserId(), User.IsInRole("Admin"), conversationId, actionKey, ct))); }
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
@@ -95,10 +216,12 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     }
 
     private Guid UserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private IActionResult Error(LiveSupportException ex) => StatusCode(ex.Code == LiveSupportErrorCodes.Forbidden ? 403 : ex.Code == "NOT_FOUND" ? 404 : 409, ApiResponse<object>.Fail(ex.Message, [ex.Code]));
+    private IActionResult Error(LiveSupportException ex) => StatusCode(ex.Code is LiveSupportErrorCodes.Forbidden or LiveSupportErrorCodes.AudioStaffOnly ? 403 : ex.Code == "NOT_FOUND" ? 404 : ex.Code == "VALIDATION_ERROR" ? 422 : 409, ApiResponse<object>.Fail(ex.Message, [ex.Code]));
 }
 
-public sealed record CloseConversationRequest(string Reason);
+public sealed record UpdateStaffCannedRepliesRequest(IReadOnlyList<LiveSupportCannedReplyDto> Replies);
+
+public sealed record CloseConversationRequest(string? Reason = null);
 public sealed record TransferConversationRequest(Guid? TargetStaffUserId, string Reason);
 public sealed record ChangeStudentLinkRequest(Guid? StudentUserId, string Reason, long ExpectedVersion);
 public sealed record ExecuteLiveSupportActionRequest(string ConfirmationVersion, System.Text.Json.JsonElement Payload);

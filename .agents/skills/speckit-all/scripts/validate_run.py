@@ -49,8 +49,23 @@ def checked_line(text: str, label: str) -> bool:
     return bool(re.search(rf"^- \[x\] {escaped}", text, re.MULTILINE))
 
 
-def validate_achievements(root: Path) -> None:
-    text = require_file(root / "achievements.md")
+def feature_achievement_block(text: str, feature_name: str) -> str:
+    marker = f"**Feature**: `{feature_name}`"
+    marker_index = text.find(marker)
+    if marker_index == -1:
+        fail(f"achievements.md is missing the current feature block: {feature_name}")
+    block_start = text.rfind("## Current Speckit-All Run", 0, marker_index)
+    block_end = text.find("## Current Speckit-All Run", marker_index + len(marker))
+    if block_start == -1:
+        fail(f"achievements.md has no run heading for: {feature_name}")
+    return text[block_start:block_end if block_end != -1 else len(text)]
+
+
+def validate_achievements(root: Path, feature_name: str) -> None:
+    text = feature_achievement_block(
+        require_file(root / "achievements.md"),
+        feature_name,
+    )
     for phase in REQUIRED_PHASES:
         if not checked_line(text, phase):
             fail(f"achievements.md does not mark complete: {phase}")
@@ -100,7 +115,7 @@ def validate_tasks(tasks_text: str) -> None:
 
     clean_idx = tasks_text.find("clean-code-guard")
     test_idx = tasks_text.find("test-guard")
-    feature_tests_idx = tasks_text.lower().find("feature tests")
+    feature_tests_idx = tasks_text.lower().find("feature tests", test_idx)
     if clean_idx == -1:
         fail("tasks.md is missing a clean-code-guard tail task")
     if test_idx == -1:
@@ -186,7 +201,7 @@ def main() -> int:
     if not spec_dir.is_dir():
         fail(f"Spec directory does not exist: {spec_dir}")
 
-    validate_achievements(root)
+    validate_achievements(root, spec_dir.name)
     validate_plan_artifacts(root, spec_dir, args.require_contracts)
     print(f"speckit-all validation passed for {spec_dir}")
     return 0

@@ -1,0 +1,14 @@
+bind 127.0.0.1 __OVERLAY_ADDRESS__
+protected-mode yes
+port 26379
+daemonize no
+supervised systemd
+pidfile /run/redis/redis-sentinel.pid
+logfile ""
+dir /var/lib/redis
+requirepass __REDIS_PASSWORD__
+sentinel monitor massar-redis 10.77.0.11 6379 2
+sentinel auth-pass massar-redis __REDIS_PASSWORD__
+sentinel down-after-milliseconds massar-redis 5000
+sentinel failover-timeout massar-redis 30000
+sentinel parallel-syncs massar-redis 1

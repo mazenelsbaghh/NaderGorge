@@ -1,0 +1,62 @@
+using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Interfaces;
+
+namespace NaderGorge.API.BackgroundServices;
+
+public sealed class RechargeRequestExpiryBackgroundService(
+    IServiceScopeFactory scopes,
+    ILogger<RechargeRequestExpiryBackgroundService> logger) : BackgroundService
+{
+    private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(10);
+    private readonly Guid _ownerToken = Guid.NewGuid();
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("RechargeRequestExpiryBackgroundService started.");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                await ClusterLeaseRunner.TryRunAsync(
+                    scope.ServiceProvider,
+                    "recharge-request-expiry",
+                    _ownerToken,
+                    SweepInterval + TimeSpan.FromMinutes(2),
+                    static async (services, token) =>
+                    {
+                        var database = services.GetRequiredService<IAppDbContext>();
+                        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(database, token);
+                        var hasPendingEvidence = await database.RechargeRequests
+                            .AsNoTracking()
+                            .AnyAsync(request => request.Status == RechargeRequestStatus.Pending
+                                && request.ScreenshotUrl != null && request.ScreenshotUrl != ""
+                                && request.SenderPhoneNumber != ""
+                                && request.TeacherId != null,
+                                token);
+                        if (hasPendingEvidence)
+                        {
+                            var matcher = services.GetRequiredService<RechargeAutoMatchingService>();
+                            await matcher.ReconcilePendingAsync(token);
+                        }
+                    },
+                    stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to maintain pending recharge requests.");
+            }
+
+            await Task.Delay(SweepInterval, stoppingToken);
+        }
+
+        logger.LogInformation("RechargeRequestExpiryBackgroundService stopped.");
+    }
+}

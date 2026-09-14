@@ -9,5 +9,7 @@ public class TeacherAccount : BaseEntity
 
     public decimal TotalEarnings { get; set; }
     public decimal CurrentBalance { get; set; }
+    public decimal ReservedBalance { get; set; }
     public decimal CommissionRate { get; set; }
+    public long Version { get; set; }
 }

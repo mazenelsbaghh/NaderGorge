@@ -24,18 +24,31 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
             .ToListAsync(cancellationToken);
 
         EnsureDefault(settings, PlatformSettingKeys.VideoWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.YouTubeWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.BunnyWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
         EnsureDefault(settings, PlatformSettingKeys.MaxExtraWatchRequestsPerVideo, CachedPlatformSettings.Default.MaxExtraWatchRequestsPerVideo.ToString());
         EnsureDefault(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage.ToString("0.##"));
         EnsureDefault(settings, PlatformSettingKeys.PlatformName, CachedPlatformSettings.Default.PlatformName);
+        EnsureDefault(settings, ParentWhatsAppRecipients.SettingKey, ParentWhatsAppRecipients.DefaultPriority);
         EnsureDefault(settings, PlatformSettingKeys.SupportPhoneNumber, CachedPlatformSettings.Default.SupportPhoneNumber);
         EnsureDefault(settings, PlatformSettingKeys.SupportWhatsAppUrl, CachedPlatformSettings.Default.SupportWhatsAppUrl);
+        EnsureDefault(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.ShowSupportOutsideAccount, CachedPlatformSettings.Default.ShowSupportOutsideAccount.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.GuestSupportWhatsAppNumber, CachedPlatformSettings.Default.GuestSupportWhatsAppNumber);
         EnsureDefault(settings, PlatformSettingKeys.YouTubeChannelUrl, CachedPlatformSettings.Default.YouTubeChannelUrl);
         EnsureDefault(settings, PlatformSettingKeys.TelegramChannelUrl, CachedPlatformSettings.Default.TelegramChannelUrl);
         EnsureDefault(settings, PlatformSettingKeys.MaxActiveDevicesPerStudent, CachedPlatformSettings.Default.MaxActiveDevicesPerStudent.ToString());
         EnsureDefault(settings, PlatformSettingKeys.EnableWatermark, CachedPlatformSettings.Default.EnableWatermark.ToString().ToLower());
         EnsureDefault(settings, PlatformSettingKeys.WatermarkOpacity, CachedPlatformSettings.Default.WatermarkOpacity.ToString("0.##"));
+        foreach (var (key, value) in WatermarkDefaults)
+        {
+            EnsureDefault(settings, key, value);
+        }
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode.ToString().ToLower());
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage);
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateRequired, CachedPlatformSettings.Default.ParentAppUpdateRequired.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateUrl, CachedPlatformSettings.Default.ParentAppUpdateUrl);
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateMessage, CachedPlatformSettings.Default.ParentAppUpdateMessage);
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb.ToString("0.######"));
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb.ToString("0.######"));
         EnsureDefault(settings, PlatformSettingKeys.PlayerShadowTopOpacity, CachedPlatformSettings.Default.PlayerShadowTopOpacity.ToString("0.##"));
@@ -68,4 +81,29 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
             Value = value,
         });
     }
+
+    private static readonly (string Key, string Value)[] WatermarkDefaults =
+    [
+        (PlatformSettingKeys.WatermarkShowBrand, "true"),
+        (PlatformSettingKeys.WatermarkShowName, "true"),
+        (PlatformSettingKeys.WatermarkShowPhone, "true"),
+        (PlatformSettingKeys.WatermarkShowStudentId, "false"),
+        (PlatformSettingKeys.WatermarkShowCustom, "false"),
+        (PlatformSettingKeys.WatermarkBrandText, "Massar Academy"),
+        (PlatformSettingKeys.WatermarkCustomText, ""),
+        (PlatformSettingKeys.WatermarkBrandColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkNameColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkPhoneColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkStudentIdColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkCustomColor, "#ffffff"),
+        (PlatformSettingKeys.WatermarkFontSize, "18"),
+        (PlatformSettingKeys.WatermarkFontWeight, "700"),
+        (PlatformSettingKeys.WatermarkFontFamily, "Tajawal"),
+        (PlatformSettingKeys.WatermarkPosition, "top-left"),
+        (PlatformSettingKeys.WatermarkMoving, "true"),
+        (PlatformSettingKeys.WatermarkIntervalSeconds, "12"),
+        (PlatformSettingKeys.WatermarkBackgroundColor, "#000000"),
+        (PlatformSettingKeys.WatermarkBackgroundOpacity, "0"),
+        (PlatformSettingKeys.WatermarkTextShadow, "true"),
+    ];
 }

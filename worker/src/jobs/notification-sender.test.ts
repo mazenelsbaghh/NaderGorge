@@ -10,7 +10,7 @@ const originalFetch = globalThis.fetch;
 let poolQueries: any[] = [];
 let multicastSentPayloads: any[] = [];
 let fetchCalls: { url: string; body: any }[] = [];
-let mockDeviceTokens: string[] = ['token-123', 'token-456'];
+let mockDeviceTokens: Array<string | { DeviceToken: string; Platform?: string }> = ['token-123', 'token-456'];
 
 // Mock Pool.prototype.query
 Pool.prototype.query = (async (text: any, params?: any[]) => {
@@ -18,9 +18,7 @@ Pool.prototype.query = (async (text: any, params?: any[]) => {
   poolQueries.push({ text: sql, params });
 
   if (sql.includes('ParentDeviceTokens')) {
-    return {
-      rows: mockDeviceTokens.map(t => ({ DeviceToken: t }))
-    };
+    return { rows: mockDeviceTokens.map(t => typeof t === 'string' ? { DeviceToken: t } : t) };
   }
   if (sql.includes('users')) {
     return {
@@ -104,6 +102,40 @@ test('processParentPushNotification handles case when no tokens are found', asyn
   assert.strictEqual(multicastSentPayloads.length, 0);
 
   mockDeviceTokens = savedTokens;
+});
+
+test('processParentPushNotification never sends iOS APNs tokens through FCM', async () => {
+  const savedTokens = mockDeviceTokens;
+  const savedApnsEnvironment = process.env.APNS_ENVIRONMENT;
+  const savedApnsKeyId = process.env.APNS_KEY_ID;
+  const savedApnsTeamId = process.env.APNS_TEAM_ID;
+  const savedApnsPrivateKey = process.env.APNS_PRIVATE_KEY;
+  mockDeviceTokens = [{ DeviceToken: 'ios-apns-token', Platform: 'ios' }];
+  delete process.env.APNS_ENVIRONMENT;
+  delete process.env.APNS_KEY_ID;
+  delete process.env.APNS_TEAM_ID;
+  delete process.env.APNS_PRIVATE_KEY;
+  multicastSentPayloads = [];
+
+  try {
+    const res = await processParentPushNotification('ios-student', 'عنوان', 'نص', 'Warning');
+    assert.strictEqual(res.success, true);
+    assert.strictEqual(res.tokensCount, 1);
+    assert.strictEqual(res.apnsTokensCount, 1);
+    assert.strictEqual(res.apnsNotConfiguredCount, 1);
+    assert.strictEqual(res.fcmTokensCount, 0);
+    assert.strictEqual(multicastSentPayloads.length, 0);
+  } finally {
+    mockDeviceTokens = savedTokens;
+    if (savedApnsEnvironment === undefined) delete process.env.APNS_ENVIRONMENT;
+    else process.env.APNS_ENVIRONMENT = savedApnsEnvironment;
+    if (savedApnsKeyId === undefined) delete process.env.APNS_KEY_ID;
+    else process.env.APNS_KEY_ID = savedApnsKeyId;
+    if (savedApnsTeamId === undefined) delete process.env.APNS_TEAM_ID;
+    else process.env.APNS_TEAM_ID = savedApnsTeamId;
+    if (savedApnsPrivateKey === undefined) delete process.env.APNS_PRIVATE_KEY;
+    else process.env.APNS_PRIVATE_KEY = savedApnsPrivateKey;
+  }
 });
 
 test('processNotificationJob handles parent-push job', async () => {

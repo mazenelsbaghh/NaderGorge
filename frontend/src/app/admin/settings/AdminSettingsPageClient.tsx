@@ -1,28 +1,38 @@
 'use client';
 
+import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
+import { WhatsAppQrSettings } from '@/components/live-support/admin/WhatsAppQrSettings';
+import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
+import { watermarkDefaults } from '@/lib/video-watermark';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Save, 
-  Info, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  X, 
-  Activity, 
-  Phone, 
-  Globe, 
-  Play, 
+import {
+  Save,
+  Info,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Activity,
+  Phone,
+  Globe,
+  Play,
+  Send,
   MessageSquare,
   LockKeyhole,
   Check,
   AlertCircle,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronDown
 } from 'lucide-react';
-import { AdminShellChrome, ConfirmDialog } from '@/components/admin';
+import { AdminPage, ConfirmDialog } from '@/components/admin';
+import { translateRole } from '@/packages/brand/platform-identity';
 import { adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import { devConsole } from '@/utils/dev-console';
+import { BunnyLibraryManager } from '@/components/admin/BunnyLibraryManager';
+import { FacebookMessengerSettingsPanel } from '@/components/admin/FacebookMessengerSettingsPanel';
+import { parseBunnyVideoReference } from '@/lib/bunny-video-reference';
 
 interface RoleDto {
   id: string;
@@ -38,6 +48,10 @@ const PERMISSION_DEFINITIONS = [
   { key: 'content.manage', label: 'إدارة المحتوى والمحاضرات', desc: 'إضافة وتعديل وحذف الباقات، الدروس، الفيديوهات، والملفات' },
   { key: 'exams.manage', label: 'إدارة الامتحانات والأسئلة', desc: 'إنشاء وتعديل الامتحانات وبنوك الأسئلة وتصحيح المقالي' },
   { key: 'codes.manage', label: 'إدارة الأكواد والاشتراكات', desc: 'توليد الأكواد شحن الرصيد والاشتراكات وإدارة مجموعات الأكواد' },
+  { key: 'gifts.manage', label: 'إدارة الهدايا والوصول المجاني', desc: 'إصدار هدايا المحتوى والرصيد الترويجي ومراجعة الاستخدام وإلغاء المتبقي' },
+  { key: 'sales.manage', label: 'إدارة البيع والخصومات', desc: 'إنشاء كوبونات الخصم والأكواد المطبوعة وقواعد الاستهداف' },
+  { key: 'sales.templates.manage', label: 'تصميم قوالب الأكواد', desc: 'إدارة قوالب الطباعة البسيطة للـ QR والسيريال' },
+  { key: 'public_exams.manage', label: 'إدارة الامتحانات العامة', desc: 'نشر وتعطيل وتسعير الامتحانات المستقلة عن الحصص' },
   { key: 'watch_requests.manage', label: 'إدارة طلبات إعادة المشاهدة', desc: 'الموافقة أو الرفض على طلبات زيادة مرات مشاهدة الفيديوهات' },
   { key: 'comments.manage', label: 'إدارة تعليقات الدروس', desc: 'الرد على أسئلة الطلاب على الدروس وحذف التعليقات غير اللائقة' },
   { key: 'community.manage', label: 'إدارة مجتمع الطلاب', desc: 'نشر منشورات عامة في مجتمع المنصة وإدارتها' },
@@ -49,8 +63,9 @@ const PERMISSION_DEFINITIONS = [
   { key: 'payments.manage', label: 'مطابقة شحن رصيد الطلاب تلقائياً', desc: 'استلام وقراءة رسائل الـ SMS، شحن أرصدة الطلاب، ومعالجة الحالات المعلقة' },
   { key: 'media.manage', label: 'إدارة خط إنتاج ونشر المحتوى', desc: 'متابعة مراحل تصوير ومونتاج ورفع المحاضرات وجدولة النشر على السوشيال ميديا' },
   { key: 'finance.manage', label: 'الحسابات المالية للمدرسين والموظفين', desc: 'حساب أرباح وعمولات المدرسين وأكواد التفعيل وصرف رواتب الموظفين' },
-  { key: 'reports.manage', label: 'سجلات المراقبة والتقارير التشغيلية', desc: 'عرض الـ Audit logs، وإحصائيات أداء الموظفين، والمؤشرات العامة للمنصة' },
+  { key: 'reports.manage', label: 'مركز التقارير وسجل المراقبة', desc: 'إنشاء التقارير متعددة الفلاتر وتصديرها، وعرض مؤشرات وسجلات المنصة' },
   { key: 'live_support.manage', label: 'إدارة الدعم المباشر', desc: 'تسمح بإدارة الخدمة والسعات والجداول ولا تُدخل صاحب الدور في التوزيع' },
+  { key: 'whatsapp_campaigns.manage', label: 'إدارة حملات واتساب', desc: 'بناء جمهور بموافقات موثقة، إدارة تفضيلات التواصل، وتأكيد الإرسال؛ تظهر داخل صفحة الدعم لمن لديه صلاحيتا الدعم والحملات' },
   { key: 'live_support.route', label: 'استقبال محادثات الدعم', desc: 'يضيف أصحاب هذا الدور إلى توزيع المحادثات تلقائياً بسعة افتراضية، ويمكن تعديل كل موظف لاحقاً' }
 ];
 
@@ -68,7 +83,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/assistants',
     '/admin/admins',
     '/admin/teachers',
-    '/admin/finance'
+    '/admin/finance',
+    '/assistant/students'
   ],
   'content.manage': [
     '/admin/content',
@@ -76,29 +92,46 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/content/sections',
     '/admin/content/lessons',
     '/admin/subjects',
-    '/admin/forms'
+    '/admin/forms',
+    '/assistant/content'
   ],
   'exams.manage': [
     '/admin/questions',
     '/admin/content/exams',
-    '/admin/content/homework'
+    '/admin/content/homework',
+    '/assistant/questions'
   ],
   'codes.manage': [
-    '/admin/codes'
+    '/admin/codes',
+    '/assistant/codes'
+  ],
+  'gifts.manage': [
+    '/admin/gifts'
+  ],
+  'sales.manage': [
+    '/admin/sales'
+  ],
+  'sales.templates.manage': [
+    '/admin/codes/templates'
+  ],
+  'public_exams.manage': [
+    '/admin/public-exams'
   ],
   'watch_requests.manage': [
-    '/admin/watch-requests'
+    '/admin/watch-requests',
+    '/assistant/watch-requests'
   ],
   'comments.manage': [
-    '/admin/content',
-    '/admin/content/lessons'
+    '/admin/comments'
   ],
   'community.manage': [
-    '/admin/community'
+    '/admin/community',
+    '/assistant/community'
   ],
   'reports.manage': [
     '/admin/ai-monitor',
-    '/admin/reports'
+    '/admin/reports',
+    '/assistant/reports'
   ],
   'hr.manage': [
     '/admin/hr',
@@ -118,7 +151,19 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/assistant/crm'
   ],
   'payments.manage': [
-    '/admin/finance'
+    '/admin/wallets',
+    '/admin/recharge-verification',
+    '/admin/wallet-messages',
+    '/admin/recharge-shift-review',
+    '/admin/recharge-conflicts',
+    '/assistant/recharge-verification',
+    '/assistant/wallet-messages',
+    '/assistant/recharge-shift-review',
+    '/assistant/recharge-conflicts'
+  ],
+  'finance.manage': [
+    '/admin/finance',
+    '/admin/teacher-finance'
   ],
   'media.manage': [
     '/admin/media'
@@ -128,12 +173,17 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/live-support/ai',
     '/assistant/live-support'
   ],
+  'whatsapp_campaigns.manage': [],
   'live_support.route': [
     '/assistant/live-support'
   ]
 };
 
 const ADMIN_NAV_OPTIONS: NavOption[] = [
+  {
+    key: '/admin/gifts',
+    label: 'الهدايا والوصول المجاني'
+  },
   {
     key: '/admin/students',
     label: 'الطلاب',
@@ -182,7 +232,8 @@ const ADMIN_NAV_OPTIONS: NavOption[] = [
     key: '/admin/finance',
     label: 'المالية والرواتب',
     subItems: [
-      { key: '/admin/finance', label: 'الحسابات المالية والعمولات' }
+      { key: '/admin/finance', label: 'الرواتب وعمليات المالية العامة' },
+      { key: '/admin/teacher-finance', label: 'مركز مالية المدرسين والاتفاقات' }
     ]
   },
   {
@@ -213,7 +264,7 @@ const ADMIN_NAV_OPTIONS: NavOption[] = [
     label: 'التقارير والمراقبة',
     subItems: [
       { key: '/admin/ai-monitor', label: 'سجلات تحليل AI للفيديو' },
-      { key: '/admin/reports', label: 'سجلات الأمان والـ Audit Logs' }
+      { key: '/admin/reports', label: 'مركز التقارير' }
     ]
   }
 ];
@@ -235,9 +286,23 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
   },
   {
     key: '/assistant/content',
-    label: 'إدارة تعليقات الطلاب',
+    label: 'إدارة المحتوى التعليمي',
     subItems: [
-      { key: '/assistant/content', label: 'الرد على تعليقات ومناقشات الدروس' }
+      { key: '/assistant/content', label: 'إدارة باقات ودروس وملفات المحتوى التعليمي' }
+    ]
+  },
+  {
+    key: '/assistant/codes',
+    label: 'الأكواد',
+    subItems: [
+      { key: '/assistant/codes', label: 'إدارة مجموعات أكواد الوصول' }
+    ]
+  },
+  {
+    key: '/assistant/students',
+    label: 'إدارة الطلاب',
+    subItems: [
+      { key: '/assistant/students', label: 'البحث عن الطلاب وإدارة حساباتهم وبياناتهم' }
     ]
   },
   {
@@ -269,6 +334,41 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
+    key: '/assistant/recharge-verification',
+    label: 'مطابقة الشحن',
+    subItems: [
+      { key: '/assistant/recharge-verification', label: 'مراجعة ومطابقة طلبات شحن المحافظ' }
+    ]
+  },
+  {
+    key: '/assistant/wallet-messages',
+    label: 'رسائل المحافظ',
+    subItems: [
+      { key: '/assistant/wallet-messages', label: 'مراجعة رسائل التحويل الواردة لمحافظ الشحن' }
+    ]
+  },
+  {
+    key: '/assistant/recharge-shift-review',
+    label: 'مراجعة شحن الشيفت',
+    subItems: [
+      { key: '/assistant/recharge-shift-review', label: 'مراجعة المقبول يدويًا وآليًا وعكس التكرار' }
+    ]
+  },
+  {
+    key: '/assistant/recharge-conflicts',
+    label: 'تعارضات الشحن',
+    subItems: [
+      { key: '/assistant/recharge-conflicts', label: 'مراجعة ونقل رسائل التحويل المرتبطة بطلب غير صحيح' }
+    ]
+  },
+  {
+    key: '/assistant/reports',
+    label: 'مركز التقارير',
+    subItems: [
+      { key: '/assistant/reports', label: 'عرض تقارير الأداء والعمليات' }
+    ]
+  },
+  {
     key: '/assistant/live-support',
     label: 'الدعم المباشر',
     subItems: [
@@ -291,6 +391,14 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
+    key: '/assistant/payroll',
+    label: 'الراتب والطلبات المالية',
+    subItems: [
+      { key: '/assistant/payroll', label: 'عرض تفاصيل الراتب' },
+      { key: '/assistant/financial-requests', label: 'تقديم ومتابعة الطلبات المالية' }
+    ]
+  },
+  {
     key: '/assistant/notifications',
     label: 'الإشعارات والتنبيهات',
     subItems: [
@@ -300,25 +408,33 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
 ];
 
 export default function AdminSettingsPageClient() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'player' | 'roles'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles'>('settings');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Settings States
   const [settings, setSettings] = useState<Record<string, string>>({
+    ParentWhatsAppPhonePriority: defaultParentWhatsAppPriority,
     VideoWatchThresholdPercentage: '30',
+    YouTubeWatchThresholdPercentage: '30',
+    BunnyWatchThresholdPercentage: '30',
     MaxExtraWatchRequestsPerVideo: '1',
     HintPenaltyPercentage: '20',
     PlatformName: 'منصة مسار',
     SupportPhoneNumber: '',
     SupportWhatsAppUrl: '',
+    LiveSupportEnabled: 'false',
+    ShowSupportOutsideAccount: 'false',
+    GuestSupportWhatsAppNumber: '',
     YouTubeChannelUrl: '',
     TelegramChannelUrl: '',
     MaxActiveDevicesPerStudent: '2',
-    EnableWatermark: 'false',
-    WatermarkOpacity: '0.15',
+    ...watermarkDefaults,
     MaintenanceMode: 'false',
     MaintenanceMessage: 'المنصة في أعمال صيانة مجدولة. سنعود قريباً!',
+    ParentAppUpdateRequired: 'false',
+    ParentAppUpdateUrl: '',
+    ParentAppUpdateMessage: 'يوجد تحديث جديد لتطبيق ولي الأمر. برجاء تحديث التطبيق للمتابعة.',
     BunnyStreamStorageRateUsdPerGb: '0.01',
     BunnyStreamBandwidthRateUsdPerGb: '0.005',
     PlayerShadowTopOpacity: '0.70',
@@ -340,16 +456,17 @@ export default function AdminSettingsPageClient() {
   const [currentRole, setCurrentRole] = useState<RoleDto | null>(null);
   const [roleName, setRoleName] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-  const [allowedDomain, setAllowedDomain] = useState<string>('all');
+  const [allowedDomain, setAllowedDomain] = useState<string>('assistant');
   const [allowedNavbarItems, setAllowedNavbarItems] = useState<string[]>([]);
+  const [expandedNavPermissionGroups, setExpandedNavPermissionGroups] = useState<Record<string, boolean>>({});
   const [roleToDelete, setRoleToDelete] = useState<RoleDto | null>(null);
 
   const toggleParentNavbarItem = (item: NavOption) => {
     const subKeys = item.subItems ? item.subItems.map(s => s.key) : [];
     const allKeys = [item.key, ...subKeys];
-    
+
     const hasAnyChecked = allKeys.some(k => allowedNavbarItems.includes(k));
-    
+
     if (hasAnyChecked) {
       setAllowedNavbarItems(prev => prev.filter(k => !allKeys.includes(k)));
     } else {
@@ -363,7 +480,7 @@ export default function AdminSettingsPageClient() {
   const toggleSubNavbarItem = (subKey: string, parentKey: string) => {
     setAllowedNavbarItems(prev => {
       let next = prev.includes(subKey) ? prev.filter(k => k !== subKey) : [...prev, subKey];
-      
+
       const parentOption = (allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).find(o => o.key === parentKey);
       if (parentOption && parentOption.subItems) {
         const anySubChecked = parentOption.subItems.some(sub => next.includes(sub.key));
@@ -380,6 +497,7 @@ export default function AdminSettingsPageClient() {
   const handleDomainChange = (domain: string) => {
     setAllowedDomain(domain);
     setAllowedNavbarItems([]);
+    setExpandedNavPermissionGroups({});
   };
 
   const loadData = useCallback(async () => {
@@ -417,9 +535,15 @@ export default function AdminSettingsPageClient() {
   };
 
   const handleSaveSettings = async () => {
+    if (settings.ShowSupportOutsideAccount === 'true' && !/^20\d{10,13}$/.test(settings.GuestSupportWhatsAppNumber)) {
+      toast.error('أدخل رقم واتساب صحيحاً بصيغة دولية، مثال: 2010xxxxxxxx.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await adminService.updatePlatformSettings(settings);
+      const saved = await adminService.updatePlatformSettings(settings);
+      if (!saved.success) throw new Error(saved.message || 'تعذر حفظ الإعدادات.');
       toast.success('تم حفظ إعدادات المنصة بنجاح ✅');
     } catch (err) {
       devConsole.error(err);
@@ -434,13 +558,13 @@ export default function AdminSettingsPageClient() {
       setCurrentRole(role);
       setRoleName(role.name);
       setSelectedPermissions(role.permissions);
-      setAllowedDomain(role.allowedDomain || 'all');
+      setAllowedDomain(role.allowedDomain === 'admin' ? 'admin' : 'assistant');
       setAllowedNavbarItems(role.allowedNavbarItems || []);
     } else {
       setCurrentRole(null);
       setRoleName('');
       setSelectedPermissions([]);
-      setAllowedDomain('all');
+      setAllowedDomain('assistant');
       setAllowedNavbarItems([]);
     }
     setIsRoleModalOpen(true);
@@ -498,7 +622,7 @@ export default function AdminSettingsPageClient() {
 
   const getNavbarItemsForPermissions = (perms: string[], domain: string): string[] => {
     const keysSet = new Set<string>();
-    
+
     if (domain === 'assistant') {
       keysSet.add('/assistant/dashboard');
       keysSet.add('/assistant/notifications');
@@ -510,7 +634,7 @@ export default function AdminSettingsPageClient() {
         mapped.forEach(k => {
           if (domain === 'admin' && k.startsWith('/admin')) {
             keysSet.add(k);
-          } else if (domain === 'assistant') {
+          } else if (domain === 'assistant' && k.startsWith('/assistant')) {
             keysSet.add(k);
           }
         });
@@ -531,23 +655,32 @@ export default function AdminSettingsPageClient() {
   };
 
   return (
-    <AdminShellChrome
-      activePath="/admin"
+    <AdminPage
+      activePath="/admin/settings"
       sectionLabel="الإعدادات"
       pageTitle="الإعدادات والصلاحيات"
       subtitle="تخصيص عام للمنصة وإدارة أدوار المساعدين وصلاحياتهم الفنية."
     >
       {/* Dynamic Tab Switcher */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-xl">
+      <div className="mb-8 w-full overflow-x-auto pb-1">
+        <div className="mx-auto flex w-max min-w-max gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-md">
           <button
             onClick={() => setActiveTab('settings')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'settings'
-              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
               : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
             }`}
           >
             إعدادات المنصة
+          </button>
+          <button
+            onClick={() => setActiveTab('bunny-libraries')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'bunny-libraries'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            مكتبات Bunny
           </button>
           <button
             onClick={() => setActiveTab('player')}
@@ -561,11 +694,29 @@ export default function AdminSettingsPageClient() {
           <button
             onClick={() => setActiveTab('roles')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'roles'
-              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
               : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
             }`}
           >
             الأدوار والصلاحيات
+          </button>
+          <button
+            onClick={() => setActiveTab('whatsapp')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'whatsapp'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            WhatsApp
+          </button>
+          <button
+            onClick={() => setActiveTab('messenger')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'messenger'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-sm'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            Facebook Messenger
           </button>
         </div>
       </div>
@@ -588,12 +739,13 @@ export default function AdminSettingsPageClient() {
                 dir="rtl"
               >
                 {/* Panel 1: General & Communication */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Globe className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات عامة وتواصل الدعم</span>
                   </h2>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {([['YouTubeWatchThresholdPercentage', 'نسبة احتساب مشاهدة YouTube'], ['BunnyWatchThresholdPercentage', 'نسبة احتساب مشاهدة Bunny']] as const).map(([key, label]) => <div key={key} className="space-y-2 text-right"><label className="block text-sm font-bold text-[var(--admin-text)]">{label}</label><div className="relative"><input type="number" min="1" max="100" value={settings[key]} onChange={(e) => handleSettingChange(key, e.target.value)} className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 pl-10 pr-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] font-mono text-left" dir="ltr"/><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]">%</span></div></div>)}
                     <div className="space-y-2 text-right">
                       <label className="block text-sm font-bold text-[var(--admin-text)]">اسم المنصة</label>
                       <input
@@ -632,6 +784,34 @@ export default function AdminSettingsPageClient() {
                         <MessageSquare className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--admin-muted)]" />
                       </div>
                     </div>
+                    <div className="sm:col-span-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-black text-[var(--admin-text)]">الدعم المباشر للحسابات المسجلة</p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-[var(--admin-muted)]">عند تفعيله يظهر زر المحادثة للطلاب بعد تسجيل الدخول فقط.</p>
+                        </div>
+                        <button type="button" role="switch" aria-checked={settings.LiveSupportEnabled === 'true'} onClick={() => handleSettingChange('LiveSupportEnabled', settings.LiveSupportEnabled === 'true' ? 'false' : 'true')} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${settings.LiveSupportEnabled === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'}`}>
+                          <span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${settings.LiveSupportEnabled === 'true' ? 'translate-x-1' : 'translate-x-6'}`} />
+                        </button>
+                      </div>
+                      <div className="border-t border-[var(--admin-border)] pt-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-black text-[var(--admin-text)]">زر واتساب للزوار</p>
+                            <p className="mt-1 text-xs font-semibold leading-5 text-[var(--admin-muted)]">يخفي زر الدعم المباشر عن غير المسجلين، ويعرض بدلًا منه زر واتساب بالرقم المحدد هنا.</p>
+                          </div>
+                          <button type="button" role="switch" aria-checked={settings.ShowSupportOutsideAccount === 'true'} onClick={() => handleSettingChange('ShowSupportOutsideAccount', settings.ShowSupportOutsideAccount === 'true' ? 'false' : 'true')} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${settings.ShowSupportOutsideAccount === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'}`}>
+                            <span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${settings.ShowSupportOutsideAccount === 'true' ? 'translate-x-1' : 'translate-x-6'}`} />
+                          </button>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                          <label className="block text-sm font-bold text-[var(--admin-text)]">رقم واتساب للزوار</label>
+                          <input type="tel" value={settings.GuestSupportWhatsAppNumber} onChange={(e) => handleSettingChange('GuestSupportWhatsAppNumber', e.target.value.replace(/\D/g, '').slice(0, 15))} placeholder="2010xxxxxxxx" dir="ltr" className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 font-mono text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60" />
+                          <p className="text-xs font-semibold text-[var(--admin-muted)]">اكتب الرقم بصيغة دولية، مثال: 2010xxxxxxxx، ثم فعّل الزر أعلاه واحفظ الإعدادات. يظهر التغيير فورًا للزوار الجدد.</p>
+                          {settings.GuestSupportWhatsAppNumber && <a href={`https://wa.me/${settings.GuestSupportWhatsAppNumber.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" dir="ltr" className="inline-flex text-xs font-bold text-[var(--admin-primary)] underline underline-offset-4">wa.me/{settings.GuestSupportWhatsAppNumber.replace(/\D/g, '')}</a>}
+                        </div>
+                      </div>
+                    </div>
                     <div className="space-y-2 text-right">
                       <label className="block text-sm font-bold text-[var(--admin-text)]">قناة اليوتيوب</label>
                       <div className="relative">
@@ -664,7 +844,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 2: Video Settings & Device Limits */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <LockKeyhole className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>الحماية وإعدادات الفيديو</span>
@@ -705,6 +885,8 @@ export default function AdminSettingsPageClient() {
                         <button
                           type="button"
                           onClick={() => handleSettingChange('EnableWatermark', settings.EnableWatermark === 'true' ? 'false' : 'true')}
+                          aria-label="تفعيل العلامة المائية"
+                          aria-pressed={settings.EnableWatermark === 'true'}
                           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                             settings.EnableWatermark === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)] dark:bg-[var(--admin-card-strong)]'
                           }`}
@@ -721,23 +903,7 @@ export default function AdminSettingsPageClient() {
                         </div>
                       </div>
 
-                      {settings.EnableWatermark === 'true' && (
-                        <div className="mt-4 space-y-2 pt-3 border-t border-[var(--admin-border)]">
-                          <div className="flex justify-between text-xs text-[var(--admin-text)] font-semibold">
-                            <span className="font-mono">{Math.round(parseFloat(settings.WatermarkOpacity) * 100)}%</span>
-                            <span>شفافية العلامة المائية</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.05"
-                            max="1.0"
-                            step="0.05"
-                            value={settings.WatermarkOpacity}
-                            onChange={(e) => handleSettingChange('WatermarkOpacity', e.target.value)}
-                            className="w-full accent-[var(--admin-primary)]"
-                          />
-                        </div>
-                      )}
+                      <WatermarkSettingsEditor settings={settings} onChange={handleSettingChange} />
                     </div>
 
                     <div className="space-y-2 text-right">
@@ -777,7 +943,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 3: Watch Requests & Hint Penalty */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Info className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات الطلبات والمكافآت</span>
@@ -816,7 +982,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 4: Maintenance Mode */}
-                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
@@ -836,7 +1002,7 @@ export default function AdminSettingsPageClient() {
                       <span>وضع الصيانة</span>
                     </h2>
                   </div>
-                  
+
                   {settings.MaintenanceMode === 'true' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -847,7 +1013,7 @@ export default function AdminSettingsPageClient() {
                         <AlertCircle className="w-5 h-5 shrink-0" />
                         <span>عند تفعيل وضع الصيانة، سيتم توجيه جميع الطلاب تلقائياً إلى صفحة الصيانة الفورية بشكل كامل ومنع وصولهم لأي محتوى دراسي.</span>
                       </div>
-                      
+
                       <div className="space-y-2 text-right">
                         <label className="block text-sm font-bold text-[var(--admin-text)]">رسالة وضع الصيانة للطلاب</label>
                         <textarea
@@ -862,12 +1028,66 @@ export default function AdminSettingsPageClient() {
                   )}
                 </div>
 
+                {/* Panel 5: Parent App Update Gate */}
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 sm:p-8 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => handleSettingChange('ParentAppUpdateRequired', settings.ParentAppUpdateRequired === 'true' ? 'false' : 'true')}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        settings.ParentAppUpdateRequired === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)] dark:bg-[var(--admin-card-strong)]'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          settings.ParentAppUpdateRequired === 'true' ? '-translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-[var(--admin-primary)]" />
+                      <span>تحديث تطبيق ولي الأمر</span>
+                    </h2>
+                  </div>
+
+                  {settings.ParentAppUpdateRequired === 'true' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-4 pt-4 border-t border-[var(--admin-border)]"
+                    >
+                      <div className="space-y-2 text-right">
+                        <label className="block text-sm font-bold text-[var(--admin-text)]">رابط النسخة الجديدة</label>
+                        <input
+                          type="url"
+                          value={settings.ParentAppUpdateUrl}
+                          onChange={(e) => handleSettingChange('ParentAppUpdateUrl', e.target.value)}
+                          className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 px-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] text-left font-mono"
+                          placeholder="https://..."
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div className="space-y-2 text-right">
+                        <label className="block text-sm font-bold text-[var(--admin-text)]">رسالة تظهر في تطبيق ولي الأمر</label>
+                        <textarea
+                          rows={3}
+                          value={settings.ParentAppUpdateMessage}
+                          onChange={(e) => handleSettingChange('ParentAppUpdateMessage', e.target.value)}
+                          className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 px-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] resize-none"
+                          placeholder="اكتب الرسالة التي تظهر قبل زر اذهب للتحديث..."
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
                 {/* Save Button */}
                 <div className="flex justify-end pt-4">
                   <button
                     onClick={handleSaveSettings}
                     disabled={isSaving}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-[var(--admin-primary)] text-white font-bold rounded-2xl hover:bg-[var(--admin-primary-strong)] transition-all shadow-[0_4px_15px_var(--admin-shadow)] disabled:opacity-50"
+                    className="flex items-center gap-2 px-8 py-3.5 bg-[var(--admin-primary)] text-white font-bold rounded-2xl hover:bg-[var(--admin-primary-strong)] transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-[0_4px_15px_var(--admin-shadow)] disabled:opacity-50"
                   >
                     {isSaving ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -877,6 +1097,16 @@ export default function AdminSettingsPageClient() {
                     <span>{isSaving ? 'جاري حفظ التغييرات...' : 'حفظ الإعدادات الفنية'}</span>
                   </button>
                 </div>
+              </motion.div>
+            ) : activeTab === 'bunny-libraries' ? (
+              <motion.div
+                key="bunny-libraries-tab"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.2 }}
+              >
+                <BunnyLibraryManager />
               </motion.div>
             ) : activeTab === 'player' ? (
               <motion.div
@@ -900,7 +1130,7 @@ export default function AdminSettingsPageClient() {
                         <select value={previewProvider} onChange={(event) => { setPreviewProvider(event.target.value as 'youtube' | 'bunny'); setPreviewVideo(''); }} className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-3 font-bold text-[var(--admin-text)]">
                           <option value="youtube">YouTube</option><option value="bunny">Bunny</option>
                         </select>
-                        <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'Bunny Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                        <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'رابط Bunny الكامل أو Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
                       </div>
                       <p className="text-xs text-[var(--admin-muted)]">انسخ رابط أو معرّف أي فيديو موجود. المعاينة لا تُحسب مشاهدة ولا تغيّر رصيد أي طالب.</p>
                       <PlayerPreview provider={previewProvider} value={previewVideo} settings={settings} />
@@ -915,7 +1145,7 @@ export default function AdminSettingsPageClient() {
                       <RangeSettingPercentage label="نقطة التعتيم الكامل للظل السفلي" value={settings.PlayerShadowBottomSolid} onChange={(value) => handleSettingChange('PlayerShadowBottomSolid', value)} />
                       <NumberSetting label="اختفاء الظل في YouTube بعد" value={settings.YouTubePlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('YouTubePlayerShadowHideDelaySeconds', value)} />
                       <NumberSetting label="اختفاء الظل في Bunny بعد" value={settings.BunnyPlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('BunnyPlayerShadowHideDelaySeconds', value)} />
-                      
+
                       <div className="space-y-3 pt-3 border-t border-[var(--admin-border)]">
                         <span className="block text-sm font-bold text-[var(--admin-text)]">تفعيل الظل على المزودين:</span>
                         <div className="grid grid-cols-2 gap-2 text-right">
@@ -926,7 +1156,7 @@ export default function AdminSettingsPageClient() {
                               .map(p => p.trim())
                               .filter(Boolean);
                             const isChecked = enabledProviders.includes(prov);
-                            
+
                             const labelMap: Record<string, string> = {
                               'youtube': 'YouTube',
                               'bunny': 'Bunny Stream',
@@ -967,6 +1197,23 @@ export default function AdminSettingsPageClient() {
                 </section>
                 <div className="flex justify-end"><button onClick={handleSaveSettings} disabled={isSaving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-7 font-bold text-white disabled:opacity-50"><Save size={18}/>{isSaving ? 'جاري الحفظ...' : 'حفظ إعدادات المشغل'}</button></div>
               </motion.div>
+            ) : activeTab === 'whatsapp' ? (
+              <div className="space-y-6">
+                <ParentWhatsAppPrioritySettings value={settings.ParentWhatsAppPhonePriority} onChange={priority => handleSettingChange('ParentWhatsAppPhonePriority', priority)} disabled={isSaving} />
+                <div className="flex justify-end"><button type="button" onClick={handleSaveSettings} disabled={isSaving} className="admin-btn-primary min-h-11 px-5">{isSaving ? 'جاري الحفظ...' : 'حفظ ترتيب أرقام ولي الأمر'}</button></div>
+                <WhatsAppQrSettings />
+                <WhatsAppSettingsTab />
+              </div>
+            ) : activeTab === 'messenger' ? (
+              <motion.div
+                key="messenger-tab"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+              >
+                <FacebookMessengerSettingsPanel />
+              </motion.div>
             ) : (
               <motion.div
                 key="roles-tab"
@@ -985,7 +1232,7 @@ export default function AdminSettingsPageClient() {
                   </div>
                   <button
                     onClick={() => handleOpenRoleModal(null)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--admin-primary)] text-white font-bold rounded-full hover:bg-[var(--admin-primary-strong)] transition-all shadow-[0_4px_15px_var(--admin-shadow)]"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--admin-primary)] text-white font-bold rounded-full hover:bg-[var(--admin-primary-strong)] transition-[color,background-color,border-color,opacity,transform,box-shadow] shadow-[0_4px_15px_var(--admin-shadow)]"
                   >
                     <Plus className="w-4 h-4" />
                     <span>إضافة دور جديد</span>
@@ -997,7 +1244,7 @@ export default function AdminSettingsPageClient() {
                   {roles.map((role) => {
                     const isSystemRole = role.name === 'Admin' || role.name === 'Student' || role.name === 'Teacher';
                     return (
-                      <div 
+                      <div
                         key={role.id}
                         className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden"
                       >
@@ -1013,8 +1260,8 @@ export default function AdminSettingsPageClient() {
                               </span>
                             )}
                             <div>
-                              <h4 className="text-base font-extrabold text-[var(--admin-text)]">{role.name}</h4>
-                              <span className="text-xs text-[var(--admin-muted)]">النوع في قاعدة البيانات: {role.type}</span>
+                              <h4 className="text-base font-extrabold text-[var(--admin-text)]">{translateRole(role.name)}</h4>
+                              <span className="text-xs text-[var(--admin-muted)]">النوع في قاعدة البيانات: {translateRole(role.type)}</span>
                             </div>
                           </div>
 
@@ -1098,7 +1345,7 @@ export default function AdminSettingsPageClient() {
                 </button>
                 <div>
                   <h3 className="text-lg font-black text-[var(--admin-text)]">
-                    {currentRole ? `تعديل صلاحيات الدور: ${currentRole.name}` : 'إضافة دور فني جديد'}
+                    {currentRole ? `تعديل صلاحيات الدور: ${translateRole(currentRole.name)}` : 'إضافة دور فني جديد'}
                   </h3>
                   <p className="text-xs text-[var(--admin-muted)]">حدد اسم الدور وصلاحياته الفنية التي يحق له تنفيذها.</p>
                 </div>
@@ -1124,29 +1371,32 @@ export default function AdminSettingsPageClient() {
                     onChange={(e) => handleDomainChange(e.target.value)}
                     className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 px-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] text-right"
                   >
-                    <option value="all">كل الواجهات (All surfaces)</option>
                     <option value="admin">بوابة المدير (Admin portal)</option>
                     <option value="assistant">بوابة المساعد (Assistant portal)</option>
-                    <option value="teacher">بوابة المعلم (Teacher portal)</option>
-                    <option value="student">بوابة الطالب (Student portal)</option>
                   </select>
                 </div>
 
                 {(allowedDomain === 'admin' || allowedDomain === 'assistant') && (
                   <div className="space-y-3">
-                    <label className="block text-sm font-bold text-[var(--admin-text)]">
-                      تخصيص عناصر القائمة الجانبية والصفحات الداخلية (Navigation & Sub-Pages)
-                    </label>
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)]">
+                        الصفحات المتاحة للدور
+                      </label>
+                      <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
+                        فعّل المجموعة كاملة، أو افتحها واختر الصفحات التي يستطيع الموظف رؤيتها فقط.
+                      </p>
+                    </div>
                     <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-1 border border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card-soft)]/50">
                       {(allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).map((item) => {
                         const isParentChecked = allowedNavbarItems.includes(item.key) || (item.subItems && item.subItems.some(sub => allowedNavbarItems.includes(sub.key)));
+                        const selectedSubItems = item.subItems?.filter((sub) => allowedNavbarItems.includes(sub.key)).length ?? 0;
+                        const isExpanded = expandedNavPermissionGroups[item.key] ?? isParentChecked;
 
                         return (
                           <div key={item.key} className="space-y-2 border-b border-[var(--admin-border)]/50 pb-3 last:border-0 last:pb-0">
-                            {/* Parent item */}
                             <div
                               onClick={() => toggleParentNavbarItem(item)}
-                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none text-right ${
+                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
                                 isParentChecked
                                   ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)]/40 text-[var(--admin-primary)]'
                                   : 'bg-[var(--admin-card-strong)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
@@ -1157,11 +1407,29 @@ export default function AdminSettingsPageClient() {
                               }`}>
                                 {isParentChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span className="text-sm font-black">{item.label}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="block text-sm font-black">{item.label}</span>
+                                <span className="mt-0.5 block text-xs font-medium text-[var(--admin-muted)]">
+                                  {item.subItems?.length ? `${selectedSubItems} من ${item.subItems.length} صفحة مفعّلة` : 'صفحة واحدة'}
+                                </span>
+                              </div>
+                              {item.subItems && item.subItems.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setExpandedNavPermissionGroups((current) => ({ ...current, [item.key]: !isExpanded }));
+                                  }}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--admin-muted)] hover:bg-[var(--admin-card)] hover:text-[var(--admin-text)]"
+                                  aria-label={`${isExpanded ? 'إخفاء' : 'عرض'} صفحات ${item.label}`}
+                                  aria-expanded={isExpanded}
+                                >
+                                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                              )}
                             </div>
 
-                            {/* Sub items */}
-                            {item.subItems && (
+                            {item.subItems && isExpanded && (
                               <div className="mr-8 grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                                 {item.subItems.map((sub) => {
                                   const isSubChecked = allowedNavbarItems.includes(sub.key);
@@ -1169,7 +1437,7 @@ export default function AdminSettingsPageClient() {
                                     <div
                                       key={sub.key}
                                       onClick={() => toggleSubNavbarItem(sub.key, item.key)}
-                                      className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer select-none text-right ${
+                                      className={`flex items-center gap-2.5 p-2 rounded-lg border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
                                         isSubChecked
                                           ? 'bg-[var(--admin-primary-5)] border-[var(--admin-primary)]/20 text-[var(--admin-primary)]'
                                           : 'bg-[var(--admin-card)] border-[var(--admin-border)]/50 text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
@@ -1199,12 +1467,12 @@ export default function AdminSettingsPageClient() {
                     {PERMISSION_DEFINITIONS.map((perm) => {
                       const isChecked = selectedPermissions.includes(perm.key);
                       return (
-                        <div 
+                        <div
                           key={perm.key}
                           onClick={() => togglePermission(perm.key)}
-                          className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none text-right ${
-                            isChecked 
-                              ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]' 
+                          className={`flex items-start gap-3 p-3 rounded-2xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer select-none text-right ${
+                            isChecked
+                              ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]'
                               : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
                           }`}
                         >
@@ -1248,14 +1516,185 @@ export default function AdminSettingsPageClient() {
       <ConfirmDialog
         open={!!roleToDelete}
         title="حذف الدور المخصص؟"
-        description={`هل أنت متأكد من رغبتك في حذف دور "${roleToDelete?.name}" نهائياً؟ هذا الإجراء غير قابل للتراجع وسيؤدي لإزالة كافة الصلاحيات الممنوحة للمشرفين التابعين له.`}
+        description={`هل أنت متأكد من رغبتك في حذف دور "${roleToDelete ? translateRole(roleToDelete.name) : ''}" نهائياً؟ هذا الإجراء غير قابل للتراجع وسيؤدي لإزالة كافة الصلاحيات الممنوحة للمشرفين التابعين له.`}
         confirmLabel="نعم، حذف الدور"
         cancelLabel="إلغاء"
         variant="danger"
         onConfirm={handleDeleteRole}
         onCancel={() => setRoleToDelete(null)}
       />
-    </AdminShellChrome>
+    </AdminPage>
+  );
+}
+
+function WhatsAppSettingsTab() {
+  const [workflow, setWorkflow] = useState<'exam-solution'>('exam-solution');
+  const [attemptId, setAttemptId] = useState('');
+  const [recipientPhoneNumber, setRecipientPhoneNumber] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [lastResult, setLastResult] = useState<{
+    success: boolean;
+    message: string;
+    recipientPhoneNumber: string;
+    metaMessageId?: string | null;
+    preview?: {
+      parentName: string;
+      studentName: string;
+      score: string;
+      totalScore: string;
+      subject: string;
+      lecture: string;
+    } | null;
+  } | null>(null);
+
+  const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!attemptId.trim()) {
+      toast.error('اكتب معرف محاولة الامتحان أولاً');
+      return;
+    }
+
+    setIsSending(true);
+    setLastResult(null);
+    try {
+      const result = await adminService.sendWhatsAppExamResultMessage({
+        attemptId: attemptId.trim(),
+        recipientPhoneNumber: recipientPhoneNumber.trim() || undefined,
+      });
+
+      setLastResult(result);
+      toast.success('تم إرسال رسالة WhatsApp الخاصة بحل الامتحان');
+    } catch (err: any) {
+      devConsole.error(err);
+      const data = err?.response?.data;
+      setLastResult({
+        success: false,
+        message: data?.message || 'تعذر إرسال رسالة WhatsApp الخاصة بحل الامتحان',
+        recipientPhoneNumber: data?.recipientPhoneNumber || data?.preview?.recipientPhoneNumber || recipientPhoneNumber,
+        metaMessageId: null,
+        preview: data?.preview || null,
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <motion.div
+      key="whatsapp-tab"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-6"
+      dir="rtl"
+    >
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-7">
+        <div className="mb-6 flex items-start gap-3 text-right">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+            <MessageSquare size={20} />
+          </span>
+          <div>
+            <h2 className="text-lg font-black text-[var(--admin-text)]">WhatsApp Cloud API</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
+              إرسال رسائل واتساب الرسمية من بيانات المنصة. أول اختيار مفعّل هو نتيجة حل الامتحانات بقالب Meta المعتمد.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSend} className="space-y-6">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="space-y-2 text-right">
+              <label className="block text-sm font-bold text-[var(--admin-text)]">الاختيار</label>
+              <select
+                value={workflow}
+                onChange={(event) => setWorkflow(event.target.value as 'exam-solution')}
+                className="h-12 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 font-bold text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]"
+              >
+                <option value="exam-solution">حل الامتحانات</option>
+              </select>
+            </div>
+
+            <div className="space-y-2 text-right">
+              <label className="block text-sm font-bold text-[var(--admin-text)]">معرف محاولة الامتحان</label>
+              <input
+                type="text"
+                required
+                value={attemptId}
+                onChange={(event) => setAttemptId(event.target.value)}
+                placeholder="AttemptId"
+                dir="ltr"
+                className="h-12 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-5 rounded-2xl bg-[var(--admin-card-soft)] p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <div className="space-y-2 text-right">
+              <label className="block text-sm font-bold text-[var(--admin-text)]">رقم مستلم تجريبي</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={recipientPhoneNumber}
+                  onChange={(event) => setRecipientPhoneNumber(event.target.value)}
+                  placeholder="اتركه فاضي لاستخدام رقم ولي الأمر"
+                  dir="ltr"
+                  className="h-12 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 pr-10 text-left font-mono text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]"
+                />
+                <Phone className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              </div>
+            </div>
+            <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-sm leading-7 text-[var(--admin-muted)]">
+              <p className="font-bold text-[var(--admin-text)]">الداتا الديناميكية</p>
+              <p>ولي الأمر: رقم الأب ثم الرقم البديل ثم رقم الأم. الطالب: اسم الحساب. الدرجة: نتيجة المحاولة. المادة والمحاضرة: من الدرس المرتبط بالامتحان.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-[var(--admin-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-6 text-[var(--admin-muted)]">
+              الإرسال يستخدم القالب الافتراضي student_result_2 باللغة ar_EG من إعدادات البيئة.
+            </p>
+            <button
+              type="submit"
+              disabled={isSending}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-6 font-bold text-white transition hover:bg-[var(--admin-primary-strong)] disabled:opacity-50"
+            >
+              {isSending ? (
+                <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+              <span>{isSending ? 'جاري الإرسال...' : 'إرسال نتيجة الامتحان'}</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {lastResult && (
+        <section className={`rounded-2xl border p-5 text-right ${
+          lastResult.success
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200'
+            : 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-200'
+        }`}>
+          <div className="flex items-start gap-3">
+            {lastResult.success ? <Check className="mt-0.5 h-5 w-5 shrink-0" /> : <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />}
+            <div className="min-w-0">
+              <h3 className="font-black">{lastResult.success ? 'تم الإرسال' : 'فشل الإرسال'}</h3>
+              <p className="mt-1 text-sm leading-6">{lastResult.message}</p>
+              <p className="mt-2 break-all font-mono text-xs" dir="ltr">
+                to: {lastResult.recipientPhoneNumber}
+                {lastResult.metaMessageId ? ` | message: ${lastResult.metaMessageId}` : ''}
+              </p>
+              {lastResult.preview && (
+                <p className="mt-3 text-xs leading-6 text-current/80">
+                  {lastResult.preview.studentName} | {lastResult.preview.score}/{lastResult.preview.totalScore} | {lastResult.preview.subject} | {lastResult.preview.lecture}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+    </motion.div>
   );
 }
 
@@ -1279,8 +1718,14 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
     return () => window.clearTimeout(timeout);
   }, [provider, value, shadowDelaySeconds]);
 
-  const videoId = provider === 'youtube' ? extractYouTubeId(value) : value.trim();
-  const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}`;
+  const bunnyReference = provider === 'bunny' ? parseBunnyVideoReference(value) : undefined;
+  const videoId = provider === 'youtube'
+    ? extractYouTubeId(value)
+    : bunnyReference?.videoGuid ?? value.trim();
+  const libraryQuery = bunnyReference?.libraryId
+    ? `&libraryId=${encodeURIComponent(bunnyReference.libraryId)}`
+    : '';
+  const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}${libraryQuery}`;
   const top = Math.min(1, Math.max(0, Number(settings.PlayerShadowTopOpacity || .7)));
   const bottom = Math.min(1, Math.max(0, Number(settings.PlayerShadowBottomOpacity || .98)));
   const topCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowTopCoverage || 40)));
@@ -1304,7 +1749,7 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
 
   return <div className="relative aspect-video overflow-hidden rounded-xl bg-black" onMouseMove={() => setShadowVisible(true)}>
     {videoId ? <iframe key={src} src={src} title="معاينة مشغل الفيديو" className="absolute inset-0 size-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <div className="grid size-full place-items-center text-sm text-white/70">أدخل رابط الفيديو أو المعرّف للمعاينة</div>}
-    <AnimatePresence>{shadowVisible && isShadowEnabled && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[80]" style={{ background: backgroundGradient }} />}</AnimatePresence>
+    <AnimatePresence>{shadowVisible && isShadowEnabled && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[var(--z-overlay)]" style={{ background: backgroundGradient }} />}</AnimatePresence>
     <button type="button" onClick={() => setShadowVisible(true)} className="absolute bottom-3 right-3 z-10 rounded-lg bg-black/70 px-3 py-2 text-xs font-bold text-white">إظهار الظل مجددًا</button>
   </div>;
 }
@@ -1317,14 +1762,14 @@ function RangeSettingPercentage({ label, value, onChange }: { label: string; val
         <span>{label}</span>
         <span dir="ltr" className="font-mono">{numericValue}%</span>
       </span>
-      <input 
-        type="range" 
-        min="0" 
-        max="100" 
-        step="1" 
-        value={numericValue} 
-        onChange={(event) => onChange(event.target.value)} 
-        className="w-full accent-[var(--admin-primary)]" 
+      <input
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value={numericValue}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full accent-[var(--admin-primary)]"
       />
     </label>
   );

@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-24
+Auto-generated from all feature plans. Last updated: 2026-08-11
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -56,6 +56,24 @@ Auto-generated from all feature plans. Last updated: 2026-06-24
 - PostgreSQL for authoritative AI policy/knowledge/turn/action/verification state; Redis for queue delivery, distributed locks, cancellation hints, and SignalR backplane; no vector database in this phase (143-ai-live-support-agent)
 - C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac (146-ai-live-support-completion)
 - PostgreSQL authoritative state and append-only evidence; Redis queue delivery, recovery hints, routing locks, and SignalR backplane; no vector database (146-ai-live-support-completion)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, Next.js App Router, Axios, Zustand, Tailwind CSS, Lucide Reac (151-content-identity-and-types)
+- PostgreSQL 16 through EF Core migrations (151-content-identity-and-types)
+- C# 13 on .NET 9 backend; TypeScript 5.x strict on Next.js 16.2.7 / React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, Next.js App Router, Axios service layer, Zustand, Tailwind CSS, Lucide React. (159-student-academic-scope-enforcement)
+- PostgreSQL through EF Core migrations; no Redis or worker storage change required. (159-student-academic-scope-enforcement)
+- C# 13/.NET 9 backend; TypeScript 5.x/Next.js 16.2.7/React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9/Npgsql, SignalR 9, Redis backplane, Axios, Zustand, Tailwind CSS; evaluate `@tanstack/react-query` as the single query cache. (160-employee-realtime-refresh)
+- PostgreSQL for user authorization/version and durable outbox state; Redis for SignalR backplane/ephemeral coordination; browser memory/local auth storage for session bootstrap; no worker storage change. (160-employee-realtime-refresh)
+- C# 13 على .NET 9؛ TypeScript 5.9 strict على Next.js 16.2.7 وReact 19.2.4 + ASP.NET Core Web API، MediatR، FluentValidation، EF Core 9.0.6/Npgsql 9.0.4، SignalR 9 مع Redis backplane، Next.js App Router، Axios، Zustand، Tailwind CSS، Lucide Reac (164-comprehensive-hr-platform)
+- PostgreSQL 16 للبيانات الموثوقة؛ مخزن الملفات الحالي للمرفقات؛ Redis للتنسيق المؤقت وSignalR فقط وليس كمصدر HR (164-comprehensive-hr-platform)
+- C# 13/.NET 9; TypeScript 5.x, Next.js 16.2.7, React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9/Npgsql, Axios service layer, Zustand, Tailwind, Lucide (165-teacher-finance-center)
+- PostgreSQL 16; existing attachment storage; Bunny Stream API/snapshots (165-teacher-finance-center)
+- C# 13 على .NET 9؛ TypeScript 5.9 على Node.js 20؛ Next.js 16.2.7 وReact 19.2.4؛ Bash وPython 3 لأدوات التشغيل + ASP.NET Core، EF Core 9/Npgsql، SignalR Redis backplane، BullMQ 5.71/ioredis، Docker Compose، HAProxy، WireGuard، Patroni 4، etcd 3، PostgreSQL 16، Redis 7/Sentinel، GlusterFS 11.2، pgBackRest، cloudflared (166-three-node-production-cluster)
+- PostgreSQL 16 واحد منطقيًا؛ Redis HA؛ GlusterFS data-primary/data-standby/arbiter؛ repository خارجي S3-compatible مشفّر للنسخ (166-three-node-production-cluster)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 22.13+ + ASP.NET Core, MediatR, FluentValidation, EF Core (167-platform-speed-completion)
+- PostgreSQL 16 for authoritative application, security-version, (167-platform-speed-completion)
+- C# 13/.NET 9; TypeScript 5.9 strict; Next.js 16.2.7/React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9/Npgsql, Next.js App Router, Axios, Zustand, Tailwind, Lucide Reac (168-platform-financial-center)
+- PostgreSQL 16; existing private attachment storage; Redis only for existing coordination, not accounting authority (168-platform-financial-center)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Node.js `>=22.13`; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core Web API, MediatR 12.4.1, FluentValidation 11.11, EF Core 9.0.6/Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4; Next.js App Router, Axios, Zustand, Tailwind CSS 4, Lucide React, SignalR client 10; BullMQ 5.71.1, ioredis 5.10.1, `@google/genai` 1.47.0, undici 7.24.6 (169-admin-ai-agent)
+- PostgreSQL 16 is authoritative; Redis is delivery/coordination only; existing private attachment storage is used only through secure continuation flows; no vector database (169-admin-ai-agent)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -68,37 +86,36 @@ tests/
 
 ## Commands
 
-npm test && npm run lint
+make verify
+
+For focused frontend checks: `cd frontend && npm run lint && npm run build`.
+For Phase 1 browser smoke: start the backend in E2E mode per `docs/verification-contract.md`, then run `make verify-e2e`.
 
 ## Code Style
 
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
-- 146-ai-live-support-completion: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
-- 143-ai-live-support-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
-- 142-live-support-command-center: Added live support command-center planning for guest/student chat, attendance-gated routing, capacity queues, student actions, audit, and ratings.
-- 139-vertex-ai-worker-migration: Added TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6
+- 169-admin-ai-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js `>=22.13`; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core Web API, MediatR 12.4.1, FluentValidation 11.11, EF Core 9.0.6/Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4; Next.js App Router, Axios, Zustand, Tailwind CSS 4, Lucide React, SignalR client 10; BullMQ 5.71.1, ioredis 5.10.1, `@google/genai` 1.47.0, undici 7.24.6
+- 168-platform-financial-center: Added C# 13/.NET 9; TypeScript 5.9 strict; Next.js 16.2.7/React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9/Npgsql, Next.js App Router, Axios, Zustand, Tailwind, Lucide Reac
+- 167-platform-speed-completion: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 22.13+ + ASP.NET Core, MediatR, FluentValidation, EF Core
 
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- 129-comprehensive-e2e-testing: specs/129-comprehensive-e2e-testing/plan.md
-- 132-watch-requests-refinements-and-repurchases: specs/132-watch-requests-refinements-and-revocations/plan.md
-- 133-e2e-flow-subject-teacher-package: specs/133-e2e-flow-subject-teacher-package/plan.md
-- 134-package-partial-enrollment: specs/134-package-partial-enrollment/plan.md
-- 135-video-exam-locking: specs/135-video-exam-locking/plan.md
-- 136-audio-upload-restrictions-and-reviews: specs/136-audio-upload-restrictions-and-reviews/plan.md
-- 137-assessment-controls-media: specs/137-assessment-controls-media/plan.md
-- 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
-- 139-vertex-ai-worker-migration: specs/139-vertex-ai-worker-migration/plan.md
-- 140-fix-video-session-counting: specs/140-fix-video-session-counting/plan.md
-- 141-teacher-photo-refinement-and-bunny-stream: specs/141-teacher-photo-refinement-and-bunny-stream/plan.md
-- 142-live-support-command-center: specs/142-live-support-command-center/plan.md
-- 143-ai-live-support-agent: specs/143-ai-live-support-agent/plan.md
-- 144-ai-live-support-refinements: specs/144-ai-live-support-refinements/plan.md
-- 145-ai-live-support-actions: specs/145-ai-live-support-actions/plan.md
-- 146-ai-live-support-completion: specs/146-ai-live-support-completion/plan.md
-- 147-parent-tracking-app: specs/147-parent-tracking-app/plan.md
+Current implementation plan: `specs/169-admin-ai-agent/plan.md` (Standalone Admin-only AI workspace, bounded and redacted whole-platform reads, complete versioned Admin capability coverage, proposal-first execution, typed strong confirmation for high-risk actions, durable idempotency, private transcripts, and append-only evidence). Implementation was authorized by the owner through `/implement`; release remains fail-closed until every task and verification gate passes.
+Previous implementation plan: `specs/168-platform-financial-center/plan.md` (Unified EGP general ledger, treasury and cashboxes, platform expenses, cash/balance refunds, teacher liabilities, flexible budgets, historical reconstruction, reconciliation, period close, permissions, and Excel/PDF reporting).
+Completed production-cluster plan: `specs/166-three-node-production-cluster/plan.md` (Three-node application load distribution, one HA PostgreSQL database, shared Redis and files, immutable rolling releases, backup/restore evidence, Cloudflare Tunnel, and owner-accepted CPU-steal exception).
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->
+
+## Shared production source (mandatory before release)
+
+GitHub `mazenelsbaghh/NaderGorge`, branch `codex/production`, is the shared application source. Do not deploy an old local snapshot over server repairs. Never force-reset the user's working tree or push its historical artifacts.
+
+1. Read `make prod-source-status`. If the shared branch advanced or this working tree is dirty, use `make prod-source-integrate-preview SOURCE_WORKSPACE=/absolute/new/path` then `make prod-source-integrate SOURCE_WORKSPACE=/absolute/new/path`. This snapshots current source in a separate worktree and merges shared production. Resolve conflicts there; original files/index remain untouched.
+2. From the resolved, committed integration worktree, use the `prod-source-export-preview` and `prod-source-export` targets with another new absolute `SOURCE_WORKSPACE`. Only reviewed source is copied into the shared Git history. Review and run the applicable checks in this exported source repository.
+3. Publish with `prod-source-publish-preview` then `prod-source-publish`, supplying the exported commit's parent as `SOURCE_PARENT` and `SOURCE_BRANCH=codex/release/<unique-name>`. Publication is one forward commit under the shared rollout lock and compare-and-swap. If it rejects a stale parent, integrate and reverify; never force-push around it.
+4. Build, migrate and deploy from that exact published source repository through the existing production gates. Deployment rechecks the shared GitHub tip under the rollout lock. Dirty/unpublished/stale candidates are blocked. Evidence-bound application rollback remains available; reconcile shared source with a forward revert before resuming repairs.
+
+The supervisor publishes verified, approved repairs to `codex/repair/<incident-id>` and advances `codex/production` before rollout. The model never receives GitHub or cluster credentials. An external release with changed dependencies requires refreshing the verified repair image; it cannot silently reuse a stale cache.

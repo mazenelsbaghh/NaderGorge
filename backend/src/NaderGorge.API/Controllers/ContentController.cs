@@ -43,9 +43,9 @@ public class ContentController : ControllerBase
     }
 
     [HttpGet("packages/{packageId:guid}/terms")]
-    public async Task<IActionResult> GetTerms(Guid packageId)
+    public async Task<IActionResult> GetTerms(Guid packageId, [FromQuery] bool includeSystemContainers = false)
     {
-        var response = await _mediator.Send(new GetTermsQuery(packageId, GetUserId()));
+        var response = await _mediator.Send(new GetTermsQuery(packageId, GetUserId(), includeSystemContainers));
         return Ok(response);
     }
 
@@ -81,19 +81,29 @@ public class ContentController : ControllerBase
 
         if (!response.Success)
         {
-            if (response.Errors?.Contains("You do not have access") == true || response.Message?.Contains("You do not have access") == true)
-                return StatusCode(403, response);
+            var errors = response.Errors ?? [];
+            if (errors.Contains("CONTENT_ARCHIVED") ||
+                errors.Contains("ACADEMIC_SCOPE_DENIED") ||
+                errors.Contains("ACADEMIC_SCOPE_TARGET_UNSCOPED") ||
+                errors.Contains("You do not have access") ||
+                response.Message?.Contains("Unauthorized access", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, response);
+            }
 
-            return NotFound(response);
+            if (response.Message?.Contains("Lesson not found", StringComparison.OrdinalIgnoreCase) == true)
+                return NotFound(response);
+
+            return StatusCode(StatusCodes.Status500InternalServerError, response);
         }
 
         return Ok(response);
     }
 
     [HttpGet("lessons/{lessonId:guid}/comments")]
-    public async Task<IActionResult> GetLessonComments(Guid lessonId, [FromQuery] int offset = 0, [FromQuery] int limit = 50)
+    public async Task<IActionResult> GetLessonComments(Guid lessonId, [FromQuery] int offset = 0, [FromQuery] int limit = 50, [FromQuery] Guid? parentCommentId = null)
     {
-        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId(), offset, limit));
+        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId(), offset, limit, parentCommentId));
 
         if (!response.Success)
         {
@@ -150,7 +160,7 @@ public class ContentController : ControllerBase
     [HttpPost("lessons/{lessonId:guid}/comments")]
     public async Task<IActionResult> CreateLessonComment(Guid lessonId, [FromBody] CreateLessonCommentRequest request)
     {
-        var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body));
+        var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body, request.ParentCommentId));
 
         if (!response.Success)
         {
@@ -198,4 +208,4 @@ public class ContentController : ControllerBase
     }
 }
 
-public record CreateLessonCommentRequest(string Body);
+public record CreateLessonCommentRequest(string Body, Guid? ParentCommentId = null);

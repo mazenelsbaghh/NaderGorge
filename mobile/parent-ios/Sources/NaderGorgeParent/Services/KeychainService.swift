@@ -4,6 +4,7 @@ import Security
 public class KeychainService {
     public static var shared = KeychainService()
     private let account = "NaderGorgeParentProfiles"
+    private let activeStudentIdKey = "NaderGorgeParentActiveStudentId"
     private let service = "com.nadergorge.parent"
     
     // Fallback store for CLI test environments or missing entitlements
@@ -95,17 +96,34 @@ public class KeychainService {
             profiles.append(profile)
         }
         try saveProfiles(profiles)
+        setActiveStudentId(profile.studentId)
     }
     
-    public func removeProfile(studentId: UUID) throws {
+    public func removeProfile(studentId: String) throws {
         var profiles = loadProfiles()
         profiles.removeAll { $0.studentId == studentId }
         try saveProfiles(profiles)
+        if activeStudentId() == studentId {
+            setActiveStudentId(profiles.first?.studentId)
+        }
+    }
+
+    public func activeStudentId() -> String? {
+        UserDefaults.standard.string(forKey: activeStudentIdKey)
+    }
+
+    public func setActiveStudentId(_ studentId: String?) {
+        if let studentId {
+            UserDefaults.standard.set(studentId, forKey: activeStudentIdKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: activeStudentIdKey)
+        }
     }
     
     public func clear() throws {
         if useFallback {
             fallbackStore.removeAll()
+            setActiveStudentId(nil)
             return
         }
         
@@ -123,6 +141,7 @@ public class KeychainService {
         if status != errSecSuccess && status != errSecItemNotFound {
             throw KeychainError.secError(status)
         }
+        setActiveStudentId(nil)
     }
 }
 

@@ -20,6 +20,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
+    "public/vendor/playerjs/**",
+    "public/vendor/hlsjs/**",
     "next-env.d.ts",
     "test.js",
     "test-node-request.js",

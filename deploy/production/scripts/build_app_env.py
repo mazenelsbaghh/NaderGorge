@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Render the root-only production app environment without logging values."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import hashlib
+import sys
+from pathlib import Path
+from urllib.parse import quote
+
+
+COPIED_OPTIONAL_KEYS = (
+    "GEMINI_API_KEY",
+    "GOOGLE_CLOUD_VISION_API_KEY",
+    "BUNNY_STREAM_LIBRARY_ID",
+    "BUNNY_STREAM_API_KEY",
+    "BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES",
+    "BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON",
+    "BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON",
+    "TELEGRAM_API_ID",
+    "TELEGRAM_API_HASH",
+    "TELEGRAM_STRING_SESSION",
+    "TELEGRAM_DOWNLOADER_BOT",
+    "EVOLUTION_API_BASE_URL",
+    "EVOLUTION_API_KEY",
+    "EVOLUTION_API_INSTANCE",
+    "WHATSAPP_CLOUD_ACCESS_TOKEN",
+    "WHATSAPP_CLOUD_PHONE_NUMBER_ID",
+    "WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID",
+    "WHATSAPP_CLOUD_VERIFY_TOKEN",
+    "WHATSAPP_CLOUD_APP_SECRET",
+    "WHATSAPP_CLOUD_API_VERSION",
+    "FACEBOOK_MESSENGER_VERIFY_TOKEN",
+    "FACEBOOK_MESSENGER_APP_SECRET",
+    "FACEBOOK_MESSENGER_API_VERSION",
+    "FACEBOOK_MESSENGER_PAGE_1_ID",
+    "FACEBOOK_MESSENGER_PAGE_1_NAME",
+    "FACEBOOK_MESSENGER_PAGE_1_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_1_HUMAN_AGENT_ENABLED",
+    "FACEBOOK_MESSENGER_PAGE_2_ID",
+    "FACEBOOK_MESSENGER_PAGE_2_NAME",
+    "FACEBOOK_MESSENGER_PAGE_2_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_2_HUMAN_AGENT_ENABLED",
+    "FACEBOOK_MESSENGER_PAGE_3_ID",
+    "FACEBOOK_MESSENGER_PAGE_3_NAME",
+    "FACEBOOK_MESSENGER_PAGE_3_ACCESS_TOKEN",
+    "FACEBOOK_MESSENGER_PAGE_3_HUMAN_AGENT_ENABLED",
+    "APNS_KEY_ID",
+    "APNS_TEAM_ID",
+    "APNS_BUNDLE_ID",
+    "APNS_ENVIRONMENT",
+    "APNS_PRIVATE_KEY",
+    "APNS_PRIVATE_KEY_PATH",
+)
+
+
+def parse_env(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip().strip("'").strip('"')
+    return values
+
+
+def read_secret(directory: Path, name: str) -> str:
+    path = directory / name
+    value = path.read_text(encoding="utf-8").strip()
+    if not value or "\n" in value or "\r" in value:
+        raise ValueError(f"invalid secret file: {name}")
+    return value
+
+
+def safe_line(key: str, value: str) -> str:
+    if "\n" in value or "\r" in value:
+        raise ValueError(f"multiline environment value rejected: {key}")
+    return f"{key}={value}"
+
+
+def render(source: dict[str, str], secrets: Path) -> list[str]:
+    postgres_password = read_secret(secrets, "postgres-app")
+    redis_password = read_secret(secrets, "redis")
+    ai_callback_secret = read_secret(secrets, "ai-callback")
+    ai_media_relay_secret = read_secret(secrets, "ai-media-relay")
+    admin_ai_hmac = base64.b64encode(
+        hashlib.sha256(b"massar-admin-ai-hmac-v1\0" + ai_callback_secret.encode("utf-8")).digest()
+    ).decode("ascii")
+    values = {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "ASPNETCORE_URLS": "http://+:5245",
+        "ConnectionStrings__DefaultConnection": (
+            "Host=host.docker.internal;Port=6432;Database=massar_platform;"
+            f"Username=massar_app;Password={postgres_password};"
+            # Six pools can overlap briefly during a three-node rollout while
+            # live lesson traffic is reconnecting. Keep that worst case well
+            # below PostgreSQL's 300-connection ceiling and prune burst
+            # capacity promptly after traffic subsides.
+            "Pooling=true;Minimum Pool Size=0;Maximum Pool Size=30;"
+            "Connection Idle Lifetime=60;Connection Pruning Interval=10;Keepalive=30;Tcp Keepalive=true;"
+            "Timeout=15;Command Timeout=60"
+        ),
+        "Redis__Sentinels": "10.77.0.11:26379,10.77.0.12:26379,10.77.0.13:26379",
+        "Redis__SentinelServiceName": "massar-redis",
+        "Redis__Password": redis_password,
+        "REDIS_SENTINELS": "10.77.0.11:26379,10.77.0.12:26379,10.77.0.13:26379",
+        "REDIS_SENTINEL_MASTER": "massar-redis",
+        "REDIS_PASSWORD": redis_password,
+        "DB_CONNECTION_STRING": (
+            "postgresql://massar_app:"
+            f"{quote(postgres_password, safe='')}@host.docker.internal:6432/massar_platform"
+        ),
+        "JwtSettings__Secret": read_secret(secrets, "jwt"),
+        "JwtSettings__Issuer": "MassarPlatformAPI",
+        "JwtSettings__Audience": "MassarPlatformClients",
+        "JwtSettings__ExpirationMinutes": "60",
+        "JwtSettings__RefreshExpirationDays": "30",
+        "API_CALLBACK_SECRET": read_secret(secrets, "api-callback"),
+        "AI_CALLBACK_SECRET": ai_callback_secret,
+        "AI_MEDIA_RELAY_SECRET": ai_media_relay_secret,
+        "ADMIN_AI_ENABLED": "true",
+        "ADMIN_AI_HMAC_KEY": admin_ai_hmac,
+        "AdminAI__Enabled": "true",
+        "AdminAI__HmacKey": admin_ai_hmac,
+        "AdminAI__CallbackSecret": ai_callback_secret,
+        "WORKER_ADMIN_TOKEN": read_secret(secrets, "worker-admin"),
+        "WORKER_ADMIN_ENABLED": "true",
+        "ParentReports__SigningSecret": read_secret(secrets, "parent-signing"),
+        "CORS_ALLOWED_ORIGINS": (
+            "https://massar-academy.net,https://app.massar-academy.net,"
+            "https://admin.massar-academy.net,https://teacher.massar-academy.net,"
+            "https://staff.massar-academy.net"
+        ),
+        "Cors__AllowedOrigins": (
+            "https://massar-academy.net,https://app.massar-academy.net,"
+            "https://admin.massar-academy.net,https://teacher.massar-academy.net,"
+            "https://staff.massar-academy.net"
+        ),
+        "CookieSettings__Domain": ".massar-academy.net",
+        "ForwardedHeaders__KnownProxies": "172.29.0.10",
+        "SeedDefaults__Enabled": "false",
+        "SeedDemoCatalog__Enabled": "false",
+        "LANDING_PUBLIC_ORIGIN": "https://massar-academy.net",
+        "STUDENT_PUBLIC_ORIGIN": "https://app.massar-academy.net",
+        "ADMIN_PUBLIC_ORIGIN": "https://admin.massar-academy.net",
+        "TEACHER_PUBLIC_ORIGIN": "https://teacher.massar-academy.net",
+        "ASSISTANT_PUBLIC_ORIGIN": "https://staff.massar-academy.net",
+        "NEXT_PUBLIC_APP_DOMAIN": "massar-academy.net",
+        "NEXT_PUBLIC_API_URL": "https://api.massar-academy.net/api",
+        "NEXT_PUBLIC_BACKEND_URL": "https://api.massar-academy.net",
+        "NEXT_PUBLIC_WS_URL": "https://ws.massar-academy.net",
+        "FacebookMessenger__WebhookPublicUrl": (
+            "https://api.massar-academy.net/api/live-support/messenger/webhook"
+        ),
+        "INTERNAL_API_URL": "http://backend:5245/api",
+        "INTERNAL_BACKEND_URL": "http://backend:5245",
+        "WORKER_URL": "http://worker:3001",
+        "NODE_ENV": "production",
+        "TZ": "Africa/Cairo",
+    }
+    for key in COPIED_OPTIONAL_KEYS:
+        if source.get(key):
+            values[key] = source[key]
+    bunny_stream_keys = {
+        "BUNNY_STREAM_LIBRARY_ID": "BunnyStream__LibraryId",
+        "BUNNY_STREAM_API_KEY": "BunnyStream__ApiKey",
+        "BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES": "BunnyStream__TusUploadExpiryMinutes",
+    }
+    for source_key, application_key in bunny_stream_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
+    whatsapp_keys = {
+        "WHATSAPP_CLOUD_ACCESS_TOKEN": "WhatsAppCloudApi__AccessToken",
+        "WHATSAPP_CLOUD_PHONE_NUMBER_ID": "WhatsAppCloudApi__PhoneNumberId",
+        "WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID": "WhatsAppCloudApi__BusinessAccountId",
+        "WHATSAPP_CLOUD_VERIFY_TOKEN": "WhatsAppCloudApi__VerifyToken",
+        "WHATSAPP_CLOUD_APP_SECRET": "WhatsAppCloudApi__AppSecret",
+        "WHATSAPP_CLOUD_API_VERSION": "WhatsAppCloudApi__ApiVersion",
+    }
+    for source_key, application_key in whatsapp_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
+    messenger_keys = {
+        "FACEBOOK_MESSENGER_VERIFY_TOKEN": "FacebookMessenger__VerifyToken",
+        "FACEBOOK_MESSENGER_APP_SECRET": "FacebookMessenger__AppSecret",
+        "FACEBOOK_MESSENGER_API_VERSION": "FacebookMessenger__ApiVersion",
+        "FACEBOOK_MESSENGER_PAGE_1_ID": "FacebookMessenger__Pages__0__PageId",
+        "FACEBOOK_MESSENGER_PAGE_1_NAME": "FacebookMessenger__Pages__0__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_1_ACCESS_TOKEN": "FacebookMessenger__Pages__0__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_1_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__0__HumanAgentEnabled",
+        "FACEBOOK_MESSENGER_PAGE_2_ID": "FacebookMessenger__Pages__1__PageId",
+        "FACEBOOK_MESSENGER_PAGE_2_NAME": "FacebookMessenger__Pages__1__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_2_ACCESS_TOKEN": "FacebookMessenger__Pages__1__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_2_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__1__HumanAgentEnabled",
+        "FACEBOOK_MESSENGER_PAGE_3_ID": "FacebookMessenger__Pages__2__PageId",
+        "FACEBOOK_MESSENGER_PAGE_3_NAME": "FacebookMessenger__Pages__2__DisplayName",
+        "FACEBOOK_MESSENGER_PAGE_3_ACCESS_TOKEN": "FacebookMessenger__Pages__2__AccessToken",
+        "FACEBOOK_MESSENGER_PAGE_3_HUMAN_AGENT_ENABLED": "FacebookMessenger__Pages__2__HumanAgentEnabled",
+    }
+    for source_key, application_key in messenger_keys.items():
+        if source.get(source_key):
+            values[application_key] = source[source_key]
+    if not values.get("GEMINI_API_KEY"):
+        raise ValueError("GEMINI_API_KEY is required for the Gemini Developer API")
+    return [safe_line(key, value) for key, value in values.items()]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source-env", type=Path, required=True)
+    parser.add_argument("--secret-dir", type=Path, required=True)
+    args = parser.parse_args()
+    try:
+        print("\n".join(render(parse_env(args.source_env), args.secret_dir)))
+    except (OSError, ValueError) as exc:
+        print(f"app environment render failed: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

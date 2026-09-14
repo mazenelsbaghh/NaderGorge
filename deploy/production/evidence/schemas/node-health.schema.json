@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "nodeId", "observedAt", "live", "ready", "releaseId", "dependencies"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "nodeId": { "enum": ["node-1", "node-2", "node-3"] },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "live": { "type": "boolean" },
+    "ready": { "type": "boolean" },
+    "releaseId": { "type": "string" },
+    "dependencies": {
+      "type": "object",
+      "required": ["postgres", "redis", "files"],
+      "properties": {
+        "postgres": { "enum": ["healthy", "unhealthy", "unknown"] },
+        "redis": { "enum": ["healthy", "unhealthy", "unknown"] },
+        "files": { "enum": ["healthy", "unhealthy", "unknown"] }
+      }
+    },
+    "reason": { "type": ["string", "null"] }
+  }
+}

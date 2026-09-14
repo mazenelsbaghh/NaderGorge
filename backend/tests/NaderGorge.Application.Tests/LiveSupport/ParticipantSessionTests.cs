@@ -1,5 +1,3 @@
-using NaderGorge.Infrastructure.Services.LiveSupportAI;
-using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +13,6 @@ using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Commands;
-using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Commands;
 
@@ -68,6 +65,41 @@ public sealed class ParticipantSessionTests
 
         await service.SubmitRatingAsync(participant, conversation.Id, 5, "ممتاز", CancellationToken.None);
         await Assert.ThrowsAsync<LiveSupportException>(() => service.SubmitRatingAsync(participant, conversation.Id, 4, null, CancellationToken.None));
+        Assert.Equal(1, await db.LiveSupportRatings.CountAsync());
+    }
+
+    [Fact]
+    public async Task Staff_can_close_a_conversation_without_typing_a_reason()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var staffId = await SeedEligibleStaffAsync(db);
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01099999998");
+        var service = CreateService(db);
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, "إغلاق مباشر", null, CancellationToken.None);
+
+        var closed = await service.CloseAsync(staffId, false, conversation.Id, null, CancellationToken.None);
+        var stored = await db.LiveSupportConversations.SingleAsync(item => item.Id == conversation.Id);
+
+        Assert.Equal(LiveSupportConversationStatus.Closed, closed.Status);
+        Assert.Equal("أغلقها موظف الدعم", stored.CloseReason);
+    }
+
+    [Fact]
+    public async Task ParticipantEndedConversation_OffersAndAcceptsRating()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        await SeedEligibleStaffAsync(db);
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01077777777");
+        var service = CreateService(db);
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, "إنهاء من الطالب", null, CancellationToken.None);
+
+        var ended = await service.AbandonAsync(participant, conversation.Id, CancellationToken.None);
+
+        Assert.Equal(LiveSupportConversationStatus.Abandoned, ended.Status);
+        Assert.True(ended.CanRate);
+        await service.SubmitRatingAsync(participant, conversation.Id, 4, null, CancellationToken.None);
         Assert.Equal(1, await db.LiveSupportRatings.CountAsync());
     }
 
@@ -317,7 +349,7 @@ public sealed class ParticipantSessionTests
             ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
         }).Build();
         var protector = new LiveSupportAIDataProtector(config);
-        var payloadBytes = System.Text.Encoding.UTF8.GetBytes("{\"arguments\": {}}");
+        var payloadBytes = System.Text.Encoding.UTF8.GetBytes($"{{\"arguments\": {{\"lessonVideoId\": \"{Guid.NewGuid()}\"}}}}");
         var encrypted = protector.Protect(payloadBytes);
         var payloadHash = protector.ComputeKeyedDigest("pending-decision", payloadBytes);
 

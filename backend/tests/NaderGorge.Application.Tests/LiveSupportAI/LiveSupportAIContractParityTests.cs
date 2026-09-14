@@ -1,6 +1,7 @@
 using NaderGorge.Application.Features.LiveSupportAI.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
+using System.Text.Json;
 using NaderGorge.Infrastructure.Services.LiveSupportAI;
 
 namespace NaderGorge.Application.Tests.LiveSupportAI;
@@ -40,5 +41,15 @@ public sealed class LiveSupportAIContractParityTests
 
         Assert.All(allKeys, key => Assert.Matches("^[a-z0-9][a-z0-9._-]{1,99}$", key));
         Assert.Equal(allKeys.Length, allKeys.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void Invalid_action_arguments_are_rejected_before_a_pending_decision_can_be_created()
+    {
+        var action = JsonDocument.Parse("{\"key\":\"student.lesson.unlock\",\"arguments\":{}}").RootElement;
+        var decision = new LiveSupportAIWorkerDecisionDto("1", "propose_action", "اقتراح", action, null, null, null, null);
+
+        Assert.Throws<InvalidOperationException>(() => LiveSupportAITurnOrchestrator.ValidateDecision(
+            decision, LiveSupportAITurnOrchestrator.ComputeDecisionHash(decision)));
     }
 }

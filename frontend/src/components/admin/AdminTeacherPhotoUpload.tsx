@@ -7,6 +7,7 @@ import { adminService } from '@/services/admin-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 interface AdminTeacherPhotoUploadProps {
   teacherId?: string;
@@ -18,6 +19,8 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
   const [photos, setPhotos] = useState<{ id: string; url: string; isActive: boolean; uploadedAt: string }[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [photoPendingDeletion, setPhotoPendingDeletion] = useState<string | null>(null);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
   const inputId = `teacher-photos-${useId().replaceAll(':', '')}`;
 
   const resolvedTeacherId = teacherId || user?.id;
@@ -59,7 +62,8 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
     let failureCount = 0;
     for (const file of imageFiles) {
       try {
-        const base64 = await compressImage(file);
+        // Keep enough facial detail for identity-sensitive image generation.
+        const base64 = await compressImage(file, 1200, 1200, 0.9);
         const finalFileName = renameFileToMatchBase64(file.name, base64);
         const res = await adminService.uploadTeacherPhoto(resolvedTeacherId, base64, finalFileName);
         if (res.success) successCount++;
@@ -103,23 +107,42 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
 
   const handleDelete = async (photoId: string) => {
     if (!resolvedTeacherId) return;
-    if (!confirm('هل أنت متأكد من حذف هذه الصورة؟')) return;
+    setIsDeletingPhoto(true);
     try {
       const res = await adminService.deleteTeacherPhoto(resolvedTeacherId, photoId);
       if (res.success) {
         toast.success('تم حذف الصورة بنجاح 🗑️');
-        fetchPhotos();
+        await fetchPhotos();
+        setPhotoPendingDeletion(null);
       } else {
         toast.error(res.message || 'فشل حذف الصورة');
       }
     } catch (err) {
       console.error(err);
       toast.error('حدث خطأ أثناء حذف الصورة');
+    } finally {
+      setIsDeletingPhoto(false);
     }
   };
 
+  const deleteConfirmationDialog = (
+    <AdminConfirmationDialog
+      open={photoPendingDeletion !== null}
+      onClose={() => setPhotoPendingDeletion(null)}
+      onConfirm={async () => {
+        if (photoPendingDeletion) await handleDelete(photoPendingDeletion);
+      }}
+      title="حذف الصورة المرجعية"
+      consequence="سيتم حذف هذه الصورة نهائيًا ولن تعود متاحة كصورة مرجعية للذكاء الاصطناعي."
+      confirmLabel="حذف الصورة"
+      variant="danger"
+      isConfirming={isDeletingPhoto}
+    />
+  );
+
   if (compact) {
     return (
+      <>
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -150,7 +173,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
           <span className="mt-2 text-xs font-bold text-[var(--admin-text)]">
             {isUploading ? 'جاري ضغط ورفع الصور...' : 'اختر عدة صور للرفع'}
           </span>
-          <span className="mt-1 text-[11px] text-[var(--admin-muted)]">يمكن تحديد أكثر من صورة في المرة الواحدة</span>
+          <span className="mt-1 text-sm text-[var(--admin-muted)]">يمكن تحديد أكثر من صورة في المرة الواحدة</span>
         </label>
 
         {loadingPhotos ? (
@@ -164,7 +187,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                 <div className="relative aspect-square overflow-hidden rounded-lg">
                   <Image src={resolveMediaUrl(photo.url)} alt="صورة مرجعية للمعلم" fill unoptimized className="object-cover" />
                   {photo.isActive && (
-                    <span className="absolute right-1 top-1 rounded-md bg-[var(--admin-primary)] px-1.5 py-1 text-[10px] font-bold text-white">النشطة</span>
+                    <span className="absolute end-1 top-1 rounded-md bg-[var(--admin-primary)] px-1.5 py-1 text-sm font-bold text-white">النشطة</span>
                   )}
                 </div>
                 <div className="mt-2 flex justify-center gap-2">
@@ -173,7 +196,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                       <Star className="h-4 w-4" />
                     </button>
                   )}
-                  <button type="button" onClick={() => handleDelete(photo.id)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-red-500 text-white" aria-label="حذف الصورة">
+                  <button type="button" onClick={() => setPhotoPendingDeletion(photo.id)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-red-500 text-white" aria-label="حذف الصورة">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -184,10 +207,13 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
           <p className="text-center text-xs text-[var(--admin-muted)]">لم يتم رفع صور مرجعية بعد.</p>
         )}
       </div>
+      {deleteConfirmationDialog}
+      </>
     );
   }
 
   return (
+    <>
     <div className="admin-photo-upload bg-[var(--admin-card)] rounded-2xl p-6 border border-[var(--admin-border)] shadow-sm">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-lg bg-[var(--admin-primary-15)] flex items-center justify-center text-[var(--admin-primary)]">
@@ -255,7 +281,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
               {photos.map((photo) => (
                 <div 
                   key={photo.id} 
-                  className={`relative group rounded-2xl overflow-hidden border-2 bg-[var(--admin-bg)] shadow-sm transition-all ${
+                  className={`relative group rounded-2xl overflow-hidden border-2 bg-[var(--admin-bg)] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                     photo.isActive 
                       ? 'border-[var(--admin-primary)] shadow-md shadow-[var(--admin-primary)]/10 scale-[1.02]' 
                       : 'border-[var(--admin-border)] hover:border-[var(--admin-border-strong)]'
@@ -272,7 +298,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                     
                     {/* Status Badge */}
                     {photo.isActive && (
-                      <div className="absolute top-2 right-2 bg-[var(--admin-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2 end-2 bg-[var(--admin-primary)] text-white text-sm font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="w-3 h-3" />
                         نشطة للـ AI
                       </div>
@@ -292,7 +318,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
                       )}
                       <button
                         type="button"
-                        onClick={() => handleDelete(photo.id)}
+                        onClick={() => setPhotoPendingDeletion(photo.id)}
                         className="bg-red-500 text-white p-2 rounded-xl hover:scale-105 transition-transform shadow-md"
                         title="حذف الصورة"
                       >
@@ -307,5 +333,7 @@ export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTea
         </div>
       </div>
     </div>
+    {deleteConfirmationDialog}
+    </>
   );
 }

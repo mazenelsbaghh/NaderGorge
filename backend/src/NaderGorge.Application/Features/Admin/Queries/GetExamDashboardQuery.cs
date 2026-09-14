@@ -2,11 +2,13 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record StudentExamResultSummaryDto(
+    Guid AttemptId,
     Guid StudentId,
     string StudentName,
     string StudentPhone, // Added for better tracking
@@ -46,17 +48,21 @@ public record ExamQuestionSummaryDto(
 
 public record ExamDashboardDto(
     Guid ExamId,
+    string InternalCode,
     string Title,
     string Description,
     int QuestionCount,
     decimal TotalScore,
     decimal PassingScore,
     int? DurationMinutes,
+    bool IsActive,
     List<StudentExamResultSummaryDto> Attempts,
-    List<ExamQuestionSummaryDto> Questions
+    List<ExamQuestionSummaryDto> Questions,
+    ContentArchiveMode ArchiveMode,
+    DateTime? ArchivedAt
 );
 
-public record GetExamDashboardQuery(Guid ExamId) : IRequest<ApiResponse<ExamDashboardDto>>;
+public record GetExamDashboardQuery(Guid ExamId, Guid ActorId) : IRequest<ApiResponse<ExamDashboardDto>>;
 
 public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuery, ApiResponse<ExamDashboardDto>>
 {
@@ -69,8 +75,11 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
     public async Task<ApiResponse<ExamDashboardDto>> Handle(GetExamDashboardQuery request, CancellationToken cancellationToken)
     {
+        if (!await new NaderGorge.Application.Services.TeacherAuthorizationService(_context)
+            .CanAccessExamAsync(request.ActorId, request.ExamId, cancellationToken))
+            return ApiResponse<ExamDashboardDto>.Fail("غير مصرح بعرض هذا الامتحان.");
         var exam = await _context.Exams
-            .Include(e => e.ExamQuestions)
+            .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
                 .ThenInclude(eq => eq.Question)
                     .ThenInclude(q => q.Options)
             .Include(e => e.Attempts)
@@ -103,6 +112,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 }
 
                 return new StudentExamResultSummaryDto(
+                    a.Id,
                     a.UserId,
                     a.User?.FullName ?? "طالب محذوف",
                     a.User?.PhoneNumber ?? "غير متوفر",
@@ -152,14 +162,18 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
         var dto = new ExamDashboardDto(
             exam.Id,
+            exam.InternalCode,
             exam.Title,
             exam.Description,
             exam.ExamQuestions.Count,
             exam.TotalScore,
             exam.PassingScore,
             exam.DurationMinutes,
+            exam.IsActive,
             attemptsDto,
-            questionsDto
+            questionsDto,
+            exam.ArchiveMode,
+            exam.ArchivedAt
         );
 
         return ApiResponse<ExamDashboardDto>.Ok(dto);

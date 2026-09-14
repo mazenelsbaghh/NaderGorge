@@ -1,66 +1,97 @@
-import { test } from 'node:test';
+import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AIProviderExecutionError, AIProviderGateway } from './aiProvider.js';
-import type { AIConfig } from './aiConfig.js';
+import { executeGeminiRequest, executeRetriableGeminiRequest, GeminiDeveloperApiError, setGeminiRetryWaitForTests } from './aiProvider.js';
 
-function config(overrides: Partial<AIConfig> = {}): AIConfig {
-  return {
-    primaryProvider: 'vertex',
-    project: 'p',
-    location: 'global',
-    temporaryBucket: 'b',
-    temporaryPrefix: 'ai-analysis',
-    textModel: 'text',
-    imageModel: 'image',
-    fallbackApiKey: 'fallback',
-    ...overrides,
-  };
-}
+afterEach(() => setGeminiRetryWaitForTests());
 
-test('provider gateway uses primary and skips fallback on success', async () => {
-  let fallbackCalls = 0;
-  const result = await new AIProviderGateway(config()).execute({
-    operation: 'essay',
-    vertex: async () => 'vertex',
-    developer: async () => { fallbackCalls++; return 'developer'; },
+test('Gemini Developer request returns the provider response', async () => {
+  assert.equal(await executeGeminiRequest(async () => 'developer-result'), 'developer-result');
+});
+
+test('essay-specific deadline aborts a stuck provider without waiting for the video-analysis deadline', async () => {
+  let aborted = false;
+  await assert.rejects(executeGeminiRequest(signal => new Promise(() => {
+    signal.addEventListener('abort', () => { aborted = true; });
+  }), 10), (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout');
+  assert.equal(aborted, true);
+});
+
+test('Gemini Developer request classifies errors without exposing provider details', async () => {
+  await assert.rejects(
+    executeGeminiRequest(async () => { throw { name: 'ApiError', status: 403, secret: 'hidden' }; }),
+    (error: unknown) => error instanceof GeminiDeveloperApiError
+      && error.category === 'permission'
+      && error.providerErrorName === 'ApiError'
+      && error.providerStatus === 403
+      && !error.message.includes('hidden'),
+  );
+});
+
+test('transient Gemini 503 failures retry the same stage until it succeeds', async () => {
+  const delays: number[] = [];
+  setGeminiRetryWaitForTests(async (delayMs) => { delays.push(delayMs); });
+  let requests = 0;
+  const response = await executeRetriableGeminiRequest(async () => {
+    requests += 1;
+    if (requests < 3) throw { name: 'ApiError', status: 503 };
+    return 'recovered';
   });
-  assert.equal(result, 'vertex');
-  assert.equal(fallbackCalls, 0);
+
+  assert.equal(response, 'recovered');
+  assert.equal(requests, 3);
+  assert.deepEqual(delays, [2_000, 5_000]);
 });
 
-test('provider gateway falls back exactly once for structured quota exhaustion', async () => {
-  let fallbackCalls = 0;
-  const result = await new AIProviderGateway(config()).execute({
-    operation: 'chapters',
-    vertex: async () => { throw { status: 429 }; },
-    developer: async () => { fallbackCalls++; return 'developer'; },
+test('persistent Gemini 503 failure stops after bounded retries', async () => {
+  setGeminiRetryWaitForTests(async () => undefined);
+  let requests = 0;
+  await assert.rejects(
+    executeRetriableGeminiRequest(async () => {
+      requests += 1;
+      throw { name: 'ApiError', status: 503 };
+    }),
+    (error: unknown) => error instanceof GeminiDeveloperApiError && error.providerStatus === 503,
+  );
+  assert.equal(requests, 4);
+});
+
+test('production timeout regression aborts the Gemini request at the configured deadline', async (testContext) => {
+  const originalDeadline = process.env.GEMINI_REQUEST_TIMEOUT_MS;
+  process.env.GEMINI_REQUEST_TIMEOUT_MS = '10';
+  let requestWasAborted = false;
+  testContext.after(() => {
+    if (originalDeadline === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
+    else process.env.GEMINI_REQUEST_TIMEOUT_MS = originalDeadline;
   });
-  assert.equal(result, 'developer');
-  assert.equal(fallbackCalls, 1);
+
+  await assert.rejects(
+    executeGeminiRequest((abortSignal) => new Promise((_resolve, reject) => {
+      abortSignal.addEventListener('abort', () => {
+        requestWasAborted = true;
+        reject(abortSignal.reason);
+      }, { once: true });
+    })),
+    (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout',
+  );
+  assert.equal(requestWasAborted, true);
 });
 
-test('provider gateway never falls back for non-quota failures', async () => {
-  let fallbackCalls = 0;
-  await assert.rejects(new AIProviderGateway(config()).execute({
-    operation: 'mindmap',
-    vertex: async () => { throw { status: 403 }; },
-    developer: async () => { fallbackCalls++; return 'developer'; },
-  }));
-  assert.equal(fallbackCalls, 0);
-});
+test('provider deadlines use the bounded retry policy', async (testContext) => {
+  const originalDeadline = process.env.GEMINI_REQUEST_TIMEOUT_MS;
+  process.env.GEMINI_REQUEST_TIMEOUT_MS = '5';
+  setGeminiRetryWaitForTests(async () => undefined);
+  let requests = 0;
+  testContext.after(() => {
+    if (originalDeadline === undefined) delete process.env.GEMINI_REQUEST_TIMEOUT_MS;
+    else process.env.GEMINI_REQUEST_TIMEOUT_MS = originalDeadline;
+  });
 
-test('provider gateway reports unavailable fallback without exposing the primary error', async () => {
-  await assert.rejects(new AIProviderGateway(config({ fallbackApiKey: undefined })).execute({
-    operation: 'essay',
-    vertex: async () => { throw { status: 429, secret: 'primary-secret' }; },
-    developer: async () => 'unused',
-  }), (error: unknown) => error instanceof AIProviderExecutionError && !error.message.includes('primary-secret'));
-});
-
-test('provider gateway reports failed fallback without exposing the fallback error', async () => {
-  await assert.rejects(new AIProviderGateway(config()).execute({
-    operation: 'essay',
-    vertex: async () => { throw { status: 429 }; },
-    developer: async () => { throw { status: 401, secret: 'fallback-secret' }; },
-  }), (error: unknown) => error instanceof AIProviderExecutionError && error.fallbackCategory === 'authentication' && !error.message.includes('fallback-secret'));
+  await assert.rejects(
+    executeRetriableGeminiRequest(() => {
+      requests += 1;
+      return new Promise(() => undefined);
+    }),
+    (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'provider-timeout',
+  );
+  assert.equal(requests, 4);
 });

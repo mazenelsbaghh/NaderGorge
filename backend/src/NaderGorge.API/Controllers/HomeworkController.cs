@@ -28,9 +28,9 @@ public class HomeworkController : ControllerBase
 
     [HttpPost("{homeworkId}/submit")]
     [Idempotent]
-    public async Task<IActionResult> SubmitHomework(Guid homeworkId, [FromBody] List<StudentAnswerInput> answers)
+    public async Task<IActionResult> SubmitHomework(Guid homeworkId, [FromBody] List<StudentAnswerInput> answers, [FromQuery] Guid? revisionId = null)
     {
-        var command = new SubmitHomeworkCommand(homeworkId, GetUserId(), answers);
+        var command = new SubmitHomeworkCommand(homeworkId, GetUserId(), answers, revisionId);
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -49,4 +49,3 @@ public class HomeworkController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }
-

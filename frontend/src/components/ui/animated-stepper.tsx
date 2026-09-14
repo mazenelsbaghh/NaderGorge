@@ -100,7 +100,7 @@ export function AnimatedStepper({ steps, onComplete, isSubmitting, activeStep, o
                type="button"
                disabled={isSubmitting}
                className={cn(
-                 "flex relative items-center justify-center w-11 h-11 font-black text-sm transition-all duration-300 ease-spring",
+                 "flex relative items-center justify-center w-11 h-11 font-black text-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 ease-spring",
                   circleClass,
                  !isSubmitting && s !== 'unvisited' && "hover:scale-105 cursor-pointer shadow-sm hover:shadow-md",
                  "focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
@@ -155,7 +155,7 @@ export function AnimatedStepper({ steps, onComplete, isSubmitting, activeStep, o
           onClick={goToPrevStep}
           disabled={currentStep === 0 || isSubmitting}
           type="button"
-          className="flex items-center gap-2 px-6 py-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-border)] text-[var(--admin-text)] disabled:opacity-40 disabled:hover:bg-[var(--admin-card)] font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
+          className="flex items-center gap-2 px-6 py-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-border)] text-[var(--admin-text)] disabled:opacity-40 disabled:hover:bg-[var(--admin-card)] font-black transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
         >
           <ChevronRight className="w-5 h-5" /> <span>السابق</span>
         </button>
@@ -164,7 +164,7 @@ export function AnimatedStepper({ steps, onComplete, isSubmitting, activeStep, o
           onClick={goToNextStep}
           disabled={isSubmitting}
           type="button"
-          className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] font-black text-lg shadow-[0_8px_20px_rgba(119,90,25,0.2)] hover:-translate-y-1 hover:shadow-[0_12px_25px_rgba(119,90,25,0.3)] transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] disabled:opacity-50 disabled:hover:translate-y-0"
+          className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] font-black text-lg shadow-sm hover:-translate-y-1 hover:shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {currentStep === steps.length - 1 ? (
              isSubmitting ? "جاري التسليم..." : <span className="flex items-center">تسليم وإنهاء <Check className="mr-2 w-6 h-6" /></span>

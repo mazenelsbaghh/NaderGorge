@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
+using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
@@ -22,8 +25,15 @@ public record LessonProgressItemDto(Guid Id, string Title, int Order, bool IsCom
 public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResponse<ProgressDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetProgressQueryHandler(IAppDbContext db) => _db = db;
+    public GetProgressQueryHandler(IAppDbContext db, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
+    {
+        _db = db;
+        _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(db);
+    }
 
     public async Task<ApiResponse<ProgressDto>> Handle(GetProgressQuery request, CancellationToken ct)
     {
@@ -39,6 +49,8 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Distinct()
             .ToList();
 
+        packageIds = await FilterEligibleOwnerIdsAsync(StudentFacingScopeOwnerType.Package, packageIds, request.UserId, ct);
+
         var packages = await _db.Packages
             .AsNoTracking()
             .Where(p => packageIds.Contains(p.Id))
@@ -49,11 +61,24 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             })
             .ToListAsync(ct);
 
-        var completedLessonIds = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
-            .Select(lp => lp.LessonId)
-            .ToListAsync(ct);
+        var packageLessonIds = packages
+            .SelectMany(package => package.Lessons)
+            .Select(lesson => lesson.Id)
+            .Distinct()
+            .ToList();
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            packageLessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
 
         var manuallyUnlockedIds = await _db.LessonProgresses
             .AsNoTracking()
@@ -76,12 +101,31 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .CountAsync(ct);
 
         var allLessonIds = packages.SelectMany(p => p.Lessons).Select(l => l.Id).ToList();
+        var lessonExamIds = packages
+            .SelectMany(package => package.Lessons)
+            .Where(lesson => lesson.ExamId.HasValue)
+            .Select(lesson => lesson.ExamId!.Value)
+            .Distinct()
+            .ToList();
+        var activeExamIds = (await _db.Exams
+                .AsNoTracking()
+                .Where(exam => lessonExamIds.Contains(exam.Id) && exam.IsActive)
+                .Select(exam => exam.Id)
+                .ToListAsync(ct))
+            .ToHashSet();
 
         var mandatoryHomeworks = await _db.Homeworks
+            .ReadyForStudents()
             .AsNoTracking()
             .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
             .Select(h => new { h.Id, h.LessonId })
             .ToListAsync(ct);
+        var visibleMandatoryHomeworkIds = new HashSet<Guid>();
+        foreach (var homework in mandatoryHomeworks)
+        {
+            if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Homework, homework.Id, ct))
+                visibleMandatoryHomeworkIds.Add(homework.Id);
+        }
 
         var passedHomeworkIds = await _db.HomeworkSubmissions
             .AsNoTracking()
@@ -89,7 +133,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Join(_db.Homeworks,
                 s => s.HomeworkId,
                 h => h.Id,
-                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = h.PassingScoreThreshold ?? 0 })
+                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0 })
             .Where(x => x.OverallScore >= x.PassingScore)
             .Select(x => x.HomeworkId)
             .Distinct()
@@ -102,8 +146,34 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
 
         foreach (var pkg in packages)
         {
+            if (!await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Package, pkg.Id, ct))
+                continue;
+
             var lessonItems = new List<LessonProgressItemDto>();
-            var orderedLessons = pkg.Lessons.OrderBy(l => l.Order).ToList();
+            var eligibleLessonIds = await FilterEligibleOwnerIdsAsync(
+                StudentFacingScopeOwnerType.Lesson,
+                pkg.Lessons.Select(l => l.Id).ToList(),
+                request.UserId,
+                ct);
+            var visibleLessonIds = new HashSet<Guid>();
+            foreach (var lessonId in eligibleLessonIds)
+            {
+                if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Lesson, lessonId, ct))
+                    visibleLessonIds.Add(lessonId);
+            }
+            var orderedLessons = pkg.Lessons
+                .Where(l => visibleLessonIds.Contains(l.Id))
+                .OrderBy(l => l.Order)
+                .ToList();
+            var visibleExamIds = new HashSet<Guid>();
+            foreach (var examId in orderedLessons
+                         .Where(lesson => lesson.ExamId.HasValue && activeExamIds.Contains(lesson.ExamId.Value))
+                         .Select(lesson => lesson.ExamId!.Value)
+                         .Distinct())
+            {
+                if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, examId, ct))
+                    visibleExamIds.Add(examId);
+            }
 
             for (int i = 0; i < orderedLessons.Count; i++)
             {
@@ -113,7 +183,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 var isCompleted = completedLessonIds.Contains(lesson.Id);
                 if (isCompleted) completedLessons++;
 
-                var hasExam = lesson.ExamId.HasValue;
+                var hasExam = lesson.ExamId.HasValue && visibleExamIds.Contains(lesson.ExamId.Value);
                 var examPassed = hasExam && passedExamIds.Contains(lesson.ExamId!.Value);
 
                 // Lesson is locked if:
@@ -131,14 +201,16 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
 
                 if (prevLesson != null)
                 {
-                    blockedByPrevExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
+                    blockedByPrevExam = prevLesson.ExamId.HasValue
+                        && visibleExamIds.Contains(prevLesson.ExamId.Value)
+                        && !passedExamIds.Contains(prevLesson.ExamId.Value);
 
                     blockedByPrevHomework = mandatoryHomeworks
-                        .Where(h => h.LessonId == prevLesson.Id)
+                        .Where(h => h.LessonId == prevLesson.Id && visibleMandatoryHomeworkIds.Contains(h.Id))
                         .Any(h => !passedHomeworkIds.Contains(h.Id));
                 }
 
-                bool blockedByCurrentExam = lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value);
+                bool blockedByCurrentExam = hasExam && !passedExamIds.Contains(lesson.ExamId!.Value);
 
                 if ((blockedByPrevExam || blockedByPrevHomework || blockedByCurrentExam) && !manuallyUnlockedIds.Contains(lesson.Id))
                 {
@@ -162,5 +234,21 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             passedExamIds.Count,
             failedExamCount
         ));
+    }
+
+    private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(
+        StudentFacingScopeOwnerType ownerType,
+        List<Guid> ownerIds,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var eligible = new List<Guid>();
+        foreach (var ownerId in ownerIds)
+        {
+            if (await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct))
+                eligible.Add(ownerId);
+        }
+
+        return eligible;
     }
 }

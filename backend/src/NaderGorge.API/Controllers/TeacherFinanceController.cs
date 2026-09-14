@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Teacher.Finance.Commands;
 using NaderGorge.Application.Features.Teacher.Finance.Queries;
+using NaderGorge.Application.Interfaces.Finance;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.API.Controllers;
 
@@ -13,40 +15,87 @@ namespace NaderGorge.API.Controllers;
 public class TeacherFinanceController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly TeacherAuthorizationService _teacherAuthorization;
+    private readonly ITeacherFinanceExportService _exportService;
 
-    public TeacherFinanceController(IMediator mediator)
+    public TeacherFinanceController(
+        IMediator mediator,
+        TeacherAuthorizationService teacherAuthorization,
+        ITeacherFinanceExportService exportService)
     {
         _mediator = mediator;
+        _teacherAuthorization = teacherAuthorization;
+        _exportService = exportService;
     }
 
     private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet("account")]
-    public async Task<IActionResult> GetAccountSummary()
+    public async Task<IActionResult> GetAccountSummary(CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetTeacherAccountQuery(GetUserId()));
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(ct);
+        if (teacherUserId == null) return Forbid();
+        var result = await _mediator.Send(new GetTeacherAccountQuery(teacherUserId.Value), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [HttpGet("transactions")]
-    public async Task<IActionResult> GetTransactions([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    [HttpGet("calendar")]
+    public async Task<IActionResult> GetCalendar([FromQuery] DateTime from, [FromQuery] DateTime to)
     {
-        var result = await _mediator.Send(new GetTeacherTransactionsQuery(GetUserId(), page, pageSize));
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(HttpContext.RequestAborted);
+        if (teacherUserId == null) return Forbid();
+        var result = await _mediator.Send(new GetTeacherFinanceCalendarQuery(teacherUserId.Value, from, to));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("calendar/export")]
+    public async Task<IActionResult> ExportCalendarDay([FromQuery] DateTime date, CancellationToken ct)
+    {
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(ct);
+        if (teacherUserId == null) return Forbid();
+        var result = await _exportService.ExportDayAsync(teacherUserId.Value, date, ct);
+        return File(result.Content, result.ContentType, result.FileName);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetTransactions(
+        [FromQuery] DateTime? date = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? status = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(HttpContext.RequestAborted);
+        if (teacherUserId == null) return Forbid();
+        var result = await _mediator.Send(new GetTeacherTransactionsQuery(teacherUserId.Value, date, from, to, status, page, pageSize));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("payouts")]
-    public async Task<IActionResult> GetPayouts()
+    public async Task<IActionResult> GetPayouts(CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetTeacherPayoutsQuery(GetUserId()));
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(ct);
+        if (teacherUserId == null) return Forbid();
+        var result = await _mediator.Send(new GetTeacherPayoutsQuery(teacherUserId.Value), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("payouts")]
-    public async Task<IActionResult> RequestPayout([FromBody] TeacherRequestPayoutDto dto)
+    public async Task<IActionResult> RequestPayout([FromBody] TeacherRequestPayoutDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new RequestPayoutCommand(GetUserId(), dto.Amount));
+        var teacherUserId = await GetAuthorizedTeacherUserIdAsync(ct);
+        if (teacherUserId == null) return Forbid();
+        var result = await _mediator.Send(new RequestPayoutCommand(teacherUserId.Value, dto.Amount), ct);
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    private async Task<Guid?> GetAuthorizedTeacherUserIdAsync(CancellationToken ct)
+    {
+        var workspace = await _teacherAuthorization.GetWorkspaceAccessAsync(GetUserId(), ct);
+        return workspace != null && (workspace.IsOwner || workspace.PermissionKeys.Contains("finance"))
+            ? workspace.TeacherUserId
+            : null;
     }
 }
 

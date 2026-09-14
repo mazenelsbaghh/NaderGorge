@@ -32,6 +32,11 @@ public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiRe
 
         var normalizedName = request.Name.Trim();
 
+        if (!DelegatedRoleDomainPolicy.TryNormalize(request.AllowedDomain, out var allowedDomain))
+        {
+            return ApiResponse<Guid>.Fail("اختر بوابة المدير أو بوابة المساعد للدور المفوض", new List<string> { "ROLE_DOMAIN_INVALID" });
+        }
+
         // Check duplicates
         var exists = await _db.Roles.AnyAsync(r => r.Name.ToLower() == normalizedName.ToLower(), cancellationToken);
         if (exists)
@@ -45,7 +50,7 @@ public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiRe
             Name = normalizedName,
             Type = RoleType.Assistant, // Custom roles created are Assistants
             PermissionsJson = JsonSerializer.Serialize(request.Permissions ?? new List<string>()),
-            AllowedDomain = request.AllowedDomain ?? "all",
+            AllowedDomain = allowedDomain,
             AllowedNavbarItemsJson = JsonSerializer.Serialize(request.AllowedNavbarItems ?? new List<string>())
         };
 

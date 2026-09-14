@@ -7,14 +7,24 @@ public class SmsParserResult
 {
     public decimal? Amount { get; set; }
     public string? SenderPhone { get; set; }
+    public string? RecipientPhone { get; set; }
     public decimal? CurrentBalance { get; set; }
+    public decimal ServiceFee { get; set; }
+    public string? TransferReference { get; set; }
     public bool IsParsedSuccessfully => Amount.HasValue && !string.IsNullOrWhiteSpace(SenderPhone);
 }
 
 public static class SmsParser
 {
     private static readonly Regex PhoneRegex = new(@"\b01[0125]\d{8}\b", RegexOptions.Compiled);
-    
+    private static readonly Regex IncomingTransferMarker = new(
+        @"(?:تم\s+(?:استلام|استقبال)|استلمت|تحويل\s+(?:إلى|الي)\s+محفظتك|received|transfer\s+received|cash\s+in)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex OutgoingTransferMarker = new(
+        @"(?:قمت\s+بتحويل|تم\s+تحويل|تم\s+خصم|تم\s+إرسال|you\s+(?:sent|transferred)|cash\s+out)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     // Patterns to match transfer amounts
     private static readonly Regex[] AmountRegexes = new[]
     {
@@ -31,8 +41,12 @@ public static class SmsParser
     private static readonly Regex[] CurrentBalanceRegexes = new[]
     {
         new Regex(@"رصيدك\s+الحالي\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:ج\.م|جنيه|EGP)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"رصيد\s+حسابك\s+(?:في|فى)\s+فودافون\s+كاش\s+الحالي\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:ج\.م|جنيه|EGP)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
         new Regex(@"(?:current\s+balance|balance)\s*[:：]?\s*(?:EGP\s*)?(\d+(?:\.\d+)?)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
     };
+    private static readonly Regex OutgoingRecipientRegex = new(@"(?:لرقم|إلى\s+رقم|الي\s+رقم|to)\s*[:：]?\s*(01[0125]\d{8})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex ServiceFeeRegex = new(@"(?:مصاريف\s+الخدمة|رسوم\s+(?:الخدمة|التحويل)|service\s+fee)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:ج\.م|جنيه|EGP)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex TransferReferenceRegex = new(@"(?:رقم\s+العملية|transaction\s*(?:number|id))\s*[:：]?\s*(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static SmsParserResult Parse(string body)
     {
@@ -47,6 +61,17 @@ public static class SmsParser
         {
             result.SenderPhone = phoneMatch.Value;
         }
+        var recipientMatch = OutgoingRecipientRegex.Match(body);
+        if (recipientMatch.Success)
+            result.RecipientPhone = recipientMatch.Groups[1].Value;
+
+        var feeMatch = ServiceFeeRegex.Match(body);
+        if (feeMatch.Success && decimal.TryParse(feeMatch.Groups[1].Value, out var fee))
+            result.ServiceFee = fee;
+
+        var referenceMatch = TransferReferenceRegex.Match(body);
+        if (referenceMatch.Success)
+            result.TransferReference = referenceMatch.Groups[1].Value;
 
         // 2. Parse Amount
         foreach (var regex in AmountRegexes)
@@ -82,4 +107,15 @@ public static class SmsParser
 
         return result;
     }
+
+    public static bool IsIncomingTransfer(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body) || OutgoingTransferMarker.IsMatch(body))
+            return false;
+
+        return IncomingTransferMarker.IsMatch(body) && Parse(body).Amount.HasValue;
+    }
+
+    public static bool IsOutgoingTransfer(string? body)
+        => !string.IsNullOrWhiteSpace(body) && OutgoingTransferMarker.IsMatch(body) && Parse(body).Amount.HasValue;
 }

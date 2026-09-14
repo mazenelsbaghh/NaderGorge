@@ -1,20 +1,21 @@
 import { expect, test } from '@playwright/test';
+import { apiUrl } from './e2e-contract-helpers';
 
 test.describe('video session counting', () => {
   test('older player stops and offers reload when a newer session supersedes it', async ({ page, request }) => {
     test.setTimeout(60_000);
 
-    await request.post('http://localhost:5245/api/e2e/clear-devices', {
+    await request.post(`${apiUrl}/e2e/clear-devices`, {
       data: { phoneNumber: '20000000001' },
     });
-    const setupResponse = await request.post('http://localhost:5245/api/e2e/setup-mock-package');
+    const setupResponse = await request.post(`${apiUrl}/e2e/setup-mock-package`);
     expect(setupResponse.ok()).toBeTruthy();
     const mockPackage = await setupResponse.json();
-    await request.post('http://localhost:5245/api/e2e/grant-package', {
+    await request.post(`${apiUrl}/e2e/grant-package`, {
       data: { packageId: mockPackage.packageId },
     });
 
-    await page.goto('http://localhost:8739/login');
+    await page.goto('/login');
     await page.locator('input[type="tel"]').fill('20000000001');
     await page.locator('input[type="password"]').fill('password');
     await page.locator('button[type="submit"]').click({ force: true });
@@ -47,23 +48,43 @@ test.describe('video session counting', () => {
       });
     });
 
-    await page.goto(`http://localhost:8739/student/packages/${mockPackage.packageId}`);
+    await page.goto(`/student/packages/${mockPackage.packageId}`);
     await page.getByText('E2E Term').first().click();
     await page.getByText('E2E Section').first().click();
     await page.getByText('E2E Lesson').first().click();
     await page.getByRole('button', { name: 'تحميل وتشغيل الفيديو' }).click();
     await expect(page.locator('iframe')).toHaveCount(1);
 
-    await page.evaluate(() => {
-      window.postMessage({
+    const embedFrame = page.frames().find((frame) => frame.url().includes('/api/video/embed'));
+    expect(embedFrame, 'secured video iframe should be attached').toBeTruthy();
+    await embedFrame!.evaluate(() => {
+      window.parent.postMessage({
         source: 'video-embed',
         type: 'ready',
         data: { duration: 100, volume: 100, isMuted: false, provider: 'youtube' },
       }, window.location.origin);
-      window.postMessage({
+      window.parent.postMessage({
         source: 'video-embed',
         type: 'stateChange',
         data: { isPlaying: true, state: 1 },
+      }, window.location.origin);
+      window.parent.postMessage({
+        source: 'video-embed',
+        type: 'timeUpdate',
+        data: { currentTime: 0.1, duration: 100, playbackRate: 1 },
+      }, window.location.origin);
+    });
+    await page.waitForTimeout(1_250);
+    await embedFrame!.evaluate(() => {
+      window.parent.postMessage({
+        source: 'video-embed',
+        type: 'timeUpdate',
+        data: { currentTime: 1, duration: 100, playbackRate: 1 },
+      }, window.location.origin);
+      window.parent.postMessage({
+        source: 'video-embed',
+        type: 'stateChange',
+        data: { isPlaying: false, state: 2 },
       }, window.location.origin);
     });
 

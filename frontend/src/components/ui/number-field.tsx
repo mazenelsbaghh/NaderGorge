@@ -119,7 +119,7 @@ const NumberFieldGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<H
     <div
       ref={ref}
       className={cn(
-        "group relative flex items-center overflow-hidden rounded-xl border bg-[var(--admin-card-soft)] transition-all duration-300",
+        "group relative flex items-center overflow-hidden rounded-xl border bg-[var(--admin-card-soft)] transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300",
         isDisabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-sm focus-within:border-[var(--admin-primary)] focus-within:ring-1 focus-within:ring-[var(--admin-primary)]",
         isInvalid ? "border-rose-500" : "border-[var(--admin-border)]",
         className

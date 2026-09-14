@@ -1,0 +1,246 @@
+openapi: 3.0.3
+info:
+  title: Phase 1 Sales and Public Exams API
+  version: 1.0.0
+paths:
+  /api/admin/sales/coupons:
+    get:
+      summary: Search digital coupons
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: search, schema: { type: string } }
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/SalesStatus' } }
+        - { in: query, name: targetType, schema: { $ref: '#/components/schemas/SalesTargetType' } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200': { description: Paged coupon ledger }
+        '403': { description: Missing sales.manage }
+    post:
+      summary: Create a digital coupon
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCouponRequest' }
+      responses:
+        '201': { description: Coupon created }
+        '400': { description: Invalid coupon }
+        '403': { description: Missing sales.manage }
+  /api/admin/sales/coupons/{id}/disable:
+    post:
+      summary: Disable coupon with reason
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200': { description: Disabled or already disabled }
+  /api/admin/sales/stacking-policies:
+    get:
+      summary: List discount stacking policies
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Policies } }
+    post:
+      summary: Create or update stacking policy
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Policy saved } }
+  /api/admin/sales/printable-batches:
+    get:
+      summary: Search printable code batches
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paged batches } }
+    post:
+      summary: Generate printable sales code batch
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePrintableBatchRequest' }
+      responses:
+        '201': { description: Batch generated }
+  /api/admin/sales/printable-batches/{id}/preview:
+    get:
+      summary: Preview printable cards for a batch
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: Preview payload } }
+  /api/admin/sales/templates:
+    get:
+      summary: List printable templates
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Templates } }
+    post:
+      summary: Save printable template
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrintableTemplateRequest' }
+      responses:
+        '200': { description: Template saved }
+  /api/admin/public-exams:
+    get:
+      summary: Search public exam products
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paged public exams } }
+    post:
+      summary: Create public exam product
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePublicExamRequest' }
+      responses:
+        '201': { description: Public exam product created }
+  /api/admin/public-exams/{id}/disable:
+    post:
+      summary: Disable public exam product for new purchases/attempts
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: Disabled } }
+  /api/student/public-exams:
+    get:
+      summary: List available public exams for the current student
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Public exam cards } }
+  /api/student/public-exams/{id}:
+    get:
+      summary: Get public exam detail and purchase/access state
+      security: [{ bearerAuth: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: Detail } }
+  /api/student/purchases/preview:
+    post:
+      summary: Preview checkout with coupon/printable-code inputs
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchasePreviewRequest' }
+      responses: { '200': { description: Funding and discount preview } }
+  /api/student/purchases:
+    post:
+      summary: Complete checkout with optional discounts
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseRequest' }
+      responses:
+        '200': { description: Purchase completed }
+        '400': { description: Validation or insufficient balance }
+  /api/codes/redeem-printable:
+    post:
+      summary: Redeem printable sales code outside checkout where supported
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, code]
+              properties:
+                requestId: { type: string, format: uuid }
+                code: { type: string, minLength: 6 }
+      responses:
+        '200': { description: Redemption result }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    SalesTargetType:
+      type: string
+      enum: [package, term, contentSection, lesson, specificVideo, videoType, publicExam, teacher, platform]
+    SalesStatus:
+      type: string
+      enum: [draft, active, disabled, expired, archived]
+    CreateCouponRequest:
+      type: object
+      required: [code, name, discountType, discountValue, targetType, ownerType]
+      properties:
+        code: { type: string, minLength: 3, maxLength: 80 }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        discountType: { type: string, enum: [percentage, fixedAmount] }
+        discountValue: { type: number, minimum: 0, exclusiveMinimum: true }
+        targetType: { $ref: '#/components/schemas/SalesTargetType' }
+        targetId: { type: string, format: uuid, nullable: true }
+        ownerType: { type: string, enum: [platform, teacher] }
+        teacherId: { type: string, format: uuid, nullable: true }
+        stackingPolicyId: { type: string, format: uuid, nullable: true }
+        startsAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        globalUsageLimit: { type: integer, minimum: 1, nullable: true }
+        perStudentUsageLimit: { type: integer, minimum: 1, nullable: true }
+    CreatePrintableBatchRequest:
+      type: object
+      required: [name, behavior, targetType, ownerType, totalCodes]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        behavior: { type: string, enum: [discount, directAccess, promotionalCredit] }
+        discountType: { type: string, enum: [percentage, fixedAmount], nullable: true }
+        discountValue: { type: number, nullable: true }
+        creditAmount: { type: number, nullable: true }
+        targetType: { $ref: '#/components/schemas/SalesTargetType' }
+        targetId: { type: string, format: uuid, nullable: true }
+        ownerType: { type: string, enum: [platform, teacher] }
+        teacherId: { type: string, format: uuid, nullable: true }
+        templateId: { type: string, format: uuid, nullable: true }
+        totalCodes: { type: integer, minimum: 1, maximum: 10000 }
+        expiresAt: { type: string, format: date-time, nullable: true }
+    PrintableTemplateRequest:
+      type: object
+      required: [name, widthMm, heightMm, layout]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        widthMm: { type: number, minimum: 1 }
+        heightMm: { type: number, minimum: 1 }
+        backgroundColor: { type: string, nullable: true }
+        backgroundImageUrl: { type: string, nullable: true }
+        layout: { type: object }
+    CreatePublicExamRequest:
+      type: object
+      required: [exam, product]
+      properties:
+        exam: { type: object }
+        product:
+          type: object
+          required: [isPaid, price]
+          properties:
+            isPaid: { type: boolean }
+            price: { type: number, minimum: 0 }
+            teacherId: { type: string, format: uuid, nullable: true }
+            subjectId: { type: string, format: uuid, nullable: true }
+            gradeLevel: { type: string, nullable: true }
+            isPlatformWide: { type: boolean }
+            availableFrom: { type: string, format: date-time, nullable: true }
+            availableUntil: { type: string, format: date-time, nullable: true }
+    PurchasePreviewRequest:
+      type: object
+      required: [contentType, contentId]
+      properties:
+        contentType: { type: string, enum: [package, term, contentSection, lesson, publicExam] }
+        contentId: { type: string, format: uuid }
+        couponCodes: { type: array, items: { type: string } }
+        printableCodes: { type: array, items: { type: string } }
+    PurchaseRequest:
+      allOf:
+        - $ref: '#/components/schemas/PurchasePreviewRequest'
+        - type: object
+          required: [requestId]
+          properties:
+            requestId: { type: string, format: uuid }

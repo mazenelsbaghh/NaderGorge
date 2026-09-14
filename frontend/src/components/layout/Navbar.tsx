@@ -48,7 +48,7 @@ export function Navbar() {
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-[var(--landing-accent)] px-5 py-2 text-sm font-bold text-[var(--landing-accent-foreground)] shadow-[0_8px_20px_rgba(145,95,42,0.25)] hover:bg-[var(--landing-accent-strong)] transition-all hover:-translate-y-0.5"
+                className="rounded-full bg-[var(--landing-accent)] px-5 py-2 text-sm font-bold text-[var(--landing-accent-foreground)] shadow-sm hover:bg-[var(--landing-accent-strong)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5"
               >
                 إنشاء حساب
               </Link>

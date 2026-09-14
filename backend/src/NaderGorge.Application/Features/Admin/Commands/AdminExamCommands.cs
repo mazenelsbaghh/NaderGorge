@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
@@ -10,6 +11,7 @@ namespace NaderGorge.Application.Features.Admin.Commands;
 
 public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
 {
+    public AssessmentParentNotificationSettings ParentNotification { get; set; } = AssessmentParentNotificationSettings.Disabled;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal PassingScore { get; set; }
@@ -100,6 +102,14 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             return ApiResponse<Guid>.Fail("Passing score cannot be greater than the total score.");
         }
 
+        var notificationError = request.ParentNotification is null ? "راجع إعدادات رسالة ولي الأمر."
+            : await request.ParentNotification.ValidateAsync(_db, ct);
+        if (notificationError is not null) return ApiResponse<Guid>.Fail(notificationError);
+
+        var notificationAccessError = await request.ParentNotification!.AuthorizeChangeAsync(
+            _db, request.CurrentUserId, AssessmentParentNotificationSettings.Disabled, ct);
+        if (notificationAccessError is not null) return ApiResponse<Guid>.Fail(notificationAccessError);
+
         // 2. Resolve Teacher and Subject Context
         var teacherId = Guid.Empty;
         if (request.CurrentUserId.HasValue)
@@ -170,6 +180,8 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
 
         var exam = new Exam
         {
+            ParentNotificationSettingsJson = request.ParentNotification!.ToJson(),
+            ParentNotificationEnabledAt = request.ParentNotification.Enabled ? DateTime.UtcNow : null,
             Title = request.Title,
             Description = request.Description,
             PassingScore = request.PassingScore,
@@ -359,6 +371,19 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
 
         if (subjectId == Guid.Empty)
         {
+            var publicExamSubjectId = await _db.PublicExamProducts
+                .Where(x => x.ExamId == exam.Id && x.SubjectId.HasValue)
+                .Select(x => x.SubjectId!.Value)
+                .FirstOrDefaultAsync(ct);
+
+            if (publicExamSubjectId != Guid.Empty)
+            {
+                subjectId = publicExamSubjectId;
+            }
+        }
+
+        if (subjectId == Guid.Empty)
+        {
             var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
             if (firstSubject != null)
             {
@@ -502,6 +527,68 @@ public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuesti
 
         _db.ExamQuestions.Remove(examQuestion);
         _db.QuestionBankItems.Remove(questionBankItem);
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<bool>.Ok(true);
+    }
+}
+
+public record DeleteExamAttemptCommand(Guid ExamId, Guid AttemptId, Guid? CurrentUserId = null) : IRequest<ApiResponse<bool>>;
+
+public class DeleteExamAttemptCommandHandler : IRequestHandler<DeleteExamAttemptCommand, ApiResponse<bool>>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public DeleteExamAttemptCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse<bool>> Handle(DeleteExamAttemptCommand request, CancellationToken ct)
+        => await SerializationRetryHelper.ExecuteAsync(async retryCt =>
+        {
+            _db.ClearTrackedChanges();
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, retryCt);
+            var response = await DeleteOnce(request, retryCt);
+            if (response.Success) await transaction.CommitAsync(retryCt);
+            return response;
+        }, ct);
+
+    private async Task<ApiResponse<bool>> DeleteOnce(DeleteExamAttemptCommand request, CancellationToken ct)
+    {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct);
+            if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to this exam.");
+        }
+
+        var attempt = await _db.StudentExamAttempts
+            .FirstOrDefaultAsync(item => item.Id == request.AttemptId && item.ExamId == request.ExamId, ct);
+
+        if (attempt is null)
+        {
+            return ApiResponse<bool>.Fail("محاولة الامتحان غير موجودة.");
+        }
+
+        var answers = await _db.StudentAnswers
+            .Where(item => item.StudentExamAttemptId == attempt.Id)
+            .ToListAsync(ct);
+
+        var essays = await _db.EssaySubmissions
+            .Where(item => item.StudentExamAttemptId == attempt.Id)
+            .ToListAsync(ct);
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Action = "ExamAttemptDeleted", EntityType = nameof(StudentExamAttempt), EntityId = attempt.Id,
+            PerformedByUserId = request.CurrentUserId,
+            OldValues = System.Text.Json.JsonSerializer.Serialize(new { attempt.ExamId, attempt.UserId, attempt.ScoreAchieved, answerCount = answers.Count })
+        });
+        _db.StudentAnswers.RemoveRange(answers);
+        _db.EssaySubmissions.RemoveRange(essays);
+        _db.StudentExamAttempts.Remove(attempt);
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse<bool>.Ok(true);

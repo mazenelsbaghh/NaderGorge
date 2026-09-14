@@ -15,4 +15,24 @@ interface ParentApiService {
     suspend fun getStudentDetails(
         @Header("Authorization") authHeader: String
     ): ApiResponse<StudentDetailsResponse>
+
+    @POST("api/parent/device-token")
+    suspend fun registerDeviceToken(
+        @Header("Authorization") authHeader: String,
+        @Body request: RegisterDeviceTokenRequest
+    ): ApiResponse<Boolean>
+
+    @GET("api/parent/notifications")
+    suspend fun getNotifications(
+        @Header("Authorization") authHeader: String
+    ): ApiResponse<List<ParentNotificationResponse>>
+
+    @POST("api/parent/notifications/{id}/read")
+    suspend fun markNotificationAsRead(
+        @Header("Authorization") authHeader: String,
+        @retrofit2.http.Path("id") id: String
+    ): ApiResponse<Boolean>
+
+    @GET("api/parent/app-config")
+    suspend fun getAppConfig(): ApiResponse<ParentAppConfigResponse>
 }

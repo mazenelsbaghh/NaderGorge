@@ -10,6 +10,7 @@ import {
   Moon,
   ShieldAlert,
 } from 'lucide-react';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 interface AttendanceLogTableProps {
   logs: AttendanceLogDto[];
@@ -72,7 +73,7 @@ export function AttendanceLogTable({ logs, loading }: AttendanceLogTableProps) {
   };
 
   const formatDateTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString('ar-EG', {
+    return formatCairoDateTime(isoString, {
       hour: '2-digit',
       minute: '2-digit',
     });

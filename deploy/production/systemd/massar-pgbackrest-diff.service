@@ -1,0 +1,11 @@
+[Unit]
+Description=Massar daily pgBackRest differential backup
+After=network-online.target patroni.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/massar/backup/pgbackrest.env
+ExecStart=/usr/local/sbin/massar-backup-database diff
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

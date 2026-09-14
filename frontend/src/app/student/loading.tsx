@@ -1,11 +1,11 @@
-'use client';
-
-import { StudentShellChrome } from '@/components/layout/StudentShellChrome';
+import { AsyncRegionState } from '@/components/ui/AsyncRegionState';
 
 export default function StudentLoading() {
   return (
-    <StudentShellChrome>
-      {/* Simple loading skeleton — StudentShellChrome handles its own layout */}
+    <AsyncRegionState
+      status="loading"
+      message="جاري تحميل محتوى الطالب"
+    >
       <div className="animate-pulse space-y-6" dir="rtl">
         {/* Header skeleton */}
         <div className="space-y-3">
@@ -33,6 +33,6 @@ export default function StudentLoading() {
           ))}
         </div>
       </div>
-    </StudentShellChrome>
+    </AsyncRegionState>
   );
 }

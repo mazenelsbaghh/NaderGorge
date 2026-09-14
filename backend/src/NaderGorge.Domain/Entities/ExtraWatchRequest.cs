@@ -10,6 +10,7 @@ public class ExtraWatchRequest : BaseEntity
     public Guid LessonVideoId { get; set; }
     public RequestStatus Status { get; set; }
     public DateTime? ResolvedAt { get; set; }
+    public string RequestReason { get; set; } = string.Empty;
     public string? RejectionReason { get; set; }
 
     public virtual User User { get; set; } = null!;

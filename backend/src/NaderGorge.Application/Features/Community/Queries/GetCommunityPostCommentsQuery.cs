@@ -10,6 +10,7 @@ namespace NaderGorge.Application.Features.Community.Queries;
 public record CommunityPostCommentDto(
     Guid Id,
     Guid PostId,
+    Guid? ParentCommentId,
     string AuthorName,
     string Body,
     DateTime CreatedAt,
@@ -52,6 +53,7 @@ public class GetCommunityPostCommentsQueryHandler : IRequestHandler<GetCommunity
             .Select(x => new CommunityPostCommentDto(
                 x.Comment.Id,
                 x.Comment.PostId,
+                x.Comment.ParentCommentId,
                 x.Comment.AuthorUser.FullName,
                 x.Comment.Body,
                 x.Comment.CreatedAt,

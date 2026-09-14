@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -62,25 +63,25 @@ public class AndroidSyncStatusCommandHandler : IRequestHandler<AndroidSyncStatus
         // Update heartbeat and status
         wallet.DeviceStatus = "Connected";
         wallet.LastSeenAt = DateTime.UtcNow;
+        wallet.CurrentBalance = await _db.ReadLatestReportedBalanceAsync(wallet.Id, ct)
+            ?? wallet.CurrentBalance;
 
         await _db.SaveChangesAsync(ct);
 
         // Calculate limits received (Egypt Local Time)
-        var egyptTime = DateTime.UtcNow.AddHours(3);
-        var today = egyptTime.Date;
-        var startOfMonth = new DateTime(egyptTime.Year, egyptTime.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var (dayStartUtc, dayEndUtc) = CairoTime.GetCurrentDayRangeUtc();
+        var (monthStartUtc, monthEndUtc) = CairoTime.GetCurrentMonthRangeUtc();
         var activeStatus = new[] { RechargeRequestStatus.Matched, RechargeRequestStatus.Approved };
 
         var rechargeRequests = await _db.RechargeRequests
-            .Where(r => r.WalletId == wallet.Id && activeStatus.Contains(r.Status) && r.ResolvedAt >= startOfMonth.AddHours(-3))
+            .Where(r => r.WalletId == wallet.Id && activeStatus.Contains(r.Status) && r.ResolvedAt >= monthStartUtc && r.ResolvedAt < monthEndUtc)
             .ToListAsync(ct);
 
         var dailyReceived = rechargeRequests
-            .Where(r => r.ResolvedAt.HasValue && r.ResolvedAt.Value.AddHours(3).Date == today)
+            .Where(r => r.ResolvedAt >= dayStartUtc && r.ResolvedAt < dayEndUtc)
             .Sum(r => r.Amount);
 
         var monthlyReceived = rechargeRequests
-            .Where(r => r.ResolvedAt.HasValue && r.ResolvedAt.Value.AddHours(3) >= new DateTime(egyptTime.Year, egyptTime.Month, 1))
             .Sum(r => r.Amount);
 
         List<string> filters;

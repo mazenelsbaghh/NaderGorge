@@ -20,5 +20,6 @@ public sealed class LiveSupportConversation : BaseEntity
     public string? CloseReason { get; set; }
     public string? Subject { get; set; }
     public DateTime? LastMessageAt { get; set; }
+    public bool AllowsAI { get; set; } = true;
     public long Version { get; set; }
 }

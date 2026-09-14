@@ -369,7 +369,7 @@ export default function PublicFormPageClient({ params }: PublicFormPageProps) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 bg-[var(--admin-primary)] text-white hover:bg-[var(--admin-primary-strong)] h-12 rounded-2xl font-bold transition-all hover:shadow-lg hover:shadow-[var(--admin-primary-15)] disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 bg-[var(--admin-primary)] text-white hover:bg-[var(--admin-primary-strong)] h-12 rounded-2xl font-bold transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:shadow-lg hover:shadow-[var(--admin-primary-15)] disabled:opacity-50"
                 >
                   {submitting ? (
                     <>

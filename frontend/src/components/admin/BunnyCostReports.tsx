@@ -5,6 +5,7 @@ import { CalendarDays, Database, RefreshCw, Wifi } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService, type BunnyCostReport } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { cairoCurrentMonthPeriod } from '@/lib/cairo-time';
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 GB';
@@ -16,7 +17,7 @@ function formatUsd(value: number) {
 }
 
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return cairoCurrentMonthPeriod().first.slice(0, 7);
 }
 
 export function BunnyCostReports() {
@@ -112,6 +113,7 @@ export function BunnyCostReports() {
                   <th className="px-4 py-3 text-right">الباندويث</th>
                   <th className="px-4 py-3 text-right">تكلفة التخزين</th>
                   <th className="px-4 py-3 text-right">تكلفة الباندويث</th>
+                  <th className="px-4 py-3 text-right">مصدر الباندويث</th>
                   <th className="px-4 py-3 text-right">الإجمالي</th>
                 </tr>
               </thead>
@@ -123,12 +125,13 @@ export function BunnyCostReports() {
                     <td className="px-4 py-3 font-mono">{formatBytes(video.bandwidthBytes)}{video.isBandwidthEstimated ? ' *' : ''}</td>
                     <td className="px-4 py-3 font-mono">{formatUsd(video.storageCostUsd)}</td>
                     <td className="px-4 py-3 font-mono">{formatUsd(video.bandwidthCostUsd)}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--admin-muted)]">{video.isBandwidthEstimated ? 'تقديري: ' : 'فعلي: '}{video.bandwidthSource}</td>
                     <td className="px-4 py-3 font-mono font-black">{formatUsd(video.totalCostUsd)}</td>
                   </tr>
                 ))}
                 {report.videos.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[var(--admin-muted)]">لا توجد snapshots لهذا الشهر.</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-[var(--admin-muted)]">لا توجد snapshots لهذا الشهر.</td>
                   </tr>
                 )}
               </tbody>

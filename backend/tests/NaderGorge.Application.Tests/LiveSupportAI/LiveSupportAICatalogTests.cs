@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NaderGorge.Application.Features.LiveSupportAI.Services;
 
 namespace NaderGorge.Application.Tests.LiveSupportAI;
@@ -33,5 +34,30 @@ public sealed class LiveSupportAICatalogTests
     {
         var values = new Dictionary<string, object?> { ["verificationAnswer"] = "secret" };
         Assert.Throws<ArgumentException>(() => LiveSupportAISafety.SerializeBounded(values));
+    }
+
+    [Fact]
+    public void Every_implemented_action_exposes_a_non_empty_schema_and_validates_arguments()
+    {
+        foreach (var action in LiveSupportAICatalog.Actions.Keys)
+        {
+            var schema = LiveSupportAICatalog.GetArgumentsSchema(action);
+            Assert.Equal(JsonValueKind.Object, schema.ValueKind);
+            Assert.Equal(JsonValueKind.Object, schema.GetProperty("properties").ValueKind);
+        }
+
+        LiveSupportAICatalog.ValidateActionArguments("student.devices.disconnect-all", JsonDocument.Parse("{}").RootElement);
+        Assert.Throws<InvalidOperationException>(() => LiveSupportAICatalog.ValidateActionArguments(
+            "student.lesson.unlock", JsonDocument.Parse("{}").RootElement));
+        Assert.Throws<InvalidOperationException>(() => LiveSupportAICatalog.ValidateActionArguments(
+            "student.devices.disconnect-all", JsonDocument.Parse("{\"unexpected\":true}").RootElement));
+    }
+
+    [Fact]
+    public void Catalog_rejects_actions_without_an_implementation()
+    {
+        Assert.Throws<InvalidOperationException>(() => LiveSupportAICatalog.GetArgumentsSchema("system.some_action"));
+        Assert.Throws<InvalidOperationException>(() => LiveSupportAICatalog.ValidateActionArguments(
+            "system.some_action", JsonDocument.Parse("{}").RootElement));
     }
 }

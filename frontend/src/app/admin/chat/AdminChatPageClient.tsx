@@ -1,11 +1,11 @@
 'use client';
 
-import { AdminShellChrome } from '@/components/admin';
+import { AdminPage } from '@/components/admin';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 
 export default function AdminChatPageClient() {
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/chat"
       sectionLabel="التواصل الداخلي"
       pageTitle="غرف المحادثات المشتركة"
@@ -14,6 +14,6 @@ export default function AdminChatPageClient() {
       <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]">
         <ChatContainer />
       </div>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

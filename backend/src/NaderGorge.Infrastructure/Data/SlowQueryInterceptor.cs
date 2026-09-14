@@ -1,5 +1,7 @@
 using System;
 using System.Data.Common;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -10,7 +12,7 @@ namespace NaderGorge.Infrastructure.Data;
 public class SlowQueryInterceptor : DbCommandInterceptor
 {
     private readonly ILogger<SlowQueryInterceptor> _logger;
-    private const int SlowQueryThresholdMs = 250; // Threshold of 250ms
+    private const int SlowQueryThresholdMs = 250;
 
     public SlowQueryInterceptor(ILogger<SlowQueryInterceptor> logger)
     {
@@ -79,8 +81,22 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         var durationMs = eventData.Duration.TotalMilliseconds;
         if (durationMs > SlowQueryThresholdMs)
         {
-            _logger.LogWarning("Slow Database Query Detected: took {DurationMs}ms (Threshold: {Threshold}ms). Command Text: {CommandText}",
-                durationMs, SlowQueryThresholdMs, command.CommandText);
+            _logger.LogWarning(
+                "Slow database command detected: operation {Operation} context {Context} fingerprint {Fingerprint} took {DurationMs}ms (threshold {ThresholdMs}ms).",
+                eventData.ExecuteMethod,
+                eventData.Context?.GetType().Name ?? "unknown",
+                QueryFingerprint(command.CommandText),
+                durationMs,
+                SlowQueryThresholdMs);
         }
+    }
+
+    private static string QueryFingerprint(string commandText)
+    {
+        var normalized = string.Join(
+            ' ',
+            commandText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToHexString(hash)[..16];
     }
 }

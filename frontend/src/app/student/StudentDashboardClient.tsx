@@ -1,34 +1,89 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { ChevronDown } from 'lucide-react';
 
 import {
-  ContinueLearningCard,
   StudentDestinationsPanel,
   StudentGettingStartedPanel,
-  PackageGrid,
-  StatsStrip,
   StudentHero,
   UpcomingExamsPanel,
+  UpcomingHomeworkPanel,
   QuickAccessPanel,
-} from "@/packages/student";
-import { studentService, type DashboardDto, type QuickAccessItemDto } from "@/services/student-service";
-import { useAuthStore } from "@/stores/auth-store";
-import { RegistrationInstructionsModal } from "@/components/registration/RegistrationInstructionsModal";
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+} from '@/packages/student';
+import {
+  studentService,
+  type DashboardDto,
+  type QuickAccessItemDto,
+  type MyLessonDto,
+} from '@/services/student-service';
+import { useAuthStore } from '@/stores/auth-store';
+import { usePlatformQuery } from '@/components/providers/QueryProvider';
+import { queryKeys } from '@/lib/query-keys';
+import { StudentLearningOverview } from '@/components/student-dashboard/StudentLearningOverview';
+
+const CompactRegistrationInstructionsDialog = dynamic(
+  () =>
+    import(
+      '@/components/registration/CompactRegistrationInstructionsDialog'
+    ).then((module) => module.CompactRegistrationInstructionsDialog),
+  { ssr: false },
+);
 
 export default function StudentDashboardClient() {
-  const [data, setData] = useState<DashboardDto | null>(null);
-  const [quickAccessItems, setQuickAccessItems] = useState<QuickAccessItemDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const { user } = useAuthStore();
-  const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
   const router = useRouter();
+  const userId = useAuthStore((state) => state.user?.id);
+  const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
+  const userBoundary = userId ?? 'pending';
+  const dashboardQueryFn = useCallback(
+    ({ signal }: { signal: AbortSignal }) =>
+      studentService.getDashboard(signal),
+    []
+  );
+  const quickAccessQueryFn = useCallback(
+    ({ signal }: { signal: AbortSignal }) =>
+      studentService.getQuickAccess(signal),
+    []
+  );
+  const dashboardQuery = usePlatformQuery<DashboardDto>({
+    queryKey: queryKeys.student.dashboard(userBoundary),
+    queryFn: dashboardQueryFn,
+    staleTime: 30_000,
+    enabled: Boolean(userId),
+  });
+  const quickAccessQuery = usePlatformQuery<QuickAccessItemDto[]>({
+    queryKey: queryKeys.student.quickAccess(userBoundary),
+    queryFn: quickAccessQueryFn,
+    staleTime: 30_000,
+    enabled: Boolean(userId),
+  });
+  const lessonsQueryFn = useCallback(({ signal }: { signal: AbortSignal }) => studentService.getMyLessons(signal), []);
+  const lessonsQuery = usePlatformQuery<MyLessonDto[]>({
+    queryKey: queryKeys.student.lessons(userBoundary), queryFn: lessonsQueryFn,
+    staleTime: 30_000, enabled: Boolean(userId),
+  });
+  const data = dashboardQuery.data;
+  const quickAccessItems = quickAccessQuery.data ?? [];
+  const loading =
+    !userId ||
+    (dashboardQuery.data === undefined && dashboardQuery.error === null) ||
+    (quickAccessQuery.data === undefined && quickAccessQuery.error === null);
+  const loadError =
+    dashboardQuery.error || quickAccessQuery.error
+      ? 'تعذر تحميل لوحة الطالب. تحقق من الاتصال ثم أعد المحاولة.'
+      : null;
+
+  const refetchDashboard = useCallback(() => {
+    void Promise.all([
+      dashboardQuery.refetch(),
+      quickAccessQuery.refetch(),
+    ]).catch(() => undefined);
+  }, [dashboardQuery, quickAccessQuery]);
 
   // ─── Cookie helpers (cross-subdomain, persists 1 year) ─────────────────
-  const COOKIE_KEY = `onboarding_ack_${user?.id ?? 'anon'}`;
+  const COOKIE_KEY = `onboarding_ack_${userId ?? 'anon'}`;
 
   const getOnboardingCookie = () => {
     if (typeof window === 'undefined') return false;
@@ -38,7 +93,9 @@ export default function StudentDashboardClient() {
       }
     } catch {}
     if (typeof document === 'undefined') return false;
-    return document.cookie.split('; ').some((c) => c.startsWith(`${COOKIE_KEY}=1`));
+    return document.cookie
+      .split('; ')
+      .some((c) => c.startsWith(`${COOKIE_KEY}=1`));
   };
 
   const setOnboardingCookie = () => {
@@ -50,49 +107,24 @@ export default function StudentDashboardClient() {
     expires.setFullYear(expires.getFullYear() + 1);
     document.cookie = `${COOKIE_KEY}=1; path=/; domain=${domain}; expires=${expires.toUTCString()}; SameSite=Lax`;
     // Also set in localStorage as fallback for local dev
-    try { localStorage.setItem(COOKIE_KEY, '1'); } catch {}
+    try {
+      localStorage.setItem(COOKIE_KEY, '1');
+    } catch {}
   };
 
   useEffect(() => {
-    if (user?.id) {
+    if (userId) {
       if (!getOnboardingCookie()) {
         setShowInstructionsOnboard(true);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const handleCloseOnboard = () => {
     setOnboardingCookie();
     setShowInstructionsOnboard(false);
   };
-
-  const fetchDashboard = useCallback(() => {
-    setLoadError(null);
-    Promise.all([
-      studentService.getDashboard(),
-      studentService.getQuickAccess(),
-    ])
-      .then(([dashboardData, dQuickAccess]) => {
-        setData(dashboardData);
-        setQuickAccessItems(dQuickAccess || []);
-      })
-      .catch(() => {
-        setLoadError("تعذر تحميل لوحة الطالب. تحقق من الاتصال ثم أعد المحاولة.");
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
-
-  useEffect(() => {
-    registerCacheStore('student:exams', () => {}, fetchDashboard);
-    return () => {
-      unregisterCacheStore('student:exams');
-    };
-  }, [fetchDashboard]);
 
   if (loading) {
     return (
@@ -116,10 +148,7 @@ export default function StudentDashboardClient() {
         <p className="font-bold text-red-700 dark:text-red-200">{loadError}</p>
         <button
           type="button"
-          onClick={() => {
-            setLoading(true);
-            fetchDashboard();
-          }}
+          onClick={refetchDashboard}
           className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)]"
         >
           إعادة المحاولة
@@ -129,10 +158,11 @@ export default function StudentDashboardClient() {
   }
 
   const d: DashboardDto = data ?? {
-    studentName: "طالب",
+    studentName: 'طالب',
     activePackages: [],
     resumePoint: undefined,
     upcomingExams: [],
+    upcomingHomeworks: [],
     overallProgressPercent: 0,
     totalLessonsCompleted: 0,
     totalLessons: 0,
@@ -140,7 +170,7 @@ export default function StudentDashboardClient() {
   };
 
   return (
-    <div className="space-y-8 pb-4">
+    <div className="mx-auto max-w-5xl space-y-5 pb-4">
       {loadError && (
         <div
           role="alert"
@@ -149,7 +179,7 @@ export default function StudentDashboardClient() {
           <span>{loadError} يتم عرض آخر بيانات متاحة.</span>
           <button
             type="button"
-            onClick={fetchDashboard}
+            onClick={refetchDashboard}
             className="min-h-11 rounded-xl border border-current px-4"
           >
             إعادة المحاولة
@@ -159,51 +189,79 @@ export default function StudentDashboardClient() {
 
       <StudentHero data={d} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] xl:items-stretch">
-        <ContinueLearningCard
-          resumePoint={d.resumePoint ?? undefined}
-          hasActivePackages={d.activePackages.length > 0}
-          onContinue={() => {
-            if (d.resumePoint) {
-              router.push(
-                `/student/packages/${d.resumePoint.packageId}/lessons/${d.resumePoint.lessonId}`,
-              );
-              return;
-            }
-            router.push(d.activePackages.length > 0 ? "/student/packages" : "/student/code-redemption");
-          }}
-        />
+      {lessonsQuery.data ? <StudentLearningOverview lessons={lessonsQuery.data} /> : lessonsQuery.error ? (
+        <div role="alert" className="rounded-xl border border-[var(--admin-border)] p-5 text-[var(--admin-text)]">
+          <p>تعذر تحميل تقدّم المشاهدة. ده مش معناه إن تقدّمك صفر.</p>
+          <button type="button" onClick={() => void lessonsQuery.refetch()} className="mt-3 min-h-11 font-bold text-[var(--admin-primary)]">إعادة تحميل التقدّم</button>
+        </div>
+      ) : <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" aria-label="جارٍ تحميل تقدّم المشاهدة" />}
 
-        <UpcomingExamsPanel
-          exams={d.upcomingExams}
-          onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
+      {lessonsQuery.data?.length === 0 && (
+        <StudentGettingStartedPanel
+          data={d}
+          hasDirectContentAccess={quickAccessItems.length > 0}
         />
-      </div>
-
-      {(d.activePackages.length === 0 || (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
-        <StudentGettingStartedPanel data={d} />
       )}
 
-      <PackageGrid
-        packages={d.activePackages}
-        onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
-        onActivateCode={() => router.push("/student/code-redemption")}
-      />
+      {(d.upcomingExams.length > 0 || d.upcomingHomeworks.length > 0) && (
+        <details
+          className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]"
+          open
+        >
+          <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+            <span className="flex-1">المواعيد القريبة</span>
+            <span className="text-xs font-bold text-[var(--admin-muted)]">
+              {d.upcomingExams.length + d.upcomingHomeworks.length} عناصر
+            </span>
+            <ChevronDown
+              className="h-4 w-4 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="grid gap-4 border-t border-[var(--admin-border)] p-4 lg:grid-cols-2">
+            <UpcomingExamsPanel
+              exams={d.upcomingExams}
+              onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
+            />
+            <UpcomingHomeworkPanel
+              homeworks={d.upcomingHomeworks}
+              onStartHomework={(homeworkId) =>
+                router.push(`/student/homework/${homeworkId}`)
+              }
+            />
+          </div>
+        </details>
+      )}
 
-      {quickAccessItems.length > 0 && <QuickAccessPanel items={quickAccessItems} />}
+      <QuickAccessPanel accessItems={quickAccessItems} />
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <StudentDestinationsPanel />
-        <StatsStrip data={d} />
-      </div>
+      <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-3 font-black text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+          <span className="flex-1">المزيد من أدواتي</span>
+          <span className="text-xs font-bold text-[var(--admin-muted)]">
+            الوصول السريع والإحصاءات
+          </span>
+          <ChevronDown
+            className="h-4 w-4 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--admin-border)] p-4">
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <StudentDestinationsPanel />
+          </div>
+        </div>
+      </details>
 
-      <RegistrationInstructionsModal
-        open={showInstructionsOnboard}
-        onClose={handleCloseOnboard}
-        confirmLabel="أوافق وأرغب في استكمال استخدام المنصة"
-        title="تعليمات وشروط هامة قبل الدخول"
-        subtitle="يرجى قراءتها بدقة قبل تسجيل الدخول للجنة التعليمية واستخدام المنصة."
-      />
+      {showInstructionsOnboard && !d.resumePoint ? (
+        <CompactRegistrationInstructionsDialog
+          open
+          onClose={handleCloseOnboard}
+          confirmLabel="قرأت التعليمات، ابدأ رحلتي"
+          title="قبل أول خطوة في مسارك"
+          subtitle="راجع تعليمات الاستخدام مرة واحدة، ثم ابدأ دراستك مباشرة."
+        />
+      ) : null}
     </div>
   );
 }

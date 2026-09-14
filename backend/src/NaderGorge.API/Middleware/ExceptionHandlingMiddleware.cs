@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Common;
 
 namespace NaderGorge.API.Middleware;
 
@@ -23,6 +24,13 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // The client has disconnected; do not turn its cancelled transaction
+            // into a generic server failure or attempt to write to the closed response.
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+        }
         catch (ValidationException ex)
         {
             _logger.LogWarning("Validation failed: {Errors}", ex.Errors);
@@ -42,6 +50,24 @@ public class ExceptionHandlingMiddleware
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
         }
+        catch (ForbiddenException ex)
+        {
+            _logger.LogWarning("Forbidden access: {Message}", ex.Message);
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse.Fail(ex.Message);
+            await context.Response.WriteAsJsonAsync(response);
+        }
+        catch (DuplicatePhoneNumberException ex)
+        {
+            _logger.LogWarning("Duplicate phone rejected at {Method} {Path}", context.Request.Method, context.Request.Path);
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse.Fail(ex.Message, ["PHONE_ALREADY_EXISTS"]);
+            await context.Response.WriteAsJsonAsync(response);
+        }
         catch (KeyNotFoundException ex)
         {
             _logger.LogWarning("Not found at {Method} {Path}: {Message}", context.Request.Method, context.Request.Path, ex.Message);
@@ -50,6 +76,27 @@ public class ExceptionHandlingMiddleware
 
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || SerializationRetryHelper.IsSerializationFailure(ex))
+        {
+            var correlationId = context.Items["CorrelationId"]?.ToString() ?? context.TraceIdentifier;
+            _logger.LogWarning("Concurrent write conflict. CorrelationId: {CorrelationId}, Method: {Method}, Endpoint: {Endpoint}",
+                correlationId, context.Request.Method, context.GetEndpoint()?.DisplayName);
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(
+                "تغيّرت البيانات أثناء تنفيذ الطلب. حدّث الصفحة وراجع حالة العملية قبل المحاولة مرة أخرى.",
+                ["CONCURRENT_WRITE_CONFLICT"]));
+        }
+        catch (Exception ex) when (DatabaseFailureClassifier.IsTransient(ex))
+        {
+            var correlationId = context.Items["CorrelationId"]?.ToString() ?? context.TraceIdentifier;
+            _logger.LogWarning("Temporary database failure. CorrelationId: {CorrelationId}, Endpoint: {Endpoint}",
+                correlationId, context.GetEndpoint()?.DisplayName);
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.Headers.RetryAfter = "5";
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(
+                "تعذّر الاتصال بالخدمة مؤقتًا. انتظر لحظات وراجع حالة العملية قبل إعادة المحاولة.",
+                ["DATABASE_TEMPORARILY_UNAVAILABLE"]));
         }
         catch (InvalidOperationException ex)
         {
@@ -60,11 +107,12 @@ public class ExceptionHandlingMiddleware
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.GetType().Name == "PostgresException")
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException postgres &&
+            (IsExpectedConflict(postgres.SqlState) ||
+             postgres.SqlState == "23503" && postgres.ConstraintName == "FK_audit_logs_users_PerformedByUserId"))
         {
-            var inner = ex.InnerException;
-            var sqlState = inner.GetType().GetProperty("SqlState")?.GetValue(inner)?.ToString();
-            var constraintName = inner.GetType().GetProperty("ConstraintName")?.GetValue(inner)?.ToString();
+            var sqlState = postgres.SqlState;
+            var constraintName = postgres.ConstraintName;
 
             if (sqlState == "23503" && constraintName == "FK_audit_logs_users_PerformedByUserId")
             {
@@ -77,7 +125,12 @@ public class ExceptionHandlingMiddleware
                 return;
             }
 
-            throw;
+            _logger.LogWarning(
+                "Database conflict at {Method} {Path}. SqlState: {SqlState}, Constraint: {ConstraintName}",
+                context.Request.Method, context.Request.Path, sqlState, constraintName);
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(ApiResponse.Fail(GetConflictMessage(constraintName)));
         }
         catch (Exception ex)
         {
@@ -91,4 +144,17 @@ public class ExceptionHandlingMiddleware
             await context.Response.WriteAsJsonAsync(response);
         }
     }
+
+    private static bool IsExpectedConflict(string? sqlState)
+    {
+        return sqlState is "23505" or "23514" or "40001";
+    }
+
+    private static string GetConflictMessage(string? constraintName) => constraintName switch
+    {
+        "IX_student_access_grants_UserId_GrantType_TermId" => "لديك صلاحية مفعلة بالفعل لنفس الترم. لا يمكن تفعيل الكود مرتين لنفس المحتوى.",
+        "IX_users_PhoneNumber" => "رقم الهاتف مسجل بالفعل في حساب آخر.",
+        "CK_live_support_schedule_time" => "وقت بداية ونهاية الدعم يجب ألا يكونا متساويين؛ الشيفت الليلي مثل 10 مساءً إلى 2 صباحًا مسموح.",
+        _ => "تعذر تنفيذ العملية لأن البيانات تغيّرت. حدّث الصفحة ثم حاول مرة أخرى."
+    };
 }

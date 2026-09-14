@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { AssessmentStartConfirmation } from '@/components/assessments/AssessmentStartConfirmation';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { examService, ActiveExamAttemptDto, ExamResultDto } from '@/services/exam-service';
 import { ExamViewer, ExamResultPanel } from '@/components/exams/ExamViewer';
 
 export default function ExamPageClient() {
+  const params = useParams();
+  return <ExamPageClientContent key={params.examId as string} />;
+}
+
+function ExamPageClientContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -13,73 +19,77 @@ export default function ExamPageClient() {
   const examId = params.examId as string;
   const packageId = searchParams.get('packageId') || undefined;
   const lessonId = searchParams.get('lessonId') || undefined;
+  const fromPublicExams = searchParams.get('from') === 'public-exams';
+  const resultReturnHref = fromPublicExams ? '/student/public-exams' : undefined;
+  const resultReturnLabel = fromPublicExams ? 'العودة للامتحانات العامة' : undefined;
   
   const [exam, setExam] = useState<ActiveExamAttemptDto | null>(null);
   const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState<'entry' | 'restart' | null>('entry');
 
-  const loadExam = useCallback(async () => {
+  const startExam = useCallback(async () => {
     if (!examId) return;
-
     setLoading(true);
     setError('');
-    setPassedResult(null);
-
     try {
-      try {
-        const passedResultResponse = await examService.getLatestPassedResult(examId);
-        setPassedResult(passedResultResponse.data.data);
-        setExam(null);
-        return;
-      } catch (err: unknown) {
-        const passedResultError = err as { response?: { status?: number; data?: { message?: string } } };
-        if (passedResultError.response?.status && passedResultError.response.status !== 404) {
-          if (passedResultError.response.data?.message) {
-            setError(passedResultError.response.data.message);
-          } else if (passedResultError.response.status === 403) {
-            setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
-          } else {
-            setError('تعذر تحميل نتيجة الامتحان الحالية.');
-          }
-          setExam(null);
-          return;
-        }
-      }
-
-      try {
-        const res = await examService.startExam(examId);
-        setExam(res.data.data);
-      } catch (err: unknown) {
-        const apiError = err as { response?: { status?: number; data?: { errors?: string[]; message?: string } } };
-
-        if (apiError.response?.data?.message) {
-          setError(apiError.response.data.message);
-        } else if (apiError.response?.status === 403) {
-          setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
-        } else if (apiError.response?.data?.errors?.includes('لقد اجتزت هذا الامتحان بالفعل.')) {
-          try {
-            const passedResultResponse = await examService.getLatestPassedResult(examId);
-            setPassedResult(passedResultResponse.data.data);
-            setExam(null);
-            return;
-          } catch {
-            setError('لقد اجتزت هذا الامتحان بالفعل.');
-          }
-        } else {
-          setError('الامتحان غير موجود أو حدث خطأ أثناء تحميله.');
-        }
-        setExam(null);
-      }
-
+      const response = await examService.startExam(examId);
+      setExam(response.data.data);
+      setPassedResult(null);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
+      setError(apiError.response?.data?.message || 'تعذر بدء محاولة جديدة. حاول مرة أخرى.');
+      setExam(null);
+      setPassedResult(null);
     } finally {
       setLoading(false);
     }
   }, [examId]);
 
-  useEffect(() => {
-    void loadExam();
-  }, [loadExam]);
+  const loadExam = useCallback(async () => {
+    if (!examId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const response = await examService.getLatestResult(examId);
+      setPassedResult(response.data.data);
+      setExam(null);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { status?: number; data?: { message?: string } } };
+      if (apiError.response?.status === 404) {
+        await startExam();
+      } else {
+        setError(apiError.response?.data?.message || 'تعذر تحميل نتيجة الامتحان الحالية. حاول مرة أخرى.');
+        setExam(null);
+        setPassedResult(null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [examId, startExam]);
+
+  const confirmationDialog = confirmation ? (
+    <AssessmentStartConfirmation
+      kind="exam"
+      onConfirm={() => {
+        const action = confirmation === 'restart' ? startExam : loadExam;
+        setConfirmation(null);
+        void action();
+      }}
+      onCancel={() => {
+        if (confirmation === 'restart') {
+          setConfirmation(null);
+        } else {
+          router.push(packageId && lessonId
+            ? `/student/packages/${packageId}/lessons/${lessonId}`
+            : fromPublicExams ? '/student/public-exams' : packageId ? `/student/packages/${packageId}` : '/student');
+        }
+      }}
+    />
+  ) : null;
+
+  if (confirmation === 'entry') return confirmationDialog;
 
   if (loading) {
     return (
@@ -96,7 +106,16 @@ export default function ExamPageClient() {
     if (passedResult) {
       return (
         <div className="mx-auto max-w-5xl pb-16">
-          <ExamResultPanel result={passedResult} packageId={packageId} lessonId={passedResult.lessonId} onRestart={loadExam} />
+      {confirmationDialog}
+          <ExamResultPanel
+            result={passedResult}
+            packageId={packageId}
+            lessonId={passedResult.lessonId}
+            onRestart={() => setConfirmation('restart')}
+            onResultRefresh={setPassedResult}
+            returnHref={resultReturnHref}
+            returnLabel={resultReturnLabel}
+          />
         </div>
       );
     }
@@ -110,6 +129,8 @@ export default function ExamPageClient() {
           onClick={() => {
             if (packageId && lessonId) {
               router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else if (fromPublicExams) {
+              router.push('/student/public-exams');
             } else {
               router.push(packageId ? `/student/packages/${packageId}` : '/student');
             }
@@ -124,12 +145,15 @@ export default function ExamPageClient() {
 
   return (
     <div className="mx-auto max-w-5xl pb-16">
+      {confirmationDialog}
       {!passedResult && (
         <button 
           type="button"
           onClick={() => {
             if (packageId && lessonId) {
               router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else if (fromPublicExams) {
+              router.push('/student/public-exams');
             } else {
               router.push(packageId ? `/student/packages/${packageId}` : '/student');
             }
@@ -143,7 +167,18 @@ export default function ExamPageClient() {
         </button>
       )}
 
-      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} lessonId={lessonId} onRestart={loadExam} />
+      <ExamViewer
+        key={`${exam.attemptId}:${exam.revisionId ?? ""}`}
+        examId={examId}
+        examTitle={exam.title}
+        examDescription={exam.description}
+        attempt={exam}
+        packageId={packageId}
+        lessonId={lessonId}
+        onRestart={() => setConfirmation('restart')}
+        resultReturnHref={resultReturnHref}
+        resultReturnLabel={resultReturnLabel}
+      />
     </div>
   );
 }

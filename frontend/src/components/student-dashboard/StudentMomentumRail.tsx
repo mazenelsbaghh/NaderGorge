@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpLeft, BookOpenText, CirclePlay, FilePenLine, KeyRound } from "lucide-react";
+import { ArrowUpLeft, BookOpenText, CirclePlay, FilePenLine } from "lucide-react";
 
 import type { DashboardDto } from "@/services/student-service";
 
@@ -25,10 +25,10 @@ function buildStages(data: DashboardDto): RailStage[] {
       ? {
           id: "unlock",
           label: "الآن",
-          title: "فعّل كودك لفتح أول باقة",
-          href: "/student/code-redemption",
-          cta: "فعّل كودك",
-          icon: KeyRound,
+          title: "اختر أول باقة لتبدأ رحلتك",
+          href: "/student/packages",
+          cta: "استعرض الباقات",
+          icon: BookOpenText,
           active: true,
         }
       : data.resumePoint

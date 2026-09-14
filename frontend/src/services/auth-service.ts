@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { createClientId } from '@/lib/client-id';
 
 export interface RegisterData {
   // ── Personal ───────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ export interface RegisterData {
   educationStage: 'Secondary' | 'Baccalaureate' | 'Primary' | 'Preparatory' | 'Azhari' | 'American';
   gradeLevel: string;
   studyTrack?: string;
-  avatarSlug?: string;
+  avatarSlug: string;
 }
 
 export interface LoginData {
@@ -59,10 +60,31 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
+export interface CurrentSessionSnapshot {
+  user: {
+    id: string;
+    fullName: string;
+    phone: string;
+    roles: string[];
+    permissions: string[];
+    profileComplete: boolean;
+    avatarSlug?: string | null;
+    allowedDomains?: string[];
+    allowedNavbarItems?: string[];
+    authorizationVersion?: number;
+  };
+  authorizationVersion: number;
+  serverTime: string;
+}
+
 export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
-  login: (data: LoginData) => apiClient.post('/auth/login', data),
+  // LoginForm renders the server's authentication error beside the fields.
+  // Suppress the global interceptor toast so an expected 401 is not also
+  // presented as a misleading network failure.
+  login: (data: LoginData) => apiClient.post('/auth/login', data, { suppressErrorToast: true }),
   refresh: () => apiClient.post('/auth/refresh', {}),
+  getCurrentSession: () => apiClient.get<{ data: CurrentSessionSnapshot }>('/auth/session'),
   logout: () => apiClient.post('/auth/logout', {}),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
@@ -75,7 +97,7 @@ export function getDeviceFingerprint(): string {
   if (typeof window === 'undefined') return 'ssr';
   let fp = localStorage.getItem('deviceFingerprint');
   if (!fp) {
-    fp = crypto.randomUUID();
+    fp = createClientId();
     localStorage.setItem('deviceFingerprint', fp);
   }
   return fp;

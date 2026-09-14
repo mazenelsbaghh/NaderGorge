@@ -72,13 +72,22 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
             TargetUserId = req.UserId.ToString(),
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
+                requestId = req.Id,
                 lessonId = req.LessonVideo.LessonId,
                 videoId = req.LessonVideoId,
                 status = "Approved",
-                allowedWatchCount = watchEvent?.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount
+                allowedWatchCount = watchEvent?.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount,
+                reason
             })
         };
         _context.OutboxEvents.Add(outboxEvent);
+
+        _context.OutboxEvents.Add(new OutboxEvent
+        {
+            Type = "ExtraWatchRequestUpdated",
+            TargetGroup = "Role_Staff",
+            PayloadJson = outboxEvent.PayloadJson
+        });
 
         await _context.SaveChangesAsync(cancellationToken);
         return ApiResponse<bool>.Ok(true);

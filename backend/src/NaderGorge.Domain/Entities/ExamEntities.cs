@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Common;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities;
 
@@ -9,8 +10,11 @@ public enum QuestionType
     FindTheMistake = 2
 }
 
-public class Exam : BaseEntity
+public class Exam : BaseEntity, IArchivableContent
 {
+    public string? ParentNotificationSettingsJson { get; set; }
+    public DateTime? ParentNotificationEnabledAt { get; set; }
+    public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
 
@@ -25,6 +29,10 @@ public class Exam : BaseEntity
 
     // Config properties
     public bool IsMandatory { get; set; } = true;
+    public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
 
@@ -33,6 +41,7 @@ public class Exam : BaseEntity
 
     public Guid? LessonVideoId { get; set; }
     public LessonVideo? LessonVideo { get; set; }
+    public PublicExamProduct? PublicExamProduct { get; set; }
 
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();
@@ -40,6 +49,12 @@ public class Exam : BaseEntity
 
 public class QuestionBankItem : BaseEntity
 {
+    public Guid? LearningLessonId { get; set; }
+    public Lesson? LearningLesson { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(160)]
+    public string LearningConcept { get; set; } = string.Empty;
+    public int LearningDifficulty { get; set; }
+    public Guid? SupersededByQuestionId { get; set; }
     public string Text { get; set; } = string.Empty;
     public QuestionType Type { get; set; } = QuestionType.MCQ;
     public decimal DefaultPoints { get; set; } = 1.0m;
@@ -71,6 +86,7 @@ public class EssayQuestion : QuestionBankItem
 
 public class QuestionOption : BaseEntity
 {
+    public bool IsRetired { get; set; }
     public string Text { get; set; } = string.Empty;
     public bool IsCorrect { get; set; }
 
@@ -81,6 +97,7 @@ public class QuestionOption : BaseEntity
 // Junction table for Exams and Questions
 public class ExamQuestion : BaseEntity
 {
+    public bool IsRetired { get; set; }
     public Guid ExamId { get; set; }
     public Exam Exam { get; set; } = null!;
 
@@ -93,6 +110,7 @@ public class ExamQuestion : BaseEntity
 
 public class StudentExamAttempt : BaseEntity
 {
+    public string? DefinitionSnapshotJson { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

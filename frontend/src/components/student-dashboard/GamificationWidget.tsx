@@ -30,7 +30,7 @@ export function GamificationWidget() {
   if (!status) {
     if (hasError) {
       return (
-        <div className="mt-4 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-sm font-bold text-[var(--admin-muted)] shadow-sm">
+        <div className="mt-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-sm font-bold text-[var(--admin-muted)] shadow-sm">
           تعذر تحميل نقاطك الآن.
         </div>
       );
@@ -40,7 +40,7 @@ export function GamificationWidget() {
   }
 
   return (
-    <div className="mt-4 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm">
+    <div className="mt-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
           <Star className="h-5 w-5 fill-current" />

@@ -1,0 +1,14 @@
+{
+  "api_url": "https://api.massar-academy.net",
+  "token_file": "/etc/massar/auto-repair.token",
+  "state_dir": "/var/lib/massar/auto-repair",
+  "source_repository": "/var/lib/massar/auto-repair-source",
+  "source_ref": "REPLACE_WITH_VERIFIED_FULL_GIT_COMMIT",
+  "baseline_release": "REPLACE_WITH_VERIFIED_LIVE_RELEASE_ID",
+  "agent_image": "REPLACE_WITH_INSTALLED_IMAGE_AT_SHA256_DIGEST",
+  "agent_network": "massar-repair-internal",
+  "codex_home": "/home/massar-ops/.local/share/massar-auto-repair/codex-home",
+  "https_proxy": "http://massar-repair-proxy:3128",
+  "postgres_image": "REPLACE_WITH_INSTALLED_POSTGRES16_DIGEST",
+  "redis_image": "REPLACE_WITH_INSTALLED_REDIS7_DIGEST"
+}

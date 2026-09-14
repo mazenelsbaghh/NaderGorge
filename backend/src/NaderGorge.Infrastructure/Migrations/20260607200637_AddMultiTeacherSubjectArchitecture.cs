@@ -136,10 +136,12 @@ namespace NaderGorge.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            // 4. Seed default subject, teacher user, teacher profile, and teacher-subject connection
+            // 4. Create temporary, inactive compatibility rows required by the
+            // historical non-null FK transition below. A later hardening
+            // migration removes them when no real data references them.
             migrationBuilder.Sql(@"
                 INSERT INTO users (""Id"", ""FullName"", ""PhoneNumber"", ""PasswordHash"", ""IsActive"", ""IsProfileComplete"", ""CreatedAt"")
-                VALUES ('c4b82937-293e-48a3-a002-decf9a1efab8', 'مدرس تاريخ افتراضي', '01111111111', '$2a$11$wK1mJz3B.gZq6u.RjT1RquWvV0G9t0h6YI4tZpXg9gq/o0s0z0z0', true, true, NOW())
+                VALUES ('c4b82937-293e-48a3-a002-decf9a1efab8', 'Legacy migration placeholder', '__legacy_teacher__', '!', false, false, NOW())
                 ON CONFLICT (""PhoneNumber"") DO NOTHING;
             ");
 
@@ -152,13 +154,13 @@ namespace NaderGorge.Infrastructure.Migrations
 
             migrationBuilder.Sql(@"
                 INSERT INTO subjects (""Id"", ""Name"", ""NormalizedName"", ""Description"", ""CreatedAt"")
-                VALUES ('d9b8a342-990a-4286-905e-fdebb2e3895e', 'التاريخ', 'history', 'مادة التاريخ للثانوية العامة', NOW())
+                VALUES ('d9b8a342-990a-4286-905e-fdebb2e3895e', 'Legacy migration placeholder', '__legacy_subject__', '', NOW())
                 ON CONFLICT DO NOTHING;
             ");
 
             migrationBuilder.Sql(@"
                 INSERT INTO teacher_profiles (""Id"", ""UserId"", ""Bio"", ""Specialization"", ""CommissionRate"", ""ContactInfo"", ""CreatedAt"")
-                VALUES ('b4b82937-293e-48a3-a002-decf9a1efab8', 'c4b82937-293e-48a3-a002-decf9a1efab8', 'المدرس الافتراضي للمنصة', 'التاريخ', 10.00, '01111111111', NOW())
+                VALUES ('b4b82937-293e-48a3-a002-decf9a1efab8', 'c4b82937-293e-48a3-a002-decf9a1efab8', '', '', 0.00, '', NOW())
                 ON CONFLICT DO NOTHING;
             ");
 

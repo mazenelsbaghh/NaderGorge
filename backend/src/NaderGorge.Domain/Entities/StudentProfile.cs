@@ -1,5 +1,6 @@
 using NaderGorge.Domain.Common;
 using NaderGorge.Domain.Enums;
+using System.Security.Cryptography;
 
 namespace NaderGorge.Domain.Entities;
 
@@ -52,18 +53,11 @@ public class StudentProfile : BaseEntity
 
     public StudentProfile()
     {
-        ParentTrackingCode = GenerateRandomCode();
+        ParentTrackingCode = GenerateParentTrackingCode();
     }
 
-    private static string GenerateRandomCode()
+    public static string GenerateParentTrackingCode()
     {
-        const string chars = "0123456789";
-        var random = new Random();
-        var result = new char[6];
-        for (int i = 0; i < 6; i++)
-        {
-            result[i] = chars[random.Next(chars.Length)];
-        }
-        return new string(result);
+        return RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
     }
 }

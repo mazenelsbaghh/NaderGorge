@@ -54,6 +54,13 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
         }
 
         var oldRolesJson = JsonSerializer.Serialize(user.UserRoles.Select(r => r.Role.Name));
+        var oldRoleNames = user.UserRoles.Select(r => r.Role.Name)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var newRoleNames = rolesToAssign.Select(r => r.Name)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var rolesChanged = !oldRoleNames.SequenceEqual(newRoleNames, StringComparer.OrdinalIgnoreCase);
         var previouslyReceivedConversations = user.UserRoles.Any(userRole => HasRoutingPermission(userRole.Role.PermissionsJson));
 
         // Clear existing
@@ -79,6 +86,20 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
         }
 
         var newRolesJson = JsonSerializer.Serialize(rolesToAssign.Select(r => r.Name));
+        if (rolesChanged)
+        {
+            user.SecurityStampVersion += 1;
+            AddUserAuthorizationChangedEvent(user.Id, user.SecurityStampVersion, request.AdminId);
+        }
+
+        var activeRefreshTokens = await _db.RefreshTokens
+            .Where(refreshToken => refreshToken.UserId == user.Id && !refreshToken.IsRevoked)
+            .ToListAsync(ct);
+
+        foreach (var refreshToken in activeRefreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+        }
 
         _db.AuditLogs.Add(new AuditLog
         {
@@ -93,6 +114,29 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok("User roles updated successfully.");
+    }
+
+    private void AddUserAuthorizationChangedEvent(Guid userId, int authorizationVersion, Guid actorUserId)
+    {
+        _db.OutboxEvents.Add(new OutboxEvent
+        {
+            Type = "StaffDataChanged",
+            TargetUserId = userId.ToString(),
+            TargetGroup = "Role_Staff",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                schemaVersion = "2",
+                eventId = Guid.NewGuid(),
+                occurredAt = DateTime.UtcNow,
+                scopes = new[] { "users", "settings" },
+                operation = "updated",
+                entityType = "UserRole",
+                entityIds = new[] { userId },
+                userId,
+                authorizationVersion,
+                actorUserId
+            })
+        });
     }
 
     private static bool HasRoutingPermission(string? permissionsJson)

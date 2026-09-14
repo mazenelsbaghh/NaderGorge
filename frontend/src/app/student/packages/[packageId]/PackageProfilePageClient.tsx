@@ -14,35 +14,13 @@ import { devConsole } from '@/utils/dev-console';
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
+import { GRADE_LEVEL_LABELS } from "@/lib/academic-labels";
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي',
-  SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي',
-  FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا',
-  PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي',
-  PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي',
-  PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي',
-  PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي',
-  PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري',
-  AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري',
-  AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10',
-  AmericanGrade11: 'Grade 11',
-  AmericanGrade12: 'Grade 12',
-};
 import {
   ArrowRight,
   ChevronLeft,
@@ -50,12 +28,18 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
-import { CodeType } from "@/services/balance-service";
 import {
+  CONTENT_CACHE_KEYS,
   contentService,
+  getContentRootLabel,
+  getContentRootPurchaseReference,
   type TermDto,
   type PackageDto,
 } from "@/services/content-service";
+import { registerCacheStore } from "@/lib/cache-invalidation";
+import { isFullPackagePurchaseDisabled } from "@/lib/content-access";
+
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
 /* ── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
@@ -74,7 +58,10 @@ const fadeUp = {
 
 export default function PackageProfilePageClient() {
   const params = useParams();
+  const router = useRouter();
   const packageId = params.packageId as string;
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   const [pkg, setPkg] = useState<PackageDto | null>(null);
   const [terms, setTerms] = useState<TermDto[]>([]);
@@ -82,17 +69,9 @@ export default function PackageProfilePageClient() {
   const [termsLoading, setTermsLoading] = useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const loadPackageData = useCallback((options?: { showLoading?: boolean }) => {
+  const loadPackageData = useCallback(() => {
     if (!packageId) return;
-
-    const cachedPackage = contentService.peekCachedPackageById(packageId);
-    if (cachedPackage) {
-      setPkg(cachedPackage);
-    }
-
-    if (options?.showLoading || !cachedPackage) {
-      setLoading(true);
-    }
+    setLoading(true);
     setTermsLoading(true);
 
     Promise.all([
@@ -103,7 +82,7 @@ export default function PackageProfilePageClient() {
         const found = pkgRes.data?.data?.find(
           (p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()
         );
-        setPkg(found ?? cachedPackage ?? null);
+        setPkg(found ?? null);
         setTerms(termRes.data.data);
       })
       .catch((err) => devConsole.error(err))
@@ -127,6 +106,11 @@ export default function PackageProfilePageClient() {
     };
   }, [loadPackageData]);
 
+  useEffect(() => {
+    const cleanupCacheStore = registerCacheStore(CONTENT_CACHE_KEYS.packages, () => {}, loadPackageData);
+    return cleanupCacheStore;
+  }, [loadPackageData]);
+
 
 
   /* ── Loading skeleton ── */
@@ -134,7 +118,7 @@ export default function PackageProfilePageClient() {
     return (
       <div className="space-y-6 animate-pulse">
         {/* Hero skeleton */}
-        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)]" />
+        <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)]" />
         {/* Two-column skeleton */}
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
@@ -159,6 +143,13 @@ export default function PackageProfilePageClient() {
 
   const isEnrolled = pkg?.isEnrolled ?? false;
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
+  const contentMode = pkg?.contentMode ?? "TermWithSections";
+  const contentRootLabel = getContentRootLabel(contentMode);
+  const directSections = pkg?.directSections ?? [];
+  const directLessons = pkg?.directLessons ?? [];
+  const hasRootContentAccess = pkg?.hasRootContentAccess ?? hasDirectPackageAccess;
+  const fullPackagePurchaseDisabled = isFullPackagePurchaseDisabled(pkg);
+  const rootPurchaseTarget = pkg ? getContentRootPurchaseReference(pkg) : null;
 
   return (
     <motion.div
@@ -169,14 +160,14 @@ export default function PackageProfilePageClient() {
     >
       {/* ── Back button ── */}
       <motion.div variants={fadeUp}>
-        <Link
-          href="/student/packages"
-          prefetch={false}
+        <button
+          type="button"
+          onClick={() => returnTo?.startsWith("/student/") ? router.push(returnTo) : router.back()}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
         >
           <ArrowRight className="h-4 w-4" />
-          <span>العودة إلى باقاتي</span>
-        </Link>
+          <span>الرجوع خطوة</span>
+        </button>
       </motion.div>
 
       {/* ── Hero Image Banner ── */}
@@ -211,10 +202,14 @@ export default function PackageProfilePageClient() {
                 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
           }`}>
-            {hasDirectPackageAccess ? "باقة مفعّلة" : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
+            {hasRootContentAccess ? `تم تفعيل ${contentRootLabel}` : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
           </span>
           <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
-            {terms.length} ترم
+            {contentMode === "LessonsOnly" || contentMode === "SingleLesson"
+              ? `${directLessons.length} حصة`
+              : contentMode === "SectionWithLessons"
+                ? `${directSections.length} قسم`
+                : `${terms.length} ترم`}
           </span>
         </div>
 
@@ -232,13 +227,78 @@ export default function PackageProfilePageClient() {
         <div className="lg:col-span-2 space-y-8">
           {/* Description */}
           <div className="space-y-2 text-right">
-            <h3 className="text-lg font-black text-[var(--admin-text)]">تفاصيل الباقة</h3>
+            <h3 className="text-lg font-black text-[var(--admin-text)]">تفاصيل {contentRootLabel}</h3>
             <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base whitespace-pre-line">
-              {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
+              {pkg?.description || `تفاصيل ${contentRootLabel} غير متوفرة حالياً.`}
             </p>
           </div>
 
-          {/* Terms Section */}
+          {contentMode === "SectionWithLessons" ? (
+            <div className="space-y-4">
+              <div className="text-right">
+                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر القسم</h2>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">الأقسام متاحة مباشرة داخل هذا الكورس.</p>
+              </div>
+              {directSections.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
+                  <p className="font-bold text-[var(--admin-muted)]">لا توجد أقسام في هذا الكورس بعد.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {directSections.map((section, idx) => (
+                    <Link
+                      key={section.id}
+                      href={pkg?.rootTermId ? `/student/packages/${packageId}/terms/${pkg.rootTermId}/sections/${section.id}` : '#'}
+                      prefetch={false}
+                      className="group flex items-center justify-between rounded-[1.75rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-1 hover:shadow-md"
+                    >
+                      <div>
+                        <span className="text-xs font-black text-[var(--admin-primary)]">قسم {idx + 1}</span>
+                        <h3 className="mt-2 text-lg font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)]">{section.title}</h3>
+                        <p className="mt-2 text-xs font-bold text-[var(--admin-muted)]">{section.isPurchased || hasDirectPackageAccess ? '✦ مفتوح' : 'مقفل'}</p>
+                      </div>
+                      <ChevronLeft className="h-5 w-5 text-[var(--admin-muted)] group-hover:text-[var(--admin-primary)]" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : contentMode === "LessonsOnly" || contentMode === "SingleLesson" ? (
+            <div className="space-y-4">
+              <div className="text-right">
+                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">
+                  {contentMode === "SingleLesson" ? "الحصة" : "اختر الحصة"}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">
+                  {contentMode === "SingleLesson" ? "افتح الحصة لإضافة أو مشاهدة الفيديوهات والملفات." : "الحصص متاحة مباشرة داخل هذا القسم."}
+                </p>
+              </div>
+              {directLessons.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center">
+                  <p className="font-bold text-[var(--admin-muted)]">لا توجد حصص في هذا الكورس بعد.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {directLessons.map((lesson, idx) => (
+                    <Link
+                      key={lesson.id}
+                      href={`/student/packages/${packageId}/lessons/${lesson.id}`}
+                      prefetch={false}
+                      className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div>
+                        <span className="text-xs font-black text-[var(--admin-primary)]">حصة {idx + 1}</span>
+                        <h3 className="mt-1 text-base font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)]">{lesson.title}</h3>
+                        {lesson.summary && <p className="mt-1 text-xs text-[var(--admin-muted)] line-clamp-2">{lesson.summary}</p>}
+                      </div>
+                      <ChevronLeft className="h-5 w-5 text-[var(--admin-muted)] group-hover:text-[var(--admin-primary)]" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+          /* Terms Section */
           <div className="space-y-4">
             <div className="text-right">
               <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الترم</h2>
@@ -253,7 +313,7 @@ export default function PackageProfilePageClient() {
                 ))}
               </div>
             ) : terms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center bg-[var(--admin-card)]/30">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] py-16 text-center bg-[var(--admin-card)]/30">
                 <p className="font-bold text-[var(--admin-muted)]">لا توجد أترام في هذه الباقة بعد.</p>
               </div>
             ) : (
@@ -271,7 +331,7 @@ export default function PackageProfilePageClient() {
                       key={term.id}
                       href={`/student/packages/${packageId}/terms/${term.id}`}
                       prefetch={false}
-                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-all hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
                     >
                       {/* Thumbnail area */}
                       <div
@@ -354,7 +414,7 @@ export default function PackageProfilePageClient() {
                           ) : (
                             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">مجانًا</span>
                           )}
-                          <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
+                          <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-[color,background-color,border-color,opacity,transform,box-shadow] group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
                         </div>
                       </div>
                     </Link>
@@ -363,6 +423,7 @@ export default function PackageProfilePageClient() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Left Column: Sidebar (Actions + Teacher Info) */}
@@ -370,32 +431,36 @@ export default function PackageProfilePageClient() {
           {/* Purchase / Enrollment Action Card */}
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm space-y-4 text-right">
             <div>
-              <span className="text-xs font-bold text-[var(--admin-muted)]">سعر الباقة</span>
+              <span className="text-xs font-bold text-[var(--admin-muted)]">سعر {contentRootLabel}</span>
               <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{pkg?.price || 0} ج.م</p>
             </div>
-            
-            {hasDirectPackageAccess ? (
+
+            {hasRootContentAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> تم تفعيل {contentRootLabel} في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
               </div>
-            ) : (
+            ) : fullPackagePurchaseDisabled ? (
+              <div
+                role="status"
+                className="rounded-2xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] p-4 text-sm font-bold leading-7 text-[var(--admin-warning)]"
+              >
+                شراء الباقة كاملة متوقف حالياً. يمكنك فتح الترمات وشراء الترم أو القسم أو الحصة بشكل منفصل.
+              </div>
+            ) : rootPurchaseTarget ? (
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  شراء الباقة
+                  شراء {contentRootLabel}
                 </button>
-                <Link
-                  href="/student/code-redemption"
-                  prefetch={false}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] active:scale-[0.98]"
-                >
-                  لدي كود تفعيل
-                </Link>
               </div>
+            ) : (
+              <p className="rounded-2xl bg-red-500/10 p-4 text-center text-sm font-bold text-red-600 dark:text-red-400">
+                تعذر تجهيز شراء هذا المحتوى حاليًا. حاول مرة أخرى لاحقًا.
+              </p>
             )}
           </div>
 
@@ -443,9 +508,9 @@ export default function PackageProfilePageClient() {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchaseSuccess={() => loadPackageData()}
-        contentType={"Package" as CodeType}
-        contentId={packageId}
-        contentName={pkg?.name || "الباقة الكاملة"}
+        contentType={rootPurchaseTarget?.contentType ?? "Package"}
+        contentId={rootPurchaseTarget?.contentId ?? ""}
+        contentName={pkg?.name || contentRootLabel}
         price={pkg?.price || 0}
       />
     </motion.div>

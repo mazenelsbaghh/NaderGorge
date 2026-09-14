@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massar-academy.net/schemas/production-inventory.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cluster", "nodes", "hostnames"],
+  "properties": {
+    "cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "domain", "overlay_cidr", "ssh_user", "known_hosts_file", "identity_file"],
+      "properties": {
+        "name": { "const": "massar-production" },
+        "domain": { "const": "massar-academy.net" },
+        "overlay_cidr": { "type": "string", "pattern": "^(?:\\d{1,3}\\.){3}\\d{1,3}/(?:[0-9]|[12][0-9]|3[0-2])$" },
+        "ssh_user": { "const": "massar-ops" },
+        "known_hosts_file": { "type": "string", "minLength": 1 },
+        "identity_file": { "type": "string", "minLength": 1 }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "ssh_alias", "public_address", "overlay_address", "roles"],
+        "properties": {
+          "id": { "enum": ["node-1", "node-2", "node-3"] },
+          "ssh_alias": { "enum": ["massar-prod-1", "massar-prod-2", "massar-prod-3"] },
+          "public_address": { "type": "string", "format": "ipv4" },
+          "overlay_address": { "type": "string", "format": "ipv4" },
+          "roles": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "app", "ingress", "etcd", "postgres", "redis", "sentinel",
+                "file-data-primary", "file-data-standby", "file-arbiter"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "hostnames": {
+      "type": "object",
+      "minProperties": 8,
+      "maxProperties": 8,
+      "additionalProperties": {
+        "enum": ["landing", "student", "admin", "teacher", "staff", "api", "websocket", "assets"]
+      }
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["password"] },
+      { "required": ["token"] },
+      { "required": ["private_key"] },
+      { "required": ["secret"] }
+    ]
+  }
+}

@@ -30,4 +30,21 @@ public sealed class RedisJobEnqueuerMappingTests
         Assert.Throws<InvalidOperationException>(() =>
             RedisJobEnqueuer.ResolveStableJobId("ai-live-support-turns", "{\"conversationId\":\"not-a-turn\"}"));
     }
+
+    [Fact]
+    public void Outbox_notification_retry_reuses_the_durable_event_id()
+    {
+        var outboxEventId = Guid.NewGuid();
+        var payload = JsonSerializer.Serialize(new
+        {
+            outboxEventId,
+            studentId = Guid.NewGuid()
+        });
+
+        var first = RedisJobEnqueuer.ResolveStableJobId("notifications", payload);
+        var retry = RedisJobEnqueuer.ResolveStableJobId("notifications", payload);
+
+        Assert.Equal(outboxEventId.ToString(), first);
+        Assert.Equal(first, retry);
+    }
 }

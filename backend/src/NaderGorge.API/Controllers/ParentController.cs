@@ -6,6 +6,8 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Reports.Queries;
 using NaderGorge.Application.Features.Parent.Commands;
 using NaderGorge.Application.Features.Parent.Queries;
+using NaderGorge.Application.Features.Student.Commands;
+using NaderGorge.Application.Features.Student.Queries;
 using System;
 using System.Security.Cryptography;
 using System.Text;
@@ -51,11 +53,72 @@ public class ParentController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("device-token")]
+    [Authorize(Policy = "RequireParent")]
+    public async Task<IActionResult> RegisterDeviceToken([FromBody] RegisterParentDeviceTokenRequest request, CancellationToken ct)
+    {
+        var studentIdClaim = User.FindFirst("StudentId")?.Value;
+        if (!Guid.TryParse(studentIdClaim, out var studentProfileId))
+        {
+            return Unauthorized(ApiResponse.Fail("غير مصرح بتحديث إشعارات الطالب"));
+        }
+
+        var command = new RegisterParentDeviceTokenCommand(
+            studentProfileId,
+            request.DeviceToken,
+            request.Platform ?? "android"
+        );
+        var result = await _mediator.Send(command, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("notifications")]
+    [Authorize(Policy = "RequireParent")]
+    public async Task<IActionResult> GetNotifications(CancellationToken ct)
+    {
+        if (!TryGetParentStudentId(out var studentProfileId))
+        {
+            return Unauthorized(ApiResponse.Fail("غير مصرح بقراءة تنبيهات الطالب"));
+        }
+
+        var result = await _mediator.Send(new GetStudentNotificationsQuery(studentProfileId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("notifications/{id:guid}/read")]
+    [Authorize(Policy = "RequireParent")]
+    public async Task<IActionResult> MarkNotificationAsRead(Guid id, CancellationToken ct)
+    {
+        if (!TryGetParentStudentId(out var studentProfileId))
+        {
+            return Unauthorized(ApiResponse.Fail("غير مصرح بتحديث تنبيهات الطالب"));
+        }
+
+        var result = await _mediator.Send(new MarkNotificationAsReadCommand(id, studentProfileId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("app-config")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAppConfig(
+        [FromServices] ICachedPlatformSettingsReader settingsReader,
+        CancellationToken ct)
+    {
+        var settings = await settingsReader.GetAsync(ct);
+        return Ok(ApiResponse<ParentAppConfigResponse>.Ok(new ParentAppConfigResponse(
+            settings.ParentAppUpdateRequired,
+            settings.ParentAppUpdateUrl,
+            settings.ParentAppUpdateMessage
+        )));
+    }
+
     [HttpGet("reports/{studentId}/summary")]
     [AllowAnonymous]
     [EnableRateLimiting("parent-report")]
     public async Task<IActionResult> GetSummaryReport(Guid studentId, [FromQuery] string? token, CancellationToken ct)
     {
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
         if (!TryValidateParentReportToken(studentId, token, out var error))
             return Unauthorized(ApiResponse.Fail(error));
 
@@ -69,8 +132,28 @@ public class ParentController : ControllerBase
     [Authorize(Roles = "Admin")]
     public IActionResult CreateParentReportLink(Guid studentId)
     {
-        var token = CreateParentReportToken(studentId, DateTimeOffset.UtcNow.AddDays(7));
-        return Ok(ApiResponse<object>.Ok(new { token, expiresInDays = 7 }));
+        var expirationHours = GetParentReportLinkExpirationHours();
+        var expiresAt = DateTimeOffset.UtcNow.AddHours(expirationHours);
+        var token = CreateParentReportToken(studentId, expiresAt);
+        return Ok(ApiResponse<object>.Ok(new
+        {
+            token,
+            expiresAt,
+            expiresInHours = expirationHours,
+            expiresInDays = Math.Max(1, (int)Math.Ceiling(expirationHours / 24.0))
+        }));
+    }
+
+    private int GetParentReportLinkExpirationHours()
+    {
+        var configured = _configuration.GetValue<int?>("ParentReports:PublicLinkExpirationHours");
+        return configured is > 0 and <= 168 ? configured.Value : 24;
+    }
+
+    private bool TryGetParentStudentId(out Guid studentProfileId)
+    {
+        var studentIdClaim = User.FindFirst("StudentId")?.Value;
+        return Guid.TryParse(studentIdClaim, out studentProfileId);
     }
 
     private string CreateParentReportToken(Guid studentId, DateTimeOffset expiresAt)
@@ -159,3 +242,15 @@ public class VerifyParentCodeRequest
     public string? DeviceToken { get; set; }
     public string? Platform { get; set; }
 }
+
+public class RegisterParentDeviceTokenRequest
+{
+    public string DeviceToken { get; set; } = string.Empty;
+    public string? Platform { get; set; }
+}
+
+public sealed record ParentAppConfigResponse(
+    bool UpdateRequired,
+    string UpdateUrl,
+    string UpdateMessage
+);

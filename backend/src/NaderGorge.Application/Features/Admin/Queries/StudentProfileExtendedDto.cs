@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -23,6 +24,7 @@ public class StudentProfileExtendedDto
     public string? Governorate { get; set; }
     public string? Address { get; set; }
     public string? StudentCode { get; set; }
+    public string? ParentTrackingCode { get; set; }
     public bool IsProfileComplete { get; set; }
 
     // ── Academic fields ─────────────────────────────────────────────────
@@ -43,10 +45,56 @@ public class StudentProfileExtendedDto
     public List<StudentDeviceDto> Devices { get; set; } = new();
     public List<VideoOverrideDto> Overrides { get; set; } = new();
     public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
+    public List<StudentExamHistoryDto> ExamHistory { get; set; } = new();
+    public List<StudentHomeworkHistoryDto> HomeworkHistory { get; set; } = new();
     public decimal CurrentBalance { get; set; }
+    public List<StudentPromotionalBalanceDto> PromotionalBalances { get; set; } = new();
     public List<StudentBalanceTransactionDto> BalanceTransactions { get; set; } = new();
+    public List<StudentRechargeRequestDto> RechargeRequests { get; set; } = new();
     public List<AuditLogDto> AuditTrail { get; set; } = new();
     public List<StudentNoteDto> Notes { get; set; } = new();
+}
+
+public class StudentExamHistoryDto
+{
+    public Guid AttemptId { get; set; }
+    public Guid ExamId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? PackageName { get; set; }
+    public string? LessonTitle { get; set; }
+    public decimal Score { get; set; }
+    public decimal TotalScore { get; set; }
+    public bool HasFinalGrade { get; set; }
+    public bool IsPassed { get; set; }
+    public bool IsTimeExpired { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Evaluation { get; set; }
+    public DateTime AttemptedAt { get; set; }
+}
+
+public class StudentHomeworkHistoryDto
+{
+    public Guid SubmissionId { get; set; }
+    public Guid HomeworkId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? PackageName { get; set; }
+    public string? LessonTitle { get; set; }
+    public decimal Score { get; set; }
+    public decimal TotalScore { get; set; }
+    public bool HasFinalGrade { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Evaluation { get; set; }
+    public DateTime AttemptedAt { get; set; }
+}
+
+public class StudentPromotionalBalanceDto
+{
+    public Guid? TeacherId { get; set; }
+    public string TeacherName { get; set; } = string.Empty;
+    public decimal AvailableAmount { get; set; }
+    public decimal OriginalAmount { get; set; }
+    public decimal ConsumedAmount { get; set; }
+    public DateTime? NearestExpiresAt { get; set; }
 }
 
 public class StudentBalanceTransactionDto
@@ -54,10 +102,28 @@ public class StudentBalanceTransactionDto
     public Guid Id { get; set; }
     public decimal Amount { get; set; }
     public decimal BalanceAfter { get; set; }
+    public decimal BalanceBefore { get; set; }
+    public string BalanceScope { get; set; } = "الرصيد العام";
+    public string? ContentName { get; set; }
     public string TransactionType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public string AdminName { get; set; } = string.Empty;
+}
+
+public class StudentRechargeRequestDto
+{
+    public Guid Id { get; set; }
+    public decimal Amount { get; set; }
+    public string BalanceScope { get; set; } = string.Empty;
+    public string WalletLabel { get; set; } = string.Empty;
+    public string WalletPhoneNumber { get; set; } = string.Empty;
+    public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public bool HasMatchedSms { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public string? RejectionReason { get; set; }
 }
 
 
@@ -82,6 +148,12 @@ public class StudentPackageDto
     public bool IsActive { get; set; }
     public string PurchaseMethod { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public Guid? PurchaseOperationId { get; set; }
+    public Guid? TeacherId { get; set; }
+    public string? TeacherName { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal PlatformShareAmount { get; set; }
+    public decimal TeacherShareAmount { get; set; }
     public string GrantType { get; set; } = "Package";
     public string? CancelledByName { get; set; }
     public DateTime? CancelledAt { get; set; }
@@ -116,14 +188,21 @@ public class VideoOverrideDto
 public class WatchTrackingSummaryDto
 {
     public int TotalWatchedSeconds { get; set; }
+    public decimal TotalActualWatchedSeconds { get; set; }
+    public decimal AveragePlaybackRate { get; set; } = 1m;
     public int WatchedVideosCount { get; set; }
     public List<StudentVideoWatchActivityDto> Activities { get; set; } = new();
 }
 
 public class StudentVideoWatchActivityDto
 {
+    public decimal LearningWatchedSeconds { get; set; }
+    public int? DurationSeconds { get; set; }
+    public bool IsCompleted { get; set; }
+    public List<StudentPlaybackSessionDto> Sessions { get; set; } = new();
     public Guid LessonVideoId { get; set; }
     public string VideoTitle { get; set; } = string.Empty;
+    public int VideoOrder { get; set; }
     public Guid LessonId { get; set; }
     public string LessonTitle { get; set; } = string.Empty;
     public string? PackageName { get; set; }
@@ -131,9 +210,17 @@ public class StudentVideoWatchActivityDto
     public int WatchCount { get; set; }
     public int MaxWatchCount { get; set; }
     public int WatchedSeconds { get; set; }
+    public decimal ActualWatchedSeconds { get; set; }
+    public decimal LastPlaybackRate { get; set; } = 1m;
+    public decimal AveragePlaybackRate { get; set; } = 1m;
+    public Dictionary<string, decimal> PlaybackRateSeconds { get; set; } = new();
+    [JsonIgnore]
+    public string PlaybackRateBreakdownJson { get; set; } = "{}";
     public bool IsLocked { get; set; }
-    public DateTime LastWatchedAt { get; set; }
+    public DateTime? LastWatchedAt { get; set; }
 }
+
+public record StudentPlaybackSessionDto(Guid Id, DateTime StartedAt, decimal ActualWatchedSeconds, int? DurationSeconds);
 
 public class AuditLogDto
 {

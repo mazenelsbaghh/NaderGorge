@@ -1,9 +1,12 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Homework.Commands;
 
@@ -13,27 +16,33 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
     private readonly IPublisher _publisher;
     private readonly IAccessCheckService _access;
     private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
     public SubmitHomeworkCommandHandler(
         IAppDbContext dbContext,
         IPublisher publisher,
         IAccessCheckService access,
-        NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
+        NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
+        IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
         _publisher = publisher;
         _access = access;
         _jobEnqueuer = jobEnqueuer;
+        _archiveAccess = archiveAccess ?? new ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
     {
         var homework = await _dbContext.Homeworks
-            .Include(h => h.Questions)
+            .ReadyForStudents()
+            .Include(h => h.Questions.Where(q => !q.IsRetired))
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);
 
         if (homework == null)
-            return ApiResponse<bool>.Fail("Homework not found");
+            return ApiResponse<bool>.Fail("هذا الواجب غير متاح للطلاب حاليًا.");
+        if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, cancellationToken))
+            return ApiResponse<bool>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, cancellationToken);
         if (!hasAccess)
@@ -55,7 +64,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 if (previousLesson.ExamId.HasValue)
                 {
                     var exam = await _dbContext.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, cancellationToken);
-                    if (exam != null && exam.IsMandatory)
+                    if (exam != null && exam.IsActive && exam.IsMandatory)
                     {
                         var passedExam = await _dbContext.StudentExamAttempts
                             .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, cancellationToken);
@@ -68,7 +77,13 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 }
 
                 // 2. Previous homework
-                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, cancellationToken);
+                var prevHomework = await _dbContext.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(
+                        request.StudentId,
+                        _access,
+                        _archiveAccess,
+                        cancellationToken);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _dbContext.HomeworkSubmissions
@@ -78,7 +93,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
                     bool prevHwPassed = prevHwSubmission != null 
                                       && prevHwSubmission.Status == SubmissionStatus.Graded 
-                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
 
                     if (!prevHwPassed)
                     {
@@ -91,7 +106,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             if (lesson.ExamId.HasValue)
             {
                 var currentExam = await _dbContext.Exams.FindAsync(new object[] { lesson.ExamId.Value }, cancellationToken);
-                if (currentExam != null && currentExam.IsMandatory)
+                if (currentExam != null && currentExam.IsActive && currentExam.IsMandatory)
                 {
                     var passedCurrentExam = await _dbContext.StudentExamAttempts
                         .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value && a.IsPassed, cancellationToken);
@@ -108,6 +123,15 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         var submission = await _dbContext.HomeworkSubmissions
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
 
+        if (submission?.DefinitionSnapshotJson is not null
+            && AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", homework.Id).Revision?.RequiresCompletion == true)
+            return await new HomeworkRevisionCompletion(_dbContext).Submit(request, submission.Id, cancellationToken);
+
+        homework = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission?.DefinitionSnapshotJson);
+        if (request.Answers.Select(a => a.QuestionId).Distinct().Count() != request.Answers.Count ||
+            request.Answers.Any(a => !homework.Questions.Any(q => q.Id == a.QuestionId)))
+            return ApiResponse<bool>.Fail("قائمة الإجابات تحتوي على أسئلة مكررة أو غير موجودة في الواجب.");
+
         if (submission != null && submission.Status != SubmissionStatus.InProgress)
         {
             return ApiResponse<bool>.Fail("Homework already submitted.");
@@ -120,6 +144,9 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 Id = Guid.NewGuid(),
                 HomeworkId = request.HomeworkId,
                 StudentId = request.StudentId,
+                DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(homework).ToJson(),
+                PassingScoreSnapshot = homework.PassingScoreThreshold ?? 0,
+                TotalScoreSnapshot = homework.TotalScore,
                 StartedAt = DateTime.UtcNow
             };
             _dbContext.HomeworkSubmissions.Add(submission);
@@ -133,28 +160,29 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             _dbContext.HomeworkAnswers.RemoveRange(existingAnswers);
         }
 
-        // Process answers.
+        // Unanswered questions still belong to the denominator.
         var questionLookup = homework.Questions.ToDictionary(q => q.Id);
         decimal rawPointsEarned = 0;
-        decimal rawPointsPossible = 0;
+        decimal rawPointsPossible = homework.Questions.Sum(q => q.PointsActive);
         bool hasEssayQuestions = false;
+        var expired = homework.DurationMinutes is int minutes
+            && DateTime.UtcNow - submission.StartedAt > TimeSpan.FromMinutes(minutes).Add(TimeSpan.FromSeconds(60));
 
         foreach (var answerInput in request.Answers)
         {
             if (!questionLookup.TryGetValue(answerInput.QuestionId, out var question))
                 continue;
 
-            rawPointsPossible += question.PointsActive;
-
             var answer = new HomeworkAnswer
             {
                 Id = Guid.NewGuid(),
                 HomeworkSubmissionId = submission.Id,
                 QuestionId = answerInput.QuestionId,
-                ProvidedAnswer = answerInput.ProvidedAnswer
+                ProvidedAnswer = answerInput.ProvidedAnswer ?? string.Empty
             };
 
-            switch (question.QuestionType)
+            if (expired) answer.ScoreReceived = 0;
+            else switch (question.QuestionType)
             {
                 case QuestionType.MCQ:
                 {
@@ -231,6 +259,11 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             })
         };
         _dbContext.OutboxEvents.Add(outboxEvent);
+        if (submission.Status == SubmissionStatus.Graded)
+            _dbContext.OutboxEvents.Add(new NaderGorge.Domain.Entities.OutboxEvent
+            {
+                Type = "HomeworkGraded", TargetUserId = outboxEvent.TargetUserId, PayloadJson = outboxEvent.PayloadJson
+            });
 
         try
         {

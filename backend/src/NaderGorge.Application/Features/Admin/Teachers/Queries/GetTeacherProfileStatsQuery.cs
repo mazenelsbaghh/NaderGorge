@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Content;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
@@ -10,6 +11,7 @@ public record GetTeacherProfileStatsQuery(Guid TeacherId) : IRequest<ApiResponse
 
 public record TeacherProfileStatsDto(
     int PackagesCount,
+    int StudentsCount,
     int ActiveStudentsCount,
     decimal TotalEarnings,
     decimal CurrentBalance,
@@ -17,14 +19,31 @@ public record TeacherProfileStatsDto(
     int EssaysPendingCount,
     int EssaysGradedCount,
     int CodeGroupsCount,
-    int QuestionBankItemsCount
+    int QuestionBankItemsCount,
+    IReadOnlyList<TeacherPackageSalesBreakdownDto> PackageSales
+);
+
+public record TeacherPackageSalesBreakdownDto(
+    Guid PackageId,
+    string PackageName,
+    int PackageBuyers,
+    int TermBuyers,
+    int SectionBuyers,
+    int LessonBuyers,
+    int PurchasedStudents,
+    int GiftStudents
 );
 
 public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProfileStatsQuery, ApiResponse<TeacherProfileStatsDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly ContentGrantFactSource _factSource;
 
-    public GetTeacherProfileStatsQueryHandler(IAppDbContext db) => _db = db;
+    public GetTeacherProfileStatsQueryHandler(IAppDbContext db)
+    {
+        _db = db;
+        _factSource = new ContentGrantFactSource(db);
+    }
 
     public async Task<ApiResponse<TeacherProfileStatsDto>> Handle(GetTeacherProfileStatsQuery request, CancellationToken ct)
     {
@@ -32,19 +51,13 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
         if (!teacherExists)
             return ApiResponse<TeacherProfileStatsDto>.Fail("Teacher profile not found");
 
-        var packagesCount = await _db.Packages
-            .CountAsync(p => p.TeacherId == request.TeacherId, ct);
-
-        // Count distinct students enrolled across all teacher's packages (Package-level only)
-        var activeStudentsCount = await _db.StudentAccessGrants
-            .Where(sag => sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId != null && sag.IsActive)
-            .Where(sag => _db.Packages
-                .Where(p => p.TeacherId == request.TeacherId)
-                .Select(p => p.Id)
-                .Contains(sag.PackageId!.Value))
-            .Select(sag => sag.UserId)
-            .Distinct()
-            .CountAsync(ct);
+        var teacherPackages = await _db.Packages.AsNoTracking()
+            .Where(package => package.TeacherId == request.TeacherId)
+            .OrderBy(package => package.Name)
+            .Select(package => new { package.Id, package.Name })
+            .ToListAsync(ct);
+        var packageIds = teacherPackages.Select(package => package.Id).ToArray();
+        var packagesCount = teacherPackages.Count;
 
         // Get TeacherAccount earnings/balance
         var account = await _db.TeacherAccounts
@@ -70,8 +83,27 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
         var questionBankItemsCount = await _db.QuestionBankItems
             .CountAsync(q => q.CreatedByTeacherId == request.TeacherId, ct);
 
+        var grantFacts = await _factSource.LoadAsync(new ContentGrantFactScope(packageIds), ct);
+        var activeStudentsCount = ContentAcquisitionCalculator.CountActiveStudents(grantFacts, DateTime.UtcNow);
+        var teacherStudents = ContentAcquisitionCalculator.SummarizeStudents(grantFacts);
+        var acquisitionsByPackage = ContentAcquisitionCalculator.SummarizePackages(packageIds, grantFacts);
+        var packageSales = teacherPackages.Select(package =>
+        {
+            var acquisitions = acquisitionsByPackage[package.Id];
+            return new TeacherPackageSalesBreakdownDto(
+                package.Id,
+                package.Name,
+                acquisitions.Package.Total,
+                acquisitions.Term.Total,
+                acquisitions.Section.Total,
+                acquisitions.Lesson.Total,
+                acquisitions.Overall.Purchased,
+                acquisitions.Overall.GiftOnly);
+        }).ToArray();
+
         var dto = new TeacherProfileStatsDto(
             packagesCount,
+            teacherStudents.Total,
             activeStudentsCount,
             totalEarnings,
             currentBalance,
@@ -79,7 +111,8 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
             essaysPendingCount,
             essaysGradedCount,
             codeGroupsCount,
-            questionBankItemsCount
+            questionBankItemsCount,
+            packageSales
         );
 
         return ApiResponse<TeacherProfileStatsDto>.Ok(dto);

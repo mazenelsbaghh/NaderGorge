@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
@@ -9,9 +10,13 @@ using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
+using NaderGorge.Application.Features.Content.Queries;
+using NaderGorge.Application.Features.Admin.Ocr;
+using NaderGorge.Application.Features.Admin.BunnyLibraries;
 using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
@@ -43,9 +48,14 @@ public class AdminController : ControllerBase
         [FromQuery] string? gradeLevel = null,
         [FromQuery] string? studyTrack = null,
         [FromQuery] string? gender = null,
-        [FromQuery] string? governorate = null
+        [FromQuery] string? governorate = null,
+        [FromQuery] string? role = null,
+        [FromQuery] bool staffOnly = false,
+        CancellationToken cancellationToken = default
     )
-        => Ok(await _mediator.Send(new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate)));
+        => Ok(await _mediator.Send(
+            new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate, role, staffOnly),
+            cancellationToken));
 
     [HttpPost("users")]
     [HasPermission("users.manage")]
@@ -67,9 +77,19 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new UpdateStudentProfileCommand(
             userId, dto.FullName, dto.Phone, dto.ParentPhone, dto.SecondaryPhone, dto.MotherPhone,
-            dto.Governorate, dto.District, dto.Address, dto.SchoolName, dto.DateOfBirth,
+            dto.SecondaryParentPhone, dto.Nationality, dto.Governorate, dto.District, dto.Address,
+            dto.SchoolName, dto.DateOfBirth, dto.FatherDateOfBirth, dto.MotherDateOfBirth,
             dto.Gender, dto.EducationStage, dto.GradeLevel, dto.StudyTrack, dto.SchoolType,
-            dto.IsFatherAlive, dto.IsMotherAlive, GetUserId()));
+            dto.StudentCode, dto.IsFatherAlive, dto.IsMotherAlive, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("users/staff/{userId:guid}/profile")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> UpdateStaffProfile(Guid userId, [FromBody] UpdateStaffProfileRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateStaffProfileCommand(
+            userId, dto.FullName, dto.PhoneNumber, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -78,6 +98,24 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> AdminResetPassword(Guid userId, [FromBody] AdminResetPasswordRequest dto)
     {
         var result = await _mediator.Send(new AdminResetPasswordCommand(userId, dto.NewPassword, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/admins/{userId:guid}/reset-password")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> ResetAdminPassword(Guid userId, [FromBody] AdminResetPasswordRequest dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ResetAdminPasswordCommand(userId, dto.NewPassword, GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/staff/{userId:guid}/archive")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> ArchiveStaff(Guid userId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ArchiveStaffCommand(userId, GetUserId()), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -159,7 +197,7 @@ public class AdminController : ControllerBase
     [HttpGet("codes/groups")]
     [HasPermission("codes.manage")]
     public async Task<IActionResult> ListCodeGroups()
-        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId())));
+        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId(), Request.Query["search"].FirstOrDefault())));
 
     [HttpGet("codes/groups/{id:guid}/details")]
     [HasPermission("codes.manage")]
@@ -167,6 +205,32 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new GetCodeGroupCodesQuery(id));
         return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpPut("codes/groups/{id:guid}/settings")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> UpdateCodeGroupSettings(Guid id, [FromBody] UpdateCodeGroupSettingsRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateCodeGroupSettingsCommand(
+            GroupId: id,
+            AdminId: GetUserId(),
+            Name: dto.Name,
+            TeacherId: dto.TeacherId,
+            ExpiresAt: dto.ExpiresAt,
+            RevenueOwner: dto.RevenueOwner,
+            RevenueAllocationMode: dto.RevenueAllocationMode,
+            RevenueAllocationValue: dto.RevenueAllocationValue,
+            AccountingTiming: dto.AccountingTiming));
+
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("codes/groups/{id:guid}/unused")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> RemoveUnusedCodes(Guid id, [FromBody] RemoveUnusedCodesRequest dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new RemoveUnusedCodesCommand(id, GetUserId(), dto.KeepEmptyGroup), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     // --- Student Profile Actions ---
@@ -190,7 +254,14 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> AdjustBalance(Guid userId, [FromBody] BalanceAdjustmentRequest dto)
     {
-        var result = await _mediator.Send(new AdjustBalanceCommand(userId, dto.Amount, dto.Reason, GetUserId()));
+        var result = await _mediator.Send(new AdjustBalanceCommand(
+            userId,
+            dto.Amount,
+            dto.Reason,
+            GetUserId(),
+            dto.Scope,
+            dto.Operation,
+            dto.TeacherId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -207,6 +278,22 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackagesList()
         => Ok(await _mediator.Send(new GetAdminPackagesListQuery(GetUserId())));
+
+    [HttpGet("content/summary")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetContentSummary(
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        [FromQuery] Guid? teacherId)
+    {
+        var result = await _mediator.Send(new GetContentSummaryQuery(null, fromUtc, toUtc, teacherId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("content/summary/teachers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetContentSummaryTeachers(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetContentSummaryTeachersQuery(), ct));
 
     [HttpPost("packages")]
     [HasPermission("content.manage")]
@@ -266,21 +353,59 @@ public class AdminController : ControllerBase
         return File(bytes, "text/csv", $"subscribers_section_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
     }
 
+    [HttpGet("lessons/{id:guid}/subscribers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetLessonSubscribers(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContentSubscribersQuery("lesson", id, page, pageSize, search)));
+
+    [HttpGet("lessons/{id:guid}/subscribers/export")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ExportLessonSubscribers(Guid id, [FromQuery] string? search = null)
+    {
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery("lesson", id, search));
+        return File(bytes, "text/csv", $"subscribers_lesson_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
     [HttpPut("packages/{id:guid}")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
     {
-        var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive));
+        var result = await _mediator.Send(new UpdatePackageCommand(
+            id,
+            dto.Name,
+            dto.Description,
+            dto.Price,
+            dto.IsActive,
+            dto.AcademicScopes,
+            GetUserId(),
+            dto.AiOutputLanguage)
+        {
+            AllowFullPackagePurchase = dto.AllowFullPackagePurchase
+        });
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("content/{targetType}/{id:guid}/archive")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetContentArchiveState(
+        ContentArchiveTargetType targetType,
+        Guid id,
+        [FromBody] SetContentArchiveStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new SetContentArchiveStateCommand(targetType, id, request.ArchiveMode, GetUserId()),
+            cancellationToken);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("content/{contentType}/{id:guid}/image")]
     [HasPermission("content.manage")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(12 * 1024 * 1024)]
     public async Task<IActionResult> UploadContentImage(
         string contentType,
         Guid id,
-        IFormFile image,
+        [FromForm(Name = "image")] IFormFile? image,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<ContentImageType>(contentType, true, out var parsedContentType))
@@ -288,19 +413,28 @@ public class AdminController : ControllerBase
             return BadRequest(ApiResponse.Fail("Unsupported content image type"));
         }
 
+        if (image is null)
+        {
+            return BadRequest(ApiResponse.Fail("Image is required"));
+        }
+
         if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
         {
             return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
-        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
-        }
-
         await using var imageStream = image.OpenReadStream();
         using var memoryStream = new MemoryStream();
         await imageStream.CopyToAsync(memoryStream, cancellationToken);
+
+        try
+        {
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
 
         try
         {
@@ -329,18 +463,55 @@ public class AdminController : ControllerBase
             return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
-        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
+            await using var imageStream = image.OpenReadStream();
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+            memoryStream.Position = 0;
+            var imageUrl = await _imageStorage.SaveAsWebpAsync(memoryStream, "questions", cancellationToken);
+            return Ok(ApiResponse<string>.Ok(imageUrl, "Question image uploaded successfully"));
+        }
+        catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidImageContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large"));
+        }
+    }
+
+    [HttpPost("popup/image")]
+    [HasPermission("settings.manage")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadPlatformPopupImage(IFormFile image, CancellationToken cancellationToken)
+    {
+        if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
+        {
+            return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
         try
         {
             await using var imageStream = image.OpenReadStream();
-            var imageUrl = await _imageStorage.SaveAsWebpAsync(imageStream, "questions", cancellationToken);
-            return Ok(ApiResponse<string>.Ok(imageUrl, "Question image uploaded successfully"));
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+            memoryStream.Position = 0;
+            var imageUrl = await _imageStorage.SaveAsWebpAsync(memoryStream, "platform-popup", cancellationToken);
+            return Ok(ApiResponse<string>.Ok(imageUrl, "Popup image uploaded successfully"));
         }
         catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidUploadContentException)
         {
             return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
         }
@@ -410,7 +581,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
     {
-        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -444,7 +615,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateSection(Guid id, [FromBody] UpdateSectionDto dto)
     {
-        var result = await _mediator.Send(new UpdateSectionCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateSectionCommand(id, dto.Title, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -460,7 +631,20 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateLessonDto dto)
     {
-        var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("lessons/{id:guid}/homework-coming-soon")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetLessonHomeworkComingSoon(
+        Guid id,
+        [FromBody] SetLessonHomeworkComingSoonRequest request)
+    {
+        var result = await _mediator.Send(new SetLessonHomeworkComingSoonCommand(
+            id,
+            request.ExpectedOn,
+            GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -484,7 +668,21 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
-        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit, GetUserId()));
+        var result = await _mediator.Send(new UpdateVideoCommand(
+            id,
+            dto.Title,
+            dto.Provider,
+            dto.UrlOrEmbedCode,
+            dto.Order,
+            dto.Limit,
+            dto.VideoTypeId,
+            GetUserId(),
+            dto.BunnyStreamLibraryId,
+            dto.IsActive,
+            dto.BunnyPlaybackMode)
+        {
+            PreserveSourceDerivedData = dto.PreserveSourceDerivedData
+        });
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -531,17 +729,17 @@ public class AdminController : ControllerBase
 
     [HttpPost("videos/{videoId:guid}/generate-mindmaps")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> RequestMindmapGeneration(Guid videoId)
+    public async Task<IActionResult> RequestMindmapGeneration(Guid videoId, [FromBody] MindmapStyleRequest? request)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.GenerateChapterMindmapsCommand(videoId));
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.GenerateChapterMindmapsCommand(videoId, request?.VisualStyles, request?.TeacherStyles));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
     [HttpPost("chapters/{chapterId:guid}/regenerate-mindmap")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> RegenerateChapterMindmap(Guid chapterId)
+    public async Task<IActionResult> RegenerateChapterMindmap(Guid chapterId, [FromBody] MindmapStyleRequest? request)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.RegenerateChapterMindmapCommand(chapterId));
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.RegenerateChapterMindmapCommand(chapterId, request?.VisualStyles, request?.TeacherStyles));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
@@ -555,54 +753,115 @@ public class AdminController : ControllerBase
 
     [HttpPost("resources/upload")]
     [HasPermission("content.manage")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    // Keep the file limit at 10 MB; allow room for the multipart envelope.
+    [RequestSizeLimit(11 * 1024 * 1024)]
     public async Task<IActionResult> UploadResourceFile(
         IFormFile file,
-        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment,
+        [FromServices] ISharedFileStorage sharedStorage,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest(ApiResponse.Fail("No file uploaded"));
+            return BadRequest(ApiResponse.Fail("اختر ملفًا غير فارغ للرفع."));
         }
 
         if (file.Length > 10 * 1024 * 1024)
         {
-            return BadRequest(ApiResponse.Fail("File size must not exceed 10 MB"));
+            return BadRequest(ApiResponse.Fail("حجم الملف يجب ألا يتجاوز 10 ميجابايت."));
         }
 
-        var allowedMimes = new[]
+        byte[] fileBytes;
+        SafeUploadResult validation;
+        await using (var input = file.OpenReadStream())
         {
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/zip",
-            "application/x-zip-compressed"
-        };
-
-        var isAllowed = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
-                         allowedMimes.Any(mime => string.Equals(mime, file.ContentType, StringComparison.OrdinalIgnoreCase));
-
-        if (!isAllowed)
-        {
-            return BadRequest(ApiResponse.Fail("Unsupported file type. Allowed types: Images, PDFs, Word/Excel documents, and ZIP files."));
+            using var memory = new MemoryStream();
+            await input.CopyToAsync(memory, cancellationToken);
+            fileBytes = memory.ToArray();
         }
 
-        var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "resources");
-        Directory.CreateDirectory(uploadsFolder);
-
-        var safeFileName = $"{Guid.NewGuid():N}_{Path.GetFileName(file.FileName)}";
-        var physicalPath = Path.Combine(uploadsFolder, safeFileName);
-
-        await using (var fileStream = new FileStream(physicalPath, FileMode.Create))
+        try
         {
-            await file.CopyToAsync(fileStream, cancellationToken);
+            validation = UploadFileSafety.Validate(fileBytes, file.FileName, file.ContentType, SafeUploadKind.ProtectedResource);
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Unsupported file type. Allowed types: safe Images, PDFs, Word/Excel documents, and ZIP files."));
         }
 
-        var relativeUrl = $"/uploads/resources/{safeFileName}";
-        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
+        var dateFolder = DateTime.UtcNow.ToString("yyyy/MM");
+        var safeFileName = validation.SafeFileName;
+        await using var storedContent = new MemoryStream(fileBytes, writable: false);
+        await sharedStorage.WriteAsync(
+            SharedFileArea.Protected,
+            Path.Combine("resources", dateFolder, safeFileName),
+            storedContent,
+            cancellationToken);
+
+        var relativeUrl = $"/protected/resources/{dateFolder}/{safeFileName}";
+        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl, FileName = validation.DisplayFileName, ContentType = validation.ContentType }));
+    }
+
+    [HttpPost("assessments/ocr/questions")]
+    [HasPermission("exams.manage")]
+    [RequestSizeLimit(32 * 1024 * 1024)]
+    public async Task<IActionResult> ExtractAssessmentQuestionsFromImages(
+        [FromForm] List<IFormFile> files,
+        [FromServices] IAssessmentOcrService ocrService,
+        CancellationToken cancellationToken)
+    {
+        if (files is null || files.Count == 0)
+            return BadRequest(ApiResponse.Fail("اختار صورة واحدة على الأقل فيها الأسئلة."));
+
+        if (files.Count > 20 || files.Sum(file => file.Length) > 32 * 1024 * 1024)
+            return BadRequest(ApiResponse.Fail("يمكن رفع 20 صورة بحد أقصى، بإجمالي 32 ميجابايت."));
+        if (files.Any(file => file.Length == 0 || file.Length > 8 * 1024 * 1024))
+            return BadRequest(ApiResponse.Fail("كل صورة يجب ألا تتجاوز 8 ميجابايت."));
+
+        try
+        {
+            var allQuestions = await ExtractQuestionsFromFilesAsync(files, ocrService, cancellationToken);
+            return Ok(ApiResponse<IReadOnlyList<AssessmentOcrQuestionDto>>.Ok(allQuestions));
+        }
+        catch (InvalidUploadContentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    private static async Task<IReadOnlyList<AssessmentOcrQuestionDto>> ExtractQuestionsFromFilesAsync(
+        IReadOnlyList<IFormFile> files,
+        IAssessmentOcrService ocrService,
+        CancellationToken cancellationToken)
+    {
+        var allQuestions = new List<AssessmentOcrQuestionDto>();
+        foreach (var file in files)
+        {
+            var (bytes, contentType) = await ReadValidatedImageAsync(file, cancellationToken);
+            await using var stream = new MemoryStream(bytes, writable: false);
+            var questions = await ocrService.ExtractQuestionsAsync(stream, contentType, cancellationToken);
+            allQuestions.AddRange(questions.Select((question, index) => question with { Order = allQuestions.Count + index + 1 }));
+        }
+
+        return allQuestions;
+    }
+
+    private static async Task<(byte[] Bytes, string ContentType)> ReadValidatedImageAsync(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var input = file.OpenReadStream();
+        using var memory = new MemoryStream();
+        await input.CopyToAsync(memory, cancellationToken);
+        var bytes = memory.ToArray();
+        var validation = UploadFileSafety.Validate(bytes, file.FileName, file.ContentType, SafeUploadKind.ProtectedResource);
+        if (!validation.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(validation.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("OCR supports JPG, PNG, WEBP, and PDF files.");
+        return (bytes, validation.ContentType);
     }
 
     [HttpPost("teacher-photos/upload")]
@@ -634,9 +893,27 @@ public class AdminController : ControllerBase
             dto.RequiredPointsToPass,
             dto.TotalScore,
             dto.Questions,
-            GetUserId());
+            GetUserId(),
+            dto.HomeworkComingSoonOn,
+            dto.ParentNotification);
 
         var result = await _mediator.Send(cmd);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("exams/{examId:guid}/status")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetExamStatus(Guid examId, [FromBody] SetContentStatusRequest dto)
+    {
+        var result = await _mediator.Send(new SetExamActiveStatusCommand(examId, dto.IsActive, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("homework/{homeworkId:guid}/status")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetHomeworkStatus(Guid homeworkId, [FromBody] SetContentStatusRequest dto)
+    {
+        var result = await _mediator.Send(new SetHomeworkActiveStatusCommand(homeworkId, dto.IsActive, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -685,15 +962,23 @@ public class AdminController : ControllerBase
     [HasPermission("exams.manage")]
     public async Task<IActionResult> GetExamDashboard(Guid examId)
     {
-        var result = await _mediator.Send(new GetExamDashboardQuery(examId));
+        var result = await _mediator.Send(new GetExamDashboardQuery(examId, GetUserId()));
         return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpGet("exams/{examId:guid}/attempts/{attemptId:guid}/review")]
+    [HasPermission("exams.manage")]
+    public async Task<IActionResult> ReviewExamAttempt(Guid examId, Guid attemptId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetStaffExamAttemptQuery(examId, attemptId, GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("homework/{homeworkId:guid}/dashboard")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetHomeworkDashboard(Guid homeworkId)
     {
-        var result = await _mediator.Send(new GetHomeworkDashboardQuery(homeworkId));
+        var result = await _mediator.Send(new GetHomeworkDashboardQuery(homeworkId, GetUserId()));
         return result.Success ? Ok(result) : NotFound(result);
     }
 
@@ -702,6 +987,14 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteExamQuestion(Guid examId, Guid questionId)
     {
         var result = await _mediator.Send(new DeleteExamQuestionCommand(examId, questionId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("exams/{examId:guid}/attempts/{attemptId:guid}")]
+    [HasPermission("exams.manage")]
+    public async Task<IActionResult> DeleteExamAttempt(Guid examId, Guid attemptId)
+    {
+        var result = await _mediator.Send(new DeleteExamAttemptCommand(examId, attemptId, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -767,51 +1060,11 @@ public class AdminController : ControllerBase
 
     [HttpGet("essays/pending")]
     [HasPermission("exams.manage")]
-    public async Task<IActionResult> GetPendingEssays([FromServices] NaderGorge.Domain.Interfaces.IAppDbContext db)
+    public async Task<IActionResult> GetPendingEssays(CancellationToken ct)
     {
-        Guid? teacherId = null;
-        var userId = GetUserId();
-        var user = db.Users
-            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
-            .Include(u => u.TeacherProfile)
-            .FirstOrDefault(u => u.Id == userId);
-
-        if (user != null && user.UserRoles.Any(ur => ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Teacher))
-        {
-            teacherId = user.TeacherProfile?.Id;
-        }
-
-        var aiQuery = db.EssaySubmissions.AsQueryable();
-        if (teacherId.HasValue)
-        {
-            aiQuery = aiQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
-        }
-
-        var aiScored = aiQuery
-            .Where(e => e.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.AIScored)
-            .ToList();
-
-        if (aiScored.Count > 0)
-        {
-            foreach (var essay in aiScored)
-            {
-                essay.Status = NaderGorge.Domain.Entities.EssaySubmissionStatus.WaitTeacher;
-            }
-
-            await db.SaveChangesAsync();
-        }
-
-        var listQuery = db.EssaySubmissions.AsQueryable();
-        if (teacherId.HasValue)
-        {
-            listQuery = listQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
-        }
-
-        var list = listQuery
-            .Where(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded)
-            .OrderBy(e => e.CreatedAt)
-            .Select(e => new { e.Id, e.StudentId, e.QuestionId, e.AnswerText, e.AudioUrl, e.AiInitialScore, e.AiFeedback, e.Status })
-            .ToList();
+        var list = await _mediator.Send(
+            new NaderGorge.Application.Features.Admin.Essays.GetPendingEssaysCommand(GetUserId()),
+            ct);
         return Ok(NaderGorge.Application.Common.ApiResponse<object>.Ok(list));
     }
 
@@ -833,6 +1086,11 @@ public class AdminController : ControllerBase
     }
 
     // --- Codes ---
+    [HttpGet("codes/academic-subject-eligibilities")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> GetAcademicSubjectEligibilities(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAcademicSubjectEligibilitiesQuery(), ct));
+
     [HttpPost("codes/bulk-generate")]
     [HasPermission("codes.manage")]
     public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
@@ -848,10 +1106,20 @@ public class AdminController : ControllerBase
             ContentSectionId: dto.ContentSectionId,
             LessonId: dto.LessonId,
             ExamId: dto.ExamId,
+            PublicExamProductId: dto.PublicExamProductId,
+            VideoTypeId: dto.VideoTypeId,
+            IncludeFutureVideos: dto.IncludeFutureVideos,
             VideoTargetIds: dto.VideoTargetIds,
             BalanceAmount: dto.BalanceAmount,
+            TeacherId: dto.TeacherId,
             DiscountPercentage: dto.DiscountPercentage,
-            ExpiresAt: dto.ExpiresAt
+            RevenueOwner: dto.RevenueOwner,
+            RevenueAllocationMode: dto.RevenueAllocationMode,
+            RevenueAllocationValue: dto.RevenueAllocationValue,
+            AccountingTiming: dto.AccountingTiming,
+            ExpiresAt: dto.ExpiresAt,
+            ExpireActivatedAccess: dto.ExpireActivatedAccess,
+            AcademicScopes: dto.AcademicScopes
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -905,6 +1173,76 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("bunny/libraries")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> GetBunnyStreamLibraries(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetBunnyStreamLibrariesQuery(), ct));
+
+    [HttpGet("bunny/libraries/available")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetAvailableBunnyStreamLibraries(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAvailableBunnyStreamLibrariesQuery(), ct));
+
+    [HttpPost("bunny/libraries")]
+    [HasPermission("settings.manage")]
+    [HttpLogging(HttpLoggingFields.None)]
+    public async Task<IActionResult> CreateBunnyStreamLibrary(
+        [FromBody] CreateBunnyStreamLibraryRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CreateBunnyStreamLibraryCommand(
+            req.Name,
+            req.LibraryId,
+            req.ApiKey,
+            req.IsActive,
+            GetUserId(),
+            req.HlsCdnHostname,
+            req.HlsTokenKey), ct);
+        return response.Success ? StatusCode(StatusCodes.Status201Created, response) : BadRequest(response);
+    }
+
+    [HttpPut("bunny/libraries/{id:guid}")]
+    [HasPermission("settings.manage")]
+    [HttpLogging(HttpLoggingFields.None)]
+    public async Task<IActionResult> UpdateBunnyStreamLibrary(
+        Guid id,
+        [FromBody] UpdateBunnyStreamLibraryRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new UpdateBunnyStreamLibraryCommand(
+            id,
+            req.Name,
+            req.LibraryId,
+            req.ApiKey,
+            req.IsActive,
+            GetUserId(),
+            req.HlsCdnHostname,
+            req.HlsTokenKey), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPatch("bunny/libraries/{id:guid}/status")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> SetBunnyStreamLibraryStatus(
+        Guid id,
+        [FromBody] SetBunnyStreamLibraryStatusRequest req,
+        CancellationToken ct)
+    {
+        var response = await _mediator.Send(new SetBunnyStreamLibraryStatusCommand(id, req.IsActive, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpDelete("bunny/libraries/{id:guid}")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> DeleteBunnyStreamLibrary(Guid id, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new DeleteBunnyStreamLibraryCommand(id, GetUserId()), ct);
+        if (response.Success) return Ok(response);
+        return response.Errors?.Contains("BUNNY_LIBRARY_IN_USE") == true
+            ? Conflict(response)
+            : BadRequest(response);
+    }
+
     [HttpPost("bunny/uploads/tus")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateBunnyTusUpload([FromBody] CreateBunnyTusUploadRequest req, CancellationToken ct)
@@ -916,9 +1254,14 @@ public class AdminController : ControllerBase
             req.Title,
             req.Order,
             req.MaxWatchCount,
+            req.VideoTypeId,
+            req.BunnyStreamLibraryId,
+            req.IsActive,
             req.FileName,
             req.FileSizeBytes,
-            GetUserId()), ct);
+            GetUserId(),
+            req.ExistingLessonVideoId,
+            req.BunnyPlaybackMode), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -927,6 +1270,14 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> CompleteBunnyUpload(Guid assetId, CancellationToken ct)
     {
         var response = await _mediator.Send(new CompleteBunnyUploadCommand(assetId, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/uploads/{assetId:guid}/cancel-replacement")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> CancelBunnyVideoReplacement(Guid assetId, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CancelBunnyVideoReplacementCommand(assetId, GetUserId()), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -941,8 +1292,13 @@ public class AdminController : ControllerBase
             req.Title,
             req.Order,
             req.MaxWatchCount,
+            req.VideoTypeId,
+            req.BunnyStreamLibraryId,
+            req.IsActive,
             req.SourceUrl,
-            GetUserId()), ct);
+            GetUserId(),
+            req.ExistingLessonVideoId,
+            req.BunnyPlaybackMode), ct);
         return response.Success ? Ok(response) : BadRequest(response);
     }
 
@@ -1089,7 +1445,7 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherProfileCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { ActorUserId = User.RequireUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateTeacher), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -1098,8 +1454,10 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateTeacher(Guid id, [FromBody] UpdateTeacherProfileRequestDto dto)
     {
         var result = await _mediator.Send(new UpdateTeacherProfileCommand(
-            id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds,
-            dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
+            id, GetUserId(), dto.FullName, dto.PhoneNumber, dto.NewPassword, dto.Bio, dto.Specialization,
+            dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds, dto.AssistantPhoneNumbers,
+            dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl, dto.IntroVideoUrl, dto.ShowOnLanding, dto.IsVisibleToStudents,
+            dto.IsContentVisibleToStudents));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1127,6 +1485,9 @@ public class AdminController : ControllerBase
 
 public record UpdateSubjectRequest(string Name, string Description);
 public record UpdateTeacherProfileRequestDto(
+    string FullName,
+    string PhoneNumber,
+    string? NewPassword,
     string Bio,
     string Specialization,
     decimal CommissionRate,
@@ -1136,7 +1497,11 @@ public record UpdateTeacherProfileRequestDto(
     string? AssistantPhoneNumbers = null,
     string? FacebookUrl = null,
     string? YouTubeUrl = null,
-    string? TelegramUrl = null);
+    string? TelegramUrl = null,
+    string? IntroVideoUrl = null,
+    bool ShowOnLanding = true,
+    bool IsVisibleToStudents = true,
+    bool IsContentVisibleToStudents = true);
 
 public record CreateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 public record UpdateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
@@ -1151,7 +1516,12 @@ public record ApproveWatchRequestBody(string? Reason, int? AddedViews = null);
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
-public record BalanceAdjustmentRequest(decimal Amount, string Reason);
+public record BalanceAdjustmentRequest(
+    decimal Amount,
+    string Reason,
+    string? Scope = null,
+    string? Operation = null,
+    Guid? TeacherId = null);
 public record CancelPackageRequest(bool RefundBalance, string? Reason = null);
 public record BulkGenerateRequest(
     string GroupName,
@@ -1163,21 +1533,75 @@ public record BulkGenerateRequest(
     Guid? ContentSectionId = null,
     Guid? LessonId = null,
     Guid? ExamId = null,
+    Guid? PublicExamProductId = null,
+    Guid? VideoTypeId = null,
+    bool IncludeFutureVideos = true,
     List<Guid>? VideoTargetIds = null,
     decimal? BalanceAmount = null,
+    Guid? TeacherId = null,
     decimal? DiscountPercentage = null,
-    DateTime? ExpiresAt = null
+    Domain.Enums.SalesOwnerType? RevenueOwner = null,
+    Domain.Enums.TeacherAllocationMode? RevenueAllocationMode = null,
+    decimal? RevenueAllocationValue = null,
+    Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation,
+    DateTime? ExpiresAt = null,
+    bool ExpireActivatedAccess = true,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null
 );
-public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string? FileName, long? FileSizeBytes);
-public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string SourceUrl);
+public record UpdateCodeGroupSettingsRequest(
+    string? Name = null,
+    Guid? TeacherId = null,
+    DateTime? ExpiresAt = null,
+    Domain.Enums.SalesOwnerType? RevenueOwner = null,
+    Domain.Enums.TeacherAllocationMode? RevenueAllocationMode = null,
+    decimal? RevenueAllocationValue = null,
+    Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation
+);
+public record RemoveUnusedCodesRequest(bool KeepEmptyGroup = true);
+public record CreateBunnyStreamLibraryRequest(string Name, string LibraryId, string ApiKey, bool IsActive = true, string? HlsCdnHostname = null, string? HlsTokenKey = null);
+public record UpdateBunnyStreamLibraryRequest(string Name, string LibraryId, string? ApiKey, bool IsActive, string? HlsCdnHostname = null, string? HlsTokenKey = null);
+public record SetBunnyStreamLibraryStatusRequest(bool IsActive);
+public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string? FileName, long? FileSizeBytes, Guid? ExistingLessonVideoId = null, Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
+public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, Guid BunnyStreamLibraryId, bool IsActive, string SourceUrl, Guid? ExistingLessonVideoId = null, Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer);
 public record SyncBunnyUsageRequest(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh);
-public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit);
-public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, bool IsRandomized, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
+public record UpdateVideoRequest(
+    string Title,
+    string Provider,
+    string UrlOrEmbedCode,
+    int Order,
+    int Limit,
+    Guid VideoTypeId,
+    Guid? BunnyStreamLibraryId,
+    bool? IsActive = null,
+    Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer)
+{
+    public bool PreserveSourceDerivedData { get; init; }
+}
+public record AttachHomeworkRequest(
+    string Title,
+    string Instructions,
+    bool IsMandatory,
+    bool IsRandomized,
+    int RequiredPointsToPass,
+    decimal TotalScore,
+    List<AttachHomeworkQuestionDto> Questions,
+    DateOnly? HomeworkComingSoonOn = null,
+    NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null);
 public record LinkLessonExamRequest(Guid? ExamId);
-public record UpdateTermDto(string Title, int Order, decimal Price);
-public record UpdateSectionDto(string Title, int Order, decimal Price);
-public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price);
-public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive);
+public record SetContentStatusRequest(bool IsActive);
+public record SetLessonHomeworkComingSoonRequest(DateOnly? ExpectedOn);
+public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdateSectionDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdatePackageDto(
+    string Name,
+    string Description,
+    decimal Price,
+    bool IsActive,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null,
+    AiOutputLanguage? AiOutputLanguage = null,
+    bool? AllowFullPackagePurchase = null);
+public record SetContentArchiveStateRequest(ContentArchiveMode ArchiveMode);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,
     string? HeroEyebrow,
@@ -1193,14 +1617,17 @@ public record UpsertPackageCodeProfileRequest(
 );
 public record AddQuestionsToExamRequest(List<InlineExamQuestionDto> Questions);
 public record UploadTeacherPhotoRequest(Guid TeacherId, string Base64Image, string FileName);
+public record MindmapStyleRequest(IReadOnlyCollection<string>? VisualStyles, IReadOnlyCollection<string>? TeacherStyles);
 public record UploadTeacherProfileImageRequest(Guid TeacherId, string Base64Image, string FileName);
 public record UpdateSettingsRequest(Dictionary<string, string> Settings);
 public record UpdateStudentProfileRequest(
     string? FullName, string? Phone, string? ParentPhone, string? SecondaryPhone, string? MotherPhone,
-    string? Governorate, string? District, string? Address, string? SchoolName, string? DateOfBirth,
+    string? SecondaryParentPhone, string? Nationality, string? Governorate, string? District,
+    string? Address, string? SchoolName, string? DateOfBirth, string? FatherDateOfBirth, string? MotherDateOfBirth,
     string? Gender, string? EducationStage, string? GradeLevel, string? StudyTrack, string? SchoolType,
-    bool? IsFatherAlive, bool? IsMotherAlive
+    string? StudentCode, bool? IsFatherAlive, bool? IsMotherAlive
 );
+public record UpdateStaffProfileRequest(string FullName, string PhoneNumber);
 public record AdminResetPasswordRequest(string NewPassword);
 public record AddStudentNoteRequest(string Content, bool IsPinned);
 public record AdminCreateUserRequest(

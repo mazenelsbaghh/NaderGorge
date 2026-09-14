@@ -1,19 +1,46 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { adminService, type HomeworkDashboardDto } from '@/services/admin-service';
-import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3 } from 'lucide-react';
-import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power, Eye, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { normalizeQuestionRichText } from '@/lib/question-text';
+import { getApiErrorSummary } from '@/lib/api-errors';
+import { AssessmentAttemptReview } from './AssessmentAttemptReview';
+import { MissingHomeworkExport } from './MissingHomeworkExport';
+import { HomeworkPreview } from './HomeworkPreview';
+import { AdminSearchToolbar } from './AdminSearchToolbar';
 
-export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
+function phoneSearchDigits(phone: string): string {
+  return phone
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/\D/g, '');
+}
+
+export function AttachedHomeworkViewer({
+  homeworkId,
+  surface = 'admin',
+  onStatusChanged,
+}: {
+  homeworkId: string;
+  surface?: 'admin' | 'teacher';
+  onStatusChanged?: () => void | Promise<void>;
+}) {
   const router = useRouter();
+  const pathname = usePathname();
   const [data, setData] = useState<HomeworkDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [studentPhoneSearch, setStudentPhoneSearch] = useState('');
+  const homeworkBasePath = `${assessmentContentPath(pathname, surface)}/homework`;
 
   const loadData = useCallback(async () => {
     try {
@@ -25,6 +52,21 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
       setLoading(false);
     }
   }, [homeworkId]);
+
+  const toggleStatus = async () => {
+    if (!data || statusUpdating) return;
+    try {
+      setStatusUpdating(true);
+      await adminService.setHomeworkStatus(homeworkId, !data.isActive);
+      setData({ ...data, isActive: !data.isActive });
+      toast.success(data.isActive ? 'تم تعطيل الواجب، وسيظل محفوظاً.' : 'تم تفعيل الواجب.');
+      await onStatusChanged?.();
+    } catch (error: unknown) {
+      toast.error(getApiErrorSummary(error, 'تعذر تحديث حالة الواجب.'));
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -50,11 +92,19 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
     );
   }
 
+  const activationBlocked = !data.isActive && data.questionCount === 0;
+  const submissions = data.submissions;
+  const hasPhoneSearch = studentPhoneSearch.trim().length > 0;
+  const searchedDigits = phoneSearchDigits(studentPhoneSearch);
+  const filteredSubmissions = hasPhoneSearch
+    ? submissions.filter((submission) => searchedDigits.length > 0 && phoneSearchDigits(submission.studentPhone).includes(searchedDigits))
+    : submissions;
+
   return (
     <div className="space-y-6">
       {/* Homework Overview Summary */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-full w-2 bg-[var(--admin-primary)]" />
+        <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
           <div>
             <h3 className="mb-2 text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
@@ -65,16 +115,37 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
               <p className="text-[var(--admin-muted)] text-sm">{data.description}</p>
             )}
           </div>
-          <NeumorphButton
-            type="button"
-            onClick={() => router.push(`/admin/content/homework/${homeworkId}/add-question`)}
-            intent="primary"
-            size="md"
-            pill
-            className="shrink-0"
-          >
-            <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
-          </NeumorphButton>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`${homeworkBasePath}/${homeworkId}`} className="admin-btn-ghost inline-flex min-h-11 items-center gap-2"><ClipboardList className="h-4 w-4" /> بروفايل الواجب</Link>
+            <NeumorphButton type="button" intent="ghost" size="md" onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" /> معاينة الواجب</NeumorphButton>
+            <ContentArchiveControl targetType="Homework" targetId={homeworkId} title={data.title} archiveMode={data.archiveMode} onChanged={loadData} />
+            <NeumorphButton
+              type="button"
+              disabled={statusUpdating || activationBlocked}
+              title={activationBlocked ? 'أضف سؤالًا واحدًا على الأقل قبل التفعيل.' : undefined}
+              onClick={toggleStatus}
+              intent={data.isActive ? 'danger' : 'primary'}
+              size="md"
+              pill
+            >
+              <Power className="w-4 h-4 ms-2" />
+              {statusUpdating
+                ? 'جارٍ التحديث...'
+                : data.isActive
+                  ? 'تعطيل الواجب'
+                  : 'تفعيل الواجب'}
+            </NeumorphButton>
+            <NeumorphButton
+              type="button"
+              onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
+              intent="primary"
+              size="md"
+              pill
+              className="shrink-0"
+            >
+              <Plus className="w-4 h-4 ms-2" /> إدراج أو تعديل الأسئلة
+            </NeumorphButton>
+          </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
@@ -99,7 +170,7 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
             data.questions.map((q, idx) => (
                 <div 
                   key={q.homeworkQuestionId} 
-                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                 >
                   <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
                     <div className="flex gap-4 flex-1">
@@ -119,11 +190,14 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
                           </div>
                         )}
                         {q.baseText && (
-                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3">
+                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-e-2 border-[var(--admin-border)] pe-3">
                             {q.baseText}
                           </p>
                         )}
                         <div className="mt-4 flex flex-wrap gap-3">
+                          <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question?question=${encodeURIComponent(q.homeworkQuestionId)}`)} aria-label={`تعديل السؤال ${idx + 1}`}>
+                            <Pencil className="h-4 w-4" /> تعديل السؤال
+                          </NeumorphButton>
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--admin-card-strong)] px-2.5 py-1 text-xs font-medium text-[var(--admin-muted)]">
                             {q.type === 'MCQ' ? 'اختيار من متعدد' : q.type === 'Essay' ? 'مقال' : q.type === 'FindTheMistake' ? 'استخرج الخطأ' : q.type}
                           </span>
@@ -151,16 +225,83 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة للواجب حتى الآن.</p>
               <NeumorphButton
                 type="button"
-                onClick={() => router.push(`/admin/content/homework/${homeworkId}/add-question`)}
+                onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
                 intent="primary"
                 size="sm"
                 pill
               >
-                <Plus className="w-4 h-4 ml-1" /> إضافة أسئلة الآن
+                <Plus className="w-4 h-4 ms-1" /> إضافة أسئلة الآن
               </NeumorphButton>
             </div>
           )}
         </div>
+      </div>
+
+      {previewOpen && <HomeworkPreview homework={data} onClose={() => setPreviewOpen(false)} />}
+      {/* Student submissions */}
+      <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <h3 className="flex items-center gap-3 text-xl font-bold text-[var(--admin-text)]">
+            <Users className="h-6 w-6 text-[var(--admin-primary)]" />
+            تسليمات الطلاب
+          </h3>
+          <MissingHomeworkExport homeworkId={homeworkId} />
+          <span role="status" className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
+            {hasPhoneSearch ? `${filteredSubmissions.length} من ${submissions.length}` : submissions.length} تسليم
+          </span>
+        </div>
+        <AdminSearchToolbar
+          value={studentPhoneSearch}
+          onChange={setStudentPhoneSearch}
+          label="البحث برقم هاتف الطالب"
+          placeholder="ابحث برقم هاتف الطالب أو جزء منه..."
+          actions={studentPhoneSearch && (
+            <NeumorphButton type="button" intent="ghost" size="sm" onClick={() => setStudentPhoneSearch('')}>
+              مسح البحث
+            </NeumorphButton>
+          )}
+        />
+        {filteredSubmissions.length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border border-[var(--admin-border)]">
+            <table className="w-full min-w-[680px] text-right text-sm">
+              <thead className="bg-[var(--admin-card-soft)] text-xs font-black text-[var(--admin-muted)]">
+                <tr>
+                  <th className="px-4 py-3">الطالب</th>
+                  <th className="px-4 py-3">الحالة</th>
+                  <th className="px-4 py-3">الدرجة</th>
+                  <th className="px-4 py-3">التقييم</th>
+                  <th className="px-4 py-3">تاريخ التسليم</th>
+                  <th className="px-4 py-3">الإجابات والتصحيح</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--admin-border)]">
+                {filteredSubmissions.map((submission) => (
+                  <tr key={`${submission.studentId}-${submission.startedAt}`} className="text-[var(--admin-text)]">
+                    <td className="px-4 py-4">
+                      <p className="font-black">{submission.studentName}</p>
+                      <p className="mt-1 text-xs text-[var(--admin-muted)]">{submission.studentPhone}</p>
+                    </td>
+                    <td className="px-4 py-4 font-bold">{({ InProgress: 'لم يسلّم', PendingReview: 'بانتظار التصحيح', Graded: 'تم التصحيح', Missed: 'لم يسلّم' } as Record<string, string>)[submission.status] || submission.status}</td>
+                    <td className="px-4 py-4 font-black">{submission.scoreAchieved}</td>
+                    <td className="px-4 py-4 text-[var(--admin-muted)]">{submission.evaluation}</td>
+                    <td className="px-4 py-4 text-[var(--admin-muted)]">
+                      {submission.submittedAt
+                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })
+                        : 'لم يتم التسليم'}
+                    </td>
+                    <td className="px-4 py-4"><AssessmentAttemptReview kind="homework" assessmentId={homeworkId} attemptId={submission.submissionId} studentName={submission.studentName} onChanged={loadData} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-background)] px-5 py-8 text-center font-bold text-[var(--admin-muted)]">
+            {hasPhoneSearch && submissions.length > 0
+              ? 'لا توجد تسليمات تطابق رقم الهاتف. جرّب رقمًا آخر أو امسح البحث لعرض الكل.'
+              : 'لا توجد تسليمات لهذا الواجب حتى الآن.'}
+          </p>
+        )}
       </div>
     </div>
   );

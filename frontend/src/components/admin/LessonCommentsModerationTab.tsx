@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 import { AdminDataTable, type AdminColumn } from '@/components/admin/AdminDataTable';
 import { AdminModal } from '@/components/admin/AdminModal';
+import { CommentParentQuote, ModerationCommentReply } from '@/components/content/ModerationCommentReply';
 import { adminService, type ModerationLessonCommentDto } from '@/services/admin-service';
 
 type FilterStatus = 'All' | 'Pending' | 'Approved' | 'Rejected';
@@ -14,7 +15,10 @@ type LessonCommentsModerationTabProps = {
   lessonId: string;
   pendingCount?: number;
   onRefresh?: () => Promise<void> | void;
+  moderationApi?: LessonCommentsModerationApi;
 };
+
+export type LessonCommentsModerationApi = Pick<typeof adminService, 'getLessonCommentsForModeration' | 'approveLessonComment' | 'rejectLessonComment' | 'replyToLessonComment'>;
 
 const FILTER_OPTIONS: FilterStatus[] = ['All', 'Pending', 'Approved', 'Rejected'];
 
@@ -27,7 +31,7 @@ const filterLabel: Record<FilterStatus, string> = {
 
 const formatDate = (value?: string | null) =>
   value
-    ? new Intl.DateTimeFormat('ar-EG', {
+    ? new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(value))
@@ -50,6 +54,7 @@ export function LessonCommentsModerationTab({
   lessonId,
   pendingCount = 0,
   onRefresh,
+  moderationApi = adminService,
 }: LessonCommentsModerationTabProps) {
   const [comments, setComments] = useState<ModerationLessonCommentDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +69,7 @@ export function LessonCommentsModerationTab({
     setLoading(true);
     setError(null);
     try {
-      const rows = await adminService.getLessonCommentsForModeration(lessonId, filter);
+      const rows = await moderationApi.getLessonCommentsForModeration(lessonId, filter);
       setComments(rows);
       setSelectedIds(new Set());
     } catch {
@@ -72,7 +77,7 @@ export function LessonCommentsModerationTab({
     } finally {
       setLoading(false);
     }
-  }, [lessonId]);
+  }, [lessonId, moderationApi]);
 
   useEffect(() => {
     loadComments(activeFilter);
@@ -92,8 +97,8 @@ export function LessonCommentsModerationTab({
       const results = await Promise.allSettled(
         commentIds.map((commentId) =>
           action === 'approve'
-            ? adminService.approveLessonComment(commentId)
-            : adminService.rejectLessonComment(commentId),
+            ? moderationApi.approveLessonComment(commentId)
+            : moderationApi.rejectLessonComment(commentId),
         ),
       );
       const succeeded = results.filter((result) => result.status === 'fulfilled').length;
@@ -124,7 +129,7 @@ export function LessonCommentsModerationTab({
       setActingId(null);
       setBulkAction(null);
     }
-  }, [activeFilter, loadComments, onRefresh]);
+  }, [activeFilter, loadComments, moderationApi, onRefresh]);
 
   const toggleSelection = useCallback((commentId: string) => {
     setSelectedIds((current) => {
@@ -175,6 +180,7 @@ export function LessonCommentsModerationTab({
       label: 'التعليق',
       render: (row) => (
         <div className="max-w-xl space-y-2">
+          <CommentParentQuote body={row.parentBody} />
           <p className="line-clamp-3 whitespace-pre-wrap text-sm font-medium leading-7 text-[var(--admin-text)]">
             {row.body}
           </p>
@@ -183,6 +189,17 @@ export function LessonCommentsModerationTab({
               آخر مراجعة: {row.reviewedByName} في {formatDate(row.reviewedAt)}
             </p>
           )}
+        </div>
+      ),
+    },
+    {
+      key: 'content',
+      label: 'المحتوى',
+      render: (row) => (
+        <div className="min-w-48 space-y-1 text-xs font-medium text-[var(--admin-muted)]">
+          <p><span className="font-black text-[var(--admin-text)]">المدرس:</span> {row.teacherName}</p>
+          <p><span className="font-black text-[var(--admin-text)]">الباقة:</span> {row.packageName}</p>
+          <p>{row.termTitle} ← {row.sectionTitle} ← {row.lessonTitle}</p>
         </div>
       ),
     },
@@ -298,7 +315,7 @@ export function LessonCommentsModerationTab({
             >
               {selectedIds.size === pendingComments.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </button>
-            <div className="mr-auto flex flex-wrap gap-2">
+            <div className="me-auto flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={selectedIds.size === 0 || isMutating}
@@ -334,6 +351,8 @@ export function LessonCommentsModerationTab({
           rowActionLabel={(row) => `عرض تفاصيل تعليق الطالب ${row.studentName}`}
           expandedRowRender={(row) => (
             <div className="space-y-4">
+              <CommentParentQuote body={row.parentBody} />
+              <ModerationCommentReply comment={row} onReply={moderationApi.replyToLessonComment} onReplied={() => loadComments(activeFilter)} />
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">نص التعليق الكامل</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-8 text-[var(--admin-text)]">

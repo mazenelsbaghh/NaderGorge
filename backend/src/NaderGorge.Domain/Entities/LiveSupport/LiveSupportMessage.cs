@@ -13,5 +13,10 @@ public sealed class LiveSupportMessage : BaseEntity
     public LiveSupportMessageType Type { get; set; }
     public string Content { get; set; } = string.Empty;
     public Guid? AttachmentId { get; set; }
+    public Guid? ReplyToMessageId { get; set; }
+    public LiveSupportMessage? ReplyToMessage { get; set; }
     public DateTime SentAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

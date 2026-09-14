@@ -5,6 +5,7 @@ using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
@@ -45,6 +46,13 @@ public class StudentController : ControllerBase
     public async Task<IActionResult> GetProgress()
     {
         var result = await _mediator.Send(new GetProgressQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("lessons")]
+    public async Task<IActionResult> GetMyLessons()
+    {
+        var result = await _mediator.Send(new GetMyLessonsQuery(GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -98,12 +106,16 @@ public class StudentController : ControllerBase
     {
         var result = await _mediator.Send(new UpdateStudentProfileCommand(
             GetUserId(),
+            dto.FullName,
             dto.Address,
             dto.SecondaryPhone,
             dto.ParentPhone,
             dto.SecondaryParentPhone,
             dto.MotherPhone,
-            dto.SchoolName
+            dto.SchoolName,
+            dto.EducationStage,
+            dto.GradeLevel,
+            dto.StudyTrack
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -132,7 +144,7 @@ public class StudentController : ControllerBase
     [HttpPost("upload-audio")]
     public async Task<IActionResult> UploadStudentAudio(
         [FromForm] Microsoft.AspNetCore.Http.IFormFile audio,
-        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment,
+        [FromServices] ISharedFileStorage sharedStorage,
         CancellationToken cancellationToken)
     {
         if (audio == null || audio.Length == 0)
@@ -152,17 +164,13 @@ public class StudentController : ControllerBase
             return BadRequest(ApiResponse.Fail("عذراً، يجب اختيار ملف صوتي فقط."));
         }
 
-        var wwwroot = environment.WebRootPath ?? System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot");
-        var uploadsFolder = System.IO.Path.Combine(wwwroot, "uploads", "audio");
-        System.IO.Directory.CreateDirectory(uploadsFolder);
-
         var safeFileName = $"{Guid.NewGuid():N}{extension}";
-        var physicalPath = System.IO.Path.Combine(uploadsFolder, safeFileName);
-
-        await using (var fileStream = new FileStream(physicalPath, FileMode.Create))
-        {
-            await audio.CopyToAsync(fileStream, cancellationToken);
-        }
+        await using var audioStream = audio.OpenReadStream();
+        await sharedStorage.WriteAsync(
+            SharedFileArea.Public,
+            Path.Combine("uploads", "audio", safeFileName),
+            audioStream,
+            cancellationToken);
 
         var relativeUrl = $"/uploads/audio/{safeFileName}";
         return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
@@ -171,10 +179,14 @@ public class StudentController : ControllerBase
 
 public class UpdateStudentProfileDto
 {
+    public string FullName { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string? SecondaryPhone { get; set; }
     public string? ParentPhone { get; set; }
     public string? SecondaryParentPhone { get; set; }
     public string? MotherPhone { get; set; }
     public string? SchoolName { get; set; }
+    public string EducationStage { get; set; } = string.Empty;
+    public string GradeLevel { get; set; } = string.Empty;
+    public string? StudyTrack { get; set; }
 }

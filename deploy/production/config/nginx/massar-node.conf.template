@@ -1,0 +1,200 @@
+# Backend validates each image at 10 MB; leave room for multipart boundaries.
+client_max_body_size 12m;
+
+map $http_origin $massar_cors_origin {
+    default "";
+    "~^https://(app|admin|teacher|staff)\.massar-academy\.net$" $http_origin;
+    "https://massar-academy.net" $http_origin;
+}
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    "" close;
+}
+
+map $http_x_forwarded_proto $massar_forwarded_proto {
+    default $http_x_forwarded_proto;
+    "" https;
+}
+
+# WebSocket authentication is carried in the query string by the SignalR
+# browser client. Never persist that query string in access or routine error
+# logs. The safe format intentionally uses $uri (path only), not $request or
+# $request_uri.
+log_format massar_websocket_safe '$remote_addr - $remote_user [$time_local] '
+    '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+    '"$http_referer" "$http_user_agent"';
+
+proxy_http_version 1.1;
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $massar_forwarded_proto;
+
+server {
+    listen 8080 default_server;
+    server_name _;
+    return 421;
+}
+
+server {
+    listen 8080;
+    server_name massar-academy.net;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+
+    location ^~ /_next/static/ {
+        proxy_pass http://landing:8738;
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
+    }
+    location = /__node_ready {
+        access_log off;
+        # `add_header` in a nested location replaces the server-level header
+        # inheritance, so repeat the identity headers required by the strict
+        # three-node ingress and load-distribution probes.
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        # HAProxy must remove this node when its API is unavailable. A static
+        # gateway response kept a dead backend marked healthy and caused
+        # SignalR reconnects (and API requests) to receive nginx 502 errors.
+        proxy_pass http://backend:5245/api/health/ready;
+        proxy_set_header Host api.massar-academy.net;
+        # Defining Host in this location disables inheritance of the
+        # http-level proxy_set_header directives. Preserve the trusted TLS
+        # scheme explicitly so backend readiness is not redirected.
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 2s;
+        proxy_read_timeout 3s;
+    }
+    location / {
+        if ($request_method = OPTIONS) { return 204; }
+        proxy_pass http://landing:8738;
+    }
+}
+
+server {
+    listen 8080;
+    server_name app.massar-academy.net;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+    location ^~ /_next/static/ {
+        proxy_pass http://student:8738;
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
+    }
+    # HLS segments are already bounded media chunks. Stream them directly so
+    # large 1080p responses never spill through nginx's proxy temp directory.
+    location ^~ /api/video/hls {
+        proxy_pass http://student:8738;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
+    }
+    location / {
+        if ($request_method = OPTIONS) { return 204; }
+        proxy_pass http://student:8738;
+    }
+}
+
+server {
+    listen 8080;
+    server_name admin.massar-academy.net;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+    location ^~ /_next/static/ {
+        proxy_pass http://admin:8738;
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
+    }
+    location / {
+        if ($request_method = OPTIONS) { return 204; }
+        proxy_pass http://admin:8738;
+    }
+}
+
+server {
+    listen 8080;
+    server_name teacher.massar-academy.net;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+    location ^~ /_next/static/ {
+        proxy_pass http://teacher:8738;
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
+    }
+    location / {
+        if ($request_method = OPTIONS) { return 204; }
+        proxy_pass http://teacher:8738;
+    }
+}
+
+server {
+    listen 8080;
+    server_name staff.massar-academy.net;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+    location ^~ /_next/static/ {
+        proxy_pass http://staff:8738;
+        add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+        add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+        add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
+    }
+    location / {
+        if ($request_method = OPTIONS) { return 204; }
+        proxy_pass http://staff:8738;
+    }
+}
+
+server {
+    listen 8080;
+    server_name api.massar-academy.net;
+    # The AI-media relay is reachable only over the Docker network by the
+    # worker. Keep its existence and all media bytes off the public API edge.
+    location ^~ /api/v1/internal/ai-media/ { return 404; }
+    location / {
+        proxy_pass http://backend:5245;
+    }
+}
+
+server {
+    listen 8080;
+    server_name ws.massar-academy.net;
+    location / {
+        access_log /var/log/nginx/access.log massar_websocket_safe;
+        # Client disconnects are expected for long-lived sockets. Logging them
+        # at error level both creates noise and includes the original URI.
+        error_log /var/log/nginx/error.log crit;
+        proxy_pass http://backend:5245;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+    }
+}
+
+server {
+    listen 8080;
+    server_name assets.massar-academy.net;
+    root /var/www/assets;
+    add_header X-Massar-Node "${MASSAR_NODE_ID}" always;
+    add_header X-Massar-Release "${MASSAR_RELEASE_ID}" always;
+
+    location ^~ /protected/ { return 404; }
+    location ^~ /private/ { return 404; }
+    location ^~ /.tmp/ { return 404; }
+    location / {
+        try_files $uri =404;
+        add_header Access-Control-Allow-Origin "$massar_cors_origin" always;
+        add_header Vary Origin always;
+        add_header Cache-Control "public, max-age=86400, must-revalidate, no-transform" always;
+    }
+}

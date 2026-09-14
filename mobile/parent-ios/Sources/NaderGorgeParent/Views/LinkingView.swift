@@ -11,7 +11,7 @@ public struct MassarLogoView: View {
     
     public var body: some View {
         HStack(spacing: 10) {
-            Image(isDarkBg ? "logo-mark-light" : "logo-mark", bundle: .module)
+            Image(isDarkBg ? "logo-mark-light" : "logo-mark", bundle: NaderGorgeResources.bundle)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 36, height: 36)
@@ -52,13 +52,15 @@ public struct CornerDotsView: View {
 public struct LinkingView: View {
     @StateObject private var viewModel: LinkingViewModel
     public var onLinkSuccess: () -> Void
+    public var onBack: (() -> Void)?
     
     @State private var rememberMe: Bool = true
     @Environment(\.colorScheme) var colorScheme
     
-    public init(viewModel: LinkingViewModel? = nil, onLinkSuccess: @escaping () -> Void) {
+    public init(viewModel: LinkingViewModel? = nil, onLinkSuccess: @escaping () -> Void, onBack: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel ?? LinkingViewModel())
         self.onLinkSuccess = onLinkSuccess
+        self.onBack = onBack
     }
     
     private var isDark: Bool {
@@ -96,6 +98,21 @@ public struct LinkingView: View {
                             Spacer()
                         }
                         
+                        if let onBack = onBack {
+                            VStack {
+                                HStack {
+                                    Button(action: onBack) {
+                                        Image(systemName: "arrow.right")
+                                            .font(.system(size: 18, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .padding(16)
+                                    }
+                                    Spacer()
+                                }
+                                Spacer()
+                            }
+                        }
+                        
                         VStack(spacing: 12) {
                             // Circle housing the brand SVG logo
                             ZStack {
@@ -103,7 +120,7 @@ public struct LinkingView: View {
                                     .fill(Color.white.opacity(0.15))
                                     .frame(width: 72, height: 72)
                                 
-                                Image("logo-mark-light", bundle: .module)
+                                Image("logo-mark-light", bundle: NaderGorgeResources.bundle)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 44, height: 44)
@@ -175,7 +192,9 @@ public struct LinkingView: View {
                                         viewModel.cancelLink()
                                     } else {
                                         Task {
-                                            await viewModel.linkStudent()
+                                            await viewModel.linkStudent(
+                                                deviceToken: ParentDeviceTokenStore.token ?? "ios-parent-pending-token"
+                                            )
                                         }
                                     }
                                 }) {
@@ -185,7 +204,7 @@ public struct LinkingView: View {
                                                 .tint(.white)
                                                 .padding(.trailing, 8)
                                         }
-                                        Text(viewModel.errorMessage != nil ? "إعادة المحاولة" : "تأكيد المتابعة")
+                                        Text(viewModel.errorMessage != nil ? "إعادة المحاولة" : "ربط الطالب")
                                             .font(.custom("Tajawal-Bold", size: 16))
                                             .fontWeight(.bold)
                                         
@@ -202,29 +221,6 @@ public struct LinkingView: View {
                                 .disabled(viewModel.isLoading || (viewModel.trackingCode.count != 6 && viewModel.errorMessage == nil))
                                 .opacity((viewModel.trackingCode.count == 6 || viewModel.errorMessage != nil) ? 1.0 : 0.6)
                                 
-                                Text("أو")
-                                    .font(.custom("Tajawal-Bold", size: 13))
-                                    .foregroundColor(.gray)
-                                
-                                // QR Scanner Button
-                                Button(action: { /* Mock scan action */ }) {
-                                    HStack {
-                                        Text("Scan QR Code")
-                                            .font(.custom("Tajawal-Bold", size: 16))
-                                            .fontWeight(.bold)
-                                        
-                                        Image(systemName: "qrcode.viewfinder")
-                                            .font(.system(size: 18))
-                                    }
-                                    .foregroundColor(BrandColors.teal)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.clear)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(BrandColors.teal, lineWidth: 2)
-                                    )
-                                }
                             }
                             .padding(24)
                             .background(isDark ? BrandColors.darkCard : .white)

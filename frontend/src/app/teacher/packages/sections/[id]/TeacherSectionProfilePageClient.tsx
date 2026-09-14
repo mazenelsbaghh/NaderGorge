@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpenText, ChevronRight } from "lucide-react";
-import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { BookOpenText, ChevronRight, Users } from "lucide-react";
+import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from "@/components/admin";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, LessonSummaryDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "lessons";
+type ActiveTab = "overview" | "lessons" | "subscribers";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "lessons", label: "الحصص", icon: BookOpenText },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
 ];
 
 export default function TeacherSectionProfilePageClient(props: { params: { id: string } }) {
@@ -58,22 +59,22 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
 
   if (sectionLoading) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!section) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="القسم غير موجود">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="القسم غير موجود">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على القسم المطلوب.</p>
           <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة
           </NeumorphButton>
         </div>
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
@@ -85,17 +86,21 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
     subtitle: l.summary || undefined,
     href: `/teacher/packages/lessons/${l.id}`,
   }));
+  const parentHref = section.isDirect
+    ? `/teacher/packages/packages/${section.packageId}`
+    : `/teacher/packages/terms/${section.termId}`;
+  const parentLabel = section.isDirect ? "الباقة" : "الترم";
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
-      sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"
+      sectionLabel={section.isDirect ? "إدارة المحتوى ▸ الباقات ▸ الأقسام المباشرة" : "إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"}
       pageTitle={section.title}
       subtitle={`ترتيب: ${section.order} — ${lessons.length} حصة`}
       action={
-        <NeumorphButton onClick={() => router.push(`/teacher/packages/terms/${section.termId}`)} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.push(parentHref)} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          الترم
+          {parentLabel}
         </NeumorphButton>
       }
     >
@@ -143,6 +148,10 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
           />
         </div>
       )}
-    </TeacherShellChrome>
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="section" contentId={section.id} contentName={section.title} surface="teacher" />
+      )}
+    </TeacherPage>
   );
 }

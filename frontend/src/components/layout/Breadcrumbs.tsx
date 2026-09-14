@@ -45,7 +45,7 @@ export function Breadcrumbs() {
   };
 
   return (
-    <nav className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/60 px-3 py-2.5 text-sm text-[var(--admin-muted)] shadow-sm backdrop-blur-sm sm:rounded-full sm:px-4">
+    <nav className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/60 px-3 py-2.5 text-sm text-[var(--admin-muted)] shadow-sm sm:rounded-full sm:px-4">
       <Link href="/" className="flex shrink-0 items-center gap-2 font-bold transition hover:text-[var(--admin-text)] hover:underline">
         <House className="h-4 w-4" />
         <span>الرئيسية</span>

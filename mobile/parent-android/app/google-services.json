@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "1234567890",
-    "project_id": "mock-project-id",
-    "storage_bucket": "mock-project-id.appspot.com"
+    "project_number": "170467853453",
+    "project_id": "massar-mtab3a",
+    "storage_bucket": "massar-mtab3a.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1234567890:android:mockappid",
+        "mobilesdk_app_id": "1:170467853453:android:cffee8b29c4c1ce006cec4",
         "android_client_info": {
-          "package_name": "com.nadergorge.parent"
+          "package_name": "com.massar.parent"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "mock_api_key"
+          "current_key": "AIzaSyBFgLBNBNzV54v2O1Q0L3qo80Z_xp6Z30E"
         }
       ],
       "services": {

@@ -24,7 +24,10 @@ public class CreateChatRoomCommandHandler : IRequestHandler<CreateChatRoomComman
     {
         // 1. Authorization: Verify that all participants exist
         var allUserIds = request.ParticipantIds.Concat(new[] { request.CurrentUserId }).Distinct().ToList();
-        var existingUsersCount = await _db.Users.CountAsync(u => allUserIds.Contains(u.Id), ct);
+        if (allUserIds.Count > 100 || !Enum.IsDefined(request.Type))
+            return ApiResponse<Guid>.Fail("إعدادات المجموعة غير صالحة.");
+        var existingUsersCount = await _db.Users.CountAsync(u => allUserIds.Contains(u.Id) && u.IsActive && !u.IsDeleted &&
+            u.UserRoles.Any(r => r.Role.Type != RoleType.Student), ct);
         if (existingUsersCount != allUserIds.Count)
         {
             return ApiResponse<Guid>.Fail("One or more user participants not found");

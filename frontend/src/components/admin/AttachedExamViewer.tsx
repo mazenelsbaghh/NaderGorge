@@ -1,17 +1,38 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { assessmentContentPath } from '@/lib/assessment-navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
-import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Trash2 } from 'lucide-react';
-import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import {
+  BarChart3,
+  BookCheck,
+  Eye,
+  EyeOff,
+  FileQuestion,
+  GraduationCap,
+  LayoutList,
+  Plus,
+  Power,
+  Timer,
+} from 'lucide-react';
+import { AdminPageSkeleton, AdminStatCard, ContentArchiveControl } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
-export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnlink?: () => void }) {
+export function AttachedExamViewer({
+  examId,
+  surface = 'admin',
+}: {
+  examId: string;
+  surface?: 'admin' | 'teacher';
+}) {
   const router = useRouter();
+  const pathname = usePathname();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const examBasePath = `${assessmentContentPath(pathname, surface)}/exams`;
 
   const loadData = useCallback(async () => {
     try {
@@ -23,6 +44,26 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
       setLoading(false);
     }
   }, [examId]);
+
+  const toggleStatus = async () => {
+    if (!data || statusUpdating) return;
+    const nextIsActive = !data.isActive;
+
+    try {
+      setStatusUpdating(true);
+      await adminService.setExamStatus(examId, nextIsActive);
+      setData((current) => current ? { ...current, isActive: nextIsActive } : current);
+      toast.success(
+        nextIsActive
+          ? 'تم تفعيل الامتحان.'
+          : 'تم إيقاف الامتحان وإخفاؤه عن الطلاب.',
+      );
+    } catch {
+      toast.error('تعذر تحديث حالة الامتحان.');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -52,46 +93,71 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
     <div className="space-y-6">
       {/* Exam Overview Summary */}
       <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-full w-2 bg-[var(--admin-primary)]" />
+        <div className="absolute top-0 end-0 h-full w-2 bg-[var(--admin-primary)]" />
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
-          <div>
-            <h3 className="mb-2 text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
-              <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
-              {data.title}
-            </h3>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-2xl font-black text-[var(--admin-text)] flex items-center gap-3">
+                <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
+                {data.title}
+              </h3>
+              <span
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${
+                  data.isActive
+                    ? 'border-[var(--admin-success-20)] bg-[var(--admin-success-10)] text-[var(--admin-success)]'
+                    : 'border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] text-[var(--admin-danger)]'
+                }`}
+              >
+                {data.isActive ? (
+                  <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {data.isActive ? 'الامتحان مفعّل' : 'متوقف ومخفي عن الطلاب'}
+              </span>
+            </div>
             {data.description && (
-              <p className="text-[var(--admin-muted)] text-sm">{data.description}</p>
+              <p className="mt-2 text-[var(--admin-muted)] text-sm">{data.description}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {onUnlink && (
-              <NeumorphButton
-                type="button"
-                onClick={onUnlink}
-                intent="danger"
-                size="md"
-                pill
-              >
-                <Trash2 className="w-4 h-4 ml-2" /> إلغاء ربط الامتحان
-              </NeumorphButton>
-            )}
+            <ContentArchiveControl
+              targetType="Exam"
+              targetId={examId}
+              title={data.title}
+              archiveMode={data.archiveMode}
+              onChanged={loadData}
+            />
             <NeumorphButton
               type="button"
-              onClick={() => router.push(`/admin/content/exams/${examId}`)}
-              intent="primary"
+              onClick={toggleStatus}
+              loading={statusUpdating}
+              intent={data.isActive ? 'danger' : 'primary'}
               size="md"
               pill
             >
-              <BarChart3 className="w-4 h-4 ml-2" /> عرض البروفايل
+              <Power className="w-4 h-4 ms-2" /> {data.isActive ? 'إيقاف وإخفاء الامتحان' : 'تفعيل الامتحان'}
             </NeumorphButton>
             <NeumorphButton
               type="button"
-              onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+              onClick={() => router.push(`${examBasePath}/${examId}`)}
               intent="primary"
               size="md"
               pill
             >
-              <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
+              <BarChart3 className="w-4 h-4 ms-2" /> عرض البروفايل
+            </NeumorphButton>
+            <NeumorphButton
+              type="button"
+              onClick={() => router.push(`${examBasePath}/${examId}/add-question`)}
+              intent="primary"
+              size="md"
+              pill
+            >
+              <Plus className="w-4 h-4 ms-2" /> إدراج أو تعديل الأسئلة
             </NeumorphButton>
           </div>
         </div>
@@ -118,7 +184,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
             data.questions.map((q, idx) => (
                 <div 
                   key={q.examQuestionId} 
-                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
+                  className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:border-[var(--admin-primary)] hover:shadow-md"
                 >
                   <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
                     <div className="flex gap-4 flex-1">
@@ -128,7 +194,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
                       <div className="flex-1">
                         <p className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words">{q.text}</p>
                         {q.baseText && (
-                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3">
+                          <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-e-2 border-[var(--admin-border)] pe-3">
                             {q.baseText}
                           </p>
                         )}
@@ -161,7 +227,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
                               style={{ width: `${q.correctPercentage}%` }}
                             />
                           </div>
-                          <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
+                          <div className="grid grid-cols-3 gap-1 text-sm font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
                             <div>
                               <div className="font-bold text-green-600 dark:text-green-400">{q.correctCount}</div>
                               <div>صح</div>
@@ -179,7 +245,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
                       ) : (
                         <div className="space-y-2">
                           <p className="text-xs font-bold text-[var(--admin-muted)]">لم يتم حل السؤال بعد</p>
-                          <p className="text-[10px] leading-relaxed text-[var(--admin-muted)] opacity-85">
+                          <p className="text-sm leading-relaxed text-[var(--admin-muted)] opacity-85">
                             بمجرد قيام الطلاب بحل هذا السؤال، ستظهر الإحصائيات هنا بالتفصيل.
                           </p>
                         </div>
@@ -194,12 +260,12 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة حتى الآن. تأكد من إعداد الأسئلة للطلاب.</p>
               <NeumorphButton
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+                onClick={() => router.push(`${examBasePath}/${examId}/add-question`)}
                 intent="primary"
                 size="sm"
                 pill
               >
-                <Plus className="w-4 h-4 ml-1" /> إضافة أسئلة الآن
+                <Plus className="w-4 h-4 ms-1" /> إضافة أسئلة الآن
               </NeumorphButton>
             </div>
           )}

@@ -1,5 +1,8 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 import type { LiveSupportAdminConversation } from './live-support-service';
+
+const invalidateSupportAI = () => invalidateMany(['support:ai', 'support:dashboard']);
 
 export interface AICatalogItem { key: string; label: string; description: string; requiresVerification: boolean }
 export interface AICatalogs { readableData: AICatalogItem[]; actions: AICatalogItem[]; lookupKeys: AICatalogItem[]; verificationQuestions: AICatalogItem[] }
@@ -48,15 +51,15 @@ export function getLiveSupportAIError(error: unknown, fallback: string) {
 
 export const liveSupportAIService = {
   getConfig: () => apiClient.get<ApiResponse<AIConfig>>('/live-support/admin/ai/config').then(response => response.data.data),
-  saveDraft: (payload: SaveAIDraft) => apiClient.put<ApiResponse<AIPolicy>>('/live-support/admin/ai/config', payload).then(response => response.data.data),
-  publish: (expectedVersion: number) => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/publish', { expectedVersion }).then(response => response.data.data),
-  disable: (expectedVersion: number) => apiClient.post('/live-support/admin/ai/disable', { expectedVersion }),
-  enable: (expectedVersion: number) => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/enable', { expectedVersion }).then(response => response.data.data),
+  saveDraft: async (payload: SaveAIDraft) => { const response = await apiClient.put<ApiResponse<AIPolicy>>('/live-support/admin/ai/config', payload); invalidateSupportAI(); return response.data.data; },
+  publish: async (expectedVersion: number) => { const response = await apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/publish', { expectedVersion }); invalidateSupportAI(); return response.data.data; },
+  disable: async (expectedVersion: number) => { const response = await apiClient.post('/live-support/admin/ai/disable', { expectedVersion }); invalidateSupportAI(); return response; },
+  enable: async (expectedVersion: number) => { const response = await apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/enable', { expectedVersion }); invalidateSupportAI(); return response.data.data; },
   getStats: (period: AIStatsPeriod) => apiClient.get<ApiResponse<AIStats>>('/live-support/admin/ai/stats', { params: { period } }).then(response => response.data.data),
   getActiveConversations: () => apiClient.get<ApiResponse<LiveSupportAdminConversation[]>>('/live-support/admin/ai/active-conversations').then(response => response.data.data),
   getKnowledge: () => apiClient.get<ApiResponse<AIKnowledgeRevision[]>>('/live-support/admin/ai/knowledge').then(response => response.data.data),
-  saveKnowledgeRevision: (payload: SaveAIKnowledgeRevision) => apiClient.post<ApiResponse<AIKnowledgeRevision>>('/live-support/admin/ai/knowledge/revisions', payload).then(response => response.data.data),
-  linkKnowledge: (policyVersionId: string, revisionIds: string[]) => apiClient.put('/live-support/admin/ai/knowledge/links', { policyVersionId, revisionIds }),
+  saveKnowledgeRevision: async (payload: SaveAIKnowledgeRevision) => { const response = await apiClient.post<ApiResponse<AIKnowledgeRevision>>('/live-support/admin/ai/knowledge/revisions', payload); invalidateSupportAI(); return response.data.data; },
+  linkKnowledge: async (policyVersionId: string, revisionIds: string[]) => { const response = await apiClient.put('/live-support/admin/ai/knowledge/links', { policyVersionId, revisionIds }); invalidateSupportAI(); return response; },
   preview: (message: string, policyVersionId?: string) => apiClient.post<ApiResponse<AIPreviewResult>>('/live-support/admin/ai/preview', { message, policyVersionId }).then(response => response.data.data),
   getEvidence: (period: AIStatsPeriod, cursor?: string, pageSize = 50) => apiClient.get<ApiResponse<AIEvidencePage>>('/live-support/admin/ai/evidence', { params: { period, cursor, pageSize } }).then(response => response.data.data),
   getReadiness: () => apiClient.get<AIReadiness>('/health/ready/ai-live-support').then(response => response.data),

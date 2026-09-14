@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Services;
 using Microsoft.AspNetCore.RateLimiting;
@@ -28,14 +30,78 @@ public sealed class LiveSupportSecurityTests
         var error = await Assert.ThrowsAsync<LiveSupportException>(() => service.GetStaffBootstrapAsync(outsider, false, CancellationToken.None));
         Assert.Equal(LiveSupportErrorCodes.Forbidden, error.Code);
         await service.CloseAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, "تم الحل", CancellationToken.None);
-        await Assert.ThrowsAsync<LiveSupportException>(() => service.SendStaffMessageAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, Guid.NewGuid().ToString(), "retry", CancellationToken.None));
+        await Assert.ThrowsAsync<LiveSupportException>(() => service.SendStaffMessageAsync(LiveSupportTestData.StaffAId, false, LiveSupportTestData.Conversation().Id, Guid.NewGuid().ToString(), "retry", null, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ParticipantCannotSendAudioMessages()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, LiveSupportTestData.StudentId, null);
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+
+        var error = await Assert.ThrowsAsync<LiveSupportException>(() => service.SendParticipantMessageAsync(
+            participant,
+            LiveSupportTestData.Conversation().Id,
+            Guid.NewGuid().ToString(),
+            "voice.webm",
+            LiveSupportMessageType.Audio,
+            CancellationToken.None));
+
+        Assert.Equal(LiveSupportErrorCodes.AudioStaffOnly, error.Code);
+    }
+
+    [Fact]
+    public async Task CurrentAttendanceSession_MarksConfiguredStaffAsCheckedIn()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var employee = await fixture.Db.EmployeeProfiles.SingleAsync(x => x.UserId == LiveSupportTestData.StaffAId);
+        var legacyLogs = fixture.Db.AttendanceLogs.Where(x => x.EmployeeId == employee.Id);
+        fixture.Db.AttendanceLogs.RemoveRange(legacyLogs);
+        fixture.Db.AttendanceSessions.Add(new AttendanceSession
+        {
+            EmployeeId = employee.Id,
+            ShiftAssignmentId = Guid.NewGuid(),
+            WorkDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"))),
+            ClockedInAt = DateTime.UtcNow,
+            State = AttendanceSessionState.Open,
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var bootstrap = await service.GetStaffBootstrapAsync(LiveSupportTestData.StaffAId, false, CancellationToken.None);
+
+        Assert.True(bootstrap.IsCheckedIn);
+    }
+
+    [Fact]
+    public async Task OvernightAttendanceSession_RemainsCheckedInAfterCairoMidnight_20260905Regression()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var employee = await fixture.Db.EmployeeProfiles.SingleAsync(x => x.UserId == LiveSupportTestData.StaffAId);
+        fixture.Db.AttendanceLogs.RemoveRange(fixture.Db.AttendanceLogs);
+        fixture.Db.AttendanceSessions.Add(new AttendanceSession
+        {
+            EmployeeId = employee.Id,
+            ShiftAssignmentId = Guid.NewGuid(),
+            WorkDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"))).AddDays(-1),
+            ClockedInAt = DateTime.UtcNow.AddHours(-2),
+            State = AttendanceSessionState.Open,
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        var bootstrap = await service.GetStaffBootstrapAsync(LiveSupportTestData.StaffAId, false, CancellationToken.None);
+        var availability = await service.GetAvailabilityAsync(CancellationToken.None);
+
+        Assert.True(bootstrap.IsCheckedIn);
+        Assert.Equal(1, availability.AvailableStaffCount);
     }
 
     [Fact]
     public void PublicMutationsAndSensitiveActionsHaveDedicatedRateLimits()
     {
         static string? Policy(Type controller, string method) => controller.GetMethod(method)!.GetCustomAttributes(typeof(EnableRateLimitingAttribute), true).Cast<EnableRateLimitingAttribute>().Single().PolicyName;
-        Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.CreateGuestSession)));
         Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Create)));
         Assert.Equal("live-support-ai-message", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Send)));
         Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Upload)));

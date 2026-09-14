@@ -5,40 +5,22 @@ import { useRouter } from 'next/navigation';
 import { Download, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminDataTable, type AdminColumn } from './AdminDataTable';
 import { adminService, type ContentSubscriberDto } from '@/services/admin-service';
+import { teacherService } from '@/services/teacher-service';
+import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 import toast from 'react-hot-toast';
 
 interface ContentSubscribersTabProps {
-  contentType: 'package' | 'term' | 'section';
+  contentType: 'package' | 'term' | 'section' | 'lesson';
   contentId: string;
   contentName: string;
+  surface?: 'admin' | 'teacher';
 }
 
 const PAGE_SIZE = 10;
 
-const EDUCATION_STAGE_MAP: Record<string, string> = {
-  Primary: 'ابتدائي',
-  Preparatory: 'إعدادي',
-  Secondary: 'ثانوي',
-};
-
-const GRADE_LEVEL_MAP: Record<string, string> = {
-  FirstPrimary: 'أولى ابتدائي',
-  SecondPrimary: 'ثانية ابتدائي',
-  ThirdPrimary: 'ثالثة ابتدائي',
-  FourthPrimary: 'رابعة ابتدائي',
-  FifthPrimary: 'خامسة ابتدائي',
-  SixthPrimary: 'سادسة ابتدائي',
-  FirstPreparatory: 'أولى إعدادي',
-  SecondPreparatory: 'ثانية إعدادي',
-  ThirdPreparatory: 'ثالثة إعدادي',
-  FirstSecondary: 'أولى ثانوي',
-  SecondSecondary: 'ثانية ثانوي',
-  ThirdSecondary: 'ثالثة ثانوي',
-};
-
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('ar-EG', {
+    return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -48,10 +30,25 @@ function formatDate(iso: string): string {
   }
 }
 
+const purchaseTypeLabel: Record<ContentSubscriberDto['purchaseType'], string> = {
+  Package: 'باقة',
+  Term: 'ترم',
+  Month: 'قسم',
+  Lesson: 'حصة',
+};
+
+const purchaseMethodLabel: Record<ContentSubscriberDto['purchaseMethod'], string> = {
+  Code: 'كود',
+  Gift: 'هدية',
+  Balance: 'رصيد',
+  Direct: 'مباشر / غير مصنف',
+};
+
 export default function ContentSubscribersTab({
   contentType,
   contentId,
   contentName,
+  surface = 'admin',
 }: ContentSubscribersTabProps) {
   const router = useRouter();
   const [subscribers, setSubscribers] = useState<ContentSubscriberDto[]>([]);
@@ -62,22 +59,29 @@ export default function ContentSubscribersTab({
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSequenceRef = useRef(0);
 
   const fetchSubscribers = useCallback(async (p: number, s: string) => {
+    const requestSequence = ++requestSequenceRef.current;
     try {
       setLoading(true);
       setError(null);
-      const result = await adminService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
-      if (result) {
+      const subscribersService = surface === 'teacher' ? teacherService : adminService;
+      const result = await subscribersService.getContentSubscribers(contentType, contentId, p, PAGE_SIZE, s);
+      if (requestSequence === requestSequenceRef.current && result) {
         setSubscribers(result.items ?? []);
         setTotalCount(result.totalCount ?? 0);
       }
     } catch {
-      setError('تعذر تحميل بيانات المشتركين');
+      if (requestSequence === requestSequenceRef.current) {
+        setError('تعذر تحميل بيانات المشتركين');
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === requestSequenceRef.current) {
+        setLoading(false);
+      }
     }
-  }, [contentType, contentId]);
+  }, [contentType, contentId, surface]);
 
   useEffect(() => {
     void fetchSubscribers(page, search);
@@ -87,6 +91,7 @@ export default function ContentSubscribersTab({
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      requestSequenceRef.current += 1;
     };
   }, []);
 
@@ -101,7 +106,8 @@ export default function ContentSubscribersTab({
   const handleExport = async () => {
     try {
       setExporting(true);
-      await adminService.exportContentSubscribersCsv(contentType, contentId, contentName);
+      const subscribersService = surface === 'teacher' ? teacherService : adminService;
+      await subscribersService.exportContentSubscribersCsv(contentType, contentId, contentName);
       toast.success('تم تنزيل ملف المشتركين');
     } catch {
       toast.error('تعذر تنزيل الملف');
@@ -138,17 +144,26 @@ export default function ContentSubscribersTab({
     {
       key: 'stage',
       label: 'المرحلة',
-      render: (row) => <span>{EDUCATION_STAGE_MAP[row.educationStage] ?? row.educationStage ?? '—'}</span>,
+      render: (row) => <span>{getEducationStageLabel(row.educationStage)}</span>,
     },
     {
       key: 'grade',
       label: 'الصف',
-      render: (row) => <span>{GRADE_LEVEL_MAP[row.gradeLevel] ?? row.gradeLevel ?? '—'}</span>,
+      render: (row) => <span>{getGradeLevelLabel(row.gradeLevel)}</span>,
     },
     {
       key: 'enrolledAt',
       label: 'تاريخ الاشتراك',
       render: (row) => <span className="text-xs">{formatDate(row.enrolledAt)}</span>,
+    },
+    {
+      key: 'purchase',
+      label: 'نوع الاشتراك',
+      render: (row) => (
+        <span className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2.5 py-1 text-xs font-bold text-[var(--admin-primary)]">
+          {purchaseTypeLabel[row.purchaseType] ?? row.purchaseType} · {purchaseMethodLabel[row.purchaseMethod] ?? row.purchaseMethod}
+        </span>
+      ),
     },
     {
       key: 'status',
@@ -159,10 +174,10 @@ export default function ContentSubscribersTab({
           className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
             row.isActive
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
           }`}
         >
-          {row.isActive ? 'نشط' : 'ملغى'}
+          {row.isActive ? 'نشط' : 'منتهي / غير نشط'}
         </span>
       ),
     },
@@ -176,24 +191,29 @@ export default function ContentSubscribersTab({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-[var(--admin-primary)]" />
-          <h3 className="text-lg font-black text-[var(--admin-text)]">
-            الطلاب المشتركين
-            {!loading && (
-              <span className="mr-2 text-sm font-bold text-[var(--admin-muted)]">
-                ({totalCount})
-              </span>
-            )}
-          </h3>
+          <div>
+            <h3 className="text-lg font-black text-[var(--admin-text)]">
+              الطلاب المشتركين في {contentName}
+              {!loading && (
+                <span className="me-2 text-sm font-bold text-[var(--admin-muted)]">
+                  ({totalCount})
+                </span>
+              )}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-[var(--admin-muted)]">
+              كل طالب يظهر مرة واحدة، وتشمل القائمة الشراء والهدايا على هذا المستوى والمستويات التابعة له. نوع الاشتراك المعروض هو أحدث شراء للطالب، أو أحدث هدية إذا لم يشترِ.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Search */}
           <div className="relative">
-            <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+            <Search className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
             <input
               type="text"
               placeholder="بحث بالاسم أو رقم الهاتف..."
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-10 w-64 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] pr-10 pl-4 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
+              className="h-10 w-64 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] pe-10 ps-4 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
             />
           </div>
           {/* Export */}
@@ -204,7 +224,7 @@ export default function ContentSubscribersTab({
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 text-sm font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)] disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
-            {exporting ? 'جارٍ التنزيل...' : 'تنزيل CSV'}
+            {exporting ? 'جارٍ التنزيل...' : 'تنزيل بيانات الطلاب'}
           </button>
         </div>
       </div>
@@ -215,11 +235,11 @@ export default function ContentSubscribersTab({
         columns={columns}
         loading={loading}
         rowKey={(item) => item.studentId}
-        emptyMessage="لا يوجد طلاب مشتركين حالياً"
+        emptyMessage="لا يوجد مشتركين في هذا المحتوى أو المستويات التابعة له"
         errorMessage={error}
         onRetry={() => fetchSubscribers(page, search)}
         pagination={false}
-        onRowClick={(row) => router.push(`/admin/users/${row.studentId}`)}
+        onRowClick={surface === 'admin' ? (row) => router.push(`/admin/users/${row.studentId}`) : undefined}
       />
 
       {/* Server-side pagination */}

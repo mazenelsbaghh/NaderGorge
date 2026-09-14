@@ -17,6 +17,7 @@ public record PackageDto(
     Guid ProgramId, 
     bool IsEnrolled, 
     bool HasDirectPackageAccess,
+    bool HasRootContentAccess,
     Guid TeacherId, 
     Guid SubjectId,
     string TeacherName,
@@ -25,18 +26,29 @@ public record PackageDto(
     string? TeacherBio,
     string? TeacherSpecialization,
     string TargetGrade,
-    string? ImageUrl
+    string? ImageUrl,
+    PackageContentMode ContentMode,
+    Guid? RootTermId,
+    Guid? RootSectionId,
+    IReadOnlyList<PackageDirectSectionDto> DirectSections,
+    IReadOnlyList<PackageDirectLessonDto> DirectLessons,
+    ContentArchiveMode ArchiveMode = ContentArchiveMode.None,
+    DateTime? ArchivedAt = null,
+    AiOutputLanguage AiOutputLanguage = AiOutputLanguage.Auto,
+    bool AllowFullPackagePurchase = true
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetPackagesQueryHandler(IAppDbContext db, IAccessCheckService access)
+    public GetPackagesQueryHandler(IAppDbContext db, IAccessCheckService access, IAcademicScopeService academicScope)
     {
         _db = db;
         _access = access;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<List<PackageDto>>> Handle(GetPackagesQuery request, CancellationToken ct)
@@ -60,31 +72,48 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
             ur.Role.Type == RoleType.Staff);
 
         bool isTeacher = user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher);
+        Guid? teacherId = user?.TeacherProfile?.Id;
+        if (teacherId == null && isTeacher)
+        {
+            teacherId = await _db.TeacherStaffMembers
+                .Where(member => member.UserId == request.UserId && member.IsActive && member.User.IsActive)
+                .Select(member => (Guid?)member.TeacherId)
+                .FirstOrDefaultAsync(ct);
+        }
 
         if (isAdminOrStaff)
         {
             // Admins/Staff see ALL packages in the system regardless of IsActive
         }
-        else if (isTeacher && user!.TeacherProfile != null)
+        else if (isTeacher && teacherId.HasValue)
         {
             // Teachers see their own packages (both active & inactive)
-            query = query.Where(p => p.TeacherId == user.TeacherProfile.Id);
+            query = query.Where(p => p.TeacherId == teacherId.Value);
+        }
+        else if (isTeacher)
+        {
+            query = query.Where(p => false);
         }
         else
         {
             // Students only see active packages
-            query = query.Where(p => p.IsActive);
+            query = query.Where(p => p.IsActive && p.Teacher.IsContentVisibleToStudents);
         }
 
-        var packages = await query.ToListAsync(ct);
-
-        var userRoles = await _db.UserRoles
-            .Include(ur => ur.Role)
-            .Where(ur => ur.UserId == request.UserId)
-            .Select(ur => ur.Role.Name)
+        var packages = await query
+            .AsNoTracking()
             .ToListAsync(ct);
 
-        bool hasGlobalAccess = userRoles.Contains("Admin") || userRoles.Contains("Teacher");
+        if (!isAdminOrStaff && !isTeacher)
+        {
+            var eligiblePackageIds = await _academicScope.GetEligiblePackageIdsForStudentAsync(
+                packages.Select(package => package.Id).ToList(),
+                request.UserId,
+                ct);
+            packages = packages.Where(package => eligiblePackageIds.Contains(package.Id)).ToList();
+        }
+
+        bool hasGlobalAccess = user?.UserRoles.Any(role => role.Role.Name is "Admin" or "Teacher") == true;
 
         var activeGrants = hasGlobalAccess 
             ? new List<StudentAccessGrant>()
@@ -107,6 +136,52 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
         var packageLessons = await _db.Lessons
             .Where(l => packageIds.Contains(l.ContentSection.Term.PackageId))
             .Select(l => new { l.Id, PackageId = l.ContentSection.Term.PackageId })
+            .ToListAsync(ct);
+
+        var rootTerms = await _db.Terms
+            .Where(term => packageIds.Contains(term.PackageId) && term.IsSystemContainer)
+            .Select(term => new { term.Id, term.PackageId })
+            .ToListAsync(ct);
+
+        var rootTermIds = rootTerms.Select(term => term.Id).ToList();
+        var rootSections = await _db.ContentSections
+            .Where(section => rootTermIds.Contains(section.TermId) && section.IsSystemContainer)
+            .Select(section => new { section.Id, section.TermId })
+            .ToListAsync(ct);
+
+        var directSections = await _db.ContentSections
+            .Where(section => rootTermIds.Contains(section.TermId) && !section.IsSystemContainer)
+            .OrderBy(section => section.Order)
+            .Select(section => new
+            {
+                section.Id,
+                section.Title,
+                section.Order,
+                section.Price,
+                section.ImageUrl,
+                section.TermId,
+                PackageId = section.Term.PackageId,
+                section.ArchiveMode,
+                section.ArchivedAt
+            })
+            .ToListAsync(ct);
+
+        var rootSectionIds = rootSections.Select(section => section.Id).ToList();
+        var directLessons = await _db.Lessons
+            .Where(lesson => rootSectionIds.Contains(lesson.ContentSectionId))
+            .OrderBy(lesson => lesson.Order)
+            .Select(lesson => new
+            {
+                lesson.Id,
+                lesson.Title,
+                lesson.Summary,
+                lesson.Order,
+                lesson.Price,
+                lesson.ContentSectionId,
+                PackageId = lesson.ContentSection.Term.PackageId,
+                lesson.ArchiveMode,
+                lesson.ArchivedAt
+            })
             .ToListAsync(ct);
 
         var dtos = new List<PackageDto>();
@@ -142,6 +217,60 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
             bool hasDirectPackageAccess = hasGlobalAccess || activeGrants.Any(g => g.GrantType == CodeType.Package && g.PackageId == pk.Id);
 
+            if (!hasGlobalAccess && (pk.ArchiveMode == ContentArchiveMode.HiddenFromEveryone ||
+                (pk.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && !isEnrolled)))
+                continue;
+
+            var packageRootTerm = rootTerms.FirstOrDefault(term => term.PackageId == pk.Id);
+            var packageRootSection = packageRootTerm == null
+                ? null
+                : rootSections.FirstOrDefault(section => section.TermId == packageRootTerm.Id);
+
+            var directSectionDtos = directSections
+                .Where(section => section.PackageId == pk.Id)
+                .Select(section => new
+                {
+                    Section = section,
+                    HasAccess = hasDirectPackageAccess || activeGrants.Any(grant =>
+                        (grant.GrantType == CodeType.Month && grant.ContentSectionId == section.Id) ||
+                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))
+                })
+                .Where(row => hasGlobalAccess || row.Section.ArchiveMode == ContentArchiveMode.None ||
+                    (row.Section.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && row.HasAccess))
+                .Where(row => hasGlobalAccess || row.Section.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
+                .Select(row => new PackageDirectSectionDto(
+                    row.Section.Id, row.Section.Title, row.Section.Order, row.Section.Price, row.Section.ImageUrl,
+                    row.HasAccess, row.Section.ArchiveMode, row.Section.ArchivedAt))
+                .ToList();
+
+            var directLessonDtos = directLessons
+                .Where(lesson => lesson.PackageId == pk.Id)
+                .Select(lesson => new
+                {
+                    Lesson = lesson,
+                    HasAccess = hasDirectPackageAccess || activeGrants.Any(grant =>
+                        (grant.GrantType == CodeType.Lesson && grant.LessonId == lesson.Id) ||
+                        (grant.GrantType == CodeType.Month && grant.ContentSectionId == lesson.ContentSectionId) ||
+                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))
+                })
+                .Where(row => hasGlobalAccess || row.Lesson.ArchiveMode == ContentArchiveMode.None ||
+                    (row.Lesson.ArchiveMode == ContentArchiveMode.ActiveSubscribersOnly && row.HasAccess))
+                .Where(row => hasGlobalAccess || row.Lesson.ArchiveMode != ContentArchiveMode.HiddenFromEveryone)
+                .Select(row => new PackageDirectLessonDto(
+                    row.Lesson.Id, row.Lesson.Title, row.Lesson.Summary, row.Lesson.Order, row.Lesson.Price,
+                    row.HasAccess, row.Lesson.ArchiveMode, row.Lesson.ArchivedAt))
+                .ToList();
+
+            var hasRootContentAccess = pk.ContentMode switch
+            {
+                PackageContentMode.SectionWithLessons => hasGlobalAccess || activeGrants.Any(grant =>
+                    grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id),
+                PackageContentMode.LessonsOnly => hasGlobalAccess || activeGrants.Any(grant =>
+                    grant.GrantType == CodeType.Month && grant.ContentSectionId == packageRootSection?.Id),
+                PackageContentMode.SingleLesson => hasGlobalAccess || directLessonDtos.Any(lesson => lesson.HasAccess),
+                _ => hasDirectPackageAccess
+            };
+
             dtos.Add(new PackageDto(
                 pk.Id, 
                 pk.Name, 
@@ -150,6 +279,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.SubjectId, 
                 isEnrolled, 
                 hasDirectPackageAccess,
+                hasRootContentAccess,
                 pk.TeacherId, 
                 pk.SubjectId,
                 pk.Teacher?.User?.FullName ?? "Unknown",
@@ -158,7 +288,16 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Teacher?.Bio,
                 pk.Teacher?.Specialization,
                 pk.TargetGrade,
-                pk.ImageUrl
+                pk.ImageUrl,
+                pk.ContentMode,
+                packageRootTerm?.Id,
+                packageRootSection?.Id,
+                directSectionDtos,
+                directLessonDtos,
+                pk.ArchiveMode,
+                pk.ArchivedAt,
+                pk.AiOutputLanguage,
+                pk.AllowFullPackagePurchase
             ));
         }
 

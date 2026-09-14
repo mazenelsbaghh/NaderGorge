@@ -1,8 +1,11 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Application.Features.Homework.Queries;
 
@@ -20,7 +23,8 @@ public record StartHomeworkAttemptDto(
     DateTime StartedAt,
     int? DurationMinutes,
     int? RemainingSeconds,
-    List<HomeworkQuestionDto> Questions
+    List<HomeworkQuestionDto> Questions,
+    Guid? RevisionId = null
 );
 
 public record HomeworkQuestionDto(
@@ -47,21 +51,26 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
 {
     private readonly IAppDbContext _dbContext;
     private readonly IAccessCheckService _access;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public StartHomeworkAttemptQueryHandler(IAppDbContext dbContext, IAccessCheckService access)
+    public StartHomeworkAttemptQueryHandler(IAppDbContext dbContext, IAccessCheckService access, IContentArchiveAccessService? archiveAccess = null)
     {
         _dbContext = dbContext;
         _access = access;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(dbContext);
     }
 
     public async Task<ApiResponse<StartHomeworkAttemptDto>> Handle(StartHomeworkAttemptQuery request, CancellationToken ct)
     {
         var homework = await _dbContext.Homeworks
-            .Include(h => h.Questions)
+            .ReadyForStudents()
+            .Include(h => h.Questions.Where(q => !q.IsRetired))
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, ct);
 
         if (homework == null)
-            return ApiResponse<StartHomeworkAttemptDto>.Fail("Homework not found.");
+            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب غير متاح للطلاب حاليًا.");
+        if (!await _archiveAccess.CanViewAsync(request.StudentId, ContentArchiveTargetType.Homework, homework.Id, ct))
+            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب مؤرشف وغير متاح لحسابك.");
 
         // Verify student has access to the lesson
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, ct);
@@ -83,7 +92,7 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 if (previousLesson.ExamId.HasValue)
                 {
                     var exam = await _dbContext.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
-                    if (exam != null && exam.IsMandatory)
+                    if (exam != null && exam.IsActive && exam.IsMandatory)
                     {
                         var passedExam = await _dbContext.StudentExamAttempts
                             .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
@@ -103,7 +112,13 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 }
 
                 // 2. Previous homework
-                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                var prevHomework = await _dbContext.Homeworks
+                    .Where(h => h.LessonId == previousLesson.Id)
+                    .FirstAccessibleToStudentAsync(
+                        request.StudentId,
+                        _access,
+                        _archiveAccess,
+                        ct);
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _dbContext.HomeworkSubmissions
@@ -113,7 +128,7 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
 
                     bool prevHwPassed = prevHwSubmission != null 
                                       && prevHwSubmission.Status == SubmissionStatus.Graded 
-                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                                      && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
 
                     if (!prevHwPassed)
                     {
@@ -129,7 +144,7 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 if (lesson.ExamId.HasValue)
                 {
                     var currentExam = await _dbContext.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-                    if (currentExam != null && currentExam.IsMandatory)
+                    if (currentExam != null && currentExam.IsActive && currentExam.IsMandatory)
                     {
                         var passedCurrentExam = await _dbContext.StudentExamAttempts
                             .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
@@ -154,8 +169,31 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             .Include(s => s.Answers)
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, ct);
 
+        var revisionDefinition = submission?.DefinitionSnapshotJson is null ? null
+            : AssessmentDefinitionSnapshot.Read(submission.DefinitionSnapshotJson, "homework", homework.Id);
+        if (revisionDefinition?.Revision?.RequiresCompletion == true)
+        {
+            var started = await new HomeworkRevisionCompletion(_dbContext).Start(submission!.Id, request.StudentId, ct);
+            if (!started.Success) return ApiResponse<StartHomeworkAttemptDto>.Fail(started.Message ?? "تعذر بدء الاستكمال.");
+            revisionDefinition = started.Data!.Definition;
+            submission.StartedAt = started.Data.StartedAt;
+            submission.DefinitionSnapshotJson = revisionDefinition.ToJson();
+        }
+
+        var attemptDefinition = AssessmentDefinitionSnapshot.ResolveHomework(homework, submission?.DefinitionSnapshotJson);
+        var previousAttemptPassed = submission?.Status == SubmissionStatus.Graded
+            && submission.OverallScore >= (attemptDefinition.PassingScoreThreshold ?? 0);
+        if (submission?.Status != SubmissionStatus.Graded || previousAttemptPassed)
+            homework = attemptDefinition;
+
         // Build questions list (without correct answers for security)
         var baseQuery = homework.Questions.AsEnumerable();
+        if (revisionDefinition?.Revision?.RequiresCompletion == true)
+        {
+            var required = revisionDefinition.Revision.Answers.Where(a => a.RequiresCompletion && !a.Excluded)
+                .Select(a => a.QuestionId).ToHashSet();
+            baseQuery = baseQuery.Where(q => required.Contains(q.Id));
+        }
         if (homework.IsRandomized)
         {
             baseQuery = baseQuery.OrderBy(_ => Guid.NewGuid());
@@ -183,13 +221,10 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         // If existing Graded submission
         if (submission != null && submission.Status == SubmissionStatus.Graded)
         {
-            var passingScore = homework.PassingScoreThreshold ?? 0;
-            bool passed = submission.OverallScore >= passingScore;
-
-            if (passed)
+            if (previousAttemptPassed)
             {
-                var durationMinutes = 30; // Default 30 minutes
-                var remainingSeconds = (int)Math.Max(0, (TimeSpan.FromMinutes(durationMinutes) - (DateTime.UtcNow - submission.StartedAt)).TotalSeconds);
+                var durationMinutes = homework.DurationMinutes;
+                var remainingSeconds = RemainingSeconds(durationMinutes, submission.StartedAt);
 
                 return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
                     homework.Id,
@@ -219,8 +254,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         // If existing InProgress or PendingReview submission → reuse it
         if (submission != null && (submission.Status == SubmissionStatus.InProgress || submission.Status == SubmissionStatus.PendingReview))
         {
-            var durationMinutes = 30; // Default 30 minutes
-            var remainingSeconds = (int)Math.Max(0, (TimeSpan.FromMinutes(durationMinutes) - (DateTime.UtcNow - submission.StartedAt)).TotalSeconds);
+            var durationMinutes = homework.DurationMinutes;
+            var remainingSeconds = RemainingSeconds(durationMinutes, submission.StartedAt);
 
             return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
                 homework.Id,
@@ -235,7 +270,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 submission.StartedAt,
                 durationMinutes,
                 remainingSeconds,
-                questions
+                questions,
+                revisionDefinition?.Revision?.RequiresCompletion == true ? revisionDefinition.RevisionId : null
             ));
         }
 
@@ -245,12 +281,15 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             HomeworkId = request.HomeworkId,
             StudentId = request.StudentId,
             Status = SubmissionStatus.InProgress,
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromHomework(homework).ToJson(),
+            PassingScoreSnapshot = homework.PassingScoreThreshold ?? 0,
+            TotalScoreSnapshot = homework.TotalScore,
             StartedAt = DateTime.UtcNow
         };
         _dbContext.HomeworkSubmissions.Add(newSubmission);
         await _dbContext.SaveChangesAsync(ct);
 
-        var defaultDurationMinutes = 30; // Default 30 minutes
+        var defaultDurationMinutes = homework.DurationMinutes;
 
         return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
             homework.Id,
@@ -268,4 +307,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             questions
         ));
     }
+
+    private static int? RemainingSeconds(int? durationMinutes, DateTime startedAt) => durationMinutes is int minutes
+        ? (int)Math.Max(0, (TimeSpan.FromMinutes(minutes) - (DateTime.UtcNow - startedAt)).TotalSeconds)
+        : null;
 }

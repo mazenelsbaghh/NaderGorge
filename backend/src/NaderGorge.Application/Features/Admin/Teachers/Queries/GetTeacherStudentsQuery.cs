@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Admin.Content.Queries;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -21,7 +22,15 @@ public record TeacherStudentDto(
     decimal Price,
     DateTime EnrolledAt,
     DateTime? LastWatchedAt,
-    int WatchedVideosCount
+    int WatchedVideosCount,
+    IReadOnlyList<TeacherStudentPackageDto> Packages
+);
+
+public record TeacherStudentPackageDto(
+    Guid PackageId,
+    string PackageName,
+    decimal Price,
+    DateTime EnrolledAt
 );
 
 public record TeacherStudentsPagedResult(
@@ -49,12 +58,20 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             return ApiResponse<TeacherStudentsPagedResult>.Ok(
                 new TeacherStudentsPagedResult(new List<TeacherStudentDto>(), 0, request.Page, request.PageSize));
 
-        // Query StudentAccessGrants that are package-level enrollments for teacher's packages
-        var query = _db.StudentAccessGrants
-            .Where(sag => sag.PackageId != null
-                && sag.IsActive
-                && sag.GrantType == CodeType.Package
-                && teacherPackageIds.Contains(sag.PackageId!.Value));
+        var now = DateTime.UtcNow;
+        var scopedGrants = _db.StudentAccessGrants
+            .Where(grant =>
+                grant.IsActive &&
+                !grant.CancelledAt.HasValue &&
+                (!grant.ExpiresAt.HasValue || grant.ExpiresAt > now) &&
+                ((grant.GrantType == CodeType.Package && grant.PackageId.HasValue && teacherPackageIds.Contains(grant.PackageId.Value)) ||
+                 (grant.GrantType == CodeType.Term && grant.TermId.HasValue &&
+                  _db.Terms.Any(term => term.Id == grant.TermId.Value && teacherPackageIds.Contains(term.PackageId))) ||
+                 (grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue &&
+                  _db.ContentSections.Any(section => section.Id == grant.ContentSectionId.Value && teacherPackageIds.Contains(section.Term.PackageId))) ||
+                 (grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue &&
+                  _db.Lessons.Any(lesson => lesson.Id == grant.LessonId.Value && teacherPackageIds.Contains(lesson.ContentSection.Term.PackageId)))));
+        var query = ContentSubscriberGrantQuery.RepresentativePerStudent(scopedGrants);
 
         var totalCount = await query.CountAsync(ct);
 
@@ -68,12 +85,24 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
                 StudentName = sag.User.FullName,
                 StudentPhone = sag.User.PhoneNumber,
                 AvatarSlug = sag.User.StudentProfile != null ? sag.User.StudentProfile.AvatarSlug : null,
-                PackageName = sag.PackageId != null
-                    ? _db.Packages.Where(p => p.Id == sag.PackageId).Select(p => p.Name).FirstOrDefault() ?? ""
-                    : "",
-                PackagePrice = sag.PackageId != null
-                    ? _db.Packages.Where(p => p.Id == sag.PackageId).Select(p => p.Price).FirstOrDefault()
-                    : 0m,
+                PackageName = sag.GrantType == CodeType.Package && sag.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == sag.PackageId).Select(package => package.Name).FirstOrDefault() ?? ""
+                    : sag.GrantType == CodeType.Term && sag.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == sag.TermId).Select(term => term.Package.Name).FirstOrDefault() ?? ""
+                        : sag.GrantType == CodeType.Month && sag.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == sag.ContentSectionId).Select(section => section.Term.Package.Name).FirstOrDefault() ?? ""
+                            : sag.GrantType == CodeType.Lesson && sag.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == sag.LessonId).Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault() ?? ""
+                                : "",
+                PackagePrice = sag.GrantType == CodeType.Package && sag.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == sag.PackageId).Select(package => package.Price).FirstOrDefault()
+                    : sag.GrantType == CodeType.Term && sag.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == sag.TermId).Select(term => term.Price).FirstOrDefault()
+                        : sag.GrantType == CodeType.Month && sag.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == sag.ContentSectionId).Select(section => section.Price).FirstOrDefault()
+                            : sag.GrantType == CodeType.Lesson && sag.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == sag.LessonId).Select(lesson => lesson.Price).FirstOrDefault()
+                                : 0m,
                 sag.GrantedAt
             })
             .ToListAsync(ct);
@@ -81,14 +110,67 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
         // Get watch tracking data for these students
         var studentIds = grants.Select(g => g.UserId).Distinct().ToList();
 
+        var membershipRows = await scopedGrants
+            .Where(grant => studentIds.Contains(grant.UserId))
+            .Select(grant => new
+            {
+                grant.UserId,
+                PackageId = grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? grant.PackageId
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => (Guid?)term.PackageId).FirstOrDefault()
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => (Guid?)section.Term.PackageId).FirstOrDefault()
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => (Guid?)lesson.ContentSection.Term.PackageId).FirstOrDefault()
+                                : null,
+                PackageName = grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Name).FirstOrDefault() ?? ""
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => term.Package.Name).FirstOrDefault() ?? ""
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => section.Term.Package.Name).FirstOrDefault() ?? ""
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault() ?? ""
+                                : "",
+                Price = grant.GrantType == CodeType.Package && grant.PackageId.HasValue
+                    ? _db.Packages.Where(package => package.Id == grant.PackageId).Select(package => package.Price).FirstOrDefault()
+                    : grant.GrantType == CodeType.Term && grant.TermId.HasValue
+                        ? _db.Terms.Where(term => term.Id == grant.TermId).Select(term => term.Price).FirstOrDefault()
+                        : grant.GrantType == CodeType.Month && grant.ContentSectionId.HasValue
+                            ? _db.ContentSections.Where(section => section.Id == grant.ContentSectionId).Select(section => section.Price).FirstOrDefault()
+                            : grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue
+                                ? _db.Lessons.Where(lesson => lesson.Id == grant.LessonId).Select(lesson => lesson.Price).FirstOrDefault()
+                                : 0m,
+                grant.GrantedAt
+            })
+            .ToListAsync(ct);
+        var membershipsByStudent = membershipRows
+            .Where(row => row.PackageId.HasValue)
+            .GroupBy(row => row.UserId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<TeacherStudentPackageDto>)group
+                    .GroupBy(row => row.PackageId!.Value)
+                    .Select(packageGroup => packageGroup.OrderByDescending(row => row.GrantedAt).First())
+                    .OrderBy(row => row.PackageName)
+                    .Select(row => new TeacherStudentPackageDto(
+                        row.PackageId!.Value,
+                        row.PackageName,
+                        row.Price,
+                        row.GrantedAt))
+                    .ToList());
+
         var watchData = await _db.VideoWatchEvents
-            .Where(vwe => studentIds.Contains(vwe.UserId))
+            .Where(vwe =>
+                studentIds.Contains(vwe.UserId) &&
+                teacherPackageIds.Contains(vwe.LessonVideo.Lesson.ContentSection.Term.PackageId))
             .GroupBy(vwe => vwe.UserId)
             .Select(g => new
             {
                 UserId = g.Key,
                 LastWatchedAt = g.Max(vwe => vwe.UpdatedAt ?? vwe.CreatedAt),
-                WatchedVideosCount = g.Count()
+                WatchedVideosCount = g.Select(vwe => vwe.LessonVideoId).Distinct().Count()
             })
             .ToListAsync(ct);
 
@@ -97,6 +179,7 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
         var dtos = grants.Select(g =>
         {
             watchLookup.TryGetValue(g.UserId, out var watch);
+            var memberships = membershipsByStudent.GetValueOrDefault(g.UserId) ?? [];
             return new TeacherStudentDto(
                 g.UserId,
                 g.StudentName,
@@ -106,7 +189,8 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
                 g.PackagePrice,
                 g.GrantedAt,
                 watch?.LastWatchedAt,
-                watch?.WatchedVideosCount ?? 0
+                watch?.WatchedVideosCount ?? 0,
+                memberships
             );
         }).ToList();
 

@@ -38,6 +38,30 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
 
     public async Task<ApiResponse<AndroidSmsUploadDto>> Handle(AndroidUploadSmsCommand request, CancellationToken ct)
     {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                return await HandleCoreAsync(request, ct);
+            }
+            catch (DbUpdateException ex) when (attempt < maxAttempts && IsRetryableDatabaseConflict(ex))
+            {
+                await PrepareTransientRetryAsync(attempt, ct);
+            }
+            catch (InvalidOperationException ex) when (attempt < maxAttempts && IsRetryableDatabaseConflict(ex))
+            {
+                await PrepareTransientRetryAsync(attempt, ct);
+            }
+        }
+
+        throw new InvalidOperationException("تعذر معالجة رسالة المحفظة بعد عدة محاولات.");
+    }
+
+    private async Task<ApiResponse<AndroidSmsUploadDto>> HandleCoreAsync(AndroidUploadSmsCommand request, CancellationToken ct)
+    {
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
+
         if (string.IsNullOrWhiteSpace(request.PairingToken))
             return ApiResponse<AndroidSmsUploadDto>.Fail("pairing token invalid");
 
@@ -71,6 +95,23 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         // 3. Parse SMS body
         var parserResult = SmsParser.Parse(request.Body);
 
+        // A transaction reference identifies one wallet movement. The sender and amount may
+        // legitimately repeat, so they must never be used as a deduplication identity.
+        if (!string.IsNullOrWhiteSpace(parserResult.TransferReference))
+        {
+            var existingTransfer = await _db.IncomingSmsLogs.AsNoTracking()
+                .FirstOrDefaultAsync(log => log.WalletId == wallet.Id
+                    && log.TransferReference == parserResult.TransferReference, ct);
+            if (existingTransfer is not null)
+            {
+                return ApiResponse<AndroidSmsUploadDto>.Ok(new AndroidSmsUploadDto
+                {
+                    IsMatched = existingTransfer.IsMatched,
+                    Message = "تم تسجيل رقم العملية هذا مسبقاً"
+                }, "تم تسجيل رقم العملية هذا مسبقاً");
+            }
+        }
+
         var smsLog = new IncomingSmsLog
         {
             WalletId = wallet.Id,
@@ -80,6 +121,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             DeduplicationHash = deduplicationHash,
             ParsedAmount = parserResult.Amount,
             ParsedSenderPhone = parserResult.SenderPhone,
+            TransferReference = parserResult.TransferReference,
             IsMatched = false
         };
 
@@ -87,36 +129,29 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         RechargeRequest? matchedRequest = null;
 
         // 4. Try matching with pending requests if successfully parsed
-        if (parserResult.IsParsedSuccessfully)
+        if (!SmsParser.IsOutgoingTransfer(request.Body) && parserResult.IsParsedSuccessfully)
         {
             var amount = parserResult.Amount!.Value;
             var senderPhone = parserResult.SenderPhone!;
 
-            // Search window: resolved within 2 hours of SMS receipt
-            var startTime = request.ReceivedAt.AddHours(-2);
-            var endTime = request.ReceivedAt.AddHours(2);
-
-            matchedRequest = await _db.RechargeRequests
-                .Include(r => r.User)
-                .FirstOrDefaultAsync(r => 
-                    r.WalletId == wallet.Id &&
-                    r.Amount == amount &&
-                    r.SenderPhoneNumber == senderPhone &&
-                    r.Status == RechargeRequestStatus.Pending &&
-                    r.CreatedAt >= startTime &&
-                    r.CreatedAt <= endTime, ct);
+            matchedRequest = await RechargeMatchCandidateSelector.UniquePendingRequestAsync(
+                _db.RechargeRequests.Include(r => r.User),
+                new RechargeMatchKey(amount, senderPhone, request.ReceivedAt),
+                ct);
 
             if (matchedRequest != null)
             {
                 // Run in transaction to ensure atomicity
                 var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
-                var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+                var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
                 
                 try
                 {
                     // Update request status
                     matchedRequest.Status = RechargeRequestStatus.Matched;
                     matchedRequest.ResolvedAt = DateTime.UtcNow;
+                    matchedRequest.WalletId = wallet.Id;
+                    matchedRequest.Wallet = wallet;
 
                     // Update SMS log
                     smsLog.IsMatched = true;
@@ -124,8 +159,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
                     matchedRequest.MatchedSmsLogId = smsLog.Id;
                     matchedRequest.MatchedSmsLog = smsLog;
 
-                    // Vodafone Cash messages include the authoritative wallet balance after the transfer.
-                    wallet.CurrentBalance = parserResult.CurrentBalance ?? wallet.CurrentBalance + amount;
+                    await _db.ApplyIfLatestAsync(wallet, smsLog, amount, ct);
 
                     // Save matching state first so entities exist/have IDs
                     _db.IncomingSmsLogs.Add(smsLog);
@@ -161,12 +195,22 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         // If not matched (or not parsed successfully), just log it
         if (!isMatched)
         {
-            if (parserResult.CurrentBalance.HasValue)
-            {
-                wallet.CurrentBalance = parserResult.CurrentBalance.Value;
-            }
+            await _db.ApplyIfLatestAsync(wallet, smsLog, null, ct);
 
             _db.IncomingSmsLogs.Add(smsLog);
+            if (SmsParser.IsOutgoingTransfer(request.Body))
+            {
+                _db.WalletTransferReviews.Add(new WalletTransferReview
+                {
+                    IncomingSmsLogId = smsLog.Id,
+                    SourceWalletId = wallet.Id,
+                    DestinationPhoneNumber = parserResult.RecipientPhone ?? parserResult.SenderPhone ?? "غير معروف",
+                    Amount = parserResult.Amount!.Value,
+                    ServiceFee = parserResult.ServiceFee,
+                    TransferReference = parserResult.TransferReference,
+                    OccurredAt = request.ReceivedAt
+                });
+            }
             await _db.SaveChangesAsync(ct);
         }
 
@@ -190,4 +234,29 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         }
         return sb.ToString();
     }
+
+    private static bool IsRetryableDatabaseConflict(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            var sqlState = current.GetType().GetProperty("SqlState")?.GetValue(current)?.ToString();
+            if (sqlState is "40001" or "40P01")
+                return true;
+
+            if (current.Message.Contains("could not serialize access", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("deadlock detected", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private async Task PrepareTransientRetryAsync(int attempt, CancellationToken ct)
+    {
+        if (_db is DbContext context)
+            context.ChangeTracker.Clear();
+
+        await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt), ct);
+    }
+
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getLiveSupportApiError, liveSupportService } from '@/services/live-support-service';
 import { UserPlus, LoaderCircle, CheckCircle } from 'lucide-react';
+import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 
 interface AISecureRegistrationFormProps {
   conversationId: string;
@@ -30,27 +31,27 @@ export function AISecureRegistrationForm({ conversationId, decisionId, onSuccess
   useEffect(() => () => setPassword(''), []);
 
   const stages = [
-    { value: 'Primary', label: 'الابتدائية' },
-    { value: 'Preparatory', label: 'الإعدادية' },
-    { value: 'Secondary', label: 'الثانوية' }
+    { value: 'Primary', label: getEducationStageLabel('Primary') },
+    { value: 'Preparatory', label: getEducationStageLabel('Preparatory') },
+    { value: 'Secondary', label: getEducationStageLabel('Secondary') }
   ];
 
   const getGradesForStage = (stage: string) => {
     switch (stage) {
       case 'Primary':
-        return [{ value: 'Grade6', label: 'الصف السادس الابتدائي' }];
+        return [{ value: 'Grade6', label: getGradeLevelLabel('Grade6') }];
       case 'Preparatory':
         return [
-          { value: 'Grade7', label: 'الصف الأول الإعدادي' },
-          { value: 'Grade8', label: 'الصف الثاني الإعدادي' },
-          { value: 'Grade9', label: 'الصف الثالث الإعدادي' }
+          { value: 'Grade7', label: getGradeLevelLabel('Grade7') },
+          { value: 'Grade8', label: getGradeLevelLabel('Grade8') },
+          { value: 'Grade9', label: getGradeLevelLabel('Grade9') }
         ];
       case 'Secondary':
       default:
         return [
-          { value: 'FirstSecondary', label: 'الصف الأول الثانوي' },
-          { value: 'SecondSecondary', label: 'الصف الثاني الثانوي' },
-          { value: 'ThirdSecondary', label: 'الصف الثالث الثانوي' }
+          { value: 'FirstSecondary', label: getGradeLevelLabel('FirstSecondary') },
+          { value: 'SecondSecondary', label: getGradeLevelLabel('SecondSecondary') },
+          { value: 'ThirdSecondary', label: getGradeLevelLabel('ThirdSecondary') }
         ];
     }
   };

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 import { LessonViewer } from "@/components/content/LessonViewer";
-import { contentService, type LessonDetailDto } from "@/services/content-service";
+import { useLessonDetail } from "@/hooks/useLessonDetail";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
 import { Lock, ShoppingCart, Sparkles } from "lucide-react";
@@ -16,53 +16,22 @@ export default function DirectLessonPageClient() {
   const searchParams = useSearchParams();
   const lessonId = params.lessonId as string;
 
-  const [lesson, setLesson] = useState<LessonDetailDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { lesson, loading, error, refreshError, fetchLessonDetail } = useLessonDetail(lessonId);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const fetchLessonDetail = useCallback(() => {
-    if (!lessonId) return;
-    contentService
-      .getLessonDetail(lessonId)
-      .then((res) => {
-        if (res.data.data) {
-          setLesson(res.data.data);
-        } else {
-          setError("تعذر تحميل الحصة أو لم يتم العثور عليها.");
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 403) {
-          setError("هذه الحصة غير متاحة الآن أو ما زالت مغلقة.");
-        } else {
-          setError("تعذر تحميل الحصة أو لم يتم العثور عليها.");
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [lessonId]);
-
-  useEffect(() => {
-    fetchLessonDetail();
-  }, [fetchLessonDetail]);
-
   const resolvedPackageId = searchParams.get("packageId") || lesson?.packageId;
-
-  const backUrl = resolvedPackageId
-    ? `/student/packages/${resolvedPackageId}`
-    : "/student";
 
   const backLabel = "العودة إلى الباقة";
 
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6 animate-pulse pt-6 px-4 sm:px-6 lg:px-8">
-        <div className="h-28 w-full rounded-[24px] bg-[var(--admin-card-strong)] sm:h-32"></div>
+        <div className="h-28 w-full rounded-2xl bg-[var(--admin-card-strong)] sm:h-32"></div>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
-            <div className="aspect-video w-full rounded-[24px] bg-[var(--admin-card-strong)]"></div>
+            <div className="aspect-video w-full rounded-2xl bg-[var(--admin-card-strong)]"></div>
           </div>
-          <div className="h-64 w-full rounded-[24px] bg-[var(--admin-card-strong)]"></div>
+          <div className="h-64 w-full rounded-2xl bg-[var(--admin-card-strong)]"></div>
         </div>
       </div>
     );
@@ -71,18 +40,20 @@ export default function DirectLessonPageClient() {
   if (error || !lesson) {
     return (
       <div className="mx-auto max-w-2xl pt-6 px-4 sm:px-6 pb-12">
-        <div className="rounded-[24px] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-6 text-center sm:p-8">
+        <div className="rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-6 text-center sm:p-8">
           <h2 className="mb-4 text-xl font-bold text-[var(--admin-danger)]">الحصة غير متاحة</h2>
           <p className="mb-6 text-sm leading-7 text-[var(--admin-text)] sm:text-base">
             {error}
           </p>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[var(--admin-primary)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
-          >
-            {backLabel}
-          </button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--admin-danger-20)] px-6 py-3 font-semibold text-[var(--admin-danger)] transition hover:bg-[var(--admin-danger-10)]"
+            >
+              {backLabel}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -100,7 +71,7 @@ export default function DirectLessonPageClient() {
           <span>{backLabel}</span>
         </button>
 
-        <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-xl space-y-6 text-center">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-xl space-y-6 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
             <Lock className="h-8 w-8" />
           </div>
@@ -121,7 +92,7 @@ export default function DirectLessonPageClient() {
                 <button
                   type="button"
                   onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full mt-4 inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full mt-4 inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   شراء وتفعيل الحصة الآن
@@ -135,7 +106,7 @@ export default function DirectLessonPageClient() {
                 <button
                   type="button"
                   onClick={() => router.push(resolvedPackageId ? `/student/packages/${resolvedPackageId}` : "/student")}
-                  className="w-full mt-4 inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
+                  className="w-full mt-4 inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
                   الانتقال لصفحة الباقة
@@ -171,7 +142,13 @@ export default function DirectLessonPageClient() {
         <span>{backLabel}</span>
       </button>
 
-      <LessonViewer lesson={lesson} packageId={resolvedPackageId} />
+      {refreshError && (
+        <p role="status" className="mb-4 text-sm text-[var(--admin-muted)]">
+          {refreshError}{" "}
+          <button type="button" onClick={() => void fetchLessonDetail()} className="underline">إعادة المحاولة</button>
+        </p>
+      )}
+      <LessonViewer key={lesson.id} lesson={lesson} packageId={resolvedPackageId} />
     </div>
   );
 }

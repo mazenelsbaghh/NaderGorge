@@ -10,8 +10,24 @@ public class VideoWatchEvent : BaseEntity
     public Guid LessonVideoId { get; set; }
     public LessonVideo LessonVideo { get; set; } = null!;
 
-    // Cumulative time watched in seconds
+    // Cumulative, speed-adjusted time used to calculate watch progress.
     public int TimeWatchedInSeconds { get; set; }
+
+    // Media-time learning progress continues after the session's quota view.
+    public decimal LearningWatchedSeconds { get; set; }
+
+    // Duration evidence retained for an audited historical progress correction.
+    // Live asset/session durations remain authoritative when available.
+    public int? LearningDurationSeconds { get; set; }
+
+    // Real elapsed playback time. This keeps reporting independent from the
+    // speed-adjusted progress value above.
+    public decimal ActualWatchedSeconds { get; set; }
+
+    public decimal LastPlaybackRate { get; set; } = 1m;
+
+    // Actual wall-clock seconds grouped by playback rate, e.g. {"1":42,"2":61}.
+    public string PlaybackRateBreakdownJson { get; set; } = "{}";
 
     public int WatchCount { get; set; }
     public bool IsLocked { get; set; }

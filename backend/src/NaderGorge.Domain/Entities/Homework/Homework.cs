@@ -1,18 +1,26 @@
 using System;
 using System.Collections.Generic;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities.Homework;
 
-public class Homework
+public class Homework : NaderGorge.Domain.Entities.IArchivableContent
 {
+    public string? ParentNotificationSettingsJson { get; set; }
+    public DateTime? ParentNotificationEnabledAt { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid LessonId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public bool IsMandatory { get; set; } = true;
+    public bool IsActive { get; set; } = true;
+    public ContentArchiveMode ArchiveMode { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+    public Guid? ArchivedByUserId { get; set; }
     public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }
+    public int? DurationMinutes { get; set; } = 30;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

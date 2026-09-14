@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -50,9 +51,103 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         // Load ALL grants (Package, Term, Month, Lesson) with proper names
         var allGrants = await _context.StudentAccessGrants
+            .AsNoTracking()
             .Where(g => g.UserId == request.UserId)
             .Include(g => g.CancelledByUser)
+            .Include(g => g.AccessCode)
+                .ThenInclude(c => c!.CodeGroup)
+                    .ThenInclude(cg => cg.Teacher)
+                        .ThenInclude(t => t!.User)
             .OrderByDescending(g => g.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var packageGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Package && grant.PackageId.HasValue)
+            .Select(grant => grant.PackageId!.Value)
+            .Distinct()
+            .ToList();
+        var termGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Term && grant.TermId.HasValue)
+            .Select(grant => grant.TermId!.Value)
+            .Distinct()
+            .ToList();
+        var sectionGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Month && grant.ContentSectionId.HasValue)
+            .Select(grant => grant.ContentSectionId!.Value)
+            .Distinct()
+            .ToList();
+        var lessonGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Lesson && grant.LessonId.HasValue)
+            .Select(grant => grant.LessonId!.Value)
+            .Distinct()
+            .ToList();
+
+        var grantedPackages = await _context.Packages
+            .AsNoTracking()
+            .Where(package => packageGrantIds.Contains(package.Id))
+            .Select(package => new
+            {
+                package.Id,
+                package.Name,
+                package.Price,
+                package.TeacherId,
+                TeacherName = package.Teacher.User.FullName
+            })
+            .ToDictionaryAsync(package => package.Id, cancellationToken);
+        var grantedTerms = await _context.Terms
+            .AsNoTracking()
+            .Where(term => termGrantIds.Contains(term.Id))
+            .Select(term => new
+            {
+                term.Id,
+                PackageName = term.Package.Name,
+                term.Title,
+                term.Price,
+                term.Package.TeacherId,
+                TeacherName = term.Package.Teacher.User.FullName
+            })
+            .ToDictionaryAsync(term => term.Id, cancellationToken);
+        var grantedSections = await _context.ContentSections
+            .AsNoTracking()
+            .Where(section => sectionGrantIds.Contains(section.Id))
+            .Select(section => new
+            {
+                section.Id,
+                PackageName = section.Term.Package.Name,
+                section.Title,
+                section.Price,
+                section.Term.Package.TeacherId,
+                TeacherName = section.Term.Package.Teacher.User.FullName
+            })
+            .ToDictionaryAsync(section => section.Id, cancellationToken);
+        var grantedLessons = await _context.Lessons
+            .AsNoTracking()
+            .Where(lesson => lessonGrantIds.Contains(lesson.Id))
+            .Select(lesson => new
+            {
+                lesson.Id,
+                PackageName = lesson.ContentSection.Term.Package.Name,
+                lesson.Title,
+                lesson.Price,
+                lesson.ContentSection.Term.Package.TeacherId,
+                TeacherName = lesson.ContentSection.Term.Package.Teacher.User.FullName
+            })
+            .ToDictionaryAsync(lesson => lesson.Id, cancellationToken);
+
+        var purchaseEffects = await _context.SalesFinancialEffects
+            .AsNoTracking()
+            .Where(effect => effect.StudentId == request.UserId)
+            .Select(effect => new
+            {
+                effect.PurchaseOperationId,
+                effect.TargetId,
+                effect.TeacherId,
+                TeacherName = effect.Teacher != null ? effect.Teacher.User.FullName : null,
+                effect.PaidAmount,
+                effect.PlatformShareImpact,
+                effect.TeacherShareImpact,
+                effect.CreatedAt
+            })
             .ToListAsync(cancellationToken);
 
         var packages = new List<StudentPackageDto>();
@@ -61,37 +156,77 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             string name = "غير معروف";
             decimal price = 0m;
             Guid contentId = Guid.Empty;
+            Guid? contentTeacherId = null;
+            string? contentTeacherName = null;
+            var codeTeacherId = grant.AccessCode?.CodeGroup?.TeacherId;
+            var codeTeacherName = grant.AccessCode?.CodeGroup?.Teacher?.User?.FullName;
 
             switch (grant.GrantType)
             {
                 case NaderGorge.Domain.Enums.CodeType.Package:
-                    if (grant.PackageId.HasValue)
+                    if (grant.PackageId.HasValue && grantedPackages.TryGetValue(grant.PackageId.Value, out var package))
                     {
-                        var pkg = await _context.Packages.FindAsync(new object[] { grant.PackageId.Value }, cancellationToken);
-                        if (pkg != null) { name = pkg.Name; price = pkg.Price; contentId = pkg.Id; }
+                        name = package.Name;
+                        price = package.Price;
+                        contentId = package.Id;
+                        contentTeacherId = package.TeacherId;
+                        contentTeacherName = package.TeacherName;
+                    }
+                    else
+                    {
+                        name = string.IsNullOrWhiteSpace(codeTeacherName)
+                            ? "باكدج عام للمنصة"
+                            : $"باكدج عام لمدرس {codeTeacherName}";
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Term:
-                    if (grant.TermId.HasValue)
+                    if (grant.TermId.HasValue && grantedTerms.TryGetValue(grant.TermId.Value, out var term))
                     {
-                        var term = await _context.Terms.Include(t => t.Package).FirstOrDefaultAsync(t => t.Id == grant.TermId.Value, cancellationToken);
-                        if (term != null) { name = $"{term.Package?.Name} — {term.Title}"; price = term.Price; contentId = term.Id; }
+                        name = $"{term.PackageName} — {term.Title}";
+                        price = term.Price;
+                        contentId = term.Id;
+                        contentTeacherId = term.TeacherId;
+                        contentTeacherName = term.TeacherName;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Month:
-                    if (grant.ContentSectionId.HasValue)
+                    if (grant.ContentSectionId.HasValue && grantedSections.TryGetValue(grant.ContentSectionId.Value, out var section))
                     {
-                        var section = await _context.ContentSections.Include(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(s => s.Id == grant.ContentSectionId.Value, cancellationToken);
-                        if (section != null) { name = $"{section.Term?.Package?.Name} — {section.Title}"; price = section.Price; contentId = section.Id; }
+                        name = $"{section.PackageName} — {section.Title}";
+                        price = section.Price;
+                        contentId = section.Id;
+                        contentTeacherId = section.TeacherId;
+                        contentTeacherName = section.TeacherName;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Lesson:
-                    if (grant.LessonId.HasValue)
+                    if (grant.LessonId.HasValue && grantedLessons.TryGetValue(grant.LessonId.Value, out var lesson))
                     {
-                        var lesson = await _context.Lessons.Include(l => l.ContentSection).ThenInclude(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(l => l.Id == grant.LessonId.Value, cancellationToken);
-                        if (lesson != null) { name = $"{lesson.ContentSection?.Term?.Package?.Name} — {lesson.Title}"; price = lesson.Price; contentId = lesson.Id; }
+                        name = $"{lesson.PackageName} — {lesson.Title}";
+                        price = lesson.Price;
+                        contentId = lesson.Id;
+                        contentTeacherId = lesson.TeacherId;
+                        contentTeacherName = lesson.TeacherName;
                     }
                     break;
+            }
+
+            var purchaseEffect = purchaseEffects
+                .Where(effect => effect.TargetId == contentId)
+                .OrderBy(effect => Math.Abs((effect.CreatedAt - grant.CreatedAt).Ticks))
+                .FirstOrDefault();
+
+            var resolvedTeacherId = contentTeacherId;
+            var resolvedTeacherName = contentTeacherName;
+            if (codeTeacherId.HasValue)
+            {
+                resolvedTeacherId = codeTeacherId;
+                resolvedTeacherName = codeTeacherName;
+            }
+            if (purchaseEffect?.TeacherId is not null)
+            {
+                resolvedTeacherId = purchaseEffect.TeacherId;
+                resolvedTeacherName = purchaseEffect.TeacherName;
             }
 
             packages.Add(new StudentPackageDto
@@ -105,6 +240,12 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 IsActive = grant.IsActive,
                 PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
                 Price = price,
+                PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
+                TeacherId = resolvedTeacherId,
+                TeacherName = resolvedTeacherName,
+                PaidAmount = purchaseEffect?.PaidAmount ?? 0m,
+                PlatformShareAmount = purchaseEffect?.PlatformShareImpact ?? 0m,
+                TeacherShareAmount = purchaseEffect?.TeacherShareImpact ?? 0m,
                 GrantType = grant.GrantType.ToString(),
                 CancelledByName = grant.CancelledByUser?.FullName,
                 CancelledAt = grant.CancelledAt,
@@ -156,6 +297,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             {
                 LessonVideoId = v.LessonVideoId,
                 VideoTitle = v.LessonVideo.Title,
+                VideoOrder = v.LessonVideo.Order,
                 LessonId = v.LessonVideo.LessonId,
                 LessonTitle = v.LessonVideo.Lesson.Title,
                 PackageName = v.LessonVideo.Lesson.ContentSection.Term.Package.Name,
@@ -163,10 +305,174 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 WatchCount = v.WatchCount,
                 MaxWatchCount = v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount,
                 WatchedSeconds = Math.Max(0, v.TimeWatchedInSeconds),
+                ActualWatchedSeconds = Math.Max(0m, v.ActualWatchedSeconds),
+                LastPlaybackRate = v.LastPlaybackRate,
+                PlaybackRateBreakdownJson = v.PlaybackRateBreakdownJson,
                 IsLocked = v.IsLocked && v.WatchCount >= (v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount),
                 LastWatchedAt = v.UpdatedAt ?? v.CreatedAt
             })
             .ToListAsync(cancellationToken);
+
+        var watchedVideosCount = watchActivities.Count;
+        var activityLessonIds = await GetActivityLessonIdsAsync(request.UserId, cancellationToken);
+        activityLessonIds = activityLessonIds.Concat(watchActivities.Select(activity => activity.LessonId)).Distinct().ToList();
+        if (activityLessonIds.Count > 0)
+        {
+            var unwatchedActivities = await _context.LessonVideos
+                .AsNoTracking()
+                .Where(video => video.IsActive
+                    && activityLessonIds.Contains(video.LessonId)
+                    && !_context.VideoWatchEvents.Any(watchEvent =>
+                        watchEvent.UserId == request.UserId
+                        && watchEvent.LessonVideoId == video.Id))
+                .Select(video => new StudentVideoWatchActivityDto
+                {
+                    LessonVideoId = video.Id,
+                    VideoTitle = video.Title,
+                    VideoOrder = video.Order,
+                    LessonId = video.LessonId,
+                    LessonTitle = video.Lesson.Title,
+                    PackageName = video.Lesson.ContentSection.Term.Package.Name,
+                    TermTitle = video.Lesson.ContentSection.Term.Title,
+                    WatchCount = 0,
+                    MaxWatchCount = video.MaxWatchCount,
+                    WatchedSeconds = 0,
+                    ActualWatchedSeconds = 0m,
+                    LastPlaybackRate = 1m,
+                    AveragePlaybackRate = 1m,
+                    IsLocked = false,
+                    LastWatchedAt = null
+                })
+                .ToListAsync(cancellationToken);
+            watchActivities.AddRange(unwatchedActivities);
+        }
+
+        var progressByVideo = (await NaderGorge.Application.Common.StudentWatchProgressReader.ReadAsync(
+            new(_context, request.UserId, activityLessonIds),
+            watchActivities.Select(activity => activity.LessonVideoId).ToArray(),
+            cancellationToken)).ToDictionary(progress => progress.VideoId);
+        var playbackSessions = await _context.VideoPlaybackSessions.AsNoTracking()
+            .Where(session => session.UserId == request.UserId && session.AcceptedWallSeconds > 0)
+            .OrderByDescending(session => session.CreatedAt)
+            .Select(session => new
+            {
+                session.LessonVideoId,
+                Session = new StudentPlaybackSessionDto(session.Id, session.CreatedAt,
+                    session.AcceptedWallSeconds, session.TrackingDurationSeconds)
+            }).ToListAsync(cancellationToken);
+        var sessionsByVideo = playbackSessions.ToLookup(session => session.LessonVideoId, session => session.Session);
+
+        foreach (var activity in watchActivities)
+        {
+            var progress = progressByVideo.GetValueOrDefault(activity.LessonVideoId);
+            activity.LearningWatchedSeconds = progress?.WatchedSeconds ?? 0;
+            activity.DurationSeconds = progress?.DurationSeconds;
+            activity.IsCompleted = progress?.IsCompleted ?? false;
+            activity.Sessions = sessionsByVideo[activity.LessonVideoId].ToList();
+            activity.PlaybackRateSeconds = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(activity.PlaybackRateBreakdownJson) ?? new();
+            activity.AveragePlaybackRate = activity.ActualWatchedSeconds > 0
+                ? decimal.Round(activity.WatchedSeconds / (decimal)activity.ActualWatchedSeconds, 2)
+                : activity.LastPlaybackRate;
+        }
+
+        watchActivities = watchActivities
+            .OrderBy(activity => activity.PackageName)
+            .ThenBy(activity => activity.TermTitle)
+            .ThenBy(activity => activity.LessonTitle)
+            .ThenBy(activity => activity.VideoOrder)
+            .ThenBy(activity => activity.VideoTitle)
+            .ToList();
+
+        var examAttemptsRaw = await _context.StudentExamAttempts
+            .AsNoTracking()
+            .Where(attempt => attempt.UserId == request.UserId)
+            .Select(attempt => new
+            {
+                attempt.Id,
+                attempt.ExamId,
+                attempt.Exam.Title,
+                attempt.Exam.TotalScore,
+                attempt.DefinitionSnapshotJson,
+                attempt.ScoreAchieved,
+                attempt.IsPassed,
+                attempt.IsTimeExpired,
+                attempt.Evaluation,
+                AttemptedAt = attempt.StartedAt ?? attempt.CreatedAt,
+                LessonTitle = attempt.Exam.LessonVideo != null
+                    ? attempt.Exam.LessonVideo.Lesson.Title
+                    : _context.Lessons.Where(lesson => lesson.ExamId == attempt.ExamId)
+                        .Select(lesson => lesson.Title).FirstOrDefault(),
+                PackageName = attempt.Exam.LessonVideo != null
+                    ? attempt.Exam.LessonVideo.Lesson.ContentSection.Term.Package.Name
+                    : _context.Lessons.Where(lesson => lesson.ExamId == attempt.ExamId)
+                        .Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+            })
+            .OrderByDescending(attempt => attempt.AttemptedAt)
+            .ToListAsync(cancellationToken);
+        var examHistory = examAttemptsRaw.Select(attempt =>
+        {
+            var snapshot = ReadAssessmentSnapshot(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+            var hasFinalGrade = !string.IsNullOrWhiteSpace(attempt.Evaluation)
+                && attempt.Evaluation != "قيد التصحيح";
+            return new StudentExamHistoryDto
+            {
+                AttemptId = attempt.Id,
+                ExamId = attempt.ExamId,
+                Title = snapshot?.Title ?? attempt.Title,
+                PackageName = attempt.PackageName,
+                LessonTitle = attempt.LessonTitle,
+                Score = attempt.ScoreAchieved,
+                TotalScore = snapshot?.TotalScore ?? attempt.TotalScore,
+                HasFinalGrade = hasFinalGrade,
+                IsPassed = attempt.IsPassed,
+                IsTimeExpired = attempt.IsTimeExpired,
+                Status = hasFinalGrade ? "Graded"
+                    : attempt.Evaluation == "قيد التصحيح" ? "PendingReview" : "InProgress",
+                Evaluation = attempt.Evaluation,
+                AttemptedAt = attempt.AttemptedAt
+            };
+        }).ToList();
+
+        var homeworkSubmissionsRaw = await _context.HomeworkSubmissions
+            .AsNoTracking()
+            .Where(submission => submission.StudentId == request.UserId)
+            .Select(submission => new
+            {
+                submission.Id,
+                submission.HomeworkId,
+                submission.Homework.Title,
+                submission.Homework.TotalScore,
+                submission.TotalScoreSnapshot,
+                submission.DefinitionSnapshotJson,
+                submission.OverallScore,
+                submission.Status,
+                submission.Evaluation,
+                AttemptedAt = submission.SubmittedAt ?? submission.StartedAt,
+                LessonTitle = _context.Lessons.Where(lesson => lesson.Id == submission.Homework.LessonId)
+                    .Select(lesson => lesson.Title).FirstOrDefault(),
+                PackageName = _context.Lessons.Where(lesson => lesson.Id == submission.Homework.LessonId)
+                    .Select(lesson => lesson.ContentSection.Term.Package.Name).FirstOrDefault()
+            })
+            .OrderByDescending(submission => submission.AttemptedAt)
+            .ToListAsync(cancellationToken);
+        var homeworkHistory = homeworkSubmissionsRaw.Select(submission =>
+        {
+            var snapshot = ReadAssessmentSnapshot(submission.DefinitionSnapshotJson, "homework", submission.HomeworkId);
+            return new StudentHomeworkHistoryDto
+            {
+                SubmissionId = submission.Id,
+                HomeworkId = submission.HomeworkId,
+                Title = snapshot?.Title ?? submission.Title,
+                PackageName = submission.PackageName,
+                LessonTitle = submission.LessonTitle,
+                Score = submission.OverallScore,
+                TotalScore = snapshot?.TotalScore ?? submission.TotalScoreSnapshot ?? submission.TotalScore,
+                HasFinalGrade = submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded,
+                Status = submission.Status.ToString(),
+                Evaluation = submission.Evaluation,
+                AttemptedAt = submission.AttemptedAt
+            };
+        }).ToList();
 
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
@@ -203,6 +509,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     Id = t.Id,
                     Amount = t.Amount,
                     BalanceAfter = t.BalanceAfter,
+                    BalanceBefore = t.BalanceAfter - t.Amount,
+                    BalanceScope = "الرصيد العام",
+                    ContentName = t.TransactionType == "ContentPurchase" ? t.Description : null,
                     TransactionType = t.TransactionType,
                     Description = t.Description,
                     CreatedAt = t.CreatedAt,
@@ -210,6 +519,111 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 })
                 .ToListAsync(cancellationToken);
         }
+
+        var promotionalUsages = await _context.PromotionalBalanceUsages
+            .AsNoTracking()
+            .Where(x => x.Allocation.StudentId == request.UserId)
+            .Select(x => new
+            {
+                x.Id,
+                x.AllocationId,
+                x.Allocation.OriginalAmount,
+                x.Amount,
+                x.ContentType,
+                x.ContentId,
+                x.CreatedAt,
+                TeacherName = x.Allocation.Teacher != null ? x.Allocation.Teacher.User.FullName : "رصيد مخصص عام"
+            })
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var consumedByAllocation = new Dictionary<Guid, decimal>();
+        foreach (var usage in promotionalUsages)
+        {
+            var consumedBefore = consumedByAllocation.GetValueOrDefault(usage.AllocationId);
+            var balanceBefore = Math.Max(0m, usage.OriginalAmount - consumedBefore);
+            var contentName = usage.ContentType switch
+            {
+                NaderGorge.Domain.Enums.CodeType.Package when grantedPackages.TryGetValue(usage.ContentId, out var package) => package.Name,
+                NaderGorge.Domain.Enums.CodeType.Term when grantedTerms.TryGetValue(usage.ContentId, out var term) => $"{term.PackageName} — {term.Title}",
+                NaderGorge.Domain.Enums.CodeType.Month when grantedSections.TryGetValue(usage.ContentId, out var section) => $"{section.PackageName} — {section.Title}",
+                NaderGorge.Domain.Enums.CodeType.Lesson when grantedLessons.TryGetValue(usage.ContentId, out var lesson) => $"{lesson.PackageName} — {lesson.Title}",
+                _ => $"{usage.ContentType} ({usage.ContentId})"
+            };
+
+            balanceTransactions.Add(new StudentBalanceTransactionDto
+            {
+                Id = usage.Id,
+                Amount = -usage.Amount,
+                BalanceBefore = balanceBefore,
+                BalanceAfter = Math.Max(0m, balanceBefore - usage.Amount),
+                BalanceScope = $"رصيد المدرس {usage.TeacherName}",
+                ContentName = contentName,
+                TransactionType = "ContentPurchase",
+                Description = $"شراء {contentName} من رصيد المدرس",
+                CreatedAt = usage.CreatedAt,
+                AdminName = "النظام"
+            });
+            consumedByAllocation[usage.AllocationId] = consumedBefore + usage.Amount;
+        }
+
+        balanceTransactions = balanceTransactions
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var rechargeRequests = await _context.RechargeRequests
+            .AsNoTracking()
+            .Where(x => x.UserId == request.UserId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new StudentRechargeRequestDto
+            {
+                Id = x.Id,
+                Amount = x.Amount,
+                BalanceScope = x.Teacher != null ? $"رصيد المدرس {x.Teacher.User.FullName}" : "الرصيد العام",
+                WalletLabel = x.Wallet.Label,
+                WalletPhoneNumber = x.Wallet.PhoneNumber,
+                SenderPhoneNumber = x.SenderPhoneNumber,
+                Status = x.Status.ToString(),
+                HasMatchedSms = x.MatchedSmsLogId.HasValue,
+                CreatedAt = x.CreatedAt,
+                ResolvedAt = x.ResolvedAt,
+                RejectionReason = x.RejectionReason
+            })
+            .ToListAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var promotionalBalancesRaw = await _context.PromotionalBalanceAllocations
+            .AsNoTracking()
+            .Where(x => x.StudentId == request.UserId && x.AvailableAmount > 0 && (x.ExpiresAt == null || x.ExpiresAt > now))
+            .Select(x => new
+            {
+                x.TeacherId,
+                TeacherName = x.Teacher != null ? x.Teacher.User.FullName : "رصيد مخصص عام",
+                x.AvailableAmount,
+                x.OriginalAmount,
+                x.ConsumedAmount,
+                x.ExpiresAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var promotionalBalances = promotionalBalancesRaw
+            .GroupBy(x => new { x.TeacherId, x.TeacherName })
+            .Select(group => new StudentPromotionalBalanceDto
+            {
+                TeacherId = group.Key.TeacherId,
+                TeacherName = group.Key.TeacherName,
+                AvailableAmount = group.Sum(x => x.AvailableAmount),
+                OriginalAmount = group.Sum(x => x.OriginalAmount),
+                ConsumedAmount = group.Sum(x => x.ConsumedAmount),
+                NearestExpiresAt = group
+                    .Where(x => x.ExpiresAt.HasValue)
+                    .OrderBy(x => x.ExpiresAt)
+                    .Select(x => x.ExpiresAt)
+                    .FirstOrDefault()
+            })
+            .OrderByDescending(x => x.AvailableAmount)
+            .ThenBy(x => x.TeacherName)
+            .ToList();
 
         return new StudentProfileExtendedDto
         {
@@ -231,6 +645,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Governorate = user.StudentProfile?.Governorate,
             Address = user.StudentProfile?.Address,
             StudentCode = user.StudentProfile?.StudentCode,
+            ParentTrackingCode = user.StudentProfile?.ParentTrackingCode,
             IsProfileComplete = user.IsProfileComplete,
 
             // ── Academic fields ──────────────────────────────────────────
@@ -260,11 +675,17 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             WatchTracking = new WatchTrackingSummaryDto
             {
                 TotalWatchedSeconds = watchActivities.Sum(activity => activity.WatchedSeconds),
-                WatchedVideosCount = watchActivities.Count,
+                TotalActualWatchedSeconds = watchActivities.Sum(activity => activity.ActualWatchedSeconds),
+                AveragePlaybackRate = CalculateAveragePlaybackRate(watchActivities),
+                WatchedVideosCount = watchedVideosCount,
                 Activities = watchActivities
             },
+            ExamHistory = examHistory,
+            HomeworkHistory = homeworkHistory,
             CurrentBalance = balance?.CurrentBalance ?? 0m,
+            PromotionalBalances = promotionalBalances,
             BalanceTransactions = balanceTransactions,
+            RechargeRequests = rechargeRequests,
             AuditTrail = auditLogs,
             Notes = await _context.StudentNotes
                 .Include(n => n.Admin)
@@ -281,5 +702,34 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 })
                 .ToListAsync(cancellationToken)
         };
+    }
+
+    private Task<List<Guid>> GetActivityLessonIdsAsync(Guid studentId, CancellationToken ct) =>
+        _context.Lessons.AsNoTracking()
+            .Where(lesson =>
+                _context.StudentExamAttempts.Any(attempt => attempt.UserId == studentId &&
+                    (attempt.ExamId == lesson.ExamId ||
+                     (attempt.Exam.LessonVideo != null && attempt.Exam.LessonVideo.LessonId == lesson.Id))) ||
+                _context.HomeworkSubmissions.Any(submission => submission.StudentId == studentId &&
+                    submission.Homework.LessonId == lesson.Id) ||
+                _context.VideoPlaybackSessions.Any(session => session.UserId == studentId &&
+                    session.LessonVideo.LessonId == lesson.Id))
+            .Select(lesson => lesson.Id)
+            .ToListAsync(ct);
+
+    private static decimal CalculateAveragePlaybackRate(IReadOnlyCollection<StudentVideoWatchActivityDto> activities)
+    {
+        var actualWatchedSeconds = activities.Sum(activity => activity.ActualWatchedSeconds);
+        return actualWatchedSeconds > 0
+            ? decimal.Round(activities.Sum(activity => activity.WatchedSeconds) / actualWatchedSeconds, 2)
+            : 1m;
+    }
+
+    private static AssessmentDefinitionSnapshot? ReadAssessmentSnapshot(string? json, string kind, Guid assessmentId)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return AssessmentDefinitionSnapshot.Read(json, kind, assessmentId); }
+        catch (InvalidOperationException) { return null; }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 }

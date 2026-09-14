@@ -1,5 +1,6 @@
 using System;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities.Notifications;
 
@@ -26,6 +27,8 @@ public class NotificationEvent
     public NotificationChannelType ChannelType { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
+    public StudentFacingScopeOwnerType? AcademicScopeOwnerType { get; set; }
+    public Guid? AcademicScopeOwnerId { get; set; }
 
     public NotificationStatus Status { get; set; } = NotificationStatus.Pending;
 

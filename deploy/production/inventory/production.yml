@@ -1,0 +1,43 @@
+{
+  "cluster": {
+    "name": "massar-production",
+    "domain": "massar-academy.net",
+    "overlay_cidr": "10.77.0.0/24",
+    "ssh_user": "massar-ops",
+    "known_hosts_file": "${MASSAR_KNOWN_HOSTS_FILE}",
+    "identity_file": "${MASSAR_SSH_IDENTITY_FILE}"
+  },
+  "nodes": [
+    {
+      "id": "node-1",
+      "ssh_alias": "massar-prod-1",
+      "public_address": "191.218.161.76",
+      "overlay_address": "10.77.0.11",
+      "roles": ["app", "ingress", "etcd", "postgres", "redis", "sentinel", "file-data-primary", "backup-object"]
+    },
+    {
+      "id": "node-2",
+      "ssh_alias": "massar-prod-2",
+      "public_address": "191.218.161.78",
+      "overlay_address": "10.77.0.12",
+      "roles": ["app", "ingress", "etcd", "postgres", "redis", "sentinel", "file-data-standby", "backup-object"]
+    },
+    {
+      "id": "node-3",
+      "ssh_alias": "massar-prod-3",
+      "public_address": "168.231.106.230",
+      "overlay_address": "10.77.0.13",
+      "roles": ["app", "ingress", "etcd", "postgres", "redis", "sentinel", "file-arbiter", "backup-object", "builder"]
+    }
+  ],
+  "hostnames": {
+    "massar-academy.net": "landing",
+    "app.massar-academy.net": "student",
+    "admin.massar-academy.net": "admin",
+    "teacher.massar-academy.net": "teacher",
+    "staff.massar-academy.net": "staff",
+    "api.massar-academy.net": "api",
+    "ws.massar-academy.net": "websocket",
+    "assets.massar-academy.net": "assets"
+  }
+}

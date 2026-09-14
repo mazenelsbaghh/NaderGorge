@@ -12,5 +12,15 @@ export function getBackendOrigin(): string {
 
 export function getBackendHubUrl(hubPath: string): string {
   const normalizedPath = hubPath.startsWith('/') ? hubPath : `/${hubPath}`;
-  return `${getBackendOrigin()}${normalizedPath}`;
+  const configuredHubUrl = process.env.NEXT_PUBLIC_WS_URL;
+  if (configuredHubUrl) return `${configuredHubUrl.replace(/\/$/, '')}${normalizedPath}`;
+
+  const backendOrigin = getBackendOrigin();
+  try {
+    const url = new URL(backendOrigin);
+    if (url.hostname === 'api.massar-academy.net') url.hostname = 'ws.massar-academy.net';
+    return `${url.toString().replace(/\/$/, '')}${normalizedPath}`;
+  } catch {
+    return `${backendOrigin}${normalizedPath}`;
+  }
 }

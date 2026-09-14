@@ -21,12 +21,9 @@ public class WhatsAppVerificationService
         ILogger<WhatsAppVerificationService> logger)
     {
         _httpClient = httpClient;
-        _baseUrl = configuration["EvolutionApi:BaseUrl"]
-            ?? throw new InvalidOperationException("EvolutionApi:BaseUrl is not configured");
-        _apiKey = configuration["EvolutionApi:ApiKey"]
-            ?? throw new InvalidOperationException("EvolutionApi:ApiKey is not configured");
-        _instanceName = configuration["EvolutionApi:InstanceName"]
-            ?? throw new InvalidOperationException("EvolutionApi:InstanceName is not configured");
+        _baseUrl = configuration["EvolutionApi:BaseUrl"] ?? string.Empty;
+        _apiKey = configuration["EvolutionApi:ApiKey"] ?? string.Empty;
+        _instanceName = configuration["EvolutionApi:InstanceName"] ?? string.Empty;
         _logger = logger;
     }
 
@@ -42,6 +39,14 @@ public class WhatsAppVerificationService
         var internationalNumber = phoneNumber.StartsWith("0")
             ? "20" + phoneNumber[1..]
             : phoneNumber;
+
+        if (string.IsNullOrWhiteSpace(_baseUrl) ||
+            string.IsNullOrWhiteSpace(_apiKey) ||
+            string.IsNullOrWhiteSpace(_instanceName))
+        {
+            _logger.LogWarning("Evolution API is not configured. WhatsApp check skipped for {Number}", internationalNumber);
+            return new WhatsAppCheckResult(null, internationalNumber);
+        }
 
         var url = $"{_baseUrl}/chat/whatsappNumbers/{_instanceName}";
 

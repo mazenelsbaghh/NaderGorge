@@ -13,7 +13,7 @@ public record MyCommunityPostDto(
     bool IsPoll
 );
 
-public record GetMyCommunityPostsQuery(Guid UserId) : IRequest<ApiResponse<List<MyCommunityPostDto>>>;
+public record GetMyCommunityPostsQuery(Guid UserId, Guid? TeacherId = null) : IRequest<ApiResponse<List<MyCommunityPostDto>>>;
 
 public class GetMyCommunityPostsQueryHandler : IRequestHandler<GetMyCommunityPostsQuery, ApiResponse<List<MyCommunityPostDto>>>
 {
@@ -28,7 +28,9 @@ public class GetMyCommunityPostsQueryHandler : IRequestHandler<GetMyCommunityPos
     {
         var posts = await _db.CommunityPosts
             .AsNoTracking()
-            .Where(p => p.AuthorUserId == request.UserId)
+            .Where(p =>
+                p.AuthorUserId == request.UserId &&
+                (request.TeacherId.HasValue ? p.TeacherId == request.TeacherId.Value : p.TeacherId == null))
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new MyCommunityPostDto(
                 p.Id,

@@ -73,7 +73,7 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, ApiRe
             AssigneeId = request.AssigneeId,
             CreatedById = request.CreatedById,
             Priority = request.Priority,
-            DueDate = request.DueDate?.ToUniversalTime(),
+            DueDate = request.DueDate is { } dueDate ? CairoTime.ToUtc(dueDate) : null,
             Status = TaskStatus.New
         };
 

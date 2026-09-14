@@ -64,7 +64,7 @@ export function createLiveSupportTurnProcessor(overrides: Partial<ProcessorDepen
         model: null,
         latencyMs: 0,
       });
-      return { success: false, reason: 'AI_QUEUE_STALE' };
+      return { success: false, reason: 'AI_QUEUE_STALE', failureReported: true };
     }
 
     try {
@@ -91,11 +91,19 @@ export function createLiveSupportTurnProcessor(overrides: Partial<ProcessorDepen
       await throwIfCancellationRequested(job);
       await dependencies.callbacks.complete(turnId, completion);
       recordLiveSupportMetric('inference_latency', completion.latencyMs, { provider: completion.provider, model: completion.model, decisionType: validated.decision.type });
+      recordLiveSupportMetric('provider_outcome', 1, { outcome: 'success', provider: completion.provider, decisionType: validated.decision.type });
       recordLiveSupportMetric('callback_outcome', 1, { outcome: 'delivered', decisionType: validated.decision.type });
       return { success: true, decision: validated.decision.type, callbackReplay: false };
     } catch (error) {
-      if (error instanceof LiveSupportCallbackError) throw error;
+      if (error instanceof LiveSupportCallbackError) {
+        recordLiveSupportMetric('callback_outcome', 1, {
+          outcome: error.retryable ? 'retryable_failure' : 'permanent_failure',
+          code: error.code,
+        });
+        throw error;
+      }
       const failureCode = safeInferenceFailureCode(error);
+      recordLiveSupportMetric('provider_outcome', 1, { outcome: 'failure', failureCode });
       await dependencies.callbacks.fail(turnId, {
         failureCode,
         callbackIdempotencyKey: context.callbackIdempotencyKey,
@@ -103,7 +111,7 @@ export function createLiveSupportTurnProcessor(overrides: Partial<ProcessorDepen
         model: null,
         latencyMs: Math.max(0, dependencies.now() - startedAt),
       });
-      throw new Error(failureCode);
+      return { success: false, reason: failureCode, failureReported: true };
     }
   };
 }

@@ -11,6 +11,7 @@ public enum QuestionType
 
 public class HomeworkQuestion
 {
+    public bool IsRetired { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid HomeworkId { get; set; }
     public int Order { get; set; }

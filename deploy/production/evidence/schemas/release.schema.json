@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "releaseId", "gitCommit", "createdAt", "images"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "releaseId": { "type": "string", "minLength": 1 },
+    "gitCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "images": {
+      "type": "object",
+      "required": ["backend", "frontend", "worker", "migrator"],
+      "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    }
+  }
+}

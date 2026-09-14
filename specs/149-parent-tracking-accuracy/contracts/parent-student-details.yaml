@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Parent Student Details Contract
+  version: 149-parent-tracking-accuracy
+paths:
+  /api/parent/student-details:
+    get:
+      summary: Return linked student tracking data for the authenticated parent token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Student tracking payload
+        "401":
+          description: Missing or invalid parent token or StudentId claim
+        "400":
+          description: Linked student profile not found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Teacher:
+      type: object
+      required: [teacherId, teacherName]
+      properties:
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        specialization: { type: string, nullable: true }
+        profileImageUrl: { type: string, nullable: true }
+    WatchLesson:
+      type: object
+      required: [teacherId, teacherName, lessonId, lessonTitle, totalVideos, watchedVideos, watchCount, watchedSeconds, isCompleted]
+      properties:
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        lessonId: { type: string, format: uuid }
+        lessonTitle: { type: string }
+        totalVideos: { type: integer }
+        watchedVideos: { type: integer }
+        watchCount: { type: integer }
+        watchedSeconds: { type: integer }
+        isCompleted: { type: boolean }
+        lastWatchedAt: { type: string, format: date-time, nullable: true }
+    ExamReview:
+      type: object
+      required: [teacherId, teacherName, examTitle, score, totalScore, percentage, status, mistakes]
+      properties:
+        examId: { type: string, format: uuid }
+        attemptId: { type: string, format: uuid, nullable: true }
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        examTitle: { type: string }
+        score: { type: number }
+        totalScore: { type: number }
+        percentage: { type: number }
+        submittedAt: { type: string, format: date-time, nullable: true }
+        status:
+          type: string
+          enum: [NotStarted, Passed, Failed]
+        mistakes:
+          type: array
+          items: { $ref: "#/components/schemas/QuestionReview" }
+    HomeworkReview:
+      type: object
+      required: [homeworkId, teacherId, teacherName, title, isSubmitted, submissionState, mistakes]
+      properties:
+        homeworkId: { type: string, format: uuid }
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        title: { type: string }
+        isSubmitted: { type: boolean }
+        submissionState:
+          type: string
+          enum: [NotSubmitted, InProgress, PendingReview, Graded, Missed]
+        grade: { type: string, nullable: true }
+        submittedAt: { type: string, format: date-time, nullable: true }
+        mistakes:
+          type: array
+          items: { $ref: "#/components/schemas/HomeworkAnswerReview" }
+    QuestionReview:
+      type: object
+      properties:
+        questionText: { type: string }
+        studentAnswer: { type: string, nullable: true }
+        correctAnswer: { type: string, nullable: true }
+        writtenCorrection: { type: string, nullable: true }
+        pointsAwarded: { type: number }
+        points: { type: number }
+    HomeworkAnswerReview:
+      type: object
+      properties:
+        questionText: { type: string }
+        studentAnswer: { type: string }
+        correctAnswer: { type: string, nullable: true }
+        writtenCorrection: { type: string, nullable: true }
+        scoreReceived: { type: integer, nullable: true }
+        points: { type: integer }
+    Balance:
+      type: object
+      required: [currentBalance, transactions]
+      properties:
+        currentBalance: { type: number }
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              amount: { type: number }
+              balanceAfter: { type: number }
+              transactionType: { type: string }
+              description: { type: string }
+              createdAt: { type: string, format: date-time }

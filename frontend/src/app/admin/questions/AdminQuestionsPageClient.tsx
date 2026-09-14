@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CircleCheck, Plus, Shield, Tags } from 'lucide-react';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -229,15 +229,16 @@ export default function AdminQuestionsPageClient({ mode }: { mode?: 'admin' | 'a
     },
   ];
 
-  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminPage;
   const shellActivePath = mode === 'assistant' ? '/assistant/questions' : '/admin/questions';
+  const isAssistantWorkspace = mode === 'assistant';
 
   return (
     <Shell
       activePath={shellActivePath as any}
-      sectionLabel="بنك الأسئلة"
-      pageTitle="إدارة الأسئلة"
-      subtitle="إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة."
+      sectionLabel={isAssistantWorkspace ? 'مساحة عمل الأسئلة' : 'بنك الأسئلة'}
+      pageTitle={isAssistantWorkspace ? 'متابعة بنك الأسئلة' : 'إدارة الأسئلة'}
+      subtitle={isAssistantWorkspace ? 'راجع الأسئلة والتصنيفات والإجابات الصحيحة المكلف بها.' : 'إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة.'}
       action={
         <NeumorphButton
           onClick={() => setShowModal(true)}
@@ -435,7 +436,7 @@ export default function AdminQuestionsPageClient({ mode }: { mode?: 'admin' | 'a
               type="file" 
               accept="audio/*"
               onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-              className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+              className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-[color,background-color,border-color,opacity,transform,box-shadow] cursor-pointer"
             />
           </div>
 

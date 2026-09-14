@@ -16,6 +16,8 @@ public record TeacherPayoutRequestDto(
     Guid Id,
     decimal Amount,
     string Status,
+    decimal ReservedBalance,
+    decimal AvailableBalance,
     DateTime CreatedAt
 );
 
@@ -31,6 +33,13 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
     }
 
     public async Task<ApiResponse<TeacherPayoutRequestDto>> Handle(RequestPayoutCommand request, CancellationToken ct)
+    {
+        return await SerializationRetryHelper.ExecuteAsync(
+            retryCt => HandleOnce(request, retryCt),
+            ct);
+    }
+
+    private async Task<ApiResponse<TeacherPayoutRequestDto>> HandleOnce(RequestPayoutCommand request, CancellationToken ct)
     {
         var teacherProfile = await _db.TeacherProfiles
             .FirstOrDefaultAsync(tp => tp.UserId == request.TeacherUserId, ct);
@@ -51,6 +60,7 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
                 TeacherId = teacherProfile.Id,
                 TotalEarnings = 0m,
                 CurrentBalance = 0m,
+                ReservedBalance = 0m,
                 CommissionRate = teacherProfile.CommissionRate
             };
             _db.TeacherAccounts.Add(account);
@@ -62,9 +72,34 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
             return ApiResponse<TeacherPayoutRequestDto>.Fail("المبلغ المطلوب يجب أن يكون أكبر من صفر");
         }
 
-        if (request.Amount > account.CurrentBalance)
+        var availableBalance = account.CurrentBalance - account.ReservedBalance;
+        if (request.Amount > availableBalance)
         {
-            return ApiResponse<TeacherPayoutRequestDto>.Fail($"رصيدك الحالي لا يكفي لطلب دفعة قيمتها ({request.Amount} ج.م)");
+            return ApiResponse<TeacherPayoutRequestDto>.Fail($"رصيدك المتاح لا يكفي لطلب دفعة قيمتها ({request.Amount} ج.م)");
+        }
+
+        var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
+        await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+
+        if (_db is DbContext efDb2 && efDb2.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            account.ReservedBalance += request.Amount;
+            account.UpdatedAt = DateTime.UtcNow;
+            _db.TeacherAccounts.Update(account);
+        }
+        else
+        {
+            var reservedRows = await _db.TeacherAccounts
+                .Where(ta => ta.Id == account.Id && ta.CurrentBalance - ta.ReservedBalance >= request.Amount)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(ta => ta.ReservedBalance, ta => ta.ReservedBalance + request.Amount)
+                    .SetProperty(ta => ta.Version, ta => ta.Version + 1)
+                    .SetProperty(ta => ta.UpdatedAt, DateTime.UtcNow), ct);
+
+            if (reservedRows != 1)
+            {
+                return ApiResponse<TeacherPayoutRequestDto>.Fail($"رصيدك المتاح لا يكفي لطلب دفعة قيمتها ({request.Amount} ج.م)");
+            }
         }
 
         var payout = new TeacherPayout
@@ -77,6 +112,11 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
 
         _db.TeacherPayouts.Add(payout);
         await _db.SaveChangesAsync(ct);
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(ct);
+        }
+        await _db.Entry(account).ReloadAsync(ct);
 
         // Audit log
         var auditEntry = new AuditLog
@@ -94,6 +134,8 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
             payout.Id,
             payout.Amount,
             payout.Status.ToString(),
+            account.ReservedBalance,
+            account.CurrentBalance - account.ReservedBalance,
             payout.CreatedAt
         );
 

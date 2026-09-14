@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, KeyRound, Shield, Users, GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
-import { AdminStatCard } from "@/components/admin";
+import { AdminStatCard, ContentSummaryPanel } from "@/components/admin";
 import { teacherService, TeacherDashboardStatsDto } from "@/services/teacher-service";
 
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 
 export default function TeacherDashboardPageClient() {
   const { user } = useAuthStore();
@@ -55,15 +55,15 @@ export default function TeacherDashboardPageClient() {
       icon: KeyRound,
     },
     {
-      href: "/teacher/exams",
-      title: "الأسئلة والامتحانات",
-      body: "أنشئ الامتحانات وتابع نتائج الطلاب.",
+      href: "/teacher/public-exams",
+      title: "الامتحانات العامة",
+      body: "أنشئ امتحاناً يظهر خارج الحصص ويرتبط بك تلقائياً.",
       icon: Shield,
     },
   ];
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher"
       sectionLabel="لوحة التحكم"
       pageTitle="لوحة المعلم"
@@ -76,7 +76,7 @@ export default function TeacherDashboardPageClient() {
             أ. {user?.fullName || "المعلم"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--admin-muted)]">
-            ابدأ بالإجابات التي تنتظر التصحيح، ثم انتقل إلى إدارة المحتوى والامتحانات.
+            ابدأ بالإجابات التي تنتظر التصحيح، ثم انتقل إلى المحتوى والامتحانات العامة.
           </p>
         </section>
 
@@ -90,36 +90,38 @@ export default function TeacherDashboardPageClient() {
         ) : null}
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4" aria-busy={loading} aria-label={loading ? "جارٍ تحميل إحصاءات المعلم" : "إحصاءات المعلم"}>
           <AdminStatCard
             variant="light"
             icon={Users}
             label="الطلاب المشتركون"
-            value={loading ? "..." : stats?.activeStudentsCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.activeStudentsCount.toString() ?? "0"}
             subtitle="عدد الطلاب النشطين"
           />
           <AdminStatCard
             variant="accent"
             icon={BookOpen}
             label="الباقات الدراسية"
-            value={loading ? "..." : stats?.packagesCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.packagesCount.toString() ?? "0"}
             subtitle="إجمالي الباقات النشطة"
           />
           <AdminStatCard
             variant="light"
             icon={Shield}
             label="الامتحانات"
-            value={loading ? "..." : stats?.examsCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.examsCount.toString() ?? "0"}
             subtitle="عدد الامتحانات المنشأة"
           />
           <AdminStatCard
             variant="muted"
             icon={GraduationCap}
             label="إجابات معلقة"
-            value={loading ? "..." : stats?.pendingEssaysCount.toString() ?? "0"}
+            value={loading ? "—" : stats?.pendingEssaysCount.toString() ?? "0"}
             subtitle="بانتظار تصحيح المعلم"
           />
         </div>
+
+        <ContentSummaryPanel scope="teacher" />
 
         <section aria-labelledby="teacher-actions-title" className="overflow-hidden rounded-2xl bg-[var(--admin-card)]">
           <div className="border-b border-[var(--admin-border)] px-5 py-4">
@@ -144,6 +146,6 @@ export default function TeacherDashboardPageClient() {
           ))}
         </section>
       </div>
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

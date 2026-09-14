@@ -37,7 +37,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
   /* ── Success Screen ── */
   if (submitted) {
     return (
-      <div className="mx-auto max-w-2xl rounded-[28px] border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] p-8 text-center shadow-[0_28px_70px_var(--admin-shadow)] sm:p-10">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] p-8 text-center shadow-sm sm:p-10">
         <div className="mb-5 flex justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--admin-success-10)]">
             <CheckCircle2 className="h-10 w-10 text-[var(--admin-success)]" />
@@ -51,7 +51,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
         <div className="mt-8">
           <button
             onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_10px_24px_rgba(119,90,25,0.2)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)]"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)]"
           >
             العودة للوحة التحكم
             <ArrowUpLeft className="h-4 w-4" />
@@ -65,7 +65,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
       {/* Header */}
-      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-xl sm:rounded-[28px] sm:p-8">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:rounded-2xl sm:p-8">
         <div className="flex items-center gap-3 mb-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
             <BookOpen className="h-5 w-5" />
@@ -92,7 +92,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
       {/* Questions */}
       <div className="space-y-5">
         {homework.questions?.map((q, idx) => (
-          <div key={q.id} className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 overflow-hidden backdrop-blur-xl" role="group" aria-label={`السؤال ${idx + 1}: ${q.text}`}>
+          <div key={q.id} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 overflow-hidden" role="group" aria-label={`السؤال ${idx + 1}: ${q.text}`}>
             <div className="bg-[var(--admin-card-strong)] p-5">
               <h3 className="text-lg font-black text-[var(--admin-text)]">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--admin-primary)] text-sm font-black text-[var(--admin-primary-contrast)] ml-3">
@@ -150,7 +150,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
         ))}
 
         {!hasQuestions && (
-          <div className="rounded-[28px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-10 text-center backdrop-blur-xl">
+          <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-10 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
               <PenTool className="h-7 w-7" />
             </div>
@@ -169,7 +169,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
         <button
           onClick={handleSubmit}
           disabled={loading || (hasQuestions && !allAnswered)}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_10px_24px_rgba(119,90,25,0.2)] transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
         >
           {loading ? 'جاري التسليم...' : 'تسليم الواجب'}
         </button>

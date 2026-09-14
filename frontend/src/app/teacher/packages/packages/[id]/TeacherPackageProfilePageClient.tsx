@@ -2,27 +2,35 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight } from "lucide-react";
+import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Layers } from "lucide-react";
 import {
   AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
-  PackageCodeProfileSummary, ContentImageUpload
+  PackageCodeProfileSummary, ContentImageUpload, PackageDirectContentPanel, ContentSubscribersTab
 } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
-import { contentService, TermDto } from "@/services/content-service";
+import { contentService, getContentRootLabel, TermDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "terms" | "codeProfile";
+type ActiveTab = "overview" | "terms" | "direct" | "subscribers" | "codeProfile";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "terms", label: "الأترام", icon: Calendar },
+  { key: "direct", label: "المحتوى المباشر", icon: BookOpenText },
+  { key: "subscribers", label: "الطلاب المشتركون", icon: Users },
   { key: "codeProfile", label: "صفحة الأكواد", icon: KeyRound },
 ];
+
+function getPackageTabs(contentMode: string): AdminTab<ActiveTab>[] {
+  return contentMode === "TermWithSections"
+    ? TABS
+    : TABS.filter((tab) => tab.key !== "terms");
+}
 
 export default function TeacherPackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
@@ -36,6 +44,8 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
   const [terms, setTerms] = useState<TermDto[]>([]);
   const [termsLoading, setTermsLoading] = useState(true);
   const [termsError, setTermsError] = useState(false);
+  const [togglingActive, setTogglingActive] = useState(false);
+  const packageContentMode = pkg?.contentMode;
 
   const loadPkg = useCallback(async () => {
     try {
@@ -63,26 +73,60 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
   }, [params.id]);
 
   useEffect(() => { void loadPkg(); }, [loadPkg]);
-  useEffect(() => { void loadTerms(); }, [loadTerms]);
+  useEffect(() => {
+    if (pkgLoading) return;
+    if (packageContentMode === "TermWithSections" || packageContentMode == null) {
+      void loadTerms();
+    }
+  }, [loadTerms, packageContentMode, pkgLoading]);
+
+  const archivePackage = async () => {
+    if (!pkg || togglingActive) return;
+    if (!window.confirm(`ستُؤرشف الباقة "${pkg.name}". لن تظهر للطلاب الجدد، مع الاحتفاظ بكل المحتوى والاشتراكات الحالية.`)) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, { name: pkg.name, description: pkg.description, price: pkg.price, isActive: false });
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: false }));
+      toast.success("تمت أرشفة الباقة.");
+    } catch {
+      toast.error("تعذر أرشفة الباقة");
+    } finally {
+      setTogglingActive(false);
+    }
+  };
+
+  const restorePackage = async () => {
+    if (!pkg || togglingActive) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, { name: pkg.name, description: pkg.description, price: pkg.price, isActive: true });
+      setPkg((currentPackage: any) => ({ ...currentPackage, isActive: true }));
+      toast.success("تمت استعادة الباقة وظهرت للطلاب.");
+    } catch {
+      toast.error("تعذر استعادة الباقة");
+    } finally {
+      setTogglingActive(false);
+    }
+  };
 
   if (pkgLoading) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!pkg) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الباقة المطلوبة.</p>
           <NeumorphButton onClick={() => router.push("/teacher/packages")} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة للباقات
           </NeumorphButton>
         </div>
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
@@ -94,13 +138,23 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
     imageUrl: t.imageUrl,
     href: `/teacher/packages/terms/${t.id}`,
   }));
+  const contentMode = packageContentMode ?? "TermWithSections";
+  const contentRootLabel = getContentRootLabel(contentMode);
+  const packageTabs = getPackageTabs(contentMode);
+  const directSections = pkg.directSections ?? [];
+  const directLessons = pkg.directLessons ?? [];
+  const hierarchyStat = contentMode === "TermWithSections"
+    ? { icon: Calendar, label: "عدد الأترام", value: terms.length }
+    : contentMode === "SectionWithLessons"
+      ? { icon: Layers, label: "عدد الأقسام", value: directSections.length }
+      : { icon: BookOpenText, label: "عدد الحصص", value: directLessons.length };
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
-      sectionLabel="إدارة المحتوى ▸ الباقات"
+      sectionLabel={`إدارة المحتوى ▸ ${contentRootLabel}`}
       pageTitle={pkg.name}
-      subtitle={pkg.description || "إدارة محتويات وإعدادات الباقة"}
+      subtitle={pkg.description || `إدارة محتوى وإعدادات ${contentRootLabel}`}
       action={
         <NeumorphButton onClick={() => router.push("/teacher/packages")} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
@@ -114,15 +168,32 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
           entityId={pkg.id}
           contentType="package"
           imageUrl={pkg.imageUrl}
-          label="صورة الباقة"
+          label={`صورة ${contentRootLabel}`}
           onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
         />
       </div>
 
       {/* Stats */}
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <AdminStatCard variant="accent" icon={BookOpenText}  label="حالة الباقة" value={pkg.isActive !== false ? "نشطة" : "مسودة"} />
-        <AdminStatCard variant="light"  icon={Calendar}      label="عدد الأترام"  value={terms.length} />
+        <button
+          type="button"
+          onClick={pkg.isActive === false ? restorePackage : archivePackage}
+          disabled={togglingActive}
+          className={`rounded-2xl border p-4 text-center transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:brightness-95 active:scale-[0.98] cursor-pointer ${pkg.isActive !== false ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30" : "border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30"} ${togglingActive ? "opacity-50" : ""}`}
+        >
+          <p className={`text-lg font-black ${pkg.isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"}`}>
+            {pkg.isActive !== false ? "نشطة" : "مؤرشفة"}
+          </p>
+          <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
+            {pkg.isActive !== false ? "ظاهرة للطلاب — اضغط للأرشفة" : "مخفية عن الطلاب — اضغط للاستعادة"}
+          </p>
+        </button>
+        <AdminStatCard
+          variant="light"
+          icon={hierarchyStat.icon}
+          label={hierarchyStat.label}
+          value={hierarchyStat.value}
+        />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard
           variant="light"
@@ -139,7 +210,7 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
 
       {/* Tabs */}
       <div className="mb-8">
-        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+        <AdminTabBar tabs={packageTabs} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {/* Terms tab — uses shared ContentHierarchyPanel */}
@@ -177,17 +248,42 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
         </div>
       )}
 
+      {activeTab === "direct" && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى {contentRootLabel}</h3>
+            <p className="mt-2 text-sm text-[var(--admin-muted)]">
+              أضف الأقسام أو الحصص مباشرة حسب شكل الكورس.
+            </p>
+          </div>
+          <PackageDirectContentPanel
+            packageId={params.id}
+            mode={pkg.contentMode ?? "TermWithSections"}
+            rootTermId={pkg.rootTermId}
+            rootSectionId={pkg.rootSectionId}
+            sections={pkg.directSections}
+            lessons={pkg.directLessons}
+            basePath="/teacher/packages"
+            onChanged={loadPkg}
+          />
+        </div>
+      )}
+
       {activeTab === "overview" && (
         <div className="space-y-6">
           <EntityOverviewDashboard 
-            entityType="باقة" 
+            entityType={contentRootLabel}
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 
           />
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
-            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
+            <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات {contentRootLabel} الأساسية</h3>
             <PackageDetailsForm pkg={pkg} />
           </div>
         </div>
+      )}
+
+      {activeTab === "subscribers" && (
+        <ContentSubscribersTab contentType="package" contentId={pkg.id} contentName={pkg.name} surface="teacher" />
       )}
 
       {activeTab === "codeProfile" && (
@@ -203,6 +299,6 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
           />
         </div>
       )}
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

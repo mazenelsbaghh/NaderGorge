@@ -17,7 +17,7 @@ import { AddUserDrawer } from '../users/components/AddUserDrawer';
 import { AssistantProfileModal } from '../users/components/AssistantProfileModal';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -31,9 +31,12 @@ import {
   getInitials,
 } from '@/components/admin/admin-utils';
 import { AdminUserListDto, adminService } from '@/services/admin-service';
+import { translateRole } from '@/packages/brand';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { useDisableEmployee } from '@/features/employee';
+import { ResetAdminPasswordButton } from '@/components/admin/StaffAccountActions';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -65,13 +68,13 @@ export default function AdminAdminsPageClient() {
   const [exporting, setExporting] = useState(false);
 
   const currentUser = useAuthStore((state) => state.user);
+  const disableEmployee = useDisableEmployee();
 
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setLoadError(false);
-      const data = await adminService.listUsers(1, 1000, search);
-      setUsers(data.items);
+      setUsers(await adminService.listAllUsers({ search: search || undefined }));
     } catch {
       setLoadError(true);
     } finally {
@@ -97,7 +100,7 @@ export default function AdminAdminsPageClient() {
 
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
     try {
-      await adminService.updateUserStatus(user.id, nextStatus);
+      await disableEmployee.mutateAsync({ userId: user.id, status: nextStatus });
       setUsers((currentUsers) =>
         currentUsers.map((entry) =>
           entry.id === user.id ? { ...entry, status: nextStatus } : entry
@@ -120,8 +123,8 @@ export default function AdminAdminsPageClient() {
     const toastId = toast.loading('جاري تصدير بيانات المديرين...');
 
     try {
-      const data = await adminService.listUsers(1, 100000, search);
-      const itemsToExport = data.items.filter(
+      const matchingUsers = await adminService.listAllUsers({ search: search || undefined });
+      const itemsToExport = matchingUsers.filter(
         (user) => normalizeRole(user) === 'Admin'
       );
 
@@ -144,9 +147,9 @@ export default function AdminAdminsPageClient() {
         const rowData = [
           u.fullName,
           u.phoneNumber,
-          u.roles.join(' | '),
+          u.roles.map(translateRole).join(' | '),
           statusLabel(u.status),
-          new Date(u.createdAt).toLocaleDateString('ar-EG'),
+          new Date(u.createdAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' }),
         ];
 
         const escapedRow = rowData.map((val) => {
@@ -214,7 +217,7 @@ export default function AdminAdminsPageClient() {
       label: 'الأدوار والصلاحيات',
       render: (u) => (
         <span className="text-sm font-bold text-[var(--admin-text)]">
-          {u.roles.join(', ') || 'مدير عام'}
+          {u.roles.map(translateRole).join('، ') || 'مدير عام'}
         </span>
       ),
     },
@@ -249,6 +252,7 @@ export default function AdminAdminsPageClient() {
         const isSelf = currentUser?.id === u.id;
         return (
           <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+            <ResetAdminPasswordButton user={u} />
             <NeumorphButton
               type="button"
               onClick={(e: React.MouseEvent) => {
@@ -292,7 +296,7 @@ export default function AdminAdminsPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/admins"
       sectionLabel="المديرين"
       pageTitle="إدارة المديرين"
@@ -411,6 +415,6 @@ export default function AdminAdminsPageClient() {
           />
         </>
       )}
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

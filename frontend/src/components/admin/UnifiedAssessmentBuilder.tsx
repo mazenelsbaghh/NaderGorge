@@ -1,12 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, BookOpen, Video, Shuffle } from 'lucide-react';
+import { Save, BookOpen, Video, Shuffle, CalendarClock } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
 import { NumberField } from '@/components/ui/number-field';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import toast from 'react-hot-toast';
-import NeumorphButton from '@/components/ui/neumorph-button';
+import { cairoCurrentDate } from '@/lib/cairo-time';
+import {
+  getDefaultHomeworkComingSoonDate,
+  getHomeworkComingSoonLabel,
+} from '@/lib/homework-coming-soon';
+import { getApiErrorSummary } from '@/lib/api-errors';
+import { AssessmentParentNotificationEditor } from './AssessmentParentNotificationEditor';
+import { disabledParentNotification } from '@/services/assessment-revision-service';
 
 interface UnifiedAssessmentBuilderProps {
   type: 'exam' | 'homework';
@@ -14,6 +21,8 @@ interface UnifiedAssessmentBuilderProps {
   videos?: { id: string; title: string }[];
   onSuccess?: () => void;
   forceTargetType?: 'Lesson' | 'Video';
+  surface?: 'admin' | 'teacher';
+  initialHomeworkComingSoonOn?: string | null;
 }
 
 export function UnifiedAssessmentBuilder({ 
@@ -21,9 +30,12 @@ export function UnifiedAssessmentBuilder({
   lessonId, 
   videos = [], 
   onSuccess,
-  forceTargetType
+  forceTargetType,
+  surface = 'admin',
+  initialHomeworkComingSoonOn,
 }: UnifiedAssessmentBuilderProps) {
   const isExam = type === 'exam';
+  const audienceLabel = surface === 'teacher' ? 'لطلابك' : 'للطلاب';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -37,8 +49,15 @@ export function UnifiedAssessmentBuilder({
   // New Toggles
   const [isMandatory, setIsMandatory] = useState(true);
   const [isRandomized, setIsRandomized] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(
+    !isExam && Boolean(initialHomeworkComingSoonOn)
+  );
+  const [homeworkComingSoonOn, setHomeworkComingSoonOn] = useState(
+    initialHomeworkComingSoonOn || getDefaultHomeworkComingSoonDate()
+  );
   
   const [saving, setSaving] = useState(false);
+  const [parentNotification, setParentNotification] = useState(disabledParentNotification);
 
 
 
@@ -63,6 +82,11 @@ export function UnifiedAssessmentBuilder({
       return false;
     }
 
+    if (!isExam && showComingSoon && !homeworkComingSoonOn) {
+      toast.error('حدد موعد ظهور إعلان الواجب للطلاب');
+      return false;
+    }
+
     return true;
   };
 
@@ -82,6 +106,7 @@ export function UnifiedAssessmentBuilder({
       if (isExam) {
         // Exam payload mapping
         const payload = {
+          parentNotification,
           title,
           description,
           totalScore,
@@ -103,29 +128,42 @@ export function UnifiedAssessmentBuilder({
         toast.success('تم إنشاء الامتحان وإضافته بنجاح');
       } else {
         const payload = {
+          parentNotification,
           title,
           instructions: description,
           isMandatory,
           isRandomized,
           totalScore,
           requiredPointsToPass: passingScore,
+          homeworkComingSoonOn: showComingSoon ? homeworkComingSoonOn : null,
           questions: [],
         };
-        await adminService.attachHomework(lessonId, payload as any);
-        toast.success('تم إنشاء الواجب بنجاح');
+        await adminService.attachHomework(lessonId, payload);
+        toast.success(
+          showComingSoon
+            ? 'تم حفظ الواجب كمسودة، وظهر موعده للطلاب.'
+            : 'تم حفظ الواجب كمسودة.'
+        );
       }
       
       // Reset
       setTitle('');
+      setParentNotification(disabledParentNotification);
       setDescription('');
       setDurationMinutes(undefined);
       setDisplayQuestionCount(undefined);
       setIsMandatory(true);
       setIsRandomized(false);
+      setShowComingSoon(false);
+      setHomeworkComingSoonOn(getDefaultHomeworkComingSoonDate());
       onSuccess?.();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || `حدث خطأ أثناء حفظ ${isExam ? 'الامتحان' : 'الواجب'}`;
-      toast.error(msg);
+    } catch (error: unknown) {
+      toast.error(
+        getApiErrorSummary(
+          error,
+          `حدث خطأ أثناء حفظ ${isExam ? 'الامتحان' : 'الواجب'}`
+        )
+      );
     } finally {
       setSaving(false);
     }
@@ -145,7 +183,7 @@ export function UnifiedAssessmentBuilder({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={`مثال: ${isExam ? 'الاختبار الأول' : 'الواجب الأسبوعي'} على الدرس`}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                className="admin-input w-full"
               />
             </div>
 
@@ -216,6 +254,7 @@ export function UnifiedAssessmentBuilder({
               </div>
             </div>
 
+            <AssessmentParentNotificationEditor kind={type} settings={parentNotification} onChange={setParentNotification} disabled={saving} />
             <div className="space-y-4 pt-2">
               <div className="flex items-center">
                 <Checkbox isSelected={isMandatory} onChange={setIsMandatory}>
@@ -238,6 +277,44 @@ export function UnifiedAssessmentBuilder({
                   </Checkbox.Content>
                 </Checkbox>
               </div>
+
+              {!isExam && (
+                <div className="rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:p-5">
+                  <Checkbox isSelected={showComingSoon} onChange={setShowComingSoon}>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <Checkbox.Content>
+                      <Label className="font-bold">
+                        أظهر للطلاب أن الواجب قادم
+                        <span className="mt-1 block text-xs font-normal leading-5 opacity-75">
+                          سيظهر زر «الذهاب للواجب» مقفولًا إلى أن تضيف الأسئلة وتفعّل الواجب.
+                        </span>
+                      </Label>
+                    </Checkbox.Content>
+                  </Checkbox>
+
+                  {showComingSoon && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                      <label className="block text-sm font-bold text-[var(--admin-text)]">
+                        الموعد المتوقع
+                        <input
+                          type="date"
+                          required
+                          min={cairoCurrentDate()}
+                          value={homeworkComingSoonOn}
+                          onChange={(event) => setHomeworkComingSoonOn(event.target.value)}
+                          className="admin-input mt-2 w-full"
+                        />
+                      </label>
+                      <div className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-card)] px-4 py-3 text-sm font-black text-[var(--admin-primary)]">
+                        <CalendarClock className="h-4 w-4" aria-hidden="true" />
+                        {getHomeworkComingSoonLabel(homeworkComingSoonOn)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -245,8 +322,8 @@ export function UnifiedAssessmentBuilder({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="يرجى الإجابة على جميع الأسئلة..."
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all h-24 resize-none"
+                placeholder={`اكتب تعليمات واضحة ${audienceLabel}...`}
+                className="admin-input h-24 w-full resize-none"
               />
             </div>
 
@@ -260,7 +337,7 @@ export function UnifiedAssessmentBuilder({
                       <button
                         type="button"
                         onClick={() => setTargetType('Lesson')}
-                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                           targetType === 'Lesson'
                             ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
                             : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
@@ -276,7 +353,7 @@ export function UnifiedAssessmentBuilder({
                       <button
                         type="button"
                         onClick={() => setTargetType('Video')}
-                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                           targetType === 'Video'
                             ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
                             : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
@@ -284,7 +361,7 @@ export function UnifiedAssessmentBuilder({
                       >
                         <Video className="w-5 h-5 opacity-80" />
                         <div className="text-right">
-                          <span className="block font-bold">اختبار لفيديو (Pop Quiz)</span>
+                          <span className="block font-bold">اختبار لفيديو</span>
                           <span className="text-xs opacity-80">يظهر بعد انتهاء الطالب من الفيديو</span>
                         </div>
                       </button>
@@ -301,7 +378,7 @@ export function UnifiedAssessmentBuilder({
                       </div>
                     ) : (
                       <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-3">
-                        <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                        <div className="max-h-48 space-y-2 overflow-y-auto pe-1">
                           {videos.map((video) => {
                             const isSelected = video.id === targetVideoId;
                             return (
@@ -309,7 +386,7 @@ export function UnifiedAssessmentBuilder({
                                 key={video.id}
                                 type="button"
                                 onClick={() => setTargetVideoId(video.id)}
-                                className={`w-full rounded-xl border px-4 py-3 text-right transition-all ${
+                                className={`w-full rounded-xl border px-4 py-3 text-right transition-[color,background-color,border-color,opacity,transform,box-shadow] ${
                                   isSelected
                                     ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-card)] shadow-md'
                                     : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:border-[var(--admin-primary)]/40'
@@ -330,24 +407,20 @@ export function UnifiedAssessmentBuilder({
 
             
             <div className="mt-8 pt-6 border-t border-[var(--admin-border)] flex justify-end">
-              <NeumorphButton
+              <button
                 type="submit"
                 disabled={saving}
-                loading={saving}
-                intent="primary"
-                size="xl"
-                pill
-                className="w-full sm:w-auto px-10 shadow-lg shadow-blue-500/20"
+                className="admin-btn-primary w-full justify-center px-10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
-                <Save className="w-5 h-5 ml-2" />
+                <Save className="w-5 h-5 ms-2" />
                 {saving 
                   ? 'يتم الحفظ...' 
                   : isExam 
                     ? targetType === 'Video' 
-                      ? 'إنشاء امتحان الفيديو (Pop Quiz)' 
+                      ? 'إنشاء امتحان الفيديو' 
                       : 'إنشاء امتحان الحصة ككل' 
                     : 'إنشاء الواجب الأساسي'}
-              </NeumorphButton>
+              </button>
             </div>
           </div>
         </div>

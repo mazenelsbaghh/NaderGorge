@@ -34,28 +34,33 @@ public class ChatHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
+        try
         {
-            Context.Abort();
-            return;
+            var userId = GetUserId();
+            if (userId == Guid.Empty)
+            {
+                Context.Abort();
+                return;
+            }
+
+            var roomIds = await _db.ChatParticipants
+                .Where(p => p.UserId == userId)
+                .Select(p => p.ChatRoomId)
+                .ToListAsync(Context.ConnectionAborted);
+
+            foreach (var roomId in roomIds)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}", Context.ConnectionAborted);
+            }
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}", Context.ConnectionAborted);
+
+            await base.OnConnectedAsync();
         }
-
-        // Join groups for all rooms the user is a participant of
-        var roomIds = await _db.ChatParticipants
-            .Where(p => p.UserId == userId)
-            .Select(p => p.ChatRoomId)
-            .ToListAsync();
-
-        foreach (var roomId in roomIds)
+        catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"Room_{roomId}");
+            // A client can leave while its room memberships are loading.
         }
-
-        // Also join a personal group for targeted real-time notifications (e.g. mentions)
-        await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");
-
-        await base.OnConnectedAsync();
     }
 
     public async Task SendMessage(Guid roomId, string content, string? mediaUrl = null, string? mediaMetadata = null)
@@ -91,7 +96,9 @@ public class ChatHub : Hub
                 );
 
                 // Broadcast message to the room group
-                await Clients.Group($"Room_{roomId}").SendAsync("ReceiveMessage", dto);
+                var recipients = await _db.ChatParticipants.Where(p => p.ChatRoomId == roomId && p.User.IsActive && !p.User.IsDeleted)
+                    .Select(p => "User_" + p.UserId).ToListAsync();
+                await Clients.Groups(recipients).SendAsync("ReceiveMessage", dto);
 
                 // Check for mentions in the content to trigger a real-time notification alert to mentioned users
                 var mentions = System.Text.RegularExpressions.Regex.Matches(content, @"@([\w\.\-]+)")
@@ -133,6 +140,9 @@ public class ChatHub : Hub
 
         var userName = GetUserName();
         // Broadcast typing state to room group (excluding the sender)
-        await Clients.OthersInGroup($"Room_{roomId}").SendAsync("UserTyping", roomId, userId, userName);
+        if (!await _db.ChatParticipants.AnyAsync(p => p.ChatRoomId == roomId && p.UserId == userId)) return;
+        var recipients = await _db.ChatParticipants.Where(p => p.ChatRoomId == roomId && p.UserId != userId && p.User.IsActive && !p.User.IsDeleted)
+            .Select(p => "User_" + p.UserId).ToListAsync();
+        await Clients.Groups(recipients).SendAsync("UserTyping", roomId, userId, userName);
     }
 }

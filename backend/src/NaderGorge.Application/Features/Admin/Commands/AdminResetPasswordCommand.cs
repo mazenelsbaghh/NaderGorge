@@ -16,7 +16,9 @@ public class AdminResetPasswordCommandHandler : IRequestHandler<AdminResetPasswo
 
     public async Task<ApiResponse> Handle(AdminResetPasswordCommand request, CancellationToken ct)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.StudentId, ct);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.StudentId && !u.IsDeleted &&
+            u.UserRoles.Any(r => r.Role.Type == NaderGorge.Domain.Enums.RoleType.Student) &&
+            !u.UserRoles.Any(r => r.Role.Type == NaderGorge.Domain.Enums.RoleType.Admin), ct);
         if (user == null) return ApiResponse.Fail("Student not found.");
 
         if (!PasswordPolicy.IsValid(request.NewPassword))

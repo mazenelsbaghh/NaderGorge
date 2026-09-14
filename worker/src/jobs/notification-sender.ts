@@ -1,21 +1,17 @@
 import { Job } from 'bullmq';
 import { maskId } from '../logging.js';
-import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
+import fs from 'node:fs';
+import { fetchWithTimeout } from '../services/workerFetch.js';
+import { randomUUID } from 'node:crypto';
+import { databasePool } from '../config/database.js';
+import { apnsProvider } from '../services/apns.js';
 
 dotenv.config();
 
-let dbUrl = process.env.DATABASE_URL;
-if (!dbUrl && process.env.DB_CONNECTION_STRING) {
-  dbUrl = process.env.DB_CONNECTION_STRING;
-}
-dbUrl = dbUrl || 'postgresql://postgres:postgres@localhost:5432/nadergorge?schema=public';
-
-const pool = new Pool({
-  connectionString: dbUrl
-});
+const pool = databasePool();
 
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {
@@ -31,6 +27,15 @@ if (getApps().length === 0) {
         credential: applicationDefault()
       });
     }
+  } else if (process.env.FIREBASE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.FIREBASE_APPLICATION_CREDENTIALS)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(process.env.FIREBASE_APPLICATION_CREDENTIALS, 'utf8'));
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+    initializeApp({
+      credential: applicationDefault()
+    });
   } else {
     // For testing/CI without credentials, use a dummy project ID so it won't throw
     initializeApp({
@@ -61,8 +66,10 @@ async function sendWhatsAppMessage(phone: string, text: string) {
     }
 
     const url = `${baseUrl}/message/sendText/${instance}`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
         method: 'POST',
+        timeoutMs: 10_000,
+        operation: 'evolution-whatsapp',
         headers: {
             'apikey': apiKey,
             'Content-Type': 'application/json'
@@ -85,43 +92,115 @@ async function sendWhatsAppMessage(phone: string, text: string) {
     }
 }
 
-export async function processParentPushNotification(studentId: string, title: string, body: string, category: string) {
-  // Load FCM tokens from ParentDeviceTokens linked to StudentId.
+async function persistParentPushNotification(studentId: string, title: string, body: string) {
+  await pool.query(
+    `INSERT INTO "notification_events" ("Id", "UserId", "ChannelType", "Title", "Body", "Status", "CreatedAt")
+     SELECT $1, $2, 0, $3, $4, 1, NOW()
+     WHERE NOT EXISTS (
+       SELECT 1
+       FROM "notification_events"
+       WHERE "UserId" = $2
+         AND "Title" = $3
+         AND "Body" = $4
+         AND "CreatedAt" > NOW() - INTERVAL '30 minutes'
+     )`,
+    [randomUUID(), studentId, title, body]
+  );
+}
+
+export async function processParentPushNotification(studentId: string, title: string, body: string, category: string, persistInApp = true) {
+  // DeviceToken is an FCM registration token on Android and an APNs token on iOS.
+  // Keep the platform column in the query so an APNs token is never sent to FCM.
   const res = await pool.query(
-    'SELECT "DeviceToken" FROM "ParentDeviceTokens" WHERE "StudentId" = $1',
+    `SELECT DISTINCT pdt."DeviceToken", pdt."Platform"
+     FROM "ParentDeviceTokens" pdt
+     LEFT JOIN student_profiles sp ON sp."Id" = pdt."StudentId"
+     WHERE (pdt."StudentId" = $1 OR sp."UserId" = $1)
+       AND LOWER(pdt."DeviceToken") NOT LIKE '%-parent-pending-token'`,
     [studentId]
   );
-  
-  const tokens = res.rows.map((row: any) => row.DeviceToken).filter(Boolean);
+
+  const deviceTokens = res.rows
+    .map((row: any) => ({
+      token: typeof row.DeviceToken === 'string' ? row.DeviceToken.trim() : '',
+      platform: typeof row.Platform === 'string' ? row.Platform.trim().toLowerCase() : 'android'
+    }))
+    .filter((device: { token: string }) => device.token.length > 0);
+  const tokens = deviceTokens.map((device: { token: string }) => device.token);
+  const fcmTokens = deviceTokens
+    .filter((device: { platform: string }) => device.platform !== 'ios')
+    .map((device: { token: string }) => device.token);
+  const apnsTokens = deviceTokens
+    .filter((device: { platform: string }) => device.platform === 'ios')
+    .map((device: { token: string }) => device.token);
   
   if (tokens.length === 0) {
     console.log(`[NotificationSender] No parent device tokens found for studentId ${studentId}`);
     return { success: true, reason: 'no_tokens', tokensCount: 0 };
   }
 
-  const message = {
-    notification: {
-      title,
-      body
-    },
-    data: {
-      studentId,
-      category
-    },
-    tokens
-  };
+  if (persistInApp) {
+    await persistParentPushNotification(studentId, title, body);
+  }
 
   try {
-    const response = await firebaseMessaging.sendEachForMulticast(message);
-    console.log(`[NotificationSender] Sent push notifications. Success: ${response.successCount}, Failure: ${response.failureCount}`);
+    let successCount = 0;
+    let failureCount = 0;
+    let fcmSuccessCount = 0;
+    let fcmFailureCount = 0;
+    let apnsSuccessCount = 0;
+    let apnsFailureCount = 0;
+    let apnsNotConfiguredCount = 0;
+
+    if (fcmTokens.length > 0) {
+      const message = {
+        notification: {
+          title,
+          body
+        },
+        data: {
+          studentId,
+          category
+        },
+        tokens: fcmTokens
+      };
+      const response = await firebaseMessaging.sendEachForMulticast(message);
+      fcmSuccessCount = response.successCount;
+      fcmFailureCount = response.failureCount;
+      successCount += fcmSuccessCount;
+      failureCount += fcmFailureCount;
+    }
+
+    if (apnsTokens.length > 0) {
+      if (!apnsProvider.isConfigured()) {
+        apnsNotConfiguredCount = apnsTokens.length;
+        failureCount += apnsNotConfiguredCount;
+        console.warn(`[NotificationSender] ${apnsNotConfiguredCount} iOS token(s) found, but APNs credentials are not configured.`);
+      } else {
+        const response = await apnsProvider.sendMany(apnsTokens, { title, body, studentId, category });
+        apnsSuccessCount = response.successCount;
+        apnsFailureCount = response.failureCount;
+        successCount += apnsSuccessCount;
+        failureCount += apnsFailureCount;
+      }
+    }
+
+    console.log(`[NotificationSender] Sent push notifications. Success: ${successCount}, Failure: ${failureCount}`);
     return {
       success: true,
       tokensCount: tokens.length,
-      successCount: response.successCount,
-      failureCount: response.failureCount
+      successCount,
+      failureCount,
+      fcmTokensCount: fcmTokens.length,
+      fcmSuccessCount,
+      fcmFailureCount,
+      apnsTokensCount: apnsTokens.length,
+      apnsSuccessCount,
+      apnsFailureCount,
+      apnsNotConfiguredCount
     };
   } catch (error: any) {
-    console.error('[NotificationSender] Error sending multicast message:', error);
+    console.error('[NotificationSender] Error sending push notifications:', error);
     throw error;
   }
 }
@@ -161,11 +240,11 @@ export async function processNotificationJob(job: Job) {
     }
 
     if (job.name === 'parent-push') {
-        const { StudentId, studentId, Title, title, Body, body, Category, category } = data;
+        const { StudentId, studentId, Title, title, Body, body, Category, category, HomeworkTitle, homeworkTitle } = data;
         const actualStudentId = StudentId || studentId;
-        const actualTitle = Title || title;
-        const actualBody = Body || body;
         const actualCategory = Category || category || 'General';
+        const actualTitle = Title || title || defaultParentPushTitle(actualCategory);
+        const actualBody = Body || body || defaultParentPushBody(actualCategory, HomeworkTitle || homeworkTitle);
 
         if (!actualStudentId || !actualTitle || !actualBody) {
             throw new Error('StudentId, Title, and Body are required for parent-push notification jobs.');
@@ -207,7 +286,7 @@ export async function processNotificationJob(job: Job) {
             const title = `تنبيه أكاديمي جديد`;
             const body = `تم تسجيل تنبيه جديد لولدكم: ${Message || 'غير محدد'}`;
             const actualCategory = Category || 'Warning';
-            parentPushResult = await processParentPushNotification(StudentId, title, body, actualCategory);
+            parentPushResult = await processParentPushNotification(StudentId, title, body, actualCategory, false);
             parentPushSent = true;
         }
 
@@ -221,4 +300,31 @@ export async function processNotificationJob(job: Job) {
     }
 
     throw new Error('Unsupported notification job payload.');
+}
+
+function defaultParentPushTitle(category: string) {
+    switch ((category || '').toLowerCase()) {
+        case 'homework':
+            return 'تسليم واجب جديد';
+        case 'exam':
+            return 'حل اختبار جديد';
+        case 'purchase':
+            return 'شراء جديد للطالب';
+        default:
+            return 'تنبيه جديد لولي الأمر';
+    }
+}
+
+function defaultParentPushBody(category: string, itemTitle?: string) {
+    const safeTitle = itemTitle ? `: ${itemTitle}` : '';
+    switch ((category || '').toLowerCase()) {
+        case 'homework':
+            return `تم تسليم واجب جديد${safeTitle}.`;
+        case 'exam':
+            return `تم حل اختبار جديد${safeTitle}.`;
+        case 'purchase':
+            return `تم تفعيل محتوى جديد للطالب${safeTitle}.`;
+        default:
+            return 'يوجد تحديث جديد في متابعة الطالب.';
+    }
 }

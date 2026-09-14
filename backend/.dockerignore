@@ -1,6 +1,8 @@
 # Backend Docker build context — exclude build artifacts and secrets
 bin/
 obj/
+**/bin/
+**/obj/
 .env
 .env.*
 *.log
@@ -8,6 +10,8 @@ tests/
 *.user
 *.suo
 .DS_Store
+._*
+**/._*
 Thumbs.db
 *.tmp
 .vscode/

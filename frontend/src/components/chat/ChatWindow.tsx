@@ -148,7 +148,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
               {/* Message Bubble */}
               <div
-                className={`relative group p-3.5 rounded-[1.5rem] shadow-sm transition-all duration-300 border ${
+                className={`relative group p-3.5 rounded-[1.5rem] shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 border ${
                   isOwn
                     ? "bg-[var(--admin-primary)] text-white border-[var(--admin-primary-strong)] rounded-br-none"
                     : "bg-[var(--admin-card)] text-[var(--admin-text)] border-[var(--admin-border)] rounded-bl-none"

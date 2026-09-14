@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "service", "formerNode", "startedAt", "recoveredAt", "result", "acknowledgedLossCount", "splitBrainDetected"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "service": { "enum": ["ingress", "app", "postgres", "redis", "files"] },
+    "formerNode": { "enum": ["node-1", "node-2", "node-3"] },
+    "newNode": { "type": ["string", "null"], "enum": ["node-1", "node-2", "node-3", null] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "recoveredAt": { "type": "string", "format": "date-time" },
+    "result": { "enum": ["pass", "fail", "safe-refusal"] },
+    "acknowledgedLossCount": { "type": "integer", "minimum": 0 },
+    "splitBrainDetected": { "type": "boolean" },
+    "quorumEvidence": { "type": ["object", "null"] }
+  }
+}

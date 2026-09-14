@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "operationId", "command", "startedAt", "completedAt", "status", "targets"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "operationId": { "type": "string", "format": "uuid" },
+    "command": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["success", "failed", "blocked", "dry-run"] },
+    "targets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["node-1", "node-2", "node-3"] }
+    },
+    "reason": { "type": ["string", "null"] }
+  }
+}

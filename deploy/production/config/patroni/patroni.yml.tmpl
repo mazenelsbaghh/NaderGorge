@@ -1,0 +1,94 @@
+scope: massar-production
+namespace: /service/
+name: __NODE_ID__
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: __OVERLAY_ADDRESS__:8008
+
+etcd3:
+  protocol: https
+  hosts:
+    - 10.77.0.11:2379
+    - 10.77.0.12:2379
+    - 10.77.0.13:2379
+  cacert: /etc/massar/pki/etcd/ca.crt
+  username: patroni
+  password: __ETCD_PATRONI_PASSWORD__
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    maximum_lag_on_syncnode: 1048576
+    synchronous_mode: quorum
+    synchronous_mode_strict: true
+    synchronous_node_count: 1
+    failsafe_mode: true
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
+      parameters:
+        cluster_name: massar-production
+        wal_level: replica
+        hot_standby: "on"
+        wal_log_hints: "on"
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_keep_size: 1GB
+        archive_mode: "on"
+        archive_command: "pgbackrest --stanza=massar archive-push %p"
+        archive_timeout: 300
+        password_encryption: scram-sha-256
+        synchronous_commit: "on"
+        max_connections: 300
+        shared_buffers: 4GB
+        effective_cache_size: 12GB
+        maintenance_work_mem: 512MB
+        work_mem: 8MB
+        log_min_duration_statement: 1000
+        log_checkpoints: "on"
+        log_connections: "on"
+        log_disconnections: "on"
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+  pg_hba:
+    - local all all peer
+    - host all all 127.0.0.1/32 scram-sha-256
+    - host all all 10.77.0.0/24 scram-sha-256
+    - host replication replicator 10.77.0.0/24 scram-sha-256
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: __OVERLAY_ADDRESS__:5432
+  data_dir: /var/lib/postgresql/16/massar
+  bin_dir: /usr/lib/postgresql/16/bin
+  pgpass: /var/lib/postgresql/.pgpass
+  authentication:
+    superuser:
+      username: postgres
+      password: __POSTGRES_SUPERUSER_PASSWORD__
+    replication:
+      username: replicator
+      password: __POSTGRES_REPLICATION_PASSWORD__
+    rewind:
+      username: rewind_user
+      password: __POSTGRES_REWIND_PASSWORD__
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+  callbacks:
+    on_role_change: /usr/local/sbin/massar-patroni-role-change
+
+watchdog:
+  mode: off
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

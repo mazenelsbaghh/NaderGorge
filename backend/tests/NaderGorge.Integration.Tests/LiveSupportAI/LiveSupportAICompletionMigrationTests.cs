@@ -19,7 +19,7 @@ public sealed class LiveSupportAICompletionMigrationTests
         var migrator = fixture.Db.GetService<IMigrator>();
         await migrator.MigrateAsync(PreviousMigration);
 
-        var userId = await fixture.Db.Users.AsNoTracking().Select(x => x.Id).FirstAsync();
+        var userId = await InsertSupportUserAsync(fixture);
         var conversationId = Guid.NewGuid();
         var policyId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -76,7 +76,7 @@ public sealed class LiveSupportAICompletionMigrationTests
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
 
-        var userId = await fixture.Db.Users.AsNoTracking().Select(x => x.Id).FirstAsync();
+        var userId = await InsertSupportUserAsync(fixture);
         var policy = new LiveSupportAIPolicyVersion
         {
             VersionNumber = 99147,
@@ -140,5 +140,19 @@ public sealed class LiveSupportAICompletionMigrationTests
         });
 
         await Assert.ThrowsAnyAsync<DbUpdateException>(() => fixture.Db.SaveChangesAsync());
+    }
+
+    private static async Task<Guid> InsertSupportUserAsync(PostgresLiveSupportFixture fixture)
+    {
+        var userId = Guid.NewGuid();
+        var phone = $"010{Random.Shared.NextInt64(10_000_000, 99_999_999)}";
+        var createdAt = DateTime.UtcNow;
+        await fixture.Db.Database.ExecuteSqlInterpolatedAsync($$"""
+            INSERT INTO users
+                ("Id", "FullName", "PhoneNumber", "PasswordHash", "IsActive", "IsProfileComplete", "CreatedAt")
+            VALUES
+                ({{userId}}, 'Migration Test User', {{phone}}, 'integration', TRUE, TRUE, {{createdAt}});
+            """);
+        return userId;
     }
 }

@@ -1,0 +1,35 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": []
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/lib/safe-return-url.ts",
+    "src/lib/navigation-state.ts",
+    "src/components/navigation/NavigationFocusManager.tsx",
+    "src/components/navigation/IntentLink.tsx",
+    "src/hooks/useShellNavigationState.ts",
+    "src/components/providers/QueryProvider.tsx",
+    "src/services/api-client.ts",
+    "src/services/student-service.ts",
+    "src/services/content-service.ts",
+    "src/lib/realtime-invalidation-map.ts",
+    "src/hooks/usePlatformEvents.ts",
+    "src/app/student/StudentDashboardClient.tsx",
+    "src/app/student/packages/PackagesPageClient.tsx",
+    "src/app/student/teachers/StudentTeachersPageClient.tsx",
+    "src/components/layout/StudentShellChrome.tsx",
+    "src/components/assistant/AssistantShellChrome.tsx",
+    "src/components/admin/AdminShellChrome.tsx",
+    "src/components/teacher/TeacherShellChrome.tsx",
+    "src/packages/surface-runtime/config.ts",
+    "src/components/forms/LoginForm.tsx",
+    "src/app/(public)/login/LoginPageClient.tsx",
+    "tests/e2e/auth-return-navigation.spec.ts",
+    "tests/e2e/selective-prefetch.spec.ts",
+    "playwright.contract.config.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

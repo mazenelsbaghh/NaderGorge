@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 
 export default function TeacherEssaysPageClient() {
   const [essays, setEssays] = useState<PendingEssayDto[]>([]);
@@ -158,7 +158,7 @@ export default function TeacherEssaysPageClient() {
         return (
           <div className="flex items-center gap-1.5 text-xs text-[var(--admin-muted)]">
             <Calendar className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
-            <span>{date.toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{date.toLocaleDateString("ar-EG-u-nu-latn", { timeZone: 'Africa/Cairo', month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
           </div>
         );
       },
@@ -179,7 +179,7 @@ export default function TeacherEssaysPageClient() {
   ];
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/essays"
       sectionLabel="تصحيح المقالي"
       pageTitle="مساحة تصحيح الإجابات المقالية"
@@ -339,6 +339,6 @@ export default function TeacherEssaysPageClient() {
           ) : null}
         </AdminModal>
       </div>
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

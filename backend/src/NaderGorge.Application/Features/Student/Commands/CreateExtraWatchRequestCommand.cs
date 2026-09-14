@@ -7,7 +7,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
 
-public record CreateExtraWatchRequestCommand(Guid LessonVideoId, Guid UserId) : IRequest<ApiResponse<Guid>>;
+public record CreateExtraWatchRequestCommand(Guid LessonVideoId, Guid UserId, string RequestReason) : IRequest<ApiResponse<Guid>>;
 
 public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtraWatchRequestCommand, ApiResponse<Guid>>
 {
@@ -22,6 +22,13 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
 
     public async Task<ApiResponse<Guid>> Handle(CreateExtraWatchRequestCommand request, CancellationToken cancellationToken)
     {
+        var requestReason = request.RequestReason?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(requestReason))
+            return ApiResponse<Guid>.Fail("A request reason is required.", new List<string> { "REQUEST_REASON_REQUIRED" });
+
+        if (requestReason.Length > 1000)
+            return ApiResponse<Guid>.Fail("The request reason is too long.", new List<string> { "REQUEST_REASON_TOO_LONG" });
+
         // Ensure video exists
         var video = await _context.LessonVideos
             .AsNoTracking()
@@ -50,6 +57,7 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
         {
             UserId = request.UserId,
             LessonVideoId = request.LessonVideoId,
+            RequestReason = requestReason,
             Status = RequestStatus.Pending
         };
 
@@ -58,7 +66,7 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
         var outboxEvent = new OutboxEvent
         {
             Type = "ExtraWatchRequestCreated",
-            TargetGroup = "Role_Admin",
+            TargetGroup = "Role_Staff",
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 requestId = watchRequest.Id,

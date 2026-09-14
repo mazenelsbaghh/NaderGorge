@@ -15,6 +15,11 @@ coverage/
 *.tsbuildinfo
 .npm/
 .yarn/
+worker/dist/
+frontend/playwright-report/
+frontend/test-results/
+playwright-report/
+test-results/
 
 # Environment — secrets (never commit)
 .env
@@ -44,6 +49,17 @@ Thumbs.db
 nginx/logs/
 pgdata/
 redisdata/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Mobile generated artifacts
+**/.gradle/
+**/build/
+**/.kotlin/
+**/gradle-*.zip
+**/*.apk
+**/*.aab
 
 # Backups / SQL Dumps / Sensitive data
 *.sql
@@ -52,6 +68,8 @@ redisdata/
 *.bak
 *.dump
 *.db.bak
+artifacts/production/legacy-authoritative-*/candidate/files.tar.gpg
+artifacts/production/legacy-authoritative-*/capture/*-assets.tar.gpg
 .env.production
 .env.staging
 .env.test
@@ -62,3 +80,9 @@ redisdata/
 .env.production.local
 
 .env.prod
+
+# Raw production account export used only for local migration verification.
+artifacts/teacher-defaults/production-teachers.txt
+
+# Synthetic PostgreSQL fixture for the staged finance migration regression.
+!deploy/production/tests/fixtures/finance-activation.sql

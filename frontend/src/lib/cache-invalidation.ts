@@ -1,3 +1,5 @@
+import { recordRealtimeMetric } from './realtime-observability.ts';
+
 /**
  * Centralized Cache Invalidation Registry
  *
@@ -11,7 +13,10 @@ type CacheStoreEntry = {
   refetch: () => void;
 };
 
-const cacheStores = new Map<string, CacheStoreEntry>();
+type CacheStoreRegistrations = Map<number, CacheStoreEntry>;
+
+const cacheStores = new Map<string, CacheStoreRegistrations>();
+let nextRegistrationId = 1;
 
 // Debounce tracking: prevents stampeding when multiple events arrive in quick succession
 let pendingInvalidations = new Set<string>();
@@ -26,15 +31,31 @@ export function registerCacheStore(
   name: string,
   clear: () => void,
   refetch: () => void
-): void {
-  cacheStores.set(name, { clear, refetch });
+): () => void {
+  const registrationId = nextRegistrationId++;
+  const registrations = cacheStores.get(name) ?? new Map<number, CacheStoreEntry>();
+  registrations.set(registrationId, { clear, refetch });
+  cacheStores.set(name, registrations);
+
+  let isCleanedUp = false;
+  return () => {
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+    unregisterCacheStore(name, registrationId);
+  };
 }
 
 /**
- * Unregister a cache store (for cleanup).
+ * Unregister one cache store registration (for legacy cleanup callers).
  */
-export function unregisterCacheStore(name: string): void {
-  cacheStores.delete(name);
+export function unregisterCacheStore(name: string, registrationId?: number): void {
+  const registrations = cacheStores.get(name);
+  if (!registrations) return;
+
+  const idToRemove = registrationId ?? [...registrations.keys()].at(-1);
+  if (idToRemove === undefined) return;
+  registrations.delete(idToRemove);
+  if (registrations.size === 0) cacheStores.delete(name);
 }
 
 /**
@@ -42,20 +63,21 @@ export function unregisterCacheStore(name: string): void {
  * Matches by exact key or by prefix (e.g., "content:lesson:abc" matches store "content:lesson").
  */
 export function invalidate(key: string): void {
-  // Try exact match first
-  const exact = cacheStores.get(key);
-  if (exact) {
-    exact.clear();
-    exact.refetch();
-    return;
-  }
+  invalidateKeys([key]);
+}
 
-  // Try prefix match (e.g., "content:lesson:abc-123" matches "content:lesson")
-  for (const [storeName, store] of cacheStores) {
-    if (key.startsWith(storeName)) {
-      store.clear();
-      store.refetch();
-      return;
+function invalidateKeys(keys: Iterable<string>): void {
+  const invalidationKeys = [...keys];
+  // Match exact keys and both prefix directions so a broad key reaches all active child queries.
+  for (const [storeName, registrations] of cacheStores) {
+    if (invalidationKeys.some(key => key === storeName
+      || key.startsWith(`${storeName}:`) || storeName.startsWith(`${key}:`))) {
+      for (const store of registrations.values()) {
+        recordRealtimeMetric('invalidation');
+        store.clear();
+        recordRealtimeMetric('refetch');
+        store.refetch();
+      }
     }
   }
 }
@@ -78,9 +100,7 @@ export function invalidateMany(keys: string[]): void {
     pendingInvalidations = new Set<string>();
     debounceTimer = null;
 
-    for (const key of keysToInvalidate) {
-      invalidate(key);
-    }
+    invalidateKeys(keysToInvalidate);
   }, DEBOUNCE_MS);
 }
 
@@ -96,7 +116,5 @@ export function flushInvalidations(): void {
   const keysToInvalidate = new Set(pendingInvalidations);
   pendingInvalidations = new Set<string>();
 
-  for (const key of keysToInvalidate) {
-    invalidate(key);
-  }
+  invalidateKeys(keysToInvalidate);
 }

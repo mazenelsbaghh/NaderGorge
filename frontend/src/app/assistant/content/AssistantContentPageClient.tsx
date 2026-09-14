@@ -5,7 +5,7 @@ import AdminContentPageClient from '@/app/admin/content/AdminContentPageClient';
 
 export default function AssistantContentPageClient() {
   return (
-    <NavRouteGuard routePath="/assistant/content" permission="comments.manage">
+    <NavRouteGuard routePath="/assistant/content" permission="content.manage">
       <AdminContentPageClient mode="assistant" />
     </NavRouteGuard>
   );

@@ -1,0 +1,5 @@
+import { expect, test } from '@playwright/test'; const api = 'http://api.lvh.me:5245/api/hr';
+test.describe('Recruitment hire-to-exit contract', () => {
+  test('anonymous cannot browse candidates or convert offers to employees', async ({ request }) => { const responses = await Promise.all([request.get(`${api}/admin/recruitment/board`), request.post(`${api}/admin/recruitment/candidates/${crypto.randomUUID()}/hire`, { data: { offerId: crypto.randomUUID(), temporaryPassword: 'Secret123!' } })]); expect(responses.map((item) => item.status())).toEqual([401, 401]); });
+  test('offboarding start and completion are protected', async ({ request }) => { const start = await request.post(`${api}/admin/lifecycle/offboarding`, { data: { employeeId: crypto.randomUUID(), lastWorkingDate: '2026-08-31', reason: 'test' } }); const complete = await request.post(`${api}/admin/lifecycle/offboarding/${crypto.randomUUID()}/complete`, { data: { expectedVersion: 1 } }); expect(start.status()).toBe(401); expect(complete.status()).toBe(401); });
+});

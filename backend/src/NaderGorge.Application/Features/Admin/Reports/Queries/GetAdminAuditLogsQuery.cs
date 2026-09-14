@@ -52,13 +52,13 @@ public class GetAdminAuditLogsQueryHandler : IRequestHandler<GetAdminAuditLogsQu
 
         if (request.StartDate.HasValue)
         {
-            var startUtc = request.StartDate.Value.ToUniversalTime();
+            var startUtc = CairoTime.ToUtc(request.StartDate.Value);
             query = query.Where(a => a.CreatedAt >= startUtc);
         }
 
         if (request.EndDate.HasValue)
         {
-            var endUtc = request.EndDate.Value.ToUniversalTime();
+            var endUtc = CairoTime.ToUtc(request.EndDate.Value);
             query = query.Where(a => a.CreatedAt <= endUtc);
         }
 

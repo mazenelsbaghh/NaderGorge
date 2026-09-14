@@ -11,6 +11,7 @@ public record StudentThemePreferencesDto(
     string CurrentMode,
     string SelectedLightPaletteId,
     string SelectedDarkPaletteId,
+    string? AvatarSlug,
     string DefaultLightPaletteId,
     string DefaultDarkPaletteId,
     IReadOnlyList<StudentThemePaletteOptionDto> AvailableLightPalettes,
@@ -49,7 +50,11 @@ public static class StudentThemeCatalog
     public static bool IsValidDarkPalette(string paletteId)
         => DarkPalettes.Any(p => string.Equals(p.Id, paletteId, StringComparison.Ordinal));
 
-    public static StudentThemePreferencesDto BuildPreferences(string? lightPaletteId, string? darkPaletteId, string? currentMode)
+    public static StudentThemePreferencesDto BuildPreferences(
+        string? lightPaletteId,
+        string? darkPaletteId,
+        string? currentMode,
+        string? avatarSlug)
     {
         var resolvedLight = IsValidLightPalette(lightPaletteId ?? string.Empty)
             ? lightPaletteId!
@@ -65,6 +70,7 @@ public static class StudentThemeCatalog
             CurrentMode: resolvedMode,
             SelectedLightPaletteId: resolvedLight,
             SelectedDarkPaletteId: resolvedDark,
+            AvatarSlug: avatarSlug,
             DefaultLightPaletteId: DefaultLightPaletteId,
             DefaultDarkPaletteId: DefaultDarkPaletteId,
             AvailableLightPalettes: GetLightPalettes(),

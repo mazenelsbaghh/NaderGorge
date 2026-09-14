@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Briefcase, Loader2, Coins, Clock, Hourglass } from 'lucide-react';
-import { hrService, SaveEmployeeProfilePayload } from '@/services/hr-service';
+import { X, Briefcase, Loader2, Coins, Clock, Hourglass, Coffee } from 'lucide-react';
+import { SaveEmployeeProfilePayload } from '@/services/hr-service';
+import { useEmployee, useUpdateEmployeeProfile } from '@/features/employee';
 import toast from 'react-hot-toast';
 
 interface EmployeeProfileDrawerProps {
@@ -24,19 +25,21 @@ export function EmployeeProfileDrawer({
   const [basicSalary, setBasicSalary] = useState<number>(0);
   const [standardStartTime, setStandardStartTime] = useState<string>('09:00');
   const [targetDailyHours, setTargetDailyHours] = useState<number>(8);
+  const [dailyBreakAllowanceMinutes, setDailyBreakAllowanceMinutes] = useState<number>(30);
+  const [shortPermissionMaxMinutes, setShortPermissionMaxMinutes] = useState<number>(5);
+  const [dailyShortPermissionAllowanceMinutes, setDailyShortPermissionAllowanceMinutes] = useState<number>(15);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const employeeQuery = useEmployee(open ? userId : undefined);
+  const updateProfile = useUpdateEmployeeProfile();
 
   useEffect(() => {
-    if (open && userId) {
-      const loadProfile = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const employees = await hrService.listEmployees();
-          const currentEmp = employees.find((emp) => emp.id === userId);
-          if (currentEmp?.employeeProfile) {
+    if (open) {
+      setLoading(employeeQuery.isLoading);
+      setError(employeeQuery.error ? 'حدث خطأ أثناء تحميل بيانات الملف التعريفي للموظف.' : null);
+      const currentEmp = employeeQuery.data;
+      if (currentEmp?.employeeProfile) {
             setBasicSalary(currentEmp.employeeProfile.basicSalary);
             // Format standardStartTime from "hh:mm:ss" or similar to "hh:mm"
             const timeStr =
@@ -48,21 +51,18 @@ export function EmployeeProfileDrawer({
               setStandardStartTime(timeStr);
             }
             setTargetDailyHours(currentEmp.employeeProfile.targetDailyHours);
-          } else {
+            setDailyBreakAllowanceMinutes(currentEmp.employeeProfile.dailyBreakAllowanceMinutes ?? 30);
+            setShortPermissionMaxMinutes(currentEmp.employeeProfile.shortPermissionMaxMinutes ?? 5);
+            setDailyShortPermissionAllowanceMinutes(currentEmp.employeeProfile.dailyShortPermissionAllowanceMinutes ?? 15);
+      } else if (!employeeQuery.isLoading) {
             // Reset to default settings
             setBasicSalary(0);
             setStandardStartTime('09:00');
             setTargetDailyHours(8);
-          }
-        } catch {
-          setError('حدث خطأ أثناء تحميل بيانات الملف التعريفي للموظف.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadProfile();
+            setDailyBreakAllowanceMinutes(30); setShortPermissionMaxMinutes(5); setDailyShortPermissionAllowanceMinutes(15);
+      }
     }
-  }, [open, userId]);
+  }, [open, employeeQuery.data, employeeQuery.error, employeeQuery.isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,16 +90,20 @@ export function EmployeeProfileDrawer({
       basicSalary,
       standardStartTime: formattedTime,
       targetDailyHours,
+      dailyBreakAllowanceMinutes,
+      shortPermissionMaxMinutes,
+      dailyShortPermissionAllowanceMinutes,
     };
 
     try {
-      const res = await hrService.saveEmployeeProfile(payload);
-      if (res.success) {
+      const res = await updateProfile.mutateAsync({
+        ...payload,
+        expectedUpdatedAt: employeeQuery.data?.employeeProfile?.updatedAt ?? null,
+      });
+      if (res) {
         toast.success('تم حفظ إعدادات ملف الموظف بنجاح ✅');
         onSuccess();
         onClose();
-      } else {
-        setError(res.message || 'فشل حفظ الملف التعريفي');
       }
     } catch (err: any) {
       setError(
@@ -121,7 +125,7 @@ export function EmployeeProfileDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[90] bg-[var(--admin-text)]/35 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-floating)] bg-[var(--admin-text)]/35 backdrop-blur-sm"
             onClick={() => {
               if (!submitting) onClose();
             }}
@@ -134,7 +138,7 @@ export function EmployeeProfileDrawer({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
             role="dialog"
             aria-modal="true"
@@ -204,6 +208,12 @@ export function EmployeeProfileDrawer({
                         required
                       />
                     </div>
+                    <div className="grid gap-3 rounded-2xl bg-[var(--admin-card-soft)] p-4 sm:grid-cols-3">
+                      <p className="sm:col-span-3 flex items-center gap-2 text-sm font-black"><Coffee className="h-4 w-4 text-[var(--admin-primary)]" />البريك والإذن القصير</p>
+                      <label className="text-xs font-bold">بريك يومي (دقيقة)<input type="number" min="0" max="240" value={dailyBreakAllowanceMinutes} onChange={(e) => setDailyBreakAllowanceMinutes(Number(e.target.value))} className="admin-input mt-1 w-full" /></label>
+                      <label className="text-xs font-bold">حد الإذن في المرة<input type="number" min="0" max="60" value={shortPermissionMaxMinutes} onChange={(e) => setShortPermissionMaxMinutes(Number(e.target.value))} className="admin-input mt-1 w-full" /></label>
+                      <label className="text-xs font-bold">إذن يومي (دقيقة)<input type="number" min="0" max="240" value={dailyShortPermissionAllowanceMinutes} onChange={(e) => setDailyShortPermissionAllowanceMinutes(Number(e.target.value))} className="admin-input mt-1 w-full" /></label>
+                    </div>
 
                     {/* Standard Start Time */}
                     <div>
@@ -255,7 +265,7 @@ export function EmployeeProfileDrawer({
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] py-3 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-sm transition hover:bg-[var(--admin-primary-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {submitting ? (
                           <>

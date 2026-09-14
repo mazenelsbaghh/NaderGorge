@@ -1,0 +1,20 @@
+[Unit]
+Description=Local TLS endpoint for the Massar internal backup bucket
+After=docker.service massar-backup-bucket.service
+Requires=docker.service massar-backup-bucket.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+ExecStartPre=-/usr/bin/docker rm -f massar-backup-tls-proxy
+ExecStart=/usr/bin/docker run --rm --name massar-backup-tls-proxy --network host \
+  --user 0:0 --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --mount type=bind,src=/etc/massar/backup-haproxy.cfg,dst=/usr/local/etc/haproxy/haproxy.cfg,readonly \
+  --mount type=bind,src=/etc/massar/secrets/backup-tls.pem,dst=/run/secrets/backup-tls.pem,readonly \
+  haproxy@sha256:82b76748bcf0f2f8e9e48a4bcb83667df06493ea8fd2a699056a45e64ec6d08f
+ExecStop=/usr/bin/docker stop -t 15 massar-backup-tls-proxy
+
+[Install]
+WantedBy=multi-user.target

@@ -59,7 +59,30 @@ test('inference failures send stable safe codes without raw errors', async () =>
   };
   const processor = createLiveSupportTurnProcessor({ callbacks, infer: async () => { throw new Error('secret raw provider response'); } });
 
-  await assert.rejects(() => processor(fakeJob(context)), /^Error: AI_PROVIDER_FAILURE$/);
+  const result = await processor(fakeJob(context));
+  assert.deepEqual(result, { success: false, reason: 'AI_PROVIDER_FAILURE', failureReported: true });
   assert.equal((reported as { failureCode: string }).failureCode, 'AI_PROVIDER_FAILURE');
   assert.doesNotMatch(JSON.stringify(reported), /secret raw provider response/);
+});
+
+test('a successful fail callback ends the job without a retry or second inference', async () => {
+  const context = claim();
+  let inferenceCalls = 0;
+  let claimCalls = 0;
+  let failCalls = 0;
+  const callbacks: LiveSupportCallbackClient = {
+    claim: async () => { claimCalls++; return context; },
+    complete: async () => { throw new Error('not expected'); },
+    fail: async () => { failCalls++; return 'failed'; },
+  };
+  const processor = createLiveSupportTurnProcessor({ callbacks, infer: async () => {
+    inferenceCalls++;
+    throw new Error('provider unavailable');
+  } });
+
+  const result = await processor(fakeJob(context));
+  assert.deepEqual(result, { success: false, reason: 'AI_PROVIDER_FAILURE', failureReported: true });
+  assert.equal(claimCalls, 1);
+  assert.equal(inferenceCalls, 1);
+  assert.equal(failCalls, 1);
 });

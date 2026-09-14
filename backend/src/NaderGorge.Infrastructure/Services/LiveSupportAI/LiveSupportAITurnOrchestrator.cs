@@ -33,6 +33,7 @@ public sealed class LiveSupportAITurnOrchestrator(
 
         var conversation = await db.LiveSupportConversations
             .SingleAsync(item => item.Id == conversationId, cancellationToken);
+        if (!conversation.AllowsAI) return;
         var now = DateTime.UtcNow;
         var turn = new LiveSupportAITurn
         {
@@ -64,15 +65,59 @@ public sealed class LiveSupportAITurnOrchestrator(
 
     public async Task<LiveSupportAIWorkerClaimDto?> ClaimAsync(Guid turnId, CancellationToken cancellationToken)
     {
-        var turn = await db.LiveSupportAITurns.SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
-        if (turn is null) return null;
-        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.Failed or LiveSupportAITurnStatus.DiscardedAfterHandoff or LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.Cancelled)
+        var startedAt = DateTime.UtcNow;
+        var staleProcessingCutoff = startedAt.AddMinutes(-2);
+        var claimed = await db.LiveSupportAITurns
+            .Where(item => item.Id == turnId &&
+                (item.Status == LiveSupportAITurnStatus.Queued ||
+                 (item.Status == LiveSupportAITurnStatus.Processing && item.StartedAt != null && item.StartedAt < staleProcessingCutoff)) &&
+                db.LiveSupportConversations.Any(conversation =>
+                    conversation.Id == item.ConversationId && conversation.AllowsAI) &&
+                db.LiveSupportAIConversationStates.Any(state =>
+                    state.ConversationId == item.ConversationId &&
+                    state.PolicyVersionId == item.PolicyVersionId &&
+                    state.Mode == LiveSupportAIMode.AiActive) &&
+                db.LiveSupportAIPolicyVersions.Any(policy =>
+                    policy.Id == item.PolicyVersionId &&
+                    policy.Status == LiveSupportAIPolicyStatus.Published &&
+                    policy.IsEnabled))
+            .ExecuteUpdateAsync(updates => updates
+                .SetProperty(item => item.Status, LiveSupportAITurnStatus.Processing)
+                .SetProperty(item => item.StartedAt, startedAt)
+                .SetProperty(item => item.Version, item => item.Version + 1), cancellationToken);
+
+        if (claimed == 0)
+        {
+            await db.LiveSupportAITurns
+                .Where(item => item.Id == turnId &&
+                    (item.Status == LiveSupportAITurnStatus.Queued ||
+                     item.Status == LiveSupportAITurnStatus.Processing) &&
+                    db.LiveSupportConversations.Any(conversation =>
+                        conversation.Id == item.ConversationId && !conversation.AllowsAI))
+                .ExecuteUpdateAsync(updates => updates
+                    .SetProperty(item => item.Status, LiveSupportAITurnStatus.DiscardedAfterDisable)
+                    .SetProperty(item => item.CallbackStatus, LiveSupportAICallbackStatus.Discarded)
+                    .SetProperty(item => item.LastSafeCallbackErrorCode, "AI_NOT_ALLOWED")
+                    .SetProperty(item => item.CompletedAt, startedAt)
+                    .SetProperty(item => item.Version, item => item.Version + 1), cancellationToken);
             return null;
-        if (turn.Status == LiveSupportAITurnStatus.Queued)
-            turn.Status = LiveSupportAITurnStatus.Processing;
-        turn.StartedAt ??= DateTime.UtcNow;
-        turn.Version++;
-        await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var turn = await db.LiveSupportAITurns
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
+        if (turn is null || turn.Status != LiveSupportAITurnStatus.Processing) return null;
+        var remainsEligible = await db.LiveSupportConversations.AnyAsync(conversation =>
+                conversation.Id == turn.ConversationId && conversation.AllowsAI, cancellationToken) &&
+            await db.LiveSupportAIConversationStates.AnyAsync(state =>
+                state.ConversationId == turn.ConversationId &&
+                state.PolicyVersionId == turn.PolicyVersionId &&
+                state.Mode == LiveSupportAIMode.AiActive, cancellationToken) &&
+            await db.LiveSupportAIPolicyVersions.AnyAsync(policy =>
+                policy.Id == turn.PolicyVersionId &&
+                policy.Status == LiveSupportAIPolicyStatus.Published &&
+                policy.IsEnabled, cancellationToken);
+        if (!remainsEligible) return null;
         return await contextBuilder.BuildAsync(turnId, cancellationToken);
     }
 
@@ -82,12 +127,13 @@ public sealed class LiveSupportAITurnOrchestrator(
         await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var turn = await db.LiveSupportAITurns.SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
         if (turn is null) return "TURN_NOT_FOUND";
-        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.DiscardedAfterHandoff)
+        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.Failed or
+            LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.DiscardedAfterHandoff)
             return turn.DecisionHash == request.DecisionHash ? "REPLAYED" : "IDEMPOTENCY_CONFLICT";
 
         var conversation = await db.LiveSupportConversations.SingleAsync(item => item.Id == turn.ConversationId, cancellationToken);
         var state = await db.LiveSupportAIConversationStates.SingleOrDefaultAsync(item => item.ConversationId == turn.ConversationId, cancellationToken);
-        if (state is null || state.Mode != LiveSupportAIMode.AiActive)
+        if (!conversation.AllowsAI || await LiveSupportBlockPolicy.FindAsync(db, conversation, cancellationToken) is not null || state is null || state.Mode != LiveSupportAIMode.AiActive)
         {
             turn.Status = state?.Mode == LiveSupportAIMode.HumanQueued || state?.Mode == LiveSupportAIMode.HumanAssigned
                 ? LiveSupportAITurnStatus.DiscardedAfterHandoff
@@ -123,6 +169,43 @@ public sealed class LiveSupportAITurnOrchestrator(
         turn.CallbackStatus = LiveSupportAICallbackStatus.Pending;
         ApplyProviderMetadata(turn, request);
 
+        var completionTime = DateTime.UtcNow;
+        var whatsAppWindowExpired = !string.IsNullOrWhiteSpace(request.Decision.MessageAr) &&
+            await db.LiveSupportWhatsAppBindings.AsNoTracking()
+                .AnyAsync(binding => binding.ConversationId == conversation.Id &&
+                    binding.AccountId == null && binding.CustomerServiceWindowExpiresAt <= completionTime, cancellationToken);
+        if (whatsAppWindowExpired)
+        {
+            turn.Status = LiveSupportAITurnStatus.Failed;
+            turn.CallbackStatus = LiveSupportAICallbackStatus.Delivered;
+            turn.CallbackAttemptCount++;
+            turn.DecisionType = ParseDecisionType(request.Decision.Type);
+            turn.FailureCode = "WHATSAPP_WINDOW_EXPIRED";
+            turn.LastSafeCallbackErrorCode = "WHATSAPP_WINDOW_EXPIRED";
+            turn.CompletedAt = completionTime;
+            turn.Version++;
+
+            state.Mode = LiveSupportAIMode.HumanQueued;
+            state.HandoffReasonCode = "WHATSAPP_WINDOW_EXPIRED";
+            state.HandoffSafeSummary = "انتهت نافذة الرد النصي على واتساب وتم تحويل المحادثة للدعم البشري لإرسال قالب معتمد.";
+            state.HandedOffAt = completionTime;
+            state.Version++;
+            if (!await db.LiveSupportQueueEntries.AnyAsync(item => item.ConversationId == conversation.Id && item.DequeuedAt == null, cancellationToken))
+                db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversation.Id, EnteredAt = completionTime, Sequence = completionTime.Ticks });
+            conversation.Status = LiveSupportConversationStatus.Waiting;
+            conversation.QueuedAt ??= completionTime;
+            conversation.Version++;
+            await AddEventAsync(conversation.Id, LiveSupportEventType.AITurnFailed, turn.Id, cancellationToken);
+            await AddEventAsync(conversation.Id, LiveSupportEventType.AIHandoffCompleted, turn.Id, cancellationToken);
+            await AddEventAsync(conversation.Id, LiveSupportEventType.QueueEntered, null, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            LiveSupportAITelemetry.CallbackOutcomes.Add(1,
+                new KeyValuePair<string, object?>("outcome", "failed"),
+                new KeyValuePair<string, object?>("failure_code", "WHATSAPP_WINDOW_EXPIRED"));
+            return "FAILED_AND_HANDED_OFF";
+        }
+
         LiveSupportMessage? outputMessage = null;
         if (!string.IsNullOrWhiteSpace(request.Decision.MessageAr))
         {
@@ -136,6 +219,21 @@ public sealed class LiveSupportAITurnOrchestrator(
                 SentAt = DateTime.UtcNow
             };
             db.LiveSupportMessages.Add(outputMessage);
+            var whatsAppWindowCutoff = DateTime.UtcNow;
+            if (await db.LiveSupportWhatsAppBindings.AsNoTracking()
+                    .AnyAsync(binding => binding.ConversationId == conversation.Id &&
+                        binding.CustomerServiceWindowExpiresAt > whatsAppWindowCutoff, cancellationToken))
+            {
+                db.LiveSupportWhatsAppMessages.Add(new LiveSupportWhatsAppMessage
+                {
+                    ConversationId = conversation.Id,
+                    LiveSupportMessageId = outputMessage.Id,
+                    Direction = "Outbound",
+                    MessageType = "text",
+                    Status = "Pending",
+                    Version = 1
+                });
+            }
             conversation.LastMessageAt = outputMessage.SentAt;
             conversation.Version++;
             turn.OutputMessageId = outputMessage.Id;
@@ -201,7 +299,7 @@ public sealed class LiveSupportAITurnOrchestrator(
         turn.CompletedAt = DateTime.UtcNow;
         turn.Version++;
 
-        if (state?.Mode == LiveSupportAIMode.AiActive)
+        if (conversation.AllowsAI && state?.Mode == LiveSupportAIMode.AiActive)
         {
             var now = DateTime.UtcNow;
             state.Mode = LiveSupportAIMode.HumanQueued;
@@ -259,6 +357,15 @@ public sealed class LiveSupportAITurnOrchestrator(
         if (!correctBranch) throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
         if (decision.Type == "handoff" && decision.Handoff!.Value.TryGetProperty("forced", out var forced) && forced.ValueKind == JsonValueKind.True)
             throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
+        if (decision.Type == "propose_action") ValidateActionProposal(decision.Action!.Value);
+    }
+
+    private static void ValidateActionProposal(JsonElement action)
+    {
+        if (action.ValueKind != JsonValueKind.Object || !action.TryGetProperty("key", out var key) || key.ValueKind != JsonValueKind.String ||
+            !action.TryGetProperty("arguments", out var arguments))
+            throw new InvalidOperationException("ACTION_ARGUMENTS_INVALID");
+        LiveSupportAICatalog.ValidateActionArguments(key.GetString()!, arguments);
     }
 
     public static string ComputeDecisionHash(LiveSupportAIWorkerDecisionDto decision)
@@ -345,6 +452,7 @@ public sealed class LiveSupportAITurnOrchestrator(
             if (!conversation.LinkedStudentUserId.HasValue) throw new InvalidOperationException("ACTION_REQUIRES_LINKED_STUDENT");
             var allowed = JsonSerializer.Deserialize<string[]>((await db.LiveSupportAIPolicyVersions.SingleAsync(item => item.Id == turn.PolicyVersionId, cancellationToken)).ActionKeysJson) ?? [];
             if (!allowed.Contains(actionKey, StringComparer.Ordinal)) throw new InvalidOperationException("ACTION_NOT_ALLOWED");
+            LiveSupportAICatalog.ValidateActionArguments(actionKey, branch.GetProperty("arguments"));
         }
         var protectedJson = branch.GetRawText();
         var protectedBytes = Encoding.UTF8.GetBytes(protectedJson);

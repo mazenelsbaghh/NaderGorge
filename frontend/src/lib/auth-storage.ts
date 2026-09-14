@@ -1,7 +1,7 @@
 type PersistedStorageType = 'local' | 'session';
 
 type PersistedAuthPayload = {
-  accessToken: string;
+  accessToken?: string | null;
   user: unknown;
 };
 
@@ -36,11 +36,8 @@ function readRawPayload(storage: Storage | null) {
   const accessToken = storage.getItem(AUTH_KEYS.accessToken);
   const user = storage.getItem(AUTH_KEYS.user);
 
-  if (!accessToken || !user) {
-    // Self-heal partial auth state so stale access tokens do not keep triggering refresh attempts.
-    if (hasAnyAuthKey(storage)) {
-      clearStorage(storage);
-    }
+  if (!user) {
+    if (hasAnyAuthKey(storage)) clearStorage(storage);
     return null;
   }
 
@@ -49,11 +46,9 @@ function readRawPayload(storage: Storage | null) {
 }
 
 function getPreferredStorage(): Storage | null {
-  return readRawPayload(getStorage('local'))
-    ? getStorage('local')
-    : readRawPayload(getStorage('session'))
-      ? getStorage('session')
-      : null;
+  if (getStorage('local')?.getItem(AUTH_KEYS.user)) return getStorage('local');
+  if (getStorage('session')?.getItem(AUTH_KEYS.user)) return getStorage('session');
+  return null;
 }
 
 export function persistAuthSession(
@@ -65,8 +60,10 @@ export function persistAuthSession(
 
   if (!storage) return;
 
-  storage.setItem(AUTH_KEYS.accessToken, payload.accessToken);
   storage.setItem(AUTH_KEYS.user, JSON.stringify(payload.user));
+  if (payload.accessToken) {
+    storage.setItem(AUTH_KEYS.accessToken, payload.accessToken);
+  }
 }
 
 export function clearStoredAuth() {
@@ -105,15 +102,8 @@ export function readStoredAuth(): (PersistedAuthPayload & { storage: PersistedSt
 }
 
 export function getStoredAccessToken() {
-  return readStoredAuth()?.accessToken ?? null;
-}
-
-export function replaceStoredTokens(accessToken: string) {
-  const storage = getPreferredStorage();
-  if (!storage) return;
-
-  storage.setItem(AUTH_KEYS.accessToken, accessToken);
-  storage.removeItem(AUTH_KEYS.refreshToken);
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(AUTH_KEYS.accessToken) ?? window.sessionStorage.getItem(AUTH_KEYS.accessToken);
 }
 
 export function updateStoredUser(user: unknown) {

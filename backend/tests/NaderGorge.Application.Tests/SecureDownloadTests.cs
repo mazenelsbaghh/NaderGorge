@@ -13,6 +13,8 @@ using NaderGorge.API.Controllers;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
+using NaderGorge.Infrastructure.Services;
+using NaderGorge.Application.Interfaces;
 using Xunit;
 
 namespace NaderGorge.Application.Tests;
@@ -30,7 +32,7 @@ public class SecureDownloadTests : IDisposable
     {
         _db = TestAppDbContextFactory.Create();
         _accessService = new FakeAccessCheckService();
-        
+
         _config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -68,7 +70,15 @@ public class SecureDownloadTests : IDisposable
             ControllerContext = controllerContext
         };
 
-        var publicController = new PublicController(_mediator, _db, _config, _env)
+        var sharedStorage = new SharedFileStorage(new Dictionary<SharedFileArea, string>
+        {
+            [SharedFileArea.Public] = _testWwwRoot,
+            [SharedFileArea.Protected] = Path.Combine(
+                Path.GetDirectoryName(_testWwwRoot)!,
+                "App_Data",
+                "protected")
+        });
+        var publicController = new PublicController(_mediator, _db, _config, _env, sharedStorage)
         {
             ControllerContext = controllerContext
         };
@@ -103,10 +113,10 @@ public class SecureDownloadTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(result);
         var value = okResult.Value;
         Assert.NotNull(value);
-        
+
         var successProp = value.GetType().GetProperty("Success")?.GetValue(value);
         var urlProp = value.GetType().GetProperty("DownloadUrl")?.GetValue(value);
-        
+
         Assert.NotNull(successProp);
         Assert.NotNull(urlProp);
 
@@ -172,7 +182,7 @@ public class SecureDownloadTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(signResult);
         var value = okResult.Value;
         Assert.NotNull(value);
-        
+
         var downloadUrlProp = value.GetType().GetProperty("DownloadUrl")?.GetValue(value);
         Assert.NotNull(downloadUrlProp);
         var downloadUrl = (string)downloadUrlProp;
@@ -185,8 +195,8 @@ public class SecureDownloadTests : IDisposable
         var downloadResult = await publicController.DownloadResource(resource.Id, token, CancellationToken.None);
 
         // Assert
-        var fileResult = Assert.IsType<PhysicalFileResult>(downloadResult);
-        Assert.Equal(filePath, fileResult.FileName);
+        var fileResult = Assert.IsType<FileStreamResult>(downloadResult);
+        Assert.Equal("valid.pdf", fileResult.FileDownloadName);
         Assert.Equal("application/octet-stream", fileResult.ContentType);
     }
 
@@ -201,7 +211,7 @@ public class SecureDownloadTests : IDisposable
         // Generate an expired token (expiry 5 minutes in past)
         var expiresUnixSeconds = DateTimeOffset.UtcNow.AddMinutes(-5).ToUnixTimeSeconds();
         var payload = $"{userId}:{expiresUnixSeconds}";
-        
+
         var secret = "SuperSecretKeyForSignedDownloadTestingOnly!";
         var keyBytes = System.Text.Encoding.UTF8.GetBytes(secret);
         using var hmac = new System.Security.Cryptography.HMACSHA256(keyBytes);
@@ -224,7 +234,7 @@ public class SecureDownloadTests : IDisposable
         // Arrange
         var userId = Guid.NewGuid();
         var lessonId = Guid.NewGuid();
-        
+
         // Evil path attempting traversal
         var resource = new LessonResource
         {
@@ -240,9 +250,9 @@ public class SecureDownloadTests : IDisposable
         // Create the outside secret file mock path (so that physically if checked it might pass, but traversal check must block it)
         var outsideSecretPath = Path.GetFullPath(Path.Combine(_testWwwRoot, "..", "secret.txt"));
         // Create test folder context for safety
-        
+
         var (contentController, publicController) = CreateControllers(userId);
-        
+
         // Act: Sign URL
         var signResult = await contentController.SignDownload(resource.Id, CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(signResult);
@@ -272,6 +282,7 @@ public class SecureDownloadTests : IDisposable
         public bool HasAccessResult { get; set; } = true;
         public Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
         public Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
+        public Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
         public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
     }
 

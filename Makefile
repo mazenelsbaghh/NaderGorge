@@ -3,13 +3,44 @@
         build-frontend build-landing build-student build-admin build-backend build-worker \
         logs logs-frontend logs-landing logs-student logs-admin logs-backend logs-worker logs-db logs-redis \
         shell-frontend shell-landing shell-student shell-admin shell-backend shell-worker shell-db \
-        verify-surfaces verify-surfaces-static \
+        verify verify-backend verify-frontend verify-worker verify-docker verify-e2e verify-surfaces verify-surfaces-static \
+        verify-performance-budgets verify-performance-budget-contracts verify-admin-ai-capabilities \
         migrate migrate-add \
+        ops-plan ops-check ops-build ops-fast ops-db-guard ops-db-migration \
+        prod-status prod-audit prod-logs prod-plan prod-db-inventory \
+        prod-db-fast-preview prod-db-fast \
+        prod-small-preview prod-small prod-release-id \
+        prod-sync-ocr-key-preview prod-sync-ocr-key \
+        prod-image-transfer-preview prod-image-transfer-install \
+        prod-build-preview prod-build prod-gate-preview prod-gate \
+        prod-release-preview prod-release prod-fast-release \
         dev frontend backend stop \
         logs-production logs-production-backend \
-        build-mobile-android build-mobile-ios build-mobile
+        android-builder-start android-builder-stop android-builder-reset android-gradle-cache-clean android-builder-shell \
+        build-mobile-android build-mobile-android-offline test-mobile-android build-mobile-ios build-mobile
 
 .DEFAULT_GOAL := help
+
+ANDROID_PROJECT_DIR := $(CURDIR)/mobile/parent-android
+ANDROID_BUILDER_NAME := parent-android-builder
+ANDROID_BUILDER_IMAGE := mobiledevops/android-sdk-image:34.0.0
+ANDROID_GRADLE_VOLUME := parent_android_gradle_cache
+PERFORMANCE_BASELINE ?= artifacts/performance-167/baseline/frontend-routes.json
+PERFORMANCE_CANDIDATE ?= artifacts/performance-167/final/frontend-routes.json
+PERFORMANCE_RAW_ROOT ?= artifacts/performance-167/final/raw
+PYTHON ?= python3
+OPS_BASE ?= AUTO
+SMALL_BASE ?= HEAD^
+RELEASE ?=
+MANIFEST ?= artifacts/production/build/$(RELEASE)/manifest.json
+BACKUP_EVIDENCE ?= artifacts/production/migration-gates/$(RELEASE).json
+NODE ?= node-1
+SERVICE ?= backend
+MINUTES ?= 15
+REASON ?=
+CONFIRM ?=
+COMPONENT ?= frontend
+SSH_SKILL_SCRIPTS := .agents/skills/ssh-server/scripts
 
 help: ## Show all available make targets
 	@echo ""
@@ -161,6 +192,59 @@ verify-audit-remediation: ## Run audit remediation verification commands
 	node scripts/generate-endpoint-inventory.mjs --check
 	docker compose config -q
 
+verify: verify-backend verify-frontend verify-worker verify-docker verify-performance-budgets verify-admin-ai-capabilities ## Run the repository verification contract
+
+verify-admin-ai-capabilities: ## Fail when the sealed Admin AI endpoint, route, or capability baseline drifts
+	node frontend/scripts/generate-admin-ai-capability-baseline.mjs --check
+	node scripts/generate-admin-ai-capability-baseline.mjs --check
+	python3 -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py
+
+verify-performance-budget-contracts: ## Run local performance budget and production cache/matrix contracts
+	cd frontend && node --test scripts/check-route-performance-budgets.test.mjs
+	node --check deploy/production/load/platform-workflows.js
+	$(PYTHON) -m pytest -q \
+		deploy/production/tests/test_static_cache_contract.py \
+		deploy/production/tests/test_performance_evidence_assembler.py \
+		deploy/production/tests/test_performance_budget_verification.py \
+		deploy/production/tests/test_load_contract.py
+
+verify-performance-budgets: verify-performance-budget-contracts ## Enforce candidate route/request/navigation/query budgets
+	$(PYTHON) deploy/production/scripts/verify_performance_budgets.py \
+		--baseline "$(PERFORMANCE_BASELINE)" \
+		--candidate "$(PERFORMANCE_CANDIDATE)" \
+		--raw-root "$(PERFORMANCE_RAW_ROOT)"
+
+performance-seal-source: ## Create source-bound performance provenance without overwriting evidence
+	$(PYTHON) deploy/production/scripts/assemble_performance_evidence.py seal-source
+
+performance-assemble: ## Assemble immutable candidate performance evidence from reviewed raw inputs
+	$(PYTHON) deploy/production/scripts/assemble_performance_evidence.py assemble
+
+verify-backend: ## Restore, build, and test the backend solution
+	dotnet restore backend/NaderGorge.sln
+	dotnet build backend/NaderGorge.sln --no-restore
+	@if [ -n "$${ConnectionStrings__DefaultConnection:-}" ]; then \
+		dotnet test backend/NaderGorge.sln --no-build; \
+	else \
+		echo "Skipping PostgreSQL integration tests: ConnectionStrings__DefaultConnection is not set."; \
+		dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-build; \
+	fi
+
+verify-frontend: ## Run focused checks, lint, and build the frontend
+	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run check:video-page-protection && npm run check:video-playback-security && npm run lint && npm run build
+
+verify-worker: ## Build the Node.js worker
+	cd worker && npm run build
+
+verify-docker: ## Validate Docker Compose configuration
+	docker compose config -q
+
+verify-e2e: ## Run Phase 1 auth/session browser smoke; requires backend E2e mode on api.lvh.me:5245
+	cd frontend && \
+		NEXT_PUBLIC_API_URL=http://api.lvh.me:5245/api \
+		NEXT_PUBLIC_BACKEND_URL=http://api.lvh.me:5245 \
+		npx playwright test tests/e2e/auth.spec.ts tests/e2e/admin-users.spec.ts tests/e2e/parent-report.spec.ts tests/e2e/lesson-context-menu-guard.spec.ts --project=chromium -g "Phase 1|Parent report|lesson video context-menu guard"
+
 # =============================================================================
 # LOGS
 # =============================================================================
@@ -227,24 +311,7 @@ migrate: ## Apply all pending EF Core migrations to the database
 	docker compose --profile migration run --rm migrator
 	@echo "Migrations applied."
 
-migrate-add: ## Scaffold a new EF Core migration (usage: make migrate-add NAME=MyMigration)
-	@[ "$(NAME)" ] || (echo "" && echo "  NAME is required." && echo "     Usage: make migrate-add NAME=MyMigration" && echo "" && exit 1)
-	@echo "Adding migration: $(NAME)"
-	docker run --rm \
-		--network massar_net \
-		-v "$(PWD)/backend":/src \
-		-w /src \
-		-e "ConnectionStrings__DefaultConnection=Host=db;Database=massar_platform;Username=postgres;Password=postgres" \
-		-e "ConnectionStrings__Redis=redis:6379,abortConnect=false" \
-		mcr.microsoft.com/dotnet/sdk:9.0 \
-		sh -c "dotnet tool install --global dotnet-ef && \
-		       export PATH=\$$PATH:/root/.dotnet/tools && \
-		       dotnet restore NaderGorge.sln && \
-		       dotnet ef migrations add $(NAME) \
-		         --project src/NaderGorge.Infrastructure \
-		         --startup-project src/NaderGorge.API \
-		         --output-dir Migrations"
-	@echo "Migration '$(NAME)' created in backend/src/NaderGorge.Infrastructure/Migrations/"
+migrate-add: ops-db-migration ## Alias: scaffold an EF migration without downloading tools
 
 # =============================================================================
 # LOCAL (NATIVE) DEVELOPMENT
@@ -293,58 +360,197 @@ stop: ## Kill all native processes running on known ports
 	@echo "Done."
 
 # =============================================================================
-# DEPLOYMENT
+# OPERATIONS AND PRODUCTION
 # =============================================================================
 
-deploy: ## Stage, commit, merge current branch to main, push to origin, and checkout original branch
-	@CURRENT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
-	echo "Deploying from branch: $$CURRENT_BRANCH"; \
-	echo "Staging and committing changes..."; \
-	git add .; \
-	git commit -m "deploy: updates from $$CURRENT_BRANCH" || true; \
-	echo "Switching to main..."; \
-	git checkout main; \
-	echo "Pulling latest main..."; \
-	git pull origin main; \
-	echo "Merging $$CURRENT_BRANCH into main..."; \
-	git merge $$CURRENT_BRANCH; \
-	echo "Pushing to main..."; \
-	git push origin main; \
-	echo "Switching back to $$CURRENT_BRANCH..."; \
-	git checkout $$CURRENT_BRANCH; \
-	echo "Deployment push completed."
+ops-plan: ## Detect affected frontend/backend/worker/database and Docker images
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh plan --base="$(OPS_BASE)"
 
-deploy-production: deploy ## Push code to production server and rebuild containers with migrations
-	@echo "Pushing code to production server git repository..."
-	git push prod main
-	@echo "Running deployment and database migration fixes on production server..."
-	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py"
+ops-check: ## Run DB guard and checks only for affected components
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh check --base="$(OPS_BASE)"
 
-migrate-production: ## Populate migration history and run pending migrations on the VPS production server without rebuild
-	@echo "Connecting and applying migrations to production database..."
-	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
+ops-build: ## Build only locally affected Docker images with live progress
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh build --base="$(OPS_BASE)"
 
-logs-production: ## Tail live logs from ALL services on the production server
-	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f"
+ops-fast: ## Urgent local path: DB guard, focused checks, cached affected build
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh fast --base="$(OPS_BASE)"
 
-logs-production-backend: ## Tail backend logs from the production server
-	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f backend"
+ops-db-guard: ## Block EF model changes that do not include a migration
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh db-guard --base="$(OPS_BASE)"
+
+ops-db-migration: ## Add EF migration using installed tools (NAME=Required; no downloads)
+	@[ "$(NAME)" ] || (echo "Usage: make ops-db-migration NAME=DescribeTheSchemaChange" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh db-add "$(NAME)" --base="$(OPS_BASE)"
+
+prod-status: ## Show three-node Production health/quorum/release with evidence
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh status
+
+prod-audit: ## Run the read-only three-node Production audit
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh audit
+
+prod-logs: ## Read redacted Production logs (NODE/SERVICE/MINUTES)
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh logs "$(NODE)" "$(SERVICE)" "$(MINUTES)"
+
+prod-plan: ## Show affected areas and immutable Production image plan
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh plan --base="$(OPS_BASE)"
+
+prod-release-id: ## Print the exact immutable release ID; never type a short SHA
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release-id
+
+prod-registry-preview: ## Preview private registry and per-node mTLS installation
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --dry-run
+
+prod-registry-install: ## Install reviewed registry infrastructure without restarting apps
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --yes
+
+prod-registry-status: ## Verify private TLS connectivity and reject anonymous clients
+	$(PYTHON) deploy/production/scripts/install_image_registry.py --probe
+
+prod-sync-ocr-key-preview: ## Validate secure OCR-key synchronization to all nodes
+	$(PYTHON) deploy/production/scripts/sync_ocr_vision_key.py
+
+prod-sync-ocr-key: ## Sync the OCR key from .env.prod; requires CONFIRM=OCR-KEY
+	@[ "$(CONFIRM)" = "OCR-KEY" ] || (echo "Refusing: use CONFIRM=OCR-KEY after preview" && exit 2)
+	$(PYTHON) deploy/production/scripts/sync_ocr_vision_key.py --yes
+
+prod-small-preview: ## Preview one-command safe release (COMPONENT/REASON)
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-small-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh small-release \
+		--component="$(COMPONENT)" --reason="$(REASON)" --base="$(SMALL_BASE)"
+
+prod-small: ## Build, gate, and roll safely; CONFIRM must match COMPONENT uppercase
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-small" && exit 2)
+	@expected="$$(printf '%s' "$(COMPONENT)" | tr '[:lower:]' '[:upper:]')"; \
+		[ "$(CONFIRM)" = "$$expected" ] || \
+		(echo "Refusing: review prod-small-preview then use CONFIRM=$$expected" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh small-release \
+		--component="$(COMPONENT)" --reason="$(REASON)" \
+		--base="$(SMALL_BASE)" --yes
+
+prod-db-inventory: ## Read-only: compare expected EF tables/migrations with Production
+	bash $(SSH_SKILL_SCRIPTS)/database.sh inventory
+
+prod-db-fast-preview: ## Preview no-build repair using current release migrator
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-db-fast-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/database.sh fast \
+		--base="$(OPS_BASE)" --reason="$(REASON)"
+
+prod-db-fast: ## Repair DB drift with current migrator; CONFIRM=DB-ONLY required
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-db-fast" && exit 2)
+	@[ "$(CONFIRM)" = "DB-ONLY" ] || \
+		(echo "Refusing: use CONFIRM=DB-ONLY after reviewing prod-db-fast-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/database.sh fast \
+		--base="$(OPS_BASE)" --reason="$(REASON)" --yes
+
+prod-build-preview: ## Preview node-3 immutable build (RELEASE required)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)"
+
+prod-image-transfer-preview: ## Preview direct WireGuard image-transfer setup
+	python3 deploy/production/scripts/install_node_image_transfer.py \
+		--inventory deploy/production/inventory/production.yml \
+		--known-hosts "$$MASSAR_KNOWN_HOSTS_FILE" --identity "$$MASSAR_SSH_IDENTITY_FILE" --dry-run
+
+prod-image-transfer-install: prod-image-transfer-preview ## Install restricted node-to-node image transfer
+	python3 deploy/production/scripts/install_node_image_transfer.py \
+		--inventory deploy/production/inventory/production.yml \
+		--known-hosts "$$MASSAR_KNOWN_HOSTS_FILE" --identity "$$MASSAR_SSH_IDENTITY_FILE" --yes
+
+prod-build: ## Build/distribute four immutable images on node-3 (RELEASE required)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)" --yes
+
+prod-gate-preview: ## Preview backup/restore migration gate (RELEASE/MANIFEST)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh gate \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" --output="$(BACKUP_EVIDENCE)"
+
+prod-gate: ## Create backup/restore migration evidence (RELEASE/MANIFEST)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh gate \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--output="$(BACKUP_EVIDENCE)" --yes
+
+prod-release-preview: ## Preview migrate + rolling three-node release
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)"
+
+prod-release: ## Run reviewed migrate + zero-downtime rolling release
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)" --yes
+
+prod-fast-release: ## Urgent safe release; REASON required, safety gates remain
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-fast-release" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh fast-release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)" \
+		--reason="$(REASON)" --yes
+
+deploy: prod-release-preview ## Safe default: deployment command is preview-only
+
+deploy-production: prod-release ## Backward-compatible safe rolling Production release
+
+migrate-production: ## Refuse unbound DB migration; use prod-gate then prod-release
+	@echo "Blocked: Production migrations require release manifest and backup/restore evidence."
+	@echo "Run make prod-gate, then make prod-release."
+	@exit 2
+
+logs-production: prod-logs ## Backward-compatible redacted Production logs
+
+logs-production-backend: ## Redacted backend logs from NODE (default node-1)
+	@$(MAKE) prod-logs NODE="$(NODE)" SERVICE=backend MINUTES="$(MINUTES)"
 
 
 # =============================================================================
 # MOBILE BUILDS
 # =============================================================================
 
-build-mobile-android: ## Build and test the Android mobile app in Docker
-	@if [ -d "mobile/parent-android" ]; then \
-		echo "Building Android app in Docker..."; \
-		docker run --rm -v "$(PWD)/mobile/parent-android:/app" -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test; \
-	elif [ -d "parent-android" ]; then \
-		echo "Building Android app in Docker..."; \
-		docker run --rm -v "$(PWD)/parent-android:/app" -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test; \
+android-builder-start: ## Start/reuse the persistent Android Docker builder
+	@test -d "$(ANDROID_PROJECT_DIR)" || (echo "Android project directory not found: $(ANDROID_PROJECT_DIR)" && exit 1)
+	@docker volume create "$(ANDROID_GRADLE_VOLUME)" >/dev/null
+	@if docker ps --format '{{.Names}}' | grep -qx "$(ANDROID_BUILDER_NAME)"; then \
+		echo "Android builder already running: $(ANDROID_BUILDER_NAME)"; \
+	elif docker ps -a --format '{{.Names}}' | grep -qx "$(ANDROID_BUILDER_NAME)"; then \
+		echo "Starting existing Android builder: $(ANDROID_BUILDER_NAME)"; \
+		docker start "$(ANDROID_BUILDER_NAME)" >/dev/null; \
 	else \
-		echo "Android project directory not found. Checked 'mobile/parent-android' and 'parent-android'."; \
+		echo "Creating Android builder: $(ANDROID_BUILDER_NAME)"; \
+		docker run -d \
+			--name "$(ANDROID_BUILDER_NAME)" \
+			--dns 8.8.8.8 \
+			-v "$(ANDROID_PROJECT_DIR):/app" \
+			-v "$(ANDROID_GRADLE_VOLUME):/home/mobiledevops/.gradle" \
+			-e GRADLE_USER_HOME=/home/mobiledevops/.gradle \
+			-w /app \
+			"$(ANDROID_BUILDER_IMAGE)" \
+			tail -f /dev/null >/dev/null; \
 	fi
+	@if ! docker exec "$(ANDROID_BUILDER_NAME)" sh -lc 'test -w /home/mobiledevops/.gradle'; then \
+		docker exec -u root "$(ANDROID_BUILDER_NAME)" chown -R mobiledevops:mobiledevops /home/mobiledevops/.gradle; \
+	fi
+
+android-builder-stop: ## Stop the persistent Android Docker builder
+	@docker stop "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@echo "Android builder stopped."
+
+android-builder-reset: ## Recreate the Android Docker builder without deleting Gradle cache
+	@docker rm -f "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@$(MAKE) android-builder-start
+
+android-gradle-cache-clean: ## Delete the persistent Android Gradle Docker volume cache
+	@docker rm -f "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@docker volume rm "$(ANDROID_GRADLE_VOLUME)" >/dev/null 2>&1 || true
+	@echo "Android Gradle cache deleted."
+
+android-builder-shell: android-builder-start ## Open a shell in the Android Docker builder
+	docker exec -it -w /app "$(ANDROID_BUILDER_NAME)" bash
+
+build-mobile-android: android-builder-start ## Fast debug APK build using the persistent Android builder
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew assembleDebug --build-cache --parallel
+
+build-mobile-android-offline: android-builder-start ## Fast offline debug APK build after dependencies are cached
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew assembleDebug --offline --build-cache --parallel
+
+test-mobile-android: android-builder-start ## Run Android unit tests using the persistent Android builder
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew test --build-cache --parallel
 
 build-mobile-ios: ## Compile and test the iOS mobile app on host
 	@if [ -d "mobile/parent-ios" ]; then \
@@ -358,3 +564,22 @@ build-mobile-ios: ## Compile and test the iOS mobile app on host
 	fi
 
 build-mobile: build-mobile-android build-mobile-ios ## Compile and test both mobile apps
+
+# Shared production source; prepare in a separate workspace to preserve local edits.
+.PHONY: prod-source-status prod-source-integrate-preview prod-source-integrate prod-source-export-preview prod-source-export prod-source-publish-preview prod-source-publish
+prod-source-status:
+	python3 deploy/production/scripts/source_sync.py status
+prod-source-integrate-preview:
+	python3 deploy/production/scripts/source_sync.py integrate --destination "$(SOURCE_WORKSPACE)" --dry-run
+prod-source-integrate:
+	test -n "$(SOURCE_WORKSPACE)"
+	python3 deploy/production/scripts/source_sync.py integrate --destination "$(SOURCE_WORKSPACE)" --yes
+prod-source-export-preview:
+	python3 deploy/production/scripts/source_sync.py export --destination "$(SOURCE_WORKSPACE)" --dry-run
+prod-source-export:
+	test -n "$(SOURCE_WORKSPACE)"
+	python3 deploy/production/scripts/source_sync.py export --destination "$(SOURCE_WORKSPACE)" --yes
+prod-source-publish-preview:
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --dry-run
+prod-source-publish:
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --yes

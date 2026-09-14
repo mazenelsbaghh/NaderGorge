@@ -1,10 +1,15 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import type { LiveSupportAIPendingDecision, LiveSupportAIVerificationSession, LiveSupportMessage } from '@/services/live-support-service';
 import { AIPendingActionCard } from './AIPendingActionCard';
 import { AIHandoffConfirmation } from './AIHandoffConfirmation';
 import { AIGuestVerification } from './AIGuestVerification';
 import { AISecureRegistrationForm } from './AISecureRegistrationForm';
+import { LiveSupportMessageContent, LiveSupportMessageMeta } from '@/components/live-support/LiveSupportMessageContent';
+import { LiveSupportMessageActions } from '@/components/live-support/LiveSupportMessageActions';
 
 export interface ParticipantConversationProps {
   conversationId: string;
@@ -18,6 +23,8 @@ export interface ParticipantConversationProps {
   onCancelHandoff: () => Promise<void>;
   onVerificationSuccess: () => void;
   onRegistrationSuccess: () => void;
+  onEditMessage: (messageId: string, content: string) => Promise<void>;
+  onDeleteMessage: (messageId: string) => Promise<void>;
 }
 
 export function ParticipantConversation({
@@ -31,22 +38,43 @@ export function ParticipantConversation({
   onConfirmHandoff,
   onCancelHandoff,
   onVerificationSuccess,
-  onRegistrationSuccess
+  onRegistrationSuccess,
+  onEditMessage,
+  onDeleteMessage
 }: ParticipantConversationProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const shouldStickToBottom = useRef(true);
+
+  useEffect(() => { shouldStickToBottom.current = true; }, [conversationId]);
+  useEffect(() => {
+    if (!shouldStickToBottom.current) return;
+    const frame = requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [conversationId, messages.length, isAiTyping, activeAction, activeVerification]);
+
   return (
-    <div role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
+    <div ref={viewportRef} onScroll={(event) => { const viewport = event.currentTarget; shouldStickToBottom.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-contain pb-3 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
       {messages.map((message) => (
         <article
           dir="auto"
           key={message.id}
-          aria-label={`${message.senderType}، ${new Date(message.sentAt).toLocaleTimeString('ar-EG')}`}
+          aria-label={`${message.senderType}، ${formatCairoDateTime(message.sentAt, { hour: '2-digit', minute: '2-digit' })}`}
           className={`max-w-[85%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-sm ${
             ['Student', 'Guest'].includes(message.senderType)
               ? 'mr-auto bg-cyan-700 text-white'
               : 'ml-auto bg-slate-100 text-slate-800'
           }`}
         >
-          {message.content}
+          {['Staff', 'Admin'].includes(message.senderType) && message.senderDisplayName ? (
+            <p className="mb-1 text-xs font-bold text-cyan-800">{message.senderDisplayName} · فريق الدعم</p>
+          ) : null}
+          {message.replyTo ? <div className="mb-2 rounded-lg bg-black/10 px-2 py-1.5 text-xs opacity-90"><p className="font-bold">رد على رسالة</p><p className="truncate">{message.replyTo.isDeleted ? 'تم حذف هذه الرسالة' : message.replyTo.content || 'مرفق'}</p></div> : null}
+          <LiveSupportMessageContent message={message} audience="participant"/>
+          {['Student', 'Guest'].includes(message.senderType) ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}
+          <LiveSupportMessageMeta message={message} audience="participant"/>
         </article>
       ))}
 
@@ -95,9 +123,9 @@ export function ParticipantConversation({
           className="ml-auto max-w-[85%] rounded-2xl bg-slate-100 px-4 py-3 text-slate-800"
         >
           <div className="flex items-center gap-1.5 py-0.5">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]"></span>
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]"></span>
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500 [animation-delay:-0.3s]"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500 [animation-delay:-0.15s]"></span>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500"></span>
           </div>
         </article>
       )}

@@ -8,6 +8,8 @@ coverage/
 playwright-report/
 test-results/
 .DS_Store
+._*
+**/._*
 Thumbs.db
 *.tmp
 .vscode/

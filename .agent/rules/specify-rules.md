@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-18
+Auto-generated from all feature plans. Last updated: 2026-07-12
 
 ## Active Technologies
 - C# (.NET 8), TypeScript 5.x (strict mode) + Next.js 14 (App Router), .NET Web API, Entity Framework Core, MediatR, React Query (TanStack Query v5), Zustand, Shadcn/UI, Tailwind CSS, Framer Motion, BullMQ (003-phase1-foundation-mvp)
@@ -48,6 +48,14 @@ Auto-generated from all feature plans. Last updated: 2026-06-18
 - N/A (Stateless cookie/Zustand validation) (112-surface-login-access-contract)
 - C# 13 / .NET 9 backend; TypeScript 5.x strict / Next.js 16.2.7 / React 19.2.4 frontend + ASP.NET Core Web API, MediatR 12.4.1, EF Core 9.0.6, Npgsql 9.0.4, Axios 1.17, existing `SecureVideoPlayer` and service layer (140-fix-video-session-counting)
 - PostgreSQL; new lifecycle/idempotency fields on existing `VideoPlaybackSession`; existing `VideoWatchEvent` remains aggregate source of truth (140-fix-video-session-counting)
+- C# 13 / .NET 9 backend; TypeScript 5.9 / Next.js 16.2.7 frontend; Node.js 20 worker; Makefile/Docker/Playwright tooling. + ASP.NET Core, EF Core, Next.js App Router, Playwright, Docker Compose, npm scripts, worker TypeScript build. (155-platform-verification-hygiene)
+- No new application persistence; repository tracking state and generated artifacts are affected. (155-platform-verification-hygiene)
+- C# 13 on .NET 9 backend; TypeScript 5.9 strict on Node.js 20 worker; Next.js 16.2.7/React 19 frontend only for service contract compatibility if needed. + ASP.NET Core controllers/middleware, MediatR, EF Core 9, ImageSharp, BullMQ, ioredis, Express, undici/global fetch, Docker Compose, Nginx. (157-uploads-worker-infra-security)
+- PostgreSQL for LessonResource/LiveSupportAttachment metadata; local/shared asset volume for uploads/subtitles/mindmaps; Redis streams/BullMQ for jobs. No new database schema is required unless implementation discovers a metadata gap for safe asset classification. (157-uploads-worker-infra-security)
+- C# 13 on .NET 9 backend; TypeScript 5.x with Next.js 16.2.7 and React 19.2.4 frontend + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql, Next.js App Router, Axios service layer, Zustand where existing surfaces use it, Tailwind CSS, Lucide Reac (158-teacher-accounting-phase3)
+- PostgreSQL via EF Core migrations; existing Redis/worker infrastructure unchanged for this feature (158-teacher-accounting-phase3)
+- C# 13/.NET 9 backend; TypeScript 5.x/Next.js 16.2.7/React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9/Npgsql, SignalR 9, Redis backplane, Axios, Zustand, Tailwind CSS; evaluate `@tanstack/react-query` as the single query cache. (160-employee-realtime-refresh)
+- PostgreSQL for user authorization/version and durable outbox state; Redis for SignalR backplane/ephemeral coordination; browser memory/local auth storage for session bootstrap; no worker storage change. (160-employee-realtime-refresh)
 
 - Markdown (documentation-only phase — no application code) + N/A (no code dependencies) (001-phase0-discovery-blueprint)
 
@@ -67,9 +75,9 @@ tests/
 Markdown (documentation-only phase — no application code): Follow standard conventions
 
 ## Recent Changes
-- 140-fix-video-session-counting: Added C# 13 / .NET 9 backend; TypeScript 5.x strict / Next.js 16.2.7 / React 19.2.4 frontend + ASP.NET Core Web API, MediatR 12.4.1, EF Core 9.0.6, Npgsql 9.0.4, Axios 1.17, existing `SecureVideoPlayer` and service layer
-- 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
-- 056-extra-watch-request: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 160-employee-realtime-refresh: Added C# 13/.NET 9 backend; TypeScript 5.x/Next.js 16.2.7/React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9/Npgsql, SignalR 9, Redis backplane, Axios, Zustand, Tailwind CSS; evaluate `@tanstack/react-query` as the single query cache.
+- 158-teacher-accounting-phase3: Added C# 13 on .NET 9 backend; TypeScript 5.x with Next.js 16.2.7 and React 19.2.4 frontend + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql, Next.js App Router, Axios service layer, Zustand where existing surfaces use it, Tailwind CSS, Lucide Reac
+- 157-uploads-worker-infra-security: Added C# 13 on .NET 9 backend; TypeScript 5.9 strict on Node.js 20 worker; Next.js 16.2.7/React 19 frontend only for service contract compatibility if needed. + ASP.NET Core controllers/middleware, MediatR, EF Core 9, ImageSharp, BullMQ, ioredis, Express, undici/global fetch, Docker Compose, Nginx.
 
 
 <!-- MANUAL ADDITIONS START -->

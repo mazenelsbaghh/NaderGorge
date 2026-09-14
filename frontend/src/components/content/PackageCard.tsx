@@ -10,7 +10,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
     <motion.button
       type="button"
       whileHover={{ y: -4 }}
-      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:shadow-xl cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-[color,background-color,border-color,opacity,transform,box-shadow] hover:shadow-xl cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
       onClick={onClick}
     >
       {/* Image Header */}
@@ -24,7 +24,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
         />
         {/* Status Badge */}
         <div className="absolute top-4 right-4">
-           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-md ${
+           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm ${
              pkg.isEnrolled 
                ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]' 
                : 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)] border border-[var(--admin-danger-20)]'

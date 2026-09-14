@@ -68,6 +68,7 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
         // Hash and update the password
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         user.PasswordResetVersion += 1;
+        user.SecurityStampVersion += 1;
 
         var activeRefreshTokens = await _db.RefreshTokens
             .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)

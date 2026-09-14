@@ -1,0 +1,241 @@
+name: massar_production
+
+x-app-defaults: &app-defaults
+  restart: unless-stopped
+  init: true
+  env_file:
+    - /etc/massar/app.env
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  networks:
+    - massar_app
+  logging:
+    driver: json-file
+    options:
+      max-size: 20m
+      max-file: "5"
+  security_opt:
+    - no-new-privileges:true
+  labels:
+    net.massar.node: ${MASSAR_NODE_ID:?MASSAR_NODE_ID is required}
+    net.massar.release: ${MASSAR_RELEASE_ID:?MASSAR_RELEASE_ID is required}
+
+x-frontend-defaults: &frontend-defaults
+  <<: *app-defaults
+  image: ${MASSAR_FRONTEND_IMAGE:?MASSAR_FRONTEND_IMAGE is required}
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+    # Next's image optimizer writes beneath .next/cache. Keep the immutable
+    # application filesystem while giving each replica an ephemeral cache.
+    - /app/.next/cache:size=256m,mode=1777
+  depends_on:
+    backend:
+      condition: service_healthy
+  healthcheck:
+    test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:8738/ >/dev/null"]
+    interval: 15s
+    timeout: 5s
+    retries: 4
+    start_period: 45s
+
+x-frontend-internal-api: &frontend-internal-api
+  INTERNAL_API_URL: http://backend:5245/api
+  INTERNAL_BACKEND_URL: http://backend:5245
+  # Bunny credentials and the raw-media relay secret are meaningful only to
+  # backend services. Do not let a Next.js process inherit them, even though
+  # the common production env file is shared.
+  BUNNY_STREAM_API_KEY: ""
+  BunnyStream__ApiKey: ""
+  BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+  BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+  AI_MEDIA_RELAY_SECRET: ""
+  AiMediaRelay__Secret: ""
+  BAILEYS_API_KEY: ""
+  BAILEYS_AUTH_KEY: ""
+  Baileys__ApiKey: ""
+
+services:
+  backend:
+    <<: *app-defaults
+    env_file:
+      - /etc/massar/app.env
+      - path: /etc/massar/auto-repair-backend.env
+        required: false
+    image: ${MASSAR_BACKEND_IMAGE:?MASSAR_BACKEND_IMAGE is required}
+    environment:
+      Cluster__NodeId: ${MASSAR_NODE_ID}
+      Cluster__ReleaseId: ${MASSAR_RELEASE_ID}
+      AiMediaRelay__Secret: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
+      BunnyAnalysis__CdnTokenSecurityKeysJson: ${BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON:-}
+      BunnyAnalysis__PlayerTokenSecurityKeysJson: ${BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON:-}
+      Baileys__BaseUrl: ${BAILEYS_BASE_URL:-}
+      Baileys__ApiKey: ${BAILEYS_API_KEY:-}
+      BAILEYS_AUTH_KEY: ""
+    volumes:
+      - /srv/massar-shared/public:/app/wwwroot
+      - /srv/massar-shared/protected:/app/App_Data/protected
+      - /srv/massar-shared/private:/app/App_Data/private
+      - /srv/massar-shared/live-support:/app/App_Data/live-support
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:5245/api/health/ready >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+
+  worker:
+    <<: *app-defaults
+    image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    group_add:
+      - ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
+    environment:
+      MASSAR_NODE_ID: ${MASSAR_NODE_ID}
+      MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+      NODE_ENV: production
+      BACKEND_API_URL: http://backend:5245
+      BUNNY_STREAM_API_KEY: ""
+      BunnyStream__ApiKey: ""
+      BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+      BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+      AI_MEDIA_RELAY_SECRET: ${AI_MEDIA_RELAY_SECRET:?AI_MEDIA_RELAY_SECRET is required}
+      AiMediaRelay__Secret: ""
+      MASSAR_SHARED_GID: ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
+      SHARED_STORAGE_ROOT: /shared
+      BAILEYS_API_KEY: ""
+      BAILEYS_AUTH_KEY: ""
+      Baileys__ApiKey: ""
+      SHARED_PUBLIC_ROOT: /shared/public
+      SUBTITLE_STORAGE_PATH: /shared/public/subtitles
+      MINDMAP_STORAGE_PATH: /shared/public/mindmaps
+    volumes:
+      - /srv/massar-shared:/shared
+      - /srv/massar-shared/public:/backend/src/NaderGorge.API/wwwroot
+      - /etc/massar/secrets/apns-auth-key.p8:/run/secrets/apns-auth-key.p8:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:3001/ready >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  # Explicitly started only on node-3 by the rolling release helper.
+  # Host networking binds only the inventory-selected WireGuard address.
+  baileys:
+    profiles: [whatsapp]
+    image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    command: ["node", "dist/whatsapp/server.js"]
+    restart: unless-stopped
+    init: true
+    network_mode: host
+    env_file: [/etc/massar/app.env]
+    environment:
+      NODE_ENV: production
+      BAILEYS_HOST: ${MASSAR_OVERLAY_IP:?MASSAR_OVERLAY_IP is required}
+      BAILEYS_DATABASE_HOST: 127.0.0.1
+      BACKEND_API_URL: https://api.massar-academy.net
+      TZ: UTC
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: 20m, max-file: "5"}
+    labels:
+      net.massar.node: ${MASSAR_NODE_ID}
+      net.massar.release: ${MASSAR_RELEASE_ID}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://'+process.env.BAILEYS_HOST+':3002/health',{headers:{'X-Baileys-Token':process.env.BAILEYS_API_KEY}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  landing:
+    <<: *frontend-defaults
+    environment:
+      <<: *frontend-internal-api
+      APP_SURFACE: landing
+      NEXT_PUBLIC_APP_SURFACE: landing
+
+  student:
+    <<: *frontend-defaults
+    environment:
+      <<: *frontend-internal-api
+      APP_SURFACE: student
+      NEXT_PUBLIC_APP_SURFACE: student
+
+  admin:
+    <<: *frontend-defaults
+    environment:
+      <<: *frontend-internal-api
+      APP_SURFACE: admin
+      NEXT_PUBLIC_APP_SURFACE: admin
+
+  teacher:
+    <<: *frontend-defaults
+    environment:
+      <<: *frontend-internal-api
+      APP_SURFACE: teacher
+      NEXT_PUBLIC_APP_SURFACE: teacher
+
+  staff:
+    <<: *frontend-defaults
+    environment:
+      <<: *frontend-internal-api
+      APP_SURFACE: assistant
+      NEXT_PUBLIC_APP_SURFACE: assistant
+
+  gateway:
+    <<: *app-defaults
+    image: nginx:1.27.5-alpine
+    environment:
+      MASSAR_NODE_ID: ${MASSAR_NODE_ID}
+      MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+      BUNNY_STREAM_API_KEY: ""
+      BunnyStream__ApiKey: ""
+      BUNNY_ANALYSIS_CDN_TOKEN_SECURITY_KEYS_JSON: ""
+      BUNNY_ANALYSIS_PLAYER_TOKEN_SECURITY_KEYS_JSON: ""
+      AI_MEDIA_RELAY_SECRET: ""
+      AiMediaRelay__Secret: ""
+      BAILEYS_API_KEY: ""
+      BAILEYS_AUTH_KEY: ""
+      Baileys__ApiKey: ""
+    ports:
+      - ${MASSAR_OVERLAY_IP:?MASSAR_OVERLAY_IP is required}:8080:8080
+    volumes:
+      - ${MASSAR_RELEASE_ROOT:?MASSAR_RELEASE_ROOT is required}/deploy/production/config/nginx/massar-node.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /srv/massar-shared/public:/var/www/assets:ro
+    depends_on:
+      landing:
+        condition: service_healthy
+      student:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      teacher:
+        condition: service_healthy
+      staff:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      massar_app:
+        ipv4_address: 172.29.0.10
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent -H 'Host: massar-academy.net' http://127.0.0.1:8080/__node_ready >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+      start_period: 15s
+
+networks:
+  massar_app:
+    name: massar_app
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: massar-app0
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24

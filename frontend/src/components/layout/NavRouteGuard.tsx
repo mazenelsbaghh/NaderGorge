@@ -35,7 +35,7 @@ export function NavRouteGuard({
 
   const roles = user?.roles || [];
   const isAdmin = roles.some(
-    (r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'supervisor'
+    (r: string) => r.toLowerCase() === 'admin'
   );
 
   // Determine if user is allowed to view this route

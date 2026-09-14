@@ -13,7 +13,13 @@ public class RechargeRequest : BaseEntity
     public virtual DigitalWallet Wallet { get; set; } = null!;
 
     public decimal Amount { get; set; }
+    /// <summary>When set, this recharge is available only for purchases from this teacher.</summary>
+    public Guid? TeacherId { get; set; }
+    public virtual TeacherProfile? Teacher { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string? OriginalSenderPhoneNumber { get; set; }
+    public bool RequiresSenderPhoneConfirmation { get; set; }
+    public DateTime? SenderPhoneConfirmedAt { get; set; }
     public string? ScreenshotUrl { get; set; }
     
     public RechargeRequestStatus Status { get; set; } = RechargeRequestStatus.Pending;

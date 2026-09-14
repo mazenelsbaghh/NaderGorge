@@ -95,6 +95,34 @@ public class TeacherIsolationTests
     }
 
     [Fact]
+    public async Task DelegatedStaff_RequiresExplicitWorkspacePermissionAndResolvesOwnerScope()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var (teacherUser, teacherProfile) = await OnboardTeacherAsync(db, "Teacher Owner", "01044444444");
+        var teacherRole = await db.Roles.SingleAsync(role => role.Type == RoleType.Teacher);
+        var staffUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher Staff", "01055555555");
+        db.UserRoles.Add(new UserRole { UserId = staffUser.Id, RoleId = teacherRole.Id });
+        var membership = new TeacherStaffMember
+        {
+            TeacherId = teacherProfile.Id,
+            UserId = staffUser.Id,
+            CreatedByTeacherUserId = teacherUser.Id,
+            PermissionKeys = "finance"
+        };
+        db.TeacherStaffMembers.Add(membership);
+        await db.SaveChangesAsync();
+        var authorization = new TeacherAuthorizationService(db);
+
+        Assert.False(await authorization.CanAccessTeacherWorkspacePermissionAsync(staffUser.Id, "chat", default));
+        Assert.False(await authorization.IsTeacherOwnerOrNonTeacherAsync(staffUser.Id, default));
+
+        var workspace = await authorization.GetWorkspaceAccessAsync(staffUser.Id, default);
+        Assert.NotNull(workspace);
+        Assert.Equal(teacherUser.Id, workspace.TeacherUserId);
+        Assert.Contains("finance", workspace.PermissionKeys);
+    }
+
+    [Fact]
     public async Task CanAccessExam_IsIsolatedBetweenTeachers()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
@@ -205,15 +233,21 @@ public class TeacherIsolationTests
         var (userA, profileA) = await OnboardTeacherAsync(db, "Teacher A", "01011111111");
         var (userB, profileB) = await OnboardTeacherAsync(db, "Teacher B", "01022222222");
 
-        var question = new QuestionBankItem { Id = Guid.NewGuid(), CreatedByTeacherId = profileA.Id };
+        var question = new QuestionBankItem { Id = Guid.NewGuid(), CreatedByTeacherId = profileA.Id, Type = QuestionType.Essay };
         db.QuestionBankItems.Add(question);
+        var exam = new Exam { CreatedByTeacherId = profileA.Id, TotalScore = 10, PassingScore = 5 };
+        exam.ExamQuestions.Add(new ExamQuestion { Question = question, Points = 10 });
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Essay student", "01033333333");
+        var attempt = new StudentExamAttempt { Exam = exam, UserId = student.Id };
+        db.StudentExamAttempts.Add(attempt);
 
         var submission = new EssaySubmission
         {
             Id = Guid.NewGuid(),
             QuestionId = question.Id,
             Status = EssaySubmissionStatus.WaitTeacher,
-            StudentExamAttemptId = Guid.NewGuid()
+            StudentExamAttemptId = attempt.Id,
+            StudentId = student.Id
         };
         db.EssaySubmissions.Add(submission);
         await db.SaveChangesAsync();
@@ -266,10 +300,11 @@ public class TeacherIsolationTests
         var sectionA = new ContentSection { Id = Guid.NewGuid(), Title = "Sec A", TermId = termA.Id };
         var lessonA = new Lesson { Id = Guid.NewGuid(), Title = "Lesson A", ContentSectionId = sectionA.Id };
         var videoA = new LessonVideo { Id = Guid.NewGuid(), Title = "Video A", LessonId = lessonA.Id, Provider = "vk", ProviderVideoId = "vA" };
+        var latestVideoA = new LessonVideo { Id = Guid.NewGuid(), Title = "Latest Video A", LessonId = lessonA.Id, Provider = "vk", ProviderVideoId = "vA-latest" };
         db.Terms.Add(termA);
         db.ContentSections.Add(sectionA);
         db.Lessons.Add(lessonA);
-        db.LessonVideos.Add(videoA);
+        db.LessonVideos.AddRange(videoA, latestVideoA);
 
         // 4. Create content items for Package B
         var termB = new Term { Id = Guid.NewGuid(), Title = "Term B", PackageId = packageB.Id };
@@ -290,6 +325,16 @@ public class TeacherIsolationTests
             WatchCount = 3,
             TimeWatchedInSeconds = 300,
             CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow.AddMinutes(-10)
+        };
+        var latestWatchEventA = new VideoWatchEvent
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            LessonVideoId = latestVideoA.Id,
+            WatchCount = 1,
+            TimeWatchedInSeconds = 60,
+            CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         var watchEventB = new VideoWatchEvent
@@ -302,7 +347,7 @@ public class TeacherIsolationTests
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        db.VideoWatchEvents.AddRange(watchEventA, watchEventB);
+        db.VideoWatchEvents.AddRange(watchEventA, latestWatchEventA, watchEventB);
 
         // 6. Grant Student Access to Package A & B
         db.StudentAccessGrants.Add(new StudentAccessGrant
@@ -332,11 +377,11 @@ public class TeacherIsolationTests
 
         // Active students should only include watch events on Package A (belonging to Teacher A)
         Assert.Single(result.Data.ActiveStudents);
-        Assert.Equal("Video A", result.Data.ActiveStudents.First().LastWatchedVideoTitle);
+        Assert.Equal("Latest Video A", result.Data.ActiveStudents.First().LastWatchedVideoTitle);
         Assert.Equal("Package A", result.Data.ActiveStudents.First().PackageName);
 
         // Most watched videos should only include Package A video
-        Assert.Single(result.Data.MostWatchedVideos);
+        Assert.Equal(2, result.Data.MostWatchedVideos.Count);
         Assert.Equal("Video A", result.Data.MostWatchedVideos.First().VideoTitle);
         Assert.Equal(3, result.Data.MostWatchedVideos.First().TotalWatchCount);
     }

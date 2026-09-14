@@ -1,4 +1,5 @@
 using FluentValidation;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 
 namespace NaderGorge.Application.Features.LiveSupportAI.Validation;
@@ -81,7 +82,7 @@ public sealed class LiveSupportAISecureRegistrationValidator : AbstractValidator
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200).Must(value => value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 4);
         RuleFor(x => x.PhoneNumber).NotEmpty().Matches("^01[0125]\\d{8}$");
         RuleFor(x => x.Password).NotEmpty().Length(8, 128);
-        RuleFor(x => x.DateOfBirth).LessThan(DateTime.UtcNow.Date);
+        RuleFor(x => x.DateOfBirth).LessThan(CairoTime.GetCurrentDate().ToDateTime(TimeOnly.MinValue));
         RuleFor(x => x.Gender).Must(value => value is "Male" or "Female");
         RuleFor(x => x.Governorate).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Address).NotEmpty().MaximumLength(300);

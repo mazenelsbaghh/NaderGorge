@@ -1,5 +1,12 @@
-import { LiveSupportLauncher } from '@/components/live-support/participant/LiveSupportLauncher';
+import { GlobalNav } from '@/components/layout/GlobalNav';
+import { DeferredLiveSupportLauncher } from '@/components/live-support/participant/DeferredLiveSupportLauncher';
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}<LiveSupportLauncher /></>;
+  return (
+    <>
+      <GlobalNav />
+      {children}
+      <DeferredLiveSupportLauncher />
+    </>
+  );
 }

@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Homework;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
@@ -12,6 +14,7 @@ public record DashboardDto(
     List<ActivePackageDto> ActivePackages,
     ResumePointDto? ResumePoint,
     List<UpcomingExamDto> UpcomingExams,
+    List<UpcomingHomeworkDto> UpcomingHomeworks,
     int OverallProgressPercent,
     int TotalLessonsCompleted,
     int TotalLessons,
@@ -35,12 +38,20 @@ public record ActivePackageDto(
 );
 public record ResumePointDto(Guid PackageId, string PackageName, Guid LessonId, string LessonTitle, int LessonOrder);
 public record UpcomingExamDto(Guid ExamId, string ExamTitle, string LessonTitle);
+public record UpcomingHomeworkDto(Guid HomeworkId, string HomeworkTitle, string LessonTitle);
 
 public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiResponse<DashboardDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
+    private readonly IContentArchiveAccessService _archiveAccess;
 
-    public GetDashboardQueryHandler(IAppDbContext db) => _db = db;
+    public GetDashboardQueryHandler(IAppDbContext db, IAcademicScopeService academicScope, IContentArchiveAccessService? archiveAccess = null)
+    {
+        _db = db;
+        _academicScope = academicScope;
+        _archiveAccess = archiveAccess ?? new NaderGorge.Application.Services.ContentArchiveAccessService(db);
+    }
 
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
     {
@@ -65,6 +76,15 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Distinct()
             .ToList();
 
+        var academicallyEligiblePackageIds = await _academicScope.GetEligiblePackageIdsForStudentAsync(
+            packageIds,
+            request.UserId,
+            ct);
+        packageIds = await GetViewablePackageIdsAsync(
+            academicallyEligiblePackageIds,
+            request.UserId,
+            ct);
+
         // Get packages with flat lesson list projected
         var packages = await _db.Packages
             .AsNoTracking()
@@ -83,12 +103,32 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             })
             .ToListAsync(ct);
 
-        // Get completed lessons count
-        var completedLessonIds = await _db.LessonProgresses
-            .AsNoTracking()
-            .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
-            .Select(lp => lp.LessonId)
-            .ToListAsync(ct);
+        var packageLessonIds = packages
+            .SelectMany(package => package.Lessons)
+            .Select(lesson => lesson.Id)
+            .Distinct()
+            .ToList();
+        var academicallyEligibleLessonIds = await _academicScope.GetEligibleLessonIdsForStudentAsync(
+            packageLessonIds,
+            request.UserId,
+            ct);
+        var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
+            request.UserId,
+            academicallyEligibleLessonIds,
+            ct);
+        var completionContext = new StudentLessonCompletionContext(
+            _db,
+            request.UserId,
+            visibleLessonIds);
+        var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
+            completionContext,
+            _academicScope,
+            _archiveAccess,
+            ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
+            completionContext,
+            visibleActiveVideoIds,
+            ct);
 
         var activePackages = new List<ActivePackageDto>();
         Guid? resumePackageId = null;
@@ -102,7 +142,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
-            var allLessons = pkg.Lessons;
+            var allLessons = pkg.Lessons
+                .Where(lesson => visibleLessonIds.Contains(lesson.Id))
+                .ToList();
             var completed = allLessons.Count(l => completedLessonIds.Contains(l.Id));
             var total = allLessons.Count;
             totalLessonsAll += total;
@@ -142,7 +184,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         // Upcoming exams: lessons with exams that haven't been passed yet
         var upcomingExams = new List<UpcomingExamDto>();
-        var allLessonIds = packages.SelectMany(p => p.Lessons.Select(l => l.Id)).ToList();
+        var allLessonIds = visibleLessonIds.ToList();
         
         var lessonsWithExams = await _db.Lessons
             .AsNoTracking()
@@ -165,17 +207,50 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         var exams = await _db.Exams
             .AsNoTracking()
-            .Where(e => examIdsToCheck.Contains(e.Id))
+            .Where(e => examIdsToCheck.Contains(e.Id) && e.IsActive)
             .Select(e => new { e.Id, e.Title })
             .ToDictionaryAsync(e => e.Id, e => e.Title, ct);
 
         foreach (var lesson in lessonsWithExams)
         {
-            if (lesson.ExamId.HasValue && exams.TryGetValue(lesson.ExamId.Value, out var examTitle))
+            if (lesson.ExamId.HasValue
+                && exams.TryGetValue(lesson.ExamId.Value, out var examTitle)
+                && await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, lesson.ExamId.Value, ct))
             {
                 upcomingExams.Add(new UpcomingExamDto(lesson.ExamId.Value, examTitle, lesson.Title));
             }
         }
+
+        var homeworkRows = await _db.Homeworks
+            .ReadyForStudents()
+            .AsNoTracking()
+            .Where(h => allLessonIds.Contains(h.LessonId))
+            .Select(h => new { h.Id, h.Title, h.LessonId, h.PassingScoreThreshold, h.TotalScore })
+            .ToListAsync(ct);
+
+        var visibleHomeworkIds = new HashSet<Guid>();
+        foreach (var homework in homeworkRows)
+        {
+            if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Homework, homework.Id, ct))
+                visibleHomeworkIds.Add(homework.Id);
+        }
+
+        var gradedHomeworkIds = await _db.HomeworkSubmissions
+            .AsNoTracking()
+            .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
+            .Select(s => new { s.HomeworkId, s.OverallScore, s.PassingScoreSnapshot })
+            .ToListAsync(ct);
+
+        var upcomingHomeworks = homeworkRows
+            .Where(h => visibleHomeworkIds.Contains(h.Id))
+            .Where(h => !gradedHomeworkIds.Any(s => s.HomeworkId == h.Id && s.OverallScore >= (s.PassingScoreSnapshot ?? h.PassingScoreThreshold ?? 0)))
+            .OrderBy(h => h.Title)
+            .Take(5)
+            .Select(h => new UpcomingHomeworkDto(
+                h.Id,
+                h.Title,
+                packages.SelectMany(p => p.Lessons).FirstOrDefault(l => l.Id == h.LessonId)?.Title ?? "درس مرتبط"))
+            .ToList();
 
         var codesRedeemed = grants.Count;
         var overallPct = totalLessonsAll > 0 ? (int)Math.Round((double)totalCompletedAll / totalLessonsAll * 100) : 0;
@@ -189,11 +264,33 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             activePackages,
             resume,
             upcomingExams,
+            upcomingHomeworks,
             overallPct,
             totalCompletedAll,
             totalLessonsAll,
             codesRedeemed,
             user.AvatarSlug
         ));
+    }
+
+    private async Task<List<Guid>> GetViewablePackageIdsAsync(
+        IReadOnlyCollection<Guid> packageIds,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var viewablePackageIds = new List<Guid>(packageIds.Count);
+        foreach (var packageId in packageIds)
+        {
+            if (await _archiveAccess.CanViewAsync(
+                    userId,
+                    ContentArchiveTargetType.Package,
+                    packageId,
+                    ct))
+            {
+                viewablePackageIds.Add(packageId);
+            }
+        }
+
+        return viewablePackageIds;
     }
 }

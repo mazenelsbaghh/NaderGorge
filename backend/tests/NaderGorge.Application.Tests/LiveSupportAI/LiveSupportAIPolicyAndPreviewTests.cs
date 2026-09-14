@@ -6,6 +6,7 @@ using NaderGorge.Infrastructure.Services;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Infrastructure.Services.LiveSupportAI;
+using NaderGorge.Infrastructure.Data;
 using Xunit;
 
 namespace NaderGorge.Application.Tests.LiveSupportAI;
@@ -207,9 +208,7 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
         var mockKnowledge = new MockKnowledgeService();
         var service = new LiveSupportAIAdminService(db, mockKnowledge, previewClient: new MockPreviewClient());
 
-        var turnCountBefore = await db.LiveSupportAITurns.CountAsync();
-        var messageCountBefore = await db.LiveSupportMessages.CountAsync();
-        var auditCountBefore = await db.AuditLogs.CountAsync();
+        var before = await BusinessRecordCountsAsync(db);
 
         var request = new LiveSupportAIPreviewRequestDto(published.Id, "برجاء المساعدة");
         var result = await service.PreviewAsync(request, CancellationToken.None);
@@ -219,10 +218,8 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
         Assert.Equal("reply", result.Decision.Type);
         Assert.Equal("DRY_RUN_DECISION_VALIDATED", result.SafeOutcome);
 
-        // Ensure zero writes
-        Assert.Equal(turnCountBefore, await db.LiveSupportAITurns.CountAsync());
-        Assert.Equal(messageCountBefore, await db.LiveSupportMessages.CountAsync());
-        Assert.Equal(auditCountBefore, await db.AuditLogs.CountAsync());
+        // Regression guard for LS-R09/T094: preview must not create any production record.
+        Assert.Equal(before, await BusinessRecordCountsAsync(db));
     }
 
     [Fact]
@@ -272,6 +269,58 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
         Assert.Empty(db.LiveSupportAITurns);
         Assert.Empty(db.LiveSupportAIPendingActions);
     }
+
+    [Fact]
+    public async Task PreviewAsync_WithNoBusinessRecords_RemainsZeroWriteAcrossAllSupportBoundaries()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01211111117");
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1, Status = LiveSupportAIPolicyStatus.Published, IsEnabled = true,
+            SystemInstructions = "Instructions", ReadableDataKeysJson = "[]", ActionKeysJson = "[]",
+            LookupKeysJson = "[]", VerificationQuestionKeysJson = "[]", CreatedByUserId = admin.Id
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var before = await BusinessRecordCountsAsync(db);
+        var service = new LiveSupportAIAdminService(db, new MockKnowledgeService(), new MockPreviewClient());
+
+        var result = await service.PreviewAsync(new LiveSupportAIPreviewRequestDto(policy.Id, "رسالة اختبار"), CancellationToken.None);
+
+        Assert.True(result.DryRun);
+        Assert.Equal("DRY_RUN_DECISION_VALIDATED", result.SafeOutcome);
+        Assert.Equal(before, await BusinessRecordCountsAsync(db));
+    }
+
+    private static async Task<BusinessRecordCounts> BusinessRecordCountsAsync(AppDbContext db) => new(
+        await db.LiveSupportConversations.CountAsync(),
+        await db.LiveSupportMessages.CountAsync(),
+        await db.LiveSupportAIConversationStates.CountAsync(),
+        await db.LiveSupportAITurns.CountAsync(),
+        await db.LiveSupportAIPendingActions.CountAsync(),
+        await db.LiveSupportAIVerificationSessions.CountAsync(),
+        await db.LiveSupportAIVerificationAttempts.CountAsync(),
+        await db.LiveSupportQueueEntries.CountAsync(),
+        await db.LiveSupportAssignments.CountAsync(),
+        await db.LiveSupportEvents.CountAsync(),
+        await db.OutboxEvents.CountAsync(),
+        await db.AuditLogs.CountAsync());
+
+    private sealed record BusinessRecordCounts(
+        int Conversations,
+        int Messages,
+        int AIStates,
+        int Turns,
+        int PendingActions,
+        int VerificationSessions,
+        int VerificationAttempts,
+        int QueueEntries,
+        int Assignments,
+        int Events,
+        int OutboxEvents,
+        int AuditLogs);
 
     private class MockKnowledgeService : ILiveSupportAIKnowledgeService
     {

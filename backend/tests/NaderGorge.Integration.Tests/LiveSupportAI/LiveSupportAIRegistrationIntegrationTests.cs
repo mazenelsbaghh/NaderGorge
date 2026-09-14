@@ -77,9 +77,7 @@ public sealed class LiveSupportAIRegistrationIntegrationTests
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
 
-        // Seed Student Role
-        var studentRole = new Role { Type = RoleType.Student, Name = "Student", AllowedDomain = "all" };
-        fixture.Db.Roles.Add(studentRole);
+        var studentRole = await fixture.Db.Roles.SingleAsync(role => role.Name == "Student");
 
         // Seed System Actor User
         var systemUser = new User { FullName = "System Actor", PhoneNumber = "01200000000", PasswordHash = "hash" };

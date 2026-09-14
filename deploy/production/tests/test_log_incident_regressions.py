@@ -1,0 +1,107 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_websocket_logs_never_persist_signalr_query_tokens() -> None:
+    nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
+    websocket = nginx.split("server_name ws.massar-academy.net;", 1)[1].split("\n}", 1)[0]
+    safe_format = nginx.split("log_format massar_websocket_safe", 1)[1].split(";", 1)[0]
+
+    assert "$request_method $uri $server_protocol" in safe_format
+    assert "$request_uri" not in safe_format
+    assert "$request " not in safe_format
+    assert "access_log /var/log/nginx/access.log massar_websocket_safe;" in websocket
+    assert "error_log /var/log/nginx/error.log crit;" in websocket
+
+
+def test_read_only_frontends_have_a_writable_next_image_cache() -> None:
+    compose = (ROOT / "deploy/production/compose/compose.app.yml").read_text()
+    frontend_defaults = compose.split("x-frontend-defaults:", 1)[1].split("\nservices:", 1)[0]
+
+    assert "read_only: true" in frontend_defaults
+    assert "/app/.next/cache:size=256m,mode=1777" in frontend_defaults
+
+
+def test_frontend_uses_memory_incremental_cache_instead_of_writing_server_files() -> None:
+    config = (ROOT / "frontend/next.config.ts").read_text()
+    handler = (ROOT / "frontend/cache-handler.cjs").read_text()
+
+    assert "cacheHandler:" in config
+    assert "cache-handler.cjs" in config
+    assert "MAX_ENTRIES" in handler
+    assert "entries.clear()" in handler
+
+
+def test_video_analysis_runtime_never_starts_a_telegram_client_update_loop() -> None:
+    """Regression for the 2026-08-03 worker TIMEOUT log storm."""
+    runtime_sources = "\n".join(
+        (ROOT / relative_path).read_text()
+        for relative_path in (
+            "worker/src/jobs/analyzeVideoChapters.ts",
+            "worker/src/services/geminiService.ts",
+            "worker/src/utils/audioExtractor.ts",
+        )
+    )
+
+    assert "TelegramClient" not in runtime_sources
+    assert "TELEGRAM_API_ID" not in runtime_sources
+    assert "TELEGRAM_STRING_SESSION" not in runtime_sources
+
+
+def test_backend_persists_data_protection_and_honors_forwarded_scheme_first() -> None:
+    program = (ROOT / "backend/src/NaderGorge.API/Program.cs").read_text()
+
+    assert "PersistKeysToFileSystem" in program
+    assert "HttpsPort = 443" in program
+    assert program.index("app.UseForwardedHeaders();") < program.index("UseHttpsRedirection()")
+    assert '!context.Request.Path.StartsWithSegments("/api/v1/internal")' in program
+
+
+def test_video_embed_material_uses_the_https_exempt_internal_route() -> None:
+    """Regression for the 2026-08-10 admin video-preview outage."""
+    controller = (
+        ROOT / "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs"
+    ).read_text()
+    playback_session = (ROOT / "frontend/src/lib/video-playback-session.ts").read_text()
+    action_attributes = controller.split(
+        "public async Task<IActionResult> GetEmbedMaterial", 1
+    )[0].rsplit("\n\n", 1)[1]
+
+    assert (
+        '[HttpGet("~/api/v1/internal/video-sessions/{sessionId:guid}/embed-material")]'
+        in action_attributes
+    )
+    assert "[InternalTokenAuthorize" in action_attributes
+    assert "[DisableRateLimiting]" in action_attributes
+    assert (
+        "/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material"
+        in playback_session
+    )
+
+
+def test_financial_constraint_allows_an_intentional_platform_loss() -> None:
+    model = (ROOT / "backend/src/NaderGorge.Infrastructure/Data/AppDbContext.cs").read_text()
+    constraint = model.split('HasCheckConstraint("CK_sales_financial_effect_amounts"', 1)[1].split(");", 1)[0]
+
+    assert '\\"TeacherShareImpact\\" >= 0' in constraint
+    assert '\\"PlatformShareImpact\\" >= 0' not in constraint
+
+
+def test_frontend_options_probes_do_not_create_405_noise() -> None:
+    nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
+
+    assert nginx.count("if ($request_method = OPTIONS) { return 204; }") == 5
+
+
+def test_hls_proxy_streams_segments_without_disk_buffering() -> None:
+    nginx = (ROOT / "deploy/production/config/nginx/massar-node.conf.template").read_text()
+    student = nginx.split("server_name app.massar-academy.net;", 1)[1].split("\n}", 1)[0]
+    hls = student.split("location ^~ /api/video/hls", 1)[1].split("\n    }", 1)[0]
+
+    assert "proxy_buffering off;" in hls
+    assert "proxy_request_buffering off;" in hls
+    assert "proxy_max_temp_file_size 0;" in hls

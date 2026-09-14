@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Auth;
 using NaderGorge.Application.Features.Auth.Commands;
+using NaderGorge.Application.Features.Auth.Queries;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -24,6 +27,14 @@ public class AuthController : ControllerBase
     }
 
     private const string RefreshCookieName = "ng_refresh";
+
+    [Authorize]
+    [HttpGet("session")]
+    public async Task<IActionResult> Session(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetCurrentSessionQuery(User.RequireUserId()), ct);
+        return result.Success ? Ok(result) : Unauthorized(result);
+    }
 
     [Authorize]
     [HttpGet("me")]
@@ -49,6 +60,11 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command)
     {
+        if (string.IsNullOrWhiteSpace(command.AvatarSlug))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail("يرجى اختيار الأفاتار الخاص بك."));
+        }
+
         var result = await _mediator.Send(command);
         return result.Success ? StatusCode(201, result) : BadRequest(result);
     }
@@ -125,7 +141,17 @@ public class AuthController : ControllerBase
         }
 
         var command = new RefreshTokenCommand(refreshToken);
-        var result = await _mediator.Send(command);
+        ApiResponse<LoginResponse> result;
+        try
+        {
+            result = await _mediator.Send(command);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ClearRefreshCookie();
+            return Unauthorized(ApiResponse.Fail("Invalid or expired refresh token"));
+        }
+
         if (!result.Success || result.Data == null)
         {
             // Note: Clear the cookie with the same domain configuration it was set with
@@ -195,7 +221,7 @@ public class AuthController : ControllerBase
             Secure = Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/auth/refresh",
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
+            Expires = DateTimeOffset.UtcNow.Add(AuthSessionPolicy.Lifetime)
         };
 
         if (!string.IsNullOrWhiteSpace(cookieDomain))

@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import AssistantContentPageClient from './AssistantContentPageClient';
 
 export default function AssistantContentPage() {
-  return <AssistantContentPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <AssistantContentPageClient />
+    </Suspense>
+  );
 }

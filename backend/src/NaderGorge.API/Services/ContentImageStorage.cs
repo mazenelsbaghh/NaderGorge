@@ -9,11 +9,11 @@ public sealed class ContentImageStorage : IContentImageStorage
 {
     private const int MaximumDimension = 1200;
     private const long MaximumPixelCount = 40_000_000;
-    private readonly IWebHostEnvironment _environment;
+    private readonly ISharedFileStorage _sharedStorage;
 
-    public ContentImageStorage(IWebHostEnvironment environment)
+    public ContentImageStorage(ISharedFileStorage sharedStorage)
     {
-        _environment = environment;
+        _sharedStorage = sharedStorage;
     }
 
     public async Task<string> SaveAsWebpAsync(
@@ -50,13 +50,16 @@ public sealed class ContentImageStorage : IContentImageStorage
 
         var randomFileName = $"{Guid.NewGuid():N}.webp";
         var relativeDirectory = Path.Combine("uploads", "content", contentFolder);
-        var physicalDirectory = Path.Combine(_environment.WebRootPath, relativeDirectory);
-        Directory.CreateDirectory(physicalDirectory);
-
-        var physicalPath = Path.Combine(physicalDirectory, randomFileName);
+        await using var encoded = new MemoryStream();
         await image.SaveAsWebpAsync(
-            physicalPath,
+            encoded,
             new WebpEncoder { Quality = 75 },
+            cancellationToken);
+        encoded.Position = 0;
+        await _sharedStorage.WriteAsync(
+            SharedFileArea.Public,
+            Path.Combine(relativeDirectory, randomFileName),
+            encoded,
             cancellationToken);
 
         return $"/{relativeDirectory.Replace(Path.DirectorySeparatorChar, '/')}/{randomFileName}";

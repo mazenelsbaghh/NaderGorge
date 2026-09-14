@@ -51,6 +51,32 @@ public sealed class StudentActionTests
     }
 
     [Fact]
+    public async Task ProfileUpdate_RemainsConfirmableWhenOnlyConversationVersionChanges()
+    {
+        await using var fixture = await ActionFixture.CreateAsync();
+        fixture.Db.StudentProfiles.Add(new StudentProfile
+        {
+            UserId = fixture.StudentId,
+            DateOfBirth = new DateTime(2008, 1, 1),
+            Governorate = "القاهرة",
+            Address = "اختبار"
+        });
+        await fixture.Db.SaveChangesAsync();
+        var definition = (await fixture.Actions.GetCatalogAsync(fixture.StaffId, false, fixture.ConversationId, CancellationToken.None))
+            .Single(x => x.Key == "student.profile.update");
+        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync(x => x.Id == fixture.ConversationId);
+        conversation.Version++;
+        await fixture.Db.SaveChangesAsync();
+
+        var result = await fixture.Actions.ExecuteAsync(
+            fixture.Request(definition, Guid.NewGuid().ToString(), "{\"fullName\":\"اسم الطالب المعدل\"}"),
+            CancellationToken.None);
+
+        Assert.False(result.Replayed);
+        Assert.Equal("اسم الطالب المعدل", await fixture.Db.Users.Where(x => x.Id == fixture.StudentId).Select(x => x.FullName).SingleAsync());
+    }
+
+    [Fact]
     public async Task DeviceDisconnect_RejectsDeviceOwnedByDifferentStudent()
     {
         await using var fixture = await ActionFixture.CreateAsync();
@@ -65,6 +91,30 @@ public sealed class StudentActionTests
 
         Assert.Equal("ACTION_VALIDATION_FAILED", error.Code);
         Assert.True(await fixture.Db.Devices.AnyAsync(x => x.Id == device.Id));
+    }
+
+    [Fact]
+    public async Task StudentActionContext_FormatsDeviceLabelAfterTheDatabaseQuery()
+    {
+        // Regression coverage for the 2026-07-14 production incident: device labels
+        // must be composed after materialization, not translated as a PostgreSQL VALUES query.
+        await using var fixture = await ActionFixture.CreateAsync();
+        fixture.Db.Devices.Add(new Device
+        {
+            UserId = fixture.StudentId,
+            DeviceFingerprint = "student-device",
+            DeviceType = "Mobile",
+            OsName = "Android",
+            BrowserName = "Chrome",
+            IsActive = true
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var context = await fixture.Actions.GetStudentActionContextAsync(
+            fixture.StaffId, false, fixture.ConversationId, CancellationToken.None);
+
+        var device = context.GetProperty("devices")[0];
+        Assert.Equal("Mobile · Android · Chrome", device.GetProperty("label").GetString());
     }
 
     [Fact]
@@ -148,6 +198,9 @@ public sealed class StudentActionTests
             var db = TestAppDbContextFactory.Create();
             var staff = await TestAppDbContextFactory.SeedUserAsync(db, "Support", "01011111111");
             var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01022222222");
+            var studentRole = new Role { Name = "Student", Type = RoleType.Student };
+            db.Roles.Add(studentRole);
+            db.UserRoles.Add(new UserRole { User = student, Role = studentRole });
             var employee = new EmployeeProfile { UserId = staff.Id, BasicSalary = 1 };
             db.EmployeeProfiles.Add(employee);
             db.LiveSupportStaffConfigs.Add(new LiveSupportStaffConfig { UserId = staff.Id, IsEnabled = true, MaxActiveConversations = 2, ConfiguredByUserId = staff.Id });

@@ -1,6 +1,7 @@
 import AddExamQuestionPageClient from "./AddExamQuestionPageClient";
 
-export default async function AddExamQuestionPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AddExamQuestionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ question?: string }> }) {
   const resolvedParams = await params;
-  return <AddExamQuestionPageClient params={resolvedParams} />;
+  const { question } = await searchParams;
+  return <AddExamQuestionPageClient params={resolvedParams} initialQuestionId={question} />;
 }
