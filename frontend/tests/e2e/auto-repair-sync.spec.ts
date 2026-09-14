@@ -78,3 +78,44 @@ test('Phase 1: work list archives dismissed cases with a reason and allows reope
   await page.getByRole('combobox', { name: 'الحالة' }).selectOption('active');
   await expect(page.getByRole('region', { name: 'قائمة المشاكل' })).toContainText('حالة اختبار الأرشفة');
 });
+
+test('Phase 1: an inconclusive diagnosis requires new evidence instead of a blind retry', async ({ page }) => {
+  await page.goto('http://admin.lvh.me:3000/login');
+  await page.getByRole('button', { name: 'فهمت، متابعة لتسجيل الدخول' }).click();
+  await page.fill('input[name="phoneNumber"]', '20000000000');
+  await page.fill('input[name="password"]', 'password');
+  await page.click('button[type="submit"]');
+  await expect(page.locator('h1')).toContainText('الرئيسية', { timeout: 30_000 });
+  let status = 'needs_evidence';
+  const evidence = 'قياس جديد في بيئة الاختبار: انتظار القفل 630 مللي ثانية';
+  await page.route('**/api/admin/auto-repair**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/case/decision')) {
+      expect(route.request().postDataJSON()).toEqual({ action: 'supply_evidence', evidence });
+      status = 'queued';
+      await route.fulfill({ json: { data: {} } });
+    } else if (url.pathname.endsWith('/case')) {
+      await route.fulfill({ json: { data: { id: 'case', status, evidence: 'Synthetic log', summary: 'يلزم قياس زمن انتظار القفل', proposalHash: '', approvedHash: '', releaseId: '', additionalEvidence: status === 'queued' ? [evidence] : [], events: [] } } });
+    } else {
+      const visible = url.searchParams.get('status') === status || (url.searchParams.get('status') === 'active' && status === 'queued');
+      await route.fulfill({ json: { data: {
+        control: { paused: false, autoDeploy: true, heartbeat: new Date().toISOString(), runner: 'node-3' },
+        incidents: visible ? [{ id: 'case', source: 'backend', category: 'حالة تحتاج قياسات', level: 'warning', status, occurrences: 40, attempts: 1, firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString() }] : [],
+        counts: [{ status, count: 1 }], total: visible ? 1 : 0,
+      } } });
+    }
+  });
+  await page.goto('http://admin.lvh.me:3000/admin/auto-repair');
+  await expect(page.getByRole('region', { name: 'قائمة المشاكل' })).not.toContainText('حالة تحتاج قياسات');
+  await page.getByRole('combobox', { name: 'الحالة' }).selectOption('needs_evidence');
+  await page.getByRole('button', { name: 'حالة تحتاج قياسات' }).click();
+  const panel = page.getByRole('region', { name: 'تفاصيل الإصلاح' });
+  await expect(panel).toContainText('يلزم قياس زمن انتظار القفل');
+  await expect(panel.getByRole('button', { name: 'إعادة التشخيص والمحاولة' })).toHaveCount(0);
+  const submit = panel.getByRole('button', { name: 'إضافة الدليل وإعادة التشخيص' });
+  await expect(submit).toBeDisabled();
+  await panel.getByRole('textbox', { name: 'الدليل الجديد' }).fill(evidence);
+  await submit.click();
+  await page.getByRole('combobox', { name: 'الحالة' }).selectOption('active');
+  await expect(page.getByRole('region', { name: 'قائمة المشاكل' })).toContainText('حالة تحتاج قياسات');
+});

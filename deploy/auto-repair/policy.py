@@ -39,10 +39,16 @@ def patch_hash(patch: bytes, baseline: str) -> str:
     return hashlib.sha256(baseline.encode() + b'\0' + patch).hexdigest()
 
 
-def validate_review(review: dict) -> None:
-    if set(review) != {'summary', 'safeToDeploy', 'critical', 'reproduction', 'verification'}:
+def validate_report(review: dict) -> None:
+    if not isinstance(review, dict) or set(review) != {'summary', 'safeToDeploy', 'critical', 'reproduction', 'verification'}:
         raise ValueError('Invalid independent review response')
-    if review['safeToDeploy'] is not True:
-        raise ValueError('Independent review did not accept this repair')
+    if type(review['safeToDeploy']) is not bool:
+        raise ValueError('Invalid deployment assessment')
     if type(review['critical']) is not bool or not all(isinstance(review[k], str) and review[k].strip() for k in ('summary', 'reproduction', 'verification')):
         raise ValueError('Review lacks reproduction or verification evidence')
+
+
+def validate_review(review: dict) -> None:
+    validate_report(review)
+    if review['safeToDeploy'] is not True:
+        raise ValueError('Independent review did not accept this repair: ' + redact(review['summary']))

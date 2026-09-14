@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'production/scripts
 if __name__ == '__main__':
     sys.modules['runner'] = sys.modules[__name__]
 
-from policy import assess_patch, patch_hash, redact, validate_review
+from policy import assess_patch, patch_hash, redact, validate_report, validate_review
 
 
 DOCKER = ["sudo", "-n", "/usr/bin/docker"]
@@ -197,6 +197,8 @@ class Runner:
         self.git(checkout, ['add', '-A', '--', '.'], workspace)
         paths = self.git(checkout, ['diff', '--cached', '--name-only', '-z', baseline], workspace).split('\0')
         paths = [path for path in paths if path]
+        if not paths:
+            return b'', []
         assess_patch(paths, workspace)
         patch = subprocess.run(['git', f'--git-dir={checkout / ".git"}', f'--work-tree={workspace}',
             'diff', '--cached', '--binary', '--no-ext-diff', baseline], capture_output=True, check=True).stdout
@@ -211,8 +213,18 @@ class Runner:
         lease.report('repairing', 'بدأ فحص الكود في بيئة معزولة وتجهيز الإصلاح')
         request = {'instructions': (Path(__file__).parent / 'SKILL.md').read_text(),
             'incident': incident['evidence'], 'category': incident['category'], 'mode': 'repair'}
-        self.container(workspace, request, lease)
+        diagnosis = json.loads(self.container(workspace, request, lease))
+        validate_report(diagnosis)
+        diagnostic_detail = '\n'.join([
+            diagnosis['summary'], 'إعادة الإنتاج: ' + diagnosis['reproduction'],
+            'التحقق: ' + diagnosis['verification']])
+        if not diagnosis['safeToDeploy']:
+            lease.report('needs_evidence', diagnostic_detail)
+            return
         patch, paths = self.snapshot(checkout, workspace, baseline)
+        if not paths:
+            lease.report('needs_evidence', 'لم ينتج التشخيص تغييرًا قابلًا للمراجعة؛ يلزم دليل جديد قبل إعادة المحاولة.\n' + diagnostic_detail)
+            return
         digest = patch_hash(patch, baseline)
         lease.report('testing', 'جارٍ التحقق المستقل من الإصلاح والاختبارات\n' + '\n'.join(paths))
         for offset in range(0, len(patch), 6000):

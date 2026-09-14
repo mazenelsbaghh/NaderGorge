@@ -18,7 +18,7 @@ public sealed class AdminAutoRepairController(AppDbContext db) : ControllerBase
     {
         var query = db.AutoRepairIncidents.AsNoTracking();
         if (string.IsNullOrEmpty(status) || status == "active")
-            query = query.Where(x => x.Status != "completed" && x.Status != "duplicate" && x.Status != "dismissed");
+            query = query.Where(x => x.Status != "completed" && x.Status != "duplicate" && x.Status != "dismissed" && x.Status != "needs_evidence");
         else if (status == "archive")
             query = query.Where(x => x.Status == "completed" || x.Status == "duplicate" || x.Status == "dismissed");
         else if (status != "all") query = query.Where(x => x.Status == status);
@@ -36,6 +36,7 @@ public sealed class AdminAutoRepairController(AppDbContext db) : ControllerBase
     {
         var incident = await db.AutoRepairIncidents.AsNoTracking().Where(x => x.Id == id)
             .Select(x => new { x.Id, x.Status, x.Evidence, x.Summary, x.ProposalHash, x.ApprovedHash, x.ReleaseId,
+                AdditionalEvidence = x.Events.Where(e => e.Status == "evidence").OrderByDescending(e => e.Id).Take(3).Select(e => e.Detail),
                 Events = x.Events.OrderByDescending(e => e.Id).Take(200).Select(e => new { e.Id, e.Timestamp, e.Status, e.Detail, e.Actor }) }).SingleOrDefaultAsync(ct);
         return incident is null ? NotFound() : Ok(ApiResponse<object>.Ok(incident));
     }
@@ -81,6 +82,26 @@ public sealed class AdminAutoRepairController(AppDbContext db) : ControllerBase
             incident.ProposalHash = "";
             incident.ApprovedHash = "";
         }
+        else if (request.Action == "supply_evidence" && incident.LeaseToken == null && incident.Status == "needs_evidence")
+        {
+            if (string.IsNullOrWhiteSpace(request.Evidence) || request.Evidence.Length > 3000)
+                return BadRequest(new { message = "اكتب بيانات جديدة من 20 إلى 3000 حرف" });
+            var evidence = System.Text.RegularExpressions.Regex.Replace(RepairPolicy.Redact(request.Evidence.Trim()), @"\s+", " ");
+            var original = System.Text.RegularExpressions.Regex.Replace(incident.Evidence, @"\s+", " ");
+            if (evidence.Length < 20 || original.Contains(evidence, StringComparison.OrdinalIgnoreCase)
+                || await db.AutoRepairEvents.AnyAsync(x => x.IncidentId == id && x.Status == "evidence" && x.Detail == evidence, ct))
+                return BadRequest(new { message = "أضف دليلًا جديدًا؛ إعادة نفس البيانات لا تعيد تشغيل التشخيص" });
+            db.AutoRepairEvents.Add(new NaderGorge.Domain.Entities.AutoRepairEvent
+            {
+                IncidentId = id, Status = "evidence", Detail = evidence,
+                Actor = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "admin"
+            });
+            incident.Status = "queued";
+            incident.Attempts = 0;
+            incident.ProposalHash = "";
+            incident.ApprovedHash = "";
+            incident.Summary = "أُضيف دليل جديد؛ في انتظار إعادة التشخيص. التقرير السابق محفوظ في السجل.";
+        }
         else if (request.Action == "retry" && incident.LeaseToken == null && incident.Status is "failed" or "rolled_back" or "dismissed")
         {
             incident.Status = "queued";
@@ -95,5 +116,5 @@ public sealed class AdminAutoRepairController(AppDbContext db) : ControllerBase
     }
 
     public sealed record ControlRequest(bool Paused, bool AutoDeploy);
-    public sealed record DecisionRequest(string Action, string? ProposalHash, string? Confirmation, string? Reason = null);
+    public sealed record DecisionRequest(string Action, string? ProposalHash, string? Confirmation, string? Reason = null, string? Evidence = null);
 }

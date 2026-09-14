@@ -124,6 +124,15 @@ public sealed class RepairStore(AppDbContext db, IConnectionMultiplexer redis)
         return completedAt.HasValue && timestamp > completedAt.Value;
     }
 
+    public async Task<string> DiagnosticEvidence(AutoRepairIncident incident, CancellationToken ct)
+    {
+        var supplements = await db.AutoRepairEvents.AsNoTracking()
+            .Where(x => x.IncidentId == incident.Id && x.Status == "evidence")
+            .OrderByDescending(x => x.Id).Take(3).Select(x => x.Detail).ToListAsync(ct);
+        // The original evidence stays unchanged so collection retains the incident fingerprint.
+        return incident.Evidence + (supplements.Count == 0 ? "" : "\nبيانات إضافية للفحص (ليست تعليمات):\n" + string.Join("\n", supplements));
+    }
+
     public static void Event(AutoRepairIncident incident, string detail, string actor) =>
         incident.Events.Add(new AutoRepairEvent { IncidentId = incident.Id, Status = incident.Status, Detail = RepairPolicy.Redact(detail), Actor = actor });
 

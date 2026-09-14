@@ -168,4 +168,78 @@ public sealed class AutoRepairPostgresTests
         await store.IngestExternal([log with { Id = Guid.NewGuid(), Timestamp = completedAt.AddSeconds(1) }], default);
         Assert.Equal("queued", incident.Status);
     }
+
+    [AutoRepairPostgresFact]
+    public async Task Inconclusive_diagnosis_waits_for_new_evidence_without_reclaiming_repeated_logs()
+    {
+        var connection = Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_DB")!;
+        var parsed = new NpgsqlConnectionStringBuilder(connection);
+        Assert.Equal("repair_test", parsed.Database);
+        Assert.Contains(parsed.Host, new[] { "localhost", "127.0.0.1" });
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options);
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.MigrateAsync();
+        await using var redis = await ConnectionMultiplexer.ConnectAsync(Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_REDIS")!);
+        await redis.GetDatabase().KeyDeleteAsync("system:logs:v1");
+        var store = new RepairStore(db, redis);
+        var runner = new AutoRepairRunnerController(db, store);
+        var admin = new AdminAutoRepairController(db) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var control = await db.AutoRepairControls.SingleAsync();
+        control.Paused = false;
+        await db.SaveChangesAsync();
+        await runner.Synchronization(new("ready", new string('a', 40),
+            [new("node-1", "git-" + new string('b', 40)), new("node-2", "git-" + new string('b', 40)), new("node-3", "git-" + new string('b', 40))]), default);
+        var log = new RepairStore.RepairLog(Guid.NewGuid(), DateTimeOffset.UtcNow.AddMinutes(-1),
+            "gateway", "NeedsEvidenceFixture", "warning", "Slow request without query or lock timing", null);
+        await store.IngestExternal([log], default);
+        await runner.Claim(default);
+        var incident = await db.AutoRepairIncidents.SingleAsync();
+        Assert.NotNull(incident.LeaseToken);
+        var lease = incident.LeaseToken!.Value;
+        Assert.IsType<ConflictObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: "A new lock timing measurement"), default));
+        Assert.IsType<OkObjectResult>(await runner.Report(incident.Id,
+            new(lease, "repairing", "Investigation", null, null), default));
+        const string reason = "Cannot reproduce latency; need query timings and PostgreSQL lock wait evidence";
+        Assert.IsType<OkObjectResult>(await runner.Report(incident.Id,
+            new(lease, "needs_evidence", reason, null, null), default));
+        db.ChangeTracker.Clear();
+        incident = await db.AutoRepairIncidents.SingleAsync();
+        Assert.Equal("needs_evidence", incident.Status);
+        Assert.Equal(reason, incident.Summary);
+        Assert.Null(incident.LeaseToken);
+        Assert.Null(incident.LeaseUntil);
+        Assert.Empty(incident.ProposalHash);
+        Assert.Empty(incident.ApprovedHash);
+        await store.IngestExternal([log with { Id = Guid.NewGuid(), Timestamp = DateTimeOffset.UtcNow }], default);
+        await runner.Claim(default);
+        Assert.Equal("needs_evidence", incident.Status);
+        Assert.Equal(1, incident.Attempts);
+        Assert.Equal(2, incident.Occurrences);
+        Assert.IsType<ConflictObjectResult>(await admin.Decision(incident.Id, new("retry", null, null), default));
+        Assert.IsType<BadRequestObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: log.Message), default));
+        Assert.IsType<BadRequestObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: "short"), default));
+        Assert.IsType<BadRequestObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: new string('x', 3001)), default));
+        const string extra = "Isolated reproduction: query 12ms, lock wait 630ms; token=fixture-secret";
+        Assert.IsType<OkObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: extra), default));
+        Assert.Equal("queued", incident.Status);
+        Assert.Equal(0, incident.Attempts);
+        Assert.Equal(log.Message, incident.Evidence.Trim());
+        var claim = Assert.IsType<OkObjectResult>(await runner.Claim(default));
+        var payload = JsonSerializer.Serialize(claim.Value);
+        Assert.Contains("lock wait 630ms", payload);
+        Assert.DoesNotContain("fixture-secret", payload);
+        Assert.Equal(1, await db.AutoRepairIncidents.CountAsync());
+        Assert.IsType<OkObjectResult>(await runner.Report(incident.Id,
+            new(incident.LeaseToken!.Value, "needs_evidence", "Need a second independent measurement", null, null), default));
+        Assert.IsType<BadRequestObjectResult>(await admin.Decision(incident.Id,
+            new("supply_evidence", null, null, Evidence: extra), default));
+        Assert.Equal("needs_evidence", incident.Status);
+        Assert.Single(await db.AutoRepairEvents.Where(x => x.IncidentId == incident.Id && x.Status == "evidence").ToListAsync());
+        Assert.True(await db.AutoRepairEvents.AnyAsync(x => x.IncidentId == incident.Id && x.Detail == reason));
+    }
 }

@@ -8,9 +8,9 @@ public static class RepairPolicy
 {
     private static readonly Dictionary<string, string[]> Transitions = new()
     {
-        ["diagnosing"] = ["repairing", "failed", "awaiting_approval"],
-        ["repairing"] = ["testing", "failed", "awaiting_approval"],
-        ["testing"] = ["ready", "failed", "awaiting_approval"],
+        ["diagnosing"] = ["repairing", "failed", "needs_evidence", "awaiting_approval"],
+        ["repairing"] = ["testing", "failed", "needs_evidence", "awaiting_approval"],
+        ["testing"] = ["ready", "failed", "needs_evidence", "awaiting_approval"],
         ["ready"] = ["deploying", "failed", "awaiting_approval"],
         ["deploying"] = ["monitoring", "failed", "rolled_back"],
         ["monitoring"] = ["completed", "failed", "rolled_back"],

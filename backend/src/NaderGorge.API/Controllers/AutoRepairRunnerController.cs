@@ -68,7 +68,8 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-        return Ok(new { incident = incident is null ? null : new { incident.Id, incident.Status, incident.Evidence, incident.Category, incident.LeaseToken, incident.ProposalHash, incident.ApprovedHash }, control.AutoDeploy });
+        var evidence = incident is null ? null : await store.DiagnosticEvidence(incident, ct);
+        return Ok(new { incident = incident is null ? null : new { incident.Id, incident.Status, Evidence = evidence, incident.Category, incident.LeaseToken, incident.ProposalHash, incident.ApprovedHash }, control.AutoDeploy });
     }
 
     [HttpPost("{id:guid}/heartbeat")]
@@ -95,6 +96,7 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         var incident = await db.AutoRepairIncidents.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (incident is null || incident.LeaseToken != request.LeaseToken || incident.LeaseUntil <= DateTimeOffset.UtcNow) return Conflict();
         if (incident.Status != request.Status && !RepairPolicy.CanTransition(incident.Status, request.Status)) return Conflict();
+        if (request.Status == "needs_evidence" && (string.IsNullOrWhiteSpace(request.Detail) || request.Detail.Length > 12_000)) return BadRequest();
         var control = await db.AutoRepairControls.SingleAsync(ct);
         if (request.Status == "deploying" && (control.Paused || (!control.AutoDeploy && incident.ApprovedHash != incident.ProposalHash))) return Conflict();
         if (request.ProposalHash is not null && !System.Text.RegularExpressions.Regex.IsMatch(request.ProposalHash, "^[a-f0-9]{64}$")) return BadRequest();
@@ -107,7 +109,9 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         if (request.ProposalHash is not null) incident.ProposalHash = request.ProposalHash;
         if (request.ReleaseId is not null) incident.ReleaseId = RepairPolicy.Redact(request.ReleaseId);
         RepairStore.Event(incident, request.Detail, "node-3");
-        if (request.Status is "failed" or "completed" or "rolled_back" or "awaiting_approval" or "ready")
+        if (request.Status == "needs_evidence")
+        { incident.ProposalHash = ""; incident.ApprovedHash = ""; }
+        if (request.Status is "failed" or "completed" or "rolled_back" or "awaiting_approval" or "ready" or "needs_evidence")
         { incident.LeaseToken = null; incident.LeaseUntil = null; }
         if (request.Status == "failed" && previousStatus is "diagnosing" or "repairing" or "testing" && incident.Attempts < 3)
         {
