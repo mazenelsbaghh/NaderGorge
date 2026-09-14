@@ -875,7 +875,7 @@ var lastInteractionAt = 0;
 document.getElementById('click-overlay').addEventListener('click', function () {
   if (!__videoEmbedSuspended && player) {
     var state = player.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) { player.pauseVideo(); } 
+    if (state === YT.PlayerState.PLAYING) { player.pauseVideo(); }
     else { player.playVideo(); }
   }
 });
@@ -986,7 +986,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     document.querySelectorAll = function(sel) {
       var result = _origQSA(sel);
       if (typeof sel === 'string' && (sel.indexOf('iframe') !== -1 || sel === '*')) {
-        return _origQSA(sel + ':not([id])');  
+        return _origQSA(sel + ':not([id])');
       }
       return result;
     };
@@ -1072,13 +1072,13 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
              if (typeof player.getVolume === 'function') vol = player.getVolume() * 100;
              if (typeof player.isMuted === 'function') muted = player.isMuted();
           } catch(e) {}
-          
+
           // Discover all available methods on the VK player object
           var methods = [];
           for (var key in player) {
             try { methods.push(key + ':' + typeof player[key]); } catch(e) {}
           }
-          
+
           postToParent('ready', { duration: 0, volume: vol, isMuted: muted, provider: 'vk', vkMethods: methods });
           if (typeof _lastVideoTimeVK !== 'undefined' && _lastVideoTimeVK > 0) {
             try { player.seek(_lastVideoTimeVK); } catch(e) {}
