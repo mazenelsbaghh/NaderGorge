@@ -17,6 +17,8 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+# Initialize typing before Python 3.14 background imports can observe it half-loaded.
+import typing  # noqa: F401
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
