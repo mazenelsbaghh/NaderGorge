@@ -11,6 +11,7 @@ public class RequestPerformanceLoggingMiddleware
     private readonly string _nodeId;
     private readonly string _releaseId;
     private const int ThresholdMs = 500;
+    private static int _activeRequests;
 
     public RequestPerformanceLoggingMiddleware(
         RequestDelegate next,
@@ -26,6 +27,7 @@ public class RequestPerformanceLoggingMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var startedAt = Stopwatch.GetTimestamp();
+        var concurrentRequests = Interlocked.Increment(ref _activeRequests);
         using var databaseCommands = RequestDbCommandScope.Begin();
         try
         {
@@ -33,14 +35,15 @@ public class RequestPerformanceLoggingMiddleware
         }
         finally
         {
-            RecordEvidence(context, databaseCommands, startedAt);
+            Interlocked.Decrement(ref _activeRequests);
+            RecordEvidence(context, databaseCommands, startedAt, concurrentRequests);
         }
     }
 
     private void RecordEvidence(
         HttpContext context,
         RequestDbCommandScope databaseCommands,
-        long startedAt)
+        long startedAt, int concurrentRequests)
     {
         if (context.Response.StatusCode == StatusCodes.Status101SwitchingProtocols)
         {
@@ -57,7 +60,7 @@ public class RequestPerformanceLoggingMiddleware
         }
 
         _logger.LogWarning(
-            "Slow request. CorrelationId={CorrelationId} Route={Route} Method={Method} Status={Status} DurationMs={DurationMs} Node={Node} Release={Release} EfCommandCount={EfCommandCount} EfCommandDurationMs={EfCommandDurationMs}",
+            "Slow request. CorrelationId={CorrelationId} Route={Route} Method={Method} Status={Status} DurationMs={DurationMs} Node={Node} Release={Release} EfCommandCount={EfCommandCount} EfCommandDurationMs={EfCommandDurationMs} EvidenceV=1 ConnectionOpenMs={ConnectionOpenMs} ConcurrentRequests={ConcurrentRequests} Commands={Commands}",
             context.Items[CorrelationIdMiddleware.CorrelationIdItem],
             measurement.Route,
             measurement.Method,
@@ -66,7 +69,9 @@ public class RequestPerformanceLoggingMiddleware
             measurement.NodeId,
             measurement.ReleaseId,
             measurement.DbCommandCount,
-            measurement.DbCommandDurationMilliseconds);
+            measurement.DbCommandDurationMilliseconds,
+            Math.Round(databaseCommands.ConnectionMilliseconds, 2), concurrentRequests,
+            System.Text.Json.JsonSerializer.Serialize(databaseCommands.Commands));
     }
 
     private RequestPerformanceMeasurement Measurement(

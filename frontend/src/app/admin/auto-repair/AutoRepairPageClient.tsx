@@ -8,7 +8,7 @@ import { decideRepair, getRepair, getRepairs, setRepairControl, type RepairDetai
 
 const labels: Record<RepairStatus, string> = {
   queued: 'في الانتظار', diagnosing: 'تشخيص', repairing: 'إصلاح', testing: 'اختبار', ready: 'جاهزة للنشر',
-  deploying: 'نشر', monitoring: 'مراقبة بعد النشر', completed: 'مكتملة', awaiting_approval: 'تحتاج قرارك', failed: 'تعذّر الإصلاح', rolled_back: 'تم التراجع', duplicate: 'تكرار مجمّع', dismissed: 'مستبعدة', needs_evidence: 'تحتاج بيانات إضافية',
+  deploying: 'نشر', monitoring: 'مراقبة بعد النشر', completed: 'مكتملة', awaiting_approval: 'تحتاج قرارك', failed: 'تعذّر الإصلاح', rolled_back: 'تم التراجع', duplicate: 'تكرار مجمّع', dismissed: 'مستبعدة', needs_evidence: 'تحتاج بيانات إضافية', collecting_evidence: 'جمع قياسات تلقائيًا',
 };
 const date = (timestamp: string) => new Date(timestamp).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
 
@@ -87,6 +87,7 @@ export default function AutoRepairPageClient() {
       {detail && <section className="admin-panel space-y-5 p-5" aria-label="تفاصيل الإصلاح">
         <div className="flex items-center justify-between"><h2 className="text-lg font-bold">تفاصيل الإصلاح · {labels[detail.status]}</h2><button className="admin-btn-ghost" onClick={() => { setSelected(''); setDetail(null); }}>إغلاق التفاصيل</button></div>
         <p className="whitespace-pre-wrap break-words">{detail.summary || 'لم ينتهِ التشخيص بعد.'}</p>
+        {detail.status === 'collecting_evidence' && <p role="status">يجمع النظام قياسات حديثة تلقائيًا لمدة أقصاها 20 دقيقة. يعيد التشخيص عند وصول دليل جديد، بحد أقصى جولتين.</p>}
         {detail.releaseId && <p className="break-all text-sm">الإصدار: <bdi>{detail.releaseId}</bdi></p>}
         <details><summary className="cursor-pointer py-2 font-semibold">الدليل من اللوج</summary><pre dir="auto" className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--admin-bg)] p-4 text-xs">{detail.evidence}</pre></details>
         {(detail.status === 'awaiting_approval' || (detail.status === 'ready' && detail.approvedHash !== detail.proposalHash && !control?.autoDeploy)) && <div className="space-y-3 rounded-xl border border-[var(--admin-border)] p-4">
@@ -109,7 +110,7 @@ export default function AutoRepairPageClient() {
           <button className="admin-btn-ghost" disabled={busy || !!error || dismissReason.trim().length < 10} onClick={() => void act(() => decideRepair(detail.id, { action: 'dismiss', reason: dismissReason.trim() }))}>استبعاد ونقل للسجل</button>
         </div>}
         <h3 className="font-semibold">ما الذي تم؟</h3>
-        <ol className="divide-y divide-[var(--admin-border)]">{detail.events.map(event => <li key={event.id} className="space-y-2 py-4"><div className="flex flex-wrap justify-between gap-2 text-sm"><strong>{event.status === 'evidence' ? 'بيانات إضافية' : labels[event.status] ?? event.status}</strong><time dateTime={event.timestamp}>{date(event.timestamp)}</time></div><p className="whitespace-pre-wrap break-words text-sm">{event.detail}</p></li>)}</ol>
+        <ol className="divide-y divide-[var(--admin-border)]">{detail.events.map(event => <li key={event.id} className="space-y-2 py-4"><div className="flex flex-wrap justify-between gap-2 text-sm"><strong>{event.status === 'evidence' ? 'بيانات إضافية' : event.status === 'collection_closed' ? 'انتهى جمع القياسات' : labels[event.status as RepairStatus] ?? event.status}</strong><time dateTime={event.timestamp}>{date(event.timestamp)}</time></div><p className="whitespace-pre-wrap break-words text-sm">{event.detail}</p></li>)}</ol>
       </section>}
     </div>
   </AdminPage>;

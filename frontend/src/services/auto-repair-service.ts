@@ -1,6 +1,6 @@
 import apiClient from './api-client';
 
-export type RepairStatus = 'queued' | 'diagnosing' | 'repairing' | 'testing' | 'ready' | 'deploying' | 'monitoring' | 'completed' | 'awaiting_approval' | 'failed' | 'rolled_back' | 'duplicate' | 'dismissed' | 'needs_evidence';
+export type RepairStatus = 'queued' | 'diagnosing' | 'repairing' | 'testing' | 'ready' | 'deploying' | 'monitoring' | 'completed' | 'awaiting_approval' | 'failed' | 'rolled_back' | 'duplicate' | 'dismissed' | 'needs_evidence' | 'collecting_evidence';
 export interface RepairIncident {
   id: string; source: string; category: string; level: string; status: RepairStatus;
   occurrences: number; attempts: number; firstSeen: string; lastSeen: string; summary: string; releaseId: string;
@@ -23,7 +23,7 @@ export interface RepairOverview {
 export interface RepairDetail {
   id: string; status: RepairStatus; evidence: string; summary: string; proposalHash: string; approvedHash: string; releaseId: string;
   additionalEvidence?: string[];
-  events: { id: number; timestamp: string; status: RepairStatus | 'evidence'; detail: string; actor: string }[];
+  events: { id: number; timestamp: string; status: RepairStatus | 'evidence' | 'collection_closed'; detail: string; actor: string }[];
 }
 export async function getRepairs(status: string, page: number) {
   return (await apiClient.get<{ data: RepairOverview }>('/admin/auto-repair', { params: { status, page } })).data.data;

@@ -9,6 +9,16 @@ public sealed class DatabaseTransactionDiagnostics(
     ILogger<DatabaseTransactionDiagnostics> logger,
     IHttpContextAccessor httpContextAccessor) : DbTransactionInterceptor
 {
+    public override void TransactionCommitted(DbTransaction transaction, TransactionEndEventData eventData)
+        => NaderGorge.Infrastructure.Observability.RequestDbCommandScope.RecordTransactionCommit(eventData.Duration);
+
+    public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        NaderGorge.Infrastructure.Observability.RequestDbCommandScope.RecordTransactionCommit(eventData.Duration);
+        return Task.CompletedTask;
+    }
+
     public override void TransactionFailed(DbTransaction transaction, TransactionErrorEventData eventData)
         => LogFailure(eventData);
 

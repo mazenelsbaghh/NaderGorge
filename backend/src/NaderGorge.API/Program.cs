@@ -94,6 +94,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // ---------- Database ----------
 builder.Services.AddSingleton<SlowQueryInterceptor>();
 builder.Services.AddSingleton<DbCommandMetricsInterceptor>();
+builder.Services.AddSingleton<DbConnectionTimingInterceptor>();
 builder.Services.AddSingleton<DatabaseTransactionDiagnostics>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -103,6 +104,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.AddInterceptors(
         sp.GetRequiredService<SlowQueryInterceptor>(),
         sp.GetRequiredService<DbCommandMetricsInterceptor>(),
+        sp.GetRequiredService<DbConnectionTimingInterceptor>(),
         sp.GetRequiredService<DatabaseTransactionDiagnostics>());
 });
 builder.Services.AddScoped<NaderGorge.API.AutoRepair.RepairStore>();

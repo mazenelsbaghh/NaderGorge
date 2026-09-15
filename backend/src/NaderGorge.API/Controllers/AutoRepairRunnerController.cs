@@ -43,6 +43,7 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(1700914)", ct);
         await store.ConsolidateQueued(ct);
         await store.Ingest(ct);
+        await store.CollectEvidence(ct);
         var control = await db.AutoRepairControls.SingleAsync(ct);
         control.Heartbeat = DateTimeOffset.UtcNow;
         control.Runner = "node-3";
@@ -80,6 +81,7 @@ public sealed class AutoRepairRunnerController(AppDbContext db, RepairStore stor
         var incident = await db.AutoRepairIncidents.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (incident is null || incident.LeaseToken != request.LeaseToken || incident.LeaseUntil <= DateTimeOffset.UtcNow) return Conflict();
         await store.Ingest(ct);
+        await store.CollectEvidence(ct);
         var control = await db.AutoRepairControls.SingleAsync(ct);
         incident.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(3);
         control.Heartbeat = DateTimeOffset.UtcNow;

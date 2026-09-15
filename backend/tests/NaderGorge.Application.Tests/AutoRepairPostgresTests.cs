@@ -23,6 +23,54 @@ public sealed class AutoRepairPostgresFactAttribute : FactAttribute
 
 public sealed class AutoRepairPostgresTests
 {
+    [AutoRepairPostgresFact]
+    public async Task Evidence_collection_persists_samples_and_does_not_reopen_an_exhausted_window()
+    {
+        var connection = Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_DB")!;
+        var parsed = new NpgsqlConnectionStringBuilder(connection);
+        Assert.Equal("repair_test", parsed.Database);
+        Assert.Contains(parsed.Host, new[] { "localhost", "127.0.0.1" });
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connection).Options);
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.MigrateAsync();
+        await using var redis = await ConnectionMultiplexer.ConnectAsync(Environment.GetEnvironmentVariable("AUTO_REPAIR_TEST_REDIS")!);
+        await redis.GetDatabase().KeyDeleteAsync("system:logs:v1");
+        var control = await db.AutoRepairControls.SingleAsync();
+        control.Paused = false;
+        var incident = new AutoRepairIncident { Status = "needs_evidence", Fingerprint = new string('d', 64),
+            Evidence = "Route=api/video/progress Method=POST", Summary = "need latency evidence" };
+        db.Add(incident);
+        await db.SaveChangesAsync();
+        var collector = new RepairEvidenceCollector(db, redis);
+        await collector.Collect(default);
+        db.ChangeTracker.Clear();
+        incident = await db.AutoRepairIncidents.Include(x => x.Events).SingleAsync();
+        Assert.Equal("collecting_evidence", incident.Status);
+        var log = JsonSerializer.Serialize(new { id = Guid.NewGuid(), timestamp = DateTimeOffset.UtcNow,
+            source = "backend", category = "NaderGorge.API.Middleware.RequestPerformanceLoggingMiddleware", level = "warning",
+            message = "Route=api/video/progress Method=POST EvidenceV=1 ConnectionOpenMs=5 Commands=[]", exception = "" });
+        await redis.GetDatabase().ListRightPushAsync("system:logs:v1", log);
+        await collector.Collect(default);
+        db.ChangeTracker.Clear();
+        incident = await db.AutoRepairIncidents.Include(x => x.Events).SingleAsync();
+        Assert.Equal("queued", incident.Status);
+        Assert.Contains("ConnectionOpenMs=5", await new RepairStore(db, redis).DiagnosticEvidence(incident, default));
+        incident.Status = "needs_evidence";
+        await db.SaveChangesAsync();
+        await collector.Collect(default);
+        var window = await db.AutoRepairEvents.Where(x => x.Status == "collecting_evidence").OrderByDescending(x => x.Id).FirstAsync();
+        window.Timestamp = DateTimeOffset.UtcNow.AddMinutes(-21);
+        await db.SaveChangesAsync();
+        await redis.GetDatabase().KeyDeleteAsync("system:logs:v1");
+        await collector.Collect(default);
+        await collector.Collect(default);
+        db.ChangeTracker.Clear();
+        incident = await db.AutoRepairIncidents.Include(x => x.Events).SingleAsync();
+        Assert.Equal("needs_evidence", incident.Status);
+        Assert.Single(incident.Events, x => x.Status == "collection_closed");
+        Assert.Equal(2, incident.Events.Count(x => x.Status == "collecting_evidence"));
+    }
+
     static AutoRepairPostgresTests() => AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     [AutoRepairPostgresFact]
     public async Task Deduplication_lease_recovery_and_hash_bound_approval_use_durable_state()

@@ -142,20 +142,41 @@ class Runner:
     def seed_dependencies(self, workspace: Path):
         command([*DOCKER, 'run', '--rm', '--pull=never', '--network=none', '--read-only',
             '--cap-drop=ALL', '--security-opt=no-new-privileges', '--cpus=2', '--memory=2g',
+            '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g,mode=1777', '-e', 'HOME=/tmp',
             '--user', f'{os.getuid()}:{os.getgid()}', '--mount', f'type=bind,src={workspace},dst=/workspace',
             self.image, 'bash', '-c',
-            'cp -R /opt/bootstrap/frontend/node_modules /workspace/frontend/ && cp -R /opt/bootstrap/worker/node_modules /workspace/worker/'],
+            'cp -R /opt/bootstrap/frontend/node_modules /workspace/frontend/ && cp -R /opt/bootstrap/worker/node_modules /workspace/worker/ && '
+            + "printf '<configuration><packageSources><clear /></packageSources></configuration>\\n' >/tmp/repair-nuget.config && "
+            + 'cd /workspace && dotnet restore backend/NaderGorge.sln --configfile /tmp/repair-nuget.config -p:NuGetAudit=false'],
             self.root, timeout=300)
 
     def container(self, workspace: Path, request: dict, lease: Lease) -> str:
+        from verification import TestServices
+        services = TestServices(self.config, self.root)
+        services.start()
+        try:
+            command([*DOCKER, 'network', 'connect', self.config['agent_network'], services.names[0]], self.root)
+            return self.diagnostic_container(workspace, request, lease, services)
+        finally:
+            services.close()
+
+    def diagnostic_container(self, workspace: Path, request: dict, lease: Lease, services) -> str:
         if lease.lost.is_set() or lease.paused or self.stopping:
             raise RepairFailure('Agent cannot start after pause or lease loss')
         name = 'massar-repair-' + uuid.uuid4().hex
         argv = [*DOCKER, 'run', '--interactive', '--rm', '--pull=never', '--name', name, '--init', '--read-only',
             '--cap-drop=ALL', '--security-opt=no-new-privileges', '--pids-limit=256', '--cpus=2', '--memory=6g',
-            '--network=' + self.config['agent_network'], '--user', f'{os.getuid()}:{os.getgid()}',
+            '--network=container:' + services.names[0], '--user', f'{os.getuid()}:{os.getgid()}',
             '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g,mode=1777', '--mount', f'type=bind,src={workspace},dst=/workspace',
             '--mount', f'type=bind,src={Path(self.config["codex_home"]).resolve()},dst=/codex',
+            '-e', 'AUTO_REPAIR_TEST_DB=Host=127.0.0.1;Database=repair_test;Username=postgres',
+            '-e', 'ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=massar_live_support_query_budget_disposable_repair;Username=postgres',
+            '-e', 'MASSAR_LEARNING_TEST_CONNECTION=Host=127.0.0.1;Database=massar_learning_test;Username=postgres',
+            '-e', 'LIVE_SUPPORT_QUERY_BUDGET_DATABASE_AUTHORIZATION=DELETE-DISPOSABLE-LIVE-SUPPORT-QUERY-BUDGET-DATABASE',
+            '-e', 'ConnectionStrings__Redis=redis:6379', '-e', 'Redis__ConnectionString=redis:6379',
+            '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379', '-e', 'TEST_REDIS_CONNECTION=redis:6379',
+            '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
+            '-e', 'NO_PROXY=127.0.0.1,localhost,postgres,redis,redis-unavailable,.lvh.me',
             '-e', 'CODEX_HOME=/codex', '-e', 'HOME=/tmp', '-e', 'HTTPS_PROXY=' + self.config['https_proxy'],
             '-e', 'HTTP_PROXY=' + self.config['https_proxy'], '-w', '/workspace', self.image,
             # Codex documents this flag for externally sandboxed environments. Docker provides

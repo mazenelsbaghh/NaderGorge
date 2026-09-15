@@ -124,6 +124,8 @@ public sealed class RepairStore(AppDbContext db, IConnectionMultiplexer redis)
         return completedAt.HasValue && timestamp > completedAt.Value;
     }
 
+    public Task CollectEvidence(CancellationToken ct) => new RepairEvidenceCollector(db, redis).Collect(ct);
+
     public async Task<string> DiagnosticEvidence(AutoRepairIncident incident, CancellationToken ct)
     {
         var supplements = await db.AutoRepairEvents.AsNoTracking()
