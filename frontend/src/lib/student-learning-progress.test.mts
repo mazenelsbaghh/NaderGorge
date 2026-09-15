@@ -3,9 +3,9 @@ import test from 'node:test';
 import { learningSummary, lessonProgressPercent, videoProgressPercent } from './student-learning-progress.ts';
 import type { MyLessonDto } from '../services/student-service.ts';
 
-test('video completion requires the full recorded media duration, not a quota view', () => {
+test('video completion tolerates clock rounding but not a quota view', () => {
   assert.equal(videoProgressPercent({ durationSeconds: 100, learningWatchedSeconds: 30 }), 30);
-  assert.equal(videoProgressPercent({ durationSeconds: 100, learningWatchedSeconds: 99.999 }), 99);
+  assert.equal(videoProgressPercent({ durationSeconds: 100, learningWatchedSeconds: 99.999 }), 100);
   assert.equal(videoProgressPercent({ durationSeconds: 100, learningWatchedSeconds: 100 }), 100);
   assert.equal(videoProgressPercent({ durationSeconds: 100, learningWatchedSeconds: 200 }), 100);
 });
@@ -55,4 +55,18 @@ test('empty and partially unknown home data do not invent progress', () => {
     lesson({ recordedWatchSeconds: 60, totalVideoSeconds: 60 }),
     lesson({ totalVideoSeconds: null }),
   ]).percent, null);
+});
+
+// 2026-09-15: rounding tolerance is per part and must stay consistent with the backend.
+test('completion bounds missing time and makes every completed part display 100 percent', () => {
+  for (const [durationSeconds, learningWatchedSeconds, percent] of [
+    [100, 99, 100], [100, 98.9, 98], [3600, 3598, 100], [3600, 3597.9, 99], [1, 0, 0],
+  ]) assert.equal(videoProgressPercent({ durationSeconds, learningWatchedSeconds }), percent);
+  assert.equal(lessonProgressPercent([
+    { durationSeconds: 100, learningWatchedSeconds: 99.999 },
+    { durationSeconds: 3600, learningWatchedSeconds: 3598 },
+  ]), 100);
+  assert.equal(learningSummary([
+    lesson({ isCompleted: true, recordedWatchSeconds: 3598, totalVideoSeconds: 3600 }),
+  ]).percent, 100);
 });

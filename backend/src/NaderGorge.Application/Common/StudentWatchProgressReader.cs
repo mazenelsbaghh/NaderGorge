@@ -5,7 +5,10 @@ namespace NaderGorge.Application.Common;
 
 public sealed record StudentVideoProgress(Guid VideoId, Guid LessonId, int? DurationSeconds, decimal WatchedSeconds)
 {
-    public bool IsCompleted => DurationSeconds is > 0 && WatchedSeconds >= DurationSeconds.Value;
+    // Browser clocks and whole-second asset metadata can leave a fully played part just short.
+    public bool IsCompleted => DurationSeconds is > 0
+        && WatchedSeconds >= DurationSeconds.Value - Math.Min(2m, DurationSeconds.Value * 0.01m);
+    public decimal CompletionWatchedSeconds => IsCompleted ? DurationSeconds!.Value : WatchedSeconds;
     public DateTime? LastWatchedAt { get; init; }
 }
 
@@ -48,7 +51,7 @@ public static class StudentWatchProgressReader
         // let one video compensate for an unwatched part of the lesson.
         if (videos.Count == 0 || videos.Any(video => video.DurationSeconds is null or <= 0)) return null;
         var duration = videos.Sum(video => (long)video.DurationSeconds!.Value);
-        var watched = videos.Sum(video => Math.Clamp(video.WatchedSeconds, 0, video.DurationSeconds!.Value));
+        var watched = videos.Sum(video => Math.Clamp(video.CompletionWatchedSeconds, 0, video.DurationSeconds!.Value));
         return (int)Math.Floor(watched * 100m / duration);
     }
 }

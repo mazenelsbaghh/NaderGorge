@@ -20,13 +20,9 @@ let package = Package(
             path: "Sources/NaderGorgeParent",
             exclude: ["NaderGorgeParentApp.swift"],
             resources: [.process("Resources")]),
-        .target(
-            name: "XCTest",
-            dependencies: [],
-            path: "Sources/XCTest"),
         .testTarget(
             name: "NaderGorgeParentTests",
-            dependencies: ["NaderGorgeParent", "XCTest"],
+            dependencies: ["NaderGorgeParent"],
             path: "Tests/NaderGorgeParentTests"),
     ]
 )

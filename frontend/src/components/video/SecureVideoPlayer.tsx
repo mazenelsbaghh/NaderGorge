@@ -2,6 +2,8 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { formatPlayerTime } from '@/lib/player-time';
+import { isVideoLearningComplete } from '@/lib/student-learning-progress';
+import { trackedPlaybackTickSeconds } from '@/lib/video-tracking-clock';
 import { videoProgressRetryDelayMs } from '@/lib/video-progress-retry';
 import { clearVideoPlaybackCookies } from '@/lib/video-playback-cleanup';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -122,7 +124,6 @@ const TRACKING_FLUSH_INTERVAL_SECONDS = 30;
 const TRACKING_RETRY_MAX_ATTEMPTS = 3;
 const TRACKING_BATCH_MAX_SEGMENTS = 30;
 const RECENT_MEDIA_PROGRESS_WINDOW_MS = 3_000;
-const MAX_TRACKING_TICK_SECONDS = 1.5;
 
 type ProgressFlushOptions = {
   keepalive?: boolean;
@@ -966,6 +967,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const activeProgressRequestRef = useRef<ActiveProgressRequest | null>(null);
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
   const lastTrackingTickAtRef = useRef(0);
+  const lastTrackingMediaTimeRef = useRef(0);
   const [thresholdSeconds, setThresholdSeconds] = useState(60);
   const thresholdSecondsRef = useRef(60);
 
@@ -1023,7 +1025,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       platformQueryClient.invalidateQueries(queryKeys.student.dashboard(progressUserId));
       platformQueryClient.invalidateQueries(['student', 'lesson-progress', progressUserId]);
     }
-    if (!learningCompletedRef.current && durationRef.current > 0 && learningSeconds >= durationRef.current) {
+    if (!learningCompletedRef.current && isVideoLearningComplete({ durationSeconds: durationRef.current, learningWatchedSeconds: learningSeconds })) {
       learningCompletedRef.current = true;
       window.dispatchEvent(new Event('massar:watch-registered'));
     }
@@ -1098,6 +1100,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const accrueTrackedPlayback = useCallback((now = performance.now()) => {
     const previousTick = lastTrackingTickAtRef.current;
+    const mediaDelta = currentTimeRef.current - lastTrackingMediaTimeRef.current;
+    lastTrackingMediaTimeRef.current = currentTimeRef.current;
     lastTrackingTickAtRef.current = now;
     if (previousTick <= 0 || !isPlayingRef.current) return;
 
@@ -1105,9 +1109,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       <= RECENT_MEDIA_PROGRESS_WINDOW_MS;
     if (!mediaClockIsAdvancing) return;
 
-    const elapsedSeconds = Math.min(
-      MAX_TRACKING_TICK_SECONDS,
-      Math.max(0, (now - previousTick) / 1000),
+    const elapsedSeconds = trackedPlaybackTickSeconds(
+      Math.max(0, (now - previousTick) / 1000), mediaDelta, playbackRateRef.current,
     );
     appendTrackedPlayback(elapsedSeconds, playbackRateRef.current);
   }, [appendTrackedPlayback]);
@@ -1560,8 +1563,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       });
       serverTrackedSecondsRef.current = session.watchInfo.totalTrackedSeconds ?? 0;
       setLearningWatchedSeconds(session.watchInfo.learningWatchedSeconds ?? 0);
-      learningCompletedRef.current = knownDurationSeconds !== null
-        && (session.watchInfo.learningWatchedSeconds ?? 0) >= knownDurationSeconds;
+      learningCompletedRef.current = isVideoLearningComplete({ durationSeconds: knownDurationSeconds, learningWatchedSeconds: session.watchInfo.learningWatchedSeconds });
       actualWatchedSeconds.current = serverTrackedSecondsRef.current;
       setDisplayedWatched(resolveDisplayedProgress(
         actualWatchedSeconds.current,
@@ -1647,8 +1649,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Player controls (send commands to iframe via postMessage) ──
   const togglePlay = () => {
-    sendCommand(isPlaying ? 'pause' : 'play');
-    if (!isPlaying) {
+    sendCommand(isPlayingRef.current ? 'pause' : 'play');
+    if (!isPlayingRef.current) {
       setIsBuffering(true);
     }
   };
@@ -2206,9 +2208,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onMouseMove={handlePlayerInteraction}
         onFocus={handlePlayerInteraction}
         onKeyDown={(event) => {
-          if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || status !== 'ready') return;
+          if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || status !== 'ready') return;
           const target = event.target as HTMLElement;
           if (target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')) return;
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            if (target.closest('button, a, [role="menu"], [role="listbox"]')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            cancelSingleTapAction();
+            seekByDoubleTap(event.key === 'ArrowLeft' ? 'backward' : 'forward');
+            handlePlayerInteraction();
+            return;
+          }
+          if (event.repeat) return;
           const isSpace = event.code === 'Space' || event.key === ' ';
           const isToggleKey = event.code === 'KeyK' || event.key.toLowerCase() === 'k';
           if (!isToggleKey && !(isSpace && !target.closest('button, a')) && !(event.key === 'Enter' && target === event.currentTarget)) return;
@@ -2234,7 +2246,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             dir="ltr"
           >
             <div
-              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
+              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16 [@media(pointer:fine)]:w-1/2 [@media(pointer:fine)]:max-w-none' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 if (event.pointerType === 'mouse') {
@@ -2247,9 +2259,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               onPointerCancel={cancelSeekTap}
               onClick={(event) => event.stopPropagation()}
             />
-            {usesNativePlayerChrome && <div className="h-full flex-1" />}
+            {usesNativePlayerChrome && <div className="h-full flex-1 [@media(pointer:fine)]:hidden" />}
             <div
-              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16' : 'w-1/2'}`}
+              className={`pointer-events-auto h-full touch-manipulation select-none ${usesNativePlayerChrome ? 'w-[12.5%] min-w-11 max-w-16 [@media(pointer:fine)]:w-1/2 [@media(pointer:fine)]:max-w-none' : 'w-1/2'}`}
               onPointerDown={(event) => {
                 if (!event.isPrimary) return;
                 if (event.pointerType === 'mouse') {

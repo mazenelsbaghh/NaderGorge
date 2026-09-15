@@ -55,6 +55,41 @@ class NaderGorgeParentTests: XCTestCase {
         XCTAssertEqual(loaded.first?.name, "سعيد علي")
     }
     
+    @MainActor
+    func testSwitchingStudentDiscardsDelayedPreviousStudentResponse() async throws {
+        let first = StudentProfile(studentId: "first", name: "First", token: "first-token")
+        let second = StudentProfile(studentId: "second", name: "Second", token: "second-token")
+        try keychain.addProfile(first)
+        let viewModel = DashboardViewModel(apiService: mockAPI, keychainService: keychain)
+        let started = expectation(description: "First student request started")
+        var pendingResponse: CheckedContinuation<StudentDetailsResponse, Error>?
+        mockAPI.fetchStudentDetailsHandler = { _ in
+            try await withCheckedThrowingContinuation { continuation in
+                pendingResponse = continuation
+                started.fulfill()
+            }
+        }
+        let firstRequest = Task { await viewModel.fetchDetails() }
+        await fulfillment(of: [started], timeout: 2)
+        let oldDetails = StudentDetailsResponse(
+            studentName: "First", grade: "Grade", school: "School", avatarSlug: nil,
+            attendance: AttendanceSummary(totalLessons: 1, watchedLessons: 1, completionRate: 100),
+            exams: [], homeworks: [], warnings: []
+        )
+        viewModel.studentDetails = oldDetails
+        mockAPI.fetchStudentDetailsHandler = nil
+        mockAPI.fetchStudentDetailsResult = .failure(APIError.serverError(statusCode: 503))
+        await viewModel.selectProfile(second)
+        XCTAssertNil(viewModel.studentDetails)
+        XCTAssertEqual(keychain.activeStudentId(), second.studentId)
+        pendingResponse?.resume(returning: oldDetails)
+        await firstRequest.value
+        XCTAssertEqual(viewModel.selectedProfile, second)
+        XCTAssertNil(viewModel.studentDetails)
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.isLoading)
+    }
+
     // MARK: - LinkingViewModel Tests
     
     @MainActor
@@ -185,6 +220,7 @@ class NaderGorgeParentTests: XCTestCase {
 class MockAPIService: APIServiceProtocol {
     var verifyCodeResult: Result<VerifyCodeResponse, Error>?
     var fetchStudentDetailsResult: Result<StudentDetailsResponse, Error>?
+    var fetchStudentDetailsHandler: ((String) async throws -> StudentDetailsResponse)?
     
     func verifyCode(trackingCode: String, deviceToken: String) async throws -> VerifyCodeResponse {
         guard let result = verifyCodeResult else {
@@ -199,6 +235,9 @@ class MockAPIService: APIServiceProtocol {
     }
     
     func fetchStudentDetails(token: String) async throws -> StudentDetailsResponse {
+        if let fetchStudentDetailsHandler {
+            return try await fetchStudentDetailsHandler(token)
+        }
         guard let result = fetchStudentDetailsResult else {
             throw APIError.invalidResponse
         }

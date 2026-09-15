@@ -1,5 +1,6 @@
 'use client';
 
+import { videoProgressPercent } from '@/lib/student-learning-progress';
 import { devConsole } from '@/utils/dev-console';
 import { type ReactNode, useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1387,7 +1388,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  <span className="font-bold">تقدم الفيديو:</span>{' '}
                                                                  {formatDuration(Math.floor(activity.learningWatchedSeconds ?? 0))} من{' '}
                                                                  {activity.durationSeconds ? formatDuration(activity.durationSeconds) : 'مدة غير متوفرة'}
-                                                                 {activity.durationSeconds ? ` · ${Math.min(100, Math.floor((activity.learningWatchedSeconds ?? 0) * 100 / activity.durationSeconds))}%` : ''}
+                                                                 {activity.durationSeconds ? ` · ${videoProgressPercent(activity)}%` : ''}
                                                                  {activity.isCompleted ? ' · مكتمل' : ''}
                                                                </div>
                                                                <div>

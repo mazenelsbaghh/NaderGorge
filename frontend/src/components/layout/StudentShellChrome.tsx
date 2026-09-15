@@ -69,6 +69,7 @@ type StudentShellRoute =
   | '/student/public-exams'
   | '/student/balance'
   | '/student/mistakes'
+  | '/student/grades'
   | '/student/notifications'
   | '/student/profile'
   | '/student/teachers';
@@ -113,6 +114,7 @@ const secondaryNavItems: Array<{
 }> = [
     { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
     { href: '/student/shared-packages', label: 'باكدجات عامة', icon: BookMarked },
+    { href: '/student/grades', label: 'درجاتي', icon: ChartNoAxesColumn },
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
     { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
     { href: '/student/balance', label: 'الرصيد', icon: Wallet },
@@ -199,6 +201,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         ? '/student/teachers'
       : pathname.startsWith('/student/balance')
         ? '/student/balance'
+      : pathname.startsWith('/student/grades')
+        ? '/student/grades'
       : pathname.startsWith('/student/mistakes')
         ? '/student/mistakes'
       : pathname.startsWith('/student/notifications')

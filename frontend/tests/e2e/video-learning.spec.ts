@@ -165,11 +165,12 @@ test('disabled tools leave no student notebook or automatic chapter panel', asyn
   await expect(page.getByRole('complementary', { name: 'فصول الفيديو والخريطة الذهنية' })).toHaveCount(0);
 });
 
-test('2026-09-13 mouse, Space and K toggle playback without requiring the center button', async ({ page }) => {
+for (const provider of ['bunny', 'bunny-hls']) {
+test(`2026-09-15 ${provider}: center clicks and keyboard control playback and seeking`, async ({ page }) => {
   await openLesson(page, async () => {
     await page.route('**/api/video/embed?*', route => route.fulfill({
       contentType: 'text/html',
-      body: `<body>Playing test video<output id="state">playing</output><script>
+      body: `<body>Playing test video<output id="state">playing</output><output id="position">60</output><script>
         let playing = true;
         const report = () => {
           document.querySelector('#state').textContent = playing ? 'playing' : 'paused';
@@ -177,12 +178,16 @@ test('2026-09-13 mouse, Space and K toggle playback without requiring the center
         };
         addEventListener('message', event => {
           if(event.source !== parent || event.origin !== location.origin) return;
+          if(event.data.type === 'seekTo') {
+            document.querySelector('#position').textContent = event.data.time;
+          }
           if(event.data.type === 'play' || event.data.type === 'pause') {
             playing = event.data.type === 'play';
             report();
           }
         });
-        parent.postMessage({source:'video-embed',type:'ready',data:{duration:600,provider:'bunny-hls'}},location.origin);
+        parent.postMessage({source:'video-embed',type:'ready',data:{duration:600,provider:'${provider}'}},location.origin);
+        parent.postMessage({source:'video-embed',type:'timeUpdate',data:{currentTime:60,duration:600}},location.origin);
         report();
       </script></body>`,
     }));
@@ -191,7 +196,7 @@ test('2026-09-13 mouse, Space and K toggle playback without requiring the center
   const state = page.frameLocator(embedSelector).locator('#state');
   await surface.scrollIntoViewIfNeeded();
   const box = (await surface.boundingBox())!;
-  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.25);
+  await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.3);
   await expect(state).toHaveText('paused');
   await page.keyboard.press('Space');
   await expect(state).toHaveText('playing');
@@ -207,7 +212,17 @@ test('2026-09-13 mouse, Space and K toggle playback without requiring the center
   await page.keyboard.down('Space');
   await expect(state).toHaveText('paused');
   await page.keyboard.up('Space');
+  const position = page.frameLocator(embedSelector).locator('#position');
+  await page.keyboard.press('ArrowLeft');
+  await expect(position).toHaveText('50');
+  await expect(state).toHaveText('paused');
+  await page.keyboard.press('ArrowRight');
+  await expect(position).toHaveText('60');
+  await page.getByRole('textbox', { name: 'ملاحظتي', exact: true }).click();
+  await page.keyboard.press('ArrowLeft');
+  await expect(position).toHaveText('60');
 });
+}
 
 test.describe('touch controls', () => {
   test.use({ hasTouch: true });

@@ -63,6 +63,14 @@ public class StudentController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("grades")]
+    public async Task<IActionResult> GetGrades([FromQuery] string kind = "all", [FromQuery] int page = 1,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetStudentGradesQuery(GetUserId(), kind, page), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("mistakes")]
     public async Task<IActionResult> GetMistakes()
     {

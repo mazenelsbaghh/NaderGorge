@@ -296,7 +296,29 @@ export interface ShellBootstrapDto {
   hasSeenTrackingCodePopup?: boolean;
 }
 
+export type StudentGradeKind = 'all' | 'exam' | 'homework';
+export interface StudentGradeDto {
+  id: string;
+  kind: 'exam' | 'homework';
+  title: string;
+  lessonTitle: string | null;
+  status: 'Graded' | 'PendingReview' | 'Missed';
+  score: number | null;
+  totalScore: number;
+  attemptedAt: string;
+}
+export interface StudentGradesDto {
+  items: StudentGradeDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
 export const studentService = {
+  getGrades: async (kind: StudentGradeKind, page: number, signal?: AbortSignal): Promise<StudentGradesDto> => {
+    const res = await apiClient.get('/student/grades', { params: { kind, page }, signal });
+    return res.data.data;
+  },
   getDashboard: async (signal?: AbortSignal): Promise<DashboardDto> => {
     const res = await apiClient.get('/student/dashboard', { signal });
     return res.data?.data;

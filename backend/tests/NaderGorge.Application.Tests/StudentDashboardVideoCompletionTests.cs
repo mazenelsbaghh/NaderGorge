@@ -13,8 +13,10 @@ namespace NaderGorge.Application.Tests;
 /// </summary>
 public sealed class StudentDashboardVideoCompletionTests
 {
-    [Fact]
-    public async Task Dashboard_CountsOnlyVisibleLessonsAndCompletesAfterEveryVisiblePartIsViewed()
+    [Theory]
+    [InlineData(100)]
+    [InlineData(99.999)]
+    public async Task Dashboard_CountsOnlyVisibleLessonsAndCompletesAfterEveryVisiblePartIsViewed(double finalPartSeconds)
     {
         await using var db = TestAppDbContextFactory.Create();
         var fixture = await SeedDashboardAsync(db);
@@ -42,7 +44,7 @@ public sealed class StudentDashboardVideoCompletionTests
             UserId = fixture.StudentId,
             LessonVideoId = fixture.FourthActiveVideoId,
             WatchCount = 1,
-            LearningWatchedSeconds = 100
+            LearningWatchedSeconds = (decimal)finalPartSeconds
         });
         await db.SaveChangesAsync();
 

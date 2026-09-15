@@ -76,7 +76,9 @@ public struct LinkingView: View {
                     details: details,
                     onConfirm: {
                         viewModel.confirmLink(student: student)
-                        onLinkSuccess()
+                        if case .success = viewModel.uiState {
+                            onLinkSuccess()
+                        }
                     },
                     onCancel: {
                         viewModel.cancelLink()
@@ -234,7 +236,7 @@ public struct LinkingView: View {
                                     .font(.custom("Tajawal-Regular", size: 13))
                                     .foregroundColor(.gray)
                                 
-                                Button(action: {}) {
+                                Link(destination: URL(string: "https://massar-academy.net/faq")!) {
                                     Text("تواصل مع الدعم الفني")
                                         .font(.custom("Tajawal-Bold", size: 13))
                                         .fontWeight(.bold)
