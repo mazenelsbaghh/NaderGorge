@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 506,
+  "reachableFileCount": 503,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -506,10 +506,6 @@
     {
       "file": "frontend/src/app/admin/platform-finance/wallets/page.tsx",
       "route": "/admin/platform-finance/wallets"
-    },
-    {
-      "file": "frontend/src/app/admin/platform-profits/page.tsx",
-      "route": "/admin/platform-profits"
     },
     {
       "file": "frontend/src/app/admin/popup/AdminPopupPageClient.tsx",
@@ -1556,10 +1552,6 @@
       "route": null
     },
     {
-      "file": "frontend/src/features/platform-finance/PlatformProfitsPage.tsx",
-      "route": null
-    },
-    {
       "file": "frontend/src/features/teacher-finance-center/TeacherAccountReport.tsx",
       "route": null
     },
@@ -1956,10 +1948,6 @@
       "route": null
     },
     {
-      "file": "frontend/src/services/platform-profits-service.ts",
-      "route": null
-    },
-    {
       "file": "frontend/src/services/shared-package-service.ts",
       "route": null
     },
@@ -2028,7 +2016,7 @@
       "route": null
     }
   ],
-  "callCount": 605,
+  "callCount": 604,
   "calls": [
     {
       "method": "DELETE",
@@ -2847,15 +2835,6 @@
       "source": {
         "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
         "line": 10
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/admin/platform-finance/profits",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 18
       }
     },
     {
@@ -7920,5 +7899,5 @@
       }
     }
   ],
-  "digest": "95e6799824192d5dc5fcfa6ee0a4fda34dae1a5086c07c4ecbc1ee1636eade00"
+  "digest": "c622a31b97507acd214feb3db512953509d5d68ffab3ab5e428fe55c99e759ef"
 }

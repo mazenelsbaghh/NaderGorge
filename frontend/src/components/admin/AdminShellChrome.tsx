@@ -134,7 +134,6 @@ export type AdminShellRoute =
   | '/admin/hr/reports'
   | '/admin/operations'
   | '/admin/finance'
-  | '/admin/platform-profits'
   | '/admin/platform-finance'
   | '/admin/platform-finance/operations'
   | '/admin/platform-finance/planning'
@@ -446,12 +445,6 @@ const navItems: AdminNavItem[] = [
     permission: 'finance.manage',
   },
   {
-    href: '/admin/platform-profits',
-    label: 'أرباح المنصّة',
-    icon: CircleDollarSign,
-    adminOnly: true,
-  },
-  {
     href: '/admin/platform-finance',
     label: 'المركز المالي العام',
     icon: WalletCards,
@@ -672,7 +665,6 @@ const GROUP_CONFIG = [
     label: 'الحسابات والميزانيات',
     icon: CircleDollarSign,
     hrefs: [
-      '/admin/platform-profits',
       '/admin/platform-finance',
       '/admin/platform-finance/operations',
       '/admin/platform-finance/planning',
@@ -1238,23 +1230,6 @@ function AdminShellFrame({
               <Home className="h-5 w-5 flex-shrink-0" />
               {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">الرئيسية</span>}
             </IntentLink>
-
-            {filteredNavItems.some((item) => item.href === '/admin/platform-profits') && (
-              <IntentLink
-                href="/admin/platform-profits"
-                aria-label="أرباح المنصّة"
-                aria-current={activePath === '/admin/platform-profits' ? 'page' : undefined}
-                title="أرباح المنصّة"
-                className={`flex h-11 items-center rounded-xl transition-colors gap-3 ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'} ${
-                  activePath === '/admin/platform-profits'
-                    ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                    : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                }`}
-              >
-                <CircleDollarSign className="h-5 w-5 flex-shrink-0" />
-                {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">أرباح المنصّة</span>}
-              </IntentLink>
-            )}
 
             {!isSidebarCollapsed && quickAdminItems.length > 0 && !normalizedNavQuery && (
               <div className="rounded-xl bg-[var(--admin-hover)] p-2">

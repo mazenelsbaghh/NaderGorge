@@ -95,7 +95,7 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
         var groupedRoles = await _db.JournalLines.AsNoTracking()
             .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
                 && line.JournalEntry.OccurredAt >= start
-                && line.JournalEntry.OccurredAt < end)
+                && line.JournalEntry.OccurredAt <= end)
             .GroupBy(line => line.FinancialAccount.Role)
             .Select(group => new { Role = group.Key, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
             .ToListAsync(ct);

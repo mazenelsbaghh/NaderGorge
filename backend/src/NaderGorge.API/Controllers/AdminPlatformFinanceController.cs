@@ -20,7 +20,6 @@ namespace NaderGorge.API.Controllers;
 [Route("api/admin/platform-finance")]
 public sealed class AdminPlatformFinanceController(
     PlatformFinanceDashboardService finance,
-    PlatformProfitReportQuery profits,
     IPlatformFinanceOperationsService operations,
     IPlatformFinancePlanningService planning,
     IPlatformFinanceExportService export,
@@ -39,16 +38,6 @@ public sealed class AdminPlatformFinanceController(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         CancellationToken ct) => finance.GetDashboardAsync(from, to, ct);
-
-    [HttpGet("profits")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<PlatformProfitReportDto>> Profits(
-        [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
-    {
-        if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
-            return BadRequest("تاريخ البداية لا يتجاوز تاريخ النهاية.");
-        return Ok(await profits.GetAsync(from, to, ct));
-    }
 
     [HttpGet("ledger")]
     [HasPermission("finance.ledger.view")]

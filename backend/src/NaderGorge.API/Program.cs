@@ -213,7 +213,6 @@ builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationS
 builder.Services.AddScoped<TeacherAccountingService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialPostingService, NaderGorge.Infrastructure.Services.Finance.FinancialPostingService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.PlatformFinanceDashboardService>();
-builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.PlatformProfitReportQuery>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceOperationsService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceOperationsService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();

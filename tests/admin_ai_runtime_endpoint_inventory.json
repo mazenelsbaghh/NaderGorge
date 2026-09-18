@@ -343,74 +343,6 @@
     "permissions": []
   },
   {
-    "route": "api/admin/auto-repair",
-    "controller": "AdminAutoRepair",
-    "action": "List",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
-    "route": "api/admin/auto-repair/{id:guid}",
-    "controller": "AdminAutoRepair",
-    "action": "Detail",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
-    "route": "api/admin/auto-repair/{id:guid}/decision",
-    "controller": "AdminAutoRepair",
-    "action": "Decision",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
-    "route": "api/admin/auto-repair/control",
-    "controller": "AdminAutoRepair",
-    "action": "Control",
-    "methods": [
-      "PUT"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
     "route": "api/Admin/bunny/libraries",
     "controller": "Admin",
     "action": "CreateBunnyStreamLibrary",
@@ -3273,28 +3205,6 @@
     ]
   },
   {
-    "route": "api/admin/platform-finance/profits",
-    "controller": "AdminPlatformFinance",
-    "action": "Profits",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      },
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
     "route": "api/admin/platform-finance/reconciliation",
     "controller": "AdminPlatformFinance",
     "action": "Reconciliation",
@@ -3395,71 +3305,11 @@
     ]
   },
   {
-    "route": "api/admin/platform-finance/refunds/bootstrap",
-    "controller": "AdminPlatformFinance",
-    "action": "RefundBootstrap",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": [
-      "finance.refunds.view",
-      "finance.refunds.view"
-    ]
-  },
-  {
     "route": "api/admin/platform-finance/refunds/external-package",
     "controller": "AdminPlatformFinance",
     "action": "CreateExternalPackageRefund",
     "methods": [
       "POST"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": [
-      "finance.refunds.create",
-      "finance.refunds.create"
-    ]
-  },
-  {
-    "route": "api/admin/platform-finance/refunds/students",
-    "controller": "AdminPlatformFinance",
-    "action": "FindRefundStudent",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": [
-      "finance.refunds.create",
-      "finance.refunds.create"
-    ]
-  },
-  {
-    "route": "api/admin/platform-finance/refunds/students/{studentId:guid}",
-    "controller": "AdminPlatformFinance",
-    "action": "RefundStudent",
-    "methods": [
-      "GET"
     ],
     "authorization": [
       {
@@ -5223,23 +5073,6 @@
     "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/agreements",
     "controller": "AdminTeacherFinanceCenter",
     "action": "ListAgreements",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
-    "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/collections",
-    "controller": "AdminTeacherFinanceCenter",
-    "action": "GetTeacherCollections",
     "methods": [
       "GET"
     ],
@@ -8241,31 +8074,6 @@
     ]
   },
   {
-    "route": "api/hr/admin/attendance/sessions/{sessionId:guid}/cancel",
-    "controller": "HrAttendance",
-    "action": "CancelEvent",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      },
-      {
-        "Policy": null,
-        "Roles": "Admin",
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": [
-      "hr.attendance.manage",
-      "hr.attendance.manage"
-    ]
-  },
-  {
     "route": "api/hr/admin/attendance/trusted-devices",
     "controller": "HrAttendance",
     "action": "RegisterDevice",
@@ -10211,61 +10019,6 @@
     ]
   },
   {
-    "route": "api/internal/auto-repair/{id:guid}/heartbeat",
-    "controller": "AutoRepairRunner",
-    "action": "Heartbeat",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [],
-    "AllowsAnonymous": true,
-    "permissions": []
-  },
-  {
-    "route": "api/internal/auto-repair/{id:guid}/report",
-    "controller": "AutoRepairRunner",
-    "action": "Report",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [],
-    "AllowsAnonymous": true,
-    "permissions": []
-  },
-  {
-    "route": "api/internal/auto-repair/claim",
-    "controller": "AutoRepairRunner",
-    "action": "Claim",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [],
-    "AllowsAnonymous": true,
-    "permissions": []
-  },
-  {
-    "route": "api/internal/auto-repair/logs",
-    "controller": "AutoRepairRunner",
-    "action": "Logs",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [],
-    "AllowsAnonymous": true,
-    "permissions": []
-  },
-  {
-    "route": "api/internal/auto-repair/synchronization",
-    "controller": "AutoRepairRunner",
-    "action": "Synchronization",
-    "methods": [
-      "POST"
-    ],
-    "authorization": [],
-    "AllowsAnonymous": true,
-    "permissions": []
-  },
-  {
     "route": "api/learning-center/follow-ups",
     "controller": "LearningCenter",
     "action": "FollowUps",
@@ -10814,15 +10567,12 @@
     "methods": [
       "PUT"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
-    "permissions": []
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
   },
   {
     "route": "api/live-support/connections/conversations/{id:guid}/block",
@@ -10831,15 +10581,12 @@
     "methods": [
       "GET"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
-    "permissions": []
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
   },
   {
     "route": "api/live-support/connections/conversations/{id:guid}/block/retry",
@@ -10848,15 +10595,12 @@
     "methods": [
       "POST"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
-    "permissions": []
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
   },
   {
     "route": "api/live-support/connections/whatsapp",
@@ -10865,13 +10609,7 @@
     "methods": [
       "POST"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
     "permissions": [
       "live_support.manage",
@@ -10885,13 +10623,7 @@
     "methods": [
       "GET"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
     "permissions": [
       "live_support.manage",
@@ -10905,13 +10637,7 @@
     "methods": [
       "POST"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
     "permissions": [
       "live_support.manage",
@@ -10925,13 +10651,7 @@
     "methods": [
       "POST"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
     "permissions": [
       "live_support.manage",
@@ -10945,13 +10665,7 @@
     "methods": [
       "POST"
     ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
-        "AuthenticationSchemes": null
-      }
-    ],
+    "authorization": [],
     "AllowsAnonymous": false,
     "permissions": [
       "live_support.manage",
@@ -12358,23 +12072,6 @@
     "permissions": []
   },
   {
-    "route": "api/Student/grades",
-    "controller": "Student",
-    "action": "GetGrades",
-    "methods": [
-      "GET"
-    ],
-    "authorization": [
-      {
-        "Policy": null,
-        "Roles": null,
-        "AuthenticationSchemes": null
-      }
-    ],
-    "AllowsAnonymous": false,
-    "permissions": []
-  },
-  {
     "route": "api/Student/lessons",
     "controller": "Student",
     "action": "GetMyLessons",
@@ -12823,7 +12520,7 @@
         "AuthenticationSchemes": null
       }
     ],
-    "AllowsAnonymous": false,
+    "AllowsAnonymous": true,
     "permissions": []
   },
   {
@@ -14087,7 +13784,7 @@
         "AuthenticationSchemes": null
       }
     ],
-    "AllowsAnonymous": false,
+    "AllowsAnonymous": true,
     "permissions": []
   },
   {
