@@ -5,11 +5,11 @@
   "sources": {
     "runtime": {
       "path": "tests/admin_ai_runtime_endpoint_inventory.json",
-      "digest": "d444943d8fd7cfd62a0417248af57f7f01d25e8f6be403f8e49068b5be96751b"
+      "digest": "8668ec3d3ca452fe9393584672d4dba20ef83ad27c8ccd3e6f62240b7e66ec76"
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "fe1cae54250cd5778426d4350a7d366fb166705b22f340ecf8694130d8bea86e"
+      "digest": "eeceb9c33af5f832907212ceb114eb79903c4ca5b65876e79052da0e1fd593cf"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -918,6 +918,60 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAssistantController.cs",
         "line": 55
+      }
+    },
+    {
+      "id": "be:get:api-admin-auto-repair-id:backend-src-nadergorge-api-controllers-adminautorepaircontroller-cs:34",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/auto-repair/{id}",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Detail",
+      "inputSchema": "backend-endpoint:adminautorepaircontroller-detail:input:v1",
+      "outputSchema": "backend-endpoint:adminautorepaircontroller-detail:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminAutoRepairController.cs",
+        "line": 34
+      }
+    },
+    {
+      "id": "be:get:api-admin-auto-repair:backend-src-nadergorge-api-controllers-adminautorepaircontroller-cs:16",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/auto-repair",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.List",
+      "inputSchema": "backend-endpoint:adminautorepaircontroller-list:input:v1",
+      "outputSchema": "backend-endpoint:adminautorepaircontroller-list:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminAutoRepairController.cs",
+        "line": 16
       }
     },
     {
@@ -2109,7 +2163,7 @@
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:325",
+      "id": "be:get:api-admin-platform-finance-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:385",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/bootstrap",
@@ -2132,11 +2186,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 325
+        "line": 385
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-budgets-actuals:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:349",
+      "id": "be:get:api-admin-platform-finance-budgets-actuals:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:409",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/budgets/actuals",
@@ -2159,11 +2213,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 349
+        "line": 409
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-dashboard:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:35",
+      "id": "be:get:api-admin-platform-finance-dashboard:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:36",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/dashboard",
@@ -2186,11 +2240,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 35
+        "line": 36
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:88",
+      "id": "be:get:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:99",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/expenses",
@@ -2213,11 +2267,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 88
+        "line": 99
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-exports-format:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:372",
+      "id": "be:get:api-admin-platform-finance-exports-format:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:432",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/exports/{format}",
@@ -2240,11 +2294,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 372
+        "line": 432
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-journals-journalid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:51",
+      "id": "be:get:api-admin-platform-finance-journals-journalid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:62",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/journals/{journalid}",
@@ -2267,11 +2321,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 51
+        "line": 62
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-ledger:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:42",
+      "id": "be:get:api-admin-platform-finance-ledger:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:53",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/ledger",
@@ -2294,11 +2348,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 42
+        "line": 53
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-migration-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:390",
+      "id": "be:get:api-admin-platform-finance-migration-preview:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:450",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/migration/preview",
@@ -2321,11 +2375,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 390
+        "line": 450
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-periods:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:400",
+      "id": "be:get:api-admin-platform-finance-periods:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:460",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/periods",
@@ -2348,11 +2402,38 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 400
+        "line": 460
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-reconciliation:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:385",
+      "id": "be:get:api-admin-platform-finance-profits:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:43",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/platform-finance/profits",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.Profits",
+      "inputSchema": "backend-endpoint:adminplatformfinancecontroller-profits:input:v1",
+      "outputSchema": "backend-endpoint:adminplatformfinancecontroller-profits:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
+        "line": 43
+      }
+    },
+    {
+      "id": "be:get:api-admin-platform-finance-reconciliation:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:445",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/reconciliation",
@@ -2375,11 +2456,92 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 385
+        "line": 445
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:257",
+      "id": "be:get:api-admin-platform-finance-refunds-bootstrap:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:377",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/platform-finance/refunds/bootstrap",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RefundBootstrap",
+      "inputSchema": "backend-endpoint:adminplatformfinancecontroller-refundbootstrap:input:v1",
+      "outputSchema": "backend-endpoint:adminplatformfinancecontroller-refundbootstrap:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
+        "line": 377
+      }
+    },
+    {
+      "id": "be:get:api-admin-platform-finance-refunds-students-studentid:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:368",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/platform-finance/refunds/students/{studentid}",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.RefundStudent",
+      "inputSchema": "backend-endpoint:adminplatformfinancecontroller-refundstudent:input:v1",
+      "outputSchema": "backend-endpoint:adminplatformfinancecontroller-refundstudent:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
+        "line": 368
+      }
+    },
+    {
+      "id": "be:get:api-admin-platform-finance-refunds-students:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:356",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/platform-finance/refunds/students",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminPlatformFinanceController.FindRefundStudent",
+      "inputSchema": "backend-endpoint:adminplatformfinancecontroller-findrefundstudent:input:v1",
+      "outputSchema": "backend-endpoint:adminplatformfinancecontroller-findrefundstudent:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
+        "line": 356
+      }
+    },
+    {
+      "id": "be:get:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:288",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/refunds",
@@ -2402,11 +2564,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 257
+        "line": 288
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-reports-kind:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:380",
+      "id": "be:get:api-admin-platform-finance-reports-kind:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:440",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/reports/{kind}",
@@ -2429,11 +2591,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 380
+        "line": 440
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-teachers-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:56",
+      "id": "be:get:api-admin-platform-finance-teachers-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:67",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/teachers/summary",
@@ -2456,11 +2618,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 56
+        "line": 67
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:63",
+      "id": "be:get:api-admin-platform-finance-teachers-teacherid-summary:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:74",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/teachers/{teacherid}/summary",
@@ -2483,11 +2645,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 63
+        "line": 74
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-wallet-transfers-reviews:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:98",
+      "id": "be:get:api-admin-platform-finance-wallet-transfers-reviews:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:109",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews",
@@ -2510,11 +2672,11 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 98
+        "line": 109
       }
     },
     {
-      "id": "be:get:api-admin-platform-finance-wallets-report:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:121",
+      "id": "be:get:api-admin-platform-finance-wallets-report:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:132",
       "kind": "backend-endpoint",
       "method": "GET",
       "route": "/api/admin/platform-finance/wallets/report",
@@ -2537,7 +2699,7 @@
       "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 121
+        "line": 132
       }
     },
     {
@@ -3375,6 +3537,33 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
         "line": 90
+      }
+    },
+    {
+      "id": "be:get:api-admin-teacher-finance-center-teachers-teacherid-collections:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:37",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/teacher-finance-center/teachers/{teacherid}/collections",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.GetTeacherCollections",
+      "inputSchema": "backend-endpoint:adminteacherfinancecentercontroller-getteachercollections:input:v1",
+      "outputSchema": "backend-endpoint:adminteacherfinancecentercontroller-getteachercollections:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
+        "line": 37
       }
     },
     {
@@ -6156,6 +6345,36 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "be:post:api-admin-auto-repair-id-decision:backend-src-nadergorge-api-controllers-adminautorepaircontroller-cs:62",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/auto-repair/{id}/decision",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Decision",
+      "inputSchema": "backend-endpoint:adminautorepaircontroller-decision:input:v1",
+      "outputSchema": "backend-endpoint:adminautorepaircontroller-decision:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminAutoRepairController.cs",
+        "line": 62
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "be:post:api-admin-bunny-libraries:backend-src-nadergorge-api-controllers-admincontroller-cs:1186",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -7446,7 +7665,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-admin-platform-finance-budgets:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:339",
+      "id": "be:post:api-admin-platform-finance-budgets:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:399",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/budgets",
@@ -7471,12 +7690,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 339
+        "line": 399
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-payments:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:183",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-payments:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:194",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/payments",
@@ -7501,12 +7720,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 183
+        "line": 194
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:79",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:90",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/post",
@@ -7531,12 +7750,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 79
+        "line": 90
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses-expenseid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:175",
+      "id": "be:post:api-admin-platform-finance-expenses-expenseid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:186",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses/{expenseid}/reverse",
@@ -7561,12 +7780,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 175
+        "line": 186
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:68",
+      "id": "be:post:api-admin-platform-finance-expenses:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:79",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/expenses",
@@ -7591,12 +7810,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 68
+        "line": 79
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-migration-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:395",
+      "id": "be:post:api-admin-platform-finance-migration-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:455",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/migration/post",
@@ -7621,12 +7840,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 395
+        "line": 455
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-periods-periodid-close:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:405",
+      "id": "be:post:api-admin-platform-finance-periods-periodid-close:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:465",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/periods/{periodid}/close",
@@ -7651,12 +7870,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 405
+        "line": 465
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-periods-periodid-reopen:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:410",
+      "id": "be:post:api-admin-platform-finance-periods-periodid-reopen:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:470",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/periods/{periodid}/reopen",
@@ -7681,12 +7900,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 410
+        "line": 470
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-external-package:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:203",
+      "id": "be:post:api-admin-platform-finance-refunds-external-package:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:214",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/external-package",
@@ -7711,12 +7930,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 203
+        "line": 214
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-refundid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:249",
+      "id": "be:post:api-admin-platform-finance-refunds-refundid-post:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:280",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/{refundid}/post",
@@ -7741,12 +7960,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 249
+        "line": 280
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds-refundid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:317",
+      "id": "be:post:api-admin-platform-finance-refunds-refundid-reverse:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:348",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds/{refundid}/reverse",
@@ -7771,12 +7990,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 317
+        "line": 348
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:192",
+      "id": "be:post:api-admin-platform-finance-refunds:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:203",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/refunds",
@@ -7801,12 +8020,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 192
+        "line": 203
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-treasury-reconciliations:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:363",
+      "id": "be:post:api-admin-platform-finance-treasury-reconciliations:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:423",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/treasury/reconciliations",
@@ -7831,12 +8050,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 363
+        "line": 423
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-treasury-transfers:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:354",
+      "id": "be:post:api-admin-platform-finance-treasury-transfers:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:414",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/treasury/transfers",
@@ -7861,12 +8080,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 354
+        "line": 414
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-backfill:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:113",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-backfill:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:124",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/backfill",
@@ -7891,12 +8110,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 113
+        "line": 124
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-expense:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:157",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-expense:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:168",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense",
@@ -7921,12 +8140,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 157
+        "line": 168
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
     {
-      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:166",
+      "id": "be:post:api-admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:backend-src-nadergorge-api-controllers-adminplatformfinancecontroller-cs:177",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer",
@@ -7951,7 +8170,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
-        "line": 166
+        "line": 177
       },
       "blocker": "Direct controller database write must be extracted into an authoritative application command/service before adaptation."
     },
@@ -10386,6 +10605,36 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
+      "id": "be:post:api-hr-admin-attendance-sessions-sessionid-cancel:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:101",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/hr/admin/attendance/sessions/{sessionid}/cancel",
+      "effect": "mutation",
+      "domain": "hr",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:HrAttendanceController.CancelEvent",
+      "inputSchema": "backend-endpoint:hrattendancecontroller-cancelevent:input:v1",
+      "outputSchema": "backend-endpoint:hrattendancecontroller-cancelevent:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "hr"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrAttendanceController.cs",
+        "line": 101
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
       "id": "be:post:api-hr-admin-attendance-trusted-devices:backend-src-nadergorge-api-controllers-hrattendancecontroller-cs:234",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -12662,6 +12911,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
         "line": 52
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "be:put:api-admin-auto-repair-control:backend-src-nadergorge-api-controllers-adminautorepaircontroller-cs:44",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/auto-repair/control",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AdminAutoRepairController.Control",
+      "inputSchema": "backend-endpoint:adminautorepaircontroller-control:input:v1",
+      "outputSchema": "backend-endpoint:adminautorepaircontroller-control:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminAutoRepairController.cs",
+        "line": 44
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -16272,6 +16551,33 @@
       "source": {
         "file": "frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx",
         "line": 10
+      }
+    },
+    {
+      "id": "fe:get:admin-platform-finance-profits:frontend-src-services-platform-profits-service-ts:18",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/platform-finance/profits",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-profits-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-profits-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/platform-profits-service.ts",
+        "line": 18
       }
     },
     {
@@ -31243,5 +31549,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "272d48c669f0bf9a1b785531b14f660183c535510598d61295034616df1aa501"
+  "digest": "fe954f87d8f7a13ca352e167e9f8203a7ccaddecc60863b41e227bb63b7ffef9"
 }
