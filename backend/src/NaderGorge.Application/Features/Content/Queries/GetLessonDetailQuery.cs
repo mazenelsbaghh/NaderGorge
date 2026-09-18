@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Homework;
@@ -89,6 +90,7 @@ public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
 public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery, ApiResponse<LessonDetailDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IBunnyVideoDurationResolver? _durationResolver;
     private readonly IAccessCheckService _access;
     private readonly TeacherAuthorizationService _auth;
     private readonly IAcademicScopeService? _academicScope;
@@ -99,9 +101,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         IAccessCheckService access,
         TeacherAuthorizationService auth,
         IAcademicScopeService? academicScope = null,
-        IContentArchiveAccessService? archiveAccess = null)
+        IContentArchiveAccessService? archiveAccess = null,
+        IBunnyVideoDurationResolver? durationResolver = null)
     {
         _db = db;
+        _durationResolver = durationResolver;
         _access = access;
         _auth = auth;
         _academicScope = academicScope;
@@ -220,7 +224,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 ct);
 
             var partialProgress = (await StudentWatchProgressReader.ReadAsync(
-                new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), accessibleVideoIds, ct))
+                new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), accessibleVideoIds, ct, _durationResolver))
                 .ToDictionary(progress => progress.VideoId);
             var partialVideoDtos = sortedLessonVideos
                 .Where(v => accessibleVideoIds.Contains(v.Id))
@@ -443,7 +447,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var videoIds = lesson.Videos.Select(v => v.Id).ToList();
         var videoProgress = await StudentWatchProgressReader.ReadAsync(
-            new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), videoIds, ct);
+            new StudentLessonCompletionContext(_db, request.UserId, [lesson.Id]), videoIds, ct, _durationResolver);
         var progressByVideo = videoProgress.ToDictionary(video => video.VideoId);
         var allVideoExams = await _db.Exams
             .Where(e => e.IsActive && (videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id))))

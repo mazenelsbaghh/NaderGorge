@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "83312301fa8d4d81704b0417e1df35096060e476bc8fa293539849b406e647a8"
+      "digest": "e64425f7476e3571ed6106003a31674edef4f6599ca1f8e8374c7d2639031ab5"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -14844,7 +14844,7 @@
       }
     },
     {
-      "id": "fe:get:admin-auto-repair-id:frontend-src-services-auto-repair-service-ts:21",
+      "id": "fe:get:admin-auto-repair-id:frontend-src-services-auto-repair-service-ts:32",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/auto-repair/{id}",
@@ -14867,11 +14867,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 21
+        "line": 32
       }
     },
     {
-      "id": "fe:get:admin-auto-repair:frontend-src-services-auto-repair-service-ts:18",
+      "id": "fe:get:admin-auto-repair:frontend-src-services-auto-repair-service-ts:29",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/auto-repair",
@@ -14894,7 +14894,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 18
+        "line": 29
       }
     },
     {
@@ -16086,7 +16086,7 @@
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-bootstrap:frontend-src-services-platform-finance-service-ts:96",
+      "id": "fe:get:admin-platform-finance-bootstrap:frontend-src-services-platform-finance-service-ts:111",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/bootstrap",
@@ -16109,11 +16109,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 96
+        "line": 111
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-budgets-actuals:frontend-src-services-platform-finance-service-ts:145",
+      "id": "fe:get:admin-platform-finance-budgets-actuals:frontend-src-services-platform-finance-service-ts:160",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/budgets/actuals",
@@ -16136,11 +16136,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 145
+        "line": 160
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-dashboard:frontend-src-services-platform-finance-service-ts:80",
+      "id": "fe:get:admin-platform-finance-dashboard:frontend-src-services-platform-finance-service-ts:91",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/dashboard",
@@ -16163,11 +16163,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 80
+        "line": 91
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-expenses:frontend-src-services-platform-finance-service-ts:106",
+      "id": "fe:get:admin-platform-finance-expenses:frontend-src-services-platform-finance-service-ts:121",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/expenses",
@@ -16190,11 +16190,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 106
+        "line": 121
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-ledger:frontend-src-services-platform-finance-service-ts:84",
+      "id": "fe:get:admin-platform-finance-ledger:frontend-src-services-platform-finance-service-ts:95",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/ledger",
@@ -16217,11 +16217,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 84
+        "line": 95
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-migration-preview:frontend-src-services-platform-finance-service-ts:160",
+      "id": "fe:get:admin-platform-finance-migration-preview:frontend-src-services-platform-finance-service-ts:175",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/migration/preview",
@@ -16244,7 +16244,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 160
+        "line": 175
       }
     },
     {
@@ -16275,7 +16275,7 @@
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-reconciliation:frontend-src-services-platform-finance-service-ts:157",
+      "id": "fe:get:admin-platform-finance-reconciliation:frontend-src-services-platform-finance-service-ts:172",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/reconciliation",
@@ -16298,11 +16298,92 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 157
+        "line": 172
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-refunds:frontend-src-services-platform-finance-service-ts:136",
+      "id": "fe:get:admin-platform-finance-refunds-bootstrap:frontend-src-services-platform-finance-service-ts:107",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/platform-finance/refunds/bootstrap",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 107
+      }
+    },
+    {
+      "id": "fe:get:admin-platform-finance-refunds-students-id:frontend-src-services-platform-finance-service-ts:87",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/platform-finance/refunds/students/{id}",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 87
+      }
+    },
+    {
+      "id": "fe:get:admin-platform-finance-refunds-students:frontend-src-services-platform-finance-service-ts:83",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/admin/platform-finance/refunds/students",
+      "effect": "read",
+      "domain": "finance",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 83
+      }
+    },
+    {
+      "id": "fe:get:admin-platform-finance-refunds:frontend-src-services-platform-finance-service-ts:151",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/refunds",
@@ -16325,11 +16406,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 136
+        "line": 151
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-reports-kind:frontend-src-services-platform-finance-service-ts:154",
+      "id": "fe:get:admin-platform-finance-reports-kind:frontend-src-services-platform-finance-service-ts:169",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/reports/{kind}",
@@ -16352,11 +16433,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 154
+        "line": 169
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-teachers-summary:frontend-src-services-platform-finance-service-ts:88",
+      "id": "fe:get:admin-platform-finance-teachers-summary:frontend-src-services-platform-finance-service-ts:99",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/teachers/summary",
@@ -16379,11 +16460,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 88
+        "line": 99
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-teachers-teacherid-summary:frontend-src-services-platform-finance-service-ts:92",
+      "id": "fe:get:admin-platform-finance-teachers-teacherid-summary:frontend-src-services-platform-finance-service-ts:103",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/teachers/{teacherId}/summary",
@@ -16406,11 +16487,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 92
+        "line": 103
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-wallet-transfers-reviews:frontend-src-services-platform-finance-service-ts:109",
+      "id": "fe:get:admin-platform-finance-wallet-transfers-reviews:frontend-src-services-platform-finance-service-ts:124",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/wallet-transfers/reviews",
@@ -16433,11 +16514,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 109
+        "line": 124
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-wallets-report:frontend-src-services-platform-finance-service-ts:115",
+      "id": "fe:get:admin-platform-finance-wallets-report:frontend-src-services-platform-finance-service-ts:130",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/wallets/report",
@@ -16460,7 +16541,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 115
+        "line": 130
       }
     },
     {
@@ -20298,7 +20379,7 @@
       }
     },
     {
-      "id": "fe:get:public-packages-packageid:frontend-src-services-student-service-ts:326",
+      "id": "fe:get:public-packages-packageid:frontend-src-services-student-service-ts:363",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/packages/{packageId}",
@@ -20321,11 +20402,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 326
+        "line": 363
       }
     },
     {
-      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:305",
+      "id": "fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:306",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/settings",
@@ -20348,11 +20429,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 305
+        "line": 306
       }
     },
     {
-      "id": "fe:get:public-teachers-landing:frontend-src-services-student-service-ts:316",
+      "id": "fe:get:public-teachers-landing:frontend-src-services-student-service-ts:353",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/teachers/landing",
@@ -20375,11 +20456,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 316
+        "line": 353
       }
     },
     {
-      "id": "fe:get:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:331",
+      "id": "fe:get:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:368",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/teachers/{teacherId}/community-posts",
@@ -20402,11 +20483,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 331
+        "line": 368
       }
     },
     {
-      "id": "fe:get:public-teachers-teacheridorslug:frontend-src-services-student-service-ts:321",
+      "id": "fe:get:public-teachers-teacheridorslug:frontend-src-services-student-service-ts:358",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/teachers/{teacherIdOrSlug}",
@@ -20429,11 +20510,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 321
+        "line": 358
       }
     },
     {
-      "id": "fe:get:public-teachers:frontend-src-services-student-service-ts:311",
+      "id": "fe:get:public-teachers:frontend-src-services-student-service-ts:348",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/public/teachers",
@@ -20456,7 +20537,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 311
+        "line": 348
       }
     },
     {
@@ -20487,7 +20568,7 @@
       }
     },
     {
-      "id": "fe:get:student-dashboard-quick-access:frontend-src-services-student-service-ts:341",
+      "id": "fe:get:student-dashboard-quick-access:frontend-src-services-student-service-ts:378",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/dashboard/quick-access",
@@ -20510,11 +20591,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 341
+        "line": 378
       }
     },
     {
-      "id": "fe:get:student-dashboard:frontend-src-services-student-service-ts:301",
+      "id": "fe:get:student-dashboard:frontend-src-services-student-service-ts:338",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/dashboard",
@@ -20537,11 +20618,38 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 301
+        "line": 338
       }
     },
     {
-      "id": "fe:get:student-lessons:frontend-src-services-student-service-ts:351",
+      "id": "fe:get:student-grades:frontend-src-services-student-service-ts:334",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/student/grades",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-student-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-student-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 334
+      }
+    },
+    {
+      "id": "fe:get:student-lessons:frontend-src-services-student-service-ts:388",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/lessons",
@@ -20564,11 +20672,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 351
+        "line": 388
       }
     },
     {
-      "id": "fe:get:student-mistakes:frontend-src-services-student-service-ts:356",
+      "id": "fe:get:student-mistakes:frontend-src-services-student-service-ts:393",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/mistakes",
@@ -20591,11 +20699,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 356
+        "line": 393
       }
     },
     {
-      "id": "fe:get:student-notifications:frontend-src-services-student-service-ts:386",
+      "id": "fe:get:student-notifications:frontend-src-services-student-service-ts:423",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/notifications",
@@ -20618,11 +20726,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 386
+        "line": 423
       }
     },
     {
-      "id": "fe:get:student-profile:frontend-src-services-student-service-ts:376",
+      "id": "fe:get:student-profile:frontend-src-services-student-service-ts:413",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/profile",
@@ -20645,11 +20753,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 376
+        "line": 413
       }
     },
     {
-      "id": "fe:get:student-progress:frontend-src-services-student-service-ts:346",
+      "id": "fe:get:student-progress:frontend-src-services-student-service-ts:383",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/progress",
@@ -20672,7 +20780,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 346
+        "line": 383
       }
     },
     {
@@ -20757,7 +20865,7 @@
       }
     },
     {
-      "id": "fe:get:student-shell-bootstrap:frontend-src-services-student-service-ts:306",
+      "id": "fe:get:student-shell-bootstrap:frontend-src-services-student-service-ts:343",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/shell-bootstrap",
@@ -20780,11 +20888,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 306
+        "line": 343
       }
     },
     {
-      "id": "fe:get:student-theme-preferences:frontend-src-services-student-service-ts:361",
+      "id": "fe:get:student-theme-preferences:frontend-src-services-student-service-ts:398",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/theme-preferences",
@@ -20807,11 +20915,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 361
+        "line": 398
       }
     },
     {
-      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:175",
+      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:176",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/student/video-session/{lessonVideoId}/request-status",
@@ -20834,7 +20942,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 175
+        "line": 176
       }
     },
     {
@@ -21954,7 +22062,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-auto-repair-id-decision:frontend-src-services-auto-repair-service-ts:27",
+      "id": "fe:post:admin-auto-repair-id-decision:frontend-src-services-auto-repair-service-ts:38",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/auto-repair/{id}/decision",
@@ -21979,7 +22087,7 @@
       ],
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 27
+        "line": 38
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -23274,7 +23382,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-budgets:frontend-src-services-platform-finance-service-ts:142",
+      "id": "fe:post:admin-platform-finance-budgets:frontend-src-services-platform-finance-service-ts:157",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/budgets",
@@ -23299,12 +23407,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 142
+        "line": 157
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-expenses-expenseid-post:frontend-src-services-platform-finance-service-ts:103",
+      "id": "fe:post:admin-platform-finance-expenses-expenseid-post:frontend-src-services-platform-finance-service-ts:118",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/expenses/{expenseId}/post",
@@ -23329,12 +23437,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 103
+        "line": 118
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-expenses-expenseid-reverse:frontend-src-services-platform-finance-service-ts:124",
+      "id": "fe:post:admin-platform-finance-expenses-expenseid-reverse:frontend-src-services-platform-finance-service-ts:139",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/expenses/{expenseId}/reverse",
@@ -23359,12 +23467,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 124
+        "line": 139
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-expenses:frontend-src-services-platform-finance-service-ts:100",
+      "id": "fe:post:admin-platform-finance-expenses:frontend-src-services-platform-finance-service-ts:115",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/expenses",
@@ -23389,12 +23497,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 100
+        "line": 115
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-migration-post:frontend-src-services-platform-finance-service-ts:163",
+      "id": "fe:post:admin-platform-finance-migration-post:frontend-src-services-platform-finance-service-ts:178",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/migration/post",
@@ -23419,7 +23527,7 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 163
+        "line": 178
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -23454,7 +23562,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-refunds-external-package:frontend-src-services-platform-finance-service-ts:130",
+      "id": "fe:post:admin-platform-finance-refunds-external-package:frontend-src-services-platform-finance-service-ts:145",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/refunds/external-package",
@@ -23479,135 +23587,15 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 130
+        "line": 145
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-refunds-refundid-post:frontend-src-services-platform-finance-service-ts:133",
+      "id": "fe:post:admin-platform-finance-refunds-refundid-post:frontend-src-services-platform-finance-service-ts:148",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/refunds/{refundId}/post",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 133
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-platform-finance-refunds-refundid-reverse:frontend-src-services-platform-finance-service-ts:139",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/platform-finance/refunds/{refundId}/reverse",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 139
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-platform-finance-refunds:frontend-src-services-platform-finance-service-ts:127",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/platform-finance/refunds",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 127
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-platform-finance-treasury-reconciliations:frontend-src-services-platform-finance-service-ts:151",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/platform-finance/treasury/reconciliations",
-      "effect": "mutation",
-      "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
-      "source": {
-        "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 151
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-platform-finance-treasury-transfers:frontend-src-services-platform-finance-service-ts:148",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/platform-finance/treasury/transfers",
       "effect": "mutation",
       "domain": "finance",
       "risk": "strong",
@@ -23634,7 +23622,127 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-backfill:frontend-src-services-platform-finance-service-ts:112",
+      "id": "fe:post:admin-platform-finance-refunds-refundid-reverse:frontend-src-services-platform-finance-service-ts:154",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/platform-finance/refunds/{refundId}/reverse",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 154
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-platform-finance-refunds:frontend-src-services-platform-finance-service-ts:142",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/platform-finance/refunds",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 142
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-platform-finance-treasury-reconciliations:frontend-src-services-platform-finance-service-ts:166",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/platform-finance/treasury/reconciliations",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 166
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-platform-finance-treasury-transfers:frontend-src-services-platform-finance-service-ts:163",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/platform-finance/treasury/transfers",
+      "effect": "mutation",
+      "domain": "finance",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-platform-finance-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "finance"
+      ],
+      "source": {
+        "file": "frontend/src/services/platform-finance-service.ts",
+        "line": 163
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-backfill:frontend-src-services-platform-finance-service-ts:127",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/wallet-transfers/reviews/backfill",
@@ -23659,12 +23767,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 112
+        "line": 127
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-reviewid-expense:frontend-src-services-platform-finance-service-ts:118",
+      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-reviewid-expense:frontend-src-services-platform-finance-service-ts:133",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/wallet-transfers/reviews/{reviewId}/expense",
@@ -23689,12 +23797,12 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 118
+        "line": 133
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:frontend-src-services-platform-finance-service-ts:121",
+      "id": "fe:post:admin-platform-finance-wallet-transfers-reviews-reviewid-internal-transfer:frontend-src-services-platform-finance-service-ts:136",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/platform-finance/wallet-transfers/reviews/{reviewId}/internal-transfer",
@@ -23719,7 +23827,7 @@
       ],
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 121
+        "line": 136
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25464,7 +25572,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:145",
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:146",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/api/video/session",
@@ -25489,12 +25597,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 145
+        "line": 146
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:151",
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:152",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/api/video/session",
@@ -25519,7 +25627,7 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 151
+        "line": 152
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -28644,7 +28752,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:336",
+      "id": "fe:post:public-teachers-teacherid-community-posts:frontend-src-services-student-service-ts:373",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/public/teachers/{teacherId}/community-posts",
@@ -28669,12 +28777,12 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 336
+        "line": 373
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-acknowledge-tracking-popup:frontend-src-services-student-service-ts:408",
+      "id": "fe:post:student-acknowledge-tracking-popup:frontend-src-services-student-service-ts:445",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/acknowledge-tracking-popup",
@@ -28699,12 +28807,12 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 408
+        "line": 445
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-notifications-id-read:frontend-src-services-student-service-ts:391",
+      "id": "fe:post:student-notifications-id-read:frontend-src-services-student-service-ts:428",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/notifications/{id}/read",
@@ -28729,7 +28837,7 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 391
+        "line": 428
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -28764,7 +28872,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-upload-audio:frontend-src-services-student-service-ts:399",
+      "id": "fe:post:student-upload-audio:frontend-src-services-student-service-ts:436",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/upload-audio",
@@ -28789,12 +28897,12 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 399
+        "line": 436
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:171",
+      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:172",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{lessonVideoId}/request-extra",
@@ -28819,12 +28927,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 171
+        "line": 172
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:180",
+      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:181",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{requestlessonVideoId}/track-progress",
@@ -28849,12 +28957,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 180
+        "line": 181
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:188",
+      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:189",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{requestlessonVideoId}/track-progress",
@@ -28879,12 +28987,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 188
+        "line": 189
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:167",
+      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:168",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{sessionId}/client-event",
@@ -28909,12 +29017,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 167
+        "line": 168
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:163",
+      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:164",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session/{sessionId}/consume",
@@ -28939,12 +29047,12 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 163
+        "line": 164
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:157",
+      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:158",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/student/video-session",
@@ -28969,7 +29077,7 @@
       ],
       "source": {
         "file": "frontend/src/services/video-session-service.ts",
-        "line": 157
+        "line": 158
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -29574,7 +29682,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-auto-repair-control:frontend-src-services-auto-repair-service-ts:24",
+      "id": "fe:put:admin-auto-repair-control:frontend-src-services-auto-repair-service-ts:35",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/auto-repair/control",
@@ -29599,7 +29707,7 @@
       ],
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 24
+        "line": 35
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -31014,7 +31122,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:student-profile:frontend-src-services-student-service-ts:381",
+      "id": "fe:put:student-profile:frontend-src-services-student-service-ts:418",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/student/profile",
@@ -31039,12 +31147,12 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 381
+        "line": 418
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:student-theme-preferences:frontend-src-services-student-service-ts:371",
+      "id": "fe:put:student-theme-preferences:frontend-src-services-student-service-ts:408",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/student/theme-preferences",
@@ -31069,7 +31177,7 @@
       ],
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 371
+        "line": 408
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -31135,5 +31243,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "05ee87c1ff534d4794b14b08cb1628e324592c3a178b9d930b69d601c787d5a4"
+  "digest": "11872c3bcb06eac475461e6bbe1a951bd9cbb31ce4320c8b8040c0625c9bbe00"
 }

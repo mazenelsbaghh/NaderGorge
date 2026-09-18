@@ -7,7 +7,7 @@ import { contentService, type LessonDetailDto } from '@/services/content-service
 import type { MyLessonDto } from '@/services/student-service';
 import { usePlatformQuery } from '@/components/providers/QueryProvider';
 import { useAuthStore } from '@/stores/auth-store';
-import { videoProgressPercent } from '@/lib/student-learning-progress';
+import { lessonProgressPercent, videoProgressPercent } from '@/lib/student-learning-progress';
 import { LearningProgress } from './LearningProgress';
 
 export function LastLessonProgress({ lesson }: { lesson: MyLessonDto }) {
@@ -18,6 +18,8 @@ export function LastLessonProgress({ lesson }: { lesson: MyLessonDto }) {
     return response.data.data;
   }, [lesson.id]);
   const query = usePlatformQuery<LessonDetailDto>({ queryKey: ['student', 'lesson-progress', userId, lesson.id], queryFn, staleTime: 30_000, enabled: Boolean(userId) });
+  const visibleVideos = query.data?.videos.filter(video => video.hasAccess);
+  const lessonPercent = visibleVideos ? lessonProgressPercent(visibleVideos) : lesson.watchProgressPercent ?? null;
   return (
     <section aria-labelledby="last-lesson" className="space-y-4 border-t border-[var(--admin-border)] pt-5">
       <h2 id="last-lesson" className="text-xl font-black">آخر حصة فتحتها</h2>
@@ -25,7 +27,7 @@ export function LastLessonProgress({ lesson }: { lesson: MyLessonDto }) {
         <div className="min-w-0 flex-1"><h3 className="text-lg font-bold">{lesson.title} • {lesson.packageName}</h3><p className="text-sm text-[var(--admin-muted)]">{lesson.teacherName}</p></div>
         <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
       </Link>
-      <LearningProgress percent={lesson.watchProgressPercent ?? null} label="تقدّم الحصة" />
+      <LearningProgress percent={lessonPercent} label="تقدّم الحصة" />
       {lesson.totalVideoSeconds ? <p className="text-sm text-[var(--admin-muted)]">{Math.floor((lesson.recordedWatchSeconds ?? 0) / 60)} من {Math.ceil(lesson.totalVideoSeconds / 60)} دقيقة</p> : null}
       {query.error ? <div role="alert" className="text-sm text-[var(--admin-muted)]">تعذر تحميل تفاصيل الفيديوهات. <button type="button" className="min-h-11 font-bold underline" onClick={() => void query.refetch()}>أعد المحاولة</button></div>
         : !query.data ? <div className="h-28 animate-pulse rounded-xl bg-[var(--admin-card-soft)]" role="status" aria-label="جارٍ تحميل تقدّم الفيديوهات" />

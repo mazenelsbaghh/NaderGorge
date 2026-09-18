@@ -98,7 +98,7 @@ export const examService = {
   getLatestPassedResult: (examId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-passed-result`),
   getLatestResult: (examId: string) =>
-    apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-result`),
+    apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-result`, { suppressErrorToast: true }),
   getGradingStatus: (attemptId: string) =>
     apiClient.get<{ data: ExamAttemptGradingStatusDto }>(`/exams/attempts/${attemptId}/grading-status`),
   getAttemptResult: (attemptId: string) =>

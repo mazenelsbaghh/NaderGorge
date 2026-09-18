@@ -314,6 +314,8 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             completionContext,
             visibleActiveVideoIds,
             ct);
+        var videoProgress = await StudentWatchProgressReader.ReadAsync(completionContext, visibleActiveVideoIds, ct);
+        var progressByLesson = videoProgress.ToLookup(video => video.LessonId);
         var watchedLessons = completedLessonIds.Count;
 
         var completionRate = totalLessons > 0 ? Math.Round((double)watchedLessons / totalLessons * 100, 2) : 0.0;
@@ -332,7 +334,7 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             .AsNoTracking()
             .Where(w =>
                 w.UserId == profile.UserId
-                && (w.WatchCount > 0 || w.TimeWatchedInSeconds > 0 || w.ActualWatchedSeconds > 0)
+                && (w.WatchCount > 0 || w.TimeWatchedInSeconds > 0 || w.ActualWatchedSeconds > 0 || w.LearningWatchedSeconds > 0)
                 && w.LessonVideo.IsActive
                 && visibleActiveVideoIds.Contains(w.LessonVideoId))
             .Select(w => new
@@ -369,9 +371,9 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     lesson.LessonId,
                     lesson.LessonTitle,
                     videoCounts.GetValueOrDefault(lesson.LessonId),
-                    lessonWatchEvents.Select(w => w.LessonVideoId).Distinct().Count(),
+                    progressByLesson[lesson.LessonId].Count(video => video.IsCompleted),
                     lessonWatchEvents.Sum(w => w.WatchCount),
-                    lessonWatchEvents.Sum(w => w.TimeWatchedInSeconds),
+                    (int)Math.Floor(progressByLesson[lesson.LessonId].Sum(video => video.CompletionWatchedSeconds)),
                     completedLessonIds.Contains(lesson.LessonId),
                     lessonWatchEvents.Count == 0 ? null : lessonWatchEvents.Max(w => w.LastWatchedAt)
                 );

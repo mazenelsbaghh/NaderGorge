@@ -843,7 +843,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                 // samples are stronger evidence than that missed event and let
                 // tracking recover without crediting a single seek operation.
                 if (
-                  providerRef.current === 'bunny'
+                  (providerRef.current === 'bunny' || providerRef.current === 'bunny-hls')
                   && !isPlayingRef.current
                   && consecutiveAdvancingMediaSamplesRef.current >= 2
                   && Date.now() - lastSeekCommandAtRef.current >= 1200
@@ -914,6 +914,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             }).catch(() => {
               // Playback errors must remain visible even if diagnostic delivery fails.
             });
+          }
+          if (msg.data?.provider === 'bunny-hls' && Number(msg.data?.code) === 410
+            && String(msg.data?.phase ?? '').endsWith('source_authorization')) {
+            bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
+            recoveryPlaybackRateRef.current = playbackRateRef.current;
+            // Only renew an expired owned session. Replaced/revoked sessions must never fight newer playback.
+            if (isPlayingRef.current && embedSessionRefreshCountRef.current < 1) {
+              embedSessionRefreshCountRef.current += 1;
+              reloadSessionRef.current?.();
+              break;
+            }
           }
           if (msg.data?.message === 'Session expired or invalid' && embedSessionRefreshCountRef.current < 1) {
             embedSessionRefreshCountRef.current += 1;

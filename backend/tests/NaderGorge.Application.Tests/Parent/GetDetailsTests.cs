@@ -335,8 +335,8 @@ public class GetDetailsTests : IDisposable
 
     // 2026-09-13: partial playback was hidden when the consumed-view counter remained zero.
     [Theory]
-    [InlineData(90, 0, 2, 270)]
-    [InlineData(0, 15, 2, 180)]
+    [InlineData(90, 0, 1, 270)]
+    [InlineData(0, 15, 1, 180)]
     [InlineData(0, 0, 1, 180)]
     public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance(
         int partialSeconds, int actualSeconds, int expectedWatchedVideos, int expectedWatchedSeconds)
@@ -546,6 +546,8 @@ public class GetDetailsTests : IDisposable
             UserId = student.Id,
             LessonVideoId = videoA.Id,
             TimeWatchedInSeconds = 180,
+            LearningWatchedSeconds = 180,
+            LearningDurationSeconds = 180,
             WatchCount = 2
         });
         _db.VideoWatchEvents.AddRange(
@@ -554,6 +556,8 @@ public class GetDetailsTests : IDisposable
                 UserId = student.Id,
                 LessonVideoId = visibleUnwatchedVideo.Id,
                 TimeWatchedInSeconds = partialSeconds,
+                LearningWatchedSeconds = partialSeconds,
+                LearningDurationSeconds = 180,
                 ActualWatchedSeconds = actualSeconds,
                 WatchCount = 0
             },

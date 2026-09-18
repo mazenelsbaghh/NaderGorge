@@ -83,6 +83,36 @@ public sealed class StudentDashboardVideoCompletionTests
         Assert.Equal(2, parentReport.Data!.CompletedLessonsCount);
     }
 
+    [Theory]
+    [InlineData(10, 3, false)]
+    [InlineData(99.999, 4, true)]
+    public async Task ParentAndStudentAgreeOnCompletedParts(double watchedSeconds, int completedParts, bool completed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedDashboardAsync(db);
+        db.VideoWatchEvents.Add(new VideoWatchEvent
+        {
+            UserId = fixture.StudentId, LessonVideoId = fixture.FourthActiveVideoId,
+            WatchCount = 1, LearningWatchedSeconds = (decimal)watchedSeconds
+        });
+        await db.SaveChangesAsync();
+        var profile = db.StudentProfiles.Single(profile => profile.UserId == fixture.StudentId);
+        var parent = await new NaderGorge.Application.Features.Parent.Queries.GetStudentAcademicDetailsQueryHandler(
+            db, new AcademicScopeService(db), new ContentArchiveAccessService(db)).Handle(
+                new NaderGorge.Application.Features.Parent.Queries.GetStudentAcademicDetailsQuery(profile.Id), CancellationToken.None);
+        var student = await new GetMyLessonsQueryHandler(db, new AcademicScopeService(db), new ContentArchiveAccessService(db))
+            .Handle(new GetMyLessonsQuery(fixture.StudentId), CancellationToken.None);
+        Assert.True(parent.Success, parent.Message);
+        Assert.True(student.Success, student.Message);
+        var parentLesson = Assert.Single(parent.Data!.WatchLessons, lesson => lesson.LessonId == fixture.FourPartLessonId);
+        var studentLesson = Assert.Single(student.Data!, lesson => lesson.Id == fixture.FourPartLessonId);
+        Assert.Equal(completedParts, parentLesson.WatchedVideos);
+        Assert.Equal(studentLesson.WatchedVideoCount, parentLesson.WatchedVideos);
+        Assert.Equal(completed, parentLesson.IsCompleted);
+        Assert.Equal(studentLesson.IsCompleted, parentLesson.IsCompleted);
+        Assert.Equal(completed ? 400 : 310, parentLesson.WatchedSeconds);
+    }
+
     private static async Task<DashboardFixture> SeedDashboardAsync(AppDbContext db)
     {
         var student = new User

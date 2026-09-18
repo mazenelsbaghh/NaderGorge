@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Application.Common;
 
@@ -17,7 +18,8 @@ public static class StudentWatchProgressReader
     public static async Task<List<StudentVideoProgress>> ReadAsync(
         StudentLessonCompletionContext context,
         IReadOnlyCollection<Guid> visibleVideoIds,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBunnyVideoDurationResolver? durationResolver = null)
     {
         if (visibleVideoIds.Count == 0) return [];
         var ids = visibleVideoIds.ToList();
@@ -27,6 +29,9 @@ public static class StudentWatchProgressReader
             {
                 video.Id,
                 video.LessonId,
+                video.Provider,
+                video.ProviderVideoId,
+                video.BunnyStreamLibraryId,
                 Duration = context.Db.BunnyVideoAssets
                     .Where(asset => asset.LessonVideoId == video.Id
                         && asset.SourceState == BunnyVideoAssetSourceState.Current && asset.DurationSeconds > 0)
@@ -39,10 +44,31 @@ public static class StudentWatchProgressReader
             .Where(watch => watch.UserId == context.UserId && ids.Contains(watch.LessonVideoId))
             .Select(watch => new { watch.LessonVideoId, watch.LearningWatchedSeconds, watch.LearningDurationSeconds, LastWatchedAt = watch.UpdatedAt ?? watch.CreatedAt })
             .ToDictionaryAsync(watch => watch.LessonVideoId, ct);
-        return videos.Select(video => new StudentVideoProgress(video.Id, video.LessonId, video.Duration is > 0 ? video.Duration
+        var progress = videos.Select(video => new StudentVideoProgress(video.Id, video.LessonId, video.Duration is > 0 ? video.Duration
             : watches.GetValueOrDefault(video.Id)?.LearningDurationSeconds,
             Math.Max(0, watches.GetValueOrDefault(video.Id)?.LearningWatchedSeconds ?? 0))
             { LastWatchedAt = watches.GetValueOrDefault(video.Id)?.LastWatchedAt }).ToList();
+        if (durationResolver is null) return progress;
+        // Only lesson-detail callers hydrate missing provider metadata; large reports remain database-only.
+        using var metadataBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        metadataBudget.CancelAfter(TimeSpan.FromSeconds(5));
+        for (var index = 0; index < progress.Count; index++)
+        {
+            var video = videos[index];
+            if (progress[index].DurationSeconds is > 0 || video.BunnyStreamLibraryId is not { } libraryId
+                || VideoProviders.Normalize(video.Provider) != VideoProviders.Bunny) continue;
+            try
+            {
+                var duration = await durationResolver.ResolveAsync(libraryId, video.ProviderVideoId, metadataBudget.Token);
+                if (duration is > 0) progress[index] = progress[index] with { DurationSeconds = duration };
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Missing metadata stays unknown when the provider exceeds the page's budget.
+                break;
+            }
+        }
+        return progress;
     }
 
     public static int? CalculatePercent(IReadOnlyCollection<StudentVideoProgress> videos)

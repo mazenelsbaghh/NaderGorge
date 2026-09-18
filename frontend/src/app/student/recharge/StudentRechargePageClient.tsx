@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { normalizeEgyptianMobileInput } from '@/utils/phone-utils';
+import { getApiErrorSummary } from '@/lib/api-errors';
 import { rechargeService, type InitiateRechargeResponse } from '@/services/recharge-service';
 import type { StudentRechargeRequestDto } from '@/services/recharge-service';
 import { studentService, type PublicTeacherDto } from '@/services/student-service';
@@ -28,7 +30,7 @@ const isRejectedRechargeStatus = (status: StudentRechargeRequestDto['status']) =
 const isPendingRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
   status === 0 || status === 'Pending';
 
-const normalizePhoneInput = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+const normalizePhoneInput = normalizeEgyptianMobileInput;
 
 const isValidEgyptianMobile = (value: string) => /^01[0125]\d{8}$/.test(value);
 
@@ -316,6 +318,24 @@ export default function StudentRechargePageClient() {
     }
   };
 
+  const recoverSavedProof = async (requestId: string, phone: string) => {
+    try {
+      const latestRequests = await rechargeService.getMyRequests({ suppressErrorToast: true });
+      const saved = latestRequests.find(request => request.id === requestId);
+      const previousProof = requests.find(request => request.id === requestId)?.screenshotUrl;
+      if (!saved?.screenshotUrl || saved.screenshotUrl === previousProof || saved.senderPhoneNumber !== phone) return false;
+      setRequests(latestRequests);
+      setReviewCode(saved.reviewCode);
+      setReviewState('checking');
+      setOutcomeMessage('تم تأكيد حفظ إثبات التحويل. جاري تحديث حالة الطلب.');
+      setStep(3);
+      return true;
+    } catch {
+      // An unavailable status read cannot confirm persistence; keep the selected proof for retry.
+      return false;
+    }
+  };
+
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rechargeData || proofSubmissionInFlightRef.current) return;
@@ -381,8 +401,10 @@ export default function StudentRechargePageClient() {
         toast.error(message);
       }
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        || 'لم نتلقَّ تأكيدًا بحفظ الصورة. تأكد من اتصال الإنترنت ثم أعد المحاولة.';
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if ((!status || status >= 500 || status === 408)
+        && await recoverSavedProof(rechargeData.rechargeRequestId, normalizedSenderPhone)) return;
+      const message = getApiErrorSummary(error, 'لم نتلقَّ تأكيدًا بحفظ الصورة. تأكد من اتصال الإنترنت ثم أعد المحاولة.');
       setProofUploadError(message);
     } finally {
       proofSubmissionInFlightRef.current = false;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 500,
+  "reachableFileCount": 503,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -58,6 +58,10 @@
     {
       "file": "frontend/src/app/admin/auto-repair/page.tsx",
       "route": "/admin/auto-repair"
+    },
+    {
+      "file": "frontend/src/app/admin/auto-repair/SynchronizationStatus.tsx",
+      "route": null
     },
     {
       "file": "frontend/src/app/admin/chat/AdminChatPageClient.tsx",
@@ -1760,6 +1764,10 @@
       "route": null
     },
     {
+      "file": "frontend/src/lib/student-learning-progress.ts",
+      "route": null
+    },
+    {
       "file": "frontend/src/lib/utils.ts",
       "route": null
     },
@@ -1789,6 +1797,10 @@
     },
     {
       "file": "frontend/src/lib/video-seek.ts",
+      "route": null
+    },
+    {
+      "file": "frontend/src/lib/video-tracking-clock.ts",
       "route": null
     },
     {
@@ -2004,7 +2016,7 @@
       "route": null
     }
   ],
-  "callCount": 603,
+  "callCount": 604,
   "calls": [
     {
       "method": "DELETE",
@@ -2390,7 +2402,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 18
+        "line": 29
       }
     },
     {
@@ -2399,7 +2411,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 21
+        "line": 32
       }
     },
     {
@@ -4073,7 +4085,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 326
+        "line": 363
       }
     },
     {
@@ -4082,7 +4094,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/components/video/SecureVideoPlayer.tsx",
-        "line": 305
+        "line": 306
       }
     },
     {
@@ -4091,7 +4103,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 311
+        "line": 348
       }
     },
     {
@@ -4100,7 +4112,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 331
+        "line": 368
       }
     },
     {
@@ -4109,7 +4121,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 321
+        "line": 358
       }
     },
     {
@@ -4118,7 +4130,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 316
+        "line": 353
       }
     },
     {
@@ -4127,7 +4139,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 301
+        "line": 338
       }
     },
     {
@@ -4136,7 +4148,16 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 341
+        "line": 378
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/student/grades",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 334
       }
     },
     {
@@ -4145,7 +4166,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 351
+        "line": 388
       }
     },
     {
@@ -4154,7 +4175,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 356
+        "line": 393
       }
     },
     {
@@ -4163,7 +4184,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 386
+        "line": 423
       }
     },
     {
@@ -4172,7 +4193,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 376
+        "line": 413
       }
     },
     {
@@ -4181,7 +4202,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 346
+        "line": 383
       }
     },
     {
@@ -4217,7 +4238,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 306
+        "line": 343
       }
     },
     {
@@ -4226,7 +4247,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 361
+        "line": 398
       }
     },
     {
@@ -4730,7 +4751,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 27
+        "line": 38
       }
     },
     {
@@ -6593,7 +6614,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 336
+        "line": 373
       }
     },
     {
@@ -6602,7 +6623,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 408
+        "line": 445
       }
     },
     {
@@ -6611,7 +6632,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 391
+        "line": 428
       }
     },
     {
@@ -6629,7 +6650,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 399
+        "line": 436
       }
     },
     {
@@ -6989,7 +7010,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/auto-repair-service.ts",
-        "line": 24
+        "line": 35
       }
     },
     {
@@ -7403,7 +7424,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 381
+        "line": 418
       }
     },
     {
@@ -7412,7 +7433,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 371
+        "line": 408
       }
     },
     {
@@ -7658,7 +7679,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 84
+        "line": 85
       }
     },
     {
@@ -7856,7 +7877,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/recharge-service.ts",
-        "line": 89
+        "line": 90
       }
     },
     {
@@ -7878,5 +7899,5 @@
       }
     }
   ],
-  "digest": "cf60c45f13b52a92150d2657acb677aafe75e58a25a10571ab96561b53d60f80"
+  "digest": "321a745b5ec31b0af5274a2db5b6709284ffc20d483e68be7a998ae01c8d8bfb"
 }
