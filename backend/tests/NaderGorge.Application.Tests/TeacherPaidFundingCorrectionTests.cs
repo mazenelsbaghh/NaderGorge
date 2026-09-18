@@ -108,7 +108,8 @@ public sealed class TeacherPaidFundingCorrectionTests
             new NaderGorge.Application.Features.Admin.PlatformFinance.PlatformFinanceDashboardService(db),
             new NaderGorge.Application.Features.Admin.PlatformFinance.Teachers.GetTeacherFinancialSummaryQuery(db));
         var before = await query.GetAsync(SaleTime.Date, DateTime.UtcNow.Date.AddDays(1), default);
-        Assert.Equal(300, before.Teachers.Single(x => x.Period.TeacherId == TeacherId).ReconciliationDifference);
+        Assert.Equal(150, before.Teachers.Single(x => x.Period.TeacherId == TeacherId).ReconciliationDifference);
+        Assert.Equal(250, before.Platform.NetProfit);
         await Correct(db);
         db.ChangeTracker.Clear();
         var report = await query.GetAsync(SaleTime.Date, DateTime.UtcNow.Date.AddDays(1), default);
@@ -182,6 +183,107 @@ public sealed class TeacherPaidFundingCorrectionTests
             await db.Database.ExecuteSqlRawAsync(Sql("FUNDING_VALIDATION_SQL"));
             Assert.Equal(scenario == "gift" ? 0 : scenario == "zero-platform" ? 250 : 150, await db.TeacherAccounts.Select(x => x.CurrentBalance).SingleAsync());
         }
+        await transaction.RollbackAsync();
+    }
+
+    [FinanceRepairTheory]
+    [InlineData(TeacherAgreementAllocationMode.PlatformFixedPerUnit, 250, 150)]
+    [InlineData(TeacherAgreementAllocationMode.PlatformFixedPerUnit, 12.5, 387.5)]
+    [InlineData(TeacherAgreementAllocationMode.Percentage, 75, 300)]
+    public async Task Historical_profit_uses_each_teachers_approved_terms_instead_of_old_zero_allocation(
+        TeacherAgreementAllocationMode mode, decimal value, decimal expectedTeacher)
+    {
+        await using var db = await OpenDatabase();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await SeedSale(db, 0, 400);
+        var agreement = await db.TeacherFinancialAgreements.SingleAsync(x => x.TeacherId == TeacherId);
+        agreement.EffectiveFrom = SaleTime.AddHours(1);
+        agreement.AllocationMode = mode;
+        agreement.AllocationValue = value;
+        var allocation = await db.TeacherFinancialAllocations.SingleAsync();
+        allocation.TeacherShareAmount = 0;
+        await db.SaveChangesAsync();
+        var history = await new NaderGorge.Application.Features.Admin.PlatformFinance.ProfitSalesHistory(db)
+            .ReadAsync(SaleTime.AddDays(1), default);
+        var sale = Assert.Single(history);
+        Assert.Equal(400, sale.Sales);
+        Assert.Equal(expectedTeacher, sale.TeacherShare);
+        Assert.Equal(400 - expectedTeacher, sale.PlatformShare);
+        Assert.Equal(0, allocation.TeacherShareAmount);
+        await transaction.RollbackAsync();
+    }
+
+    [FinanceRepairTheory]
+    [InlineData(0, 400, "gift", 0, 0)]
+    [InlineData(100, 300, "gift", 100, 0)]
+    [InlineData(400, 300, "new-format", 400, 150)]
+    public async Task Profit_excludes_gifts_and_never_counts_new_format_scoped_funding_twice(
+        decimal general, decimal scoped, string scenario, decimal expectedPaid, decimal expectedTeacher)
+    {
+        await using var db = await OpenDatabase();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await SeedSale(db, general, scoped, scenario);
+        var history = await new NaderGorge.Application.Features.Admin.PlatformFinance.ProfitSalesHistory(db)
+            .ReadAsync(SaleTime.AddDays(1), default);
+        var sale = Assert.Single(history);
+        Assert.Equal(expectedPaid, sale.Sales);
+        Assert.Equal(expectedTeacher, sale.TeacherShare);
+        Assert.Equal(expectedPaid - expectedTeacher, sale.PlatformShare);
+        await transaction.RollbackAsync();
+    }
+
+    [FinanceRepairTheory]
+    [InlineData(0, 400)]
+    [InlineData(400, 0)]
+    [InlineData(500, -100)]
+    public async Task Cancellation_without_old_reversal_removes_teacher_profit_and_uses_actual_cash_refund(
+        decimal refund, decimal expectedPlatform)
+    {
+        await using var db = await OpenDatabase();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await SeedSale(db, 0, 400, "cancelled");
+        var grant = await db.StudentAccessGrants.SingleAsync();
+        db.AuditLogs.Add(new AuditLog { PerformedByUserId = grant.UserId, Action = "CANCEL_PACKAGE_GRANT",
+            EntityId = grant.Id, EntityType = "StudentAccessGrant", CreatedAt = SaleTime.AddMinutes(1),
+            NewValues = JsonSerializer.Serialize(new { refundedAmount = refund }) });
+        await db.SaveChangesAsync();
+        var history = await new NaderGorge.Application.Features.Admin.PlatformFinance.ProfitSalesHistory(db)
+            .ReadAsync(SaleTime.AddDays(1), default);
+        Assert.Equal(2, history.Count);
+        Assert.Equal(400, history.Sum(x => x.Sales));
+        Assert.Equal(0, history.Sum(x => x.TeacherShare));
+        Assert.Equal(expectedPlatform, history.Sum(x => x.PlatformShare));
+        Assert.Equal(refund, history.Sum(x => x.Refunds));
+        await transaction.RollbackAsync();
+    }
+
+    [FinanceRepairFact]
+    public async Task Posted_partial_refund_and_linked_access_cancellation_are_counted_once()
+    {
+        await using var db = await OpenDatabase();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var purchase = await SeedSale(db, 100, 300);
+        var grant = await db.StudentAccessGrants.SingleAsync();
+        var occurredAt = SaleTime.AddMinutes(1);
+        var journal = new JournalEntry { SequenceNumber = 999999, SourceType = "PlatformRefund",
+            SourceId = Guid.NewGuid(), IdempotencyKey = Guid.NewGuid().ToString(), PostingKind = "RefundPosted",
+            Status = JournalEntryStatus.Posted, OccurredAt = occurredAt };
+        db.JournalEntries.Add(journal);
+        db.PlatformRefunds.Add(new PlatformRefund { OriginalSourceId = purchase.PurchaseOperationId,
+            OriginalSourceType = "PurchaseOperation", StudentId = grant.UserId, TeacherId = TeacherId,
+            TeacherAmount = 37.5m, PlatformAmount = 62.5m, Status = PlatformRefundStatus.Posted,
+            JournalEntryId = journal.Id, CreatedByUserId = grant.UserId, Reason = "Test" });
+        db.AuditLogs.Add(new AuditLog { PerformedByUserId = grant.UserId, Action = "CANCEL_PACKAGE_GRANT",
+            EntityId = grant.Id, EntityType = "StudentAccessGrant", CreatedAt = occurredAt,
+            NewValues = JsonSerializer.Serialize(new { refundedAmount = 0, purchaseOperationId = purchase.PurchaseOperationId }) });
+        await db.SaveChangesAsync();
+        var history = await new NaderGorge.Application.Features.Admin.PlatformFinance.ProfitSalesHistory(db)
+            .ReadAsync(SaleTime.AddDays(1), default);
+        Assert.Equal(2, history.Count);
+        Assert.Equal(400, history.Sum(x => x.Sales));
+        Assert.Equal(112.5m, history.Sum(x => x.TeacherShare));
+        Assert.Equal(187.5m, history.Sum(x => x.PlatformShare));
+        Assert.Equal(100, history.Sum(x => x.Refunds));
         await transaction.RollbackAsync();
     }
 

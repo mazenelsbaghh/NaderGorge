@@ -85,7 +85,7 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
             Action = "CANCEL_PACKAGE_GRANT",
             PerformedByUserId = request.AdminId,
             OldValues = JsonSerializer.Serialize(new { isActive = true }),
-            NewValues = JsonSerializer.Serialize(new { isActive = false, refundBalance = request.RefundBalance, refundedAmount })
+            NewValues = JsonSerializer.Serialize(new { isActive = false, refundBalance = request.RefundBalance, refundedAmount, purchaseOperationId = request.RefundScope?.PurchaseOperationId })
         };
         _context.AuditLogs.Add(audit);
 

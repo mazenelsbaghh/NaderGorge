@@ -20,10 +20,10 @@ function TeacherProfitTable({ rows }: { rows: ProfitTeacherRow[] }) {
       <table className="w-full min-w-[1000px] text-start text-sm tabular-nums">
         <caption className="sr-only">توزيع أرباح المبيعات والمرتجعات والمدفوعات حسب المدرّس خلال الفترة المختارة</caption>
         <thead className="bg-[var(--admin-card-soft)] text-[var(--admin-text)]"><tr>
-          {['المدرّس', 'المبيعات قبل المرتجعات', 'حصة المدرّس', 'حصة المنصّة', 'المرتجعات', 'المصروف للمدرّس', 'تفاصيل الحساب'].map(label => <th key={label} scope="col" className="whitespace-nowrap px-4 py-4 text-start font-bold">{label}</th>)}
+          {['المدرّس', 'المبيعات المدفوعة قبل المرتجعات', 'حصة المدرّس', 'حصة المنصّة', 'المرتجعات', 'المصروف للمدرّس', 'تفاصيل الحساب'].map(label => <th key={label} scope="col" className="whitespace-nowrap px-4 py-4 text-start font-bold">{label}</th>)}
         </tr></thead>
         <tbody>{rows.map(({ period: row, reconciliationDifference }) => <tr key={row.teacherId} className="border-t border-[var(--admin-border)] hover:bg-[var(--admin-hover)]">
-          <th scope="row" className="px-4 py-4 text-start font-bold">{row.teacherName}{Math.abs(reconciliationDifference) >= 0.01 && <span className="mt-1 block text-xs font-medium text-[var(--admin-muted)]">يوجد فرق للمراجعة</span>}</th>
+          <th scope="row" className="px-4 py-4 text-start font-bold">{row.teacherName}{Math.abs(reconciliationDifference) >= 0.01 && <span className="mt-1 block text-xs font-medium text-[var(--admin-muted)]">رصيد الحساب المسجّل يحتاج مطابقة</span>}</th>
           <td className="whitespace-nowrap px-4 py-4">{money(row.grossSales)}</td>
           <td className="whitespace-nowrap px-4 py-4">{money(row.teacherShare)}</td>
           <td className="whitespace-nowrap px-4 py-4 font-bold text-[var(--admin-primary)]">{money(row.platformShare)}</td>
@@ -39,11 +39,12 @@ function TeacherProfitTable({ rows }: { rows: ProfitTeacherRow[] }) {
     </div>
     {rows.filter(row => row.period.teacherId === expanded).map(row => <section key={row.period.teacherId} className="rounded-xl bg-[var(--admin-card-soft)] p-5" aria-label={`حساب ${row.period.teacherName}`}>
       <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-bold">حساب {row.period.teacherName}</h3><Link className="admin-btn-ghost inline-flex min-h-11 items-center px-4" href={`/admin/teachers/${row.period.teacherId}/account`}>فتح كشف الحساب التفصيلي</Link></div>
+      <p className="mt-4 font-bold">المستحق المحسوب الآن: {money(row.currentCalculatedBalance)}</p>
       <dl className="mt-4 flex flex-wrap gap-x-10 gap-y-4">
-        <div><dt className="text-sm text-[var(--admin-muted)]">رصيد الدفتر في نهاية الفترة</dt><dd className="mt-1 font-bold tabular-nums">{money(row.period.outstanding)}</dd></div>
+        <div><dt className="text-sm text-[var(--admin-muted)]">المستحق المحسوب في نهاية الفترة</dt><dd className="mt-1 font-bold tabular-nums">{money(row.period.outstanding)}</dd></div>
         <div><dt className="text-sm text-[var(--admin-muted)]">رصيد حساب المدرّس الآن</dt><dd className="mt-1 font-bold tabular-nums">{money(row.currentAccountBalance)}</dd></div>
         <div><dt className="text-sm text-[var(--admin-muted)]">رصيد الدفتر الآن</dt><dd className="mt-1 font-bold tabular-nums">{money(row.currentLedgerBalance)}</dd></div>
-        <div><dt className="text-sm text-[var(--admin-muted)]">فرق يحتاج مراجعة الآن</dt><dd className="mt-1 font-bold tabular-nums">{money(row.reconciliationDifference)}</dd></div>
+        <div><dt className="text-sm text-[var(--admin-muted)]">فرق المحسوب عن الحساب المسجّل</dt><dd className="mt-1 font-bold tabular-nums">{money(row.reconciliationDifference)}</dd></div>
       </dl>
       <p className="mt-4 max-w-prose text-sm leading-6 text-[var(--admin-muted)]">رصيد نهاية الفترة يشمل رصيد بدايتها. أرصدة «الآن» تشمل الحركات اللاحقة أيضًا. الأرباح تخص المبيعات، والمصروف للمدرّس يخص ما تم دفعه فعليًا.</p>
     </section>)}
@@ -103,14 +104,14 @@ export default function PlatformProfitsPage() {
       </form>
       {loading ? <div role="status" className="rounded-xl bg-[var(--admin-card)] px-6 py-16 text-center text-[var(--admin-muted)]">جارٍ تحميل تقرير الأرباح...</div> : error ? <div role="alert" className="rounded-xl border border-[var(--admin-border)] p-6"><p>{error}</p><button className="admin-btn-primary mt-4 min-h-11 px-4" type="button" onClick={() => setAttempt(value => value + 1)}>إعادة المحاولة</button></div> : report && <>
         <div className="flex flex-wrap items-center justify-between gap-3"><p className="font-bold">الفترة: {dateLabel(period.from)} إلى {dateLabel(period.to)}</p><p className="text-sm text-[var(--admin-muted)]">آخر تحديث: {formatCairoTimestamp(report.generatedAt)}</p></div>
-        {differences.length > 0 && <section role="status" className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm leading-7"><strong>التقرير يحتاج مراجعة تاريخية لعدد {differences.length} من المدرسين.</strong><p>توجد فروق بين الدفتر المالي وحسابات المدرسين. الأرقام أدناه هي الأرباح المسجّلة، ولا تُعد تسوية نهائية قبل مطابقة الفروق. افتح تفاصيل المدرّس للاطلاع عليها.</p></section>}
+        {differences.length > 0 && <section role="status" className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm leading-7"><strong>أرصدة الحسابات المسجّلة تحتاج مطابقة لعدد {differences.length} من المدرسين.</strong><p>أرباح التقرير محسوبة من المدفوعات الفعلية والاتفاقات المعتمدة بأثر رجعي. تصحيح التقرير لا يغيّر رصيد حساب المدرّس المسجّل؛ تظهر المقارنة في التفاصيل.</p></section>}
         <section aria-label="نتيجة المنصة لكل المدرسين" className="grid gap-4 md:grid-cols-3 [&_.text-4xl]:text-2xl">
-          <AdminStatCard label="إيراد المنصّة بعد مرتجعاتها" value={money(report.platform.revenue - report.platform.refunds)} icon={CircleDollarSign} variant="light" subtitle="حصة المنصّة من كل مصادر الإيراد المسجّلة" />
+          <AdminStatCard label="إيراد المنصّة بعد مرتجعاتها" value={money(report.platform.revenue - report.platform.refunds)} icon={CircleDollarSign} variant="light" subtitle="حصة المنصّة من مبيعات المدرسين بعد الإلغاءات" />
           <AdminStatCard label="مصروفات المنصّة" value={money(report.platform.expenses)} icon={Receipt} variant="muted" subtitle="المصروفات المسجّلة خلال الفترة" />
-          <AdminStatCard label="صافي الربح المسجّل" value={money(report.platform.netProfit)} icon={TrendingUp} variant="accent" subtitle="الإيرادات ناقص المرتجعات والمصروفات" />
+          <AdminStatCard label="صافي ربح المبيعات" value={money(report.platform.netProfit)} icon={TrendingUp} variant="accent" subtitle="الإيرادات ناقص المرتجعات والمصروفات" />
         </section>
         <section className="space-y-4 rounded-xl bg-[var(--admin-card)] p-4 sm:p-6">
-          <div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-xl font-bold">ربح كل مدرّس وحصة المنصّة</h2><p className="mt-2 max-w-prose text-sm leading-6 text-[var(--admin-muted)]">الحصص بعد المرتجعات وقبل مصروفات المنصّة العامة. شحن المحافظ لا يُحسب ربحًا عند الشحن.</p></div>
+          <div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-xl font-bold">ربح كل مدرّس وحصة المنصّة</h2><p className="mt-2 max-w-prose text-sm leading-6 text-[var(--admin-muted)]">طُبّقت اتفاقات المدرسين المعتمدة بتاريخ ١٩ سبتمبر ٢٠٢٦ على المبيعات الأقدم، مع الحفاظ على الاتفاقات الخاصة. تُحسب المبالغ المدفوعة فقط، وتُستبعد الهدايا وتُخصم الإلغاءات والمرتجعات. شحن المحافظ لا يُحسب ربحًا عند الشحن.</p></div>
             <div className="flex flex-wrap items-end gap-3"><label className="text-sm font-bold">المدرّس<select className="admin-input mt-2 block min-h-11 max-w-full" value={teacherId} onChange={event => setTeacherId(event.target.value)}><option value="">كل المدرسين</option>{report.teachers.map(row => <option key={row.period.teacherId} value={row.period.teacherId}>{row.period.teacherName}</option>)}</select></label>
               <button type="button" className="admin-btn-ghost inline-flex min-h-11 items-center gap-2 px-4" onClick={download}><ArrowDownToLine size={17} aria-hidden="true" />تصدير التقرير CSV</button></div>
           </div>

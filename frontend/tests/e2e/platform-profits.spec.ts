@@ -4,8 +4,8 @@ const payload = {
   generatedAt: '2026-09-18T21:00:00Z', earliestDate: '2026-01-01',
   platform: { from: '2026-09-01', to: '2026-09-19', revenue: 500, refunds: 20, expenses: 100, netProfit: 380, accounts: [] },
   teachers: [
-    { period: { teacherId: 'first', teacherName: 'المدرس الأول', grossSales: 1000, teacherShare: 600, platformShare: 350, refunds: 50, paid: 200, outstanding: 400 }, currentAccountBalance: 400, currentLedgerBalance: 400, reconciliationDifference: 0 },
-    { period: { teacherId: 'second', teacherName: '=2+2', grossSales: 300, teacherShare: 150, platformShare: 130, refunds: 20, paid: 0, outstanding: 150 }, currentAccountBalance: 100, currentLedgerBalance: 150, reconciliationDifference: 50 },
+    { period: { teacherId: 'first', teacherName: 'المدرس الأول', grossSales: 1000, teacherShare: 600, platformShare: 350, refunds: 50, paid: 200, outstanding: 400 }, currentCalculatedBalance: 400, currentAccountBalance: 400, currentLedgerBalance: 400, reconciliationDifference: 0 },
+    { period: { teacherId: 'second', teacherName: '=2+2', grossSales: 300, teacherShare: 150, platformShare: 130, refunds: 20, paid: 0, outstanding: 150 }, currentCalculatedBalance: 150, currentAccountBalance: 100, currentLedgerBalance: 150, reconciliationDifference: 50 },
   ],
 };
 
@@ -25,8 +25,8 @@ test('dedicated profit report filters teachers, exposes mismatches, and exports 
   });
   await page.goto('/admin/platform-profits');
   await expect(page.getByRole('heading', { name: 'أرباح المنصّة', exact: true })).toBeVisible();
-  await expect(page.getByText('صافي الربح المسجّل', { exact: true }).locator('../..')).toContainText('380.00');
-  await expect(page.getByText('التقرير يحتاج مراجعة تاريخية لعدد 1 من المدرسين.')).toBeVisible();
+  await expect(page.getByText('صافي ربح المبيعات', { exact: true }).locator('../..')).toContainText('380.00');
+  await expect(page.getByText('أرصدة الحسابات المسجّلة تحتاج مطابقة لعدد 1 من المدرسين.')).toBeVisible();
   await page.getByLabel('من', { exact: true }).fill('2026-09-01');
   await page.getByLabel('إلى', { exact: true }).fill('2026-09-19');
   await page.getByRole('button', { name: 'عرض التقرير', exact: true }).click();
