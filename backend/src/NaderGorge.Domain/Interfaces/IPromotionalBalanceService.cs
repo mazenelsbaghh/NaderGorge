@@ -6,7 +6,12 @@ public sealed record PromotionalFundingResult(
     Guid OperationId,
     decimal PromotionalAmount,
     decimal PaidAmount,
-    IReadOnlyList<Guid> AllocationIds);
+    IReadOnlyList<Guid> AllocationIds)
+{
+    public decimal PaidTeacherBalanceAmount { get; init; }
+    public decimal TotalPaidAmount => PaidAmount + PaidTeacherBalanceAmount;
+    public decimal GiftAmount => PromotionalAmount - PaidTeacherBalanceAmount;
+}
 
 public interface IPromotionalBalanceService
 {

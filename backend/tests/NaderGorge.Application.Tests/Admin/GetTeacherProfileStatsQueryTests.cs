@@ -81,6 +81,40 @@ public sealed class GetTeacherProfileStatsQueryTests
         Assert.Equal((3, 1), (packageSales.PurchasedStudents, packageSales.GiftStudents));
     }
 
+    [Fact]
+    public async Task Pending_essays_include_unassigned_owned_questions_and_exclude_graded_or_other_teachers()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var teacher = await SeedTeacherSalesAsync(db);
+        var other = new TeacherProfile { User = NewUser("other-teacher") };
+        var student = await db.Users.FirstAsync(x => x.Id != teacher.UserId);
+        var subject = await db.Subjects.SingleAsync();
+        var exam = new Exam { Title = "Essay exam", CreatedByTeacherId = teacher.Id };
+        var attempt = new StudentExamAttempt { UserId = student.Id, Exam = exam };
+        db.AddRange(other, exam, attempt);
+        foreach (var (owner, grader, status) in new[]
+        {
+            (teacher.Id, (Guid?)null, EssaySubmissionStatus.WaitTeacher),
+            (teacher.Id, (Guid?)null, EssaySubmissionStatus.WaitAI),
+            (other.Id, (Guid?)teacher.Id, EssaySubmissionStatus.AIScored),
+            (teacher.Id, (Guid?)teacher.Id, EssaySubmissionStatus.TeacherGraded),
+            (other.Id, (Guid?)null, EssaySubmissionStatus.WaitTeacher)
+        })
+            db.EssaySubmissions.Add(new EssaySubmission { StudentId = student.Id, Attempt = attempt,
+                Question = new EssayQuestion { Text = "Explain", SubjectId = subject.Id, CreatedByTeacherId = owner },
+                GradedByTeacherId = grader, Status = status });
+        await db.SaveChangesAsync();
+
+        var result = await new GetTeacherProfileStatsQueryHandler(db).Handle(new(teacher.Id), default);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(3, result.Data!.EssaysPendingCount);
+        Assert.Equal(1, result.Data.EssaysGradedCount);
+    }
+
     private static AppDbContext CreateContext(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
 

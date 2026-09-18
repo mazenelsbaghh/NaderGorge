@@ -386,6 +386,74 @@ public sealed class GiftsAndPromotionalBalanceTests
         Assert.Single(db.StudentAccessGrants);
     }
 
+    [Theory]
+    [InlineData(100, 0, 0, 85)]
+    [InlineData(60, 40, 0, 85)]
+    [InlineData(50, 30, 20, 65)]
+    [InlineData(0, 100, 0, 85)]
+    [InlineData(0, 0, 100, 0)]
+    [InlineData(10, 0, 90, 0)]
+    public async Task Purchase_RecognizesPaidTeacherFunding_WithoutTreatingGiftsAsCash(
+        decimal scoped, decimal general, decimal gift, decimal teacherShare)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await SeedStudentAsync(db, "Funding buyer", "15299");
+        var package = await SeedPackageAsync(db, 100m);
+        db.TeacherProfiles.Add(new TeacherProfile { Id = package.TeacherId });
+        db.TeacherFinancialAgreements.Add(new TeacherFinancialAgreement
+        {
+            TeacherId = package.TeacherId, ScopeType = TeacherAgreementScopeType.Default,
+            Trigger = TeacherAgreementTrigger.ContentSale,
+            AllocationMode = TeacherAgreementAllocationMode.PlatformFixedPerUnit,
+            AllocationValue = 15m, PriceBasis = TeacherPriceBasis.NetAfterDiscount,
+            EffectiveFrom = DateTime.UtcNow.AddDays(-1)
+        });
+        var wallet = new StudentBalance { UserId = student.Id, CurrentBalance = general + 7m };
+        db.StudentBalances.Add(wallet);
+        if (scoped > 0m)
+            AddAllocation(db, student.Id, package.TeacherId, scoped, null).GiftRecipient.OutcomeCode = "DIGITAL_RECHARGE";
+        if (gift > 0m) AddAllocation(db, student.Id, package.TeacherId, gift, null);
+        foreach (var code in new[] { "1100", "1110", "2000", "4000" })
+            db.FinancialAccounts.Add(new FinancialAccount { Code = code, Name = code,
+                Type = code == "4000" ? FinancialAccountType.Revenue : FinancialAccountType.Liability,
+                NormalSide = FinancialNormalSide.Credit });
+        await db.SaveChangesAsync();
+        var handler = new PurchaseContentCommandHandler(db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            new PromotionalBalanceService(db), new SalesTargetResolver(db), new DiscountEngine(db),
+            financialPosting: new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db));
+        var command = new PurchaseContentCommand(student.Id, CodeType.Package, package.Id);
+
+        var result = await handler.Handle(command, default);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(7m, wallet.CurrentBalance);
+        var sale = Assert.Single(db.SalesFinancialEffects);
+        Assert.Equal(scoped + general, sale.PaidAmount);
+        Assert.Equal(gift, sale.PromotionalAmount);
+        Assert.Equal(100m, sale.PaidAmount + sale.PromotionalAmount);
+        Assert.Equal(teacherShare, sale.TeacherShareImpact);
+        Assert.Equal(scoped + general - teacherShare, sale.PlatformShareImpact);
+        var financialEvent = Assert.Single(db.TeacherFinancialEvents);
+        Assert.Equal(sale.PaidAmount, financialEvent.PaidAmount);
+        Assert.Equal(gift, financialEvent.PromotionalAmount);
+        Assert.Equal(teacherShare, Assert.Single(financialEvent.Allocations).TeacherShareAmount);
+        Assert.Equal(teacherShare, db.TeacherAccounts.Select(x => x.TotalEarnings).SingleOrDefault());
+        Assert.All(db.PromotionalBalanceAllocations, x => Assert.Equal(0m, x.AvailableAmount));
+        var lines = db.JournalEntries.SelectMany(x => x.Lines).ToList();
+        Assert.Equal(scoped + general, lines.Sum(x => x.Debit));
+        Assert.Equal(scoped + general, lines.Sum(x => x.Credit));
+        Assert.Equal(scoped, lines.Where(x => x.FinancialAccount.Code == "1110").Sum(x => x.Debit));
+        Assert.Equal(general, lines.Where(x => x.FinancialAccount.Code == "1100").Sum(x => x.Debit));
+        Assert.Equal(teacherShare, lines.Where(x => x.FinancialAccount.Code == "2000").Sum(x => x.Credit));
+
+        await handler.Handle(command, default);
+        Assert.Single(db.SalesFinancialEffects);
+        Assert.Single(db.TeacherFinancialEvents);
+        Assert.Equal(7m, wallet.CurrentBalance);
+        Assert.Equal(scoped + general > 0 ? 1 : 0, db.JournalEntries.Count());
+    }
+
     [Fact]
     public async Task TeacherRestrictedBalance_IsIneligibleForAnotherTeacher()
     {

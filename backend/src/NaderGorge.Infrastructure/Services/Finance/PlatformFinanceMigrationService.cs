@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -147,10 +148,12 @@ public sealed class PlatformFinanceMigrationService(
 
             try
             {
-                var lines = new List<FinancialPostingLine>
-                {
-                    new("1100", sale.PaidAmount, 0m, StudentId: sale.StudentId)
-                };
+                var scopedPaidAmount = PaidTeacherBalanceAmount(sale);
+                var lines = new List<FinancialPostingLine>();
+                if (sale.PaidAmount > scopedPaidAmount)
+                    lines.Add(new("1100", sale.PaidAmount - scopedPaidAmount, 0m, StudentId: sale.StudentId));
+                if (scopedPaidAmount > 0m)
+                    lines.Add(new("1110", scopedPaidAmount, 0m, StudentId: sale.StudentId, TeacherId: sale.TeacherId));
                 AddSignedLine(lines, "4000", sale.PlatformShareImpact, sale.StudentId, null);
                 if (sale.TeacherShareImpact != 0m)
                     AddSignedLine(lines, "2000", sale.TeacherShareImpact, sale.StudentId, sale.TeacherId);
@@ -266,6 +269,17 @@ public sealed class PlatformFinanceMigrationService(
             .Select(item => item.SourceId!.Value)
             .ToListAsync(ct);
         return ids.Where(id => !existing.Contains(id)).ToHashSet();
+    }
+
+    private static decimal PaidTeacherBalanceAmount(SalesFinancialEffect sale)
+    {
+        using var details = JsonDocument.Parse(sale.DetailsJson);
+        if (!details.RootElement.TryGetProperty("paidTeacherBalanceAmount", out var scopedFunding))
+            return 0m;
+        var amount = scopedFunding.GetDecimal();
+        if (amount < 0m || amount > sale.PaidAmount || (amount > 0m && !sale.TeacherId.HasValue))
+            throw new InvalidOperationException("FINANCE_INVALID_PURCHASE_FUNDING");
+        return amount;
     }
 
     private static void AddSignedLine(List<FinancialPostingLine> lines, string code, decimal amount, Guid studentId, Guid? teacherId)

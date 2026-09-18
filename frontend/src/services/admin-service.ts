@@ -20,6 +20,29 @@ import type {
   TermDto,
 } from './content-service';
 
+export interface TeacherProfileStatsDto {
+  packagesCount: number;
+  studentsCount: number;
+  activeStudentsCount: number;
+  totalEarnings: number;
+  currentBalance: number;
+  examsCount: number;
+  essaysPendingCount: number;
+  essaysGradedCount: number;
+  codeGroupsCount: number;
+  questionBankItemsCount: number;
+  packageSales: Array<{
+    packageId: string;
+    packageName: string;
+    packageBuyers: number;
+    termBuyers: number;
+    sectionBuyers: number;
+    lessonBuyers: number;
+    purchasedStudents: number;
+    giftStudents: number;
+  }>;
+}
+
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
 
 export type ContentArchiveMode = 'None' | 'ActiveSubscribersOnly' | 'HiddenFromEveryone';
@@ -2308,15 +2331,14 @@ export const adminService = {
   },
 
   // ── Teacher Profile Page endpoints ──────────────────────────────
-  getTeacherStats: async (teacherId: string) => {
-    try {
-      const res = await apiClient.get<ApiResponse<any>>(
-        `/admin/teachers/${teacherId}/stats`
-      );
-      return res.data?.data ?? null;
-    } catch {
-      return null;
+  getTeacherStats: async (teacherId: string): Promise<TeacherProfileStatsDto> => {
+    const res = await apiClient.get<ApiResponse<TeacherProfileStatsDto>>(
+      `/admin/teachers/${teacherId}/stats`
+    );
+    if (!res.data.success || !res.data.data) {
+      throw new Error(res.data.message || 'تعذر تحميل إحصائيات المدرس');
     }
+    return res.data.data;
   },
 
   getTeacherStudents: async (teacherId: string) => {

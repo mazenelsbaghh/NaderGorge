@@ -99,6 +99,39 @@ public sealed class FinancialPostingServiceTests
         Assert.Equal(100m, reversal.Lines.Single(line => line.FinancialAccount.Code == "1100").Debit);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(60)]
+    [InlineData(100)]
+    public async Task Historical_purchase_uses_recorded_general_and_teacher_funding_once(decimal scoped)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        db.FinancialAccounts.AddRange(
+            Account("1100", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.GeneralStudentLiability),
+            Account("1110", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherStudentLiability),
+            Account("2000", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherPayable),
+            Account("4000", FinancialAccountType.Revenue, FinancialNormalSide.Credit, FinancialAccountRole.PlatformRevenue));
+        var when = DateTime.UtcNow.AddDays(-1);
+        db.SalesFinancialEffects.Add(new SalesFinancialEffect {
+            PurchaseOperationId = Guid.NewGuid(), StudentId = Guid.NewGuid(), TeacherId = Guid.NewGuid(),
+            CreatedAt = when, PaidAmount = 100m, TeacherShareImpact = 85m, PlatformShareImpact = 15m,
+            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { paidTeacherBalanceAmount = scoped })
+        });
+        await db.SaveChangesAsync();
+        var migration = new PlatformFinanceMigrationService(db, new FinancialPostingService(db));
+
+        var first = await migration.PostAsync(when.Date, when.Date.AddDays(1), Guid.NewGuid(), default);
+        var retry = await migration.PostAsync(when.Date, when.Date.AddDays(1), Guid.NewGuid(), default);
+
+        Assert.Equal(0, first.Failed);
+        Assert.Equal(1, first.Posted);
+        Assert.Equal(1, retry.AlreadyPosted);
+        var entry = Assert.Single(db.JournalEntries);
+        Assert.Equal(scoped, entry.Lines.Where(x => x.FinancialAccount.Code == "1110").Sum(x => x.Debit));
+        Assert.Equal(100m - scoped, entry.Lines.Where(x => x.FinancialAccount.Code == "1100").Sum(x => x.Debit));
+        Assert.Equal(100m, entry.Lines.Sum(x => x.Credit));
+    }
+
     private static FinancialAccount Account(string code, FinancialAccountType type, FinancialNormalSide side, FinancialAccountRole role) => new()
     {
         Code = code, Name = code, Type = type, NormalSide = side, Role = role

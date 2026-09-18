@@ -4,7 +4,7 @@ import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
-import { adminService, type UserAuditLogDto } from '@/services/admin-service';
+import { adminService, type TeacherProfileStatsDto, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { TeacherAccountSummary } from '@/features/teacher-finance-center/TeacherAccountSummary';
 import { TeacherCollectionsPanel } from '@/features/teacher-finance-center/TeacherCollectionsPanel';
@@ -150,16 +150,6 @@ const filterStudentPackageMemberships = (student: any, packageKey: string) => {
 const studentBelongsToPackage = (student: any, packageKey: string) =>
   filterStudentPackageMemberships(student, packageKey).length > 0;
 
-type PackageSalesBreakdown = {
-  packageId: string;
-  packageName: string;
-  packageBuyers: number;
-  termBuyers: number;
-  sectionBuyers: number;
-  lessonBuyers: number;
-  purchasedStudents: number;
-  giftStudents: number;
-};
 
 /* ──────────────────────────────────────────────────────────────────
    Component
@@ -172,7 +162,10 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
   // ── Data slices ──
   const [teacher, setTeacher] = useState<TeacherDto | null>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<TeacherProfileStatsDto | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
+  const [statsAttempt, setStatsAttempt] = useState(0);
   const [students, setStudents] = useState<any[]>([]);
   const [essays, setEssays] = useState<any[]>([]);
   const [activations, setActivations] = useState<any[]>([]);
@@ -230,10 +223,9 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
       // Fire all secondary requests in parallel — each wrapped in try/catch
       const [
-        statsRes, studentsRes, essaysRes, activationsRes,
+        studentsRes, essaysRes, activationsRes,
         payoutsRes, codeGroupsRes, auditRes, subjectsRes,
       ] = await Promise.all([
-        adminService.getTeacherStats(id).catch(() => null),
         adminService.getTeacherStudents(id).catch(() => []),
         adminService.getTeacherEssays(id).catch(() => []),
         adminService.getTeacherActivations(id).catch(() => []),
@@ -247,7 +239,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
       setSubjects(toArray(subjectsRes));
 
-      setStats(statsRes);
       setStudents(toArray(studentsRes));
       setEssays(toArray(essaysRes));
       setActivations(toArray(activationsRes));
@@ -267,6 +258,21 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   useEffect(() => {
     fetchTeacher();
   }, [fetchTeacher]);
+
+  useEffect(() => {
+    let active = true;
+    setStats(null);
+    setStatsLoading(true);
+    setStatsError(false);
+    void adminService.getTeacherStats(id).then((teacherStats) => {
+      if (active) setStats(teacherStats);
+    }).catch(() => {
+      if (active) setStatsError(true);
+    }).finally(() => {
+      if (active) setStatsLoading(false);
+    });
+    return () => { active = false; };
+  }, [id, statsAttempt]);
 
   const handleOpenModal = () => {
     if (!teacher) return;
@@ -381,7 +387,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   );
 
   const PackageSalesCards = () => {
-    const packageSales = toArray(stats?.packageSales) as PackageSalesBreakdown[];
+    const packageSales = stats?.packageSales ?? [];
+    if (!stats) return null;
 
     return (
       <section aria-labelledby="package-sales-title">
@@ -495,6 +502,11 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       )}
 
       <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
+      {(['overview', 'content', 'students'] as TabKey[]).includes(activeTab) && (
+        statsError ? <div role="alert" className="mt-4 text-sm">
+          تعذر تحميل الإحصائيات. <button type="button" className="min-h-11 px-3 underline" onClick={() => setStatsAttempt((attempt) => attempt + 1)}>إعادة المحاولة</button>
+        </div> : statsLoading ? <p role="status" className="mt-4 text-sm text-[var(--admin-muted)]">جارٍ تحميل الإحصائيات...</p> : null
+      )}
 
       <div className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
@@ -509,10 +521,10 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             <div>
               <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">ملخص الإحصاءات</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                <AdminStatCard variant="accent" icon={Users} label="طلاب اقتنوا محتوى (تاريخي)" value={stats?.studentsCount ?? 0} />
-                <AdminStatCard variant="light" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? 0} />
-                <AdminStatCard variant="muted" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? 0} />
-                <AdminStatCard variant="accent" icon={PenLine} label="مقالات قيد التصحيح" value={stats?.pendingEssaysCount ?? essays.length ?? 0} />
+                <AdminStatCard variant="accent" icon={Users} label="طلاب اقتنوا محتوى (تاريخي)" value={stats?.studentsCount ?? '—'} />
+                <AdminStatCard variant="light" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? '—'} />
+                <AdminStatCard variant="muted" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? '—'} />
+                <AdminStatCard variant="accent" icon={PenLine} label="مقالات قيد التصحيح" value={stats?.essaysPendingCount ?? '—'} />
               </div>
             </div>
 
@@ -615,8 +627,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         {activeTab === 'content' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <AdminStatCard variant="accent" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? 0} />
-              <AdminStatCard variant="light" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? 0} />
+              <AdminStatCard variant="accent" icon={Package} label="عدد الباقات" value={stats?.packagesCount ?? '—'} />
+              <AdminStatCard variant="light" icon={FileText} label="عدد الامتحانات" value={stats?.examsCount ?? '—'} />
               <AdminStatCard variant="muted" icon={BookOpen} label="مجموعات الأكواد" value={codeGroups.length} />
             </div>
 
@@ -647,8 +659,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         {activeTab === 'students' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب تاريخيًا" value={stats?.studentsCount ?? 0} />
-              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={stats?.activeStudentsCount ?? 0} />
+              <AdminStatCard variant="accent" icon={Users} label="إجمالي الطلاب تاريخيًا" value={stats?.studentsCount ?? '—'} />
+              <AdminStatCard variant="light" icon={Activity} label="طلاب نشطون" value={stats?.activeStudentsCount ?? '—'} />
             </div>
 
             <PackageSalesCards />
