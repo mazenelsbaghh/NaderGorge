@@ -16,6 +16,8 @@
 
 import '../auth.css';
 
+import { StudentLogin } from './StudentLogin';
+
 import { useEffect, useState, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -150,6 +152,10 @@ export default function LoginPageClient() {
     );
   }
 
+  if (surface === 'student' || surface === 'landing' || surface === 'all') {
+    return <StudentLogin isDark={isDark} onToggleTheme={toggleTheme} />;
+  }
+
   let welcomeText = 'دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.';
   if (surface === 'teacher') {
     welcomeText = 'التحكم الكامل بمجموعاتك، طلابك، وتقارير أدائهم.';
@@ -218,26 +224,7 @@ export default function LoginPageClient() {
               <h2>تسجيل الدخول إلى حسابك</h2>
               <LoginForm />
 
-              {(surface === 'student' ||
-                surface === 'landing' ||
-                surface === 'all') && (
-                <>
-                  <div className="auth-divider" />
-                  <p
-                    className="text-center text-sm"
-                    style={{ color: 'var(--admin-muted)' }}
-                  >
-                    ليس لديك حساب؟{' '}
-                    <Link
-                      href="/register"
-                      className="font-bold transition-colors hover:opacity-80"
-                      style={{ color: 'var(--admin-primary)' }}
-                    >
-                      إنشاء حساب طالب
-                    </Link>
-                  </p>
-                </>
-              )}
+
             </div>
           </div>
         </section>

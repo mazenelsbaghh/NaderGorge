@@ -11,6 +11,7 @@
  */
 
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -160,6 +161,8 @@ export function LoginForm() {
           <input
             id="login-phone"
             name="phoneNumber"
+            autoComplete="username"
+            inputMode="tel"
             type="tel"
             required
             className="auth-input"
@@ -185,6 +188,7 @@ export function LoginForm() {
           <input
             id="login-password"
             name="password"
+            autoComplete="current-password"
             type={showPassword ? 'text' : 'password'}
             required
             className="auth-input"
@@ -200,10 +204,9 @@ export function LoginForm() {
             className="auth-input-action"
             onClick={() => setShowPassword((value) => !value)}
             aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+            aria-pressed={showPassword}
           >
-            <span aria-hidden="true" className="text-sm leading-none">
-              {showPassword ? '◌' : '◉'}
-            </span>
+            {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>
