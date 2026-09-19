@@ -19,14 +19,14 @@ function __isVideoEmbedInspectionLikely() {
   var topWindow;
   try {
     var userAgent = typeof navigator === 'undefined' ? '' : String(navigator.userAgent || '');
-    var platform = typeof navigator === 'undefined' ? '' : String(navigator.platform || '');
     var touchPoints = typeof navigator === 'undefined' ? 0 : Number(navigator.maxTouchPoints || 0);
     var reportsMobileViewport = typeof navigator !== 'undefined'
       && Boolean(navigator.userAgentData && navigator.userAgentData.mobile);
     var usesMobileViewport = reportsMobileViewport
       || /Android|Mobile|iPad|iPhone|iPod|GSA\\/|FB_IAB|Instagram|; wv\\)/i.test(userAgent)
-      || (platform === 'MacIntel' && touchPoints > 1)
-      || (touchPoints > 0 && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches);
+      // Desktop-mode tablets can report a fine pointer when a mouse is attached.
+      || touchPoints > 0
+      || (typeof window.matchMedia === 'function' && window.matchMedia('(any-pointer: coarse)').matches);
     if (usesMobileViewport) return false;
     topWindow = window.top || window;
     var topDocument = topWindow.document;

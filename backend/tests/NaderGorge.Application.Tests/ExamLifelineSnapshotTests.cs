@@ -23,7 +23,8 @@ public class ExamLifelineSnapshotTests
             new(exam.Id, attempt.Id, assigned.Id, attempt.UserId), CancellationToken.None);
 
         Assert.True(response.Success, response.Message);
-        Assert.Equal(reserve.Id, response.Data!.Id);
+        Assert.Equal(reserve.Id, response.Data!.Question.Id);
+        Assert.Equal(10, response.Data.TotalScore);
         var saved = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
         Assert.Equal(oldText, Assert.Single(saved.ExamQuestions).Question.Text);
         Assert.Equal(30, saved.DurationMinutes);
@@ -31,6 +32,25 @@ public class ExamLifelineSnapshotTests
             exam, attempt.DefinitionSnapshotJson)).Id);
         Assert.Equal(reserve.Id, (await db.StudentAnswers.SingleAsync()).ExamQuestionId);
         Assert.False(attempt.IsTimeExpired);
+    }
+
+    [Fact]
+    public async Task WeightedSwapReturnsAuthoritativeScaleForImmediateAndFinalViews()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (exam, attempt, assigned, reserve) = await SeedAttempt(
+            db, assignedPoints: 15m, reservePoints: 17m, totalScore: 20m, passingScore: 12m);
+
+        var response = await new SwapQuestionCommandHandler(db).Handle(
+            new(exam.Id, attempt.Id, assigned.Id, attempt.UserId), CancellationToken.None);
+
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(reserve.Id, response.Data!.Question.Id);
+        Assert.Equal(17m, response.Data.TotalScore);
+        Assert.Equal(10.2m, response.Data.PassingScore);
+        var finalScale = AssessmentAttemptScaleNormalizer.Project(attempt);
+        Assert.Equal(response.Data.TotalScore, finalScale.Definition.TotalScore);
+        Assert.Equal(response.Data.PassingScore, finalScale.Definition.PassingScore);
     }
 
     [Fact]
@@ -74,13 +94,16 @@ public class ExamLifelineSnapshotTests
         Assert.False(answer.HintUsed);
     }
 
-    private static async Task<(Exam, StudentExamAttempt, ExamQuestion, ExamQuestion)> SeedAttempt(AppDbContext db)
+    private static async Task<(Exam, StudentExamAttempt, ExamQuestion, ExamQuestion)> SeedAttempt(
+        AppDbContext db, decimal assignedPoints = 10m, decimal reservePoints = 10m,
+        decimal totalScore = 10m, decimal passingScore = 0m)
     {
-        var assigned = CreateQuestion("Assigned");
-        var reserve = CreateQuestion("Reserve");
+        var assigned = CreateQuestion("Assigned", assignedPoints);
+        var reserve = CreateQuestion("Reserve", reservePoints);
         var exam = new Exam
         {
-            Title = "Snapshot lifelines", DurationMinutes = 30, TotalScore = 10,
+            Title = "Snapshot lifelines", DurationMinutes = 30, TotalScore = totalScore,
+            PassingScore = passingScore,
             DisplayQuestionCount = 1, ExamQuestions = [assigned, reserve]
         };
         var attempt = new StudentExamAttempt
@@ -96,9 +119,9 @@ public class ExamLifelineSnapshotTests
         return (exam, attempt, assigned, reserve);
     }
 
-    private static ExamQuestion CreateQuestion(string text) => new()
+    private static ExamQuestion CreateQuestion(string text, decimal points) => new()
     {
-        Points = 10,
+        Points = points,
         Question = new QuestionBankItem
         {
             Type = QuestionType.MCQ, Text = text,

@@ -668,6 +668,7 @@ export interface StudentExamResultSummaryDto {
   evaluation: string;
   isPassed: boolean;
   isTimeExpired: boolean;
+  totalScore: number;
 }
 
 export interface ExamQuestionSummaryDto {

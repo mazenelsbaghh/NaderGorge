@@ -78,6 +78,8 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
 
         if (attempt == null)
             return ApiResponse<ExamResultDto>.Fail("No completed attempt found");
+        if (attempt.DefinitionSnapshotJson is null)
+            return ApiResponse<ExamResultDto>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
 
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 

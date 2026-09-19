@@ -22,7 +22,7 @@ function runGuard(
     maxTouchPoints?: number;
     userAgentData?: { mobile?: boolean };
   } = {},
-  fullscreen = false,
+  viewportOptions: { fullscreen?: boolean; coarsePointer?: boolean } = {},
 ): GuardExecution {
   const locations: string[] = [];
   const messages: unknown[] = [];
@@ -36,7 +36,7 @@ function runGuard(
     addEventListener: (eventName: string, callback: () => void) => {
       if (eventName === 'resize') resize = callback;
     },
-    matchMedia: () => ({ matches: false }),
+    matchMedia: (query: string) => ({ matches: query === '(any-pointer: coarse)' && Boolean(viewportOptions.coarsePointer) }),
     setInterval: (callback: () => void) => {
       poll = callback;
       return 1;
@@ -52,7 +52,7 @@ function runGuard(
       postMessage: (message: unknown) => messages.push(message),
     },
     document: {
-      fullscreenElement: fullscreen ? {} : null,
+      fullscreenElement: viewportOptions.fullscreen ? {} : null,
       webkitFullscreenElement: null,
       visibilityState: 'visible',
     },
@@ -167,7 +167,7 @@ test('inspection guard ignores narrow desktop side panels', () => {
 test('inspection guard ignores dimension changes while the player is fullscreen', () => {
   const result = runGuard(320, 200, {
     userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
-  }, true);
+  }, { fullscreen: true });
 
   assert.equal(result.hookCalls, 0);
   assert.deepEqual(result.locations, []);
@@ -202,3 +202,24 @@ test('inspection guard resets suspicious samples when the viewport legitimately 
   assert.equal(result.hookCalls, 1);
   assert.deepEqual(result.locations, ['about:blank']);
 });
+
+for (const tablet of [
+  { name: 'desktop-mode tablet with a fine pointer', maxTouchPoints: 5, coarsePointer: false },
+  { name: 'single-touch desktop-mode tablet', maxTouchPoints: 1, coarsePointer: false },
+  { name: 'coarse-pointer tablet without reported touch points', maxTouchPoints: 0, coarsePointer: true },
+]) {
+  test(`2026-09-19 ${tablet.name} keeps playing despite persistent viewport differences`, () => {
+    const playback = runGuard(320, 240, {
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36',
+      platform: 'Linux x86_64',
+      maxTouchPoints: tablet.maxTouchPoints,
+      userAgentData: { mobile: false },
+    }, { coarsePointer: tablet.coarsePointer });
+
+    for (let sample = 0; sample < 16; sample += 1) playback.poll?.();
+
+    assert.equal(playback.hookCalls, 0);
+    assert.deepEqual(playback.locations, []);
+    assert.deepEqual(playback.messages, []);
+  });
+}

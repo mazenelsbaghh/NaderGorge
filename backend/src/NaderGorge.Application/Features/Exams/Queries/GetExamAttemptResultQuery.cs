@@ -29,6 +29,8 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
         {
             return ApiResponse<ExamResultDto>.Fail("Attempt not found", new List<string> { "NOT_FOUND" });
         }
+        if (attempt.DefinitionSnapshotJson is null)
+            return ApiResponse<ExamResultDto>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
 
         if (attempt.DefinitionSnapshotJson is not null
             && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)

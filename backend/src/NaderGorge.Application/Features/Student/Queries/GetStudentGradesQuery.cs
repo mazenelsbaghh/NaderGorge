@@ -39,6 +39,8 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
             Id = attempt.Id, AssessmentId = attempt.ExamId, Kind = "exam", Title = attempt.Exam.Title,
             Snapshot = attempt.DefinitionSnapshotJson, TotalScore = attempt.Exam.TotalScore,
             Score = attempt.ScoreAchieved,
+            AwardedPoints = attempt.Answers.Sum(answer => answer.PointsAwarded),
+            IsPassed = attempt.IsPassed, IsTimeExpired = attempt.IsTimeExpired,
             Status = attempt.Evaluation == "قيد التصحيح" ? "PendingReview" : "Graded",
             AttemptedAt = attempt.StartedAt ?? attempt.CreatedAt,
             LessonTitle = attempt.Exam.LessonVideo != null ? attempt.Exam.LessonVideo.Lesson.Title
@@ -54,6 +56,7 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
             Snapshot = submission.DefinitionSnapshotJson,
             TotalScore = submission.TotalScoreSnapshot ?? submission.Homework.TotalScore,
             Score = submission.OverallScore,
+            AwardedPoints = 0, IsPassed = false, IsTimeExpired = false,
             Status = submission.Status == SubmissionStatus.Graded ? "Graded"
                 : submission.Status == SubmissionStatus.Missed ? "Missed" : "PendingReview",
             AttemptedAt = submission.SubmittedAt ?? submission.StartedAt,
@@ -63,10 +66,18 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
 
     private static StudentGradeDto ToGrade(GradeRecord row)
     {
+        if (row.Kind == "exam" && string.IsNullOrWhiteSpace(row.Snapshot))
+            return new(row.Id, row.Kind, row.Title, row.LessonTitle, "ManualReconciliationRequired",
+                null, 0, row.AttemptedAt);
         var snapshot = string.IsNullOrWhiteSpace(row.Snapshot) ? null
             : AssessmentDefinitionSnapshot.Read(row.Snapshot, row.Kind, row.AssessmentId);
+        var scale = row.Kind == "exam"
+            ? AssessmentAttemptScaleNormalizer.Project(row.Snapshot, row.AssessmentId, row.Score,
+                row.IsPassed, row.IsTimeExpired, row.AwardedPoints)
+            : null;
         return new(row.Id, row.Kind, snapshot?.Title ?? row.Title, row.LessonTitle, row.Status,
-            row.Status == "Graded" ? row.Score : null, snapshot?.TotalScore ?? row.TotalScore, row.AttemptedAt);
+            row.Status == "Graded" ? scale?.ScoreAchieved ?? row.Score : null,
+            scale?.Definition.TotalScore ?? snapshot?.TotalScore ?? row.TotalScore, row.AttemptedAt);
     }
 
     private sealed class GradeRecord
@@ -79,6 +90,9 @@ public sealed class GetStudentGradesQueryHandler(IAppDbContext db)
         public string? LessonTitle { get; init; }
         public string Status { get; init; } = "";
         public decimal Score { get; init; }
+        public decimal AwardedPoints { get; init; }
+        public bool IsPassed { get; init; }
+        public bool IsTimeExpired { get; init; }
         public decimal TotalScore { get; init; }
         public DateTime AttemptedAt { get; init; }
     }

@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Features.Assessments;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
@@ -17,7 +18,8 @@ public record StudentExamResultSummaryDto(
     decimal ScoreAchieved,
     string Evaluation,
     bool IsPassed,
-    bool IsTimeExpired
+    bool IsTimeExpired,
+    decimal TotalScore
 );
 
 public record ExamQuestionOptionDto(
@@ -84,6 +86,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                     .ThenInclude(q => q.Options)
             .Include(e => e.Attempts)
                 .ThenInclude(a => a.User)
+            .Include(e => e.Attempts)
+                .ThenInclude(a => a.Answers)
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
 
         if (exam == null)
@@ -97,6 +101,15 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 var eval = a.Evaluation ?? "لم يقيّم";
                 var score = a.ScoreAchieved;
                 var isPassed = a.IsPassed;
+                AssessmentAttemptScaleProjection? scale = null;
+                if (a.DefinitionSnapshotJson is null)
+                    eval = "يحتاج تسوية يدوية";
+                else
+                {
+                    scale = AssessmentAttemptScaleNormalizer.Project(a);
+                    score = scale.ScoreAchieved;
+                    isPassed = scale.IsPassed;
+                }
 
                 if (a.Evaluation == null && exam.DurationMinutes.HasValue && a.StartedAt.HasValue)
                 {
@@ -121,7 +134,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                     score,
                     eval,
                     isPassed,
-                    isExpired
+                    isExpired,
+                    scale?.Definition.TotalScore ?? 0
                 );
             }).ToList();
 

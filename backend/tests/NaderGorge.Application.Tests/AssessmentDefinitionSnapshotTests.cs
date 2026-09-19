@@ -19,6 +19,10 @@ public class AssessmentDefinitionSnapshotTests
 
         var swapped = AssessmentDefinitionSnapshot.Read(
             AssessmentDefinitionSnapshot.SwapAssignedQuestion(snapshot.ToJson(), exam.Id, added.Id, reserve.Id), "exam", exam.Id);
+        Assert.True(swapped.UsesAssignedQuestionPoints);
+        Assert.Equal(7, swapped.TotalScore);
+        Assert.Equal(0, swapped.PassingScore);
+
         Assert.Equal(3, swapped.Revision!.Answers.Single(a => a.QuestionId == original.Id).AwardedPoints);
         var required = Assert.Single(swapped.Revision.Answers, a => a.RequiresCompletion);
         Assert.Equal(reserve.Id, required.QuestionId);
@@ -104,13 +108,41 @@ public class AssessmentDefinitionSnapshotTests
         Assert.Equal("Original question", question.Question.Text);
         Assert.Equal("Original rubric", question.Question.WrittenCorrection);
         Assert.Equal("Original option", Assert.Single(question.Question.Options).Text);
-        Assert.Equal(20, saved.TotalScore);
-        Assert.Equal(12, saved.PassingScore);
+        Assert.Equal(5, saved.TotalScore);
+        Assert.Equal(3, saved.PassingScore);
         Assert.Equal(30, saved.DurationMinutes);
         Assert.Equal("Original exam", saved.Title);
         Assert.Equal(100, exam.TotalScore);
         if (type == QuestionType.FindTheMistake)
             Assert.Equal("original mistake", Assert.IsType<FindTheMistakeQuestion>(question.Question).BaseText);
+    }
+
+    [Fact]
+    public void SampledExamUsesOnlyAssignedWeightsAndKeepsPassingRatio()
+    {
+        var questions = Enumerable.Range(0, 20)
+            .Select(index => new ExamQuestion
+            {
+                Order = index,
+                Points = 1,
+                Question = new QuestionBankItem()
+            })
+            .ToArray();
+        var exam = new Exam
+        {
+            TotalScore = 20,
+            PassingScore = 12,
+            DisplayQuestionCount = 15,
+            ExamQuestions = questions
+        };
+
+        var snapshot = AssessmentDefinitionSnapshot.FromExam(exam, questions.Take(15));
+
+        Assert.True(snapshot.UsesAssignedQuestionPoints);
+        Assert.Equal(15, snapshot.TotalScore);
+        Assert.Equal(9, snapshot.PassingScore);
+        Assert.Equal(15, snapshot.Questions.Length);
+        Assert.Equal(5, snapshot.ReserveQuestions.Length);
     }
 
     [Fact]

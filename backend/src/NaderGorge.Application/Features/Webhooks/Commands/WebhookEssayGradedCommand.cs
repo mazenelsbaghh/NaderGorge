@@ -64,6 +64,10 @@ public class WebhookEssayGradedCommandHandler
         {
             return ApiResponse<WebhookEssayGradedResultDto>.Fail("Exam attempt not found.");
         }
+        if (attempt.DefinitionSnapshotJson is null)
+            return ApiResponse<WebhookEssayGradedResultDto>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
+        await _db.Entry(attempt).Collection(a => a.Answers).LoadAsync(ct);
+        AssessmentAttemptScaleNormalizer.Normalize(attempt);
 
         var exam = await _db.Exams
             .Include(e => e.ExamQuestions)

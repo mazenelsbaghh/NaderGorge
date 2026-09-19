@@ -67,6 +67,7 @@ public class GetLatestPassedExamResultQueryTests
         passedAttempt.Evaluation = "ممتاز";
         passedAttempt.IsPassed = true;
         passedAttempt.ScoreAchieved = exam.TotalScore;
+        passedAttempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await db.SaveChangesAsync();
 
         var handler = new GetLatestPassedExamResultQueryHandler(db, AllowAccess.Instance);
@@ -89,6 +90,7 @@ public class GetLatestPassedExamResultQueryTests
         var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
         attempt.Evaluation = "قيد التصحيح";
         attempt.IsPassed = false;
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await db.SaveChangesAsync();
 
         var handler = new GetLatestExamAttemptResultQueryHandler(db, AllowAccess.Instance);
@@ -97,6 +99,57 @@ public class GetLatestPassedExamResultQueryTests
         Assert.True(result.Success);
         Assert.Equal(attempt.Id, result.Data!.AttemptId);
         Assert.False(result.Data.IsPassed);
+    }
+
+    [Fact]
+    public async Task DirectAndLatestResultsReturnManualReconciliationForNullSnapshot()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Legacy", "504");
+        var (exam, _, _, _, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        attempt.DefinitionSnapshotJson = null;
+        attempt.Evaluation = "ممتاز";
+        attempt.IsPassed = true;
+        await db.SaveChangesAsync();
+
+        var direct = await new GetExamAttemptResultQueryHandler(db).Handle(new(attempt.Id, student.Id), default);
+        var latest = await new GetLatestPassedExamResultQueryHandler(db, AllowAccess.Instance)
+            .Handle(new(exam.Id, student.Id), default);
+
+        Assert.False(direct.Success);
+        Assert.Equal(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage, direct.Message);
+        Assert.False(latest.Success);
+        Assert.Equal(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage, latest.Message);
+    }
+
+    [Fact]
+    public async Task HistoricalPassedDecisionRemainsPassedAfterNumericScaleProjection()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Historical pass", "505");
+        var (exam, _, _, _, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        var saved = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson!, "exam", exam.Id);
+        attempt.DefinitionSnapshotJson = (saved with
+        {
+            TotalScore = 20m,
+            PassingScore = 12m,
+            UsesAssignedQuestionPoints = false,
+            ReserveQuestions = [saved.Questions[0] with { Id = Guid.NewGuid(), Points = 10m }]
+        }).ToJson();
+        attempt.Evaluation = "ممتاز";
+        attempt.IsPassed = true;
+        attempt.ScoreAchieved = 16m;
+        await db.SaveChangesAsync();
+
+        var latest = await new GetLatestPassedExamResultQueryHandler(db, AllowAccess.Instance)
+            .Handle(new(exam.Id, student.Id), default);
+
+        Assert.True(latest.Success, latest.Message);
+        Assert.True(latest.Data!.IsPassed);
+        Assert.Equal(0m, latest.Data.ScoreAchieved);
+        Assert.Equal(saved.Questions.Sum(question => question.Points), latest.Data.TotalScore);
     }
 
     private sealed class AllowAccess : IAccessCheckService

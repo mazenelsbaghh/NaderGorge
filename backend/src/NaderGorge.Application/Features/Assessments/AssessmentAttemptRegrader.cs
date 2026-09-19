@@ -37,7 +37,7 @@ public static class AssessmentAttemptRegrader
             grades = grades with { MinimumScoreRatio = previous.TotalScore > 0 ? Math.Clamp(previousScore / previous.TotalScore, 0, 1) : 0 };
         }
         var definition = RevisedDefinition(previous, change.Proposed, grades, change.Policy);
-        return new(definition, grades);
+        return new(previous.UsesAssignedQuestionPoints ? definition.WithAssignedQuestionPoints() : definition, grades);
     }
 
     private static RevisionAnswer[] PreviousGrades(AssessmentDefinitionSnapshot previous,

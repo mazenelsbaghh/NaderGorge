@@ -48,6 +48,10 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
         var currentExam = await _db.Exams.Include(e => e.ExamQuestions).ThenInclude(q => q.Question)
             .FirstOrDefaultAsync(e => e.Id == attempt.ExamId, ct);
         if (currentExam is null) return ApiResponse<bool>.Fail("Exam not found.");
+        if (attempt.DefinitionSnapshotJson is null)
+            return ApiResponse<bool>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
+        await _db.Entry(attempt).Collection(a => a.Answers).LoadAsync(ct);
+        AssessmentAttemptScaleNormalizer.Normalize(attempt);
         var exam = AssessmentDefinitionSnapshot.ResolveExam(currentExam, attempt.DefinitionSnapshotJson);
         var question = exam.ExamQuestions.FirstOrDefault(q => q.QuestionBankItemId == submission.QuestionId);
         if (question == null || request.TeacherScore < 0 || request.TeacherScore > question.Points)

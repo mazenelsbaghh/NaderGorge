@@ -11,9 +11,10 @@ using System.Threading.Tasks;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record SwapQuestionCommand(Guid ExamId, Guid AttemptId, Guid QuestionId, Guid UserId) : IRequest<ApiResponse<ExamQuestionViewDto>>;
+public record SwapQuestionResultDto(ExamQuestionViewDto Question, decimal TotalScore, decimal PassingScore);
+public record SwapQuestionCommand(Guid ExamId, Guid AttemptId, Guid QuestionId, Guid UserId) : IRequest<ApiResponse<SwapQuestionResultDto>>;
 
-public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, ApiResponse<ExamQuestionViewDto>>
+public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, ApiResponse<SwapQuestionResultDto>>
 {
     private readonly IAppDbContext _db;
 
@@ -22,23 +23,23 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         _db = db;
     }
 
-    public async Task<ApiResponse<ExamQuestionViewDto>> Handle(SwapQuestionCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<SwapQuestionResultDto>> Handle(SwapQuestionCommand request, CancellationToken cancellationToken)
     {
         var attempt = await _db.StudentExamAttempts
             .Include(a => a.Answers)
             .FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, cancellationToken);
 
         if (attempt == null)
-            return ApiResponse<ExamQuestionViewDto>.Fail("Attempt not found");
+            return ApiResponse<SwapQuestionResultDto>.Fail("Attempt not found");
 
         if (attempt.Evaluation != null || attempt.IsPassed)
-            return ApiResponse<ExamQuestionViewDto>.Fail("Attempt already submitted");
+            return ApiResponse<SwapQuestionResultDto>.Fail("Attempt already submitted");
 
         var revision = attempt.DefinitionSnapshotJson is null ? null
             : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
         if (revision?.Revision?.RequiresCompletion == true && (revision.CompletionStartedAt is null
             || !revision.Revision.Answers.Any(a => a.QuestionId == request.QuestionId && a.RequiresCompletion && !a.Excluded)))
-            return ApiResponse<ExamQuestionViewDto>.Fail("يمكن تبديل الأسئلة المضافة فقط بعد بدء الاستكمال.");
+            return ApiResponse<SwapQuestionResultDto>.Fail("يمكن تبديل الأسئلة المضافة فقط بعد بدء الاستكمال.");
 
         var exam = await _db.Exams
             .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
@@ -47,7 +48,17 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
 
         if (exam == null)
-            return ApiResponse<ExamQuestionViewDto>.Fail("Exam not found");
+            return ApiResponse<SwapQuestionResultDto>.Fail("Exam not found");
+
+        try
+        {
+            AssessmentAttemptScaleNormalizer.Normalize(attempt);
+        }
+        catch (InvalidOperationException error)
+        {
+            return ApiResponse<SwapQuestionResultDto>.Fail(error.Message);
+        }
+        revision = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson!, "exam", attempt.ExamId);
 
         var replacements = AssessmentDefinitionSnapshot.ResolveSwapCandidates(exam, attempt.DefinitionSnapshotJson);
         var originalExam = exam;
@@ -67,13 +78,13 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
                     attempt.Evaluation = "انتهى الوقت";
                     await _db.SaveChangesAsync(cancellationToken);
                 }
-                return ApiResponse<ExamQuestionViewDto>.Fail("لقد انتهى وقت المحاولة السابقة وتعتبر غير مجتازة.");
+                return ApiResponse<SwapQuestionResultDto>.Fail("لقد انتهى وقت المحاولة السابقة وتعتبر غير مجتازة.");
             }
         }
 
         var currentAnswer = attempt.Answers.FirstOrDefault(a => a.ExamQuestionId == request.QuestionId);
         if (currentAnswer == null)
-            return ApiResponse<ExamQuestionViewDto>.Fail("Question is not part of your active attempt");
+            return ApiResponse<SwapQuestionResultDto>.Fail("Question is not part of your active attempt");
 
         var usedQuestionIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
 
@@ -83,7 +94,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
 
         if (availableExtraQuestions.Count == 0)
         {
-            return ApiResponse<ExamQuestionViewDto>.Fail("لا يوجد أسئلة إضافية متاحة للتبديل في بنك أسئلة هذا الامتحان.");
+            return ApiResponse<SwapQuestionResultDto>.Fail("لا يوجد أسئلة إضافية متاحة للتبديل في بنك أسئلة هذا الامتحان.");
         }
 
         var random = new Random();
@@ -138,6 +149,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
             mistakeEndIndex,
             options);
 
-        return ApiResponse<ExamQuestionViewDto>.Ok(dto, "تم تبديل السؤال بنجاح.");
+        var saved = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson!, "exam", attempt.ExamId);
+        return ApiResponse<SwapQuestionResultDto>.Ok(new(dto, saved.TotalScore, saved.PassingScore ?? 0), "تم تبديل السؤال بنجاح.");
     }
 }

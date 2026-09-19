@@ -53,11 +53,21 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         }
 
         var attempt = await _db.StudentExamAttempts
-            .FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, ct);
+            .Include(a => a.Answers).FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, ct);
 
         if (attempt == null)
         {
             return ApiResponse<ExamResultDto>.Fail("Attempt not found or invalid.");
+        }
+
+        try
+        {
+            if (AssessmentAttemptScaleNormalizer.Normalize(attempt))
+                await _db.SaveChangesAsync(ct);
+        }
+        catch (InvalidOperationException error)
+        {
+            return ApiResponse<ExamResultDto>.Fail(error.Message);
         }
 
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);

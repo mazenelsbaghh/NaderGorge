@@ -1,3 +1,4 @@
+using NaderGorge.Application.Features.Assessments;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -440,6 +441,9 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             {
                 var lesson = lessonIdsByTeacher[examLessonByExamId[exam.Id]];
                 latestAttemptByExamId.TryGetValue(exam.Id, out var attempt);
+                var scale = attempt?.DefinitionSnapshotJson is null ? null
+                    : AssessmentAttemptScaleNormalizer.Project(attempt);
+                var totalScore = scale?.Definition.TotalScore ?? (attempt is null ? exam.TotalScore : 0);
 
                 return new ExamDetailDto(
                     exam.Id,
@@ -451,11 +455,12 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     lesson.TeacherId,
                     lesson.TeacherName,
                     exam.Title,
-                    attempt?.ScoreAchieved ?? 0m,
-                    exam.TotalScore,
-                    attempt != null && exam.TotalScore > 0 ? (double)Math.Round((attempt.ScoreAchieved / exam.TotalScore) * 100, 2) : 0.0,
+                    scale?.ScoreAchieved ?? attempt?.ScoreAchieved ?? 0m,
+                    totalScore,
+                    attempt != null && totalScore > 0 ? (double)Math.Round(((scale?.ScoreAchieved ?? attempt.ScoreAchieved) / totalScore) * 100, 2) : 0.0,
                     attempt?.CreatedAt,
-                    attempt == null ? "NotStarted" : attempt.IsPassed ? "Passed" : "Failed",
+                    attempt == null ? "NotStarted" : attempt.DefinitionSnapshotJson is null
+                        ? "ManualReconciliationRequired" : scale!.IsPassed ? "Passed" : "Failed",
                     attempt?.Answers
                         .Where(answer => !answer.IsCorrect)
                         .OrderBy(answer => answer.ExamQuestion.Order)

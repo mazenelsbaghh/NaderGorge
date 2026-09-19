@@ -178,6 +178,16 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
         if (existingAttempt != null)
         {
+            await _db.Entry(existingAttempt).Collection(a => a.Answers).LoadAsync(ct);
+            try
+            {
+                if (AssessmentAttemptScaleNormalizer.Normalize(existingAttempt))
+                    await _db.SaveChangesAsync(ct);
+            }
+            catch (InvalidOperationException error)
+            {
+                return ApiResponse<ActiveExamAttemptDto>.Fail(error.Message);
+            }
             var revision = existingAttempt.DefinitionSnapshotJson is null ? null
                 : AssessmentDefinitionSnapshot.Read(existingAttempt.DefinitionSnapshotJson, "exam", existingAttempt.ExamId);
             if (revision?.Revision?.RequiresCompletion == true)
@@ -206,7 +216,6 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
             attempt = existingAttempt;
             // Load previously assigned questions from placeholders
-            await _db.Entry(attempt).Collection(a => a.Answers).LoadAsync(ct);
             var assignedQuestionIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
             selectedQuestions = exam.ExamQuestions.Where(eq => assignedQuestionIds.Contains(eq.Id)).ToList();
             if (revision?.Revision?.RequiresCompletion == true)
@@ -272,6 +281,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
+
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
 
         // Return the active subset
         var baseQuery = selectedQuestions.AsEnumerable();

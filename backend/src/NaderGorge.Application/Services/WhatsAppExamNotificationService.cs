@@ -1,3 +1,4 @@
+using NaderGorge.Application.Features.Assessments;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -124,12 +125,15 @@ public sealed class WhatsAppExamNotificationService
             .Include(item => item.User)
             .ThenInclude(user => user.StudentProfile)
             .Include(item => item.Exam)
+            .Include(item => item.Answers)
             .FirstOrDefaultAsync(item => item.Id == attemptId, cancellationToken);
 
         if (attempt is null)
         {
             return null;
         }
+        if (attempt.DefinitionSnapshotJson is null) return null;
+        var scale = AssessmentAttemptScaleNormalizer.Project(attempt);
 
         var lesson = await _db.Lessons
             .AsNoTracking()
@@ -173,8 +177,8 @@ public sealed class WhatsAppExamNotificationService
             recipient,
             $"ولي أمر {studentName}",
             studentName,
-            FormatDecimal(attempt.ScoreAchieved),
-            FormatDecimal(attempt.Exam.TotalScore),
+            FormatDecimal(scale.ScoreAchieved),
+            FormatDecimal(scale.Definition.TotalScore),
             subject,
             lecture,
             isResultReady);

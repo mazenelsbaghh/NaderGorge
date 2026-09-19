@@ -431,7 +431,7 @@ export default function ExamProfilePageClient({
                           <td className="p-4 font-mono text-xs text-[var(--admin-muted)]">{attempt.studentPhone}</td>
                           <td className="p-4 font-bold">
                             <span className={attempt.isPassed ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>
-                              {attempt.scoreAchieved} / {data.totalScore}
+                              {attempt.scoreAchieved} / {attempt.totalScore}
                             </span>
                           </td>
                           <td className="p-4 text-center">

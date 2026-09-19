@@ -1,3 +1,4 @@
+using NaderGorge.Application.Features.Assessments;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -157,18 +158,18 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 .Where(a => attemptIds.Contains(a.StudentExamAttemptId))
                 .ToListAsync(ct);
 
+        foreach (var attempt in attempts)
+            attempt.Answers = answers.Where(answer => answer.StudentExamAttemptId == attempt.Id).ToList();
+
         var examById = exams.ToDictionary(e => e.Id);
         var lessonByExamId = lessons
             .Where(l => l.ExamId.HasValue)
             .GroupBy(l => l.ExamId!.Value)
             .ToDictionary(g => g.Key, g => g.First());
         var attemptsById = attempts.ToDictionary(a => a.Id);
-        var passedExamIds = await _db.StudentExamAttempts
-            .AsNoTracking()
-            .Where(a => a.UserId == request.UserId && a.IsPassed && pagedExamIds.Contains(a.ExamId))
-            .Select(a => a.ExamId)
-            .Distinct()
-            .ToListAsync(ct);
+        var passedExamIds = attempts.Where(attempt => attempt.DefinitionSnapshotJson is not null
+                && AssessmentAttemptScaleNormalizer.Project(attempt).IsPassed)
+            .Select(attempt => attempt.ExamId).Distinct().ToList();
         var passedExamsSet = passedExamIds.ToHashSet();
 
         var examMistakeGroups = answers
@@ -184,6 +185,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     .Where(a => a.ExamId == group.Key)
                     .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
                     .FirstOrDefault();
+                var latestScale = latestAttempt?.DefinitionSnapshotJson is null
+                    ? null : AssessmentAttemptScaleNormalizer.Project(latestAttempt);
 
                 var items = group
                     .GroupBy(answer => answer.ExamQuestionId)
@@ -232,8 +235,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     passedExamsSet.Contains(group.Key),
                     items.Max(item => item.LastMissedAt),
                     items.Sum(item => item.TimesMissed),
-                    latestAttempt?.ScoreAchieved,
-                    latestAttempt == null ? null : exam.TotalScore,
+                    latestScale?.ScoreAchieved,
+                    latestScale?.Definition.TotalScore,
                     latestAttempt?.Evaluation,
                     items
                 );

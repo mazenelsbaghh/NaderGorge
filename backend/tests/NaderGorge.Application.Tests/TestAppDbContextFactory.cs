@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -235,6 +236,9 @@ internal static class TestAppDbContextFactory
 
     public static async Task<StudentExamAttempt> SeedAttemptAsync(AppDbContext db, Guid examId, Guid userId)
     {
+        var exam = await db.Exams.Include(entity => entity.ExamQuestions)
+            .ThenInclude(question => question.Question).ThenInclude(question => question.Options)
+            .SingleAsync(entity => entity.Id == examId);
         var attempt = new StudentExamAttempt
         {
             Id = Guid.NewGuid(),
@@ -243,7 +247,8 @@ internal static class TestAppDbContextFactory
             StartedAt = DateTime.UtcNow,
             ScoreAchieved = 0,
             IsPassed = false,
-            IsTimeExpired = false
+            IsTimeExpired = false,
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
         };
 
         db.StudentExamAttempts.Add(attempt);

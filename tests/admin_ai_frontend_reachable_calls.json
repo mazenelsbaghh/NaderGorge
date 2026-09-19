@@ -2855,7 +2855,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 18
+        "line": 19
       }
     },
     {
@@ -7920,5 +7920,5 @@
       }
     }
   ],
-  "digest": "95e6799824192d5dc5fcfa6ee0a4fda34dae1a5086c07c4ecbc1ee1636eade00"
+  "digest": "e977c540860f72b1b54f0e276ee5f2c90eebaed4e7fd9b854084a89e6a9260f7"
 }

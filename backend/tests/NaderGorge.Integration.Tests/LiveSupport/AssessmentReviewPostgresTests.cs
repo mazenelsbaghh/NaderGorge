@@ -611,6 +611,29 @@ public sealed class AssessmentReviewPostgresTests
         Assert.Equal(7.5m, (await fixture.Db.StudentExamAttempts.SingleAsync(a => a.Id == attempt.Id)).ScoreAchieved);
     }
 
+    [Fact]
+    public async Task ExamReviewDistinguishesUnsupportedLegacySnapshotFromMissingAttempt()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var attempt = await fixture.Db.StudentExamAttempts.SingleAsync(a => a.Id == essay.StudentExamAttemptId);
+        attempt.DefinitionSnapshotJson = null;
+        await fixture.Db.SaveChangesAsync();
+        var auth = new TeacherAuthorizationService(fixture.Db);
+        var legacyTarget = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, attempt.Id, seed.Teacher.UserId);
+        var missingTarget = legacyTarget with { AttemptId = Guid.NewGuid() };
+
+        var unsupported = await new GetAssessmentReviewQueryHandler(fixture.Db, auth).Handle(new(legacyTarget), default);
+        var missing = await new GetAssessmentReviewQueryHandler(fixture.Db, auth).Handle(new(missingTarget), default);
+
+        Assert.False(unsupported.Success);
+        Assert.Equal(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage, unsupported.Message);
+        Assert.False(missing.Success);
+        Assert.Equal("المحاولة غير موجودة.", missing.Message);
+    }
+
     private static User User(string name) => new() { FullName = name, PasswordHash = "test-only", PhoneNumber = $"01{Random.Shared.NextInt64(100000000, 999999999)}", IsActive = true };
     private static async Task<User> Student(AppDbContext db)
     {
@@ -647,7 +670,8 @@ public sealed class AssessmentReviewPostgresTests
         var exam = new Exam { Title = "امتحان", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
         var examQuestion = new ExamQuestion { Question = question, Points = 4, Order = 1 };
         exam.ExamQuestions.Add(examQuestion);
-        var attempt = new StudentExamAttempt { Exam = exam, UserId = studentId, Evaluation = "قيد التصحيح", StartedAt = DateTime.UtcNow };
+        var attempt = new StudentExamAttempt { Exam = exam, UserId = studentId, Evaluation = "قيد التصحيح", StartedAt = DateTime.UtcNow,
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson() };
         attempt.Answers.Add(new StudentAnswer { ExamQuestion = examQuestion, SubmittedText = "شرح" });
         var essay = new EssaySubmission { Attempt = attempt, StudentId = studentId, Question = question, AnswerText = "شرح", Status = EssaySubmissionStatus.WaitAI };
         db.EssaySubmissions.Add(essay); await db.SaveChangesAsync(); return essay;

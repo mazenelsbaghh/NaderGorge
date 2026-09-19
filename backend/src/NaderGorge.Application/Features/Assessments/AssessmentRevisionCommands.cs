@@ -339,10 +339,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
             var revisions = new List<PreparedRevision>();
             foreach (var attempt in Attempts)
             {
-                var assigned = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-                var previous = attempt.DefinitionSnapshotJson is null
-                    ? AssessmentDefinitionSnapshot.FromExam(Exam!, Exam!.ExamQuestions.Where(q => assigned.Contains(q.Id)))
-                    : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+                AssessmentAttemptScaleNormalizer.Normalize(attempt);
+                var previous = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson!, "exam", attempt.ExamId);
                 var answers = previous.Questions.Select(q => ExamAnswer(attempt, q)).ToArray();
                 revisions.Add(new(attempt.Id, attempt.ScoreAchieved, AssessmentAttemptRegrader.Regrade(previous, answers,
                     change with { PreviousScore = attempt.ScoreAchieved })));
@@ -395,9 +393,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         {
             foreach (var attempt in Attempts)
             {
-                var assignedIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-                attempt.DefinitionSnapshotJson ??= AssessmentDefinitionSnapshot.FromExam(Exam!,
-                    Exam!.ExamQuestions.Where(q => assignedIds.Contains(q.Id))).ToJson();
+                AssessmentAttemptScaleNormalizer.Normalize(attempt);
             }
             foreach (var submission in Submissions)
             {

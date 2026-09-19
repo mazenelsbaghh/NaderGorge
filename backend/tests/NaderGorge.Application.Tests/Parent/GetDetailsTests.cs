@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.API.Controllers;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Features.Parent.Queries;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
@@ -246,7 +247,8 @@ public class GetDetailsTests : IDisposable
             ExamId = exam.Id,
             ScoreAchieved = 45,
             IsPassed = true,
-            StartedAt = DateTime.UtcNow.AddHours(-1)
+            StartedAt = DateTime.UtcNow.AddHours(-1),
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
         });
         await _db.SaveChangesAsync();
 
