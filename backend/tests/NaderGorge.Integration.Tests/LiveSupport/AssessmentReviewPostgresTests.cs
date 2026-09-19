@@ -1,4 +1,6 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Assessments;
@@ -19,6 +21,61 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class AssessmentReviewPostgresTests
 {
+    [Fact]
+    public async Task EditorLoadReadsOnlyDefinitionAndAttemptCountThenPreviewIssuesSaveToken()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var interceptor = new CommandTextRecorder();
+        await using var readDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(fixture.ConnectionString).AddInterceptors(interceptor).Options);
+        var attempt = await readDb.StudentExamAttempts.AsNoTracking()
+            .SingleAsync(item => item.Id == essay.StudentExamAttemptId);
+        var target = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, Guid.Empty, seed.Teacher.UserId);
+        var handler = new AssessmentRevisionCommandHandler(readDb, new(readDb));
+        interceptor.Reset();
+
+        var editor = await handler.Handle(new GetAssessmentEditorQuery(target), default);
+
+        Assert.True(editor.Success, editor.Message);
+        Assert.Equal(1, editor.Data!.AttemptCount);
+        Assert.Empty(editor.Data.RevisionToken);
+        var attemptCommands = interceptor.Commands.Where(command => command.Contains("student_exam_attempts", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var count = Assert.Single(attemptCommands);
+        Assert.Contains("COUNT(*)", count, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DefinitionSnapshotJson", count, StringComparison.Ordinal);
+        Assert.DoesNotContain("student_answers", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("essay_submissions", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("audit_logs", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+
+        var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target,
+            editor.Data.Definition with { Title = "تعديل بعد المعاينة" }, new()), default);
+        Assert.True(preview.Success, preview.Message);
+        Assert.NotEmpty(preview.Data!.RevisionToken);
+    }
+
+    private sealed class CommandTextRecorder : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+        public void Reset() => Commands.Clear();
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
+
     [Theory]
     [InlineData(ExamQuestionType.MCQ, false, 20)]
     [InlineData(ExamQuestionType.MCQ, true, 10)]
@@ -45,6 +102,8 @@ public sealed class AssessmentReviewPostgresTests
         fixture.Db.StudentExamAttempts.Add(attempt);
         var lesson = await fixture.Db.Lessons.SingleAsync(l => l.Id == seed.Homework.LessonId);
         lesson.ExamId = exam.Id;
+        await fixture.Db.SaveChangesAsync();
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await fixture.Db.SaveChangesAsync();
         var target = new AssessmentTarget(AssessmentKind.Exam, exam.Id, Guid.Empty, seed.Teacher.UserId);
         var original = AssessmentDefinitionSnapshot.FromExam(exam);
@@ -400,6 +459,8 @@ public sealed class AssessmentReviewPostgresTests
         attempt.Answers.Add(new StudentAnswer { ExamQuestion = question, SelectedOption = bank.Options.Single(o => o.Text == "B"), SubmittedText = "B" });
         fixture.Db.StudentExamAttempts.Add(attempt);
         fixture.Db.Exams.Add(other);
+        await fixture.Db.SaveChangesAsync();
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await fixture.Db.SaveChangesAsync();
         var target = new AssessmentTarget(AssessmentKind.Exam, exam.Id, Guid.Empty, seed.Teacher.UserId);
         var original = AssessmentDefinitionSnapshot.FromExam(exam);

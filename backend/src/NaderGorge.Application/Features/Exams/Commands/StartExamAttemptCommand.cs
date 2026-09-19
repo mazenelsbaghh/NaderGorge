@@ -195,6 +195,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 var started = await new ExamRevisionCompletion(_db).Start(existingAttempt.Id, request.UserId, ct);
                 if (!started.Success) return ApiResponse<ActiveExamAttemptDto>.Fail(started.Message ?? "تعذر بدء الاستكمال.");
                 existingAttempt = await _db.StudentExamAttempts.SingleAsync(a => a.Id == existingAttempt.Id, ct);
+                await _db.Entry(existingAttempt).Collection(a => a.Answers).LoadAsync(ct);
                 revision = started.Data;
             }
             exam = AssessmentDefinitionSnapshot.ResolveExam(exam, existingAttempt.DefinitionSnapshotJson);

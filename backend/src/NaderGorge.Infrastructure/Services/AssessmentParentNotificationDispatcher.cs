@@ -7,6 +7,7 @@ using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Infrastructure.Data;
 using Npgsql;
+using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -15,9 +16,35 @@ public sealed class AssessmentParentNotificationDispatcher(
 {
     public async Task DispatchAsync(OutboxEvent notification, CancellationToken ct)
     {
+        AssessmentParentRecoveryEnvelope? recoveryEnvelope = null;
+        if (notification.Type == "AssessmentParentRecovery")
+        {
+            try { recoveryEnvelope = JsonSerializer.Deserialize<AssessmentParentRecoveryEnvelope>(notification.PayloadJson); }
+            catch (JsonException) { }
+            if (recoveryEnvelope is null) return;
+        }
         var result = await AssessmentParentResultReader.ReadAsync(db, notification, ct);
         if (result is null || !result.Settings.Enabled || result.EnabledAt is null
-            || result.EnabledAt > notification.CreatedAt) return;
+            || result.EnabledAt > notification.CreatedAt)
+        {
+            if (recoveryEnvelope is not null)
+            {
+                var bound = await db.AssessmentParentDeliveries.AsNoTracking().SingleOrDefaultAsync(item =>
+                    item.Id == recoveryEnvelope.DeliveryId && item.AttemptId == recoveryEnvelope.AttemptId
+                    && item.AssessmentKind == "exam"
+                    && item.AssessmentId == AssessmentParentNotificationRecoveryService.IncidentExamId
+                    && item.StudentUserId.ToString() == notification.TargetUserId, ct);
+                var auditBound = bound is null ? false : await db.AuditLogs.AsNoTracking().AnyAsync(item =>
+                    item.Action == "AssessmentParentRecoveryRebuilt"
+                    && item.EntityType == "AssessmentParentDelivery" && item.EntityId == bound.Id
+                    && item.CorrelationId == recoveryEnvelope.OperationId.ToString("N")
+                    && item.NewValues != null && item.NewValues.Contains(bound.PayloadDigest), ct);
+                if (bound is not null && auditBound)
+                    await FinishAsync(bound.Id, AssessmentParentDeliveryStatus.Skipped,
+                        "RECOVERY_RESULT_NO_LONGER_FINAL", null, ct, AssessmentParentDeliveryStatus.Pending);
+            }
+            return;
+        }
         var delivery = await db.AssessmentParentDeliveries.AsNoTracking().SingleOrDefaultAsync(
             item => item.AssessmentKind == result.Kind && item.AttemptId == result.AttemptId, ct);
         if (delivery is null)
@@ -36,6 +63,55 @@ public sealed class AssessmentParentNotificationDispatcher(
             return;
         }
         if (delivery.Status != AssessmentParentDeliveryStatus.Pending) return;
+        var recoveryAudit = await db.AuditLogs.AsNoTracking()
+            .Where(item => item.Action == "AssessmentParentRecoveryRebuilt"
+                && item.EntityType == "AssessmentParentDelivery" && item.EntityId == delivery.Id)
+            .OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id)
+            .Select(item => item.NewValues).FirstOrDefaultAsync(ct);
+        var isRecovery = recoveryAudit is not null;
+        string? boundRecoveryGradeVersion = null;
+        if (isRecovery && recoveryEnvelope is null) return;
+        if (recoveryEnvelope is not null && (!isRecovery || recoveryEnvelope.DeliveryId != delivery.Id
+            || recoveryEnvelope.AttemptId != delivery.AttemptId))
+        {
+            await FinishAsync(delivery.Id, AssessmentParentDeliveryStatus.Skipped,
+                "RECOVERY_AUDIT_MISSING_OR_MISMATCHED", null, ct, AssessmentParentDeliveryStatus.Pending);
+            return;
+        }
+        if (isRecovery)
+        {
+            string? expectedGradeVersion = null;
+            string? expectedPayloadDigest = null;
+            string? expectedTemplateFingerprint = null;
+            int recoveryVersion = 0;
+            try
+            {
+                using var audit = JsonDocument.Parse(recoveryAudit!);
+                expectedGradeVersion = audit.RootElement.GetProperty("gradeVersion").GetString();
+                expectedPayloadDigest = audit.RootElement.GetProperty("payloadDigest").GetString();
+                expectedTemplateFingerprint = audit.RootElement.GetProperty("templateFingerprint").GetString();
+                recoveryVersion = audit.RootElement.GetProperty("recoveryVersion").GetInt32();
+                boundRecoveryGradeVersion = expectedGradeVersion;
+            }
+            catch (Exception exception) when (exception is JsonException or KeyNotFoundException) { }
+            var currentGradeVersion = await AssessmentParentNotificationRecoveryService
+                .ComputeGradeVersionAsync(db, delivery.AttemptId, result, ct);
+            if (string.IsNullOrWhiteSpace(expectedGradeVersion)
+                || recoveryVersion != 1 || expectedPayloadDigest != delivery.PayloadDigest
+                || expectedTemplateFingerprint != delivery.TemplateFingerprint
+                || (recoveryEnvelope is not null && (recoveryEnvelope.GradeVersion != expectedGradeVersion
+                    || recoveryEnvelope.OperationId.ToString("N") != (await db.AuditLogs.AsNoTracking()
+                        .Where(item => item.Action == "AssessmentParentRecoveryRebuilt" && item.EntityId == delivery.Id)
+                        .OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id)
+                        .Select(item => item.CorrelationId).FirstAsync(ct))))
+                || !string.Equals(expectedGradeVersion, currentGradeVersion, StringComparison.Ordinal)
+                || !AssessmentParentNotificationRecoveryService.ExactSettings(result.Settings))
+            {
+                await FinishAsync(delivery.Id, AssessmentParentDeliveryStatus.Skipped,
+                    "RECOVERY_GRADE_OR_TEMPLATE_CHANGED", null, ct, AssessmentParentDeliveryStatus.Pending);
+                return;
+            }
+        }
         var template = await db.LiveSupportWhatsAppTemplates.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == delivery.TemplateId, ct);
         var currentPhone = ParentWhatsAppRecipients.Resolve(result.Student.StudentProfile,
@@ -62,9 +138,34 @@ public sealed class AssessmentParentNotificationDispatcher(
                 .SetProperty(item => item.ClaimedAt, DateTime.UtcNow)
                 .SetProperty(item => item.AttemptCount, item => item.AttemptCount + 1), ct);
         if (claimed != 1) return;
+        if (isRecovery)
+        {
+            var claimedResult = await AssessmentParentResultReader.ReadAsync(db, notification, ct);
+            var claimedPhone = claimedResult is null ? null : ParentWhatsAppRecipients.Resolve(
+                claimedResult.Student.StudentProfile, await ParentWhatsAppRecipients.ReadPriorityAsync(db, ct));
+            var claimedVersion = claimedResult is null ? null : await AssessmentParentNotificationRecoveryService
+                .ComputeGradeVersionAsync(db, delivery.AttemptId, claimedResult, ct);
+            var templateCurrent = await db.LiveSupportWhatsAppTemplates.AsNoTracking().AnyAsync(item =>
+                item.Id == delivery.TemplateId && item.Status == "APPROVED" && item.Category == "UTILITY"
+                && item.Fingerprint == delivery.TemplateFingerprint, ct);
+            var claimedPreferences = await db.WhatsAppContactPreferences.AsNoTracking()
+                .Where(item => item.DestinationHash == delivery.DestinationHash && item.EffectiveAt <= DateTime.UtcNow)
+                .ToListAsync(ct);
+            if (claimedResult is null || claimedResult.EnabledAt is null
+                || claimedResult.EnabledAt > notification.CreatedAt
+                || claimedVersion != boundRecoveryGradeVersion
+                || !AssessmentParentNotificationRecoveryService.ExactSettings(claimedResult.Settings)
+                || claimedPhone is null || protector.DestinationHash(claimedPhone) != delivery.DestinationHash
+                || !templateCurrent || !WhatsAppCampaignService.DestinationAllowsCampaign(claimedPreferences, "UTILITY"))
+            {
+                await FinishAsync(delivery.Id, AssessmentParentDeliveryStatus.Skipped,
+                    "RECOVERY_PRE_SEND_AUTHORITY_CHANGED", null, ct);
+                return;
+            }
+        }
         var response = await cloud.SendTemplateAsync(request, ct);
         var ambiguous = WhatsAppCampaignDispatcher.IsAmbiguous(response);
-        var retry = !response.Success && !ambiguous && response.IsRetryable && delivery.AttemptCount < 4;
+        var retry = !isRecovery && !response.Success && !ambiguous && response.IsRetryable && delivery.AttemptCount < 4;
         var status = response.Success ? AssessmentParentDeliveryStatus.Sent
             : ambiguous ? AssessmentParentDeliveryStatus.Uncertain
             : retry ? AssessmentParentDeliveryStatus.Pending : AssessmentParentDeliveryStatus.Failed;

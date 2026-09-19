@@ -11,13 +11,12 @@
  */
 
 import Link from 'next/link';
-import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
-import { getSurfaceOrigins, getSurfaceName } from '@/packages/surface-runtime/config';
+import { getRoleDestination, getSurfaceOrigins, getSurfaceName } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
 import { getApiErrorSummary } from '@/lib/api-errors';
 
@@ -94,22 +93,7 @@ export function LoginForm() {
       const roles = user.roles || [];
       const allowedDomains = user.allowedDomains || [];
       const origins = getSurfaceOrigins();
-      let redirectDestination = `${origins.student}/student`;
-
-      const hasAdmin = allowedDomains.includes('admin') || roles.some((r: string) => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
-      const hasTeacher = allowedDomains.includes('teacher') || roles.some((r: string) => r.toLowerCase().includes('teacher'));
-      const hasAssistant = allowedDomains.includes('assistant') || roles.some((r: string) => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
-      const isEmployee = roles.some((r: string) => r.toLowerCase() === 'employee');
-
-      if (hasAdmin) {
-        redirectDestination = `${origins.admin}/admin`;
-      } else if (hasTeacher) {
-        redirectDestination = `${origins.teacher}/teacher`;
-      } else if (isEmployee) {
-        redirectDestination = `${origins.assistant}/employee`;
-      } else if (hasAssistant) {
-        redirectDestination = `${origins.assistant}/assistant`;
-      }
+      const redirectDestination = getRoleDestination(roles, allowedDomains, origins);
 
       let targetUrl = '';
       if (typeof window !== 'undefined') {
@@ -206,7 +190,21 @@ export function LoginForm() {
             aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
             aria-pressed={showPassword}
           >
-            {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
+              <circle cx="12" cy="12" r="3" />
+              {showPassword ? <path d="m3 3 18 18" /> : null}
+            </svg>
           </button>
         </div>
       </div>

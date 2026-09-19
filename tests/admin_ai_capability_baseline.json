@@ -9,7 +9,7 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "eeceb9c33af5f832907212ceb114eb79903c4ca5b65876e79052da0e1fd593cf"
+      "digest": "ab0f8b0f256d69f568a4f55c8819f73bf1fd620d56f05a753828184a25e2bcf8"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
@@ -12825,7 +12825,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-whatsapp-admin-exam-result-message:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:104",
+      "id": "be:post:api-whatsapp-admin-exam-result-message:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:111",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/whatsapp/admin/exam-result-message",
@@ -12850,12 +12850,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
-        "line": 104
+        "line": 111
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-whatsapp-admin-test-message:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:74",
+      "id": "be:post:api-whatsapp-admin-test-message:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:81",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/whatsapp/admin/test-message",
@@ -12880,12 +12880,12 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
-        "line": 74
+        "line": 81
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "be:post:api-whatsapp-check:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:52",
+      "id": "be:post:api-whatsapp-check:backend-src-nadergorge-api-controllers-whatsappcontroller-cs:59",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/whatsapp/check",
@@ -12910,7 +12910,7 @@
       ],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
-        "line": 52
+        "line": 59
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14175,7 +14175,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1811",
+      "id": "fe:delete:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1854",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -14200,12 +14200,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1811
+        "line": 1854
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-codes-groups-id-unused:frontend-src-services-admin-service-ts:1378",
+      "id": "fe:delete:admin-codes-groups-id-unused:frontend-src-services-admin-service-ts:1421",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/codes/groups/{id}/unused",
@@ -14230,12 +14230,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1378
+        "line": 1421
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-devices-id:frontend-src-services-admin-service-ts:1294",
+      "id": "fe:delete:admin-devices-id:frontend-src-services-admin-service-ts:1337",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/devices/{id}",
@@ -14260,7 +14260,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1294
+        "line": 1337
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14295,7 +14295,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-exams-examid-attempts-attemptid:frontend-src-services-admin-service-ts:2118",
+      "id": "fe:delete:admin-exams-examid-attempts-attemptid:frontend-src-services-admin-service-ts:2161",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/exams/{examId}/attempts/{attemptId}",
@@ -14320,12 +14320,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2118
+        "line": 2161
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2112",
+      "id": "fe:delete:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2155",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/exams/{examId}/questions/{examQuestionId}",
@@ -14350,7 +14350,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2112
+        "line": 2155
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14445,7 +14445,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-homework-homeworkid-submissions-submissionid:frontend-src-services-admin-service-ts:2124",
+      "id": "fe:delete:admin-homework-homeworkid-submissions-submissionid:frontend-src-services-admin-service-ts:2167",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/homework/{homeworkId}/submissions/{submissionId}",
@@ -14470,7 +14470,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2124
+        "line": 2167
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14505,7 +14505,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1521",
+      "id": "fe:delete:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1564",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/packages/{id}/code-profile",
@@ -14530,12 +14530,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1521
+        "line": 1564
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-roles-id:frontend-src-services-admin-service-ts:2329",
+      "id": "fe:delete:admin-roles-id:frontend-src-services-admin-service-ts:2372",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/roles/{id}",
@@ -14560,7 +14560,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2329
+        "line": 2372
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -14625,7 +14625,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-teachers-teacherid-photos-photoid:frontend-src-services-admin-service-ts:1226",
+      "id": "fe:delete:admin-teachers-teacherid-photos-photoid:frontend-src-services-admin-service-ts:1269",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/teachers/{teacherId}/photos/{photoId}",
@@ -14650,12 +14650,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1226
+        "line": 1269
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-terms-id:frontend-src-services-admin-service-ts:1546",
+      "id": "fe:delete:admin-terms-id:frontend-src-services-admin-service-ts:1589",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/terms/{id}",
@@ -14680,12 +14680,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1546
+        "line": 1589
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-users-students-studentid-notes-noteid:frontend-src-services-admin-service-ts:2239",
+      "id": "fe:delete:admin-users-students-studentid-notes-noteid:frontend-src-services-admin-service-ts:2282",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{studentId}/notes/{noteId}",
@@ -14710,12 +14710,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2239
+        "line": 2282
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-users-students-userid-devices-deviceid:frontend-src-services-admin-service-ts:1280",
+      "id": "fe:delete:admin-users-students-userid-devices-deviceid:frontend-src-services-admin-service-ts:1323",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{userId}/devices/{deviceId}",
@@ -14740,12 +14740,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1280
+        "line": 1323
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-users-students-userid-devices:frontend-src-services-admin-service-ts:1287",
+      "id": "fe:delete:admin-users-students-userid-devices:frontend-src-services-admin-service-ts:1330",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/users/students/{userId}/devices",
@@ -14770,12 +14770,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1287
+        "line": 1330
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-video-types-id:frontend-src-services-admin-service-ts:1639",
+      "id": "fe:delete:admin-video-types-id:frontend-src-services-admin-service-ts:1682",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/video-types/{id}",
@@ -14800,12 +14800,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1639
+        "line": 1682
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-videos-videoid-exams-examid:frontend-src-services-admin-service-ts:2008",
+      "id": "fe:delete:admin-videos-videoid-exams-examid:frontend-src-services-admin-service-ts:2051",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/videos/{videoId}/exams/{examId}",
@@ -14830,12 +14830,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2008
+        "line": 2051
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1738",
+      "id": "fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1781",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/admin/videos/{videoId}",
@@ -14860,7 +14860,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1738
+        "line": 1781
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -15015,7 +15015,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2427",
+      "id": "fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2470",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/homework-reviews",
@@ -15038,11 +15038,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2427
+        "line": 2470
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2405",
+      "id": "fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2448",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/stats",
@@ -15065,11 +15065,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2405
+        "line": 2448
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2416",
+      "id": "fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2459",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/tasks",
@@ -15092,11 +15092,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2416
+        "line": 2459
       }
     },
     {
-      "id": "fe:get:admin-assistants-assistantid-warnings:frontend-src-services-admin-service-ts:2438",
+      "id": "fe:get:admin-assistants-assistantid-warnings:frontend-src-services-admin-service-ts:2481",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/assistants/{assistantId}/warnings",
@@ -15119,7 +15119,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2438
+        "line": 2481
       }
     },
     {
@@ -15177,7 +15177,7 @@
       }
     },
     {
-      "id": "fe:get:admin-bunny-libraries-available:frontend-src-services-admin-service-ts:1777",
+      "id": "fe:get:admin-bunny-libraries-available:frontend-src-services-admin-service-ts:1820",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/libraries/available",
@@ -15200,11 +15200,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1777
+        "line": 1820
       }
     },
     {
-      "id": "fe:get:admin-bunny-libraries:frontend-src-services-admin-service-ts:1770",
+      "id": "fe:get:admin-bunny-libraries:frontend-src-services-admin-service-ts:1813",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/libraries",
@@ -15227,11 +15227,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1770
+        "line": 1813
       }
     },
     {
-      "id": "fe:get:admin-bunny-reports-costs:frontend-src-services-admin-service-ts:1869",
+      "id": "fe:get:admin-bunny-reports-costs:frontend-src-services-admin-service-ts:1912",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/bunny/reports/costs",
@@ -15254,7 +15254,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1869
+        "line": 1912
       }
     },
     {
@@ -15285,7 +15285,7 @@
       }
     },
     {
-      "id": "fe:get:admin-comments:frontend-src-services-admin-service-ts:1690",
+      "id": "fe:get:admin-comments:frontend-src-services-admin-service-ts:1733",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/comments",
@@ -15308,11 +15308,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1690
+        "line": 1733
       }
     },
     {
-      "id": "fe:get:admin-community-comments-pending:frontend-src-services-admin-service-ts:1663",
+      "id": "fe:get:admin-community-comments-pending:frontend-src-services-admin-service-ts:1706",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/community/comments/pending",
@@ -15335,11 +15335,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1663
+        "line": 1706
       }
     },
     {
-      "id": "fe:get:admin-community-posts:frontend-src-services-admin-service-ts:1642",
+      "id": "fe:get:admin-community-posts:frontend-src-services-admin-service-ts:1685",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/community/posts",
@@ -15362,7 +15362,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1642
+        "line": 1685
       }
     },
     {
@@ -15393,7 +15393,7 @@
       }
     },
     {
-      "id": "fe:get:admin-contenttype-s-id-subscribers-export:frontend-src-services-admin-service-ts:2501",
+      "id": "fe:get:admin-contenttype-s-id-subscribers-export:frontend-src-services-admin-service-ts:2544",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/{contentType}s/{id}/subscribers/export",
@@ -15416,11 +15416,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2501
+        "line": 2544
       }
     },
     {
-      "id": "fe:get:admin-contenttype-s-id-subscribers:frontend-src-services-admin-service-ts:2489",
+      "id": "fe:get:admin-contenttype-s-id-subscribers:frontend-src-services-admin-service-ts:2532",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/{contentType}s/{id}/subscribers",
@@ -15443,11 +15443,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2489
+        "line": 2532
       }
     },
     {
-      "id": "fe:get:admin-essays-pending:frontend-src-services-admin-service-ts:1438",
+      "id": "fe:get:admin-essays-pending:frontend-src-services-admin-service-ts:1481",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/essays/pending",
@@ -15470,7 +15470,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1438
+        "line": 1481
       }
     },
     {
@@ -15501,7 +15501,7 @@
       }
     },
     {
-      "id": "fe:get:admin-exams-examid-dashboard:frontend-src-services-admin-service-ts:2087",
+      "id": "fe:get:admin-exams-examid-dashboard:frontend-src-services-admin-service-ts:2130",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/exams/{examId}/dashboard",
@@ -15524,7 +15524,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2087
+        "line": 2130
       }
     },
     {
@@ -15555,7 +15555,7 @@
       }
     },
     {
-      "id": "fe:get:admin-finance-payouts:frontend-src-services-admin-service-ts:2390",
+      "id": "fe:get:admin-finance-payouts:frontend-src-services-admin-service-ts:2433",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/finance/payouts",
@@ -15578,7 +15578,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2390
+        "line": 2433
       }
     },
     {
@@ -15906,7 +15906,7 @@
       }
     },
     {
-      "id": "fe:get:admin-homework-homeworkid-dashboard:frontend-src-services-admin-service-ts:2093",
+      "id": "fe:get:admin-homework-homeworkid-dashboard:frontend-src-services-admin-service-ts:2136",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/homework/{homeworkId}/dashboard",
@@ -15929,7 +15929,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2093
+        "line": 2136
       }
     },
     {
@@ -16068,7 +16068,7 @@
       }
     },
     {
-      "id": "fe:get:admin-lessons-id-cockpit:frontend-src-services-admin-service-ts:1603",
+      "id": "fe:get:admin-lessons-id-cockpit:frontend-src-services-admin-service-ts:1646",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{id}/cockpit",
@@ -16091,11 +16091,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1603
+        "line": 1646
       }
     },
     {
-      "id": "fe:get:admin-lessons-lessonid-comments:frontend-src-services-admin-service-ts:1681",
+      "id": "fe:get:admin-lessons-lessonid-comments:frontend-src-services-admin-service-ts:1724",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/lessons/{lessonId}/comments",
@@ -16118,7 +16118,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1681
+        "line": 1724
       }
     },
     {
@@ -16257,7 +16257,7 @@
       }
     },
     {
-      "id": "fe:get:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1505",
+      "id": "fe:get:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1548",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/code-profile",
@@ -16280,11 +16280,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1505
+        "line": 1548
       }
     },
     {
-      "id": "fe:get:admin-packages-id-stats:frontend-src-services-admin-service-ts:2450",
+      "id": "fe:get:admin-packages-id-stats:frontend-src-services-admin-service-ts:2493",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}/stats",
@@ -16307,11 +16307,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2450
+        "line": 2493
       }
     },
     {
-      "id": "fe:get:admin-packages-id:frontend-src-services-admin-service-ts:1494",
+      "id": "fe:get:admin-packages-id:frontend-src-services-admin-service-ts:1537",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/{id}",
@@ -16334,11 +16334,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1494
+        "line": 1537
       }
     },
     {
-      "id": "fe:get:admin-packages-list:frontend-src-services-admin-service-ts:1162",
+      "id": "fe:get:admin-packages-list:frontend-src-services-admin-service-ts:1205",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/packages/list",
@@ -16361,7 +16361,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1162
+        "line": 1205
       }
     },
     {
@@ -16554,7 +16554,7 @@
       }
     },
     {
-      "id": "fe:get:admin-platform-finance-profits:frontend-src-services-platform-profits-service-ts:18",
+      "id": "fe:get:admin-platform-finance-profits:frontend-src-services-platform-profits-service-ts:19",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/platform-finance/profits",
@@ -16577,7 +16577,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 18
+        "line": 19
       }
     },
     {
@@ -16905,7 +16905,7 @@
       }
     },
     {
-      "id": "fe:get:admin-questions:frontend-src-services-admin-service-ts:1389",
+      "id": "fe:get:admin-questions:frontend-src-services-admin-service-ts:1432",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/questions",
@@ -16928,11 +16928,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1389
+        "line": 1432
       }
     },
     {
-      "id": "fe:get:admin-roles:frontend-src-services-admin-service-ts:2298",
+      "id": "fe:get:admin-roles:frontend-src-services-admin-service-ts:2341",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/roles",
@@ -16955,7 +16955,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2298
+        "line": 2341
       }
     },
     {
@@ -17094,7 +17094,7 @@
       }
     },
     {
-      "id": "fe:get:admin-sections-id-stats:frontend-src-services-admin-service-ts:2472",
+      "id": "fe:get:admin-sections-id-stats:frontend-src-services-admin-service-ts:2515",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}/stats",
@@ -17117,11 +17117,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2472
+        "line": 2515
       }
     },
     {
-      "id": "fe:get:admin-sections-id:frontend-src-services-admin-service-ts:1554",
+      "id": "fe:get:admin-sections-id:frontend-src-services-admin-service-ts:1597",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/sections/{id}",
@@ -17144,11 +17144,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1554
+        "line": 1597
       }
     },
     {
-      "id": "fe:get:admin-settings:frontend-src-services-admin-service-ts:2286",
+      "id": "fe:get:admin-settings:frontend-src-services-admin-service-ts:2329",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/settings",
@@ -17171,7 +17171,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2286
+        "line": 2329
       }
     },
     {
@@ -17472,7 +17472,7 @@
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-activations:frontend-src-services-admin-service-ts:2379",
+      "id": "fe:get:admin-teachers-teacherid-activations:frontend-src-services-admin-service-ts:2422",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/activations",
@@ -17495,11 +17495,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2379
+        "line": 2422
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-active-photo:frontend-src-services-admin-service-ts:1195",
+      "id": "fe:get:admin-teachers-teacherid-active-photo:frontend-src-services-admin-service-ts:1238",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/active-photo",
@@ -17522,11 +17522,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1195
+        "line": 1238
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-essays:frontend-src-services-admin-service-ts:2368",
+      "id": "fe:get:admin-teachers-teacherid-essays:frontend-src-services-admin-service-ts:2411",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/essays",
@@ -17549,11 +17549,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2368
+        "line": 2411
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-photos:frontend-src-services-admin-service-ts:1210",
+      "id": "fe:get:admin-teachers-teacherid-photos:frontend-src-services-admin-service-ts:1253",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/photos",
@@ -17576,11 +17576,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1210
+        "line": 1253
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-stats:frontend-src-services-admin-service-ts:2335",
+      "id": "fe:get:admin-teachers-teacherid-stats:frontend-src-services-admin-service-ts:2378",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/stats",
@@ -17603,11 +17603,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2335
+        "line": 2378
       }
     },
     {
-      "id": "fe:get:admin-teachers-teacherid-students:frontend-src-services-admin-service-ts:2349",
+      "id": "fe:get:admin-teachers-teacherid-students:frontend-src-services-admin-service-ts:2392",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers/{teacherId}/students",
@@ -17630,11 +17630,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2349
+        "line": 2392
       }
     },
     {
-      "id": "fe:get:admin-teachers:frontend-src-services-admin-service-ts:1203",
+      "id": "fe:get:admin-teachers:frontend-src-services-admin-service-ts:1246",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/teachers",
@@ -17657,7 +17657,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1203
+        "line": 1246
       }
     },
     {
@@ -17688,7 +17688,7 @@
       }
     },
     {
-      "id": "fe:get:admin-terms-id-stats:frontend-src-services-admin-service-ts:2461",
+      "id": "fe:get:admin-terms-id-stats:frontend-src-services-admin-service-ts:2504",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}/stats",
@@ -17711,11 +17711,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2461
+        "line": 2504
       }
     },
     {
-      "id": "fe:get:admin-terms-id:frontend-src-services-admin-service-ts:1550",
+      "id": "fe:get:admin-terms-id:frontend-src-services-admin-service-ts:1593",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/terms/{id}",
@@ -17738,11 +17738,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1550
+        "line": 1593
       }
     },
     {
-      "id": "fe:get:admin-users-id-audit-logs:frontend-src-services-admin-service-ts:1273",
+      "id": "fe:get:admin-users-id-audit-logs:frontend-src-services-admin-service-ts:1316",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users/{id}/audit-logs",
@@ -17765,11 +17765,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1273
+        "line": 1316
       }
     },
     {
-      "id": "fe:get:admin-users-id-devices:frontend-src-services-admin-service-ts:1266",
+      "id": "fe:get:admin-users-id-devices:frontend-src-services-admin-service-ts:1309",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users/{id}/devices",
@@ -17792,11 +17792,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1266
+        "line": 1309
       }
     },
     {
-      "id": "fe:get:admin-users-students-id-profile:frontend-src-services-admin-service-ts:1261",
+      "id": "fe:get:admin-users-students-id-profile:frontend-src-services-admin-service-ts:1304",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users/students/{id}/profile",
@@ -17819,11 +17819,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1261
+        "line": 1304
       }
     },
     {
-      "id": "fe:get:admin-users:frontend-src-services-admin-service-ts:1091",
+      "id": "fe:get:admin-users:frontend-src-services-admin-service-ts:1134",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/users",
@@ -17846,11 +17846,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1091
+        "line": 1134
       }
     },
     {
-      "id": "fe:get:admin-video-types:frontend-src-services-admin-service-ts:1609",
+      "id": "fe:get:admin-video-types:frontend-src-services-admin-service-ts:1652",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/video-types",
@@ -17873,7 +17873,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1609
+        "line": 1652
       }
     },
     {
@@ -18039,7 +18039,7 @@
       }
     },
     {
-      "id": "fe:get:admin-watch-requests:frontend-src-services-admin-service-ts:2246",
+      "id": "fe:get:admin-watch-requests:frontend-src-services-admin-service-ts:2289",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/watch-requests",
@@ -18062,7 +18062,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2246
+        "line": 2289
       }
     },
     {
@@ -18633,7 +18633,7 @@
       }
     },
     {
-      "id": "fe:get:dynamic:frontend-src-services-admin-service-ts:1353",
+      "id": "fe:get:dynamic:frontend-src-services-admin-service-ts:1396",
       "kind": "frontend-call",
       "method": "GET",
       "route": "<dynamic>",
@@ -18656,11 +18656,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1353
+        "line": 1396
       }
     },
     {
-      "id": "fe:get:dynamic:frontend-src-services-admin-service-ts:1362",
+      "id": "fe:get:dynamic:frontend-src-services-admin-service-ts:1405",
       "kind": "frontend-call",
       "method": "GET",
       "route": "<dynamic>",
@@ -18683,7 +18683,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1362
+        "line": 1405
       }
     },
     {
@@ -22008,7 +22008,61 @@
       }
     },
     {
-      "id": "fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1803",
+      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-preview:frontend-src-services-admin-service-ts:1096",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/whatsapp/admin/assessment-parent-recovery/preview",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1096
+      }
+    },
+    {
+      "id": "fe:get:whatsapp-admin-assessment-parent-recovery-status-encodeuricomponentoperationid:frontend-src-services-admin-service-ts:1114",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/whatsapp/admin/assessment-parent-recovery/status/{encodeURIComponentoperationId}",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1114
+      }
+    },
+    {
+      "id": "fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1846",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}/status",
@@ -22033,12 +22087,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1803
+        "line": 1846
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:admin-users-students-userid-status:frontend-src-services-admin-service-ts:1303",
+      "id": "fe:patch:admin-users-students-userid-status:frontend-src-services-admin-service-ts:1346",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/users/students/{userId}/status",
@@ -22063,12 +22117,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1303
+        "line": 1346
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:admin-video-types-id-status:frontend-src-services-admin-service-ts:1632",
+      "id": "fe:patch:admin-video-types-id-status:frontend-src-services-admin-service-ts:1675",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/video-types/{id}/status",
@@ -22093,12 +22147,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1632
+        "line": 1675
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:patch:admin-videos-videoid-toggle-active:frontend-src-services-admin-service-ts:1732",
+      "id": "fe:patch:admin-videos-videoid-toggle-active:frontend-src-services-admin-service-ts:1775",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/admin/videos/{videoId}/toggle-active",
@@ -22123,7 +22177,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1732
+        "line": 1775
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -22338,7 +22392,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-assessments-ocr-questions:frontend-src-services-admin-service-ts:2101",
+      "id": "fe:post:admin-assessments-ocr-questions:frontend-src-services-admin-service-ts:2144",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/assessments/ocr/questions",
@@ -22363,7 +22417,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2101
+        "line": 2144
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -22398,7 +22452,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-libraries:frontend-src-services-admin-service-ts:1784",
+      "id": "fe:post:admin-bunny-libraries:frontend-src-services-admin-service-ts:1827",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/libraries",
@@ -22423,12 +22477,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1784
+        "line": 1827
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-assetid-cancel-replacement:frontend-src-services-admin-service-ts:1831",
+      "id": "fe:post:admin-bunny-uploads-assetid-cancel-replacement:frontend-src-services-admin-service-ts:1874",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/{assetId}/cancel-replacement",
@@ -22453,12 +22507,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1831
+        "line": 1874
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-assetid-complete:frontend-src-services-admin-service-ts:1825",
+      "id": "fe:post:admin-bunny-uploads-assetid-complete:frontend-src-services-admin-service-ts:1868",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/{assetId}/complete",
@@ -22483,12 +22537,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1825
+        "line": 1868
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-fetch:frontend-src-services-admin-service-ts:1839",
+      "id": "fe:post:admin-bunny-uploads-fetch:frontend-src-services-admin-service-ts:1882",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/fetch",
@@ -22513,12 +22567,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1839
+        "line": 1882
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-uploads-tus:frontend-src-services-admin-service-ts:1818",
+      "id": "fe:post:admin-bunny-uploads-tus:frontend-src-services-admin-service-ts:1861",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/uploads/tus",
@@ -22543,12 +22597,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1818
+        "line": 1861
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-usage-sync:frontend-src-services-admin-service-ts:1858",
+      "id": "fe:post:admin-bunny-usage-sync:frontend-src-services-admin-service-ts:1901",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/usage/sync",
@@ -22573,12 +22627,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1858
+        "line": 1901
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-bunny-videos-assetid-refresh-status:frontend-src-services-admin-service-ts:1846",
+      "id": "fe:post:admin-bunny-videos-assetid-refresh-status:frontend-src-services-admin-service-ts:1889",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/bunny/videos/{assetId}/refresh-status",
@@ -22603,12 +22657,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1846
+        "line": 1889
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-chapters-chapterid-regenerate-mindmap:frontend-src-services-admin-service-ts:1879",
+      "id": "fe:post:admin-chapters-chapterid-regenerate-mindmap:frontend-src-services-admin-service-ts:1922",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/chapters/{chapterId}/regenerate-mindmap",
@@ -22633,12 +22687,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1879
+        "line": 1922
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-comments-commentid-approve:frontend-src-services-admin-service-ts:1702",
+      "id": "fe:post:admin-comments-commentid-approve:frontend-src-services-admin-service-ts:1745",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/comments/{commentId}/approve",
@@ -22663,15 +22717,75 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1702
+        "line": 1745
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-comments-commentid-reject:frontend-src-services-admin-service-ts:1712",
+      "id": "fe:post:admin-comments-commentid-reject:frontend-src-services-admin-service-ts:1755",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/comments/{commentId}/reject",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1755
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-comments-commentid-reply:frontend-src-services-admin-service-ts:1751",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/comments/{commentId}/reply",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1751
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:admin-community-comments-commentid-approve:frontend-src-services-admin-service-ts:1712",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/admin/community/comments/{commentId}/approve",
       "effect": "mutation",
       "domain": "other",
       "risk": "ordinary",
@@ -22698,67 +22812,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-comments-commentid-reply:frontend-src-services-admin-service-ts:1708",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/comments/{commentId}/reply",
-      "effect": "mutation",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1708
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-community-comments-commentid-approve:frontend-src-services-admin-service-ts:1669",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/admin/community/comments/{commentId}/approve",
-      "effect": "mutation",
-      "domain": "other",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "other"
-      ],
-      "source": {
-        "file": "frontend/src/services/admin-service.ts",
-        "line": 1669
-      },
-      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
-    },
-    {
-      "id": "fe:post:admin-community-comments-commentid-reject:frontend-src-services-admin-service-ts:1675",
+      "id": "fe:post:admin-community-comments-commentid-reject:frontend-src-services-admin-service-ts:1718",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/comments/{commentId}/reject",
@@ -22783,12 +22837,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1675
+        "line": 1718
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-community-posts-postid-approve:frontend-src-services-admin-service-ts:1651",
+      "id": "fe:post:admin-community-posts-postid-approve:frontend-src-services-admin-service-ts:1694",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/posts/{postId}/approve",
@@ -22813,12 +22867,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1651
+        "line": 1694
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-community-posts-postid-reject:frontend-src-services-admin-service-ts:1657",
+      "id": "fe:post:admin-community-posts-postid-reject:frontend-src-services-admin-service-ts:1700",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/community/posts/{postId}/reject",
@@ -22843,12 +22897,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1657
+        "line": 1700
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-content-contenttype-id-image:frontend-src-services-admin-service-ts:1476",
+      "id": "fe:post:admin-content-contenttype-id-image:frontend-src-services-admin-service-ts:1519",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/content/{contentType}/{id}/image",
@@ -22873,12 +22927,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1476
+        "line": 1519
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-content-lessons-lessonid-homework:frontend-src-services-admin-service-ts:1942",
+      "id": "fe:post:admin-content-lessons-lessonid-homework:frontend-src-services-admin-service-ts:1985",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/content/lessons/{lessonId}/homework",
@@ -22903,7 +22957,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1942
+        "line": 1985
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -22938,7 +22992,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-essays-essaysubmissionid-grade:frontend-src-services-admin-service-ts:1449",
+      "id": "fe:post:admin-essays-essaysubmissionid-grade:frontend-src-services-admin-service-ts:1492",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/essays/{essaySubmissionId}/grade",
@@ -22963,12 +23017,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1449
+        "line": 1492
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-exams-examid-questions:frontend-src-services-admin-service-ts:2079",
+      "id": "fe:post:admin-exams-examid-questions:frontend-src-services-admin-service-ts:2122",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/exams/{examId}/questions",
@@ -22993,12 +23047,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2079
+        "line": 2122
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2054",
+      "id": "fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2097",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/exams/inline",
@@ -23023,7 +23077,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2054
+        "line": 2097
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -23208,7 +23262,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-forms-cover-upload:frontend-src-services-admin-service-ts:1249",
+      "id": "fe:post:admin-forms-cover-upload:frontend-src-services-admin-service-ts:1292",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/forms/cover/upload",
@@ -23233,7 +23287,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1249
+        "line": 1292
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -23388,7 +23442,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-lessons:frontend-src-services-admin-service-ts:1575",
+      "id": "fe:post:admin-lessons:frontend-src-services-admin-service-ts:1618",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/lessons",
@@ -23413,7 +23467,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1575
+        "line": 1618
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -23628,7 +23682,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-overrides-reset-watch:frontend-src-services-admin-service-ts:2151",
+      "id": "fe:post:admin-overrides-reset-watch:frontend-src-services-admin-service-ts:2194",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/overrides/reset-watch",
@@ -23653,12 +23707,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2151
+        "line": 2194
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-packages:frontend-src-services-admin-service-ts:1462",
+      "id": "fe:post:admin-packages:frontend-src-services-admin-service-ts:1505",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/packages",
@@ -23683,7 +23737,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1462
+        "line": 1505
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24138,7 +24192,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-popup-image:frontend-src-services-admin-service-ts:1977",
+      "id": "fe:post:admin-popup-image:frontend-src-services-admin-service-ts:2020",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/popup/image",
@@ -24163,7 +24217,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1977
+        "line": 2020
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24228,7 +24282,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-questions-image:frontend-src-services-admin-service-ts:1954",
+      "id": "fe:post:admin-questions-image:frontend-src-services-admin-service-ts:1997",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions/image",
@@ -24253,12 +24307,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1954
+        "line": 1997
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-questions-questionid-audio:frontend-src-services-admin-service-ts:1425",
+      "id": "fe:post:admin-questions-questionid-audio:frontend-src-services-admin-service-ts:1468",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions/{questionId}/audio",
@@ -24283,12 +24337,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1425
+        "line": 1468
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-questions:frontend-src-services-admin-service-ts:1412",
+      "id": "fe:post:admin-questions:frontend-src-services-admin-service-ts:1455",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/questions",
@@ -24313,12 +24367,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1412
+        "line": 1455
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-resources-upload:frontend-src-services-admin-service-ts:1901",
+      "id": "fe:post:admin-resources-upload:frontend-src-services-admin-service-ts:1944",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/resources/upload",
@@ -24343,12 +24397,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1901
+        "line": 1944
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-resources:frontend-src-services-admin-service-ts:1891",
+      "id": "fe:post:admin-resources:frontend-src-services-admin-service-ts:1934",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/resources",
@@ -24373,12 +24427,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1891
+        "line": 1934
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-roles:frontend-src-services-admin-service-ts:2308",
+      "id": "fe:post:admin-roles:frontend-src-services-admin-service-ts:2351",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/roles",
@@ -24403,7 +24457,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2308
+        "line": 2351
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -24558,7 +24612,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-sections:frontend-src-services-admin-service-ts:1558",
+      "id": "fe:post:admin-sections:frontend-src-services-admin-service-ts:1601",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/sections",
@@ -24583,7 +24637,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1558
+        "line": 1601
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25008,7 +25062,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teacher-photos-upload:frontend-src-services-admin-service-ts:1183",
+      "id": "fe:post:admin-teacher-photos-upload:frontend-src-services-admin-service-ts:1226",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-photos/upload",
@@ -25033,12 +25087,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1183
+        "line": 1226
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teachers-teacherid-photos-photoid-active:frontend-src-services-admin-service-ts:1219",
+      "id": "fe:post:admin-teachers-teacherid-photos-photoid-active:frontend-src-services-admin-service-ts:1262",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teachers/{teacherId}/photos/{photoId}/active",
@@ -25063,12 +25117,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1219
+        "line": 1262
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-teachers-upload-profile-image:frontend-src-services-admin-service-ts:1237",
+      "id": "fe:post:admin-teachers-upload-profile-image:frontend-src-services-admin-service-ts:1280",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teachers/upload-profile-image",
@@ -25093,7 +25147,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1237
+        "line": 1280
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25128,7 +25182,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-terms:frontend-src-services-admin-service-ts:1532",
+      "id": "fe:post:admin-terms:frontend-src-services-admin-service-ts:1575",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/terms",
@@ -25153,12 +25207,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1532
+        "line": 1575
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-admins-adminid-reset-password:frontend-src-services-admin-service-ts:2219",
+      "id": "fe:post:admin-users-admins-adminid-reset-password:frontend-src-services-admin-service-ts:2262",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/admins/{adminId}/reset-password",
@@ -25183,12 +25237,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2219
+        "line": 2262
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-staff-staffid-archive:frontend-src-services-admin-service-ts:2223",
+      "id": "fe:post:admin-users-staff-staffid-archive:frontend-src-services-admin-service-ts:2266",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/staff/{staffId}/archive",
@@ -25213,12 +25267,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2223
+        "line": 2266
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-balance-adjust:frontend-src-services-admin-service-ts:2181",
+      "id": "fe:post:admin-users-students-studentid-balance-adjust:frontend-src-services-admin-service-ts:2224",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/balance/adjust",
@@ -25243,12 +25297,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2181
+        "line": 2224
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-notes:frontend-src-services-admin-service-ts:2231",
+      "id": "fe:post:admin-users-students-studentid-notes:frontend-src-services-admin-service-ts:2274",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/notes",
@@ -25273,12 +25327,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2231
+        "line": 2274
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-studentid-reset-password:frontend-src-services-admin-service-ts:2211",
+      "id": "fe:post:admin-users-students-studentid-reset-password:frontend-src-services-admin-service-ts:2254",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{studentId}/reset-password",
@@ -25303,12 +25357,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2211
+        "line": 2254
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-userid-gamification-adjust:frontend-src-services-admin-service-ts:1328",
+      "id": "fe:post:admin-users-students-userid-gamification-adjust:frontend-src-services-admin-service-ts:1371",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/gamification/adjust",
@@ -25333,12 +25387,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1328
+        "line": 1371
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-userid-overrides:frontend-src-services-admin-service-ts:1316",
+      "id": "fe:post:admin-users-students-userid-overrides:frontend-src-services-admin-service-ts:1359",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/overrides",
@@ -25363,12 +25417,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1316
+        "line": 1359
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users-students-userid-packages-accessgrantid-cancel:frontend-src-services-admin-service-ts:2278",
+      "id": "fe:post:admin-users-students-userid-packages-accessgrantid-cancel:frontend-src-services-admin-service-ts:2321",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users/students/{userId}/packages/{accessGrantId}/cancel",
@@ -25393,12 +25447,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2278
+        "line": 2321
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-users:frontend-src-services-admin-service-ts:1151",
+      "id": "fe:post:admin-users:frontend-src-services-admin-service-ts:1194",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/users",
@@ -25423,12 +25477,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1151
+        "line": 1194
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-video-types:frontend-src-services-admin-service-ts:1618",
+      "id": "fe:post:admin-video-types:frontend-src-services-admin-service-ts:1661",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/video-types",
@@ -25453,12 +25507,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1618
+        "line": 1661
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-videos-videoid-analyze-ai:frontend-src-services-admin-service-ts:1742",
+      "id": "fe:post:admin-videos-videoid-analyze-ai:frontend-src-services-admin-service-ts:1785",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/analyze-ai",
@@ -25483,12 +25537,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1742
+        "line": 1785
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-videos-videoid-cancel-ai:frontend-src-services-admin-service-ts:1758",
+      "id": "fe:post:admin-videos-videoid-cancel-ai:frontend-src-services-admin-service-ts:1801",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/cancel-ai",
@@ -25513,12 +25567,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1758
+        "line": 1801
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-videos-videoid-cancel-mindmap:frontend-src-services-admin-service-ts:1764",
+      "id": "fe:post:admin-videos-videoid-cancel-mindmap:frontend-src-services-admin-service-ts:1807",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/cancel-mindmap",
@@ -25543,12 +25597,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1764
+        "line": 1807
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-videos-videoid-generate-mindmaps:frontend-src-services-admin-service-ts:1751",
+      "id": "fe:post:admin-videos-videoid-generate-mindmaps:frontend-src-services-admin-service-ts:1794",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos/{videoId}/generate-mindmaps",
@@ -25573,12 +25627,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1751
+        "line": 1794
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-videos:frontend-src-services-admin-service-ts:1718",
+      "id": "fe:post:admin-videos:frontend-src-services-admin-service-ts:1761",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/videos",
@@ -25603,7 +25657,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1718
+        "line": 1761
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -25788,7 +25842,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2257",
+      "id": "fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2300",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/watch-requests/{id}/approve",
@@ -25813,12 +25867,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2257
+        "line": 2300
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2265",
+      "id": "fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2308",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/watch-requests/{id}/reject",
@@ -25843,7 +25897,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2265
+        "line": 2308
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -26448,7 +26502,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:dynamic:frontend-src-services-admin-service-ts:1346",
+      "id": "fe:post:dynamic:frontend-src-services-admin-service-ts:1389",
       "kind": "frontend-call",
       "method": "POST",
       "route": "<dynamic>",
@@ -26473,7 +26527,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1346
+        "line": 1389
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -26598,7 +26652,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:exams-admin-lessons-lessonid-students-studentid-unlock:frontend-src-services-admin-service-ts:2144",
+      "id": "fe:post:exams-admin-lessons-lessonid-students-studentid-unlock:frontend-src-services-admin-service-ts:2187",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/exams/admin/lessons/{lessonId}/students/{studentId}/unlock",
@@ -26623,7 +26677,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2144
+        "line": 2187
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -29928,7 +29982,37 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1070",
+      "id": "fe:post:whatsapp-admin-assessment-parent-recovery-apply:frontend-src-services-admin-service-ts:1107",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/whatsapp/admin/assessment-parent-recovery/apply",
+      "effect": "mutation",
+      "domain": "other",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "unresolved:frontend-contract",
+      "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "other"
+      ],
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 1107
+      },
+      "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
+    },
+    {
+      "id": "fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1089",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/whatsapp/admin/exam-result-message",
@@ -29953,12 +30037,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1070
+        "line": 1089
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:post:whatsapp-admin-test-message:frontend-src-services-admin-service-ts:1061",
+      "id": "fe:post:whatsapp-admin-test-message:frontend-src-services-admin-service-ts:1080",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/whatsapp/admin/test-message",
@@ -29983,7 +30067,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1061
+        "line": 1080
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30018,7 +30102,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1795",
+      "id": "fe:put:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1838",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/bunny/libraries/{encodeURIComponentlibraryRecordId}",
@@ -30043,12 +30127,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1795
+        "line": 1838
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-codes-groups-id-settings:frontend-src-services-admin-service-ts:1370",
+      "id": "fe:put:admin-codes-groups-id-settings:frontend-src-services-admin-service-ts:1413",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/codes/groups/{id}/settings",
@@ -30073,12 +30157,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1370
+        "line": 1413
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-content-targettype-id-archive:frontend-src-services-admin-service-ts:1052",
+      "id": "fe:put:admin-content-targettype-id-archive:frontend-src-services-admin-service-ts:1071",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/content/{targetType}/{id}/archive",
@@ -30103,7 +30187,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1052
+        "line": 1071
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30138,7 +30222,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2135",
+      "id": "fe:put:admin-exams-examid-questions-examquestionid:frontend-src-services-admin-service-ts:2178",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/exams/{examId}/questions/{examQuestionId}",
@@ -30163,12 +30247,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2135
+        "line": 2178
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2014",
+      "id": "fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2057",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/exams/{examId}/status",
@@ -30193,7 +30277,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2014
+        "line": 2057
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30288,7 +30372,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-homework-homeworkid-status:frontend-src-services-admin-service-ts:2021",
+      "id": "fe:put:admin-homework-homeworkid-status:frontend-src-services-admin-service-ts:2064",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/homework/{homeworkId}/status",
@@ -30313,12 +30397,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2021
+        "line": 2064
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-lessons-id:frontend-src-services-admin-service-ts:1585",
+      "id": "fe:put:admin-lessons-id:frontend-src-services-admin-service-ts:1628",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{id}",
@@ -30343,12 +30427,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1585
+        "line": 1628
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-lessons-lessonid-exam:frontend-src-services-admin-service-ts:1994",
+      "id": "fe:put:admin-lessons-lessonid-exam:frontend-src-services-admin-service-ts:2037",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{lessonId}/exam",
@@ -30373,12 +30457,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1994
+        "line": 2037
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-lessons-lessonid-homework-coming-soon:frontend-src-services-admin-service-ts:1595",
+      "id": "fe:put:admin-lessons-lessonid-homework-coming-soon:frontend-src-services-admin-service-ts:1638",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/lessons/{lessonId}/homework-coming-soon",
@@ -30403,7 +30487,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1595
+        "line": 1638
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30468,7 +30552,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-overrides-set-watch-count:frontend-src-services-admin-service-ts:2163",
+      "id": "fe:put:admin-overrides-set-watch-count:frontend-src-services-admin-service-ts:2206",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/overrides/set-watch-count",
@@ -30493,12 +30577,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2163
+        "line": 2206
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1514",
+      "id": "fe:put:admin-packages-id-code-profile:frontend-src-services-admin-service-ts:1557",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/packages/{id}/code-profile",
@@ -30523,12 +30607,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1514
+        "line": 1557
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-packages-id:frontend-src-services-admin-service-ts:1498",
+      "id": "fe:put:admin-packages-id:frontend-src-services-admin-service-ts:1541",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/packages/{id}",
@@ -30553,7 +30637,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1498
+        "line": 1541
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30588,7 +30672,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-roles-id:frontend-src-services-admin-service-ts:2321",
+      "id": "fe:put:admin-roles-id:frontend-src-services-admin-service-ts:2364",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/roles/{id}",
@@ -30613,7 +30697,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2321
+        "line": 2364
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30648,7 +30732,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-sections-id:frontend-src-services-admin-service-ts:1568",
+      "id": "fe:put:admin-sections-id:frontend-src-services-admin-service-ts:1611",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/sections/{id}",
@@ -30673,12 +30757,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1568
+        "line": 1611
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-settings:frontend-src-services-admin-service-ts:2291",
+      "id": "fe:put:admin-settings:frontend-src-services-admin-service-ts:2334",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/settings",
@@ -30703,7 +30787,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2291
+        "line": 2334
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -30828,7 +30912,7 @@
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-terms-id:frontend-src-services-admin-service-ts:1542",
+      "id": "fe:put:admin-terms-id:frontend-src-services-admin-service-ts:1585",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/terms/{id}",
@@ -30853,12 +30937,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1542
+        "line": 1585
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-users-id-roles:frontend-src-services-admin-service-ts:1174",
+      "id": "fe:put:admin-users-id-roles:frontend-src-services-admin-service-ts:1217",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/{id}/roles",
@@ -30883,12 +30967,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1174
+        "line": 1217
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-users-id-status:frontend-src-services-admin-service-ts:1169",
+      "id": "fe:put:admin-users-id-status:frontend-src-services-admin-service-ts:1212",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/{id}/status",
@@ -30913,12 +30997,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1169
+        "line": 1212
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-users-staff-staffid-profile:frontend-src-services-admin-service-ts:2203",
+      "id": "fe:put:admin-users-staff-staffid-profile:frontend-src-services-admin-service-ts:2246",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/staff/{staffId}/profile",
@@ -30943,12 +31027,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2203
+        "line": 2246
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-users-students-studentid-profile:frontend-src-services-admin-service-ts:2192",
+      "id": "fe:put:admin-users-students-studentid-profile:frontend-src-services-admin-service-ts:2235",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/users/students/{studentId}/profile",
@@ -30973,12 +31057,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2192
+        "line": 2235
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-video-types-id:frontend-src-services-admin-service-ts:1625",
+      "id": "fe:put:admin-video-types-id:frontend-src-services-admin-service-ts:1668",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/video-types/{id}",
@@ -31003,12 +31087,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1625
+        "line": 1668
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-videos-videoid-exam:frontend-src-services-admin-service-ts:2001",
+      "id": "fe:put:admin-videos-videoid-exam:frontend-src-services-admin-service-ts:2044",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/videos/{videoId}/exam",
@@ -31033,12 +31117,12 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 2001
+        "line": 2044
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
     {
-      "id": "fe:put:admin-videos-videoid:frontend-src-services-admin-service-ts:1725",
+      "id": "fe:put:admin-videos-videoid:frontend-src-services-admin-service-ts:1768",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/admin/videos/{videoId}",
@@ -31063,7 +31147,7 @@
       ],
       "source": {
         "file": "frontend/src/services/admin-service.ts",
-        "line": 1725
+        "line": 1768
       },
       "blocker": "Requires a reviewed capability adapter that calls an authoritative application command/service."
     },
@@ -31549,5 +31633,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "fe954f87d8f7a13ca352e167e9f8203a7ccaddecc60863b41e227bb63b7ffef9"
+  "digest": "9c87df10dca08298d4fb4eb57a7306b9f3e8c07e0145bff82dca16a56b63e5bc"
 }

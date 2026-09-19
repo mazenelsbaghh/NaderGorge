@@ -18,9 +18,17 @@ internal static class AssessmentParentResultReader
     public static async Task<AssessmentParentResult?> ReadAsync(IAppDbContext db, OutboxEvent notification, CancellationToken ct)
     {
         using var payload = JsonDocument.Parse(notification.PayloadJson);
-        var kind = notification.Type == "ExamGraded" ? "exam" : "homework";
-        if (!payload.RootElement.TryGetProperty(kind == "exam" ? "attemptId" : "submissionId", out var id)
-            || !id.TryGetGuid(out var attemptId)) return null;
+        var kind = notification.Type is "ExamGraded" or "AssessmentParentRecovery" ? "exam" : "homework";
+        Guid attemptId;
+        if (notification.Type == "AssessmentParentRecovery")
+        {
+            var envelope = JsonSerializer.Deserialize<AssessmentParentRecoveryEnvelope>(notification.PayloadJson);
+            if (envelope is null || envelope.AttemptId == Guid.Empty || envelope.DeliveryId == Guid.Empty
+                || envelope.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(envelope.GradeVersion)) return null;
+            attemptId = envelope.AttemptId;
+        }
+        else if (!payload.RootElement.TryGetProperty(kind == "exam" ? "attemptId" : "submissionId", out var id)
+            || !id.TryGetGuid(out attemptId)) return null;
         var result = kind == "exam" ? await ReadExamAsync(db, attemptId, ct) : await ReadHomeworkAsync(db, attemptId, ct);
         return result is not null && result.Student.Id.ToString() == notification.TargetUserId
             && result.Student.IsActive && !result.Student.IsDeleted ? result : null;

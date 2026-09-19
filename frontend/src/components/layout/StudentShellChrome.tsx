@@ -35,7 +35,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 // StudentThemeSettingsPanel removed as settings are now inside the profile tab system
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -47,7 +47,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useStudentShellStore } from '@/stores/student-shell-store';
-import { ParentCodePopup } from '@/components/student/ParentCodePopup';
 import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
 import { StudentMobileHeader } from '@/components/layout/StudentMobileHeader';
 import { IntentLink } from '@/components/navigation/IntentLink';
@@ -226,18 +225,16 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,var(--admin-primary-10),transparent_34%)]" />
           {!shouldReduceMotion ? (
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[var(--admin-primary)]/35 to-transparent" />
+            <motion.div
+              initial={false}
+              className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[var(--admin-primary)]/35 to-transparent"
+            />
           ) : null}
         </div>
       ) : null}
-      <AnimatePresence>
-        {!isFocusMode && (
-          <motion.aside
-            initial={shouldReduceMotion ? false : { x: '100%' }}
-            animate={{ x: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { x: '100%' }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="group/sidebar fixed start-0 top-0 z-50 hidden h-full w-20 flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-6 transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex"
+      {!isFocusMode && (
+          <aside
+            className="group/sidebar fixed start-0 top-0 z-50 hidden h-full w-20 flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-6 transition-[width] duration-200 ease-out motion-safe:animate-in motion-safe:slide-in-from-right-4 hover:w-64 focus-within:w-64 lg:flex"
             role="navigation"
             aria-label="القائمة الرئيسية"
           >
@@ -358,9 +355,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 </span>
               </button>
             </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+          </aside>
+      )}
 
       <main
         ref={mainScrollRef}
@@ -371,15 +367,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             : 'px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:ms-24 lg:px-8 lg:py-10 lg:pb-10'
         }`}
       >
-        <AnimatePresence>
-          {!isFocusMode && (
-            <motion.header
-              initial={false}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="mb-4 lg:mb-8"
-            >
+        {!isFocusMode && (
+            <header className="mb-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 lg:mb-8">
               <StudentMobileHeader fullName={user?.fullName} avatarSlug={user?.avatarSlug} unreadCount={unreadCount} isDark={isDark} />
               <div className="hidden items-center justify-between w-full lg:flex">
                 <nav className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[var(--admin-muted)] lg:gap-2 lg:text-xs">
@@ -432,32 +421,23 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   </div>
                 </div>
               </div>
-            </motion.header>
-          )}
-        </AnimatePresence>
+            </header>
+        )}
 
         {children}
 
-        <AnimatePresence>
-          {!isFocusMode && (
-            <motion.footer
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 0.6, y: 0 }}
-              exit={{ opacity: 0, y: 16 }}
-              className="mt-20 flex flex-col items-center select-none"
-            >
+        {!isFocusMode && (
+            <footer className="mt-20 flex select-none flex-col items-center opacity-60 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
               <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
               <p className="text-xs font-black tracking-[0.26em] text-[var(--admin-footer)]">
                 منصة مسار
               </p>
-            </motion.footer>
-          )}
-        </AnimatePresence>
+            </footer>
+        )}
       </main>
 
       {/* ── Mobile Bottom Nav (compact: 3 primary + menu) ─────────────── */}
-      <AnimatePresence>
-        {!isFocusMode && (
+      {!isFocusMode && (
           <StudentBottomNav
             activePath={activePath}
             primaryItems={primaryNavItems}
@@ -467,8 +447,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             onOpenDrawer={() => setIsDrawerOpen(true)}
             unreadCount={unreadCount}
           />
-        )}
-      </AnimatePresence>
+      )}
 
       {/* ── Mobile Drawer (slide from left for RTL) ────────────────────── */}
       <AccessibleOverlay
@@ -586,7 +565,6 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               </div>
             </div>
       </AccessibleOverlay>
-      <ParentCodePopup />
     </div>
   );
 }

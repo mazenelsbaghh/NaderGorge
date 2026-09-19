@@ -326,7 +326,7 @@ test.describe('Platform performance 167 raw browser producer', () => {
           await expect(
             targetPage.getByRole('heading', {
               level: 1,
-              name: /أهلاً بيك،/,
+              name: /أهلاً يا E2E/,
             }),
           ).toBeVisible({ timeout: 15_000 });
         },

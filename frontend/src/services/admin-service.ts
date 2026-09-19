@@ -266,6 +266,24 @@ export interface WhatsAppExamResultMessageResult extends WhatsAppTestMessageResu
   preview?: WhatsAppExamResultPreview | null;
 }
 
+export interface AssessmentParentRecoveryPreview {
+  eligibleCount: number;
+  cohortFingerprint: string;
+  excludedByReason: Record<string, number>;
+  alreadyApplied: boolean;
+}
+
+export interface AssessmentParentRecoveryStatus {
+  operationId: string;
+  total: number;
+  pending: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  uncertain: number;
+}
+
 export type ContentImageType = 'package' | 'term' | 'section';
 
 export interface AdminUserListDto {
@@ -1071,6 +1089,30 @@ export const adminService = {
     const res = await apiClient.post<WhatsAppExamResultMessageResult>(
       '/whatsapp/admin/exam-result-message',
       payload
+    );
+    return res.data;
+  },
+  previewAssessmentParentRecovery: async (maxBatchSize = 10) => {
+    const res = await apiClient.get<AssessmentParentRecoveryPreview>(
+      '/whatsapp/admin/assessment-parent-recovery/preview',
+      { params: { maxBatchSize } }
+    );
+    return res.data;
+  },
+  applyAssessmentParentRecovery: async (payload: {
+    operationId: string;
+    expectedCohortFingerprint: string;
+    maxBatchSize: number;
+  }) => {
+    const res = await apiClient.post<AssessmentParentRecoveryPreview>(
+      '/whatsapp/admin/assessment-parent-recovery/apply',
+      payload
+    );
+    return res.data;
+  },
+  getAssessmentParentRecoveryStatus: async (operationId: string) => {
+    const res = await apiClient.get<AssessmentParentRecoveryStatus>(
+      `/whatsapp/admin/assessment-parent-recovery/status/${encodeURIComponent(operationId)}`
     );
     return res.data;
   },
