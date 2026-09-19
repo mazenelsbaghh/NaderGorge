@@ -21,6 +21,7 @@ public sealed class AssignedQuestionPointsMigrationPostgresTests
                 "Id" uuid PRIMARY KEY,
                 "DefinitionSnapshotJson" jsonb,
                 "ScoreAchieved" numeric NOT NULL,
+                "IsPassed" boolean NOT NULL DEFAULT false,
                 "IsTimeExpired" boolean NOT NULL,
                 "UpdatedAt" timestamp without time zone);
             CREATE TEMP TABLE student_answers (
@@ -71,6 +72,37 @@ public sealed class AssignedQuestionPointsMigrationPostgresTests
 
         Assert.Contains(notices, message => message.Contains("2 legacy exam attempts", StringComparison.Ordinal));
         Assert.Contains(notices, message => message.Contains("1 legacy exam attempts", StringComparison.Ordinal));
+
+        var lateAttemptId = Guid.NewGuid();
+        await using (var insert = new NpgsqlCommand("""
+            INSERT INTO student_exam_attempts
+                ("Id", "DefinitionSnapshotJson", "ScoreAchieved", "IsPassed", "IsTimeExpired")
+            VALUES (@id, @snapshot::jsonb, 0, true, false);
+            """, connection, transaction))
+        {
+            insert.Parameters.AddWithValue("id", lateAttemptId);
+            insert.Parameters.AddWithValue("snapshot", snapshot);
+            await insert.ExecuteNonQueryAsync();
+        }
+
+        var followupSql = FollowupMigrationSql();
+        await Execute(connection, followupSql, transaction);
+        await Execute(connection, followupSql, transaction);
+        await using var followupQuery = new NpgsqlCommand("""
+            SELECT ("DefinitionSnapshotJson"->>'TotalScore')::numeric,
+                   ("DefinitionSnapshotJson"->>'PassingScore')::numeric,
+                   ("DefinitionSnapshotJson"->>'UsesAssignedQuestionPoints')::boolean,
+                   "ScoreAchieved", "IsPassed"
+            FROM student_exam_attempts WHERE "Id"=@id
+            """, connection, transaction);
+        followupQuery.Parameters.AddWithValue("id", lateAttemptId);
+        await using var followupReader = await followupQuery.ExecuteReaderAsync();
+        Assert.True(await followupReader.ReadAsync());
+        Assert.Equal(15m, followupReader.GetDecimal(0));
+        Assert.Equal(9m, followupReader.GetDecimal(1));
+        Assert.True(followupReader.GetBoolean(2));
+        Assert.Equal(12m, followupReader.GetDecimal(3));
+        Assert.True(followupReader.GetBoolean(4));
     }
 
     private static string MigrationSql()
@@ -78,6 +110,16 @@ public sealed class AssignedQuestionPointsMigrationPostgresTests
         var migration = new UseAssignedQuestionPointsForExamAttempts();
         var builder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
         typeof(UseAssignedQuestionPointsForExamAttempts)
+            .GetMethod("Up", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(migration, [builder]);
+        return Assert.Single(builder.Operations.OfType<SqlOperation>()).Sql;
+    }
+
+    private static string FollowupMigrationSql()
+    {
+        var migration = new ReconcileRemainingExamAttemptScales();
+        var builder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
+        typeof(ReconcileRemainingExamAttemptScales)
             .GetMethod("Up", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(migration, [builder]);
         return Assert.Single(builder.Operations.OfType<SqlOperation>()).Sql;
