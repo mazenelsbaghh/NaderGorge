@@ -114,7 +114,9 @@ public record WatchLessonDetailDto(
     int WatchCount,
     int WatchedSeconds,
     bool IsCompleted,
-    DateTime? LastWatchedAt
+    DateTime? LastWatchedAt,
+    int StartedVideos,
+    int CompletedVideos
 );
 
 public record QuestionReviewDto(
@@ -362,6 +364,8 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             .Select(lesson =>
             {
                 var lessonWatchEvents = watchEvents.Where(w => w.LessonId == lesson.LessonId).ToList();
+                var lessonProgress = progressByLesson[lesson.LessonId];
+                var completedVideos = lessonProgress.Count(video => video.IsCompleted);
                 return new WatchLessonDetailDto(
                     lesson.PackageId,
                     lesson.PackageName,
@@ -372,11 +376,13 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     lesson.LessonId,
                     lesson.LessonTitle,
                     videoCounts.GetValueOrDefault(lesson.LessonId),
-                    progressByLesson[lesson.LessonId].Count(video => video.IsCompleted),
+                    completedVideos,
                     lessonWatchEvents.Sum(w => w.WatchCount),
-                    (int)Math.Floor(progressByLesson[lesson.LessonId].Sum(video => video.CompletionWatchedSeconds)),
+                    (int)Math.Floor(lessonProgress.Sum(video => video.CompletionWatchedSeconds)),
                     completedLessonIds.Contains(lesson.LessonId),
-                    lessonWatchEvents.Count == 0 ? null : lessonWatchEvents.Max(w => w.LastWatchedAt)
+                    lessonWatchEvents.Count == 0 ? null : lessonWatchEvents.Max(w => w.LastWatchedAt),
+                    lessonProgress.Count(video => video.WatchedSeconds > 0),
+                    completedVideos
                 );
             })
             .OrderBy(w => w.TeacherName)

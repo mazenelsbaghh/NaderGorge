@@ -13,6 +13,18 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
 }
 
+function LessonWatchProgress({ lesson }: { lesson: ParentAcademicDetails['watchLessons'][number] }) {
+  const completedVideos = lesson.completedVideos ?? lesson.watchedVideos;
+
+  return (
+    <div className={`w-full text-start text-xs font-black ${lesson.isCompleted ? 'text-emerald-700' : 'text-amber-700'} sm:w-auto sm:text-end`}>
+      {lesson.startedVideos !== undefined && <p>بدأ مشاهدة {lesson.startedVideos} من {lesson.totalVideos} فيديو</p>}
+      <p className={lesson.startedVideos !== undefined ? 'mt-1' : undefined}>أكمل {completedVideos} من {lesson.totalVideos}</p>
+      {lesson.isCompleted && <p className="mt-1 text-emerald-700">الحصة مكتملة</p>}
+    </div>
+  );
+}
+
 export default function ParentPortalPageClient() {
   const [trackingCode, setTrackingCode] = useState('');
   const [studentName, setStudentName] = useState('');
@@ -112,7 +124,7 @@ export default function ParentPortalPageClient() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl bg-white p-6 shadow-sm"><h2 className="flex items-center gap-2 text-lg font-black"><CheckCircle2 className="h-5 w-5 text-[var(--landing-accent)]" />متابعة الحصص</h2><div className="mt-5 space-y-3">{details.watchLessons.slice(0, 6).map((lesson) => <div key={lesson.lessonId} className="flex items-center justify-between gap-4"><div><p className="font-bold">{lesson.lessonTitle}</p><p className="mt-1 text-xs font-semibold text-[var(--landing-muted)]">{lesson.packageName}، {lesson.termTitle}</p></div><span className={`text-xs font-black ${lesson.isCompleted ? 'text-emerald-700' : 'text-amber-700'}`}>{lesson.isCompleted ? 'مكتملة' : `${lesson.watchedVideos}/${lesson.totalVideos} فيديو`}</span></div>)}{details.watchLessons.length === 0 && <p className="py-5 text-sm font-bold text-[var(--landing-muted)]">لا توجد حصص تمت متابعتها بعد.</p>}</div></div>
+          <div className="rounded-2xl bg-white p-6 shadow-sm"><h2 className="flex items-center gap-2 text-lg font-black"><CheckCircle2 className="h-5 w-5 text-[var(--landing-accent)]" />متابعة الحصص</h2><div className="mt-5 space-y-3">{details.watchLessons.slice(0, 6).map((lesson) => <div key={lesson.lessonId} className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"><div><p className="font-bold">{lesson.lessonTitle}</p><p className="mt-1 text-xs font-semibold text-[var(--landing-muted)]">{lesson.packageName}، {lesson.termTitle}</p></div><LessonWatchProgress lesson={lesson} /></div>)}{details.watchLessons.length === 0 && <p className="py-5 text-sm font-bold text-[var(--landing-muted)]">لا توجد حصص تمت متابعتها بعد.</p>}</div></div>
           <div className="rounded-2xl bg-white p-6 shadow-sm"><h2 className="flex items-center gap-2 text-lg font-black"><AlertTriangle className="h-5 w-5 text-amber-600" />التنبيهات</h2><div className="mt-5 space-y-3">{details.warnings.slice(0, 5).map((warning, index) => <div key={`${warning.createdAt}-${index}`} className="border-b border-[var(--landing-line)] pb-3 last:border-0 last:pb-0"><p className="font-bold">{warning.reason}</p><p className="mt-1 text-xs font-semibold text-[var(--landing-muted)]">{formatDate(warning.createdAt)}</p></div>)}{details.warnings.length === 0 && <p className="py-5 text-sm font-bold text-emerald-700">لا توجد تنبيهات حالية.</p>}</div></div>
         </section>
       </div>

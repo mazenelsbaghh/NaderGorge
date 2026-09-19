@@ -32,14 +32,22 @@ components:
         profileImageUrl: { type: string, nullable: true }
     WatchLesson:
       type: object
-      required: [teacherId, teacherName, lessonId, lessonTitle, totalVideos, watchedVideos, watchCount, watchedSeconds, isCompleted]
+      required: [teacherId, teacherName, lessonId, lessonTitle, totalVideos, watchedVideos, startedVideos, completedVideos, watchCount, watchedSeconds, isCompleted]
       properties:
         teacherId: { type: string, format: uuid }
         teacherName: { type: string }
         lessonId: { type: string, format: uuid }
         lessonTitle: { type: string }
         totalVideos: { type: integer }
-        watchedVideos: { type: integer }
+        watchedVideos:
+          type: integer
+          description: Legacy completed-video count; retained for existing clients and equal to completedVideos.
+        startedVideos:
+          type: integer
+          description: Visible active videos with recorded learning progress greater than zero.
+        completedVideos:
+          type: integer
+          description: Visible active videos that satisfy the shared completion threshold.
         watchCount: { type: integer }
         watchedSeconds: { type: integer }
         isCompleted: { type: boolean }
