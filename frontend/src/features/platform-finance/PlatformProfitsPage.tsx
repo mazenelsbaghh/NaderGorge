@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDownToLine, CircleDollarSign, RefreshCw, Receipt, TrendingUp } from 'lucide-react';
 import { AdminPage, AdminStatCard } from '@/components/admin';
@@ -12,6 +12,12 @@ const dateLabel = (date: string) => date.split('-').reverse().join('/');
 
 function TeacherProfitTable({ rows }: { rows: ProfitTeacherRow[] }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const detailRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!expanded || !detailRef.current) return;
+    detailRef.current.focus({ preventScroll: true });
+    detailRef.current.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }, [expanded]);
   const totals = rows.reduce((sum, { period }) => ({ sales: sum.sales + period.grossSales,
     teacher: sum.teacher + period.teacherShare, platform: sum.platform + period.platformShare,
     refunds: sum.refunds + period.refunds, paid: sum.paid + period.paid }), { sales: 0, teacher: 0, platform: 0, refunds: 0, paid: 0 });
@@ -29,7 +35,7 @@ function TeacherProfitTable({ rows }: { rows: ProfitTeacherRow[] }) {
           <td className="whitespace-nowrap px-4 py-4 font-bold text-[var(--admin-primary)]">{money(row.platformShare)}</td>
           <td className="whitespace-nowrap px-4 py-4">{money(row.refunds)}</td>
           <td className="whitespace-nowrap px-4 py-4">{money(row.paid)}</td>
-          <td className="px-4 py-2"><button type="button" className="admin-btn-ghost min-h-11 whitespace-nowrap px-3" aria-expanded={expanded === row.teacherId} onClick={() => setExpanded(expanded === row.teacherId ? null : row.teacherId)}>تفاصيل {row.teacherName}</button></td>
+          <td className="px-4 py-2"><button type="button" className="admin-btn-ghost min-h-11 whitespace-nowrap px-3" aria-expanded={expanded === row.teacherId} aria-controls={expanded === row.teacherId ? `profit-details-${row.teacherId}` : undefined} onClick={() => setExpanded(expanded === row.teacherId ? null : row.teacherId)}>تفاصيل {row.teacherName}</button></td>
         </tr>)}</tbody>
         <tfoot className="border-t-2 border-[var(--admin-border)] bg-[var(--admin-card-soft)] font-bold"><tr>
           <th scope="row" className="px-4 py-4 text-start">إجمالي المعروض</th>
@@ -37,7 +43,7 @@ function TeacherProfitTable({ rows }: { rows: ProfitTeacherRow[] }) {
         </tr></tfoot>
       </table>
     </div>
-    {rows.filter(row => row.period.teacherId === expanded).map(row => <section key={row.period.teacherId} className="rounded-xl bg-[var(--admin-card-soft)] p-5" aria-label={`حساب ${row.period.teacherName}`}>
+    {rows.filter(row => row.period.teacherId === expanded).map(row => <section key={row.period.teacherId} id={`profit-details-${row.period.teacherId}`} ref={detailRef} tabIndex={-1} className="scroll-mt-6 rounded-xl bg-[var(--admin-card-soft)] p-5 focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]" aria-label={`حساب ${row.period.teacherName}`}>
       <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-bold">حساب {row.period.teacherName}</h3><Link className="admin-btn-ghost inline-flex min-h-11 items-center px-4" href={`/admin/teachers/${row.period.teacherId}/account`}>فتح كشف الحساب التفصيلي</Link></div>
       <p className="mt-4 font-bold">المستحق المحسوب الآن: {money(row.currentCalculatedBalance)}</p>
       <dl className="mt-4 flex flex-wrap gap-x-10 gap-y-4">

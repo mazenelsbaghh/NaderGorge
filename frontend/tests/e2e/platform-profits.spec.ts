@@ -47,6 +47,8 @@ test('dedicated profit report filters teachers, exposes mismatches, and exports 
   await page.getByRole('button', { name: 'تفاصيل =2+2' }).click();
   const detail = page.getByRole('region', { name: 'حساب =2+2' });
   await expect(detail).toContainText('50.00');
+  await expect(detail).toBeFocused();
+  await expect(detail).toBeInViewport();
   await expect(detail.getByRole('link')).toHaveAttribute('href', '/admin/teachers/second/account');
 });
 
