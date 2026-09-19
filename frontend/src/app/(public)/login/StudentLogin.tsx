@@ -6,9 +6,9 @@ import { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Moon, Sun } from 'lucide-react';
 
 import { LoginForm } from '@/components/forms/LoginForm';
-import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { PLATFORM_IDENTITY } from '@/packages/brand';
 
 const LoginInstructions = dynamic(
@@ -26,12 +26,14 @@ export function StudentLogin({ isDark, onToggleTheme }: {
 
   return (
     <div className="auth-shell student-login" data-theme={isDark ? 'dark' : 'light'}>
-      <AnimatedThemeToggler
+      <button
         className="student-login__theme"
-        checked={isDark}
-        onToggle={onToggleTheme}
+        type="button"
+        onClick={onToggleTheme}
         aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-      />
+      >
+        {isDark ? <Sun size={24} aria-hidden="true" /> : <Moon size={24} aria-hidden="true" />}
+      </button>
 
       <main className="student-login__main">
         <section className="student-login__content" aria-labelledby="student-login-title">
