@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Student.Commands;
@@ -113,6 +114,43 @@ public sealed class ExamDeactivationProductionRegressionTests
         Assert.False(followingLessonDetail.Data!.IsLocked);
         Assert.Null(followingLessonDetail.Data.BlockingExamId);
     }
+
+    [Fact]
+    public async Task Pending_essay_review_unlocks_following_lesson_without_marking_exam_passed()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedDisabledLessonExamAsync(db);
+        (await db.Exams.SingleAsync(exam => exam.Id == fixture.ExamId)).IsActive = true;
+        db.StudentExamAttempts.Add(new StudentExamAttempt
+        {
+            UserId = fixture.StudentId,
+            ExamId = fixture.ExamId,
+            IsPassed = false,
+            Evaluation = ExamAccessPolicy.PendingReviewEvaluation,
+            StartedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var academicScope = new AcademicScopeService(db);
+        var archiveAccess = new ContentArchiveAccessService(db);
+        var access = new AccessCheckService(db, academicScope, archiveAccess);
+
+        var lessons = await new GetLessonsQueryHandler(db, access, academicScope, archiveAccess)
+            .Handle(new(fixture.SectionId, fixture.StudentId), CancellationToken.None);
+        var detail = await new GetLessonDetailQueryHandler(
+                db, access, new TeacherAuthorizationService(db), academicScope, archiveAccess)
+            .Handle(new(fixture.SecondLessonId, fixture.StudentId), CancellationToken.None);
+        var progress = await new GetProgressQueryHandler(db, academicScope, archiveAccess)
+            .Handle(new(fixture.StudentId), CancellationToken.None);
+
+        Assert.True(lessons.Success, lessons.Message);
+        Assert.False(Assert.Single(lessons.Data!, lesson => lesson.Id == fixture.SecondLessonId).IsLocked);
+        Assert.True(detail.Success, detail.Message);
+        Assert.False(detail.Data!.IsLocked);
+        var packageProgress = Assert.Single(progress.Data!.Packages);
+        Assert.False(Assert.Single(packageProgress.Lessons, lesson => lesson.Id == fixture.SecondLessonId).IsLocked);
+        Assert.False((await db.StudentExamAttempts.SingleAsync()).IsPassed);
+    }
+
 
     [Fact]
     public async Task DisabledExam_DirectStartIsRejectedWithoutCreatingAttempt()

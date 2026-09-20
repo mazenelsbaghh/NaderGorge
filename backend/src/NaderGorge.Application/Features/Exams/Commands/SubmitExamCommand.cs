@@ -193,7 +193,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 progress.IsCompleted = true;
             }
 
-            blocksNextLesson = !attempt.IsPassed && !progress.IsManuallyUnlocked;
+            blocksNextLesson = !attempt.IsPassed && attempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation && !progress.IsManuallyUnlocked;
         }
 
         try
@@ -285,7 +285,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                     var nextLessonProgress = await _db.LessonProgresses
                         .FirstOrDefaultAsync(lp => lp.UserId == request.UserId && lp.LessonId == nextLesson.Id, ct);
 
-                    bool nextIsLocked = !attempt.IsPassed && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
+                    bool nextIsLocked = !attempt.IsPassed
+                        && attempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation
+                        && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
 
                     var lockEvent = new OutboxEvent
                     {
@@ -334,7 +336,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                         .AsNoTracking()
                         .FirstOrDefaultAsync(lp => lp.UserId == request.UserId && lp.LessonId == persistedLesson.Id, ct);
 
-                var persistedBlocksNextLesson = !persistedAttempt.IsPassed && !(persistedProgress?.IsManuallyUnlocked ?? false);
+                var persistedBlocksNextLesson = !persistedAttempt.IsPassed
+                    && persistedAttempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation
+                    && !(persistedProgress?.IsManuallyUnlocked ?? false);
 
                 var persistedAnswers = await _db.StudentAnswers
                     .AsNoTracking()

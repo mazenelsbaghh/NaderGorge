@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useHasPermission } from '@/hooks/useHasPermission';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, type RefundStudent } from '@/services/platform-finance-service';
+import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, type RefundStudent, type RefundUsagePreview } from '@/services/platform-finance-service';
 
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 
@@ -23,6 +23,11 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
   const [refundAmount, setRefundAmount] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [preview, setPreview] = useState<RefundUsagePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+  const [previewKey, setPreviewKey] = useState('');
+  const studentRequest = useRef(0);
 
   const load = async () => {
     try {
@@ -39,6 +44,33 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
 
   useEffect(() => { void load(); }, []);
 
+  useEffect(() => {
+    const selected = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
+    if (!student || !selected) {
+      setPreview(null);
+      setPreviewKey('');
+      setPreviewError('');
+      setPreviewLoading(false);
+      return;
+    }
+    let current = true;
+    setPreview(null);
+    setPreviewKey('');
+    setPreviewError('');
+    setPreviewLoading(true);
+    const sourceKey = selected.purchaseOperationId || `historical:${selected.accessGrantId}`;
+    void platformFinanceService.getRefundUsagePreview(student.id, selected.accessGrantId, selected.purchaseOperationId)
+      .then(result => {
+        if (!current) return;
+        setPreview(result);
+        setPreviewKey(`${student.id}:${selected.accessGrantId}:${sourceKey}`);
+        setRefundAmount('');
+      })
+      .catch(() => { if (current) setPreviewError('تعذر تحميل استخدام هذا المحتوى. لا تنفذ الاسترداد قبل التحقق.'); })
+      .finally(() => { if (current) setPreviewLoading(false); });
+    return () => { current = false; };
+  }, [student, grantId]);
+
   async function searchStudent() {
     try {
       const matches = await platformFinanceService.findRefundStudents(phone.trim());
@@ -48,7 +80,10 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
   }
 
   async function selectStudent(userId: string) {
-    setStudent(await platformFinanceService.getRefundStudent(userId));
+    const request = ++studentRequest.current;
+    const selectedStudent = await platformFinanceService.getRefundStudent(userId);
+    if (request !== studentRequest.current) return;
+    setStudent(selectedStudent);
     setGrantId('');
     setStudents([]);
   }
@@ -57,8 +92,10 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     event.preventDefault();
     const selectedPackage = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
     const amount = Number(refundAmount);
-    if (!canCreate || !student || !selectedPackage?.purchaseOperationId || !treasuryId || !reason.trim() || !Number.isFinite(amount) || amount <= 0 || amount > selectedPackage.paidAmount) return;
-    const teacherRatio = selectedPackage.paidAmount > 0 ? selectedPackage.teacherShareAmount / selectedPackage.paidAmount : 0;
+    const sourceKey = selectedPackage ? selectedPackage.purchaseOperationId || `historical:${selectedPackage.accessGrantId}` : '';
+    const selectionKey = student && selectedPackage ? `${student.id}:${selectedPackage.accessGrantId}:${sourceKey}` : '';
+    if (!canCreate || !student || !selectedPackage || !preview || previewKey !== selectionKey || !treasuryId || !reason.trim() || !Number.isFinite(amount) || amount <= 0 || amount > preview.remainingRefundableAmount) return;
+    const teacherRatio = !preview.isHistoricalSource && selectedPackage.paidAmount > 0 ? selectedPackage.teacherShareAmount / selectedPackage.paidAmount : 0;
     const teacherAmount = Math.min(amount, Math.max(0, Number((amount * teacherRatio).toFixed(2))));
     setSubmitting(true);
     try {
@@ -92,7 +129,10 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     catch { setError('تعذر عكس الاسترداد'); }
   }
 
-  const activePackages = student?.packages.filter(item => item.isActive && item.purchaseOperationId && item.paidAmount > 0) || [];
+  const activePackages = student?.packages.filter(item => item.isActive && (
+    (item.purchaseOperationId && item.paidAmount > 0) ||
+    (!item.purchaseOperationId && item.purchaseMethod !== 'Code' && item.price > 0)
+  )) || [];
 
   return <div className="space-y-6" dir="rtl">
     <section className="admin-panel rounded-2xl p-6">
@@ -112,10 +152,29 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
         </div>
         <div>
           <label className="mb-1 block text-xs font-bold">الباقة التي سيتم إلغاؤها</label>
-          <select className="admin-input" required value={grantId} onChange={event => { const value = event.target.value; setGrantId(value); setRefundAmount(String(activePackages.find(item => item.accessGrantId === value)?.paidAmount || '')); }} disabled={!student}>
+          <select className="admin-input" required value={grantId} onChange={event => { setGrantId(event.target.value); setPreview(null); setPreviewKey(''); setRefundAmount(''); }} disabled={!student}>
             <option value="">اختر باقة نشطة</option>
-            {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — المدفوع {money(item.paidAmount)}</option>)}
+            {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — {item.purchaseOperationId ? `المدفوع ${money(item.paidAmount)}` : `سجل قديم (الحد ${money(item.price)})`}</option>)}
           </select>
+        </div>
+        <div className="md:col-span-2" aria-live="polite">
+          {previewLoading ? <p className="rounded-xl border border-[var(--admin-border)] p-4 text-sm text-[var(--admin-muted)]">جارٍ تحميل المشاهدة ومحاولات الامتحانات…</p> : null}
+          {previewError ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">{previewError}</p> : null}
+          {preview ? <div className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div><p className="text-xs font-bold text-[var(--admin-muted)]">نطاق الاستخدام</p><p className="font-black">{preview.scopeLabel}</p></div>
+              <div className="text-left"><p className="text-xs font-bold text-[var(--admin-muted)]">المتاح للاسترداد</p><p className="font-black text-[var(--admin-primary)]">{money(preview.remainingRefundableAmount)}</p></div>
+            </div>
+            <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <p><b>الفيديوهات المشاهدة:</b> {preview.videosAvailable ? `${preview.watchedVideos} من ${preview.totalVideos}` : 'غير متاح لهذا النطاق'}</p>
+              <p><b>الفيديوهات المكتملة:</b> {preview.videosAvailable ? `${preview.completedVideos} من ${preview.totalVideos}${preview.unknownDurationVideos > 0 ? `، ومدة ${preview.unknownDurationVideos} غير معروفة` : ''}` : 'غير متاح لهذا النطاق'}</p>
+              <p><b>الامتحانات المُجرّبة:</b> {preview.examsAvailable ? `${preview.attemptedExams} من ${preview.totalExams}` : 'غير متاح لهذا النطاق'}</p>
+              <p><b>المحاولات:</b> {preview.examsAvailable ? `${preview.totalAttempts} (${preview.submittedAttempts} مُسلّمة)` : 'غير متاح لهذا النطاق'}</p>
+            </div>
+            {!preview.usageAvailable ? <p className="text-sm font-bold text-amber-700">{preview.unavailableReason}</p> : null}
+            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">لا يوجد سجل شراء مالي مرتبط بهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.</p> : null}
+            <p className="text-xs text-[var(--admin-muted)]">المدفوع {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {preview.historicalUsageNote}</p>
+          </div> : null}
         </div>
         <div>
           <label className="mb-1 block text-xs font-bold">الخزنة أو المحفظة التي خرج منها المبلغ</label>
@@ -125,15 +184,16 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold">المبلغ المرتجع فعلياً</label>
-          <input className="admin-input" type="number" min="0.01" max={activePackages.find(item => item.accessGrantId === grantId)?.paidAmount} step="0.01" required value={refundAmount} onChange={event => setRefundAmount(event.target.value)} placeholder="المبلغ بالجنيه" />
+          <label className="mb-1 block text-xs font-bold">المبلغ المرتجع فعلياً (تحدده يدويًا)</label>
+          <input className="admin-input" type="number" min="0.01" max={preview?.remainingRefundableAmount} step="0.01" required value={refundAmount} onChange={event => setRefundAmount(event.target.value)} placeholder="المبلغ بالجنيه" disabled={!preview || preview.remainingRefundableAmount <= 0} />
+          <p className="mt-1 text-xs text-[var(--admin-muted)]">تنفيذ الاسترداد يلغي المنحة دائمًا؛ أرقام الاستخدام للمساعدة في الحساب فقط ولا تقترح مبلغًا.</p>
         </div>
         <div className="md:col-span-2">
           <label className="mb-1 block text-xs font-bold">سبب الاسترداد</label>
           <input className="admin-input" required value={reason} onChange={event => setReason(event.target.value)} placeholder="اكتب سبب إلغاء الباقة ورد المبلغ" />
         </div>
         <div className="md:col-span-2 flex justify-end">
-          <button className="admin-btn-primary" type="submit" disabled={submitting || !student || !grantId || !treasuryId}>{submitting ? 'جارٍ التنفيذ…' : 'إلغاء الباقة وتسجيل الاسترداد'}</button>
+          <button className="admin-btn-primary" type="submit" disabled={submitting || previewLoading || !preview || !previewKey || preview.remainingRefundableAmount <= 0 || !student || !grantId || !treasuryId}>{submitting ? 'جارٍ التنفيذ…' : 'إلغاء الباقة وتسجيل الاسترداد'}</button>
         </div>
       </form> : <p className="text-sm">تحتاج إلى صلاحية إنشاء الاستردادات لتنفيذ استرداد.</p>}
     </section>

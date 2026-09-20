@@ -8,6 +8,7 @@ using NaderGorge.Application.Features.Admin.PlatformFinance;
 using NaderGorge.Application.Features.Admin.PlatformFinance.Periods;
 using NaderGorge.Application.Features.Admin.PlatformFinance.Reports;
 using NaderGorge.Application.Features.Admin.PlatformFinance.Teachers;
+using NaderGorge.Application.Features.Admin.PlatformFinance.Refunds;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Services.Finance.Migration;
 using NaderGorge.Application.Services;
@@ -215,31 +216,29 @@ public sealed class AdminPlatformFinanceController(
     [HasPermission("finance.refunds.create")]
     public async Task<ActionResult<object>> CreateExternalPackageRefund([FromBody] ExternalPackageRefundBody body, CancellationToken ct)
     {
-        var source = await db.SalesFinancialEffects.AsNoTracking()
-            .SingleOrDefaultAsync(effect => effect.PurchaseOperationId == body.PurchaseOperationId, ct);
         var grant = await db.StudentAccessGrants.AsNoTracking().SingleOrDefaultAsync(item => item.Id == body.AccessGrantId, ct);
+        var source = body.PurchaseOperationId.HasValue
+            ? await db.SalesFinancialEffects.AsNoTracking()
+                .SingleOrDefaultAsync(effect => effect.PurchaseOperationId == body.PurchaseOperationId.Value, ct)
+            : null;
+        var preview = await mediator.Send(
+            new GetRefundUsagePreviewQuery(body.StudentId, body.AccessGrantId, body.PurchaseOperationId), ct);
         var amount = body.PlatformAmount + body.TeacherAmount;
-        if (source is null || grant is null || source.StudentId != body.StudentId || grant.UserId != source.StudentId ||
-            source.TargetId != (grant.GrantType switch
-            {
-                NaderGorge.Domain.Enums.CodeType.Package => grant.PackageId,
-                NaderGorge.Domain.Enums.CodeType.Term => grant.TermId,
-                NaderGorge.Domain.Enums.CodeType.Month => grant.ContentSectionId,
-                NaderGorge.Domain.Enums.CodeType.Lesson => grant.LessonId,
-                NaderGorge.Domain.Enums.CodeType.Video => grant.LessonVideoId,
-                NaderGorge.Domain.Enums.CodeType.Exam => grant.ExamId,
-                _ => null
-            }) ||
-            source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount ||
-            amount <= 0m || amount > source.PaidAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
+        if (grant is null || preview is null || grant.UserId != body.StudentId || !grant.IsActive ||
+            (source is not null && (source.StudentId != body.StudentId || source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount)) ||
+            amount <= 0m || amount > preview.RemainingRefundableAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
             return BadRequest(new { message = "بيانات الباقة أو مبلغ الاسترداد غير صالح." });
-        var fraction = amount / source.PaidAmount;
-        var teacherAmount = Math.Min(amount, Math.Max(0m, decimal.Round(source.TeacherShareImpact * fraction, 2)));
+        var fraction = amount / preview.PaidAmount;
+        var teacherAmount = source is null
+            ? 0m
+            : Math.Min(amount, Math.Max(0m, decimal.Round(source.TeacherShareImpact * fraction, 2)));
+        var sourceId = source?.PurchaseOperationId ?? grant.Id;
+        var sourceType = source is null ? "HistoricalAccessGrant" : "PurchaseOperation";
         var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         try
         {
             var cancellation = await mediator.Send(
-                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason, new TeacherRefundScope(source.PurchaseOperationId, fraction)), ct);
+                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason, new TeacherRefundScope(sourceId, fraction)), ct);
             if (!cancellation.Success)
             {
                 await transaction.RollbackAsync(ct);
@@ -247,17 +246,18 @@ public sealed class AdminPlatformFinanceController(
             }
 
             var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(
-                body.PurchaseOperationId,
-                "PurchaseOperation",
+                sourceId,
+                sourceType,
                 body.StudentId,
-                source.TeacherId,
+                source?.TeacherId,
                 amount - teacherAmount,
                 teacherAmount,
                 (int)NaderGorge.Domain.Entities.PlatformRefundMethod.Cash,
                 body.TreasuryAccountId,
                 body.Reason,
                 body.PaymentReference,
-                CurrentUserId()), ct);
+                CurrentUserId(),
+                source is null ? grant.Id : null), ct);
             refund = await operations.PostRefundAsync(
                 refund.Id,
                 $"external-refund-{body.AccessGrantId}",
@@ -374,6 +374,15 @@ public sealed class AdminPlatformFinanceController(
         return Ok(new { student.Id, student.FullName, student.Phone, student.Packages });
     }
 
+    [HttpGet("refunds/students/{studentId:guid}/grants/{accessGrantId:guid}/preview")]
+    [HasPermission("finance.refunds.create")]
+    public async Task<ActionResult<RefundUsagePreviewDto>> RefundUsagePreview(
+        Guid studentId, Guid accessGrantId, [FromQuery] Guid? purchaseOperationId, CancellationToken ct)
+    {
+        var preview = await mediator.Send(new GetRefundUsagePreviewQuery(studentId, accessGrantId, purchaseOperationId), ct);
+        return preview is null ? NotFound() : Ok(preview);
+    }
+
     [HttpGet("refunds/bootstrap")]
     [HasPermission("finance.refunds.view")]
     public async Task<ActionResult<object>> RefundBootstrap(CancellationToken ct) => Ok(new
@@ -486,7 +495,7 @@ public sealed record WalletTransferExpenseBody(Guid CategoryId, Guid? CostCenter
 public sealed record WalletInternalTransferBody(Guid DestinationTreasuryAccountId);
 public sealed record PayExpenseBody(Guid TreasuryAccountId, decimal Amount, string PaymentReference, string IdempotencyKey);
 public sealed record CreateRefundBody(Guid OriginalSourceId, string OriginalSourceType, Guid StudentId, Guid? TeacherId, decimal PlatformAmount, decimal TeacherAmount, int Method, Guid? TreasuryAccountId, string Reason, string? PaymentReference);
-public sealed record ExternalPackageRefundBody(Guid AccessGrantId, Guid PurchaseOperationId, Guid StudentId, Guid? TeacherId, decimal PlatformAmount, decimal TeacherAmount, Guid TreasuryAccountId, string Reason, string? PaymentReference);
+public sealed record ExternalPackageRefundBody(Guid AccessGrantId, Guid? PurchaseOperationId, Guid StudentId, Guid? TeacherId, decimal PlatformAmount, decimal TeacherAmount, Guid TreasuryAccountId, string Reason, string? PaymentReference);
 public sealed record PostRefundBody(string IdempotencyKey);
 public sealed record CreateBudgetLineBody(Guid FinancialAccountId, Guid? CostCenterId, Guid? TeacherId, decimal PlannedAmount);
 public sealed record CreateBudgetBody(string Name, int PeriodKind, DateTime StartDate, DateTime EndDate, IReadOnlyList<CreateBudgetLineBody> Lines);

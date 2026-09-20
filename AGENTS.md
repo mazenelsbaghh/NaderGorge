@@ -1,10 +1,10 @@
 # nader gorge Development Guidelines
 
-## Mandatory startup before edits
+## One canonical working directory
 
-Before editing project files, read `.agents/skills/massar-startup/SKILL.md` and follow its synchronization gate. This applies to every task, including small fixes, resumed work, and changes made with other skills. Run `python3 deploy/production/scripts/startup_check.py --repo "$PWD"` from the actual editing checkout before new work and again before commit/publication. If server fixes are missing, integrate them first without overwriting local changes and continue in the integrated workspace. A separate synchronized copy does not authorize edits in an old checkout. Failed/offline checks are not readiness. Apply ordinary agent-authored edits through `startup_edit.py` as specified by the skill; do not bypass rejected patches with direct writes. Read-only diagnosis and repairing the synchronization mechanism itself remain allowed; see the skill for the isolated repair-worker exception and full workflow.
+The owner requires all development and integration to happen in `/Users/mazenelsbagh/mazen mac/apps/nader gorge`. Do not create additional project copies, clones, or worktrees for routine planning, editing, integration, or review. Work in this directory and preserve existing local changes.
 
-Auto-generated from all feature plans. Last updated: 2026-08-11
+The owner removed the `massar-startup` skill and its mandatory pre-edit synchronization gate on 2026-09-20. Do not require `startup_check.py` or `startup_edit.py` before ordinary local edits, and do not reinstall that skill. Check relevant Git differences before merging and resolve them here without discarding local work. Production publication, migration, verification, and rollback safeguards still apply when a release is explicitly in scope.
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -117,8 +117,8 @@ Completed production-cluster plan: `specs/166-three-node-production-cluster/plan
 
 GitHub `mazenelsbaghh/NaderGorge`, branch `codex/production`, is the shared application source. Do not deploy an old local snapshot over server repairs. Never force-reset the user's working tree or push its historical artifacts.
 
-1. Read `make prod-source-status`. If the shared branch advanced or this working tree is dirty, use `make prod-source-integrate-preview SOURCE_WORKSPACE=/absolute/new/path` then `make prod-source-integrate SOURCE_WORKSPACE=/absolute/new/path`. This snapshots current source in a separate worktree and merges shared production. Resolve conflicts there; original files/index remain untouched.
-2. From the resolved, committed integration worktree, use the `prod-source-export-preview` and `prod-source-export` targets with another new absolute `SOURCE_WORKSPACE`. Only reviewed source is copied into the shared Git history. Review and run the applicable checks in this exported source repository.
+1. Inspect shared production changes before a release and integrate applicable changes in the canonical working directory. Preserve local work and resolve conflicts explicitly. Do not create additional working directories for integration.
+2. Keep private history, secrets, and historical build artifacts out of published source. Prepare the reviewed source-only candidate using Git objects or a temporary index in the existing repository; do not create another development checkout. If existing release tooling requires a separate directory, report that incompatibility and adapt it before release rather than silently creating another project copy.
 3. Publish with `prod-source-publish-preview` then `prod-source-publish`, supplying the exported commit's parent as `SOURCE_PARENT` and `SOURCE_BRANCH=codex/release/<unique-name>`. Publication is one forward commit under the shared rollout lock and compare-and-swap. If it rejects a stale parent, integrate and reverify; never force-push around it.
 4. Build, migrate and deploy from that exact published source repository through the existing production gates. Deployment rechecks the shared GitHub tip under the rollout lock. Dirty/unpublished/stale candidates are blocked. Evidence-bound application rollback remains available; reconcile shared source with a forward revert before resuming repairs.
 

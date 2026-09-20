@@ -65,3 +65,4 @@ export * from './AttendanceLogTable';
 export { default as ContentSubscribersTab } from './ContentSubscribersTab';
 export * from './ImageZoomModal';
 export * from './LessonAIAnalysisTab';
+export * from './LessonMimGameTab';

@@ -1,6 +1,6 @@
 import { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
-import { evaluateEssayWithAI, ESSAY_GRADING_MODEL } from '../services/geminiService.js';
+import { evaluateEssayWithAI } from '../services/geminiService.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 const API_URL = (() => {
   const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
@@ -71,7 +71,7 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
 
     await job.updateProgress({ percentage: 100, stage: 'خلصنا التقييم! ✅' });
     console.log(`[EvaluateEssay] Completed successfully for ${essaySubmissionId}`, {
-      model: ESSAY_GRADING_MODEL, elapsedMs: Date.now() - startedAt,
+      elapsedMs: Date.now() - startedAt,
     });
     
     return { success: true, score: safeScore, feedback: parsed.feedback };

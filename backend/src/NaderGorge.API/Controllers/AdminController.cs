@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.MimGames;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 using NaderGorge.Application.Common;
@@ -33,6 +34,38 @@ public class AdminController : ControllerBase
     {
         _mediator = mediator;
         _imageStorage = imageStorage;
+    }
+
+    [HttpGet("lessons/{lessonId:guid}/mim-game")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetMimGame(Guid lessonId)
+    {
+        var result = await _mediator.Send(new GetLessonMimGameQuery(lessonId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("lessons/{lessonId:guid}/mim-game/generate")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GenerateMimGame(Guid lessonId)
+    {
+        var result = await _mediator.Send(new GenerateLessonMimGameCommand(lessonId));
+        return result.Success ? Accepted(result) : BadRequest(result);
+    }
+
+    [HttpPost("lessons/{lessonId:guid}/mim-game/publish-enable")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> PublishMimGame(Guid lessonId)
+    {
+        var result = await _mediator.Send(new PublishLessonMimGameCommand(lessonId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("lessons/{lessonId:guid}/mim-game/disable")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> DisableMimGame(Guid lessonId)
+    {
+        var result = await _mediator.Send(new DisableLessonMimGameCommand(lessonId));
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     private Guid GetUserId() => User.RequireUserId();

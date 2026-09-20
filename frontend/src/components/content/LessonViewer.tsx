@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw, CalendarClock } from "lucide-react";
+import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck, LockKeyhole, RefreshCw, CalendarClock, Gamepad2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
@@ -13,6 +13,9 @@ import { contentService, type LessonDetailDto, type ResourceDto } from "@/servic
 
 import { LessonCarousel } from "@/app/student/packages/[packageId]/lessons/[lessonId]/components/LessonCarousel";
 import { LessonCommentsSection } from "@/components/content/LessonCommentsSection";
+import { LessonMimGameFrame } from '@/components/mim-game/LessonMimGameFrame';
+import { canShowStudentMimGame, mimGameProgressKey, parseMimGameContent } from '@/lib/mim-game-contract';
+import { useAuthStore } from '@/stores/auth-store';
 
 
 export function LessonViewer({
@@ -23,6 +26,7 @@ export function LessonViewer({
   packageId?: string;
 }) {
   const router = useRouter();
+  const userId = useAuthStore((state) => state.user?.id);
   const searchParams = useSearchParams();
   const { isFocusMode, setFocusMode, toggleFocusMode } = useLessonFocusStore();
   
@@ -117,6 +121,11 @@ export function LessonViewer({
   const homeworkComingSoonLabel = getHomeworkComingSoonLabel(
     lesson.homeworkComingSoonOn
   );
+  const canPlayMimGame = Boolean(userId) && canShowStudentMimGame(lesson);
+  const mimGameContent = canPlayMimGame ? parseMimGameContent(lesson.mimGame.contentJson) : null;
+  const mimGameKey = canPlayMimGame && mimGameContent && userId
+    ? mimGameProgressKey({ userId, lessonId: lesson.id, fingerprint: lesson.mimGame.fingerprint, schemaVersion: lesson.mimGame.schemaVersion, mode: 'student' })
+    : null;
 
   if (lesson.isLocked) {
     return (
@@ -217,6 +226,19 @@ export function LessonViewer({
             </div>
           )}
         </div>
+
+        {mimGameContent && mimGameKey && (
+          <section className="overflow-hidden rounded-2xl bg-[#0A1D3D] p-5 text-white sm:p-7" aria-labelledby="lesson-mim-game-title">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-2xl">
+                <div className="flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0E8F8F]"><Gamepad2 className="h-6 w-6" aria-hidden="true" /></span><div><p className="text-xs font-bold text-[#8ee1df]">مراجعة تفاعلية اختيارية</p><h2 id="lesson-mim-game-title" className="mt-1 text-xl font-black sm:text-2xl">{mimGameContent.title}</h2></div></div>
+                <p className="mt-4 text-sm leading-7 text-white/80">{mimGameContent.intro}</p>
+                <p className="mt-2 text-xs font-medium text-white/65">تقدمك محفوظ على هذا الجهاز لهذا الحساب والحصة فقط. اللعبة لا تؤثر على درجاتك.</p>
+              </div>
+              <LessonMimGameFrame content={mimGameContent} progressKey={mimGameKey} mode="student" />
+            </div>
+          </section>
+        )}
 
         <div className={`grid gap-6 ${lesson.examId ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           {lesson.examId && (

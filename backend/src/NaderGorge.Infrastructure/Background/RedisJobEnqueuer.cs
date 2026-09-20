@@ -43,6 +43,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
         ("notifications", _) => "notification",
         ("ai-live-support-turns", "respond") => "live support turn",
         ("ai-admin-agent-turns", "respond") => "admin ai turn",
+        ("ai-lesson-game-queue", "generate-mim") => "lesson game",
         _ => throw new InvalidOperationException($"Unsupported queue/job mapping: {queueName}/{jobName}.")
     };
 
@@ -63,6 +64,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
         foreach (var pair in new[]
                  {
                      ("lessonVideoId", "LessonVideoId"),
+                     ("gameId", "GameId"),
                      ("essaySubmissionId", "EssaySubmissionId"),
                      ("chapterId", "ChapterId"),
                      ("warningId", "WarningId"),

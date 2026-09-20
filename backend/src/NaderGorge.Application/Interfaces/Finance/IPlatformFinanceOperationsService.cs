@@ -36,7 +36,8 @@ public sealed record CreatePlatformRefundRequest(
     Guid? TreasuryAccountId,
     string Reason,
     string? PaymentReference,
-    Guid CreatedByUserId);
+    Guid CreatedByUserId,
+    Guid? HistoricalAccessGrantId = null);
 
 public interface IPlatformFinanceOperationsService
 {

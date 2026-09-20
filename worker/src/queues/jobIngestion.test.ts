@@ -23,6 +23,7 @@ function queues(existingJob?: any) {
     essayQueue: queue(undefined, 'ai-essay-grading'),
     liveSupportQueue: queue(undefined, 'ai-live-support-turns'),
     adminAIQueue: queue(undefined, 'ai-admin-agent-turns'),
+    lessonGameQueue: queue(undefined, 'ai-lesson-games'),
   } as any;
 }
 
@@ -61,6 +62,16 @@ test('generation jobs use a run-scoped physical id and retain a stable logical i
 
   assert.equal(result?.logicalJobId, 'video-1_mindmaps');
   assert.equal(result?.targetJobId, `video-1_mindmap_chapter-1--run-${generationRunId}`);
+});
+
+test('lesson game jobs map to their queue with game and run scoped identity', () => {
+  const gameId = '11111111-1111-4111-8111-111111111111';
+  const runId = '22222222-2222-4222-8222-222222222222';
+  const result = resolveQueueTarget('lesson game', 'stream-job', { gameId, runId }, queues());
+  assert.equal(result?.targetQueue.name, 'ai-lesson-games');
+  assert.equal(result?.bullmqJobName, 'generate-mim');
+  assert.equal(result?.logicalJobId, gameId);
+  assert.equal(result?.targetJobId, `${gameId}--run-${runId}`);
 });
 
 test('ingestStreamJob acknowledges invalid JSON without enqueue', async () => {
@@ -195,6 +206,7 @@ test('ingestStreamJob retries essay grading jobs after a fixed 20 seconds', asyn
       essayQueue,
       liveSupportQueue: queue(),
       adminAIQueue: queue(),
+      lessonGameQueue: queue(),
     } as any;
 
     const result = await ingestStreamJob(redisRef as any, queueSet, '4-0', [

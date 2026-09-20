@@ -6924,6 +6924,79 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("lesson_comments", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonMimGame", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CurrentGenerationRunId")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DraftContentJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("DraftFingerprint")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("GeneratedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("GenerationExpiresAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("GenerationStartedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PublishedContentJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("PublishedFingerprint")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId")
+                        .IsUnique();
+
+                    b.ToTable("lesson_mim_games", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -16637,6 +16710,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("ReviewedByUser");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonMimGame", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
+                        .WithOne("MimGame")
+                        .HasForeignKey("NaderGorge.Domain.Entities.LessonMimGame", "LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
@@ -18960,6 +19044,8 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("MimGame");
 
                     b.Navigation("Resources");
 

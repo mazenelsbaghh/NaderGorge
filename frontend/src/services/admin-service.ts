@@ -19,6 +19,7 @@ import type {
   PackageDirectSectionDto,
   TermDto,
 } from './content-service';
+import type { LessonMimGameStateDto } from '@/lib/mim-game-contract';
 
 export interface TeacherProfileStatsDto {
   packagesCount: number;
@@ -1647,6 +1648,37 @@ export const adminService = {
       `/admin/lessons/${id}/cockpit`
     );
     return res;
+  },
+  getLessonMimGame: async (lessonId: string, signal?: AbortSignal) => {
+    const res = await apiClient.get<ApiResponse<LessonMimGameStateDto | null>>(
+      `/admin/lessons/${lessonId}/mim-game`,
+      { signal, suppressErrorToast: true }
+    );
+    return res.data?.data ?? null;
+  },
+  generateLessonMimGame: async (lessonId: string) => {
+    const res = await apiClient.post<ApiResponse<string>>(
+      `/admin/lessons/${lessonId}/mim-game/generate`,
+      undefined,
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
+  publishEnableLessonMimGame: async (lessonId: string) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/lessons/${lessonId}/mim-game/publish-enable`,
+      undefined,
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
+  disableLessonMimGame: async (lessonId: string) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/lessons/${lessonId}/mim-game/disable`,
+      undefined,
+      { suppressErrorToast: true }
+    );
+    return res.data;
   },
   listVideoTypes: async (includeInactive = false) => {
     const res = await apiClient.get<ApiResponse<VideoTypeDto[]>>(

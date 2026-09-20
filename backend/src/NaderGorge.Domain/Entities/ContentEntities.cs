@@ -74,6 +74,7 @@ public class Lesson : BaseEntity, IArchivableContent
     public ICollection<LessonVideo> Videos { get; set; } = new List<LessonVideo>();
     public ICollection<LessonResource> Resources { get; set; } = new List<LessonResource>();
     public ICollection<LessonComment> Comments { get; set; } = new List<LessonComment>();
+    public LessonMimGame? MimGame { get; set; }
 }
 
 public class LessonVideo : BaseEntity, IArchivableContent

@@ -1144,6 +1144,8 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
                                 StringComparison.OrdinalIgnoreCase)
                             || !string.Equals(video.ProviderVideoId, extractedId, StringComparison.OrdinalIgnoreCase)
                             || video.BunnyStreamLibraryId != bunnyStreamLibraryId;
+        var activeOrOrderChanged = video.Order != request.Order ||
+            (request.IsActive.HasValue && video.IsActive != request.IsActive.Value);
 
         if (sourceChanged)
         {
@@ -1164,6 +1166,10 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             {
                 video.SourceRevision++;
             }
+        }
+        else if (activeOrOrderChanged)
+        {
+            await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, ct);
         }
 
         video.Title = title;
@@ -1293,7 +1299,41 @@ internal static class LessonVideoSourceMutation
             db.VideoChapters.RemoveRange(chapters);
         }
 
+        await InvalidateMimGameAsync(db, video.LessonId, cancellationToken);
+
         await SupersedePlaybackSessionsAsync(db, video, cancellationToken);
+    }
+
+    internal static async Task<int> InvalidateMimGameAsync(
+        IAppDbContext db,
+        Guid lessonId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await db.LessonMimGames.Where(game => game.LessonId == lessonId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(game => game.IsEnabled, false)
+                    .SetProperty(game => game.Status, LessonMimGameStatus.Stale)
+                    .SetProperty(game => game.CurrentGenerationRunId, (Guid?)null)
+                    .SetProperty(game => game.GenerationStartedAtUtc, (DateTime?)null)
+                    .SetProperty(game => game.GenerationExpiresAtUtc, (DateTime?)null)
+                    .SetProperty(game => game.Version, game => game.Version + 1)
+                    .SetProperty(game => game.UpdatedAt, DateTime.UtcNow), cancellationToken);
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains("not supported by the current database provider", StringComparison.Ordinal))
+        {
+            var tracked = await db.LessonMimGames.SingleOrDefaultAsync(game => game.LessonId == lessonId, cancellationToken);
+            if (tracked is null) return 0;
+            tracked.IsEnabled = false;
+            tracked.Status = LessonMimGameStatus.Stale;
+            tracked.CurrentGenerationRunId = null;
+            tracked.GenerationStartedAtUtc = null;
+            tracked.GenerationExpiresAtUtc = null;
+            tracked.Version++;
+            tracked.UpdatedAt = DateTime.UtcNow;
+            return 1;
+        }
     }
 
     public static async Task SupersedePlaybackSessionsAsync(
@@ -1432,6 +1472,8 @@ public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, Api
         var chapters = await _db.VideoChapters
             .Where(c => c.LessonVideoId == video.Id).ToListAsync(ct);
         if (chapters.Count > 0) _db.VideoChapters.RemoveRange(chapters);
+
+        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, ct);
 
         var bunnyAssets = await _db.BunnyVideoAssets
             .Where(a => a.LessonVideoId == video.Id).ToListAsync(ct);

@@ -64,4 +64,43 @@ public sealed class PlatformFinanceOperationsTests
         Assert.Equal(100m, journal.Lines.Sum(line => line.Credit));
         Assert.Contains(journal.Lines, line => line.FinancialAccountId == cash.Id && line.Credit == 100m);
     }
+
+    [Fact]
+    public async Task Historical_grant_refund_cannot_exceed_its_explicit_content_price_ceiling()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var operations = new PlatformFinanceOperationsService(
+            db,
+            new FinancialPostingService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var grantId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        var package = new Package
+        {
+            Name = "Historical package",
+            Description = "Production refund regression",
+            Price = 1350m,
+            SubjectId = Guid.NewGuid(),
+            TeacherId = Guid.NewGuid(),
+            TargetGrade = "SecondSecondary"
+        };
+        db.AddRange(package, new StudentAccessGrant
+        {
+            Id = grantId,
+            UserId = studentId,
+            GrantType = CodeType.Package,
+            PackageId = package.Id,
+            IsActive = false
+        });
+        await db.SaveChangesAsync();
+
+        var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(
+            grantId, "HistoricalAccessGrant", studentId, null, 1300m, 0m, 1, null,
+            "Production refund regression", null, Guid.NewGuid(), grantId), CancellationToken.None);
+
+        Assert.Equal(1300m, refund.TotalAmount);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => operations.CreateRefundAsync(
+            new CreatePlatformRefundRequest(grantId, "HistoricalAccessGrant", studentId, null, 51m, 0m, 1, null,
+                "Exceeds the remaining ceiling", null, Guid.NewGuid(), grantId), CancellationToken.None));
+    }
 }

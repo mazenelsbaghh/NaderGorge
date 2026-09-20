@@ -13,6 +13,7 @@ import { parseLiveSupportDecision, type LiveSupportDecision } from './liveSuppor
 import { atomicWriteFileSync, sharedMindmapsRoot } from '../config/storage.js';
 import { WorkerExternalError } from './workerFetch.js';
 import { parseArtifactRunId, type AiOutputLanguage } from './aiGenerationContract.js';
+import { lessonMimGamePrompt, MIM_GAME_ICONS, parseMimGameContent, type MimGameContent, type MimSourcePack } from './lessonMimGameContract.js';
 
 const providerTimeoutMs = Number.parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '600000', 10);
 
@@ -74,6 +75,34 @@ export type VideoChapter = VideoAIResult['chapters'][number];
 export interface EssayAIResult {
   isCorrect: boolean;
   feedback: string;
+}
+
+const mimSourceRefSchema = { type: Type.OBJECT, properties: {
+  videoId: { type: Type.STRING }, chapterId: { type: Type.STRING }, startTime: { type: Type.INTEGER }, endTime: { type: Type.INTEGER },
+}, required: ['videoId', 'chapterId', 'startTime', 'endTime'] };
+const mimTaskSchema = { type: Type.OBJECT, properties: {
+  label: { type: Type.STRING }, icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, correctChoiceIndex: { type: Type.INTEGER }, explanation: { type: Type.STRING },
+}, required: ['label', 'icon', 'correctChoiceIndex', 'explanation'] };
+const mimMissionSchema = { type: Type.OBJECT, properties: {
+  title: { type: Type.STRING }, instruction: { type: Type.STRING }, hint: { type: Type.STRING }, reward: { type: Type.STRING },
+  icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, sourceRefs: { type: Type.ARRAY, items: mimSourceRefSchema },
+  choices: { type: Type.ARRAY, items: { type: Type.STRING } }, tasks: { type: Type.ARRAY, items: mimTaskSchema },
+}, required: ['title', 'instruction', 'hint', 'reward', 'icon', 'sourceRefs', 'choices', 'tasks'] };
+const mimGameSchema = { type: Type.OBJECT, properties: {
+  schemaVersion: { type: Type.INTEGER }, title: { type: Type.STRING }, intro: { type: Type.STRING }, sourceLabel: { type: Type.STRING },
+  missions: { type: Type.ARRAY, items: mimMissionSchema },
+}, required: ['schemaVersion', 'title', 'intro', 'sourceLabel', 'missions'] };
+
+export async function generateLessonMimGame(sourcePack: MimSourcePack): Promise<MimGameContent> {
+  const runtime = createRuntime();
+  const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
+    model: runtime.config.textModel,
+    contents: lessonMimGamePrompt(sourcePack),
+    config: { abortSignal, responseMimeType: 'application/json', responseSchema: mimGameSchema, maxOutputTokens: 8192 },
+  }));
+  const text = (response.text || '').trim();
+  if (!text) throw new Error('MIM_MODEL_INVALID');
+  return parseMimGameContent(text, sourcePack);
 }
 
 const srtPrompt = `You are an expert verbatim transcription AI for an educational platform.
@@ -413,7 +442,6 @@ export async function analyzeVideoChapters(
   return { srtContent, chapters };
 }
 
-export const ESSAY_GRADING_MODEL = 'gemini-3.5-flash-lite';
 const ESSAY_GRADING_TIMEOUT_MS = 30_000;
 
 const essayGradingInstruction = `You are an Egyptian school teacher grading a single written answer against the teacher's supplied answer key.
@@ -435,7 +463,7 @@ export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: s
     throw new Error('Essay grading requires the question and the teacher answer key.');
   const runtime = createRuntime();
   const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
-    model: ESSAY_GRADING_MODEL,
+    model: runtime.config.textModel,
     contents: JSON.stringify({ questionText, expectedAnswer, studentAnswer: answerText }),
     config: {
       systemInstruction: essayGradingInstruction, responseMimeType: 'application/json', responseSchema: essayGradingSchema,

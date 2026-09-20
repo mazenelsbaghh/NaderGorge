@@ -22,6 +22,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "public/vendor/playerjs/**",
     "public/vendor/hlsjs/**",
+    "public/mim-game/vendor/**",
     "next-env.d.ts",
     "test.js",
     "test-node-request.js",

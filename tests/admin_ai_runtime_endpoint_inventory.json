@@ -2411,6 +2411,86 @@
     ]
   },
   {
+    "route": "api/Admin/lessons/{lessonId:guid}/mim-game",
+    "controller": "Admin",
+    "action": "GetMimGame",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/lessons/{lessonId:guid}/mim-game/disable",
+    "controller": "Admin",
+    "action": "DisableMimGame",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/lessons/{lessonId:guid}/mim-game/generate",
+    "controller": "Admin",
+    "action": "GenerateMimGame",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
+    "route": "api/Admin/lessons/{lessonId:guid}/mim-game/publish-enable",
+    "controller": "Admin",
+    "action": "PublishMimGame",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "content.manage",
+      "content.manage"
+    ]
+  },
+  {
     "route": "api/admin/live-support/messenger/pages/{pageRecordId:guid}",
     "controller": "AdminFacebookMessenger",
     "action": "DeletePage",
@@ -3458,6 +3538,26 @@
     "route": "api/admin/platform-finance/refunds/students/{studentId:guid}",
     "controller": "AdminPlatformFinance",
     "action": "RefundStudent",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "finance.refunds.create",
+      "finance.refunds.create"
+    ]
+  },
+  {
+    "route": "api/admin/platform-finance/refunds/students/{studentId:guid}/grants/{accessGrantId:guid}/preview",
+    "controller": "AdminPlatformFinance",
+    "action": "RefundUsagePreview",
     "methods": [
       "GET"
     ],
@@ -13997,6 +14097,28 @@
     "permissions": []
   },
   {
+    "route": "api/v1/internal/callbacks/lesson-mim-game-completed",
+    "controller": "Internal",
+    "action": "LessonMimGameCompleted",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/callbacks/lesson-mim-game-failed",
+    "controller": "Internal",
+    "action": "LessonMimGameFailed",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/v1/internal/callbacks/live-support-ai/readiness",
     "controller": "Internal",
     "action": "LiveSupportAIReadiness",
@@ -14288,6 +14410,66 @@
     ],
     "AllowsAnonymous": false,
     "permissions": []
+  },
+  {
+    "route": "api/WhatsApp/admin/assessment-parent-recovery/apply",
+    "controller": "WhatsApp",
+    "action": "ApplyAssessmentParentRecovery",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/WhatsApp/admin/assessment-parent-recovery/preview",
+    "controller": "WhatsApp",
+    "action": "PreviewAssessmentParentRecovery",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
+    "route": "api/WhatsApp/admin/assessment-parent-recovery/status/{operationId:guid}",
+    "controller": "WhatsApp",
+    "action": "AssessmentParentRecoveryStatus",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
   },
   {
     "route": "api/WhatsApp/admin/exam-result-message",

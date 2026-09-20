@@ -11,6 +11,7 @@ export interface QueueSet {
   essayQueue: Queue;
   liveSupportQueue: Queue;
   adminAIQueue: Queue;
+  lessonGameQueue: Queue;
 }
 
 export interface IngestResult {
@@ -61,13 +62,18 @@ export function resolveQueueTarget(jobType: string, jobId: string, parsedPayload
     bullmqJobName = 'respond';
     physicalBaseJobId = jobId;
     logicalJobId = jobId;
+  } else if (jobType === 'lesson game') {
+    targetQueue = queues.lessonGameQueue;
+    bullmqJobName = 'generate-mim';
+    physicalBaseJobId = String(parsedPayload.gameId || parsedPayload.GameId || jobId);
+    logicalJobId = physicalBaseJobId;
   } else {
     return undefined;
   }
 
   const sanitizedLogicalJobId = sanitizeBullMqJobId(logicalJobId);
-  const rawRunId = jobType === 'video analysis' || jobType === 'mind maps'
-    ? parsedPayload.generationRunId || parsedPayload.GenerationRunId
+  const rawRunId = jobType === 'video analysis' || jobType === 'mind maps' || jobType === 'lesson game'
+    ? parsedPayload.generationRunId || parsedPayload.GenerationRunId || parsedPayload.runId || parsedPayload.RunId
     : undefined;
   const targetJobId = rawRunId
     ? runScopedBullMqJobId(physicalBaseJobId, String(rawRunId))
@@ -116,7 +122,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
   }
 
   const { targetQueue, bullmqJobName, targetJobId, logicalJobId } = target;
-  const isGenerationJob = jobType === 'video analysis' || jobType === 'mind maps';
+  const isGenerationJob = jobType === 'video analysis' || jobType === 'mind maps' || jobType === 'lesson game';
   const queuedAlias = isGenerationJob
     ? { logicalJobId, physicalJobId: targetJobId, queueName: targetQueue.name }
     : undefined;
@@ -157,7 +163,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     const isAdminAITurn = jobType === 'admin ai turn';
     const isEssay = jobType === 'essay';
     let attempts = 5;
-    if (jobType === 'video analysis') attempts = 3;
+    if (jobType === 'video analysis' || jobType === 'lesson game') attempts = 3;
     else if (isLiveSupportTurn) attempts = 4;
     const queuedPayload = isGenerationJob
       ? { ...parsedPayload, logicalJobId }

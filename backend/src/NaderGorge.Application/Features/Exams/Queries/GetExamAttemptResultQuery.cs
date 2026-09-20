@@ -92,7 +92,9 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
         var result = ExamResultBuilder.Build(
             exam,
             attempt,
-            blocksNextLesson: !attempt.IsPassed && !(progress?.IsManuallyUnlocked ?? false),
+            blocksNextLesson: !attempt.IsPassed
+                && attempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation
+                && !(progress?.IsManuallyUnlocked ?? false),
             lesson?.Id,
             lesson?.ContentSection?.Term?.PackageId,
             BuildQuestionReviewSnapshots(answers, essays, exam),

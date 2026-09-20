@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { performance } from 'node:perf_hooks';
-import { evaluateEssayWithAI, ESSAY_GRADING_MODEL } from '../services/geminiService.js';
+import { evaluateEssayWithAI } from '../services/geminiService.js';
 
 dotenv.config({ quiet: true });
 
@@ -40,7 +40,7 @@ const results: Array<Awaited<ReturnType<typeof evaluate>>> = [];
 for (let offset = 0; offset < cases.length; offset += 3)
   results.push(...await Promise.all(cases.slice(offset, offset + 3).map(evaluate)));
 const latencies = results.map(result => result.elapsedMs).sort((a, b) => a - b);
-console.log(JSON.stringify({ model: ESSAY_GRADING_MODEL, usesMocks: false, mutatesStudentData: false,
+console.log(JSON.stringify({ model: process.env.AI_TEXT_MODEL || 'gemini-3.6-flash', usesMocks: false, mutatesStudentData: false,
   passed: results.filter(result => result.passed).length, total: cases.length,
   elapsedMs: Math.round(performance.now() - startedAt),
   medianMs: latencies[Math.floor(latencies.length / 2)], p95Ms: latencies[Math.ceil(latencies.length * 0.95) - 1], results }, null, 2));

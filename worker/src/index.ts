@@ -30,6 +30,7 @@ import { publicJobFailureReason } from './server/jobStatus.js';
 import { directGenerationRetryDenied } from './server/generationRetryPolicy.js';
 import { reportTerminalVideoFailure } from './services/videoAnalysisFailureReporter.js';
 import { reportTerminalSingleMindmapFailure } from './services/mindmapFailureReporter.js';
+import { reportTerminalLessonMimGameFailure } from './services/lessonMimGameFailureReporter.js';
 import { isTerminalJobFailure } from './utils/jobTempFiles.js';
 
 dotenv.config();
@@ -265,6 +266,31 @@ async function startMindmapsWorker() {
   console.log('[Worker] Mindmaps BullMQ worker started on queue: generate-chapter-mindmaps');
 }
 
+async function startLessonMimGameWorker() {
+  const worker = new Worker('ai-lesson-games', async job => {
+    const processor = await import('./jobs/generateLessonMimGame.js');
+    return processor.default(job);
+  }, {
+    connection,
+    concurrency: Math.max(1, Number.parseInt(process.env.AI_LESSON_GAME_CONCURRENCY || '2', 10) || 2),
+    lockDuration: 10 * 60_000,
+    lockRenewTime: 30_000,
+    stalledInterval: 60_000,
+    maxStalledCount: 2,
+  });
+  worker.on('completed', job => console.log(`[Lesson MIM Worker] Job ${job.id} completed.`));
+  worker.on('failed', async (job, error) => {
+    logError('lesson-mim-worker', 'Lesson MIM generation job failed.', { jobId: job?.id, errorName: error.name });
+    try { await reportTerminalLessonMimGameFailure(job, error); }
+    catch (callbackError) {
+      logError('lesson-mim-callback', 'Terminal failure callback exhausted its retry budget.', {
+        jobId: job?.id, errorName: callbackError instanceof Error ? callbackError.name : 'UnknownError',
+      });
+    }
+  });
+  console.log('[Worker] Lesson MIM BullMQ worker started on queue: ai-lesson-games');
+}
+
 async function startLiveSupportWorker() {
   const worker = new Worker('ai-live-support-turns', async (job) => {
     const processor = await import('./jobs/processLiveSupportTurn.js');
@@ -355,6 +381,7 @@ async function startWorker() {
   startNotificationWorker();
   startAIWorker();
   startMindmapsWorker();
+  startLessonMimGameWorker();
   startEssayWorker();
   startLiveSupportWorker();
   if (adminAIEnabled) startAdminAIWorker();
@@ -366,7 +393,8 @@ async function startWorker() {
   const essayQueue = new Queue('ai-essay-grading', { connection });
   const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
   const adminAIQueue = new Queue('ai-admin-agent-turns', { connection });
-  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue, adminAIQueue };
+  const lessonGameQueue = new Queue('ai-lesson-games', { connection });
+  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue, adminAIQueue, lessonGameQueue };
   const workerAdminGuard = createWorkerAdminGuard();
 
   const app = express();
@@ -561,7 +589,8 @@ async function startWorker() {
         new BullMQAdapter(notifQueue),
         new BullMQAdapter(essayQueue),
         new BullMQAdapter(liveSupportQueue),
-        new BullMQAdapter(adminAIQueue)
+        new BullMQAdapter(adminAIQueue),
+        new BullMQAdapter(lessonGameQueue),
       ],
       serverAdapter: serverAdapter,
     });
