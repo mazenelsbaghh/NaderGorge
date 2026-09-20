@@ -80,3 +80,21 @@ button:focus-visible { outline: 3px solid #ffdda0; outline-offset: 4px; }
  .immersive .victory-world { bottom: 170px; right: 12px; max-width: calc(100% - 24px); font-size: 13px; }
 }
 .boot-state{min-height:100dvh;display:grid;place-items:center;background:#07162d;color:#fff;text-align:center;padding:24px}.boot-state b{font-size:1.4rem}.boot-state p{color:#b8c6d8;margin-top:10px}.boot-state[hidden]{display:none}
+.rotate-prompt { display: none; }
+@media (orientation: portrait) and (max-width: 700px) and (pointer: coarse) {
+ .rotate-prompt { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 28px; background: #07162df5; color: #fff4d2; text-align: center; }
+ .rotate-prompt span { font: 72px/1 Georgia, serif; color: #79d8cb; animation: rotate-device 1.5s ease-in-out infinite alternate; }
+ .rotate-prompt b { font-size: 24px; }
+ .rotate-prompt small { color: #c9d6df; font-size: 14px; }
+}
+@keyframes rotate-device { to { transform: rotate(90deg); } }
+@media (orientation: landscape) and (max-height: 540px) {
+ .immersive header { height: 54px; padding: 6px 12px; }
+ .immersive .brand { font-size: 23px; }
+ .immersive header .icon-button { width: 42px; height: 42px; min-height: 42px; }
+ .player-hud { top: 62px; left: 10px; transform: scale(.72); transform-origin: top left; }
+ .immersive .quest-bar { top: 62px; right: 12px; width: 245px; }
+ .immersive .world-bottom { bottom: 18px; }
+ .immersive .touch-controls { bottom: 70px; }
+ .immersive .wheel-hud { bottom: 18px; width: min(720px, 86%); }
+}

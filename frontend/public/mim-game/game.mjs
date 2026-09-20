@@ -26,7 +26,6 @@ const iconGlyph = {
 const controls = new AbortController();
 let lesson;
 let storageKey;
-let mode = 'student';
 let world3d;
 let animationFrame = 0;
 let disposed = false;
@@ -282,7 +281,6 @@ function resetVirtualControls() {
   });
 }
 function startGame() {
-  $('intro').hidden = true;
   $('finish').hidden = true;
   $('game').hidden = false;
   document.body.classList.add('immersive');
@@ -593,7 +591,6 @@ function interact() {
   travelToStation(progress.completed);
 }
 function bindControls() {
-  $('start').onclick = startGame;
   $('interact').onclick = interact;
   $('wheelExit').onclick = closeMission;
   $('wheelPrev').onclick = () => rotateWheel(-1);
@@ -730,19 +727,11 @@ function bootstrap(payload) {
   }
   lesson = payload.content;
   storageKey = payload.progressKey;
-  mode = payload.mode;
   lesson.missions.forEach((mission, index) => {
     mission.x = 20 + index * 30;
     mission.y = 45;
   });
-  $('gameTitle').textContent = lesson.title;
   $('worldTitle').textContent = lesson.title;
-  $('gameIntro').textContent = lesson.intro;
-  $('sourceLabel').textContent = lesson.sourceLabel;
-  $('modeNote').textContent =
-    mode === 'preview'
-      ? 'معاينة إدارية فقط، لا تنشر هذه الشاشة أي محتوى.'
-      : 'للتدريب فقط، لا تؤثر على الدرجات أو الترتيب.';
   try {
     world3d = createWorld(
       $('world'),
@@ -765,10 +754,9 @@ function bootstrap(payload) {
   restoreProgress();
   bindControls();
   renderMap();
-  if (progress.solved.some((answers) => answers.length))
-    $('start').textContent = 'كمّل المغامرة ←';
   $('waiting').hidden = true;
   $('shell').hidden = false;
+  startGame();
   lastFrame = performance.now();
   animationFrame = requestAnimationFrame(animate);
 }
