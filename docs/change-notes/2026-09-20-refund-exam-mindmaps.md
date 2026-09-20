@@ -15,5 +15,7 @@ The owner selected build scope `all` after the release plan detected changes in 
 - The MIM provider schema stays fixed-size for analyzed parts with many chapters; exact source identifiers remain enforced by the worker's post-response grounding check and bounded correction attempt.
 - MIM preview and student play now enter the 3D world immediately without the redundant “start adventure” page.
 - The MIM overlay exposes real browser fullscreen, requests landscape orientation where the device supports it, and gives touch phones a clear rotate prompt with a compact landscape HUD.
+- The refund form treats active direct grants with a zero-cash financial effect as manually reviewed external refunds, using the content price only as a ceiling. The known production case was funded entirely through promotional balance, so the recorded student-paid amount remains zero; codes and grants issued directly as gifts remain blocked.
+- The MIM overlay is mounted at the document body, follows Safari's live visual viewport, enters fullscreen from the original tap where supported, and removes fixed minimum world heights so the game fills the actual landscape phone area without exposing dashboard navigation.
 
 Planned verification: backend application tests, frontend lint and production build, worker tests and build, database migration guard, release preview, rolling three-node deployment, and final cluster health.

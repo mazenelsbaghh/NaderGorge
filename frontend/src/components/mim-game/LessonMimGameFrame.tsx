@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Gamepad2, Maximize2, Minimize2, X } from 'lucide-react';
+import { createPortal, flushSync } from 'react-dom';
+import { Gamepad2 } from 'lucide-react';
 
 import {
   mimGameProgressKeyForContent,
@@ -14,6 +15,15 @@ type FrameEvent = {
   source: 'massar-mim-game';
   type: 'ready' | 'close' | 'error';
   message?: string;
+};
+
+type WebkitDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
+
+type WebkitFullscreenElement = HTMLDivElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
 };
 
 export function LessonMimGameFrame({
@@ -30,17 +40,20 @@ export function LessonMimGameFrame({
   const [open, setOpen] = useState(false);
   const [frameReady, setFrameReady] = useState(false);
   const [frameError, setFrameError] = useState('');
-  const [fullscreen, setFullscreen] = useState(false);
-  const [fullscreenNotice, setFullscreenNotice] = useState('');
   const [scopedProgressKey, setScopedProgressKey] = useState('');
+  const [viewport, setViewport] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const scopedProgressKeyRef = useRef('');
 
   const unlockOrientation = useCallback(() => {
     const orientation = screen.orientation as
-      | (ScreenOrientation & {
-          unlock?: () => void;
-        })
+      | (ScreenOrientation & { unlock?: () => void })
       | undefined;
     orientation?.unlock?.();
   }, []);
@@ -54,7 +67,7 @@ export function LessonMimGameFrame({
     try {
       await orientation?.lock?.('landscape');
     } catch {
-      // Fullscreen still works when a browser requires manual device rotation.
+      // Safari keeps the body-level fullscreen overlay and asks for rotation.
     }
   }, []);
 
@@ -63,59 +76,80 @@ export function LessonMimGameFrame({
       { source: 'massar-platform', type: 'dispose' },
       window.location.origin
     );
-    if (document.fullscreenElement === dialogRef.current) {
-      void document.exitFullscreen().catch(() => undefined);
+    const webkitDocument = document as WebkitDocument;
+    if (
+      document.fullscreenElement === dialogRef.current ||
+      webkitDocument.webkitFullscreenElement === dialogRef.current
+    ) {
+      const exitFullscreen =
+        document.exitFullscreen?.bind(document) ||
+        webkitDocument.webkitExitFullscreen?.bind(webkitDocument);
+      void Promise.resolve(exitFullscreen?.()).catch(() => undefined);
     }
     unlockOrientation();
     setOpen(false);
     setFrameReady(false);
     setFrameError('');
-    setFullscreen(false);
-    setFullscreenNotice('');
     setScopedProgressKey('');
+    scopedProgressKeyRef.current = '';
+    setViewport(null);
   }, [unlockOrientation]);
 
-  const toggleFullscreen = useCallback(async () => {
+  const enterNativeFullscreen = useCallback(async () => {
+    const element = dialogRef.current as WebkitFullscreenElement | null;
+    const requestFullscreen =
+      element?.requestFullscreen?.bind(element) ||
+      element?.webkitRequestFullscreen?.bind(element);
+    if (!requestFullscreen) return;
     try {
-      setFullscreenNotice('');
-      if (document.fullscreenElement === dialogRef.current) {
-        await document.exitFullscreen();
-        unlockOrientation();
-        return;
-      }
-
-      if (!dialogRef.current?.requestFullscreen) {
-        setFullscreenNotice(
-          'المتصفح لا يدعم ملء الشاشة. لف الهاتف بالعرض واستمر من هذه الشاشة.'
-        );
-        return;
-      }
-      await dialogRef.current.requestFullscreen();
+      await requestFullscreen();
       await lockLandscape();
     } catch {
-      setFullscreen(false);
-      setFullscreenNotice(
-        'تعذر تشغيل ملء الشاشة تلقائيًا. لف الهاتف بالعرض واستمر من هذه الشاشة.'
-      );
+      // The body portal is the complete Safari fallback when native fullscreen fails.
     }
-  }, [lockLandscape, unlockOrientation]);
+  }, [lockLandscape]);
 
   const openGame = useCallback(async () => {
+    setFrameReady(false);
+    setFrameError('');
+    setScopedProgressKey('');
+    scopedProgressKeyRef.current = '';
+    flushSync(() => setOpen(true));
+    void enterNativeFullscreen();
     try {
-      setScopedProgressKey(
-        await mimGameProgressKeyForContent(progressKey, content)
+      const nextProgressKey = await mimGameProgressKeyForContent(
+        progressKey,
+        content
       );
-      setOpen(true);
+      scopedProgressKeyRef.current = nextProgressKey;
+      setScopedProgressKey(nextProgressKey);
     } catch {
       setFrameError('تعذر تجهيز حفظ التقدم على هذا الجهاز.');
-      setOpen(true);
     }
-  }, [content, progressKey]);
+  }, [content, enterNativeFullscreen, progressKey]);
 
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.classList.add('mim-game-open');
+
+    const updateViewport = () => {
+      const visible = window.visualViewport;
+      setViewport({
+        top: visible?.offsetTop ?? 0,
+        left: visible?.offsetLeft ?? 0,
+        width: visible?.width ?? window.innerWidth,
+        height: visible?.height ?? window.innerHeight,
+      });
+    };
+    updateViewport();
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
 
     const onMessage = (event: MessageEvent<FrameEvent>) => {
       if (
@@ -130,7 +164,11 @@ export function LessonMimGameFrame({
           {
             source: 'massar-platform',
             type: 'bootstrap',
-            payload: { content, progressKey: scopedProgressKey, mode },
+            payload: {
+              content,
+              progressKey: scopedProgressKeyRef.current,
+              mode,
+            },
           },
           window.location.origin
         );
@@ -145,21 +183,94 @@ export function LessonMimGameFrame({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
     };
-    window.addEventListener('message', onMessage);
-    window.addEventListener('keydown', onKeyDown);
     const onFullscreenChange = () => {
-      const active = document.fullscreenElement === dialogRef.current;
-      setFullscreen(active);
+      const active =
+        document.fullscreenElement === dialogRef.current ||
+        (document as WebkitDocument).webkitFullscreenElement ===
+          dialogRef.current;
       if (!active) unlockOrientation();
     };
+    window.addEventListener('message', onMessage);
+    window.addEventListener('keydown', onKeyDown);
     document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      document.body.classList.remove('mim-game-open');
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
       window.removeEventListener('message', onMessage);
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener(
+        'webkitfullscreenchange',
+        onFullscreenChange
+      );
     };
-  }, [close, content, mode, open, scopedProgressKey, unlockOrientation]);
+  }, [close, content, mode, open, unlockOrientation]);
+
+  const overlay = open ? (
+    <div
+      ref={dialogRef}
+      className="fixed z-[2147483647] flex flex-col overflow-hidden bg-[#07162d]"
+      style={
+        viewport
+          ? {
+              top: viewport.top,
+              left: viewport.left,
+              width: viewport.width,
+              height: viewport.height,
+            }
+          : { inset: 0, width: '100vw', height: '100dvh' }
+      }
+      role="dialog"
+      aria-modal="true"
+      aria-label={mode === 'preview' ? 'معاينة لعبة الحصة' : 'لعبة الحصة'}
+    >
+      <div className="relative min-h-0 flex-1">
+        {!frameReady && !frameError && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-[#07162d] text-sm font-bold text-white">
+            جاري تجهيز عالم ميم…
+            <button
+              type="button"
+              onClick={close}
+              className="absolute left-3 top-3 min-h-11 rounded-xl bg-white/10 px-4 text-white"
+            >
+              إغلاق
+            </button>
+          </div>
+        )}
+        {frameError ? (
+          <div className="grid h-full place-items-center p-6 text-center text-white">
+            <div>
+              <p className="text-lg font-black">تعذر تشغيل اللعبة</p>
+              <p className="mt-2 text-sm text-white/75">{frameError}</p>
+              <button
+                type="button"
+                onClick={close}
+                className="mt-5 min-h-11 rounded-xl bg-white px-5 font-bold text-[#0A1D3D]"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        ) : scopedProgressKey ? (
+          <iframe
+            ref={iframeRef}
+            title={mode === 'preview' ? 'معاينة لعبة الحصة' : 'لعبة الحصة'}
+            src={FRAME_PATH}
+            className="block h-full w-full border-0"
+            sandbox="allow-scripts allow-same-origin"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -172,98 +283,9 @@ export function LessonMimGameFrame({
         {triggerLabel ??
           (mode === 'preview' ? 'معاينة المسودة' : 'ابدأ لعبة الحصة')}
       </button>
-      {open && (
-        <div
-          ref={dialogRef}
-          className="fixed inset-0 z-[70] flex flex-col bg-[#07162d]"
-          role="dialog"
-          aria-modal="true"
-          aria-label={mode === 'preview' ? 'معاينة لعبة الحصة' : 'لعبة الحصة'}
-        >
-          <div
-            className={
-              fullscreen
-                ? 'hidden'
-                : 'flex min-h-14 items-center justify-between gap-3 border-b border-white/15 bg-[#0A1D3D] px-3 text-white sm:px-5'
-            }
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-black">{content.title}</p>
-              <p className="text-xs text-white/75">
-                {mode === 'preview'
-                  ? 'معاينة إدارية، غير منشورة للطلاب'
-                  : 'مراجعة تدريبية، لا تؤثر على الدرجات'}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void toggleFullscreen()}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 text-sm font-bold text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-[#49caca]"
-                aria-label={fullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة بالعرض'}
-                aria-pressed={fullscreen}
-              >
-                {fullscreen ? (
-                  <Minimize2 className="h-5 w-5" aria-hidden="true" />
-                ) : (
-                  <Maximize2 className="h-5 w-5" aria-hidden="true" />
-                )}
-                <span className="hidden sm:inline">
-                  {fullscreen ? 'تصغير' : 'ملء الشاشة'}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={close}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-[#49caca]"
-                aria-label="إغلاق لعبة الحصة"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-          <div className="relative min-h-0 flex-1">
-            {fullscreenNotice && (
-              <p
-                role="status"
-                className="absolute inset-x-3 top-3 z-20 rounded-xl bg-amber-100 px-4 py-3 text-center text-sm font-bold text-amber-950 shadow-lg"
-              >
-                {fullscreenNotice}
-              </p>
-            )}
-            {!frameReady && !frameError && (
-              <div className="absolute inset-0 z-10 grid place-items-center bg-[#07162d] text-sm font-bold text-white">
-                جاري تجهيز عالم ميم…
-              </div>
-            )}
-            {frameError ? (
-              <div className="grid h-full place-items-center p-6 text-center text-white">
-                <div>
-                  <p className="text-lg font-black">تعذر تشغيل اللعبة</p>
-                  <p className="mt-2 text-sm text-white/75">{frameError}</p>
-                  <button
-                    type="button"
-                    onClick={close}
-                    className="mt-5 min-h-11 rounded-xl bg-white px-5 font-bold text-[#0A1D3D]"
-                  >
-                    إغلاق
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <iframe
-                ref={iframeRef}
-                title={mode === 'preview' ? 'معاينة لعبة الحصة' : 'لعبة الحصة'}
-                src={FRAME_PATH}
-                className="h-full w-full border-0"
-                sandbox="allow-scripts allow-same-origin"
-                allow="autoplay; fullscreen"
-                allowFullScreen
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {typeof document !== 'undefined' && overlay
+        ? createPortal(overlay, document.body)
+        : null}
     </>
   );
 }

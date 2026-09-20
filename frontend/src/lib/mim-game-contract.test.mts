@@ -203,3 +203,22 @@ test('iframe bridge verifies origin and source and keeps publication outside the
   );
   assert.doesNotMatch(game, /publish-enable|\/api\/|Authorization|accessToken/);
 });
+
+test('2026-09-21 mobile game escapes dashboard containers and sizes itself to the visible viewport', async () => {
+  const frame = await readFile(
+    new URL('../components/mim-game/LessonMimGameFrame.tsx', import.meta.url),
+    'utf8'
+  );
+  const gameStyles = await readFile(
+    new URL('../../public/mim-game/three.css', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(frame, /createPortal\(overlay, document\.body\)/);
+  assert.match(frame, /window\.visualViewport/);
+  assert.match(frame, /height:\s*viewport\.height/);
+  assert.match(
+    gameStyles,
+    /\.immersive \.world3d\s*\{\s*height:\s*100%;\s*min-height:\s*0/
+  );
+});

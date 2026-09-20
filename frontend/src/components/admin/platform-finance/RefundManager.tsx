@@ -6,6 +6,7 @@ import { useHasPermission } from '@/hooks/useHasPermission';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, type RefundStudent, type RefundUsagePreview } from '@/services/platform-finance-service';
+import { isExternallyRefundableGrant, refundablePurchaseOperationId, refundSourceKey } from '@/lib/refund-source';
 
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 
@@ -59,8 +60,8 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     setPreviewKey('');
     setPreviewError('');
     setPreviewLoading(true);
-    const sourceKey = selected.purchaseOperationId || `historical:${selected.accessGrantId}`;
-    void platformFinanceService.getRefundUsagePreview(student.id, selected.accessGrantId, selected.purchaseOperationId)
+    const sourceKey = refundSourceKey(selected);
+    void platformFinanceService.getRefundUsagePreview(student.id, selected.accessGrantId, refundablePurchaseOperationId(selected))
       .then(result => {
         if (!current) return;
         setPreview(result);
@@ -98,7 +99,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     event.preventDefault();
     const selectedPackage = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
     const amount = Number(refundAmount);
-    const sourceKey = selectedPackage ? selectedPackage.purchaseOperationId || `historical:${selectedPackage.accessGrantId}` : '';
+    const sourceKey = selectedPackage ? refundSourceKey(selectedPackage) : '';
     const selectionKey = student && selectedPackage ? `${student.id}:${selectedPackage.accessGrantId}:${sourceKey}` : '';
     if (!canCreate || !student || !selectedPackage || !preview || previewKey !== selectionKey || !treasuryId || !reason.trim() || !Number.isFinite(amount) || amount <= 0 || amount > preview.remainingRefundableAmount) return;
     const teacherRatio = !preview.isHistoricalSource && selectedPackage.paidAmount > 0 ? selectedPackage.teacherShareAmount / selectedPackage.paidAmount : 0;
@@ -107,7 +108,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     try {
       await platformFinanceService.createExternalPackageRefund({
         accessGrantId: selectedPackage.accessGrantId,
-        purchaseOperationId: selectedPackage.purchaseOperationId,
+        purchaseOperationId: refundablePurchaseOperationId(selectedPackage),
         studentId: student.id,
         teacherId: selectedPackage.teacherId || undefined,
         platformAmount: amount - teacherAmount,
@@ -135,10 +136,9 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     catch { setError('تعذر عكس الاسترداد'); }
   }
 
-  const activePackages = student?.packages.filter(item => item.isActive && (
-    (item.purchaseOperationId && item.paidAmount > 0) ||
-    (!item.purchaseOperationId && item.purchaseMethod !== 'Code' && item.purchaseMethod !== 'Gift' && item.price > 0)
-  )) || [];
+  const activePackages = student?.packages.filter(isExternallyRefundableGrant) || [];
+  const selectedRefundPackage = activePackages.find(item => item.accessGrantId === grantId);
+  const isZeroCashExternalReview = Boolean(selectedRefundPackage?.purchaseOperationId && selectedRefundPackage.paidAmount <= 0);
 
   return <div className="space-y-6" dir="rtl">
     <section className="admin-panel rounded-2xl p-6">
@@ -160,7 +160,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
           <label className="mb-1 block text-xs font-bold">الباقة التي سيتم إلغاؤها</label>
           <select className="admin-input" required value={grantId} onChange={event => { setGrantId(event.target.value); setPreview(null); setPreviewKey(''); setRefundAmount(''); }} disabled={!student}>
             <option value="">اختر باقة نشطة</option>
-            {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — {item.purchaseOperationId ? `المدفوع ${money(item.paidAmount)}` : `سجل قديم (الحد ${money(item.price)})`}</option>)}
+            {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — {refundablePurchaseOperationId(item) ? `المدفوع ${money(item.paidAmount)}` : `مراجعة يدوية (الحد ${money(item.price)})`}</option>)}
           </select>
           {student && activePackages.length === 0 ? <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">لا توجد لهذا الطالب باقة مدفوعة قابلة للاسترداد. باقات الهدايا والأكواد لا تحتوي مبلغًا مدفوعًا من الطالب.</p> : null}
         </div>
@@ -179,8 +179,8 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
               <p><b>المحاولات:</b> {preview.examsAvailable ? `${preview.totalAttempts} (${preview.submittedAttempts} مُسلّمة)` : 'غير متاح لهذا النطاق'}</p>
             </div>
             {!preview.usageAvailable ? <p className="text-sm font-bold text-amber-700">{preview.unavailableReason}</p> : null}
-            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">لا يوجد سجل شراء مالي مرتبط بهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.</p> : null}
-            <p className="text-xs text-[var(--admin-muted)]">المدفوع {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {preview.historicalUsageNote}</p>
+            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">{isZeroCashExternalReview ? 'عملية الشراء المسجلة مدفوعة بالكامل من رصيد ترويجي، والمدفوع من الطالب فيها صفر. أدخل فقط مبلغًا خارجيًا تأكدت أنه رُد فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.' : 'لا يوجد مبلغ مدفوع موثّق يمكن الاعتماد عليه لهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.'}</p> : null}
+            <p className="text-xs text-[var(--admin-muted)]">{preview.isHistoricalSource ? 'الحد الأقصى' : 'المدفوع'} {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {!preview.isHistoricalSource ? preview.historicalUsageNote : null}</p>
           </div> : null}
         </div>
         <div>
