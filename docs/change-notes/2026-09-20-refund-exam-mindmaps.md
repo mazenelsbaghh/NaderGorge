@@ -9,5 +9,6 @@ The owner selected build scope `all` after the release plan detected changes in 
 - Lesson MIM game jobs no longer enter an unsupported queued-alias path, and contract-invalid Gemini output receives one bounded correction attempt before failing safely. The owner's existing `all` build-scope selection applies to this follow-up production repair.
 - The release migration gate allows enough time for the observed strict-SSH handshake before probing Patroni, while retaining the five-second remote health deadline and exact-one-primary requirement.
 - MIM generation now restricts AI source identifiers to analyzed chapters and rewrites the chosen chapter reference to the server-owned video identity and timestamps before validation.
+- MIM generation requires four non-empty choices and non-empty required copy in the provider schema, keeping every generated answer index valid; rejected responses emit only their allowlisted contract code for diagnosis.
 
 Planned verification: backend application tests, frontend lint and production build, worker tests and build, database migration guard, release preview, rolling three-node deployment, and final cluster health.

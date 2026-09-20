@@ -66,6 +66,9 @@ test('lesson game constrains model source ids and canonicalizes cited timestamps
 
   assert.deepEqual(sourceRefSchema.properties.videoId.enum, [mimVideoId]);
   assert.deepEqual(sourceRefSchema.properties.chapterId.enum, [mimChapterId]);
+  assert.equal(requests[0].config.responseSchema.properties.missions.items.properties.choices.minItems, '4');
+  assert.equal(requests[0].config.responseSchema.properties.missions.items.properties.choices.maxItems, '4');
+  assert.equal(requests[0].config.responseSchema.properties.title.minLength, '1');
   assert.deepEqual(result.missions[0]!.sourceRefs[0], { videoId: mimVideoId, chapterId: mimChapterId, startTime: 0, endTime: 10 });
 });
 
