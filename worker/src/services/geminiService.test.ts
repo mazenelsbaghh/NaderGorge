@@ -51,7 +51,7 @@ test('lesson game retries one contract-invalid model response (2026-09-20 regres
   assert.equal(requests.at(-1).config.responseSchema.properties.missions.maxItems, '3');
 });
 
-test('lesson game constrains model source ids and canonicalizes cited timestamps (2026-09-20 regression)', async () => {
+test('lesson game keeps the provider schema bounded and canonicalizes cited timestamps (2026-09-21 regression)', async () => {
   const requests: any[] = [];
   const modelGame = JSON.parse(JSON.stringify(validMimGame));
   modelGame.missions[0].sourceRefs[0] = { ...modelGame.missions[0].sourceRefs[0], startTime: 2, endTime: 99 };
@@ -64,8 +64,8 @@ test('lesson game constrains model source ids and canonicalizes cited timestamps
   const result = await generateLessonMimGame(mimSourcePack);
   const sourceRefSchema = requests[0].config.responseSchema.properties.missions.items.properties.sourceRefs.items;
 
-  assert.deepEqual(sourceRefSchema.properties.videoId.enum, [mimVideoId]);
-  assert.deepEqual(sourceRefSchema.properties.chapterId.enum, [mimChapterId]);
+  assert.equal(sourceRefSchema.properties.videoId.enum, undefined);
+  assert.equal(sourceRefSchema.properties.chapterId.enum, undefined);
   assert.equal(requests[0].config.responseSchema.properties.missions.items.properties.choices.minItems, '4');
   assert.equal(requests[0].config.responseSchema.properties.missions.items.properties.choices.maxItems, '4');
   assert.equal(requests[0].config.responseSchema.properties.title.minLength, '1');
