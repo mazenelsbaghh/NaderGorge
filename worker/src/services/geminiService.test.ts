@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'node:child_process';
 import type { AIConfig } from './aiConfig.js';
-import { analyzeVideoChapters, assertChapterOutputLanguage, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, generateVideoChapters, setAIServiceRuntimeFactoryForTests, transcribePublicYouTubeVideo } from './geminiService.js';
+import { analyzeVideoChapters, assertChapterOutputLanguage, evaluateEssayWithAI, generateChapterMindmap, generateLessonMimGame, generateLiveSupportReply, generateVideoChapters, setAIServiceRuntimeFactoryForTests, transcribePublicYouTubeVideo } from './geminiService.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 import { setGeminiRetryWaitForTests } from './aiProvider.js';
 import { WorkerExternalError } from './workerFetch.js';
@@ -20,6 +20,47 @@ function runtime(client: any) {
 afterEach(() => {
   setAIServiceRuntimeFactoryForTests(undefined);
   setGeminiRetryWaitForTests(undefined);
+});
+
+const mimVideoId = '11111111-1111-4111-8111-111111111111';
+const mimChapterId = '22222222-2222-4222-8222-222222222222';
+const mimSourcePack = {
+  lessonId: '33333333-3333-4333-8333-333333333333', lessonTitle: 'Lesson', outputLanguage: 'en' as const,
+  videos: [{ id: mimVideoId, sourceRevision: 1, title: 'Video', chapters: [{ id: mimChapterId, title: 'Chapter', summary: 'Summary', startTime: 0, endTime: 10 }] }],
+};
+const mimMission = {
+  title: 'Mission', instruction: 'Choose', hint: 'Think', reward: 'Done', icon: 'book',
+  sourceRefs: [{ videoId: mimVideoId, chapterId: mimChapterId, startTime: 0, endTime: 10 }],
+  choices: ['A', 'B'], tasks: Array.from({ length: 3 }, () => ({ label: 'Task', icon: 'target', correctChoiceIndex: 0, explanation: 'Because' })),
+};
+const validMimGame = { schemaVersion: 1, title: 'Game', intro: 'Intro', sourceLabel: 'Lesson', missions: [mimMission, mimMission, mimMission] };
+
+test('lesson game retries one contract-invalid model response (2026-09-20 regression)', async () => {
+  const requests: any[] = [];
+  const responses = ['{"schemaVersion":1,"missions":[]}', JSON.stringify(validMimGame)];
+  const client = { models: { generateContent: async (request: any) => {
+    requests.push(request);
+    return { text: responses.shift() };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  const result = await generateLessonMimGame(mimSourcePack);
+
+  assert.equal(result.missions.length, 3);
+  assert.equal(requests.at(-1).config.responseSchema.properties.missions.minItems, '3');
+  assert.equal(requests.at(-1).config.responseSchema.properties.missions.maxItems, '3');
+});
+
+test('lesson game stops after two invalid structured responses', async () => {
+  const responses = ['{"schemaVersion":1,"missions":[]}', '{"schemaVersion":1,"missions":[]}'];
+  const client = { models: { generateContent: async () => {
+    const text = responses.shift();
+    if (text === undefined) throw new Error('UNEXPECTED_THIRD_REQUEST');
+    return { text };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  await assert.rejects(generateLessonMimGame(mimSourcePack), /MIM_MODEL_INVALID/);
 });
 
 test('public YouTube transcription sends the canonical URL directly to Gemini (2026-08-24 regression)', async () => {

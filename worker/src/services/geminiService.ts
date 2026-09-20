@@ -81,28 +81,40 @@ const mimSourceRefSchema = { type: Type.OBJECT, properties: {
   videoId: { type: Type.STRING }, chapterId: { type: Type.STRING }, startTime: { type: Type.INTEGER }, endTime: { type: Type.INTEGER },
 }, required: ['videoId', 'chapterId', 'startTime', 'endTime'] };
 const mimTaskSchema = { type: Type.OBJECT, properties: {
-  label: { type: Type.STRING }, icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, correctChoiceIndex: { type: Type.INTEGER }, explanation: { type: Type.STRING },
+  label: { type: Type.STRING, maxLength: '240' }, icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, correctChoiceIndex: { type: Type.INTEGER, minimum: 0, maximum: 3 }, explanation: { type: Type.STRING, maxLength: '400' },
 }, required: ['label', 'icon', 'correctChoiceIndex', 'explanation'] };
 const mimMissionSchema = { type: Type.OBJECT, properties: {
-  title: { type: Type.STRING }, instruction: { type: Type.STRING }, hint: { type: Type.STRING }, reward: { type: Type.STRING },
-  icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, sourceRefs: { type: Type.ARRAY, items: mimSourceRefSchema },
-  choices: { type: Type.ARRAY, items: { type: Type.STRING } }, tasks: { type: Type.ARRAY, items: mimTaskSchema },
+  title: { type: Type.STRING, maxLength: '100' }, instruction: { type: Type.STRING, maxLength: '500' }, hint: { type: Type.STRING, maxLength: '300' }, reward: { type: Type.STRING, maxLength: '100' },
+  icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, sourceRefs: { type: Type.ARRAY, items: mimSourceRefSchema, minItems: '1', maxItems: '3' },
+  choices: { type: Type.ARRAY, items: { type: Type.STRING, maxLength: '160' }, minItems: '2', maxItems: '4' }, tasks: { type: Type.ARRAY, items: mimTaskSchema, minItems: '3', maxItems: '5' },
 }, required: ['title', 'instruction', 'hint', 'reward', 'icon', 'sourceRefs', 'choices', 'tasks'] };
 const mimGameSchema = { type: Type.OBJECT, properties: {
-  schemaVersion: { type: Type.INTEGER }, title: { type: Type.STRING }, intro: { type: Type.STRING }, sourceLabel: { type: Type.STRING },
-  missions: { type: Type.ARRAY, items: mimMissionSchema },
+  schemaVersion: { type: Type.INTEGER, minimum: 1, maximum: 1 }, title: { type: Type.STRING, maxLength: '120' }, intro: { type: Type.STRING, maxLength: '500' }, sourceLabel: { type: Type.STRING, maxLength: '160' },
+  missions: { type: Type.ARRAY, items: mimMissionSchema, minItems: '3', maxItems: '3' },
 }, required: ['schemaVersion', 'title', 'intro', 'sourceLabel', 'missions'] };
+
+const MIM_GAME_GENERATION_ATTEMPTS = 2;
 
 export async function generateLessonMimGame(sourcePack: MimSourcePack): Promise<MimGameContent> {
   const runtime = createRuntime();
-  const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
-    model: runtime.config.textModel,
-    contents: lessonMimGamePrompt(sourcePack),
-    config: { abortSignal, responseMimeType: 'application/json', responseSchema: mimGameSchema, maxOutputTokens: 8192 },
-  }));
-  const text = (response.text || '').trim();
-  if (!text) throw new Error('MIM_MODEL_INVALID');
-  return parseMimGameContent(text, sourcePack);
+  const basePrompt = lessonMimGamePrompt(sourcePack);
+  for (let attempt = 1; attempt <= MIM_GAME_GENERATION_ATTEMPTS; attempt++) {
+    const correction = attempt === 1 ? '' : '\n\nYour previous response was rejected by the strict contract. Regenerate from the source. Copy source IDs and timestamps exactly, return exactly 3 missions, 2-4 choices per mission, 3-5 tasks per mission, keep every field within the schema limits, and ensure every correctChoiceIndex exists in that mission choices array.';
+    const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
+      model: runtime.config.textModel,
+      contents: `${basePrompt}${correction}`,
+      config: { abortSignal, responseMimeType: 'application/json', responseSchema: mimGameSchema, maxOutputTokens: 8192 },
+    }));
+    const text = (response.text || '').trim();
+    try {
+      if (!text) throw new Error('MIM_MODEL_INVALID');
+      return parseMimGameContent(text, sourcePack);
+    } catch (error) {
+      if (!(error instanceof Error) || !/^MIM_/.test(error.message)) throw error;
+      if (attempt === MIM_GAME_GENERATION_ATTEMPTS) throw new Error('MIM_MODEL_INVALID', { cause: error });
+    }
+  }
+  throw new Error('MIM_MODEL_INVALID');
 }
 
 const srtPrompt = `You are an expert verbatim transcription AI for an educational platform.

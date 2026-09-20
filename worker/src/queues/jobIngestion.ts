@@ -122,8 +122,8 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
   }
 
   const { targetQueue, bullmqJobName, targetJobId, logicalJobId } = target;
-  const isGenerationJob = jobType === 'video analysis' || jobType === 'mind maps' || jobType === 'lesson game';
-  const queuedAlias = isGenerationJob
+  const usesQueuedAlias = jobType === 'video analysis' || jobType === 'mind maps';
+  const queuedAlias = usesQueuedAlias
     ? { logicalJobId, physicalJobId: targetJobId, queueName: targetQueue.name }
     : undefined;
   logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
@@ -165,7 +165,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     let attempts = 5;
     if (jobType === 'video analysis' || jobType === 'lesson game') attempts = 3;
     else if (isLiveSupportTurn) attempts = 4;
-    const queuedPayload = isGenerationJob
+    const queuedPayload = usesQueuedAlias
       ? { ...parsedPayload, logicalJobId }
       : parsedPayload;
     await targetQueue.add(bullmqJobName, queuedPayload, {

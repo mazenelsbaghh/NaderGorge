@@ -13,9 +13,11 @@ function queue(existingJob?: any, name = 'ai-video-chapters') {
   return instance;
 }
 let queueRef: ReturnType<typeof queue>;
+let lessonGameQueueRef: ReturnType<typeof queue>;
 
 function queues(existingJob?: any) {
   queueRef = queue(existingJob);
+  lessonGameQueueRef = queue(undefined, 'ai-lesson-games');
   return {
     aiQueue: queueRef,
     mindmapsQueue: queue(undefined, 'generate-chapter-mindmaps'),
@@ -23,7 +25,7 @@ function queues(existingJob?: any) {
     essayQueue: queue(undefined, 'ai-essay-grading'),
     liveSupportQueue: queue(undefined, 'ai-live-support-turns'),
     adminAIQueue: queue(undefined, 'ai-admin-agent-turns'),
-    lessonGameQueue: queue(undefined, 'ai-lesson-games'),
+    lessonGameQueue: lessonGameQueueRef,
   } as any;
 }
 
@@ -72,6 +74,28 @@ test('lesson game jobs map to their queue with game and run scoped identity', ()
   assert.equal(result?.bullmqJobName, 'generate-mim');
   assert.equal(result?.logicalJobId, gameId);
   assert.equal(result?.targetJobId, `${gameId}--run-${runId}`);
+});
+
+test('lesson game ingestion does not write an unsupported queued-job alias (2026-09-20 regression)', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    const gameId = '11111111-1111-4111-8111-111111111111';
+    const runId = '22222222-2222-4222-8222-222222222222';
+    const result = await ingestStreamJob(redisRef as any, queues(), '1-1', [
+      'jobType', 'lesson game', 'jobId', runId,
+      'payload', JSON.stringify({ gameId, runId }),
+    ]);
+
+    assert.equal(result.action, 'enqueued');
+    assert.equal(result.targetJobId, `${gameId}--run-${runId}`);
+    assert.equal(lessonGameQueueRef.added.length, 1);
+    assert.equal(redisRef.aliases.length, 0);
+    assert.deepEqual(redisRef.acked, ['1-1']);
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
 });
 
 test('ingestStreamJob acknowledges invalid JSON without enqueue', async () => {
