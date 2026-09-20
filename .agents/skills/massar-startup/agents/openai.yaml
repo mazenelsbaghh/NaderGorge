@@ -1,6 +1,0 @@
-interface:
-  display_name: "Massar Startup"
-  short_description: "Sync server repairs before local project edits"
-  default_prompt: "Use $massar-startup before changing this Massar project."
-policy:
-  allow_implicit_invocation: true
