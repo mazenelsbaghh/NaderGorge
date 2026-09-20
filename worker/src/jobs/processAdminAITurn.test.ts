@@ -73,10 +73,13 @@ test('cancellation before claim prevents all callback and provider work', async 
 
 test('2026-08-20 processor completes with the lease renewed during inference', async () => {
   const context = claim(); let renewedLease = ''; let completion: Record<string, unknown> | undefined;
+  let releaseProvider!: () => void;
+  const renewalObserved = new Promise<void>(resolve => { releaseProvider = resolve; });
   const callback = clients(context, async (_turnId, payload) => { completion = payload; return {}; });
   callback.renew = async (_turnId, payload) => {
     assert.equal(payload.workerInstanceId, 'worker-forwarded');
     renewedLease = `renewed-${crypto.randomUUID()}`;
+    releaseProvider();
     return { turnVersion: context.expectedTurnVersion, leaseToken: renewedLease };
   };
   await createAdminAITurnProcessor({
@@ -84,7 +87,7 @@ test('2026-08-20 processor completes with the lease renewed during inference', a
     workerInstanceId: 'worker-forwarded',
     runAgent: (agentContext, callbacks, options) => runAdminAIAgent(agentContext, callbacks, {
       ...options,
-      provider: async () => { await new Promise(resolve => setTimeout(resolve, 25)); return { text: JSON.stringify(agentResult.decision) }; },
+      provider: async () => { await renewalObserved; return { text: JSON.stringify(agentResult.decision) }; },
       model: 'test',
       leaseRenewIntervalMs: 5,
     }),
