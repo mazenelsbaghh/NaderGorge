@@ -13,5 +13,7 @@ The owner selected build scope `all` after the release plan detected changes in 
 - The worker validates lesson source copy as bounded untrusted input instead of applying rendered-output URL/markup rules to it, and accepts all non-empty .NET GUID forms before model generation.
 - The backend serializes the nested MIM lesson source with the worker's camel-case field contract, so valid analyzed chapters reach generation instead of being rejected before the AI request.
 - The MIM provider schema stays fixed-size for analyzed parts with many chapters; exact source identifiers remain enforced by the worker's post-response grounding check and bounded correction attempt.
+- MIM preview and student play now enter the 3D world immediately without the redundant “start adventure” page.
+- The MIM overlay exposes real browser fullscreen, requests landscape orientation where the device supports it, and gives touch phones a clear rotate prompt with a compact landscape HUD.
 
 Planned verification: backend application tests, frontend lint and production build, worker tests and build, database migration guard, release preview, rolling three-node deployment, and final cluster health.
