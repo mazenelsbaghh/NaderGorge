@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.MimGames;
 using NaderGorge.Application.Features.Content.Queries;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
@@ -11,6 +12,29 @@ namespace NaderGorge.Application.Tests.MimGames;
 
 public class MimGameStateTests
 {
+    [Fact]
+    public async Task Generation_EnqueuesWorkerSourcePackWithCamelCaseContract()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (lesson, game) = await SeedAsync(db);
+        var videoId = await db.LessonVideos.Select(video => video.Id).SingleAsync();
+        db.LessonMimGames.Remove(game);
+        await db.SaveChangesAsync();
+        var jobs = new RecordingJobs();
+
+        var result = await new GenerateLessonMimGameCommandHandler(db, jobs)
+            .Handle(new(lesson.Id, videoId), default);
+
+        Assert.True(result.Success);
+        using var payload = JsonDocument.Parse(jobs.PayloadJson!);
+        var sourcePack = payload.RootElement.GetProperty("sourcePack");
+        Assert.Equal(lesson.Id, sourcePack.GetProperty("lessonId").GetGuid());
+        Assert.False(sourcePack.TryGetProperty("LessonId", out _));
+        var sourceVideo = sourcePack.GetProperty("videos")[0];
+        Assert.Equal(videoId, sourceVideo.GetProperty("id").GetGuid());
+        Assert.True(sourceVideo.GetProperty("chapters")[0].TryGetProperty("startTime", out _));
+    }
+
     [Fact]
     public async Task Completion_UpdatesDraftButNeverRepublishesOrEnables()
     {
@@ -280,5 +304,17 @@ public class MimGameStateTests
         public Task<IReadOnlySet<Guid>> GetViewableLessonIdsAsync(Guid userId, IReadOnlyCollection<Guid> lessonIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlySet<Guid>>(lessonIds.ToHashSet());
         public Task<IReadOnlySet<Guid>> GetViewableLessonVideoIdsAsync(Guid userId, IReadOnlyCollection<Guid> lessonVideoIds, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlySet<Guid>>(lessonVideoIds.ToHashSet());
         public Task<bool> CanAcquireAsync(NaderGorge.Domain.Enums.ContentArchiveTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
+
+    private sealed class RecordingJobs : IJobEnqueuer
+    {
+        public string? PayloadJson { get; private set; }
+        public Task EnqueueJobAsync<T>(string queueName, string jobName, T data)
+        {
+            Assert.Equal("ai-lesson-game-queue", queueName);
+            Assert.Equal("generate-mim", jobName);
+            PayloadJson = JsonSerializer.Serialize(data);
+            return Task.CompletedTask;
+        }
     }
 }

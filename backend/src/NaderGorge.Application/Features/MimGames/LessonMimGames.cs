@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -70,9 +71,22 @@ public static class MimGameContract
         !Uri.TryCreate(value, UriKind.Absolute, out _);
 }
 
-public sealed record MimSourceChapter(Guid Id, string Title, string Summary, int StartTime, int EndTime);
-public sealed record MimSourceVideo(Guid Id, int SourceRevision, string Title, IReadOnlyList<MimSourceChapter> Chapters);
-public sealed record MimSourcePack(Guid LessonId, string LessonTitle, string OutputLanguage, IReadOnlyList<MimSourceVideo> Videos);
+public sealed record MimSourceChapter(
+    [property: JsonPropertyName("id")] Guid Id,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("summary")] string Summary,
+    [property: JsonPropertyName("startTime")] int StartTime,
+    [property: JsonPropertyName("endTime")] int EndTime);
+public sealed record MimSourceVideo(
+    [property: JsonPropertyName("id")] Guid Id,
+    [property: JsonPropertyName("sourceRevision")] int SourceRevision,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("chapters")] IReadOnlyList<MimSourceChapter> Chapters);
+public sealed record MimSourcePack(
+    [property: JsonPropertyName("lessonId")] Guid LessonId,
+    [property: JsonPropertyName("lessonTitle")] string LessonTitle,
+    [property: JsonPropertyName("outputLanguage")] string OutputLanguage,
+    [property: JsonPropertyName("videos")] IReadOnlyList<MimSourceVideo> Videos);
 public sealed record MimSourceResult(bool Success, string? Error, string? Fingerprint, MimSourcePack? Pack, IReadOnlyList<string> MissingVideos);
 
 public static class MimGameSource

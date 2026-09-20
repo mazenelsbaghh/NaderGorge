@@ -11,5 +11,6 @@ The owner selected build scope `all` after the release plan detected changes in 
 - MIM generation now restricts AI source identifiers to analyzed chapters and rewrites the chosen chapter reference to the server-owned video identity and timestamps before validation.
 - MIM generation requires four non-empty choices and non-empty required copy in the provider schema, keeping every generated answer index valid; rejected responses emit only their allowlisted contract code for diagnosis.
 - The worker validates lesson source copy as bounded untrusted input instead of applying rendered-output URL/markup rules to it, and accepts all non-empty .NET GUID forms before model generation.
+- The backend serializes the nested MIM lesson source with the worker's camel-case field contract, so valid analyzed chapters reach generation instead of being rejected before the AI request.
 
 Planned verification: backend application tests, frontend lint and production build, worker tests and build, database migration guard, release preview, rolling three-node deployment, and final cluster health.
