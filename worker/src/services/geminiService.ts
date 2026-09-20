@@ -81,15 +81,15 @@ const mimSourceRefSchema = { type: Type.OBJECT, properties: {
   videoId: { type: Type.STRING }, chapterId: { type: Type.STRING }, startTime: { type: Type.INTEGER }, endTime: { type: Type.INTEGER },
 }, required: ['videoId', 'chapterId', 'startTime', 'endTime'] };
 const mimTaskSchema = { type: Type.OBJECT, properties: {
-  label: { type: Type.STRING, maxLength: '240' }, icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, correctChoiceIndex: { type: Type.INTEGER, minimum: 0, maximum: 3 }, explanation: { type: Type.STRING, maxLength: '400' },
+  label: { type: Type.STRING, minLength: '1', maxLength: '240' }, icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, correctChoiceIndex: { type: Type.INTEGER, minimum: 0, maximum: 3 }, explanation: { type: Type.STRING, minLength: '1', maxLength: '400' },
 }, required: ['label', 'icon', 'correctChoiceIndex', 'explanation'] };
 const mimMissionSchema = { type: Type.OBJECT, properties: {
-  title: { type: Type.STRING, maxLength: '100' }, instruction: { type: Type.STRING, maxLength: '500' }, hint: { type: Type.STRING, maxLength: '300' }, reward: { type: Type.STRING, maxLength: '100' },
+  title: { type: Type.STRING, minLength: '1', maxLength: '100' }, instruction: { type: Type.STRING, minLength: '1', maxLength: '500' }, hint: { type: Type.STRING, minLength: '1', maxLength: '300' }, reward: { type: Type.STRING, minLength: '1', maxLength: '100' },
   icon: { type: Type.STRING, enum: [...MIM_GAME_ICONS] }, sourceRefs: { type: Type.ARRAY, items: mimSourceRefSchema, minItems: '1', maxItems: '3' },
-  choices: { type: Type.ARRAY, items: { type: Type.STRING, maxLength: '160' }, minItems: '2', maxItems: '4' }, tasks: { type: Type.ARRAY, items: mimTaskSchema, minItems: '3', maxItems: '5' },
+  choices: { type: Type.ARRAY, items: { type: Type.STRING, minLength: '1', maxLength: '160' }, minItems: '4', maxItems: '4' }, tasks: { type: Type.ARRAY, items: mimTaskSchema, minItems: '3', maxItems: '5' },
 }, required: ['title', 'instruction', 'hint', 'reward', 'icon', 'sourceRefs', 'choices', 'tasks'] };
 const mimGameSchema = { type: Type.OBJECT, properties: {
-  schemaVersion: { type: Type.INTEGER, minimum: 1, maximum: 1 }, title: { type: Type.STRING, maxLength: '120' }, intro: { type: Type.STRING, maxLength: '500' }, sourceLabel: { type: Type.STRING, maxLength: '160' },
+  schemaVersion: { type: Type.INTEGER, minimum: 1, maximum: 1 }, title: { type: Type.STRING, minLength: '1', maxLength: '120' }, intro: { type: Type.STRING, minLength: '1', maxLength: '500' }, sourceLabel: { type: Type.STRING, minLength: '1', maxLength: '160' },
   missions: { type: Type.ARRAY, items: mimMissionSchema, minItems: '3', maxItems: '3' },
 }, required: ['schemaVersion', 'title', 'intro', 'sourceLabel', 'missions'] };
 
@@ -117,8 +117,9 @@ export async function generateLessonMimGame(sourcePack: MimSourcePack): Promise<
   const runtime = createRuntime();
   const basePrompt = lessonMimGamePrompt(sourcePack);
   const responseSchema = mimGameSchemaFor(sourcePack);
+  let priorContractCode = '';
   for (let attempt = 1; attempt <= MIM_GAME_GENERATION_ATTEMPTS; attempt++) {
-    const correction = attempt === 1 ? '' : '\n\nYour previous response was rejected by the strict contract. Regenerate from the source. Copy source IDs and timestamps exactly, return exactly 3 missions, 2-4 choices per mission, 3-5 tasks per mission, keep every field within the schema limits, and ensure every correctChoiceIndex exists in that mission choices array.';
+    const correction = attempt === 1 ? '' : `\n\nYour previous response was rejected by the strict contract (${priorContractCode}). Regenerate from the source. Copy source IDs exactly, return exactly 3 missions, exactly 4 non-empty choices per mission, 3-5 tasks per mission, keep every required text field non-empty and within the schema limits, and use correctChoiceIndex 0-3.`;
     const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
       model: runtime.config.textModel,
       contents: `${basePrompt}${correction}`,
@@ -130,6 +131,8 @@ export async function generateLessonMimGame(sourcePack: MimSourcePack): Promise<
       return parseMimGameContent(text, sourcePack);
     } catch (error) {
       if (!(error instanceof Error) || !/^MIM_/.test(error.message)) throw error;
+      priorContractCode = error.message;
+      console.warn('[lesson-mim-ai] Rejected structured model response.', { attempt, contractCode: priorContractCode });
       if (attempt === MIM_GAME_GENERATION_ATTEMPTS) throw new Error('MIM_MODEL_INVALID', { cause: error });
     }
   }
