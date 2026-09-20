@@ -135,6 +135,30 @@ class ProducerTransport:
         )
 
 
+class TimeoutRecordingTransport(ProducerTransport):
+    def __init__(self, payload: dict[str, object]) -> None:
+        super().__init__(payload)
+        self.primary_probe_timeouts: list[int] = []
+
+    def run(self, target, command, **kwargs):
+        if command[0] == "curl":
+            self.primary_probe_timeouts.append(kwargs["timeout_seconds"])
+        return super().run(target, command, **kwargs)
+
+
+def test_20260920_primary_probe_allows_slow_strict_ssh_handshakes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cluster = inventory(monkeypatch, tmp_path)
+    transport = TimeoutRecordingTransport({})
+
+    primary = runner.select_primary(cluster, transport)
+
+    assert primary.id == "node-2"
+    assert transport.primary_probe_timeouts == [45, 45, 45]
+
+
 def test_runner_uses_real_primary_operation_and_emits_consumer_valid_gate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
