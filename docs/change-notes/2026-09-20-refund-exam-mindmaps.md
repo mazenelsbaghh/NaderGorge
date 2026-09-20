@@ -7,5 +7,6 @@ The owner selected build scope `all` after the release plan detected changes in 
 - Essays without a teacher answer key move to teacher review instead of retrying AI grading indefinitely, and AI grading uses the configured text model.
 - Published chapter mind maps remain visible to students even when optional video-learning tools are disabled or stale.
 - Lesson MIM game jobs no longer enter an unsupported queued-alias path, and contract-invalid Gemini output receives one bounded correction attempt before failing safely. The owner's existing `all` build-scope selection applies to this follow-up production repair.
+- The release migration gate allows enough time for the observed strict-SSH handshake before probing Patroni, while retaining the five-second remote health deadline and exact-one-primary requirement.
 
 Planned verification: backend application tests, frontend lint and production build, worker tests and build, database migration guard, release preview, rolling three-node deployment, and final cluster health.

@@ -19,6 +19,7 @@ RELEASE = re.compile(r"^(?:git-[0-9a-f]{40}|src-[0-9a-f]{40})$")
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 OPERATION_ID = re.compile(r"^gate-[0-9a-f]{32}$")
+PATRONI_PROBE_TIMEOUT_SECONDS = 45
 
 
 class GatePreparationError(RuntimeError):
@@ -66,7 +67,7 @@ def select_primary(inventory: Inventory, transport: Transport) -> Node:
                 "curl", "--fail", "--silent", "--show-error",
                 "--max-time", "5", "http://127.0.0.1:8008/primary",
             ),
-            timeout_seconds=15,
+            timeout_seconds=PATRONI_PROBE_TIMEOUT_SECONDS,
             check=False,
         )
         if completed.returncode == 0:
