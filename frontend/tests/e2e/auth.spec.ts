@@ -31,6 +31,14 @@ test.describe('Auth and Access Flow', () => {
     }, deviceFingerprint);
 
     expect(result, result.body).toMatchObject({ ok: true, status: 200 });
+    const payload = JSON.parse(result.body);
+    const session = payload.data ?? payload;
+    expect(session.accessToken).toBeTruthy();
+    expect(session.user).toBeTruthy();
+    await page.evaluate(({ accessToken, user }) => {
+      window.localStorage.setItem('accessToken', accessToken);
+      window.localStorage.setItem('user', JSON.stringify(user));
+    }, session);
   }
 
   test('T007: Reject invalid password logins', async ({ page }) => {
@@ -72,19 +80,25 @@ test.describe('Auth and Access Flow', () => {
     await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
   });
 
-  test('Phase 1: Hydrates auth from refresh cookie after token storage is empty', async ({ page }) => {
+  test('Phase 1: Hydrates a remembered user from refresh cookie after access token storage is empty', async ({ page }) => {
     await loginStudentViaBrowserApi(page);
 
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
       window.localStorage.removeItem('accessToken');
       window.sessionStorage.removeItem('accessToken');
-      window.localStorage.removeItem('user');
-      window.sessionStorage.removeItem('user');
     });
 
+    const refreshRequests: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && request.url().endsWith('/api/auth/refresh')) refreshRequests.push(request.url());
+    });
+    const refreshed = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/api/auth/refresh'));
     await page.goto('http://app.lvh.me:3000/student');
+    expect((await refreshed).status()).toBe(200);
     await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
     await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('navigation', { name: 'القائمة الرئيسية', exact: true })).toBeVisible();
+    expect(refreshRequests).toHaveLength(1);
   });
 
   test('Phase 1: Forbidden route does not clear authenticated session', async ({ page }) => {

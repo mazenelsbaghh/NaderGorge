@@ -78,6 +78,141 @@ def select_primary(inventory: Inventory, transport: Transport) -> Node:
     return primaries[0]
 
 
+
+# These snapshots live only inside the isolated restored database. Comparing full
+# rows preserves the original ledger while allowing the reviewed appended repair.
+FUNDING_SNAPSHOT_SQL = r"""
+CREATE SCHEMA massar_gate_funding;
+DO $$ DECLARE name text; BEGIN
+  FOREACH name IN ARRAY ARRAY['teacher_financial_events','teacher_financial_allocations',
+    'financial_journal_entries','financial_journal_lines','teacher_accounts','sales_financial_effects',
+    'teacher_financial_agreements'] LOOP
+    EXECUTE format('CREATE TABLE massar_gate_funding.%I AS TABLE public.%I', name, name);
+  END LOOP;
+END $$;
+CREATE TABLE massar_gate_funding.migration_state AS
+SELECT count(*) FILTER (WHERE "MigrationId"='20260918213500_CorrectTeacherPaidFunding') AS applied,
+ count(*) FILTER (WHERE "MigrationId"='20260914135411_ActivateTeacherPlatformFeeDefaults') AS activation
+FROM "__EFMigrationsHistory";
+"""
+
+FUNDING_VALIDATION_SQL = r"""
+CREATE TEMP TABLE gate_corrections AS
+SELECT e."Id" event_id, e."IdempotencyKey" correction_key, original."SourceId" purchase_id,
+  original."StudentId" student_id, a."TeacherId" teacher_id, a."Id" original_allocation_id,
+  a."AgreementId" agreement_id, a."AgreementAllocationMode" agreement_mode,
+  a."PriceBasis" price_basis, a."AllocationValue" fee,
+  (SELECT sum(u."Amount") FROM promotional_balance_usages u
+    JOIN promotional_balance_allocations p ON p."Id"=u."AllocationId"
+    JOIN gift_recipients r ON r."Id"=p."GiftRecipientId"
+    WHERE u."PurchaseOperationId"::text=original."DetailsJson"::jsonb->>'fundingOperationId'
+      AND p."TeacherId"=a."TeacherId" AND r."OutcomeCode"='DIGITAL_RECHARGE') scoped_paid,
+  original."PaidAmount" old_paid, a."TeacherShareAmount" old_teacher,
+  original."TargetType" target_type, original."TargetId" target_id
+FROM teacher_financial_events e
+JOIN massar_gate_funding.teacher_financial_allocations a
+  ON a."Id"::text=e."DetailsJson"::jsonb->>'originalAllocationId'
+JOIN massar_gate_funding.teacher_financial_events original
+  ON original."Id"=a."TeacherFinancialEventId"
+WHERE NOT EXISTS (SELECT 1 FROM massar_gate_funding.teacher_financial_events old WHERE old."Id"=e."Id");
+ALTER TABLE gate_corrections ADD COLUMN teacher_delta numeric;
+ALTER TABLE gate_corrections ADD COLUMN platform_delta numeric;
+UPDATE gate_corrections SET teacher_delta=greatest(old_paid+scoped_paid-fee,0)-old_teacher;
+UPDATE gate_corrections SET platform_delta=scoped_paid-teacher_delta;
+DO $$ DECLARE name text; changed bigint; n bigint; BEGIN
+  SELECT count(*) INTO n FROM gate_corrections;
+  IF n > 0 AND ((SELECT applied FROM massar_gate_funding.migration_state) <> 0 OR
+    (SELECT count(*) FROM "__EFMigrationsHistory" WHERE "MigrationId"='20260918213500_CorrectTeacherPaidFunding') <> 1) THEN
+    RAISE EXCEPTION 'Funding gate: correction outside the reviewed migration';
+  END IF;
+  -- Original append-only rows and agreements must stay byte-for-byte intact.
+  FOREACH name IN ARRAY ARRAY['teacher_financial_events','teacher_financial_allocations',
+    'financial_journal_entries','financial_journal_lines'] LOOP
+    EXECUTE format('SELECT count(*) FROM massar_gate_funding.%I old LEFT JOIN public.%I current
+      ON current."Id"=old."Id" WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)',name,name) INTO changed;
+    IF changed <> 0 THEN RAISE EXCEPTION 'Funding gate: historical rows changed in %',name; END IF;
+  END LOOP;
+  IF (SELECT activation FROM massar_gate_funding.migration_state) =
+    (SELECT count(*) FROM "__EFMigrationsHistory" WHERE "MigrationId"='20260914135411_ActivateTeacherPlatformFeeDefaults')
+    AND EXISTS (SELECT 1 FROM massar_gate_funding.teacher_financial_agreements old
+      FULL JOIN teacher_financial_agreements current ON current."Id"=old."Id"
+      WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)) THEN
+    RAISE EXCEPTION 'Funding gate: agreements changed';
+  END IF;
+  IF (SELECT count(*) FROM teacher_financial_events) <>
+    (SELECT count(*) FROM massar_gate_funding.teacher_financial_events)+n OR
+    (SELECT count(DISTINCT original_allocation_id) FROM gate_corrections)<>n OR
+    EXISTS (SELECT 1 FROM gate_corrections c JOIN teacher_financial_events e ON e."Id"=c.event_id
+      WHERE c.teacher_id<>'2a0e7d2f-1dd7-4af0-9974-c999489899b2' OR c.agreement_id IS NULL
+        OR c.agreement_mode<>4 OR c.price_basis<>1 OR c.fee<=0 OR c.scoped_paid IS NULL OR c.scoped_paid<=0
+        OR c.teacher_delta<0 OR c.platform_delta<0
+        OR e."IdempotencyKey" IS DISTINCT FROM 'teacher-paid-funding-20260919:'||c.original_allocation_id::text
+        OR e."SourceId" IS DISTINCT FROM c.purchase_id OR e."StudentId" IS DISTINCT FROM c.student_id
+        OR e."SourceType"<>7 OR e."GrossAmount"<>0 OR e."PaidAmount"<>c.scoped_paid
+        OR e."PromotionalAmount"<>-c.scoped_paid OR e."PlatformShareAmount"<>c.platform_delta
+        OR e."Currency"<>'EGP' OR e."ReviewStatus"<>0
+        OR e."TargetType" IS DISTINCT FROM c.target_type OR e."TargetId" IS DISTINCT FROM c.target_id) THEN
+    RAISE EXCEPTION 'Funding gate: unexpected correction events';
+  END IF;
+  IF (SELECT count(*) FROM teacher_financial_allocations) <>
+    (SELECT count(*) FROM massar_gate_funding.teacher_financial_allocations)+n OR
+    EXISTS (SELECT 1 FROM gate_corrections c WHERE
+      (SELECT count(*) FROM teacher_financial_allocations a WHERE a."TeacherFinancialEventId"=c.event_id
+        AND a."TeacherId"=c.teacher_id AND a."TeacherShareAmount"=c.teacher_delta
+        AND a."PlatformShareAmount"=c.platform_delta AND a."GrossBasisAmount"=c.scoped_paid
+        AND a."AgreementId"=c.agreement_id AND a."AgreementAllocationMode"=c.agreement_mode
+        AND a."PriceBasis"=c.price_basis AND a."ReversedAmount"=0 AND a."ReviewStatus"=0
+        AND a."PayoutId" IS NULL AND a."SettlementLineId" IS NULL)<>1) THEN
+    RAISE EXCEPTION 'Funding gate: unexpected correction allocations';
+  END IF;
+  IF (SELECT count(*) FROM financial_journal_entries) <>
+    (SELECT count(*) FROM massar_gate_funding.financial_journal_entries)+(SELECT count(*) FROM gate_corrections WHERE platform_delta>0)
+    OR (SELECT count(*) FROM financial_journal_lines) <>
+    (SELECT count(*) FROM massar_gate_funding.financial_journal_lines)+2*(SELECT count(*) FROM gate_corrections WHERE platform_delta>0)
+    OR EXISTS (SELECT 1 FROM gate_corrections c WHERE c.platform_delta>0 AND
+      (SELECT count(*) FROM financial_journal_entries j WHERE j."IdempotencyKey"=c.correction_key
+        AND j."SourceType"='TeacherFundingCorrection' AND j."SourceId"=c.purchase_id AND j."Status"=1
+        AND j."PostingKind"='TeacherPaidFundingCorrection' AND j."ReversalOfId" IS NULL
+        AND (SELECT count(*) FROM financial_journal_lines l JOIN financial_accounts f ON f."Id"=l."FinancialAccountId"
+          WHERE l."JournalEntryId"=j."Id" AND l."StudentId"=c.student_id AND
+           ((f."Code"='2000' AND l."Debit"=c.platform_delta AND l."Credit"=0 AND l."TeacherId"=c.teacher_id)
+            OR (f."Code"='4000' AND l."Debit"=0 AND l."Credit"=c.platform_delta AND l."TeacherId" IS NULL)))=2)<>1) THEN
+    RAISE EXCEPTION 'Funding gate: unexpected correction journals';
+  END IF;
+  -- Build expected projections from the pre-migration values and proven cash.
+  UPDATE massar_gate_funding.sales_financial_effects s SET
+    "PaidAmount"=s."PaidAmount"+c.scoped_paid,"PromotionalAmount"=s."PromotionalAmount"-c.scoped_paid,
+    "TeacherShareImpact"=s."TeacherShareImpact"+c.teacher_delta,"PlatformShareImpact"=s."PlatformShareImpact"+c.platform_delta,
+    "DetailsJson"=(s."DetailsJson"::jsonb || jsonb_build_object('paidTeacherBalanceAmount',c.scoped_paid,'fundingCorrectionEventId',c.event_id))
+  FROM gate_corrections c WHERE s."PurchaseOperationId"=c.purchase_id;
+  GET DIAGNOSTICS changed = ROW_COUNT;
+  IF changed<>n THEN RAISE EXCEPTION 'Funding gate: missing or duplicate sales projection'; END IF;
+  UPDATE massar_gate_funding.teacher_accounts a SET
+    "TotalEarnings"=a."TotalEarnings"+c.amount,"CurrentBalance"=a."CurrentBalance"+c.amount,"Version"=a."Version"+1
+  FROM (SELECT teacher_id,sum(teacher_delta) amount FROM gate_corrections GROUP BY teacher_id) c
+  WHERE a."TeacherId"=c.teacher_id;
+  GET DIAGNOSTICS changed = ROW_COUNT;
+  IF changed<>(SELECT count(DISTINCT teacher_id) FROM gate_corrections) THEN
+    RAISE EXCEPTION 'Funding gate: missing teacher account';
+  END IF;
+  -- Ignore UpdatedAt only for rows whose financial adjustment is proven above.
+  UPDATE massar_gate_funding.sales_financial_effects old SET "UpdatedAt"=current."UpdatedAt"
+  FROM sales_financial_effects current,gate_corrections c
+  WHERE current."Id"=old."Id" AND old."PurchaseOperationId"=c.purchase_id;
+  UPDATE massar_gate_funding.teacher_accounts old SET "UpdatedAt"=current."UpdatedAt"
+  FROM teacher_accounts current WHERE current."Id"=old."Id"
+    AND old."TeacherId" IN (SELECT teacher_id FROM gate_corrections);
+  FOREACH name IN ARRAY ARRAY['teacher_accounts','sales_financial_effects'] LOOP
+    EXECUTE format('SELECT count(*) FROM massar_gate_funding.%I old FULL JOIN public.%I current
+      ON current."Id"=old."Id" WHERE to_jsonb(old) IS DISTINCT FROM to_jsonb(current)',name,name) INTO changed;
+    IF changed<>0 THEN RAISE EXCEPTION 'Funding gate: unexpected balance/projection change in %',name; END IF;
+  END LOOP;
+END $$;
+DROP TABLE gate_corrections;
+DROP SCHEMA massar_gate_funding CASCADE;
+"""
+
+
 def remote_producer_script(
     *,
     operation_id: str,
@@ -376,9 +511,12 @@ finance_activation_count() {{
   psql_restore -c 'select count(*) from "__EFMigrationsHistory" where "MigrationId" = '\''20260914135411_ActivateTeacherPlatformFeeDefaults'\'';'
 }}
 financial_events_hash() {{
-  psql_restore -c 'copy (select row_to_json(t)::text from teacher_financial_events t order by "Id") to stdout;' |
+  psql_restore -c 'copy (select row_to_json(t)::text from teacher_financial_events t JOIN massar_gate_funding.teacher_financial_events old USING ("Id") order by "Id") to stdout;' |
     sha256sum | awk '{{print $1}}'
 }}
+psql_restore <<'SQL'
+{FUNDING_SNAPSHOT_SQL}
+SQL
 pre_fee_activation="$(finance_activation_count)"
 pre_agreement_count="$(psql_restore -c 'select count(*) from teacher_financial_agreements;')"
 pre_financial_events_hash="$(financial_events_hash)"
@@ -393,7 +531,8 @@ psql_restore -c "
     and tablename not in (
       '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
       'teacher_profiles','teacher_subjects','subjects','thanaweya_results',
-      'teacher_financial_agreements'
+      'teacher_financial_agreements','teacher_financial_events','teacher_financial_allocations',
+      'financial_journal_entries','financial_journal_lines'
     )
   order by tablename;" > "$pre_unaffected_tables"
 pre_unaffected_hash="$(unaffected_counts_hash)"
@@ -491,6 +630,11 @@ if test "$pre_finance_preset_exists" = 0; then
        'ff2b0754-3dcd-4b33-85a9-f5869e0c2768') then 1
      when \"Id\" = '2a0e7d2f-1dd7-4af0-9974-c999489899b2' then 2 else 0 end;")" = 0
 fi
+stage="teacher-funding-validation"
+psql_restore <<'SQL'
+{FUNDING_VALIDATION_SQL}
+SQL
+post_migration_schema_hash="$(schema_hash)"
 stage="post-migration-validation"
 test "$(
   psql_restore -c "
@@ -777,14 +921,23 @@ def main() -> int:
         }))
         return 0
     transport = StrictSshTransport(args.known_hosts, args.identity)
-    payload = prepare(
-        inventory=inventory,
-        transport=transport,
-        release_id=args.release,
-        manifest_path=args.manifest,
-        output=args.output,
-        compatibility_manifest_path=args.n_minus_one_manifest,
-    )
+    try:
+        payload = prepare(
+            inventory=inventory,
+            transport=transport,
+            release_id=args.release,
+            manifest_path=args.manifest,
+            output=args.output,
+            compatibility_manifest_path=args.n_minus_one_manifest,
+        )
+    except (GatePreparationError, ReleaseContractError, OSError, ValueError):
+        if re.fullmatch(r"git-[a-f0-9]{40}", args.release):
+            from source_sync import mark_failed
+            try:
+                mark_failed(Path(__file__).resolve().parents[3], args.release[4:])
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                print("Source failure observation unavailable; reconcile publication", file=sys.stderr)
+        raise
     print(json.dumps({
         "status": "success",
         "release": payload["releaseId"],

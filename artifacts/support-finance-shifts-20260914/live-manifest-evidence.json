@@ -1,0 +1,63 @@
+{
+  "byteParity": true,
+  "capturedAt": "2026-09-14T18:56:48.727843Z",
+  "clusterId": "massar-production",
+  "images": {
+    "backend": "sha256:6f7edfec42fa2b1c22ec415d5164a69649f565084bc042d6878d7b8e5537611b",
+    "frontend": "sha256:4f4800badd2faac2b13d655bf76067aa9371f72e578352e200fc35b67766cb87",
+    "migrator": "sha256:1607e00867c99aaa05b8d4fdc86e8ccc43a89b3ecaab7bc70362c9c6773c7337",
+    "worker": "sha256:fc5d009b4cf73d45b901bef25875bf4c78d8eb9c575e0f798171b8c2070e985a"
+  },
+  "manifestSha256": "9bab38fe14333dec56680eefb0b4b209687e8df2bf17d7e5b956742a61673010",
+  "nodeCount": 3,
+  "nodes": {
+    "node-1": {
+      "actualImages": {
+        "backend": "sha256:6f7edfec42fa2b1c22ec415d5164a69649f565084bc042d6878d7b8e5537611b",
+        "frontend": "sha256:4f4800badd2faac2b13d655bf76067aa9371f72e578352e200fc35b67766cb87",
+        "migrator": "sha256:1607e00867c99aaa05b8d4fdc86e8ccc43a89b3ecaab7bc70362c9c6773c7337",
+        "worker": "sha256:fc5d009b4cf73d45b901bef25875bf4c78d8eb9c575e0f798171b8c2070e985a"
+      },
+      "manifestPath": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92/manifest.json",
+      "manifestSha256": "9bab38fe14333dec56680eefb0b4b209687e8df2bf17d7e5b956742a61673010",
+      "nodeLabel": "node-1",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "42c152164eeb8204b84470bb74aaaceca44ff26a48fec435a8972d6b700cb108",
+      "releaseRoot": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+      "resolutionMode": "current-pointer"
+    },
+    "node-2": {
+      "actualImages": {
+        "backend": "sha256:6f7edfec42fa2b1c22ec415d5164a69649f565084bc042d6878d7b8e5537611b",
+        "frontend": "sha256:4f4800badd2faac2b13d655bf76067aa9371f72e578352e200fc35b67766cb87",
+        "migrator": "sha256:1607e00867c99aaa05b8d4fdc86e8ccc43a89b3ecaab7bc70362c9c6773c7337",
+        "worker": "sha256:fc5d009b4cf73d45b901bef25875bf4c78d8eb9c575e0f798171b8c2070e985a"
+      },
+      "manifestPath": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92/manifest.json",
+      "manifestSha256": "9bab38fe14333dec56680eefb0b4b209687e8df2bf17d7e5b956742a61673010",
+      "nodeLabel": "node-2",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "42c152164eeb8204b84470bb74aaaceca44ff26a48fec435a8972d6b700cb108",
+      "releaseRoot": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+      "resolutionMode": "current-pointer"
+    },
+    "node-3": {
+      "actualImages": {
+        "backend": "sha256:6f7edfec42fa2b1c22ec415d5164a69649f565084bc042d6878d7b8e5537611b",
+        "frontend": "sha256:4f4800badd2faac2b13d655bf76067aa9371f72e578352e200fc35b67766cb87",
+        "migrator": "sha256:1607e00867c99aaa05b8d4fdc86e8ccc43a89b3ecaab7bc70362c9c6773c7337",
+        "worker": "sha256:fc5d009b4cf73d45b901bef25875bf4c78d8eb9c575e0f798171b8c2070e985a"
+      },
+      "manifestPath": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92/manifest.json",
+      "manifestSha256": "9bab38fe14333dec56680eefb0b4b209687e8df2bf17d7e5b956742a61673010",
+      "nodeLabel": "node-3",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "42c152164eeb8204b84470bb74aaaceca44ff26a48fec435a8972d6b700cb108",
+      "releaseRoot": "/opt/massar/releases/git-0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+      "resolutionMode": "current-pointer"
+    }
+  },
+  "releaseId": "git-0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+  "schemaVersion": 1,
+  "status": "success"
+}

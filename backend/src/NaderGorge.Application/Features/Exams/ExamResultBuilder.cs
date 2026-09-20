@@ -49,7 +49,11 @@ internal static class ExamResultBuilder
         bool revealCorrectAnswers,
         string? resultState = null)
     {
-        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
+        var awardedPoints = questionSnapshotsByQuestionId.Values.Sum(answer => answer.PointsAwarded);
+        var scale = AssessmentAttemptScaleNormalizer.Project(
+            attempt.DefinitionSnapshotJson, attempt.ExamId, attempt.ScoreAchieved,
+            attempt.IsPassed, attempt.IsTimeExpired, awardedPoints);
+        exam = AssessmentDefinitionSnapshot.ResolveExam(exam, scale.Definition.ToJson());
         var questionReviews = exam.ExamQuestions
             .OrderBy(q => q.Order)
             .Select(eq =>
@@ -81,9 +85,9 @@ internal static class ExamResultBuilder
 
         return new ExamResultDto(
             attempt.Id,
-            attempt.ScoreAchieved,
+            scale.ScoreAchieved,
             exam.TotalScore,
-            attempt.IsPassed,
+            scale.IsPassed,
             blocksNextLesson,
             attempt.Evaluation ?? "غير مقيم",
             attempt.IsTimeExpired,

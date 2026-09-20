@@ -60,6 +60,7 @@ public static class Seeder
                     defaultRole.AllowedDomain != "all")
                 {
                     existingRole.AllowedDomain = defaultRole.AllowedDomain;
+                    if (existingRole.Name == "Staff") existingRole.PermissionsJson = defaultRole.PermissionsJson;
                     addedAny = true;
                 }
             }

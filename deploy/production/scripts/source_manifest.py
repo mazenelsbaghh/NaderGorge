@@ -289,9 +289,16 @@ def gitlink_entry(
     path = repo / relative
     if not path.is_dir():
         raise ManifestSafetyError(f"{relative}: uninitialized-gitlink")
-    if git_bytes(path, "status", "--porcelain", "-z"):
-        raise ManifestSafetyError(f"{relative}: dirty-gitlink")
-    current_commit = git_bytes(path, "rev-parse", "HEAD").decode("ascii").strip()
+    # An empty worktree gitlink has no repository. Running Git there would inspect
+    # the parent and incorrectly reject unrelated local edits as submodule changes.
+    if not any(path.iterdir()):
+        current_commit = index_commit
+    else:
+        if not (path / ".git").exists():
+            raise ManifestSafetyError(f"{relative}: uninitialized-gitlink")
+        if git_bytes(path, "status", "--porcelain", "-z"):
+            raise ManifestSafetyError(f"{relative}: dirty-gitlink")
+        current_commit = git_bytes(path, "rev-parse", "HEAD").decode("ascii").strip()
     if not re.fullmatch(r"[0-9a-f]{40,64}", current_commit):
         raise ManifestSafetyError(f"{relative}: invalid-gitlink-commit")
     return {

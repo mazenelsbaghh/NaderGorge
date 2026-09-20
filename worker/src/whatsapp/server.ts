@@ -68,8 +68,29 @@ app.post('/sessions/:id/block', async (request, response) => {
 app.post('/sessions/:id/text', async (request, response) => {
   const text: unknown = request.body?.text;
   if (typeof text !== 'string' || text.length < 1 || text.length > 4000) { response.sendStatus(400); return; }
-  const message = await sessions.socket(request.params.id).sendMessage(contactJid(request.body?.number), { text });
+  const jid = contactJid(request.body?.number);
+  const replyId: unknown = request.body?.replyMessageId;
+  if (replyId !== undefined && (typeof replyId !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(replyId))) { response.sendStatus(400); return; }
+  const quoted = typeof replyId === 'string' ? {
+    key: { remoteJid: jid, id: replyId, fromMe: request.body?.replyFromMe === true },
+    message: { conversation: typeof request.body?.replyText === 'string' ? request.body.replyText.slice(0, 4000) : '' },
+  } : undefined;
+  const message = await sessions.socket(request.params.id).sendMessage(jid, { text }, quoted ? { quoted } : {});
   response.json({ key: message?.key });
+});
+app.post('/sessions/:id/message', async (request, response) => {
+  const id: unknown = request.body?.messageId;
+  const text: unknown = request.body?.text;
+  if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(id) ||
+      (text !== null && (typeof text !== 'string' || !text.trim() || text.length > 4000))) {
+    response.sendStatus(400); return;
+  }
+  const jid = contactJid(request.body?.number);
+  const key = { remoteJid: jid, id, fromMe: true };
+  const receipt = await sessions.socket(request.params.id).sendMessage(jid,
+    text === null ? { delete: key } : { text, edit: key });
+  if (!receipt?.key.id) { response.sendStatus(502); return; }
+  response.json({ accepted: true });
 });
 app.post('/sessions/:id/audio', async (request, response) => {
   const mimetype: unknown = request.body?.mimetype;

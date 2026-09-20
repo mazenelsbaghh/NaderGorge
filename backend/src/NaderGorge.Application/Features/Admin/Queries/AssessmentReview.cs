@@ -52,6 +52,16 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
     {
         if (!await AssessmentAccess.Allowed(db, auth, request.Target, ct))
             return ApiResponse<AssessmentReviewDto>.Fail("غير مصرح بعرض هذه الإجابات.");
+        if (request.Target.Kind == AssessmentKind.Exam)
+        {
+            var snapshot = await db.StudentExamAttempts
+                .Where(attempt => attempt.Id == request.Target.AttemptId
+                    && attempt.ExamId == request.Target.AssessmentId)
+                .Select(attempt => new { attempt.DefinitionSnapshotJson })
+                .SingleOrDefaultAsync(ct);
+            if (snapshot is not null && snapshot.DefinitionSnapshotJson is null)
+                return ApiResponse<AssessmentReviewDto>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
+        }
         var review = request.Target.Kind == AssessmentKind.Homework
             ? await HomeworkReview(request.Target, ct) : await ExamReview(request.Target, ct);
         if (review == null) return ApiResponse<AssessmentReviewDto>.Fail("المحاولة غير موجودة.");
@@ -82,7 +92,9 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
             .Include(a => a.Exam).ThenInclude(e => e.ExamQuestions).ThenInclude(q => q.Question).ThenInclude(q => q.Options)
             .SingleOrDefaultAsync(a => a.Id == target.AttemptId && a.ExamId == target.AssessmentId, ct);
         if (attempt == null) return null;
-        var definition = AssessmentDefinitionSnapshot.ResolveExam(attempt.Exam, attempt.DefinitionSnapshotJson);
+        if (attempt.DefinitionSnapshotJson is null) return null;
+        var scale = AssessmentAttemptScaleNormalizer.Project(attempt);
+        var definition = AssessmentDefinitionSnapshot.ResolveExam(attempt.Exam, scale.Definition.ToJson());
         var essays = await db.EssaySubmissions.AsNoTracking().Where(e => e.StudentExamAttemptId == attempt.Id).ToListAsync(ct);
         var assignedIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
         var questions = definition.ExamQuestions.Where(q => assignedIds.Contains(q.Id)).OrderBy(q => q.Order).Select(q =>
@@ -97,7 +109,7 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
                 q.Points, essay != null ? essay.TeacherFinalScore : answer?.PointsAwarded);
         }).ToList();
         var pending = essays.Any(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded);
-        return new(attempt.Id, attempt.User.FullName, definition.Title, attempt.ScoreAchieved, definition.TotalScore,
+        return new(attempt.Id, attempt.User.FullName, definition.Title, scale.ScoreAchieved, definition.TotalScore,
             pending ? "PendingReview" : attempt.Evaluation ?? "InProgress", attempt.Evaluation != null || essays.Count > 0, null, questions);
     }
 }

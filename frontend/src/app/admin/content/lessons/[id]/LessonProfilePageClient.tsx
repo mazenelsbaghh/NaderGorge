@@ -2,21 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles, Users } from 'lucide-react';
-import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentArchiveControl, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles, Users, Gamepad2 } from 'lucide-react';
+import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, HomeworkComingSoonSettings, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, LessonMimGameTab, ContentArchiveControl, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
 import { LessonInteractionsEditor } from '@/components/video-learning/LessonInteractionsEditor';
 
-type ActiveTab = 'interactions' | 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
+type ActiveTab = 'interactions' | 'overview' | 'videos' | 'ai-analysis' | 'mim-game' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: 'interactions', label: 'التفاعل والمراجعة', icon: MessageSquareText },
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
   { key: 'ai-analysis', label: 'تحليل AI', icon: Sparkles },
+  { key: 'mim-game', label: 'لعبة ميم', icon: Gamepad2 },
   { key: 'comments', label: 'التعليقات', icon: MessageSquareText },
   { key: 'subscribers', label: 'الطلاب المشتركون', icon: Users },
   { key: 'resources', label: 'المذكرات والملفات', icon: FileText },
@@ -225,6 +226,10 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
       {activeTab === 'ai-analysis' && (
         <LessonAIAnalysisTab lessonId={lesson.lessonId} videos={lesson.videos || []} onRefresh={loadData} />
+      )}
+
+      {activeTab === 'mim-game' && (
+        <LessonMimGameTab lessonId={lesson.lessonId} videos={lesson.videos || []} />
       )}
 
       {activeTab === 'comments' && (

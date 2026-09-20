@@ -49,7 +49,14 @@ def configure_main_boundaries(
     monkeypatch: pytest.MonkeyPatch,
     rollout_state: dict[str, object],
 ) -> None:
+    import source_sync
+    from release_contract import ReleaseManifest
     candidate_release = str(rollout_state["candidate_release"])
+    # Git transport boundary: this rollout fixture uses an already-published candidate.
+    monkeypatch.setattr(source_sync, "git", lambda _repo, *args: candidate_release[4:] + "\t" + source_sync.REF)
+    class Transport:
+        def run(self, *_args, **_kwargs):
+            return SimpleNamespace(returncode=0, stdout="")
     cluster_inventory = inventory()
 
     class SuccessfulLock:
@@ -139,7 +146,10 @@ def configure_main_boundaries(
     monkeypatch.setattr(
         deploy,
         "load_release_manifest",
-        lambda _path, _release: SimpleNamespace(
+        lambda _path, _release: ReleaseManifest(
+            path=Path('/tmp/manifest.json'), release_id=candidate_release,
+            git_commit=candidate_release[4:], source_state_sha256=None,
+            provenance_type='git', release_files_sha256='e' * 64,
             images={
                 name: f"sha256:{index:064x}"
                 for index, name in enumerate(
@@ -154,7 +164,7 @@ def configure_main_boundaries(
         "load_migration_safety_gate",
         lambda *_args, **_kwargs: migration_gate,
     )
-    monkeypatch.setattr(deploy, "StrictSshTransport", lambda *_args: object())
+    monkeypatch.setattr(deploy, "StrictSshTransport", lambda *_args: Transport())
     monkeypatch.setattr(deploy, "RolloutLock", SuccessfulLock)
     monkeypatch.setattr(
         deploy,
@@ -410,3 +420,21 @@ def test_post_drain_predeploy_failure_returns_unchanged_node_to_service(
         ("node-3", "undrain"),
     ]
     assert set(current_rollout["traffic_states"].values()) == {"UP"}
+
+
+def test_ingress_reconciliation_failure_releases_rollout_lock(monkeypatch):
+    state = rollout_state()
+    configure_main_boundaries(monkeypatch, state)
+    events = []
+    class Lock:
+        def __init__(self, *_args): pass
+        def acquire(self): events.append('acquired')
+        def release(self): events.append('released')
+    def fail(**_kwargs):
+        raise deploy.DeployError('ingress unavailable')
+    monkeypatch.setattr(deploy, 'RolloutLock', Lock)
+    monkeypatch.setattr(deploy, 'reconcile_inconsistent_ingress_traffic', fail)
+    with pytest.raises(deploy.DeployError, match='ingress unavailable'):
+        deploy.main()
+    assert events == ['acquired', 'released']
+    assert state['deploy_calls'] == []

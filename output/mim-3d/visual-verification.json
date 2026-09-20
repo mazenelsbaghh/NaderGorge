@@ -1,0 +1,42 @@
+{
+  "scope": "Local museum gameplay prototype; no production deployment",
+  "visual_changes": [
+    "Detailed Mim mesh and backpack",
+    "Sculpted fossil, compass, scales and cat statue",
+    "Textured stone and decorated doorway",
+    "Reflected floor, warm lighting and subtle bloom",
+    "Miniature receiver buildings",
+    "Portrait camera and readable mobile puzzle text"
+  ],
+  "verification": {
+    "syntax": "All local game modules passed node --check",
+    "imports": "All relative module paths resolve",
+    "browser": "No new console errors or warnings after final reload",
+    "desktop_viewport": [
+      1280,
+      720
+    ],
+    "portrait_viewport": [
+      390,
+      844
+    ],
+    "flow": "Continued saved first seal, completed remaining seven connections, collected all three seals, opened door and restored completed progress on reload",
+    "mobile": "Puzzle text and controls visible; successful connection exercised",
+    "movement": "Click-to-move exercised"
+  },
+  "limitations": [
+    "Procedural stylized 3D assets, not pixel-identical to concept art",
+    "Mobile hardware frame rate has not been benchmarked",
+    "Island and city remain concept art; this pass improves the existing museum game"
+  ],
+  "texture": {
+    "path": "assets/limestone.png",
+    "prompt": "assets/limestone-prompt.json",
+    "generator": "built-in image_gen"
+  },
+  "screenshots": [
+    "gameplay-polished.png",
+    "puzzle-polished.png",
+    "gameplay-mobile.png"
+  ]
+}

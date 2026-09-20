@@ -216,18 +216,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     void (async () => {
       try {
-        const { authService } = await import('@/services/auth-service');
-        const response = await authService.refresh();
-        const payload = response.data.data;
-        clearQueriesForBoundaryTransition(get().user, payload.user);
-        setAccessToken(payload.accessToken);
-        persistAuthSession({ user: payload.user, accessToken: null }, true);
-        set({
-          user: payload.user,
-          accessToken: payload.accessToken,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        const previousUser = get().user;
+        // Bootstrap and requests share one rotation of the single-use refresh cookie.
+        const { refreshAccessToken } = await import('@/services/api-client');
+        const accessToken = await refreshAccessToken();
+        const user = get().user;
+        if (!user || get().accessToken !== accessToken) return;
+        clearQueriesForBoundaryTransition(previousUser, user);
+        persistAuthSession({ user, accessToken: null }, true);
       } catch {
         if (storedAuth?.user) {
           clearStoredAuth();

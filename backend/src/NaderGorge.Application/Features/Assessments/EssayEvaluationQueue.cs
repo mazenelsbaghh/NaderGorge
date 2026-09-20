@@ -11,8 +11,9 @@ public static class EssayEvaluationQueue
     public static void Enqueue(IAppDbContext db, EssaySubmission essay, string questionText, string? expectedAnswer)
     {
         if (essay.Status != EssaySubmissionStatus.WaitAI) return;
-        // The text evaluator cannot assess an attached recording.
-        if (!string.IsNullOrWhiteSpace(essay.AudioUrl))
+        // Audio still needs a teacher. Text answers can be graded from the question
+        // itself when a legacy question has no authored answer key.
+        if (!string.IsNullOrWhiteSpace(essay.AudioUrl) || string.IsNullOrWhiteSpace(questionText))
         {
             essay.Status = EssaySubmissionStatus.WaitTeacher;
             essay.AiNextRetryAt = null;
@@ -26,7 +27,7 @@ public static class EssayEvaluationQueue
             {
                 essaySubmissionId = essay.Id, questionId = essay.QuestionId, studentId = essay.StudentId,
                 questionText, answerText = essay.AnswerText,
-                expectedAnswer = expectedAnswer ?? string.Empty
+                expectedAnswer = expectedAnswer?.Trim() ?? string.Empty
             })
         });
     }

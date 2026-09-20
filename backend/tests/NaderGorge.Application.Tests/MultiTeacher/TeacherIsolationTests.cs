@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Application.Services;
@@ -238,7 +239,12 @@ public class TeacherIsolationTests
         var exam = new Exam { CreatedByTeacherId = profileA.Id, TotalScore = 10, PassingScore = 5 };
         exam.ExamQuestions.Add(new ExamQuestion { Question = question, Points = 10 });
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Essay student", "01033333333");
-        var attempt = new StudentExamAttempt { Exam = exam, UserId = student.Id };
+        var attempt = new StudentExamAttempt
+        {
+            Exam = exam,
+            UserId = student.Id,
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
+        };
         db.StudentExamAttempts.Add(attempt);
 
         var submission = new EssaySubmission

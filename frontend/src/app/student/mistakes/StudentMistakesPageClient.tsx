@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowUpLeft, BookX, Bug, ChevronLeft, ShieldCheck } from "lucide-react";
 
+import { HomeworkMistakes } from "@/components/homework/HomeworkMistakes";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { studentService, type StudentMistakesDto } from "@/services/student-service";
 
@@ -12,14 +13,20 @@ export default function StudentMistakesPageClient() {
   const router = useRouter();
   const [data, setData] = useState<StudentMistakesDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [retry, setRetry] = useState(0);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    studentService
-      .getMistakes()
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, []);
+    let active = true;
+    setLoading(true);
+    setLoadError(false);
+    studentService.getMistakes(page * 10)
+      .then(response => { if (active) setData(response); })
+      .catch(() => { if (active) setLoadError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, retry]);
 
   if (loading) {
     return (
@@ -33,12 +40,20 @@ export default function StudentMistakesPageClient() {
     );
   }
 
+  if (loadError) return <div role="alert" className="space-y-3 p-6">
+    <p>تعذر تحميل أخطائك. بياناتك محفوظة، حاول مرة أخرى.</p>
+    <button type="button" className="min-h-11 font-bold underline" onClick={() => setRetry(count => count + 1)}>إعادة المحاولة</button>
+  </div>;
+
   const mistakes = data ?? {
     totalExamMistakes: 0,
     examsWithMistakes: 0,
     weakHomeworkCount: 0,
     examMistakes: [],
     homeworkWeaknesses: [],
+    totalHomeworkMistakes: 0,
+    homeworkMistakes: [],
+    hasMore: false,
   };
 
   return (
@@ -54,7 +69,7 @@ export default function StudentMistakesPageClient() {
               أخطائي ونقط ضعفي
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--admin-muted)] sm:text-base">
-              هنا هتلاقي كل الأسئلة اللي غلطت فيها في الامتحانات، والواجبات اللي محتاجة شغل أكتر. الفكرة إنك تعرف إيه اللي محتاج تراجعه الأول.
+              هنا هتلاقي الأسئلة اللي غلطت فيها في الامتحانات والواجبات، حتى لو نجحت فيها، والواجبات اللي محتاجة متابعة. الفكرة إنك تعرف إيه اللي محتاج تراجعه الأول.
             </p>
           </div>
 
@@ -75,7 +90,14 @@ export default function StudentMistakesPageClient() {
         </div>
       </section>
 
+      <nav aria-label="صفحات الأخطاء" className="flex items-center justify-between gap-3">
+        <button type="button" disabled={page === 0} onClick={() => setPage(index => index - 1)} className="min-h-11 px-4 font-bold disabled:opacity-40">السابق</button>
+        <span>صفحة {page + 1}</span>
+        <button type="button" disabled={!mistakes.hasMore} onClick={() => setPage(index => index + 1)} className="min-h-11 px-4 font-bold disabled:opacity-40">التالي</button>
+      </nav>
       <LearningReviewList />
+
+      <HomeworkMistakes groups={mistakes.homeworkMistakes ?? []} total={mistakes.totalHomeworkMistakes ?? 0} />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">

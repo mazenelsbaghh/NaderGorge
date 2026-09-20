@@ -1,8 +1,10 @@
+using NaderGorge.Application.Features.Assessments;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities.Homework;
 
 namespace NaderGorge.Application.Features.Student.Queries;
 
@@ -13,7 +15,10 @@ public record StudentMistakesDto(
     int ExamsWithMistakes,
     int WeakHomeworkCount,
     List<ExamMistakeGroupDto> ExamMistakes,
-    List<HomeworkWeaknessDto> HomeworkWeaknesses
+    List<HomeworkWeaknessDto> HomeworkWeaknesses,
+    int TotalHomeworkMistakes,
+    List<HomeworkMistakeGroupDto> HomeworkMistakes,
+    bool HasMore
 );
 
 public record ExamMistakeGroupDto(
@@ -61,14 +66,21 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
     private readonly IAppDbContext _db;
     private readonly IAcademicScopeService _academicScope;
 
-    public GetMistakesQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    private readonly IAccessCheckService _access;
+    private readonly IContentArchiveAccessService _archiveAccess;
+
+    public GetMistakesQueryHandler(IAppDbContext db, IAcademicScopeService academicScope,
+        IAccessCheckService access, IContentArchiveAccessService archiveAccess)
     {
         _db = db;
         _academicScope = academicScope;
+        _access = access;
+        _archiveAccess = archiveAccess;
     }
 
     public async Task<ApiResponse<StudentMistakesDto>> Handle(GetMistakesQuery request, CancellationToken ct)
     {
+        request = request with { Skip = Math.Max(0, request.Skip), Take = Math.Clamp(request.Take, 1, 50) };
         var mistakeExamIds = await _db.StudentAnswers
             .AsNoTracking()
             .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
@@ -146,18 +158,18 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 .Where(a => attemptIds.Contains(a.StudentExamAttemptId))
                 .ToListAsync(ct);
 
+        foreach (var attempt in attempts)
+            attempt.Answers = answers.Where(answer => answer.StudentExamAttemptId == attempt.Id).ToList();
+
         var examById = exams.ToDictionary(e => e.Id);
         var lessonByExamId = lessons
             .Where(l => l.ExamId.HasValue)
             .GroupBy(l => l.ExamId!.Value)
             .ToDictionary(g => g.Key, g => g.First());
         var attemptsById = attempts.ToDictionary(a => a.Id);
-        var passedExamIds = await _db.StudentExamAttempts
-            .AsNoTracking()
-            .Where(a => a.UserId == request.UserId && a.IsPassed && pagedExamIds.Contains(a.ExamId))
-            .Select(a => a.ExamId)
-            .Distinct()
-            .ToListAsync(ct);
+        var passedExamIds = attempts.Where(attempt => attempt.DefinitionSnapshotJson is not null
+                && AssessmentAttemptScaleNormalizer.Project(attempt).IsPassed)
+            .Select(attempt => attempt.ExamId).Distinct().ToList();
         var passedExamsSet = passedExamIds.ToHashSet();
 
         var examMistakeGroups = answers
@@ -173,6 +185,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     .Where(a => a.ExamId == group.Key)
                     .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
                     .FirstOrDefault();
+                var latestScale = latestAttempt?.DefinitionSnapshotJson is null
+                    ? null : AssessmentAttemptScaleNormalizer.Project(latestAttempt);
 
                 var items = group
                     .GroupBy(answer => answer.ExamQuestionId)
@@ -221,8 +235,8 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     passedExamsSet.Contains(group.Key),
                     items.Max(item => item.LastMissedAt),
                     items.Sum(item => item.TimesMissed),
-                    latestAttempt?.ScoreAchieved,
-                    latestAttempt == null ? null : exam.TotalScore,
+                    latestScale?.ScoreAchieved,
+                    latestScale?.Definition.TotalScore,
                     latestAttempt?.Evaluation,
                     items
                 );
@@ -305,13 +319,38 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .Take(request.Take)
             .ToList();
 
+        var homeworkMistakes = await ReadHomeworkMistakesAsync(request.UserId, homeworkLessons.ToDictionary(entry => entry.Key, entry => entry.Value.PackageId), ct);
         return ApiResponse<StudentMistakesDto>.Ok(new StudentMistakesDto(
             totalExamMistakes,
             examsWithMistakes,
             weakHomeworkCount,
             examMistakeGroups,
-            weakHomework
+            weakHomework,
+            homeworkMistakes.Sum(group => group.Items.Count),
+            homeworkMistakes.Skip(request.Skip).Take(request.Take).ToList(),
+            Math.Max(examsWithMistakes, Math.Max(weakHomeworkCount, homeworkMistakes.Count)) > request.Skip + request.Take
         ));
+    }
+
+    private async Task<List<HomeworkMistakeGroupDto>> ReadHomeworkMistakesAsync(
+        Guid userId, Dictionary<Guid, Guid?> eligibleLessonIds, CancellationToken ct)
+    {
+        var accessibleLessonIds = await _access.GetAccessibleLessonIdsAsync(userId, eligibleLessonIds.Keys.ToList(), ct);
+        var submissions = await _db.HomeworkSubmissions.AsNoTracking()
+            .Where(submission => submission.StudentId == userId && submission.Status == SubmissionStatus.Graded
+                && accessibleLessonIds.Contains(submission.Homework.LessonId) && submission.Homework.IsActive)
+            .Include(submission => submission.Answers)
+            .Include(submission => submission.Homework).ThenInclude(homework => homework.Questions)
+            .OrderByDescending(submission => submission.SubmittedAt).ThenBy(submission => submission.Id)
+            .ToListAsync(ct);
+        var groups = new List<HomeworkMistakeGroupDto>();
+        foreach (var submission in submissions)
+        {
+            if (!await _archiveAccess.CanViewAsync(userId, ContentArchiveTargetType.Homework, submission.HomeworkId, ct)) continue;
+            var review = HomeworkMistakeReview.Create(submission, eligibleLessonIds.GetValueOrDefault(submission.Homework.LessonId));
+            if (review.Items.Count > 0) groups.Add(review);
+        }
+        return groups;
     }
 
     private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(

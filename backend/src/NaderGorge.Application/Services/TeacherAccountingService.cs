@@ -46,6 +46,8 @@ public record TeacherFinancialEventInput(
     decimal TeacherDiscountAmount = 0m
 );
 
+public sealed record TeacherRefundScope(Guid PurchaseOperationId, decimal Fraction);
+
 public class TeacherAccountingService
 {
     private sealed record ApprovedTeacherCredit(Guid TeacherId, decimal Amount);
@@ -148,8 +150,10 @@ public class TeacherAccountingService
         Guid targetId,
         Guid sourceId,
         string reason,
-        CancellationToken ct)
+        CancellationToken ct, TeacherRefundScope? refundScope = null)
     {
+        if (refundScope is { Fraction: <= 0m or > 1m })
+            throw new InvalidOperationException("FINANCE_INVALID_REFUND_FRACTION");
         var idempotencyKey = $"teacher-reversal:{sourceId}:{studentId}:{targetType}:{targetId}";
         var existing = await _db.TeacherFinancialEvents
             .AnyAsync(e => e.IdempotencyKey == idempotencyKey, ct);
@@ -158,11 +162,13 @@ public class TeacherAccountingService
             return 0;
         }
 
+        var purchaseOperationId = refundScope?.PurchaseOperationId;
         var allocations = await _db.TeacherFinancialAllocations
             .Include(a => a.TeacherFinancialEvent)
             .Where(a => a.TeacherFinancialEvent.StudentId == studentId
                 && a.TeacherFinancialEvent.TargetType == targetType
                 && a.TeacherFinancialEvent.TargetId == targetId
+                && (!purchaseOperationId.HasValue || a.TeacherFinancialEvent.SourceId == purchaseOperationId.Value)
                 && a.TeacherShareAmount > a.ReversedAmount
                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Reversed
                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Debt
@@ -184,11 +190,11 @@ public class TeacherAccountingService
             StudentId = studentId,
             TargetType = targetType,
             TargetId = targetId,
-            GrossAmount = -allocations.Sum(a => a.GrossBasisAmount),
+            GrossAmount = -decimal.Round(allocations.Sum(a => a.GrossBasisAmount) * (refundScope?.Fraction ?? 1m), 2),
             DiscountAmount = 0m,
             PaidAmount = 0m,
             PromotionalAmount = 0m,
-            PlatformShareAmount = -allocations.Sum(a => a.PlatformShareAmount),
+            PlatformShareAmount = -decimal.Round(allocations.Sum(a => a.PlatformShareAmount) * (refundScope?.Fraction ?? 1m), 2),
             IdempotencyKey = idempotencyKey,
             DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { reason }),
             OccurredAt = DateTime.UtcNow,
@@ -198,16 +204,17 @@ public class TeacherAccountingService
 
         foreach (var allocation in allocations)
         {
-            var remainingShare = allocation.TeacherShareAmount - allocation.ReversedAmount;
+            var remainingShare = Math.Min(allocation.TeacherShareAmount - allocation.ReversedAmount,
+                decimal.Round(allocation.TeacherShareAmount * (refundScope?.Fraction ?? 1m), 2));
             reversalEvent.Allocations.Add(new TeacherFinancialAllocation
             {
                 Id = Guid.NewGuid(),
                 TeacherId = allocation.TeacherId,
                 AllocationMode = TeacherAllocationMode.Reversal,
                 AllocationValue = remainingShare,
-                GrossBasisAmount = -allocation.GrossBasisAmount,
+                GrossBasisAmount = -decimal.Round(allocation.GrossBasisAmount * (refundScope?.Fraction ?? 1m), 2),
                 TeacherShareAmount = -remainingShare,
-                PlatformShareAmount = -allocation.PlatformShareAmount,
+                PlatformShareAmount = -decimal.Round(allocation.PlatformShareAmount * (refundScope?.Fraction ?? 1m), 2),
                 StudentNameSnapshot = allocation.StudentNameSnapshot,
                 StudentPhoneSnapshot = allocation.StudentPhoneSnapshot,
                 ContentNameSnapshot = allocation.ContentNameSnapshot,
@@ -246,11 +253,14 @@ public class TeacherAccountingService
                 }
             }
 
-            allocation.ReversedAmount = allocation.TeacherShareAmount;
-            allocation.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
-            allocation.PayoutStatus = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid
-                ? TeacherFinancialPayoutStatus.Debt
-                : TeacherFinancialPayoutStatus.Reversed;
+            allocation.ReversedAmount += remainingShare;
+            if (allocation.ReversedAmount == allocation.TeacherShareAmount)
+            {
+                allocation.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
+                allocation.PayoutStatus = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid
+                    ? TeacherFinancialPayoutStatus.Debt
+                    : TeacherFinancialPayoutStatus.Reversed;
+            }
             allocation.UpdatedAt = DateTime.UtcNow;
         }
 

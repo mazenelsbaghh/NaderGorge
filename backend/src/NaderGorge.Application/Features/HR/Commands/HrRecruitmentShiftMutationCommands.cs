@@ -94,7 +94,7 @@ public sealed class HrRecruitmentShiftMutationHandler(IAppDbContext db) :
         if (errors.Count > 0) return ApiResponse<Guid>.Fail("Invalid segments", errors.ToList());
         var source = assignment.ShiftTemplate;
         var replacement = new ShiftTemplate { Code = $"EDIT-{Guid.NewGuid():N}", Name = $"جدول أسبوعي: {assignment.Employee?.User?.FullName ?? source.Name}",
-            Mode = source.Mode, WorkCalendarId = source.WorkCalendarId, GraceMinutes = source.GraceMinutes,
+            Mode = source.Mode, WorkCalendarId = source.WorkCalendarId, GraceMinutes = 0,
             MinimumBreakMinutes = source.MinimumBreakMinutes, OvertimeAfterMinutes = source.OvertimeAfterMinutes, Segments = segments };
         db.ShiftTemplates.Add(replacement); assignment.ShiftTemplateId = replacement.Id; assignment.EffectiveFrom = request.EffectiveFrom;
         assignment.EffectiveTo = request.EffectiveTo; assignment.Reason = request.Reason.Trim(); assignment.PublishedByUserId = request.ActorUserId; assignment.PublishedAt = DateTime.UtcNow;

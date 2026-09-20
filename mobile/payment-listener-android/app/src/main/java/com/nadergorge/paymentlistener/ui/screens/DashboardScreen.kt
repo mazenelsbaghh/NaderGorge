@@ -169,7 +169,29 @@ private val dashboardTabs = listOf(
     DashboardTab("الإعدادات", Icons.Filled.Settings)
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val Navy = Color(0xFF0A1D3D)
+private val Teal = Color(0xFF0E8F8F)
+private val Gold = Color(0xFFD4A017)
+private val OffWhite = Color(0xFFF6F7F8)
+private val SoftGray = Color(0xFFEEF1F4)
+private val LineGray = Color(0xFFDCE1E6)
+private val DarkGray = Color(0xFF2E3A47)
+private val Success = Color(0xFF16A06A)
+private val Danger = Color(0xFFD94A4A)
+
+private data class DashboardTab(
+    val title: String,
+    val icon: ImageVector
+)
+
+private val dashboardTabs = listOf(
+    DashboardTab("الرئيسية", Icons.Filled.Home),
+    DashboardTab("المحافظ", Icons.Filled.CreditCard),
+    DashboardTab("التحصيلات", Icons.Filled.Payments),
+    DashboardTab("الحساب", Icons.Filled.AccountCircle)
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun DashboardScreen(
     prefManager: PreferenceManager,

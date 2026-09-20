@@ -1,0 +1,81 @@
+/* Gameplay controls remain anchored to the viewport, clear of the world targets. */
+body:not(.immersive) .game-actions > button:not(#settingsButton) { display: none; }
+.immersive header { background: none; height: 86px; left: auto; padding: 18px 24px; gap: 20px; }
+.immersive .brand { text-shadow: 0 2px 10px #0a1828; font-size: 34px; }
+.immersive .brand span { display: none; }
+.game-actions { display: flex; gap: 9px; align-items: center; }
+.immersive header .icon-button { width: 45px; height: 45px; min-height: 44px; padding: 0; border: 1px solid #efe0b2b3; border-radius: 50%; background: #122537dd; color: #fff0c9; font: 26px Georgia, serif; box-shadow: 0 3px 10px #0005, inset 0 0 0 3px #122537; }
+.immersive #hint { color: #fbd881; }
+.icon-button[aria-pressed="true"] { border-color: #75e2d6; }
+.player-hud { position: absolute; z-index: 9; top: 20px; left: 24px; direction: ltr; width: 260px; color: #fff1d3; filter: drop-shadow(0 3px 7px #09141a99); }
+.player-vitals { display: flex; align-items: center; gap: 12px; }
+.portrait { width: 76px; height: 78px; overflow: hidden; border: 2px solid #bcdfd7; border-radius: 27px 27px 23px 23px; background: radial-gradient(ellipse at 50% 25%, #51c0b9, #0c4d65); box-shadow: inset 0 0 0 4px #092b41, 0 3px 0 #0b1929; position: relative; flex-shrink: 0; }
+.portrait img { position: absolute; width: 139px; max-width: none; height: 139px; object-fit: contain; left: -32px; top: -3px; }
+.vital-bars { flex: 1; padding-top: 3px; }
+.hearts { display: flex; gap: 7px; height: 39px; align-items: center; }
+.heart { font: 38px/1 Georgia, serif; }
+.heart.full { color: #ff756b; text-shadow: 0 2px 0 #922f34, 0 -1px 0 #ffd2a9; }
+.heart.empty { color: #dfebe4; opacity: .65; }
+.journey-track { background: #071d2c; padding: 3px; border: 1px solid #c7ddd0; border-radius: 30px; box-shadow: 0 2px 0 #071722; }
+.journey-track progress { display: block; appearance: none; width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; background: #183e4e; }
+.journey-track progress::-webkit-progress-bar { background: #183e4e; }
+.journey-track progress::-webkit-progress-value { background: linear-gradient(#93f2d9, #1aafa9); border-radius: 8px; }
+.journey-track progress::-moz-progress-bar { background: #60dbbd; }
+.journey-caption { display: block; font-size: 10px; padding-top: 4px; direction: ltr; text-align: left; color: #dfdfc7; }
+.inventory { margin-top: 13px; }
+.inventory .seals { justify-content: flex-start; gap: 10px; }
+.inventory .seal { width: 64px; height: 68px; border: 1px dashed #e5d4a18c; border-radius: 12px; background: #10283ac7; color: #b3b3a85c; font: 35px Georgia, serif; box-shadow: inset 0 0 0 4px #0a1c2980; }
+.inventory .seal.earned { color: #fbd47d; border: 1px solid #d8b772; background: radial-gradient(#43534b, #10283a); text-shadow: 0 0 14px #ffc95d80; }
+.inventory-caption { display: block; font-size: 10px; color: #ddd5b9; margin-top: 7px; text-align: left; }
+.immersive .quest-bar { top: 98px; right: 26px; width: 270px; background: linear-gradient(90deg, #10263800, #102638b3); border: 0; border-right: 2px solid #d8b772; border-radius: 0; padding: 8px 14px; box-shadow: none; }
+.immersive .quest-bar b { color: #ffe9b6; font-size: 14px; }
+.immersive .quest-bar #questText { color: #e0d9c9; font-size: 11px; }
+.immersive .world3d { min-height: 540px; }
+.immersive .world3d::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px 25px #05152350; z-index: 1; }
+.immersive .station .marker { box-shadow: 0 0 22px #65dfc450; border-color: #ecdbb2; }
+.immersive .station-label { background: #112a3adb; color: #f4e4bf; border: 1px solid #c5af7533; }
+.immersive .movement-pad { opacity: .7; bottom: 84px; }
+.immersive .world-bottom { bottom: 26px; padding: 0 25px; }
+.immersive .world-bottom span { font-size: 10px; color: #f1e5cd; text-shadow: 0 1px 4px #081728; }
+.immersive .world-bottom .primary { border: 1px solid #e1c38f; background: #153e4c; box-shadow: inset 0 0 0 3px #12313e; color: #ffe5b1; }
+.immersive .game-footer { bottom: 3px; right: 25px; font-size: 9px; opacity: .65; }
+.immersive .wheel-hud { bottom: 35px; background: #102738f2; border: 1px solid #b99c6366; box-shadow: 0 10px 30px #0005; }
+.pause-layer { z-index: 20; background: #0b2239ed; color: #f4e4c5; }
+.pause-layer p { color: #d3dcd5; }
+.rest-heart { font: 80px Georgia, serif; color: #ff8678; }
+button:focus-visible { outline: 3px solid #ffdda0; outline-offset: 4px; }
+@media (max-width: 700px) {
+ .immersive header { padding: 12px; height: 66px; gap: 9px; }
+ .immersive .brand { font-size: 25px; }
+ .game-actions { gap: 6px; }
+ .immersive header .icon-button { width: 44px; height: 44px; font-size: 23px; }
+ .player-hud { top: 80px; left: 12px; width: 210px; }
+ .portrait { width: 57px; height: 61px; border-radius: 20px; }
+ .portrait img { width: 112px; height: 112px; left: -29px; top: -3px; }
+ .heart { font-size: 30px; }
+ .hearts { height: 32px; }
+ .inventory { margin-top: 9px; }
+ .inventory .seal { width: 46px; height: 49px; font-size: 28px; }
+ .inventory-caption { display: none; }
+ .immersive .quest-bar { top: 217px; right: 12px; left: auto; width: 205px; padding: 6px 10px; }
+ .immersive .world3d { min-height: 650px; }
+ .immersive .world-bottom { padding: 0 12px; }
+ .immersive .world-bottom span { max-width: 160px; font-size: 9px; }
+ .wheel-hud .wheel-actions { flex-wrap: wrap; }
+}
+@media (max-height: 540px) and (min-width: 701px) {
+ .immersive .world3d { min-height: 100svh; }
+ .player-hud { transform: scale(.8); transform-origin: top left; }
+}
+
+@media (max-width: 700px) {
+ .journey-caption { display: inline-block; line-height: 1.5; padding: 1px 4px; background: #102638c9; border-radius: 3px; }
+ .immersive .quest-bar { top: 205px; width: 175px; }
+}
+@media (max-width: 700px) {
+ .wheel-hud #wheelTask { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; font-size: 14px; margin: 3px 0 8px; }
+}
+.immersive .victory-world { top: auto; bottom: 86px; left: auto; right: 24px; transform: none; font-size: 16px; padding: 12px 18px; color: #ffe6ad; background: #102638e6; border: 1px solid #ae9156; }
+@media (max-width: 700px) {
+ .immersive .victory-world { bottom: 170px; right: 12px; max-width: calc(100% - 24px); font-size: 13px; }
+}

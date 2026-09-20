@@ -54,6 +54,7 @@ public interface IAppDbContext
     DbSet<ContentSection> ContentSections { get; }
     DbSet<Lesson> Lessons { get; }
     DbSet<LessonVideo> LessonVideos { get; }
+    DbSet<LessonMimGame> LessonMimGames { get; }
     DbSet<VideoType> VideoTypes { get; }
     DbSet<BunnyStreamLibrary> BunnyStreamLibraries { get; }
     DbSet<BunnyVideoAsset> BunnyVideoAssets { get; }

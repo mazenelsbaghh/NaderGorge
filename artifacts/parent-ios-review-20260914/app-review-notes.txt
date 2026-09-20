@@ -1,0 +1,11 @@
+Build 1.0 (15) addresses the Guideline 2.1(a) issue reported for build 14. The non-functional Scan QR code control has been removed. Parents link a student by entering the six-digit follow-up code using the on-screen keypad. The support action now opens our support page. This build also prevents obsolete dashboard responses from being displayed after switching students.
+
+Purpose and audience: Masar Parent Follow-up is for parents/guardians of students enrolled with Massar Academy. It shows student academic progress, attendance/watch progress, examinations, homework, warnings and notifications. Parents can link more than one student and switch between their profiles.
+
+Access: Launch the app, continue past onboarding, enter the existing reviewer code shown in the saved App Store Connect Notes, tap Continue, then confirm the student. No username/password or account registration is needed. The code was verified against our live service on September 14, 2026. Students are linked or removed locally; the app does not create a new student account.
+
+Services: Our HTTPS backend at api.massar-academy.net provides authentication and academic data. Apple Push Notification service delivers notifications. The support page is massar-academy.net/faq. Linking is available without granting notification permission.
+
+Validation for this build: eight automated XCTest cases passed, live API responses were successfully decoded using the production Swift API client and models, and release builds installed and launched on iPhone 17 Pro Max and iPad Air 11-inch (M3) simulators running iOS 26.5. This run did not include a physical-device test or a complete interactive simulator walkthrough. The physical-device recording supplied on August 24 remains in the review correspondence and represents the earlier build.
+
+The previously supplied regional and content-authorization information remains in the August 24 correspondence. This update changes bug fixes, not the app's target audience or content sources.

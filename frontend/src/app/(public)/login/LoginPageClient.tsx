@@ -16,43 +16,30 @@
 
 import '../auth.css';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
+import { StudentLogin } from './StudentLogin';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
-import { LoginForm } from '@/components/forms/LoginForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
-import { getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
+import { getRoleDestination, getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
 
-const CompactRegistrationInstructionsDialog = dynamic(
-  () =>
-    import(
-      '@/components/registration/CompactRegistrationInstructionsDialog'
-    ).then((module) => module.CompactRegistrationInstructionsDialog),
-  { ssr: false },
+const StaffLogin = dynamic(
+  () => import('./StaffLogin').then((module) => module.StaffLogin),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="auth-shell flex min-h-[100dvh] items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]">
+        <p role="status" aria-live="polite" aria-busy="true" className="font-bold">
+          جارٍ تجهيز صفحة تسجيل الدخول…
+        </p>
+      </div>
+    ),
+  },
 );
-
-function getLoginCopy(surface: string) {
-  let title = 'بوابة الطالب';
-  let description = 'ادخل مباشرة إلى دروسك، واجباتك، ومتابعة تقدمك الدراسي.';
-
-  if (surface === 'teacher') {
-    title = 'بوابة المعلم';
-    description = 'إدارة المحاضرات، الامتحانات، ومتابعة تقارير الطلاب.';
-  } else if (surface === 'assistant') {
-    title = 'بوابة المساعدين والموظفين';
-    description = 'متابعة المهام اليومية، طلبات الحضور، وإدارة شؤون الطلاب.';
-  } else if (surface === 'admin') {
-    title = 'بوابة الإدارة';
-    description = 'إدارة المنصة بالكامل، إعدادات النظام، والصلاحيات.';
-  }
-
-  return { title, description };
-}
 
 export default function LoginPageClient() {
   const router = useRouter();
@@ -60,8 +47,6 @@ export default function LoginPageClient() {
 
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const surface = getSurfaceName();
-  const loginCopy = getLoginCopy(surface);
-  const [showLoginInstructions, setShowLoginInstructions] = useState(true);
   const authThemeVars = {
     ...themeVars,
     '--admin-footer': isDark ? '#d1c5b4' : '#0E8F8F',
@@ -84,22 +69,7 @@ export default function LoginPageClient() {
       const roles = user?.roles || [];
       const allowedDomains = user?.allowedDomains || [];
 
-      // Default destinations
-      let defaultDestination = `${origins.student}/student`;
-      const hasAdmin = allowedDomains.includes('admin') || roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
-      const hasTeacher = allowedDomains.includes('teacher') || roles.some(r => r.toLowerCase().includes('teacher'));
-      const hasAssistant = allowedDomains.includes('assistant') || roles.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
-      const isEmployee = roles.some(r => r.toLowerCase() === 'employee');
-
-      if (hasAdmin) {
-        defaultDestination = `${origins.admin}/admin`;
-      } else if (hasTeacher) {
-        defaultDestination = `${origins.teacher}/teacher`;
-      } else if (isEmployee) {
-        defaultDestination = `${origins.assistant}/employee`;
-      } else if (hasAssistant) {
-        defaultDestination = `${origins.assistant}/assistant`;
-      }
+      const defaultDestination = getRoleDestination(roles, allowedDomains, origins);
 
       const navigation = resolveReturnNavigation({
         returnUrl,
@@ -150,109 +120,9 @@ export default function LoginPageClient() {
     );
   }
 
-  let welcomeText = 'دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.';
-  if (surface === 'teacher') {
-    welcomeText = 'التحكم الكامل بمجموعاتك، طلابك، وتقارير أدائهم.';
-  } else if (surface === 'assistant') {
-    welcomeText = 'إدارة العمليات اليومية وتسهيل شؤون الطلاب.';
-  } else if (surface === 'admin') {
-    welcomeText = 'اللوحة القيادية المتكاملة لإدارة النظام والتحكم بالصلاحيات.';
+  if (surface === 'student' || surface === 'landing' || surface === 'all') {
+    return <StudentLogin isDark={isDark} onToggleTheme={toggleTheme} />;
   }
 
-  return (
-    <div
-      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]"
-      style={authThemeVars}
-    >
-      <div className="auth-shell__glow pointer-events-none">
-        <div className="auth-shell__glow-top" />
-        <div className="auth-shell__glow-bottom" />
-      </div>
-
-      <div className="auth-theme-bar">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={
-            isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
-          }
-          title={
-            isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
-          }
-          className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card-soft)]"
-        >
-          <span aria-hidden="true" className="text-xl leading-none">
-            {isDark ? '☀' : '☾'}
-          </span>
-        </button>
-      </div>
-
-      <main className="auth-login-main">
-        <section className="auth-login-card" aria-labelledby="login-page-title">
-          <header className="auth-login-heading">
-            <div className="auth-login-logo">
-              <PlatformLogo
-                variant="mark"
-                size="md"
-                tone={isDark ? 'light' : 'dark'}
-                priority
-              />
-            </div>
-            <div>
-              <p className="auth-login-brand">منصة مسار</p>
-              <h1 id="login-page-title">{loginCopy.title}</h1>
-              <p>{loginCopy.description}</p>
-            </div>
-          </header>
-
-          <div className="auth-login-body">
-            <aside className="auth-login-intro" aria-label="عن منصة مسار">
-              <h2>خطوتك التالية تبدأ من حسابك</h2>
-              <p>{welcomeText}</p>
-              <Link href="/" className="auth-login-home-link">
-                العودة إلى الصفحة الرئيسية
-              </Link>
-            </aside>
-
-            <div className="auth-login-panel">
-              <h2>تسجيل الدخول إلى حسابك</h2>
-              <LoginForm />
-
-              {(surface === 'student' ||
-                surface === 'landing' ||
-                surface === 'all') && (
-                <>
-                  <div className="auth-divider" />
-                  <p
-                    className="text-center text-sm"
-                    style={{ color: 'var(--admin-muted)' }}
-                  >
-                    ليس لديك حساب؟{' '}
-                    <Link
-                      href="/register"
-                      className="font-bold transition-colors hover:opacity-80"
-                      style={{ color: 'var(--admin-primary)' }}
-                    >
-                      إنشاء حساب طالب
-                    </Link>
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <p className="auth-footer-caption">© 2026 منصة مسار</p>
-      </main>
-
-      {showLoginInstructions ? <CompactRegistrationInstructionsDialog
-        open
-        mode="login"
-        title="تعليمات مهمة قبل تسجيل الدخول"
-        subtitle="هذه التعليمات تخص استخدام حسابك الحالي، وليست تعليمات إنشاء حساب جديد."
-        confirmLabel="فهمت، متابعة لتسجيل الدخول"
-        onClose={() => setShowLoginInstructions(false)}
-      /> : null}
-    </div>
-  );
+  return <StaffLogin surface={surface} isDark={isDark} themeVars={authThemeVars} onToggleTheme={toggleTheme} />;
 }

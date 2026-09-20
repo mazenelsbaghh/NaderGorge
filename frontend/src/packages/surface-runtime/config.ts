@@ -19,6 +19,20 @@ export interface SurfaceOrigins {
   mainDomain: string;
 }
 
+export function getRoleDestination(
+  roles: readonly string[],
+  allowedDomains: readonly string[],
+  origins: SurfaceOrigins,
+): string {
+  const normalizedRoles = roles.map((role) => role.toLowerCase());
+  const hasRole = (fragment: string) => normalizedRoles.some((role) => role.includes(fragment));
+  if (allowedDomains.includes('admin') || hasRole('admin') || hasRole('supervisor')) return `${origins.admin}/admin`;
+  if (allowedDomains.includes('teacher') || hasRole('teacher')) return `${origins.teacher}/teacher`;
+  if (normalizedRoles.includes('employee')) return `${origins.assistant}/employee`;
+  if (allowedDomains.includes('assistant') || hasRole('assistant') || hasRole('staff')) return `${origins.assistant}/assistant`;
+  return `${origins.student}/student`;
+}
+
 export interface RouteBoundaryInput {
   surface: SurfaceName;
   pathname: string;

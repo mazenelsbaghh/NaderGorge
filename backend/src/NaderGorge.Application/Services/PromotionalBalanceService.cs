@@ -86,6 +86,7 @@ public sealed class PromotionalBalanceService : IPromotionalBalanceService
         await ExpireAvailableAsync(studentId, ct);
         var operationId = Guid.NewGuid();
         var remaining = price;
+        var paidTeacherBalanceAmount = 0m;
         var allocationIds = new List<Guid>();
         var allocations = await _db.PromotionalBalanceAllocations
             .Include(x => x.GiftRecipient)
@@ -155,11 +156,17 @@ public sealed class PromotionalBalanceService : IPromotionalBalanceService
 
             allocationIds.Add(allocation.Id);
             remaining -= amount;
+            // A teacher-scoped digital recharge is cash funding, despite sharing gift storage.
+            if (allocation.GiftRecipient.OutcomeCode == "DIGITAL_RECHARGE")
+                paidTeacherBalanceAmount += amount;
         }
 
         await _db.SaveChangesAsync(ct);
         await CompleteFinishedIssuancesAsync(allocations.Select(x => x.GiftRecipient.GiftIssuanceId).Distinct(), ct);
-        return new PromotionalFundingResult(operationId, price - remaining, remaining, allocationIds);
+        return new PromotionalFundingResult(operationId, price - remaining, remaining, allocationIds)
+        {
+            PaidTeacherBalanceAmount = paidTeacherBalanceAmount
+        };
     }
 
     private async Task CompleteFinishedIssuancesAsync(IEnumerable<Guid> issuanceIds, CancellationToken ct)

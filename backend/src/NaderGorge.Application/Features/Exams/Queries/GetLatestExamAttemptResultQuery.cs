@@ -28,7 +28,7 @@ public class GetLatestExamAttemptResultQueryHandler
     {
         if (!await _access.HasAccessToExamAsync(request.UserId, request.ExamId, ct))
         {
-            return ApiResponse<ExamResultDto>.Fail("You do not have access to this exam.");
+            return ApiResponse<ExamResultDto>.Fail("You do not have access to this exam.", ["You do not have access"]);
         }
 
         var attemptId = await _db.StudentExamAttempts

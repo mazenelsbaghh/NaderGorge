@@ -1,0 +1,25 @@
+Mim local playtest — 2026-09-14
+
+Start from repository root:
+python3 -m http.server 8766 --bind 127.0.0.1 --directory output/mim-playtest
+Open http://127.0.0.1:8766/
+
+Scope: standalone local browser prototype, three missions / ten matching tasks.
+Lesson content: curated from first lecture chapter summaries for Nader George,
+Second Baccalaureate, lesson 086d664a-f784-4cdd-a0c8-09948619bef4.
+No production API, deployment, student publication, or automatic AI generation.
+Lesson toggle simulates a future setting and is stored locally, default off.
+Progress is local to the browser origin, with an in-session fallback if storage is blocked.
+Player uses a single generated sprite with a walking bob, not a rigged 3D character.
+Background and character generated with built-in image_gen from the established Mim design.
+
+Browser checks completed:
+- Walk to first station; later stations locked.
+- Wrong answer explains the mistake and allows retry.
+- All ten correct connections; three seals; completion screen.
+- Reload restores saved progress and unlocks the next station.
+- Lesson toggle defaults off, saves on reload, and returns off.
+- Replay/reset returns to first station.
+- Mobile-size layout exercised; physical mobile device not tested.
+- Hover fix: explicit station transform overrides generic disabled-button transform.
+JavaScript syntax checks passed. Local page, modules, styles, font and images returned HTTP 200.

@@ -1,4 +1,6 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Assessments;
@@ -19,6 +21,61 @@ namespace NaderGorge.Integration.Tests.LiveSupport;
 
 public sealed class AssessmentReviewPostgresTests
 {
+    [Fact]
+    public async Task EditorLoadReadsOnlyDefinitionAndAttemptCountThenPreviewIssuesSaveToken()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var interceptor = new CommandTextRecorder();
+        await using var readDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(fixture.ConnectionString).AddInterceptors(interceptor).Options);
+        var attempt = await readDb.StudentExamAttempts.AsNoTracking()
+            .SingleAsync(item => item.Id == essay.StudentExamAttemptId);
+        var target = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, Guid.Empty, seed.Teacher.UserId);
+        var handler = new AssessmentRevisionCommandHandler(readDb, new(readDb));
+        interceptor.Reset();
+
+        var editor = await handler.Handle(new GetAssessmentEditorQuery(target), default);
+
+        Assert.True(editor.Success, editor.Message);
+        Assert.Equal(1, editor.Data!.AttemptCount);
+        Assert.Empty(editor.Data.RevisionToken);
+        var attemptCommands = interceptor.Commands.Where(command => command.Contains("student_exam_attempts", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var count = Assert.Single(attemptCommands);
+        Assert.Contains("COUNT(*)", count, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DefinitionSnapshotJson", count, StringComparison.Ordinal);
+        Assert.DoesNotContain("student_answers", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("essay_submissions", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("audit_logs", string.Join(Environment.NewLine, interceptor.Commands), StringComparison.OrdinalIgnoreCase);
+
+        var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target,
+            editor.Data.Definition with { Title = "تعديل بعد المعاينة" }, new()), default);
+        Assert.True(preview.Success, preview.Message);
+        Assert.NotEmpty(preview.Data!.RevisionToken);
+    }
+
+    private sealed class CommandTextRecorder : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+        public void Reset() => Commands.Clear();
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
+
     [Theory]
     [InlineData(ExamQuestionType.MCQ, false, 20)]
     [InlineData(ExamQuestionType.MCQ, true, 10)]
@@ -45,6 +102,8 @@ public sealed class AssessmentReviewPostgresTests
         fixture.Db.StudentExamAttempts.Add(attempt);
         var lesson = await fixture.Db.Lessons.SingleAsync(l => l.Id == seed.Homework.LessonId);
         lesson.ExamId = exam.Id;
+        await fixture.Db.SaveChangesAsync();
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await fixture.Db.SaveChangesAsync();
         var target = new AssessmentTarget(AssessmentKind.Exam, exam.Id, Guid.Empty, seed.Teacher.UserId);
         var original = AssessmentDefinitionSnapshot.FromExam(exam);
@@ -122,6 +181,8 @@ public sealed class AssessmentReviewPostgresTests
         var definition = AssessmentDefinitionSnapshot.FromHomework(seed.Homework) with { Questions = [] };
         var policy = new AssessmentRevisionPolicy(PreviousAttemptsPolicy.Regrade, removedPolicy, ScoreDecrease: scorePolicy);
         var handler = new AssessmentRevisionCommandHandler(fixture.Db, new(fixture.Db));
+        // Preview is a new request and must read PostgreSQL-normalized timestamps.
+        fixture.Db.ChangeTracker.Clear();
         var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, definition, policy), default);
         Assert.Equal(expectedScore, Assert.Single(preview.Data!.Attempts).RevisedScore);
         var operationId = Guid.NewGuid();
@@ -158,6 +219,8 @@ public sealed class AssessmentReviewPostgresTests
         var definition = original with { Questions = [original.Questions.Single(), added] };
         var policy = new AssessmentRevisionPolicy(PreviousAttemptsPolicy.Regrade, AddedQuestions: AddedQuestionPolicy.RequestCompletion);
         var handler = new AssessmentRevisionCommandHandler(fixture.Db, new(fixture.Db));
+        // Preview is a new request and must read PostgreSQL-normalized timestamps.
+        fixture.Db.ChangeTracker.Clear();
         var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, definition, policy), default);
         Assert.True(Assert.Single(preview.Data!.Attempts).RequiresCompletion);
         var command = new SaveAssessmentRevisionCommand(target, definition, policy, preview.Data.RevisionToken, Guid.NewGuid());
@@ -274,6 +337,8 @@ public sealed class AssessmentReviewPostgresTests
         { Id = Guid.NewGuid(), Text = "السؤال الجديد", Points = 10 };
         var definition = editor.Data.Definition with { Title = "الواجب المعدل", TotalScore = 100, PassingScore = 90,
             DurationMinutes = null, IsActive = false, Questions = [replacement] };
+        // Preview is a new request and must read PostgreSQL-normalized timestamps.
+        fixture.Db.ChangeTracker.Clear();
         var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, definition, new()), default);
         Assert.True(preview.Success, preview.Message);
         Assert.Equal(1, preview.Data!.AttemptCount);
@@ -351,6 +416,8 @@ public sealed class AssessmentReviewPostgresTests
         var definition = editor.Data!.Definition with
         { Questions = [editor.Data.Definition.Questions.Single() with { Text = "New rubric question", Points = 8 }] };
         var policy = new AssessmentRevisionPolicy(regrade ? PreviousAttemptsPolicy.Regrade : PreviousAttemptsPolicy.Preserve);
+        // Preview is a new request and must read PostgreSQL-normalized timestamps.
+        fixture.Db.ChangeTracker.Clear();
         var preview = await handler.Handle(new PreviewAssessmentRevisionQuery(target, definition, policy), default);
 
         var saved = await handler.Handle(new SaveAssessmentRevisionCommand(target, definition, policy, preview.Data!.RevisionToken,
@@ -392,6 +459,8 @@ public sealed class AssessmentReviewPostgresTests
         attempt.Answers.Add(new StudentAnswer { ExamQuestion = question, SelectedOption = bank.Options.Single(o => o.Text == "B"), SubmittedText = "B" });
         fixture.Db.StudentExamAttempts.Add(attempt);
         fixture.Db.Exams.Add(other);
+        await fixture.Db.SaveChangesAsync();
+        attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson();
         await fixture.Db.SaveChangesAsync();
         var target = new AssessmentTarget(AssessmentKind.Exam, exam.Id, Guid.Empty, seed.Teacher.UserId);
         var original = AssessmentDefinitionSnapshot.FromExam(exam);
@@ -603,6 +672,29 @@ public sealed class AssessmentReviewPostgresTests
         Assert.Equal(7.5m, (await fixture.Db.StudentExamAttempts.SingleAsync(a => a.Id == attempt.Id)).ScoreAchieved);
     }
 
+    [Fact]
+    public async Task ExamReviewDistinguishesUnsupportedLegacySnapshotFromMissingAttempt()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var seed = await Seed(fixture.Db);
+        var essay = await Essay(fixture.Db, seed.Teacher, seed.Submission.StudentId);
+        var attempt = await fixture.Db.StudentExamAttempts.SingleAsync(a => a.Id == essay.StudentExamAttemptId);
+        attempt.DefinitionSnapshotJson = null;
+        await fixture.Db.SaveChangesAsync();
+        var auth = new TeacherAuthorizationService(fixture.Db);
+        var legacyTarget = new AssessmentTarget(AssessmentKind.Exam, attempt.ExamId, attempt.Id, seed.Teacher.UserId);
+        var missingTarget = legacyTarget with { AttemptId = Guid.NewGuid() };
+
+        var unsupported = await new GetAssessmentReviewQueryHandler(fixture.Db, auth).Handle(new(legacyTarget), default);
+        var missing = await new GetAssessmentReviewQueryHandler(fixture.Db, auth).Handle(new(missingTarget), default);
+
+        Assert.False(unsupported.Success);
+        Assert.Equal(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage, unsupported.Message);
+        Assert.False(missing.Success);
+        Assert.Equal("المحاولة غير موجودة.", missing.Message);
+    }
+
     private static User User(string name) => new() { FullName = name, PasswordHash = "test-only", PhoneNumber = $"01{Random.Shared.NextInt64(100000000, 999999999)}", IsActive = true };
     private static async Task<User> Student(AppDbContext db)
     {
@@ -639,7 +731,8 @@ public sealed class AssessmentReviewPostgresTests
         var exam = new Exam { Title = "امتحان", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
         var examQuestion = new ExamQuestion { Question = question, Points = 4, Order = 1 };
         exam.ExamQuestions.Add(examQuestion);
-        var attempt = new StudentExamAttempt { Exam = exam, UserId = studentId, Evaluation = "قيد التصحيح", StartedAt = DateTime.UtcNow };
+        var attempt = new StudentExamAttempt { Exam = exam, UserId = studentId, Evaluation = "قيد التصحيح", StartedAt = DateTime.UtcNow,
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson() };
         attempt.Answers.Add(new StudentAnswer { ExamQuestion = examQuestion, SubmittedText = "شرح" });
         var essay = new EssaySubmission { Attempt = attempt, StudentId = studentId, Question = question, AnswerText = "شرح", Status = EssaySubmissionStatus.WaitAI };
         db.EssaySubmissions.Add(essay); await db.SaveChangesAsync(); return essay;

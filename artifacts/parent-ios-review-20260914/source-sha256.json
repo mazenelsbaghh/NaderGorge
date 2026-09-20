@@ -1,0 +1,19 @@
+{
+  "mobile/parent-ios/Sources/NaderGorgeParent/NaderGorgeParentApp.swift": "0397bcf8c8bad4bd76db58d7cc0196f9ebc3ba736edda13c46a3d487c9b50496",
+  "mobile/parent-ios/Sources/NaderGorgeParent/ViewModels/LinkingViewModel.swift": "abe08d8ac4b0ecf4928f830ed09e186bf98919587167bf42445977181e1f0e7a",
+  "mobile/parent-ios/Sources/NaderGorgeParent/ViewModels/DashboardViewModel.swift": "d1112167d5b6a1c49837114ca91f6ab73064b6ca09d6cdcf966fc507774e7bab",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Models/StudentModels.swift": "cd83b26f9b6dc324ed767e53145fb87dff53eec680d0babf4d2ff7a79b70c6f5",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/DashboardView.swift": "44f00b7f299275f1bed05728e4ba281037daaea5afa8dabb6a8c72be0441af0c",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/SplashScreenView.swift": "ec6b5837587f9b54d1449fa98b332cb234fc21a3c40b0acb7754630dbf5c66ff",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/LinkingView.swift": "b8e5d34b96455a0897e7f347a6ecfee03380b4d8931119affb5d3ba0b64bb2a7",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/StudentConfirmationView.swift": "89bbc865c1b57ec188d9fb0a3108ece8269c89593408af1d0459da5dec31ba84",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/OnboardingView.swift": "f7b6c2d064970c21c32babca10547608d9faf97675e4cb6a1c6213aafdeb6947",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/ParentAppContainer.swift": "96aaf4286390e557812106de13edc9d71ed1b5f0753d9173a13096e81ac7f1c4",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Services/APIService.swift": "596721263d4de20b6418e8a5a18977409e64c2b642c0051c9d2561d5db0cb481",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Services/KeychainService.swift": "f0d6099d8d32fd77dada0d7ab5e2cd53734c719ea7112afda7b16bb2c8c474ef",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Services/ParentNotificationService.swift": "eabf81eb4663460445c8201e82f218813cebe78c0b0591e322f4c14428855f08",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/Components/GlassCardModifier.swift": "32ba04f1c987dad19fa5a0c8e2e8997ca79f93314e12b3dd469def984980812b",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/Components/CircularProgressView.swift": "15e486d506ea35793c717d0412166991c522905165c96856ec15d2c3b66841f7",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/Components/LiquidBackgroundView.swift": "43f93551cc4e55f25c4ab164c93976f0eed7ea7ee06cc4ead62ddf56769b356d",
+  "mobile/parent-ios/Sources/NaderGorgeParent/Views/Components/BrandColors.swift": "5e1a09aac808385706e81e393ecf6b5e0515e7cdf49f5268f51cab33dfeb6029"
+}

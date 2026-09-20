@@ -19,6 +19,30 @@ import type {
   PackageDirectSectionDto,
   TermDto,
 } from './content-service';
+import type { LessonMimGameStateDto } from '@/lib/mim-game-contract';
+
+export interface TeacherProfileStatsDto {
+  packagesCount: number;
+  studentsCount: number;
+  activeStudentsCount: number;
+  totalEarnings: number;
+  currentBalance: number;
+  examsCount: number;
+  essaysPendingCount: number;
+  essaysGradedCount: number;
+  codeGroupsCount: number;
+  questionBankItemsCount: number;
+  packageSales: Array<{
+    packageId: string;
+    packageName: string;
+    packageBuyers: number;
+    termBuyers: number;
+    sectionBuyers: number;
+    lessonBuyers: number;
+    purchasedStudents: number;
+    giftStudents: number;
+  }>;
+}
 
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
 
@@ -241,6 +265,24 @@ export interface WhatsAppExamResultPreview {
 
 export interface WhatsAppExamResultMessageResult extends WhatsAppTestMessageResult {
   preview?: WhatsAppExamResultPreview | null;
+}
+
+export interface AssessmentParentRecoveryPreview {
+  eligibleCount: number;
+  cohortFingerprint: string;
+  excludedByReason: Record<string, number>;
+  alreadyApplied: boolean;
+}
+
+export interface AssessmentParentRecoveryStatus {
+  operationId: string;
+  total: number;
+  pending: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  uncertain: number;
 }
 
 export type ContentImageType = 'package' | 'term' | 'section';
@@ -645,6 +687,7 @@ export interface StudentExamResultSummaryDto {
   evaluation: string;
   isPassed: boolean;
   isTimeExpired: boolean;
+  totalScore: number;
 }
 
 export interface ExamQuestionSummaryDto {
@@ -854,6 +897,7 @@ export interface LessonCockpitVideoDto {
   isProcessingAI: boolean;
   isProcessingMindmaps: boolean;
   isActive: boolean;
+  hasCompletedAiAnalysis: boolean;
   bunnyPlaybackMode?: BunnyPlaybackMode;
   bunnyLibrary?: BunnyLibraryReferenceDto | null;
   bunnyStatus?: string | null;
@@ -1047,6 +1091,30 @@ export const adminService = {
     const res = await apiClient.post<WhatsAppExamResultMessageResult>(
       '/whatsapp/admin/exam-result-message',
       payload
+    );
+    return res.data;
+  },
+  previewAssessmentParentRecovery: async (maxBatchSize = 10) => {
+    const res = await apiClient.get<AssessmentParentRecoveryPreview>(
+      '/whatsapp/admin/assessment-parent-recovery/preview',
+      { params: { maxBatchSize } }
+    );
+    return res.data;
+  },
+  applyAssessmentParentRecovery: async (payload: {
+    operationId: string;
+    expectedCohortFingerprint: string;
+    maxBatchSize: number;
+  }) => {
+    const res = await apiClient.post<AssessmentParentRecoveryPreview>(
+      '/whatsapp/admin/assessment-parent-recovery/apply',
+      payload
+    );
+    return res.data;
+  },
+  getAssessmentParentRecoveryStatus: async (operationId: string) => {
+    const res = await apiClient.get<AssessmentParentRecoveryStatus>(
+      `/whatsapp/admin/assessment-parent-recovery/status/${encodeURIComponent(operationId)}`
     );
     return res.data;
   },
@@ -1581,6 +1649,37 @@ export const adminService = {
       `/admin/lessons/${id}/cockpit`
     );
     return res;
+  },
+  getLessonMimGame: async (lessonId: string, signal?: AbortSignal) => {
+    const res = await apiClient.get<ApiResponse<LessonMimGameStateDto | null>>(
+      `/admin/lessons/${lessonId}/mim-game`,
+      { signal, suppressErrorToast: true }
+    );
+    return res.data?.data ?? null;
+  },
+  generateLessonMimGame: async (lessonId: string, sourceVideoId: string) => {
+    const res = await apiClient.post<ApiResponse<string>>(
+      `/admin/lessons/${lessonId}/mim-game/generate`,
+      { sourceVideoId },
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
+  publishEnableLessonMimGame: async (lessonId: string) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/lessons/${lessonId}/mim-game/publish-enable`,
+      undefined,
+      { suppressErrorToast: true }
+    );
+    return res.data;
+  },
+  disableLessonMimGame: async (lessonId: string) => {
+    const res = await apiClient.post<ApiResponse>(
+      `/admin/lessons/${lessonId}/mim-game/disable`,
+      undefined,
+      { suppressErrorToast: true }
+    );
+    return res.data;
   },
   listVideoTypes: async (includeInactive = false) => {
     const res = await apiClient.get<ApiResponse<VideoTypeDto[]>>(
@@ -2308,15 +2407,14 @@ export const adminService = {
   },
 
   // ── Teacher Profile Page endpoints ──────────────────────────────
-  getTeacherStats: async (teacherId: string) => {
-    try {
-      const res = await apiClient.get<ApiResponse<any>>(
-        `/admin/teachers/${teacherId}/stats`
-      );
-      return res.data?.data ?? null;
-    } catch {
-      return null;
+  getTeacherStats: async (teacherId: string): Promise<TeacherProfileStatsDto> => {
+    const res = await apiClient.get<ApiResponse<TeacherProfileStatsDto>>(
+      `/admin/teachers/${teacherId}/stats`
+    );
+    if (!res.data.success || !res.data.data) {
+      throw new Error(res.data.message || 'تعذر تحميل إحصائيات المدرس');
     }
+    return res.data.data;
   },
 
   getTeacherStudents: async (teacherId: string) => {

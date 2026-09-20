@@ -1,0 +1,42 @@
+{
+  "status": "deployed",
+  "buildScope": "all",
+  "productionMutationsPerformed": true,
+  "scheduleApplied": false,
+  "verified": [
+    "make ops-check passed: backend build, EF guard, 1432 application tests passed/3 skipped, frontend lint/typecheck, worker 195 tests, compose contracts",
+    "Next.js production build passed",
+    "22 frontend support/shift contract tests passed",
+    "88 focused integration tests passed",
+    "Production three-node status success"
+  ],
+  "pending": [
+    "Authenticated staff-specific navigation and permissions check",
+    "Weekly employee roster application",
+    "Live WhatsApp QR messaging verification",
+    "Two isolated PostgreSQL integration tests"
+  ],
+  "productionHealth": "All three nodes healthy with matching published release",
+  "scopeNotes": [
+    "Existing unrelated working-tree edits were preserved",
+    "WhatsApp message mutations/replies implemented for QR/Baileys accounts",
+    "Refund employee permission mapping added; live role assignments unchanged"
+  ],
+  "buildScopeAuthorization": "User: اه all",
+  "staffRefundVerification": {
+    "navigationLabel": "استردادات الطلاب",
+    "route": "/assistant/refunds",
+    "viewPermission": "finance.refunds.view",
+    "createPermission": "finance.refunds.create",
+    "navbarAllowlistRequiredWhenConfigured": true,
+    "routeContracts": "passed: 21 assistant and 30 admin routes",
+    "liveRoute": "Resolved successfully; redirected to staff login instead of 404",
+    "liveSession": "Staff home redirects to login; no authenticated staff session available",
+    "liveFunctionalVerification": "Admin refund form, treasury selector and refund history loaded; staff login required for staff-specific verification"
+  },
+  "releaseWorkspace": "/Users/mazenelsbagh/mazen mac/apps/massar-refunds-release-20260914",
+  "publishedCommit": "3768759dfb22534691584aec45fb468935bbf84c",
+  "releaseAuthorization": "User: طب ارفعها",
+  "deployedCommit": "3768759dfb22534691584aec45fb468935bbf84c",
+  "deploymentEvidence": "/Users/mazenelsbagh/mazen mac/apps/massar-refunds-release-20260914/artifacts/production/20260914T194144.626525Z-deploy.json"
+}

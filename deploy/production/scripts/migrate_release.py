@@ -194,6 +194,8 @@ stage="success"
     )
     lock.acquire()
     try:
+        from source_sync import assert_published
+        assert_published(Path(__file__).resolve().parents[3], manifest)
         if not all_nodes_running_release(
             inventory,
             transport,

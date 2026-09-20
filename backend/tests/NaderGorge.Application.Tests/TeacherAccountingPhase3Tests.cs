@@ -302,9 +302,11 @@ public class TeacherAccountingPhase3Tests
         Assert.Equal(20m, transaction.TeacherShareAmount);
     }
 
-    [Fact]
+    [Theory]
+    [InlineData(1.0)]
+    [InlineData(0.5)]
     [Trait("Category", "Finance")]
-    public async Task ReverseTargetAsync_WhenAllocationUnpaid_ReversesLedgerAndTeacherBalance()
+    public async Task ReverseTargetAsync_WhenAllocationUnpaid_ReversesOnlyRefundedShare(decimal fraction)
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Refund Teacher", "01030000007");
@@ -322,9 +324,10 @@ public class TeacherAccountingPhase3Tests
 
         var packageId = Guid.NewGuid();
         var service = new TeacherAccountingService(db);
+        var purchaseId = Guid.NewGuid();
         await service.RecordEventAsync(new TeacherFinancialEventInput(
             TeacherFinancialSourceType.DirectPurchase,
-            Guid.NewGuid(),
+            purchaseId,
             student.Id,
             SalesTargetType.Package,
             packageId,
@@ -357,21 +360,23 @@ public class TeacherAccountingPhase3Tests
             packageId,
             Guid.NewGuid(),
             "Package grant cancelled",
-            CancellationToken.None);
+            CancellationToken.None,
+            new TeacherRefundScope(purchaseId, fraction));
 
         Assert.Equal(1, reversedCount);
         var account = await db.TeacherAccounts.SingleAsync();
-        Assert.Equal(0m, account.TotalEarnings);
-        Assert.Equal(0m, account.CurrentBalance);
+        Assert.Equal(40m * (1m - fraction), account.TotalEarnings);
+        Assert.Equal(40m * (1m - fraction), account.CurrentBalance);
 
         var allocations = await db.TeacherFinancialAllocations
             .OrderBy(a => a.TeacherShareAmount)
             .ToListAsync();
         Assert.Equal(2, allocations.Count);
-        Assert.Equal(-40m, allocations[0].TeacherShareAmount);
+        Assert.Equal(-40m * fraction, allocations[0].TeacherShareAmount);
         Assert.Equal(TeacherAllocationMode.Reversal, allocations[0].AllocationMode);
         Assert.Equal(TeacherFinancialPayoutStatus.Reversed, allocations[0].PayoutStatus);
-        Assert.Equal(TeacherFinancialPayoutStatus.Reversed, allocations[1].PayoutStatus);
+        Assert.Equal(40m * fraction, allocations[1].ReversedAmount);
+        Assert.Equal(fraction == 1m, allocations[1].PayoutStatus == TeacherFinancialPayoutStatus.Reversed);
         Assert.Empty(db.TeacherPayoutAdjustments);
     }
 

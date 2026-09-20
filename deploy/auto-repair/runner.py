@@ -8,16 +8,27 @@ import os
 import re
 import signal
 import shutil
+import sys
 import subprocess
 import tarfile
 import threading
+import tempfile
 import time
 import urllib.error
 import urllib.request
 import uuid
+# Initialize typing before Python 3.14 background imports can observe it half-loaded.
+import typing  # noqa: F401
 from pathlib import Path
 
-from policy import assess_patch, patch_hash, redact, validate_review
+sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'production/scripts'))
+
+# Keep exceptions and supervisor imports identical when launched as a script.
+if __name__ == '__main__':
+    sys.modules['runner'] = sys.modules[__name__]
+
+from policy import assess_patch, patch_hash, redact, validate_report, validate_review
 
 
 DOCKER = ["sudo", "-n", "/usr/bin/docker"]
@@ -38,7 +49,8 @@ class Api:
 
     def post(self, path: str, body: dict | list) -> dict:
         request = urllib.request.Request(self.url + path, json.dumps(body).encode(),
-            {'Content-Type': 'application/json', 'X-Repair-Token': self.token}, method='POST')
+            {'Content-Type': 'application/json', 'User-Agent': 'Massar-AutoRepair/1.0',
+             'X-Repair-Token': self.token}, method='POST')
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.load(response)
 
@@ -80,16 +92,20 @@ class Runner:
         self.root = Path(config['state_dir']).resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.api = Api(config)
-        if not re.fullmatch(r'[\w./:-]+@sha256:[a-f0-9]{64}', config['agent_image']):
+        if not re.fullmatch(r'(?:[\w./:-]+@)?sha256:[a-f0-9]{64}', config['agent_image']):
             raise ValueError('Agent image must use an installed immutable digest')
         self.image = config['agent_image']
         for image in (self.image, config['postgres_image'], config['redis_image']):
-            if not re.fullmatch(r'[\w./:-]+@sha256:[a-f0-9]{64}', image):
+            if not re.fullmatch(r'(?:[\w./:-]+@)?sha256:[a-f0-9]{64}', image):
                 raise ValueError('All test images require installed immutable digests')
             command([*DOCKER, 'image', 'inspect', image], self.root)
         network = json.loads(command([*DOCKER, 'network', 'inspect', config['agent_network']], self.root))[0]
         if not network['Internal']:
             raise ValueError('Agent network must be internal, with a separately restricted HTTPS proxy')
+        bridge = 'br-' + network['Id'][:12]
+        fence = command(['sudo', '-n', '/usr/sbin/nft', 'list', 'set', 'inet', 'massar_repair', 'blocked_bridges'], self.root)
+        if bridge not in fence:
+            raise ValueError('Host firewall fence is missing for the agent network')
         self.stopping = False
 
     def git(self, checkout: Path, arguments: list[str], workspace: Path | None = None) -> str:
@@ -99,44 +115,80 @@ class Runner:
         return command(argv + arguments, checkout)
 
     def prepare(self, folder: Path) -> tuple[Path, Path, str]:
-        checkout, workspace = folder / 'checkout', folder / 'workspace'
+        checkout = folder / 'checkout'
         folder.mkdir(mode=0o700)
-        current_file = self.root / 'current.json'
-        current = json.loads(current_file.read_text()) if current_file.exists() else {
-            'repository': self.config['source_repository'], 'ref': self.config['source_ref'], 'release': self.config['baseline_release']}
-        command(['git', 'clone', '--no-hardlinks', '--', current['repository'], str(checkout)], self.root)
-        self.git(checkout, ['checkout', '--detach', current['ref']])
-        (folder / 'baseline-release').write_text(current['release'])
+        from source_sync import fetch
+        from source_baseline import verify_baseline
+        source = Path(self.config['source_repository'])
+        shared = fetch(source)
+        command(['git', 'clone', '--no-hardlinks', '--', str(source), str(checkout)], self.root)
+        self.git(checkout, ['checkout', '--detach', shared])
+        live_release = verify_baseline(checkout, self.config)
+        (folder / 'baseline-release').write_text(live_release)
+        (folder / 'shared-parent').write_text(shared)
         baseline = self.git(checkout, ['rev-parse', 'HEAD'])
+        return checkout, self.source_workspace(checkout, folder, baseline), baseline
+
+    def source_workspace(self, checkout: Path, folder: Path, baseline: str) -> Path:
+        workspace = folder / 'workspace'
         workspace.mkdir(mode=0o700)
         archive = folder / 'source.tar'
         command(['git', 'archive', '--format=tar', '-o', str(archive), baseline], checkout)
         with tarfile.open(archive) as bundle:
             bundle.extractall(workspace, filter='data')
         archive.unlink()
-        return checkout, workspace, baseline
+        return workspace
 
     def seed_dependencies(self, workspace: Path):
         command([*DOCKER, 'run', '--rm', '--pull=never', '--network=none', '--read-only',
             '--cap-drop=ALL', '--security-opt=no-new-privileges', '--cpus=2', '--memory=2g',
+            '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g,mode=1777', '-e', 'HOME=/tmp',
             '--user', f'{os.getuid()}:{os.getgid()}', '--mount', f'type=bind,src={workspace},dst=/workspace',
             self.image, 'bash', '-c',
-            'cp -R /opt/bootstrap/frontend/node_modules /workspace/frontend/ && cp -R /opt/bootstrap/worker/node_modules /workspace/worker/'],
+            'cp -R /opt/bootstrap/frontend/node_modules /workspace/frontend/ && cp -R /opt/bootstrap/worker/node_modules /workspace/worker/ && '
+            + "printf '<configuration><packageSources><clear /></packageSources></configuration>\\n' >/tmp/repair-nuget.config && "
+            + 'cd /workspace && dotnet restore backend/NaderGorge.sln --configfile /tmp/repair-nuget.config -p:NuGetAudit=false'],
             self.root, timeout=300)
 
     def container(self, workspace: Path, request: dict, lease: Lease) -> str:
+        from verification import TestServices
+        services = TestServices(self.config, self.root)
+        services.start()
+        try:
+            command([*DOCKER, 'network', 'connect', self.config['agent_network'], services.names[0]], self.root)
+            return self.diagnostic_container(workspace, request, lease, services)
+        finally:
+            services.close()
+
+    def diagnostic_container(self, workspace: Path, request: dict, lease: Lease, services) -> str:
+        if lease.lost.is_set() or lease.paused or self.stopping:
+            raise RepairFailure('Agent cannot start after pause or lease loss')
         name = 'massar-repair-' + uuid.uuid4().hex
-        argv = [*DOCKER, 'run', '--rm', '--pull=never', '--name', name, '--init', '--read-only',
+        argv = [*DOCKER, 'run', '--interactive', '--rm', '--pull=never', '--name', name, '--init', '--read-only',
             '--cap-drop=ALL', '--security-opt=no-new-privileges', '--pids-limit=256', '--cpus=2', '--memory=6g',
-            '--network=' + self.config['agent_network'], '--user', f'{os.getuid()}:{os.getgid()}',
+            '--network=container:' + services.names[0], '--user', f'{os.getuid()}:{os.getgid()}',
             '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g,mode=1777', '--mount', f'type=bind,src={workspace},dst=/workspace',
             '--mount', f'type=bind,src={Path(self.config["codex_home"]).resolve()},dst=/codex',
+            '-e', 'AUTO_REPAIR_TEST_DB=Host=127.0.0.1;Database=repair_test;Username=postgres',
+            '-e', 'ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=massar_live_support_query_budget_disposable_repair;Username=postgres',
+            '-e', 'MASSAR_LEARNING_TEST_CONNECTION=Host=127.0.0.1;Database=massar_learning_test;Username=postgres',
+            '-e', 'LIVE_SUPPORT_QUERY_BUDGET_DATABASE_AUTHORIZATION=DELETE-DISPOSABLE-LIVE-SUPPORT-QUERY-BUDGET-DATABASE',
+            '-e', 'ConnectionStrings__Redis=redis:6379', '-e', 'Redis__ConnectionString=redis:6379',
+            '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379', '-e', 'TEST_REDIS_CONNECTION=redis:6379',
+            '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
+            '-e', 'NO_PROXY=127.0.0.1,localhost,postgres,redis,redis-unavailable,.lvh.me',
             '-e', 'CODEX_HOME=/codex', '-e', 'HOME=/tmp', '-e', 'HTTPS_PROXY=' + self.config['https_proxy'],
             '-e', 'HTTP_PROXY=' + self.config['https_proxy'], '-w', '/workspace', self.image,
-            'codex', 'exec', '--ignore-user-config', '--skip-git-repo-check', '--sandbox', 'workspace-write',
+            # Codex documents this flag for externally sandboxed environments. Docker provides
+            # the enforced read-only filesystem, mount boundary, network fence and resource caps;
+            # nested bubblewrap namespaces are unavailable under the container's default seccomp.
+            'codex', 'exec', '--ignore-user-config', '--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox',
+            '--model', 'gpt-6-astra', '-c', 'model_reasoning_effort="medium"',
+            '-c', 'service_tier="default"',
             '--json', '--output-schema', '/opt/repair/review-schema.json', '-o', '/workspace/.repair-response.json', '-']
         # The report remains outside the model's transcript; only bounded final evidence is published.
-        proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+        errors = tempfile.TemporaryFile(mode='w+b')
+        proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=errors, text=True)
         assert proc.stdin is not None
         proc.stdin.write(json.dumps(request, ensure_ascii=False))
         proc.stdin.close()
@@ -145,9 +197,12 @@ class Runner:
             while proc.poll() is None:
                 if lease.lost.is_set() or lease.paused or self.stopping or time.monotonic() > deadline:
                     raise RepairFailure('Agent stopped: pause, lost lease, shutdown or time budget')
+                if os.fstat(errors.fileno()).st_size > 1_000_000:
+                    raise RepairFailure('Agent diagnostic output budget exceeded')
                 time.sleep(1)
             if proc.returncode:
-                raise RepairFailure('Codex failed; check server authentication and runner health')
+                errors.seek(max(0, os.fstat(errors.fileno()).st_size - 3000))
+                raise RepairFailure('Codex failed: ' + redact(errors.read(3000).decode(errors='replace')))
             response = workspace / '.repair-response.json'
             if response.is_symlink() or response.stat().st_size > 32_000:
                 raise RepairFailure('Invalid agent response file')
@@ -155,6 +210,7 @@ class Runner:
         finally:
             subprocess.run([*DOCKER, 'rm', '-f', name], capture_output=True, check=False, timeout=30)
             proc.wait(timeout=30)
+            errors.close()
             (workspace / '.repair-response.json').unlink(missing_ok=True)
 
     def snapshot(self, checkout: Path, workspace: Path, baseline: str) -> tuple[bytes, list[str]]:
@@ -162,6 +218,8 @@ class Runner:
         self.git(checkout, ['add', '-A', '--', '.'], workspace)
         paths = self.git(checkout, ['diff', '--cached', '--name-only', '-z', baseline], workspace).split('\0')
         paths = [path for path in paths if path]
+        if not paths:
+            return b'', []
         assess_patch(paths, workspace)
         patch = subprocess.run(['git', f'--git-dir={checkout / ".git"}', f'--work-tree={workspace}',
             'diff', '--cached', '--binary', '--no-ext-diff', baseline], capture_output=True, check=True).stdout
@@ -176,8 +234,18 @@ class Runner:
         lease.report('repairing', 'بدأ فحص الكود في بيئة معزولة وتجهيز الإصلاح')
         request = {'instructions': (Path(__file__).parent / 'SKILL.md').read_text(),
             'incident': incident['evidence'], 'category': incident['category'], 'mode': 'repair'}
-        self.container(workspace, request, lease)
+        diagnosis = json.loads(self.container(workspace, request, lease))
+        validate_report(diagnosis)
+        diagnostic_detail = '\n'.join([
+            diagnosis['summary'], 'إعادة الإنتاج: ' + diagnosis['reproduction'],
+            'التحقق: ' + diagnosis['verification']])
+        if not diagnosis['safeToDeploy']:
+            lease.report('needs_evidence', diagnostic_detail)
+            return
         patch, paths = self.snapshot(checkout, workspace, baseline)
+        if not paths:
+            lease.report('needs_evidence', 'لم ينتج التشخيص تغييرًا قابلًا للمراجعة؛ يلزم دليل جديد قبل إعادة المحاولة.\n' + diagnostic_detail)
+            return
         digest = patch_hash(patch, baseline)
         lease.report('testing', 'جارٍ التحقق المستقل من الإصلاح والاختبارات\n' + '\n'.join(paths))
         for offset in range(0, len(patch), 6000):
@@ -192,7 +260,7 @@ class Runner:
         verified_patch, _ = self.snapshot(checkout, workspace, baseline)
         if verified_patch != patch:
             raise RepairFailure('Verification changed source; repair must be reviewed again')
-        critical = assess_patch(paths, workspace)
+        critical = assess_patch(paths, workspace, patch)
         # Seal the source only after independent verification; deployment never runs agent-chosen commands.
         self.git(checkout, ['reset', '--hard', baseline])
         patch_file = folder / 'repair.patch'
@@ -216,11 +284,14 @@ class Runner:
         services = TestServices(self.config, self.root)
         services.start()
         argv = [*DOCKER, 'run', '--rm', '--pull=never', '--name', name, '--init', '--cap-drop=ALL',
-            '--security-opt=no-new-privileges', '--network=' + services.network, '--cpus=2', '--memory=8g', '--pids-limit=512',
+            '--security-opt=no-new-privileges', '--network=container:' + services.names[0], '--cpus=2', '--memory=8g', '--pids-limit=512',
             '--user', f'{os.getuid()}:{os.getgid()}', '--mount', f'type=bind,src={workspace},dst=/workspace',
             '--mount', f'type=bind,src={script},dst=/verify.sh,readonly', '-e', 'HOME=/tmp',
-            '-e', 'ConnectionStrings__DefaultConnection=Host=postgres;Database=repair_test;Username=postgres',
+            '-e', 'ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=repair_test;Username=postgres',
+            '-e', 'AUTO_REPAIR_TEST_DB=Host=127.0.0.1;Database=repair_test;Username=postgres',
+            '-e', 'AUTO_REPAIR_TEST_REDIS=redis:6379',
             '-e', 'TEST_REDIS_CONNECTION=redis:6379', '-e', 'RUN_REDIS_INTEGRATION_TESTS=1',
+            '-e', 'TEST_REDIS_UNAVAILABLE_CONNECTION=redis-unavailable:6379',
             '-w', '/workspace', self.image, 'bash', '/verify.sh']
         try:
             self.verify_container(argv, workspace, lease)
@@ -228,6 +299,8 @@ class Runner:
             services.close()
 
     def verify_container(self, argv: list[str], workspace: Path, lease: Lease):
+        if lease.lost.is_set() or lease.paused or self.stopping:
+            raise RepairFailure('Verification cannot start after pause or lease loss')
         name = argv[argv.index('--name') + 1]
         log = workspace.parent / 'verification.log'
         with log.open('w') as output:
@@ -280,6 +353,8 @@ class Runner:
     def run_one(self):
         if shutil.disk_usage(self.root).free < 20 * 1024 ** 3:
             raise RepairFailure('Less than 20 GiB free for isolated repair; service stopped')
+        from source_baseline import refresh_shared_source
+        refresh_shared_source(self.config)
         claimed = self.api.post('claim', {})
         incident = claimed['incident']
         if incident is None:
@@ -309,15 +384,20 @@ class Runner:
             from collector import Collector
             collector = Collector(self.config, self.api)
             collector.thread.start()
+            from sync_monitor import SyncMonitor
+            synchronization = SyncMonitor(self.config, self.api)
+            synchronization.thread.start()
             while not self.stopping:
                 try:
                     self.run_one()
-                except (urllib.error.URLError, OSError, ValueError) as exc:
+                except (urllib.error.URLError, OSError, ValueError, RepairFailure, subprocess.SubprocessError) as exc:
                     print('Repair service unavailable: ' + type(exc).__name__, flush=True)
                 for _ in range(30):
                     if self.stopping:
                         break
                     time.sleep(1)
+            synchronization.stop.set()
+            synchronization.thread.join(timeout=35)
             collector.stop.set()
             collector.thread.join(timeout=35)
 

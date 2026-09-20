@@ -20,9 +20,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     private readonly IPublisher _publisher;
     private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
     private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
+    private readonly WhatsAppExamNotificationService? _whatsAppExamNotificationService;
 
     public SubmitExamCommandHandler(IAppDbContext db, IPublisher publisher, NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
-        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader())
+        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader(), null)
     {
     }
 
@@ -30,12 +31,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IAppDbContext db,
         IPublisher publisher,
         NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
-        ICachedPlatformSettingsReader cachedPlatformSettingsReader)
+        ICachedPlatformSettingsReader cachedPlatformSettingsReader,
+        WhatsAppExamNotificationService? whatsAppExamNotificationService = null)
     {
         _db = db;
         _publisher = publisher;
         _jobEnqueuer = jobEnqueuer;
         _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
+        _whatsAppExamNotificationService = whatsAppExamNotificationService;
     }
 
     public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
@@ -53,11 +56,21 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         }
 
         var attempt = await _db.StudentExamAttempts
-            .FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, ct);
+            .Include(a => a.Answers).FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, ct);
 
         if (attempt == null)
         {
             return ApiResponse<ExamResultDto>.Fail("Attempt not found or invalid.");
+        }
+
+        try
+        {
+            if (AssessmentAttemptScaleNormalizer.Normalize(attempt))
+                await _db.SaveChangesAsync(ct);
+        }
+        catch (InvalidOperationException error)
+        {
+            return ApiResponse<ExamResultDto>.Fail(error.Message);
         }
 
         exam = AssessmentDefinitionSnapshot.ResolveExam(exam, attempt.DefinitionSnapshotJson);
@@ -183,7 +196,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 progress.IsCompleted = true;
             }
 
-            blocksNextLesson = !attempt.IsPassed && !progress.IsManuallyUnlocked;
+            blocksNextLesson = !attempt.IsPassed && attempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation && !progress.IsManuallyUnlocked;
         }
 
         try
@@ -275,7 +288,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                     var nextLessonProgress = await _db.LessonProgresses
                         .FirstOrDefaultAsync(lp => lp.UserId == request.UserId && lp.LessonId == nextLesson.Id, ct);
 
-                    bool nextIsLocked = !attempt.IsPassed && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
+                    bool nextIsLocked = !attempt.IsPassed
+                        && attempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation
+                        && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
 
                     var lockEvent = new OutboxEvent
                     {
@@ -292,6 +307,11 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             }
 
             await _db.SaveChangesAsync(ct);
+
+            if (!hasEssayQuestions)
+            {
+                await TrySendWhatsAppExamResultAsync(attempt.Id, ct);
+            }
 
             // Enqueue notification payload for parent push notifications
             await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
@@ -324,7 +344,9 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                         .AsNoTracking()
                         .FirstOrDefaultAsync(lp => lp.UserId == request.UserId && lp.LessonId == persistedLesson.Id, ct);
 
-                var persistedBlocksNextLesson = !persistedAttempt.IsPassed && !(persistedProgress?.IsManuallyUnlocked ?? false);
+                var persistedBlocksNextLesson = !persistedAttempt.IsPassed
+                    && persistedAttempt.Evaluation != ExamAccessPolicy.PendingReviewEvaluation
+                    && !(persistedProgress?.IsManuallyUnlocked ?? false);
 
                 var persistedAnswers = await _db.StudentAnswers
                     .AsNoTracking()
@@ -375,6 +397,27 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id)));
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
+    }
+
+    private async Task TrySendWhatsAppExamResultAsync(Guid attemptId, CancellationToken ct)
+    {
+        if (_whatsAppExamNotificationService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _whatsAppExamNotificationService.SendExamResultAsync(attemptId, null, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // WhatsApp is a side-effect. Exam submission must remain successful if delivery fails.
+        }
     }
 
     private void HandleEssaySubmission(

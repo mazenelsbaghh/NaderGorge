@@ -179,7 +179,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                         align: 'center',
                         render: (row) => (
                           <div className="font-black text-lg">
-                            {row.scoreAchieved.toFixed(1)} <span className="text-sm text-[var(--admin-muted)]">/ {examData.totalScore}</span>
+                            {row.scoreAchieved.toFixed(1)} <span className="text-sm text-[var(--admin-muted)]">/ {row.totalScore}</span>
                           </div>
                         )
                       },

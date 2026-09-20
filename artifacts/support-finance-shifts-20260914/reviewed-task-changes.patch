@@ -1,0 +1,1561 @@
+diff --git a/backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs b/backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs
+index c7f28a3bb..4052aa0a9 100644
+--- a/backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs
++++ b/backend/src/NaderGorge.API/BackgroundServices/WhatsAppOutboundBackgroundService.cs
+@@ -222,7 +222,19 @@ public sealed class WhatsAppOutboundBackgroundService(
+         try
+         {
+             if (!message.AttachmentId.HasValue)
++            {
++                if (message.ReplyToMessageId.HasValue)
++                {
++                    var reply = await context.Db.LiveSupportMessages.AsNoTracking().SingleAsync(item => item.Id == message.ReplyToMessageId, ct);
++                    var original = await context.Db.LiveSupportWhatsAppMessages.AsNoTracking().SingleOrDefaultAsync(item => item.LiveSupportMessageId == reply.Id, ct);
++                    var prefix = $"baileys:{account.InstanceName}:";
++                    if (original?.MetaMessageId is null || !original.MetaMessageId.StartsWith(prefix, StringComparison.Ordinal))
++                        return new(false, "تعذر العثور على رسالة واتساب المطلوب الرد عليها.", binding.PhoneNumber, null, 409, "WHATSAPP_REPLY_UNAVAILABLE");
++                    return await context.Baileys.SendReplyAsync(account.InstanceName,
++                        new(binding.WhatsAppUserId, message.Content, original.MetaMessageId[prefix.Length..], original.Direction == "Outbound", reply.Content), ct);
++                }
+                 return await context.Baileys.SendTextAsync(account.InstanceName, binding.WhatsAppUserId, message.Content, ct);
++            }
+             var attachment = await context.Db.LiveSupportAttachments.AsNoTracking().SingleAsync(item => item.Id == message.AttachmentId, ct);
+             await using var source = await context.AttachmentStorage.OpenReadAsync(attachment.StoragePath, ct);
+             var normalized = await context.MediaNormalizer.NormalizeAsync(new WhatsAppOutboundMediaSource(
+diff --git a/backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs b/backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs
+index 9994fb7fc..894486193 100644
+--- a/backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs
++++ b/backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs
+@@ -204,11 +204,31 @@ public sealed class AdminPlatformFinanceController(
+     [HasPermission("finance.refunds.create")]
+     public async Task<ActionResult<object>> CreateExternalPackageRefund([FromBody] ExternalPackageRefundBody body, CancellationToken ct)
+     {
+-        var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
++        var source = await db.SalesFinancialEffects.AsNoTracking()
++            .SingleOrDefaultAsync(effect => effect.PurchaseOperationId == body.PurchaseOperationId, ct);
++        var grant = await db.StudentAccessGrants.AsNoTracking().SingleOrDefaultAsync(item => item.Id == body.AccessGrantId, ct);
++        var amount = body.PlatformAmount + body.TeacherAmount;
++        if (source is null || grant is null || source.StudentId != body.StudentId || grant.UserId != source.StudentId ||
++            source.TargetId != (grant.GrantType switch
++            {
++                NaderGorge.Domain.Enums.CodeType.Package => grant.PackageId,
++                NaderGorge.Domain.Enums.CodeType.Term => grant.TermId,
++                NaderGorge.Domain.Enums.CodeType.Month => grant.ContentSectionId,
++                NaderGorge.Domain.Enums.CodeType.Lesson => grant.LessonId,
++                NaderGorge.Domain.Enums.CodeType.Video => grant.LessonVideoId,
++                NaderGorge.Domain.Enums.CodeType.Exam => grant.ExamId,
++                _ => null
++            }) ||
++            source.TeacherShareImpact < 0m || source.TeacherShareImpact > source.PaidAmount ||
++            amount <= 0m || amount > source.PaidAmount || decimal.Round(amount, 2) != amount || string.IsNullOrWhiteSpace(body.Reason))
++            return BadRequest(new { message = "بيانات الباقة أو مبلغ الاسترداد غير صالح." });
++        var fraction = amount / source.PaidAmount;
++        var teacherAmount = Math.Min(amount, Math.Max(0m, decimal.Round(source.TeacherShareImpact * fraction, 2)));
++        var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+         try
+         {
+             var cancellation = await mediator.Send(
+-                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason), ct);
++                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason, new TeacherRefundScope(source.PurchaseOperationId, fraction)), ct);
+             if (!cancellation.Success)
+             {
+                 await transaction.RollbackAsync(ct);
+@@ -219,9 +239,9 @@ public sealed class AdminPlatformFinanceController(
+                 body.PurchaseOperationId,
+                 "PurchaseOperation",
+                 body.StudentId,
+-                body.TeacherId,
+-                body.PlatformAmount,
+-                body.TeacherAmount,
++                source.TeacherId,
++                amount - teacherAmount,
++                teacherAmount,
+                 (int)NaderGorge.Domain.Entities.PlatformRefundMethod.Cash,
+                 body.TreasuryAccountId,
+                 body.Reason,
+@@ -322,6 +342,35 @@ public sealed class AdminPlatformFinanceController(
+         return Ok(new { id = result.RecordId, status = NaderGorge.Domain.Entities.PlatformRefundStatus.Reversed, reversalId = result.ReversalId });
+     }
+ 
++    [HttpGet("refunds/students")]
++    [HasPermission("finance.refunds.create")]
++    public async Task<ActionResult<object>> FindRefundStudent([FromQuery] string phone, CancellationToken ct)
++    {
++        var normalized = NaderGorge.Infrastructure.Services.LiveSupportBlockPolicy.NormalizePhone(phone ?? "");
++        if (normalized.Length < 10) return BadRequest(new { message = "اكتب رقم هاتف الطالب كاملًا." });
++        var localPhone = normalized.StartsWith("20", StringComparison.Ordinal) ? "0" + normalized[2..] : normalized;
++        return Ok(await db.Users.AsNoTracking().Where(user => user.StudentProfile != null &&
++            (user.PhoneNumber == normalized || user.PhoneNumber == localPhone || user.PhoneNumber == "+" + normalized))
++            .Take(10).Select(user => new { user.Id, user.FullName, user.PhoneNumber }).ToListAsync(ct));
++    }
++
++    [HttpGet("refunds/students/{studentId:guid}")]
++    [HasPermission("finance.refunds.create")]
++    public async Task<ActionResult<object>> RefundStudent(Guid studentId, CancellationToken ct)
++    {
++        if (!await db.Users.AnyAsync(user => user.Id == studentId && user.StudentProfile != null, ct)) return NotFound();
++        var student = await mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetStudentProfileDetailQuery(studentId), ct);
++        return Ok(new { student.Id, student.FullName, student.Phone, student.Packages });
++    }
++
++    [HttpGet("refunds/bootstrap")]
++    [HasPermission("finance.refunds.view")]
++    public async Task<ActionResult<object>> RefundBootstrap(CancellationToken ct) => Ok(new
++    {
++        treasuryAccounts = await db.TreasuryAccounts.AsNoTracking().Where(account => account.IsActive)
++            .OrderBy(account => account.Name).Select(account => new { account.Id, account.Name, account.Type, account.MaskedIdentifier }).ToListAsync(ct)
++    });
++
+     [HttpGet("bootstrap")]
+     [HasPermission("finance.dashboard.view")]
+     public async Task<ActionResult<object>> Bootstrap(CancellationToken ct)
+diff --git a/backend/src/NaderGorge.API/Controllers/HrShiftsController.cs b/backend/src/NaderGorge.API/Controllers/HrShiftsController.cs
+index b8f3fb394..d476c5f50 100644
+--- a/backend/src/NaderGorge.API/Controllers/HrShiftsController.cs
++++ b/backend/src/NaderGorge.API/Controllers/HrShiftsController.cs
+@@ -35,7 +35,7 @@ public sealed class HrShiftsController : ControllerBase
+             item.Id, item.Code, item.Name, mode = item.Mode.ToString(), item.WorkCalendarId,
+             item.GraceMinutes, item.MinimumBreakMinutes, item.OvertimeAfterMinutes, item.Version,
+             segments = item.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
+-            { segment.Id, segment.Sequence, segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
++            { segment.Id, segment.Sequence, dayOfWeek = (int?)segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
+         }).ToListAsync(ct));
+ 
+     [HttpPatch("admin/shifts/calendars/{calendarId:guid}")]
+@@ -58,7 +58,7 @@ public sealed class HrShiftsController : ControllerBase
+             item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.ShiftTemplateId,
+             shift = item.ShiftTemplate!.Name, item.EffectiveFrom, item.EffectiveTo, status = item.Status.ToString(), item.Reason,
+             segments = item.ShiftTemplate.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
+-            { segment.Sequence, segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
++            { segment.Sequence, dayOfWeek = (int?)segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
+         }).ToListAsync(ct));
+ 
+     [HttpPatch("admin/shifts/assignments/{assignmentId:guid}")]
+diff --git a/backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs b/backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs
+index 6c47b18b8..a0a372146 100644
+--- a/backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs
++++ b/backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs
+@@ -13,34 +13,45 @@ namespace NaderGorge.API.Controllers;
+ 
+ [ApiController]
+ [Route("api/live-support/connections")]
+-[HasPermission("live_support.manage")]
++[Authorize(Roles = "Admin,Assistant,AssistantReviewer,Staff")]
+ public sealed class LiveSupportConnectionsController(BaileysAccountService accounts, LiveSupportBlockingService blocking) : ControllerBase
+ {
+     [HttpGet("whatsapp")]
++    [HasPermission("live_support.manage")]
+     public async Task<IActionResult> List(CancellationToken ct) => Ok(ApiResponse<IReadOnlyList<BaileysAccountDto>>.Ok(await accounts.ListAsync(ct)));
+ 
+     [HttpPost("whatsapp")]
++    [HasPermission("live_support.manage")]
+     public Task<IActionResult> Create(CreateWhatsAppAccountRequest request, CancellationToken ct) =>
+         RespondAsync(() => accounts.CreateAsync(User.RequireUserId(), request.Name, ct));
+ 
+     [HttpPost("whatsapp/{id:guid}/connect")]
++    [HasPermission("live_support.manage")]
+     public Task<IActionResult> Connect(Guid id, CancellationToken ct) => RespondAsync(() => accounts.ConnectAsync(id, ct));
+ 
+     [HttpPost("whatsapp/{id:guid}/refresh")]
++    [HasPermission("live_support.manage")]
+     public Task<IActionResult> Refresh(Guid id, CancellationToken ct) => RespondAsync(() => accounts.RefreshAsync(id, ct));
+ 
+     [HttpPost("whatsapp/{id:guid}/disconnect")]
++    [HasPermission("live_support.manage")]
+     public Task<IActionResult> Disconnect(Guid id, CancellationToken ct) => RespondAsync(() => accounts.DisconnectAsync(id, ct));
+ 
+     [HttpGet("conversations/{id:guid}/block")]
+-    public Task<IActionResult> BlockStatus(Guid id, CancellationToken ct) => RespondAsync(() => blocking.GetAsync(id, ct));
++    public Task<IActionResult> BlockStatus(Guid id, CancellationToken ct) => RespondAsync(() => WithBlockAccessAsync(id, () => blocking.GetAsync(id, ct), ct));
+ 
+     [HttpPut("conversations/{id:guid}/block")]
+     public Task<IActionResult> Block(Guid id, SupportBlockRequest request, CancellationToken ct) =>
+-        RespondAsync(() => blocking.SetAsync(id, User.RequireUserId(), request, ct));
++        RespondAsync(() => WithBlockAccessAsync(id, () => blocking.SetAsync(id, User.RequireUserId(), request, ct), ct));
+ 
+     [HttpPost("conversations/{id:guid}/block/retry")]
+-    public Task<IActionResult> RetryBlock(Guid id, CancellationToken ct) => RespondAsync(() => blocking.RetryAsync(id, ct));
++    public Task<IActionResult> RetryBlock(Guid id, CancellationToken ct) => RespondAsync(() => WithBlockAccessAsync(id, () => blocking.RetryAsync(id, ct), ct));
++
++    private async Task<T> WithBlockAccessAsync<T>(Guid id, Func<Task<T>> operation, CancellationToken ct)
++    {
++        await blocking.RequireStaffAccessAsync(id, User.RequireUserId(), User.IsInRole("Admin"), ct);
++        return await operation();
++    }
+ 
+     private async Task<IActionResult> RespondAsync<T>(Func<Task<T>> operation)
+     {
+@@ -48,7 +59,7 @@ public sealed class LiveSupportConnectionsController(BaileysAccountService accou
+         try { return Ok(ApiResponse<T>.Ok(await operation())); }
+         catch (LiveSupportException exception)
+         {
+-            var status = exception.Code == "NOT_FOUND" ? 404 : exception.Code == "VALIDATION_ERROR" ? 400
++            var status = exception.Code == "FORBIDDEN" ? 403 : exception.Code == "NOT_FOUND" ? 404 : exception.Code == "VALIDATION_ERROR" ? 400
+                 : exception.Code == "VERSION_CONFLICT" ? 409 : 502;
+             return StatusCode(status, ApiResponse<object>.Fail(exception.Message, [exception.Code]));
+         }
+diff --git a/backend/src/NaderGorge.API/Program.cs b/backend/src/NaderGorge.API/Program.cs
+index 0aaf7ce76..40239d40a 100644
+--- a/backend/src/NaderGorge.API/Program.cs
++++ b/backend/src/NaderGorge.API/Program.cs
+@@ -275,6 +275,7 @@ builder.Services.AddHttpClient<WhatsAppVerificationService>();
+ builder.Services.AddHttpClient<WhatsAppCloudService>();
+ builder.Services.AddScoped<WhatsAppLiveSupportService>();
+ builder.Services.AddHttpClient<BaileysWhatsAppClient>();
++builder.Services.AddScoped<WhatsAppMessageMutationService>();
+ builder.Services.AddScoped<BaileysAccountService>();
+ builder.Services.AddScoped<BaileysWebhookService>();
+ builder.Services.AddScoped<LiveSupportBlockingService>();
+diff --git a/backend/src/NaderGorge.Application/Features/Admin/Commands/CancelPackageGrantCommand.cs b/backend/src/NaderGorge.Application/Features/Admin/Commands/CancelPackageGrantCommand.cs
+index aab0da3cb..011d8f744 100644
+--- a/backend/src/NaderGorge.Application/Features/Admin/Commands/CancelPackageGrantCommand.cs
++++ b/backend/src/NaderGorge.Application/Features/Admin/Commands/CancelPackageGrantCommand.cs
+@@ -12,7 +12,7 @@ using NaderGorge.Domain.Interfaces;
+ 
+ namespace NaderGorge.Application.Features.Admin.Commands;
+ 
+-public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId, string? Reason = null) : IRequest<ApiResponse>;
++public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId, string? Reason = null, TeacherRefundScope? RefundScope = null) : IRequest<ApiResponse>;
+ 
+ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGrantCommand, ApiResponse>
+ {
+@@ -131,7 +131,7 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
+                 grantContext.TargetId,
+                 grant.Id,
+                 request.Reason ?? $"إلغاء اشتراك {contentName}",
+-                cancellationToken);
++                cancellationToken, request.RefundScope);
+         }
+ 
+         var successMessage = refundedAmount > 0m
+diff --git a/backend/src/NaderGorge.Application/Services/TeacherAccountingService.cs b/backend/src/NaderGorge.Application/Services/TeacherAccountingService.cs
+index e45647cf8..0edd6ff85 100644
+--- a/backend/src/NaderGorge.Application/Services/TeacherAccountingService.cs
++++ b/backend/src/NaderGorge.Application/Services/TeacherAccountingService.cs
+@@ -46,6 +46,8 @@ public record TeacherFinancialEventInput(
+     decimal TeacherDiscountAmount = 0m
+ );
+ 
++public sealed record TeacherRefundScope(Guid PurchaseOperationId, decimal Fraction);
++
+ public class TeacherAccountingService
+ {
+     private sealed record ApprovedTeacherCredit(Guid TeacherId, decimal Amount);
+@@ -148,8 +150,10 @@ public class TeacherAccountingService
+         Guid targetId,
+         Guid sourceId,
+         string reason,
+-        CancellationToken ct)
++        CancellationToken ct, TeacherRefundScope? refundScope = null)
+     {
++        if (refundScope is { Fraction: <= 0m or > 1m })
++            throw new InvalidOperationException("FINANCE_INVALID_REFUND_FRACTION");
+         var idempotencyKey = $"teacher-reversal:{sourceId}:{studentId}:{targetType}:{targetId}";
+         var existing = await _db.TeacherFinancialEvents
+             .AnyAsync(e => e.IdempotencyKey == idempotencyKey, ct);
+@@ -158,11 +162,13 @@ public class TeacherAccountingService
+             return 0;
+         }
+ 
++        var purchaseOperationId = refundScope?.PurchaseOperationId;
+         var allocations = await _db.TeacherFinancialAllocations
+             .Include(a => a.TeacherFinancialEvent)
+             .Where(a => a.TeacherFinancialEvent.StudentId == studentId
+                 && a.TeacherFinancialEvent.TargetType == targetType
+                 && a.TeacherFinancialEvent.TargetId == targetId
++                && (!purchaseOperationId.HasValue || a.TeacherFinancialEvent.SourceId == purchaseOperationId.Value)
+                 && a.TeacherShareAmount > a.ReversedAmount
+                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Reversed
+                 && a.PayoutStatus != TeacherFinancialPayoutStatus.Debt
+@@ -184,11 +190,11 @@ public class TeacherAccountingService
+             StudentId = studentId,
+             TargetType = targetType,
+             TargetId = targetId,
+-            GrossAmount = -allocations.Sum(a => a.GrossBasisAmount),
++            GrossAmount = -decimal.Round(allocations.Sum(a => a.GrossBasisAmount) * (refundScope?.Fraction ?? 1m), 2),
+             DiscountAmount = 0m,
+             PaidAmount = 0m,
+             PromotionalAmount = 0m,
+-            PlatformShareAmount = -allocations.Sum(a => a.PlatformShareAmount),
++            PlatformShareAmount = -decimal.Round(allocations.Sum(a => a.PlatformShareAmount) * (refundScope?.Fraction ?? 1m), 2),
+             IdempotencyKey = idempotencyKey,
+             DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { reason }),
+             OccurredAt = DateTime.UtcNow,
+@@ -198,16 +204,17 @@ public class TeacherAccountingService
+ 
+         foreach (var allocation in allocations)
+         {
+-            var remainingShare = allocation.TeacherShareAmount - allocation.ReversedAmount;
++            var remainingShare = Math.Min(allocation.TeacherShareAmount - allocation.ReversedAmount,
++                decimal.Round(allocation.TeacherShareAmount * (refundScope?.Fraction ?? 1m), 2));
+             reversalEvent.Allocations.Add(new TeacherFinancialAllocation
+             {
+                 Id = Guid.NewGuid(),
+                 TeacherId = allocation.TeacherId,
+                 AllocationMode = TeacherAllocationMode.Reversal,
+                 AllocationValue = remainingShare,
+-                GrossBasisAmount = -allocation.GrossBasisAmount,
++                GrossBasisAmount = -decimal.Round(allocation.GrossBasisAmount * (refundScope?.Fraction ?? 1m), 2),
+                 TeacherShareAmount = -remainingShare,
+-                PlatformShareAmount = -allocation.PlatformShareAmount,
++                PlatformShareAmount = -decimal.Round(allocation.PlatformShareAmount * (refundScope?.Fraction ?? 1m), 2),
+                 StudentNameSnapshot = allocation.StudentNameSnapshot,
+                 StudentPhoneSnapshot = allocation.StudentPhoneSnapshot,
+                 ContentNameSnapshot = allocation.ContentNameSnapshot,
+@@ -246,11 +253,14 @@ public class TeacherAccountingService
+                 }
+             }
+ 
+-            allocation.ReversedAmount = allocation.TeacherShareAmount;
+-            allocation.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
+-            allocation.PayoutStatus = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid
+-                ? TeacherFinancialPayoutStatus.Debt
+-                : TeacherFinancialPayoutStatus.Reversed;
++            allocation.ReversedAmount += remainingShare;
++            if (allocation.ReversedAmount == allocation.TeacherShareAmount)
++            {
++                allocation.ReviewStatus = TeacherFinancialReviewStatus.Reversed;
++                allocation.PayoutStatus = allocation.PayoutStatus == TeacherFinancialPayoutStatus.Paid
++                    ? TeacherFinancialPayoutStatus.Debt
++                    : TeacherFinancialPayoutStatus.Reversed;
++            }
+             allocation.UpdatedAt = DateTime.UtcNow;
+         }
+ 
+diff --git a/backend/src/NaderGorge.Infrastructure/Services/BaileysWhatsAppClient.cs b/backend/src/NaderGorge.Infrastructure/Services/BaileysWhatsAppClient.cs
+index a9377e316..4bae8a1c9 100644
+--- a/backend/src/NaderGorge.Infrastructure/Services/BaileysWhatsAppClient.cs
++++ b/backend/src/NaderGorge.Infrastructure/Services/BaileysWhatsAppClient.cs
+@@ -41,6 +41,20 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
+         return Accepted(response, instance, phone);
+     }
+ 
++    public async Task MutateTextAsync(string instance, BaileysMessageMutation mutation, CancellationToken ct)
++    {
++        var response = await RequestAsync(HttpMethod.Post, $"sessions/{Uri.EscapeDataString(instance)}/message",
++            mutation, ct);
++        if (!response.TryGetProperty("accepted", out var accepted) || accepted.ValueKind != JsonValueKind.True)
++            throw Failure("BAILEYS_REQUEST_UNCERTAIN");
++    }
++
++    public async Task<WhatsAppCloudService.SendTestMessageResult> SendReplyAsync(string instance, BaileysTextReply reply, CancellationToken ct)
++    {
++        var response = await RequestAsync(HttpMethod.Post, $"sessions/{Uri.EscapeDataString(instance)}/text", reply, ct);
++        return Accepted(response, instance, reply.Number);
++    }
++
+     public async Task<WhatsAppCloudService.SendTestMessageResult> SendMediaAsync(
+         string instance, WhatsAppCloudService.MediaMessageRequest media, CancellationToken ct)
+     {
+@@ -109,3 +123,6 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
+     private static LiveSupportException Failure(string code) => new(code,
+         code == "BAILEYS_NOT_CONFIGURED" ? "اتصال واتساب QR غير مهيأ على الخادم." : "تعذر إتمام طلب واتساب. راجع حالة الاتصال ثم حاول مجددًا.");
+ }
++
++public sealed record BaileysMessageMutation(string Number, string MessageId, string? Text);
++public sealed record BaileysTextReply(string Number, string Text, string ReplyMessageId, bool ReplyFromMe, string ReplyText);
+diff --git a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockPolicy.cs b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockPolicy.cs
+index fec9ec40b..7e2890c87 100644
+--- a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockPolicy.cs
++++ b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockPolicy.cs
+@@ -28,7 +28,14 @@ public static class LiveSupportBlockPolicy
+         var phone = await db.LiveSupportWhatsAppBindings.AsNoTracking()
+             .Where(binding => binding.ConversationId == conversation.Id)
+             .Select(binding => binding.WhatsAppUserId).SingleOrDefaultAsync(ct);
+-        return await ForParticipant(db, conversation.StudentUserId ?? conversation.LinkedStudentUserId, conversation.GuestSessionId, phone)
++        var studentId = conversation.StudentUserId ?? conversation.LinkedStudentUserId;
++        if (phone is null && studentId.HasValue)
++        {
++            var registeredPhone = await db.Users.AsNoTracking().Where(user => user.Id == studentId)
++                .Select(user => user.PhoneNumber).SingleOrDefaultAsync(ct);
++            if (!string.IsNullOrWhiteSpace(registeredPhone)) phone = NormalizePhone(registeredPhone);
++        }
++        return await ForParticipant(db, studentId, conversation.GuestSessionId, phone)
+             .OrderByDescending(block => block.CreatedAt).FirstOrDefaultAsync(ct);
+     }
+ 
+diff --git a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockingService.cs b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockingService.cs
+index 3bfe4832b..ea4c289ef 100644
+--- a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockingService.cs
++++ b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportBlockingService.cs
+@@ -14,6 +14,16 @@ public sealed record SupportBlockStatus(LiveSupportContactBlock? Block, IReadOnl
+ 
+ public sealed class LiveSupportBlockingService(IAppDbContext db, ILiveSupportEventWriter events)
+ {
++    public async Task RequireStaffAccessAsync(Guid conversationId, Guid actor, bool isAdmin, CancellationToken ct)
++    {
++        if (isAdmin) return;
++        var conversation = await RequireConversationAsync(conversationId, ct);
++        var enabled = await db.LiveSupportStaffConfigs.AsNoTracking().AnyAsync(config => config.UserId == actor && config.IsEnabled, ct);
++        if (!enabled || (conversation.CurrentOwnerUserId != actor &&
++            !await db.LiveSupportContactBlocks.AnyAsync(block => block.ConversationId == conversationId && block.BlockedByUserId == actor, ct)))
++            throw new LiveSupportException("FORBIDDEN", "يمكنك إدارة حظر المحادثات المسندة إليك فقط.");
++    }
++
+     public async Task<SupportBlockStatus> GetAsync(Guid conversationId, CancellationToken ct)
+     {
+         var conversation = await RequireConversationAsync(conversationId, ct);
+diff --git a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportService.cs b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportService.cs
+index 37360df3c..441cca7ef 100644
+--- a/backend/src/NaderGorge.Infrastructure/Services/LiveSupportService.cs
++++ b/backend/src/NaderGorge.Infrastructure/Services/LiveSupportService.cs
+@@ -34,7 +34,8 @@ public sealed class LiveSupportService(
+     IMediator? mediator = null,
+     ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null,
+     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? aiVerificationService = null,
+-    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator, ILiveSupportHumanConversationFactory
++    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null,
++    WhatsAppMessageMutationService? messageMutations = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator, ILiveSupportHumanConversationFactory
+ {
+     private const int MaxCannedReplies = 300;
+     private readonly IAppDbContext _db = db;
+@@ -1439,12 +1440,14 @@ public sealed class LiveSupportService(
+ 
+     private async Task<LiveSupportMessageDto> UpdateMessageAsync(LiveSupportMessage message, string content, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
+     {
+-        await EnsureMessageIsNotExternalAsync(message.Id, ct);
++
+         content = content.Trim();
+         if (message.DeletedAt.HasValue) throw new LiveSupportException("MESSAGE_DELETED", "لا يمكن تعديل رسالة محذوفة.");
+         if (message.Type != LiveSupportMessageType.Text || message.AttachmentId.HasValue) throw new LiveSupportException("VALIDATION_ERROR", "يمكن تعديل الرسائل النصية فقط.");
+         if (content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "نص الرسالة يجب أن يكون بين 1 و4000 حرف.");
++        await MutateExternalMessageAsync(message, content, ct);
+         message.Content = content;
++        message.UpdatedAt = DateTime.UtcNow;
+         AddEvent(message.ConversationId, LiveSupportEventType.MessageEdited, actorUserId, actorGuestId, message.Id);
+         await _db.SaveChangesAsync(ct);
+         return ToDto(message);
+@@ -1452,8 +1455,9 @@ public sealed class LiveSupportService(
+ 
+     private async Task<LiveSupportMessageDto> DeleteMessageAsync(LiveSupportMessage message, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
+     {
+-        await EnsureMessageIsNotExternalAsync(message.Id, ct);
++
+         if (message.DeletedAt.HasValue) return ToDto(message);
++        await MutateExternalMessageAsync(message, null, ct);
+         message.Content = string.Empty;
+         message.AttachmentId = null;
+         message.DeletedAt = DateTime.UtcNow;
+@@ -1644,7 +1648,11 @@ public sealed class LiveSupportService(
+ 
+         var studentIds = items.Select(c => c.StudentUserId ?? c.LinkedStudentUserId).Where(id => id.HasValue).ToArray();
+         var guestIds = items.Select(c => c.GuestSessionId).Where(id => id.HasValue).ToArray();
+-        var phones = whatsAppBindings.Values.Select(binding => binding.WhatsAppUserId).ToArray();
++        var studentPhones = await _db.Users.AsNoTracking().Where(user => studentIds.Contains(user.Id))
++            .Select(user => new { user.Id, user.PhoneNumber }).ToListAsync(ct);
++        var normalizedPhones = studentPhones.Where(user => !string.IsNullOrWhiteSpace(user.PhoneNumber))
++            .ToDictionary(user => user.Id, user => LiveSupportBlockPolicy.NormalizePhone(user.PhoneNumber!));
++        var phones = whatsAppBindings.Values.Select(binding => binding.WhatsAppUserId).Concat(normalizedPhones.Values).Distinct().ToArray();
+         var supportBlocks = await _db.LiveSupportContactBlocks.AsNoTracking().Where(block => block.UnblockedAt == null &&
+             (block.StudentUserId != null && studentIds.Contains(block.StudentUserId) ||
+              block.GuestSessionId != null && guestIds.Contains(block.GuestSessionId) ||
+@@ -1672,7 +1680,8 @@ public sealed class LiveSupportService(
+             var supportBlock = supportBlocks.FirstOrDefault(block =>
+                 block.StudentUserId != null && block.StudentUserId == (c.StudentUserId ?? c.LinkedStudentUserId) ||
+                 block.GuestSessionId != null && block.GuestSessionId == c.GuestSessionId ||
+-                block.PhoneNumber != null && block.PhoneNumber == whatsAppBinding?.WhatsAppUserId);
++                block.PhoneNumber != null && (block.PhoneNumber == whatsAppBinding?.WhatsAppUserId ||
++                    (c.StudentUserId ?? c.LinkedStudentUserId) is Guid participantId && block.PhoneNumber == normalizedPhones.GetValueOrDefault(participantId)));
+             var channel = messengerBinding is not null
+                 ? "Messenger"
+                 : whatsAppBinding is not null
+@@ -2287,10 +2296,18 @@ public sealed class LiveSupportService(
+     {
+         if (conversations.Count == 0) return [];
+ 
++        var closedConversationIds = conversations.Where(c => IsTerminal(c.Status)).Select(c => c.Id).ToArray();
++        var lastOwners = await _db.LiveSupportAssignments.AsNoTracking()
++            .Where(assignment => closedConversationIds.Contains(assignment.ConversationId))
++            .GroupBy(assignment => assignment.ConversationId)
++            .Select(group => group.OrderByDescending(assignment => assignment.AssignmentSequence)
++                .ThenByDescending(assignment => assignment.Id).First())
++            .ToDictionaryAsync(assignment => assignment.ConversationId, assignment => assignment.StaffUserId, ct);
+         var userIds = conversations
+             .SelectMany(x => new[] { x.StudentUserId, x.CurrentOwnerUserId })
+             .Where(x => x.HasValue)
+             .Select(x => x!.Value)
++            .Concat(lastOwners.Values)
+             .Distinct()
+             .ToArray();
+         var guestIds = conversations
+@@ -2407,7 +2424,7 @@ public sealed class LiveSupportService(
+                     : null;
+             var ownerName = c.CurrentOwnerUserId.HasValue
+                 ? userNames.GetValueOrDefault(c.CurrentOwnerUserId.Value)
+-                : null;
++                : lastOwners.TryGetValue(c.Id, out var lastOwnerId) ? userNames.GetValueOrDefault(lastOwnerId) : null;
+             externalBindings.TryGetValue(c.Id, out var externalBinding);
+             var channel = externalBinding?.Channel ?? "Web";
+             return new LiveSupportAdminConversationDto(
+@@ -2550,10 +2567,15 @@ public sealed class LiveSupportService(
+         string Status,
+         string Channel);
+ 
+-    private async Task EnsureMessageIsNotExternalAsync(Guid messageId, CancellationToken ct)
++    private async Task MutateExternalMessageAsync(LiveSupportMessage message, string? content, CancellationToken ct)
+     {
++        var messageId = message.Id;
+         if (await _db.LiveSupportWhatsAppMessages.AsNoTracking().AnyAsync(item => item.LiveSupportMessageId == messageId, ct))
+-            throw new LiveSupportException(LiveSupportErrorCodes.WhatsAppMessageImmutable, "لا يمكن تعديل أو حذف رسالة واتساب بعد تسجيلها للإرسال أو الاستلام.");
++        {
++            if (messageMutations is null)
++                throw new LiveSupportException(LiveSupportErrorCodes.WhatsAppMessageImmutable, "تعديل رسائل واتساب غير متاح حاليًا.");
++            await messageMutations.ApplyAsync(message, content, ct);
++        }
+         if (await _db.LiveSupportMessengerMessages.AsNoTracking().AnyAsync(item => item.LiveSupportMessageId == messageId, ct))
+             throw new LiveSupportException("LIVE_SUPPORT_MESSENGER_MESSAGE_IMMUTABLE", "لا يمكن تعديل أو حذف رسالة ماسنجر بعد تسجيلها للإرسال أو الاستلام.");
+     }
+diff --git a/backend/tests/NaderGorge.Application.Tests/LiveSupport/RatingAndMetricsTests.cs b/backend/tests/NaderGorge.Application.Tests/LiveSupport/RatingAndMetricsTests.cs
+index bbcfd451b..607b4c7d1 100644
+--- a/backend/tests/NaderGorge.Application.Tests/LiveSupport/RatingAndMetricsTests.cs
++++ b/backend/tests/NaderGorge.Application.Tests/LiveSupport/RatingAndMetricsTests.cs
+@@ -16,4 +16,19 @@ public sealed class RatingAndMetricsTests
+         var dashboard = await new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence()).GetAdminDashboardAsync(CancellationToken.None);
+         Assert.All(dashboard.StaffPerformance.Where(x => x.StaffUserId == LiveSupportTestData.StaffAId || x.StaffUserId == LiveSupportTestData.StaffBId), x => { Assert.Equal(1, x.RatingCount); Assert.Equal(4, x.AverageRating); });
+     }
++    [Fact]
++    public async Task ClosedConversationShowsLastAssignedEmployeeAfterOwnershipIsCleared()
++    {
++        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
++        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync();
++        conversation.Status = NaderGorge.Domain.Enums.LiveSupportConversationStatus.Closed;
++        conversation.CurrentOwnerUserId = null;
++        conversation.ClosedAt = DateTime.UtcNow;
++        fixture.Db.LiveSupportAssignments.Add(new() { ConversationId = conversation.Id, StaffUserId = LiveSupportTestData.StaffBId,
++            StartedAt = DateTime.UtcNow, EndedAt = DateTime.UtcNow, AssignmentSequence = 2 });
++        await fixture.Db.SaveChangesAsync();
++        var expectedName = await fixture.Db.Users.Where(user => user.Id == LiveSupportTestData.StaffBId).Select(user => user.FullName).SingleAsync();
++        var dashboard = await new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence()).GetAdminDashboardAsync(CancellationToken.None);
++        Assert.Equal(expectedName, Assert.Single(dashboard.Conversations).OwnerName);
++    }
+ }
+diff --git a/backend/tests/NaderGorge.Application.Tests/LiveSupport/SupportBlockingTests.cs b/backend/tests/NaderGorge.Application.Tests/LiveSupport/SupportBlockingTests.cs
+index 7d8daaeaa..449f4304f 100644
+--- a/backend/tests/NaderGorge.Application.Tests/LiveSupport/SupportBlockingTests.cs
++++ b/backend/tests/NaderGorge.Application.Tests/LiveSupport/SupportBlockingTests.cs
+@@ -99,6 +99,39 @@ public sealed class SupportBlockingTests
+         Assert.Equal("WHATSAPP_BLOCK_NOT_CONFIRMED", error.ErrorCode);
+     }
+ 
++    [Fact]
++    public async Task WhatsAppPhoneBlock_PreventsRegisteredStudentOpeningWebChat()
++    {
++        await using var db = TestAppDbContextFactory.Create();
++        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Blocked student", "01099999999");
++        db.LiveSupportContactBlocks.Add(new() { PhoneNumber = "201099999999", Reason = "إساءة", BlockedByUserId = LiveSupportTestData.AdminId });
++        await db.SaveChangesAsync();
++        var support = new LiveSupportService(db, new LiveSupportEnabledSettings());
++        var identity = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
++        var error = await Assert.ThrowsAsync<LiveSupportException>(() => support.CreateConversationAsync(identity, "طلب جديد", null, CancellationToken.None));
++        Assert.Equal("SUPPORT_BLOCKED", error.Code);
++        Assert.Empty(db.LiveSupportConversations);
++    }
++
++    [Fact]
++    public async Task StaffCanBlockOwnedConversationButCannotBlockAnotherEmployeesConversation()
++    {
++        await using var db = TestAppDbContextFactory.Create();
++        var actor = Guid.NewGuid();
++        var owned = LiveSupportTestData.Conversation();
++        owned.CurrentOwnerUserId = actor;
++        var other = LiveSupportTestData.Conversation();
++        other.Id = Guid.NewGuid();
++        other.CurrentOwnerUserId = Guid.NewGuid();
++        db.LiveSupportStaffConfigs.Add(new() { UserId = actor, IsEnabled = true });
++        db.LiveSupportConversations.AddRange(owned, other);
++        await db.SaveChangesAsync();
++        var blocking = new LiveSupportBlockingService(db, new LiveSupportEventWriter(db));
++        await blocking.RequireStaffAccessAsync(owned.Id, actor, false, CancellationToken.None);
++        var error = await Assert.ThrowsAsync<LiveSupportException>(() => blocking.RequireStaffAccessAsync(other.Id, actor, false, CancellationToken.None));
++        Assert.Equal("FORBIDDEN", error.Code);
++    }
++
+     private sealed class RejectedMetaUser : HttpMessageHandler
+     {
+         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+diff --git a/backend/tests/NaderGorge.Application.Tests/TeacherAccountingPhase3Tests.cs b/backend/tests/NaderGorge.Application.Tests/TeacherAccountingPhase3Tests.cs
+index 8530774e9..f8e7c6e86 100644
+--- a/backend/tests/NaderGorge.Application.Tests/TeacherAccountingPhase3Tests.cs
++++ b/backend/tests/NaderGorge.Application.Tests/TeacherAccountingPhase3Tests.cs
+@@ -302,9 +302,11 @@ public class TeacherAccountingPhase3Tests
+         Assert.Equal(20m, transaction.TeacherShareAmount);
+     }
+ 
+-    [Fact]
++    [Theory]
++    [InlineData(1.0)]
++    [InlineData(0.5)]
+     [Trait("Category", "Finance")]
+-    public async Task ReverseTargetAsync_WhenAllocationUnpaid_ReversesLedgerAndTeacherBalance()
++    public async Task ReverseTargetAsync_WhenAllocationUnpaid_ReversesOnlyRefundedShare(decimal fraction)
+     {
+         await using var db = TestAppDbContextFactory.Create();
+         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Refund Teacher", "01030000007");
+@@ -322,9 +324,10 @@ public class TeacherAccountingPhase3Tests
+ 
+         var packageId = Guid.NewGuid();
+         var service = new TeacherAccountingService(db);
++        var purchaseId = Guid.NewGuid();
+         await service.RecordEventAsync(new TeacherFinancialEventInput(
+             TeacherFinancialSourceType.DirectPurchase,
+-            Guid.NewGuid(),
++            purchaseId,
+             student.Id,
+             SalesTargetType.Package,
+             packageId,
+@@ -357,21 +360,23 @@ public class TeacherAccountingPhase3Tests
+             packageId,
+             Guid.NewGuid(),
+             "Package grant cancelled",
+-            CancellationToken.None);
++            CancellationToken.None,
++            new TeacherRefundScope(purchaseId, fraction));
+ 
+         Assert.Equal(1, reversedCount);
+         var account = await db.TeacherAccounts.SingleAsync();
+-        Assert.Equal(0m, account.TotalEarnings);
+-        Assert.Equal(0m, account.CurrentBalance);
++        Assert.Equal(40m * (1m - fraction), account.TotalEarnings);
++        Assert.Equal(40m * (1m - fraction), account.CurrentBalance);
+ 
+         var allocations = await db.TeacherFinancialAllocations
+             .OrderBy(a => a.TeacherShareAmount)
+             .ToListAsync();
+         Assert.Equal(2, allocations.Count);
+-        Assert.Equal(-40m, allocations[0].TeacherShareAmount);
++        Assert.Equal(-40m * fraction, allocations[0].TeacherShareAmount);
+         Assert.Equal(TeacherAllocationMode.Reversal, allocations[0].AllocationMode);
+         Assert.Equal(TeacherFinancialPayoutStatus.Reversed, allocations[0].PayoutStatus);
+-        Assert.Equal(TeacherFinancialPayoutStatus.Reversed, allocations[1].PayoutStatus);
++        Assert.Equal(40m * fraction, allocations[1].ReversedAmount);
++        Assert.Equal(fraction == 1m, allocations[1].PayoutStatus == TeacherFinancialPayoutStatus.Reversed);
+         Assert.Empty(db.TeacherPayoutAdjustments);
+     }
+ 
+diff --git a/frontend/src/app/admin/hr/shifts/HrShiftsPageClient.tsx b/frontend/src/app/admin/hr/shifts/HrShiftsPageClient.tsx
+index 3b6e5cdb5..974ddb2ff 100644
+--- a/frontend/src/app/admin/hr/shifts/HrShiftsPageClient.tsx
++++ b/frontend/src/app/admin/hr/shifts/HrShiftsPageClient.tsx
+@@ -57,15 +57,20 @@ export default function HrShiftsPageClient() {
+     const selectedDays = weeklyForm.days.map((templateId, dayOfWeek) => ({ templateId, dayOfWeek })).filter((day) => day.templateId);
+     if (!weeklyForm.employeeId || !weeklyForm.effectiveFrom || !weeklyForm.reason.trim()) return toast.error('اختر الموظف وتاريخ بدء الجدول وسبب التعيين');
+     if (selectedDays.length === 0) return toast.error('اختر شفتاً ليوم عمل واحد على الأقل');
+-    const sourceTemplates = selectedDays.map((day) => templates.find((template) => template.id === day.templateId)).filter((template): template is ShiftTemplateDto => Boolean(template));
++    const sourceTemplates = selectedDays.map((day) => templates.find((template) => template.id === (day.templateId.startsWith('published:') ? editingAssignment?.shiftTemplateId : day.templateId))).filter((template): template is ShiftTemplateDto => Boolean(template));
+     const calendarId = sourceTemplates[0]?.workCalendarId;
+     if (!calendarId || sourceTemplates.some((template) => template.workCalendarId !== calendarId)) return toast.error('اختر شفتات مرتبطة بتقويم عمل واحد');
+     const segments = selectedDays.flatMap(({ templateId, dayOfWeek }) => {
++      if (templateId.startsWith('published:') && editingAssignment) {
++        const published = editingAssignment.segments.filter((segment) => segment.dayOfWeek === dayOfWeek || segment.dayOfWeek == null);
++        return published.map((segment) => ({ ...segment, dayOfWeek }));
++      }
+       const source = templates.find((template) => template.id === templateId);
+-      const segment = source?.segments.find((item) => item.dayOfWeek === dayOfWeek) ?? source?.segments[0];
+-      return segment ? [{ ...segment, sequence: dayOfWeek + 1, dayOfWeek }] : [];
++      const segmentsForDay = source?.segments.filter((segment) => segment.dayOfWeek === dayOfWeek || segment.dayOfWeek == null) ?? [];
++      return segmentsForDay.map((segment) => ({ ...segment, dayOfWeek }));
+     });
+-    if (segments.length !== selectedDays.length) return toast.error('أحد الشفتات المحددة لا يحتوي على توقيت صالح');
++    if (selectedDays.some((day) => !segments.some((segment) => segment.dayOfWeek === day.dayOfWeek))) return toast.error('أحد الشفتات المحددة لا يحتوي على توقيت صالح');
++    segments.forEach((segment, index) => { segment.sequence = index + 1; });
+     const employeeCode = weeklyForm.employeeId.replaceAll('-', '').slice(0, 8).toUpperCase();
+     const dateCode = weeklyForm.effectiveFrom.replaceAll('-', '');
+     try {
+@@ -104,10 +109,7 @@ export default function HrShiftsPageClient() {
+     for (let dayOfWeek = 0; dayOfWeek < weekDays.length; dayOfWeek += 1) {
+       const segment = assignedSegmentForDay(assignment, templates, calendars, dayOfWeek);
+       if (!segment) continue;
+-      const matchingTemplate = templates.find((template) => template.segments.some((candidate) =>
+-        (candidate.dayOfWeek === dayOfWeek || candidate.dayOfWeek == null) &&
+-        candidate.startsAt === segment.startsAt && candidate.endsAt === segment.endsAt));
+-      days[dayOfWeek] = matchingTemplate?.id ?? '';
++      days[dayOfWeek] = `published:${dayOfWeek}`;
+     }
+     setEditingAssignmentId(assignment.id);
+     setWeeklyForm({ employeeId: assignment.employeeId, effectiveFrom: assignment.effectiveFrom, effectiveTo: assignment.effectiveTo ?? '', reason: assignment.reason, days });
+@@ -138,6 +140,7 @@ export default function HrShiftsPageClient() {
+     try { await hrService.updateWorkCalendar(calendarId, workingDaysMask); toast.success('تم حفظ أيام العمل والراحة'); await load(); }
+     catch { toast.error('اختر يوم عمل واحدًا على الأقل ثم أعد المحاولة'); }
+   }
++  const editingAssignment = assignments.find((assignment) => assignment.id === editingAssignmentId);
+   const selectedCalendar = calendars.find((calendar) => calendar.id === templateForm.workCalendarId);
+   const selectedRestDays = selectedCalendar
+     ? weekDays.filter((_, dayOfWeek) => (selectedCalendar.workingDaysMask & (1 << dayOfWeek)) === 0)
+@@ -149,7 +152,7 @@ export default function HrShiftsPageClient() {
+       <section className="space-y-3"><div><h2 className="text-lg font-black">تقويمات العمل وأيام الراحة</h2><p className="mt-1 text-sm text-[var(--admin-muted)]">حدد أيام العمل لكل تقويم؛ الأيام غير المحددة تُحسب راحة أسبوعية لكل الشيفتات المرتبطة به.</p></div><div className="grid gap-3 lg:grid-cols-2">{calendars.map((calendar) => <article key={calendar.id} className="admin-panel"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-black">{calendar.name}</p><p className="text-xs font-bold text-[var(--admin-muted)]">{calendar.timeZoneId}</p></div><button type="button" onClick={() => void saveCalendar(calendar.id)} className="admin-btn-primary min-h-10">حفظ الأيام</button></div><div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">{weekDays.map((day, dayOfWeek) => { const isWorking = ((calendarDrafts[calendar.id] ?? 0) & (1 << dayOfWeek)) !== 0; return <label key={day} className={`flex min-h-16 cursor-pointer flex-col items-center justify-center rounded-xl border px-2 text-xs font-bold ${isWorking ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)]'}`}><input type="checkbox" checked={isWorking} onChange={() => toggleCalendarDay(calendar.id, dayOfWeek)} className="sr-only" /><span>{day}</span><span className="mt-1 text-sm">{isWorking ? 'عمل' : 'راحة'}</span></label>; })}</div></article>)}</div></section>
+       <div className="grid gap-6 xl:grid-cols-2"><form onSubmit={createTemplate} className="admin-panel space-y-4"><div className="flex items-center gap-2"><Plus className="h-5 w-5 text-[var(--admin-primary)]" /><h2 className="text-lg font-black">قالب شفت جديد</h2></div><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-bold">الكود<input required value={templateForm.code} onChange={(e) => setTemplateForm((v) => ({ ...v, code: e.target.value }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">الاسم<input required value={templateForm.name} onChange={(e) => setTemplateForm((v) => ({ ...v, name: e.target.value }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">البداية<input aria-label="بداية الشفت" type="time" value={templateForm.startsAt} onChange={(e) => setTemplateForm((v) => ({ ...v, startsAt: e.target.value }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">النهاية<input aria-label="نهاية الشفت" type="time" value={templateForm.endsAt} onChange={(e) => setTemplateForm((v) => ({ ...v, endsAt: e.target.value }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">سماح التأخير بالدقائق<input required min={0} type="number" value={templateForm.graceMinutes} onChange={(e) => setTemplateForm((v) => ({ ...v, graceMinutes: Number(e.target.value) }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">الراحة غير المدفوعة<input required min={0} type="number" value={templateForm.breakMinutes} onChange={(e) => setTemplateForm((v) => ({ ...v, breakMinutes: Number(e.target.value) }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">بدء الإضافي بعد (دقيقة)<input required min={1} type="number" value={templateForm.overtimeAfterMinutes} onChange={(e) => setTemplateForm((v) => ({ ...v, overtimeAfterMinutes: Number(e.target.value) }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">نوع الشفت<select value={templateForm.mode} onChange={(e) => setTemplateForm((v) => ({ ...v, mode: e.target.value }))} className="admin-input mt-1 w-full"><option value="Fixed">ثابت</option><option value="Flexible">مرن</option><option value="Split">متعدد الفترات</option></select></label><label className="text-sm font-bold sm:col-span-2">تقويم العمل وأيام الراحة<select required value={templateForm.workCalendarId} onChange={(e) => setTemplateForm((v) => ({ ...v, workCalendarId: e.target.value }))} className="admin-input mt-1 w-full"><option value="">اختر تقويم العمل</option>{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label></div>{selectedCalendar && <p className="rounded-xl bg-[var(--admin-bg)] p-3 text-xs font-bold text-[var(--admin-muted)]">أيام الراحة في هذا التقويم: <span className="text-[var(--admin-text)]">{selectedRestDays.length > 0 ? selectedRestDays.join('، ') : 'لا توجد'}</span></p>}<button className="admin-btn-primary min-h-11 w-full">حفظ القالب</button></form>
+       <form onSubmit={publishAssignment} className="admin-panel space-y-4"><h2 className="text-lg font-black">نشر تعيين موظف</h2><label className="text-sm font-bold">الموظف<select required value={assignmentForm.employeeId} onChange={(e) => setAssignmentForm((v) => ({ ...v, employeeId: e.target.value }))} className="admin-input mt-1 w-full"><option value="">اختر الموظف</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label><label className="text-sm font-bold">الشفت<select required value={assignmentForm.shiftTemplateId} onChange={(e) => setAssignmentForm((v) => ({ ...v, shiftTemplateId: e.target.value }))} className="admin-input mt-1 w-full"><option value="">اختر الشفت</option>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-bold">من<input required type="date" value={assignmentForm.effectiveFrom} onChange={(e) => setAssignmentForm((v) => ({ ...v, effectiveFrom: e.target.value }))} className="admin-input mt-1 w-full" /></label><label className="text-sm font-bold">إلى<input type="date" value={assignmentForm.effectiveTo} onChange={(e) => setAssignmentForm((v) => ({ ...v, effectiveTo: e.target.value }))} className="admin-input mt-1 w-full" /></label></div><label className="text-sm font-bold">سبب التعيين<input required value={assignmentForm.reason} onChange={(e) => setAssignmentForm((v) => ({ ...v, reason: e.target.value }))} className="admin-input mt-1 w-full" /></label>{assignmentConflict && <p role="alert" className="flex items-center gap-2 rounded-2xl bg-amber-100 p-3 text-sm font-bold text-amber-800"><AlertTriangle className="h-4 w-4" />{assignmentConflict}</p>}<button className="admin-btn-primary min-h-11 w-full">فحص ونشر</button></form></div>
+-      <form id="weekly-schedule-editor" onSubmit={publishWeeklySchedule} className="admin-panel scroll-mt-24 space-y-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-black">{editingAssignmentId ? 'تعديل الجدول الأسبوعي المنشور' : 'الجدول الأسبوعي للموظف'}</h2><p className="mt-1 text-sm text-[var(--admin-muted)]">اختر شفت كل يوم. اليوم الذي تتركه «إجازة» لن يقبل فيه النظام تسجيل حضور.</p></div>{editingAssignmentId && <button type="button" onClick={cancelScheduleEdit} className="admin-btn-secondary inline-flex min-h-10 items-center gap-2"><X className="h-4 w-4" />إلغاء التعديل</button>}</div><div className="grid gap-3 md:grid-cols-3"><label className="text-sm font-bold md:col-span-2">الموظف<select required disabled={Boolean(editingAssignmentId)} value={weeklyForm.employeeId} onChange={(e) => setWeeklyForm((current) => ({ ...current, employeeId: e.target.value }))} className="admin-input mt-1 disabled:cursor-not-allowed disabled:opacity-70"><option value="">اختر الموظف</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label><label className="text-sm font-bold">يبدأ من<input required type="date" value={weeklyForm.effectiveFrom} onChange={(e) => setWeeklyForm((current) => ({ ...current, effectiveFrom: e.target.value }))} className="admin-input mt-1" /></label><label className="text-sm font-bold">ينتهي في (اختياري)<input type="date" value={weeklyForm.effectiveTo} onChange={(e) => setWeeklyForm((current) => ({ ...current, effectiveTo: e.target.value }))} className="admin-input mt-1" /></label><label className="text-sm font-bold md:col-span-2">سبب التعيين<input required value={weeklyForm.reason} onChange={(e) => setWeeklyForm((current) => ({ ...current, reason: e.target.value }))} className="admin-input mt-1" /></label></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekDays.map((day, dayOfWeek) => <label key={day} className="rounded-xl bg-[var(--admin-bg)] p-3 text-sm font-bold">{day}<select value={weeklyForm.days[dayOfWeek]} onChange={(e) => setWeeklyForm((current) => ({ ...current, days: current.days.map((value, index) => index === dayOfWeek ? e.target.value : value) }))} className="admin-input mt-2"><option value="">إجازة</option>{templates.map((template) => { const segment = template.segments.find((item) => item.dayOfWeek === dayOfWeek) ?? template.segments[0]; return <option key={template.id} value={template.id}>{template.name}{segment ? ` (${formatShiftTimeRange(segment.startsAt, segment.endsAt)})` : ''}</option>; })}</select></label>)}</div>{weeklyConflict && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-800"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" />{weeklyConflict.message}</span>{weeklyConflict.assignmentId && <button type="button" onClick={editConflictingSchedule} className="min-h-10 rounded-lg border border-amber-700 px-3">فتح الجدول المنشور وتعديله</button>}</div>}<button className="admin-btn-primary min-h-11">{editingAssignmentId ? 'حفظ تعديلات الجدول' : 'حفظ الجدول الأسبوعي'}</button></form>
++      <form id="weekly-schedule-editor" onSubmit={publishWeeklySchedule} className="admin-panel scroll-mt-24 space-y-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-black">{editingAssignmentId ? 'تعديل الجدول الأسبوعي المنشور' : 'الجدول الأسبوعي للموظف'}</h2><p className="mt-1 text-sm text-[var(--admin-muted)]">اختر شفت كل يوم. اليوم الذي تتركه «إجازة» لن يقبل فيه النظام تسجيل حضور.</p></div>{editingAssignmentId && <button type="button" onClick={cancelScheduleEdit} className="admin-btn-secondary inline-flex min-h-10 items-center gap-2"><X className="h-4 w-4" />إلغاء التعديل</button>}</div><div className="grid gap-3 md:grid-cols-3"><label className="text-sm font-bold md:col-span-2">الموظف<select required disabled={Boolean(editingAssignmentId)} value={weeklyForm.employeeId} onChange={(e) => setWeeklyForm((current) => ({ ...current, employeeId: e.target.value }))} className="admin-input mt-1 disabled:cursor-not-allowed disabled:opacity-70"><option value="">اختر الموظف</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label><label className="text-sm font-bold">يبدأ من<input required type="date" value={weeklyForm.effectiveFrom} onChange={(e) => setWeeklyForm((current) => ({ ...current, effectiveFrom: e.target.value }))} className="admin-input mt-1" /></label><label className="text-sm font-bold">ينتهي في (اختياري)<input type="date" value={weeklyForm.effectiveTo} onChange={(e) => setWeeklyForm((current) => ({ ...current, effectiveTo: e.target.value }))} className="admin-input mt-1" /></label><label className="text-sm font-bold md:col-span-2">سبب التعيين<input required value={weeklyForm.reason} onChange={(e) => setWeeklyForm((current) => ({ ...current, reason: e.target.value }))} className="admin-input mt-1" /></label></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekDays.map((day, dayOfWeek) => <label key={day} className="rounded-xl bg-[var(--admin-bg)] p-3 text-sm font-bold">{day}<select value={weeklyForm.days[dayOfWeek]} onChange={(e) => setWeeklyForm((current) => ({ ...current, days: current.days.map((value, index) => index === dayOfWeek ? e.target.value : value) }))} className="admin-input mt-2"><option value="">إجازة</option>{editingAssignment && assignedSegmentForDay(editingAssignment, templates, calendars, dayOfWeek) ? <option value={`published:${dayOfWeek}`}>المواعيد المنشورة ({editingAssignment.segments.filter((segment) => segment.dayOfWeek === dayOfWeek || segment.dayOfWeek == null).map((segment) => formatShiftTimeRange(segment.startsAt, segment.endsAt)).join("، ")})</option> : null}{templates.filter((template) => template.segments.some((segment) => segment.dayOfWeek === dayOfWeek || segment.dayOfWeek == null)).map((template) => { const segment = template.segments.find((item) => item.dayOfWeek === dayOfWeek) ?? template.segments[0]; return <option key={template.id} value={template.id}>{template.name}{segment ? ` (${formatShiftTimeRange(segment.startsAt, segment.endsAt)})` : ''}</option>; })}</select></label>)}</div>{weeklyConflict && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl bg-amber-100 p-3 text-sm font-bold text-amber-800"><span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4" />{weeklyConflict.message}</span>{weeklyConflict.assignmentId && <button type="button" onClick={editConflictingSchedule} className="min-h-10 rounded-lg border border-amber-700 px-3">فتح الجدول المنشور وتعديله</button>}</div>}<button className="admin-btn-primary min-h-11">{editingAssignmentId ? 'حفظ تعديلات الجدول' : 'حفظ الجدول الأسبوعي'}</button></form>
+       <section className="space-y-3"><div><h2 className="text-lg font-black">الجدول المنشور</h2><p className="mt-1 text-sm text-[var(--admin-muted)]">كل أيام الأسبوع ظاهرة هنا، ويمكن فتح أي جدول للتعديل.</p></div>{assignments.length === 0 ? <div className="admin-panel py-12 text-center text-sm font-bold text-[var(--admin-muted)]">لا توجد تعيينات منشورة.</div> : <div className="space-y-3">{assignments.map((item) => <article key={item.id} className="admin-panel"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-black">{item.employee}</p><p className="text-sm font-bold text-[var(--admin-primary)]">{item.shift}</p></div><div className="flex flex-wrap items-center gap-2"><span className="admin-badge">{item.effectiveFrom} — {item.effectiveTo ?? 'مفتوح'}</span><button type="button" onClick={() => editPublishedSchedule(item)} className="admin-btn-secondary inline-flex min-h-10 items-center gap-2"><Pencil className="h-4 w-4" />تعديل الجدول</button></div></div><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">{weekDays.map((day, dayOfWeek) => { const segment = assignedSegmentForDay(item, templates, calendars, dayOfWeek); return <div key={day} className={`rounded-xl p-3 ${segment ? 'bg-[var(--admin-primary-15)] text-[var(--admin-text)]' : 'bg-[var(--admin-bg)] text-[var(--admin-muted)]'}`}><p className="text-xs font-black">{day}</p><p className="mt-1 text-xs font-bold">{segment ? formatShiftTimeRange(segment.startsAt, segment.endsAt) : 'إجازة'}</p></div>; })}</div><p className="mt-3 text-sm text-[var(--admin-muted)]">{item.reason}</p></article>)}</div>}</section>
+     </div>}
+   </AdminPage>;
+diff --git a/frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx b/frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx
+index 44fe825b2..a3a30ed21 100644
+--- a/frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx
++++ b/frontend/src/app/admin/live-support/AdminLiveSupportPageClient.tsx
+@@ -242,7 +242,7 @@ export default function AdminLiveSupportPageClient() {
+                   <td className="p-3 font-semibold text-[var(--admin-text)]">{statusLabels[item.status]}</td>
+                   <td className="p-3 text-xs font-medium text-[var(--admin-text)]">{formatExternalWindow(item)}</td>
+                   <td className="hidden p-3 text-[var(--admin-text)] lg:table-cell"><span className="font-semibold">{isMessenger ? 'موظفون فقط' : item.aiTurnStatus || 'بشري'}</span>{!isMessenger && item.aiTurnFailureCode && <bdi dir="ltr" className="mt-1 block break-all text-xs text-[var(--admin-danger)]">{item.aiTurnFailureCode}</bdi>}</td>
+-                  <td className="p-3 text-[var(--admin-text)]">{item.ownerName || 'الطابور'}</td>
++                  <td className="p-3 text-[var(--admin-text)]">{item.ownerName || (item.status === 'Closed' || item.status === 'Abandoned' ? 'لم تُسند لموظف' : 'الطابور')}</td>
+                   <td className="hidden p-3 text-[var(--admin-text)] xl:table-cell"><time dateTime={item.createdAt}>{formatCairoTimestamp(item.createdAt)}</time></td>
+                   <td className="hidden p-3 text-[var(--admin-text)] md:table-cell">{formatDuration(item.waitSeconds)}</td>
+                   <td className="sticky left-0 z-10 border-r border-[var(--admin-border)] bg-[var(--admin-card)] p-3"><button type="button" onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="min-h-10 rounded-lg bg-[var(--admin-primary)] px-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)]">فتح المحادثة</button></td>
+diff --git a/frontend/src/app/admin/settings/AdminSettingsPageClient.tsx b/frontend/src/app/admin/settings/AdminSettingsPageClient.tsx
+index b2ef9b254..211afaaca 100644
+--- a/frontend/src/app/admin/settings/AdminSettingsPageClient.tsx
++++ b/frontend/src/app/admin/settings/AdminSettingsPageClient.tsx
+@@ -76,6 +76,8 @@ interface NavOption {
+ }
+ 
+ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
++  'finance.refunds.view': ['/admin/platform-finance/refunds', '/assistant/refunds'],
++  'finance.refunds.create': ['/admin/platform-finance/refunds', '/assistant/refunds'],
+   'users.manage': [
+     '/admin/students',
+     '/admin/overrides',
+@@ -298,6 +300,11 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
+       { key: '/assistant/codes', label: 'إدارة مجموعات أكواد الوصول' }
+     ]
+   },
++  {
++    key: '/assistant/refunds',
++    label: 'استردادات الطلاب',
++    subItems: [{ key: '/assistant/refunds', label: 'عرض الاستردادات وتسجيل المبلغ المرتجع للطالب' }]
++  },
+   {
+     key: '/assistant/students',
+     label: 'إدارة الطلاب',
+diff --git a/frontend/src/components/admin/platform-finance/RefundManager.tsx b/frontend/src/components/admin/platform-finance/RefundManager.tsx
+index 4a2334c8e..52529e1ae 100644
+--- a/frontend/src/components/admin/platform-finance/RefundManager.tsx
++++ b/frontend/src/components/admin/platform-finance/RefundManager.tsx
+@@ -1,20 +1,23 @@
+ 'use client';
+ 
+ import Link from 'next/link';
++import { useHasPermission } from '@/hooks/useHasPermission';
+ import { FormEvent, useEffect, useState } from 'react';
+ import toast from 'react-hot-toast';
+-import { adminService, type AdminUserListDto, type StudentProfileExtendedDto } from '@/services/admin-service';
+-import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow } from '@/services/platform-finance-service';
++import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, type RefundStudent } from '@/services/platform-finance-service';
+ 
+ const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
+ 
+-export default function RefundManager() {
++export default function RefundManager({ staff = false }: { staff?: boolean }) {
++  const { hasPermission } = useHasPermission();
++  const canCreate = hasPermission('finance.refunds.create');
++  const canReverse = hasPermission('finance.refunds.post');
+   const [rows, setRows] = useState<PlatformRefundRow[]>([]);
+-  const [bootstrap, setBootstrap] = useState<FinanceBootstrap | null>(null);
++  const [bootstrap, setBootstrap] = useState<Pick<FinanceBootstrap, 'treasuryAccounts'> | null>(null);
+   const [error, setError] = useState('');
+   const [phone, setPhone] = useState('');
+-  const [students, setStudents] = useState<AdminUserListDto[]>([]);
+-  const [student, setStudent] = useState<StudentProfileExtendedDto | null>(null);
++  const [students, setStudents] = useState<Array<{ id: string; fullName: string; phoneNumber: string }>>([]);
++  const [student, setStudent] = useState<RefundStudent | null>(null);
+   const [grantId, setGrantId] = useState('');
+   const [treasuryId, setTreasuryId] = useState('');
+   const [refundAmount, setRefundAmount] = useState('');
+@@ -25,7 +28,7 @@ export default function RefundManager() {
+     try {
+       const [refunds, financeBootstrap] = await Promise.all([
+         platformFinanceService.getRefunds(),
+-        platformFinanceService.bootstrap(),
++        platformFinanceService.refundBootstrap(),
+       ]);
+       setRows(refunds);
+       setBootstrap(financeBootstrap);
+@@ -37,12 +40,15 @@ export default function RefundManager() {
+   useEffect(() => { void load(); }, []);
+ 
+   async function searchStudent() {
+-    const result = await adminService.listUsers(1, 10, phone.trim(), undefined, undefined, undefined, undefined, undefined, 'Student');
+-    setStudents(result?.items || []);
++    try {
++      const matches = await platformFinanceService.findRefundStudents(phone.trim());
++      setStudents(matches);
++      if (matches.length === 0) toast.error('لا يوجد طالب بهذا الرقم');
++    } catch { toast.error('تعذر البحث؛ اكتب رقم الهاتف كاملًا وحاول مجددًا'); }
+   }
+ 
+   async function selectStudent(userId: string) {
+-    setStudent(await adminService.getStudentProfile(userId));
++    setStudent(await platformFinanceService.getRefundStudent(userId));
+     setGrantId('');
+     setStudents([]);
+   }
+@@ -51,7 +57,7 @@ export default function RefundManager() {
+     event.preventDefault();
+     const selectedPackage = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
+     const amount = Number(refundAmount);
+-    if (!student || !selectedPackage?.purchaseOperationId || !treasuryId || !reason.trim() || amount <= 0 || amount > selectedPackage.paidAmount) return;
++    if (!canCreate || !student || !selectedPackage?.purchaseOperationId || !treasuryId || !reason.trim() || !Number.isFinite(amount) || amount <= 0 || amount > selectedPackage.paidAmount) return;
+     const teacherRatio = selectedPackage.paidAmount > 0 ? selectedPackage.teacherShareAmount / selectedPackage.paidAmount : 0;
+     const teacherAmount = Math.min(amount, Math.max(0, Number((amount * teacherRatio).toFixed(2))));
+     setSubmitting(true);
+@@ -67,7 +73,7 @@ export default function RefundManager() {
+         reason: reason.trim(),
+       });
+       toast.success('تم إلغاء الباقة وتسجيل الاسترداد الخارجي في المركز المالي');
+-      setStudent(await adminService.getStudentProfile(student.id));
++      setStudent(await platformFinanceService.getRefundStudent(student.id));
+       setGrantId('');
+       setRefundAmount('');
+       setReason('');
+@@ -94,7 +100,7 @@ export default function RefundManager() {
+         <h2 className="text-lg font-black">استرداد خارجي لطالب</h2>
+         <p className="mt-1 text-xs text-[var(--admin-muted)]">يلغي الباقة بدون إضافة رصيد للطالب، ويسجل المبلغ الخارج من الخزنة كاسترداد في المركز المالي.</p>
+       </div>
+-      <form onSubmit={createExternalRefund} className="grid gap-4 md:grid-cols-2">
++      {canCreate ? <form onSubmit={createExternalRefund} className="grid gap-4 md:grid-cols-2">
+         <div className="md:col-span-2">
+           <label className="mb-1 block text-xs font-bold">رقم هاتف الطالب</label>
+           <div className="flex gap-2">
+@@ -129,13 +135,13 @@ export default function RefundManager() {
+         <div className="md:col-span-2 flex justify-end">
+           <button className="admin-btn-primary" type="submit" disabled={submitting || !student || !grantId || !treasuryId}>{submitting ? 'جارٍ التنفيذ…' : 'إلغاء الباقة وتسجيل الاسترداد'}</button>
+         </div>
+-      </form>
++      </form> : <p className="text-sm">تحتاج إلى صلاحية إنشاء الاستردادات لتنفيذ استرداد.</p>}
+     </section>
+ 
+     <section className="admin-panel rounded-2xl p-6">
+       <div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">سجل الاستردادات</h2><p className="mt-1 text-xs text-[var(--admin-muted)]">يشمل الاستردادات المسجلة بالمركز المالي واستردادات الرصيد القديمة تلقائياً.</p></div><button className="admin-btn-ghost" type="button" onClick={() => void load()}>تحديث</button></div>
+       {error ? <p role="alert" className="mb-3 text-rose-600">{error}</p> : null}
+-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>السبب</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الإجمالي</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={`/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{!row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
++      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>الطالب</th><th>التاريخ</th><th>الطريقة</th><th>السبب</th><th>حصة المنصة</th><th>حصة المدرس</th><th>الإجمالي</th><th>الحالة</th><th /></tr></thead><tbody>{rows.map(row => <tr key={row.id} className="border-t border-[var(--admin-border)]"><td><Link href={staff ? `/assistant/students/${row.studentId}` : `/admin/users/${row.studentId}`} className="font-bold text-[var(--admin-primary)] hover:underline">{row.studentName}</Link><bdi className="block font-mono text-xs text-[var(--admin-muted)]">{row.studentPhoneNumber}</bdi></td><td>{new Date(row.createdAt).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</td><td>{row.method === 2 ? 'كاش' : 'رصيد طالب'}</td><td>{row.reason || '—'}</td><td>{money(row.platformAmount)}</td><td>{money(row.teacherAmount)}</td><td className="font-bold">{money(row.totalAmount)}</td><td>{row.isHistorical ? 'استرداد قديم' : row.status === 3 ? 'معكوس' : row.status === 2 ? 'مقيد' : 'مسودة'}</td><td>{canReverse && !row.isHistorical && row.status === 2 ? <button className="text-rose-600" type="button" onClick={() => void reverse(row.id)}>عكس</button> : null}</td></tr>)}</tbody></table>{rows.length === 0 ? <p className="py-8 text-center text-[var(--admin-muted)]">لا توجد استردادات.</p> : null}</div>
+     </section>
+   </div>;
+ }
+diff --git a/frontend/src/components/assistant/AssistantShellChrome.tsx b/frontend/src/components/assistant/AssistantShellChrome.tsx
+index c2c2e112d..99e66c47a 100644
+--- a/frontend/src/components/assistant/AssistantShellChrome.tsx
++++ b/frontend/src/components/assistant/AssistantShellChrome.tsx
+@@ -40,7 +40,7 @@ export type AssistantShellRoute =
+   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
+   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
+   | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/wallet-messages' | '/assistant/recharge-shift-review' | '/assistant/recharge-conflicts' | '/assistant/students' | '/assistant/reports'
+-  | '/assistant/codes';
++  | '/assistant/codes' | '/assistant/refunds';
+ 
+ type AssistantShellChromeProps = {
+   activePath: AssistantShellRoute;
+@@ -70,6 +70,7 @@ const AssistantShellContext = createContext<{
+ type AssistantNavItem = { href: AssistantShellRoute; label: string; icon: LucideIcon; group: 'operations' | 'learning' | 'communication' | 'employee'; permission?: string };
+ 
+ const navItems: AssistantNavItem[] = [
++  { href: '/assistant/refunds', label: 'استردادات الطلاب', icon: WalletCards, group: 'operations', permission: 'finance.refunds.view' },
+   { href: '/assistant/tasks', label: 'المهام والعمليات', icon: ClipboardList, group: 'operations', permission: 'tasks.manage' },
+   { href: '/assistant/content', label: 'إدارة المحتوى التعليمي', icon: BookOpen, group: 'learning', permission: 'content.manage' },
+   { href: '/assistant/codes', label: 'الأكواد', icon: KeyRound, group: 'operations', permission: 'codes.manage' },
+diff --git a/frontend/src/components/live-support/admin/ConversationInvestigation.tsx b/frontend/src/components/live-support/admin/ConversationInvestigation.tsx
+index e256b4baa..ff3d65139 100644
+--- a/frontend/src/components/live-support/admin/ConversationInvestigation.tsx
++++ b/frontend/src/components/live-support/admin/ConversationInvestigation.tsx
+@@ -16,6 +16,7 @@ import {
+   LiveSupportMessageContent,
+   LiveSupportMessageMeta,
+ } from '@/components/live-support/LiveSupportMessageContent';
++import { LiveSupportMessageActions } from '@/components/live-support/LiveSupportMessageActions';
+ import { SupportBlockPanel } from './SupportBlockPanel';
+ import { WhatsAppTemplatePicker } from '@/components/live-support/staff/WhatsAppTemplatePicker';
+ import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSupportChannelBadge';
+@@ -54,6 +55,7 @@ export function ConversationInvestigation({
+ }: ConversationInvestigationProps) {
+   const [messages, setMessages] = useState<LiveSupportMessage[]>([]);
+   const [draft, setDraft] = useState('');
++  const [replyTarget, setReplyTarget] = useState<LiveSupportMessage>();
+   const [loading, setLoading] = useState(true);
+   const [sending, setSending] = useState(false);
+   const [error, setError] = useState('');
+@@ -328,9 +330,11 @@ export function ConversationInvestigation({
+         {
+           clientMessageId: createClientId(),
+           content,
++          replyToMessageId: replyTarget?.conversationId === conversation.id ? replyTarget.id : undefined,
+         }
+       );
+       appendMessage(message);
++      setReplyTarget(undefined);
+       setDraft('');
+     } catch (cause) {
+       setError(
+@@ -743,6 +747,11 @@ export function ConversationInvestigation({
+                                 : undefined
+                             }
+                           />
++                          {message.replyTo ? <blockquote className="mb-2 border-r-2 border-current pr-2 text-xs opacity-80">{message.replyTo.isDeleted ? 'رسالة محذوفة' : message.replyTo.content}</blockquote> : null}
++                          {channelCapabilities.supportsMessageReply && !message.deletedAt && message.conversationId === conversation.id && canSendText ? <button type="button" onClick={() => setReplyTarget(message)} className="min-h-9 px-2 text-xs font-bold">رد على الرسالة</button> : null}
++                          {channelCapabilities.supportsMessageMutation && (message.senderType === 'Admin' || message.senderType === 'Staff') && message.conversationId === conversation.id ? <LiveSupportMessageActions message={message}
++                            onEdit={async (id, content) => { const updated = await liveSupportService.updateStaffMessage(conversation.id, id, content); setMessages(current => current.map(item => item.id === id ? updated : item)); }}
++                            onDelete={async (id) => { const updated = await liveSupportService.deleteStaffMessage(conversation.id, id); setMessages(current => current.map(item => item.id === id ? updated : item)); }} /> : null}
+                           <LiveSupportMessageMeta
+                             message={message}
+                             audience="staff"
+@@ -766,6 +775,7 @@ export function ConversationInvestigation({
+             </div>
+ 
+             <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-3 sm:p-4">
++              {replyTarget?.conversationId === conversation.id ? <div className="mb-2 flex items-center justify-between gap-2 text-sm"><span className="truncate">رد على: {replyTarget.content}</span><button type="button" onClick={() => setReplyTarget(undefined)} aria-label="إلغاء الرد" className="min-h-11 px-3"><X size={16} /></button></div> : null}
+               {error ? (
+                 <p
+                   role="alert"
+diff --git a/frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx b/frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx
+index 5bf20879d..8a98c5b0c 100644
+--- a/frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx
++++ b/frontend/src/components/live-support/staff/StaffConversationWorkspace.tsx
+@@ -1,3 +1,4 @@
++import { SupportBlockPanel } from '@/components/live-support/admin/SupportBlockPanel';
+ import Image from 'next/image';
+ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+ import { ChevronDown, Headphones, LoaderCircle, MessageSquareReply, MessageSquareText, Paperclip, Send, X, XCircle } from 'lucide-react';
+@@ -235,7 +236,7 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
+             && (index > 0 || message.conversationId !== conversation.id);
+           return <Fragment key={message.id}>
+             {showEpisodeBoundary ? <div role="separator" aria-label={message.conversationId === conversation.id ? 'بداية المحادثة الحالية' : 'بداية محادثة سابقة'} className="flex items-center gap-2 py-2 text-xs font-bold text-[var(--admin-muted)]"><span className="h-px flex-1 bg-[var(--admin-border)]"/><span>{message.conversationId === conversation.id ? 'المحادثة الحالية' : 'محادثة سابقة'}</span><span className="h-px flex-1 bg-[var(--admin-border)]"/></div> : null}
+-            <article dir="auto" data-live-support-message-id={message.id} aria-label={`رسالة من ${senderLabel}`} style={{ backgroundColor: colors.backgroundColor, color: colors.color, fontSize: fontSize(preferences.fontScale) }} className={`max-w-[76%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 ${isStaffMessage ? 'mr-auto' : 'ml-auto'}`}><p className="mb-1 text-xs font-bold opacity-75">{senderLabel}</p>{message.replyTo ? <ReplyPreview message={message.replyTo}/>: null}<LiveSupportMessageContent message={message} audience="staff" staffWhatsAppThreadConversationId={isWhatsApp ? conversation.id : undefined}/>{channelCapabilities.supportsMessageReply ? <button type="button" onClick={() => { setReplyTarget(message); replyInputRef.current?.focus(); }} className="mt-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-bold opacity-75 hover:bg-black/10"><MessageSquareReply size={14}/>رد</button> : null}{isStaffMessage && channelCapabilities.supportsMessageMutation ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}<LiveSupportMessageMeta message={message} audience="staff"/></article>
++            <article dir="auto" data-live-support-message-id={message.id} aria-label={`رسالة من ${senderLabel}`} style={{ backgroundColor: colors.backgroundColor, color: colors.color, fontSize: fontSize(preferences.fontScale) }} className={`max-w-[76%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 ${isStaffMessage ? 'mr-auto' : 'ml-auto'}`}><p className="mb-1 text-xs font-bold opacity-75">{senderLabel}</p>{message.replyTo ? <ReplyPreview message={message.replyTo}/>: null}<LiveSupportMessageContent message={message} audience="staff" staffWhatsAppThreadConversationId={isWhatsApp ? conversation.id : undefined}/>{channelCapabilities.supportsMessageReply && !message.deletedAt && message.conversationId === conversation.id ? <button type="button" onClick={() => { setReplyTarget(message); replyInputRef.current?.focus(); }} className="mt-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-bold opacity-75 hover:bg-black/10"><MessageSquareReply size={14}/>رد</button> : null}{isStaffMessage && channelCapabilities.supportsMessageMutation && message.conversationId === conversation.id ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}<LiveSupportMessageMeta message={message} audience="staff"/></article>
+           </Fragment>;
+         })}
+         {channelCapabilities.supportsParticipantTypingPreview && participantDraft !== null && participantDraft !== undefined ? <article className="ml-auto max-w-[76%] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-primary-15)] px-3 py-2 text-sm text-[var(--admin-text)]"><p className="mb-1 text-xs font-bold text-[var(--admin-primary)]">{participantName} يكتب الآن…</p><p dir="auto" className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{participantDraft || '…'}</p></article> : null}
+@@ -243,6 +244,7 @@ export function StaffConversationWorkspace({ conversation, messages, draft, part
+     </div>
+     </div>
+     <div className="shrink-0 border-t border-[var(--admin-border)] p-4">
++      <SupportBlockPanel key={conversation.id} conversationId={conversation.id} />
+       {isWhatsApp ? <WhatsAppTemplatePicker disabled={!channelCapabilities.canSendTemplate || ownershipLost || Boolean(pendingAction) || Boolean(uploading)} onSend={onSendWhatsAppTemplate}/> : null}
+       {externalWindowClosed ? <p role="status" className="mb-3 rounded-lg bg-[var(--admin-warning-10)] px-3 py-2 text-sm font-medium text-[var(--admin-warning)]">{isWhatsApp ? 'انتهت نافذة الرد النصي. أرسل قالب واتساب معتمدًا لبدء المحادثة من جديد.' : 'انتهت نافذة الرد المتاحة لهذه الصفحة. انتظر رسالة جديدة من العميل قبل الرد.'}</p> : null}
+       {!externalWindowClosed ? <>
+diff --git a/frontend/src/lib/live-support-channel.test.mts b/frontend/src/lib/live-support-channel.test.mts
+index ab10212b1..a07532fdc 100644
+--- a/frontend/src/lib/live-support-channel.test.mts
++++ b/frontend/src/lib/live-support-channel.test.mts
+@@ -133,6 +133,8 @@ test('Baileys replies stay available after the Meta window expires and templates
+   assert.equal(capabilities.canSendAttachments, true);
+   assert.equal(capabilities.canSendTemplate, false);
+   assert.equal(capabilities.requiresCustomerServiceWindow, false);
++  assert.equal(capabilities.supportsMessageReply, true);
++  assert.equal(capabilities.supportsMessageMutation, true);
+ });
+ 
+ test('support blocks override stale sending flags for every channel', () => {
+diff --git a/frontend/src/lib/live-support-channel.ts b/frontend/src/lib/live-support-channel.ts
+index 501441d94..aed4714a8 100644
+--- a/frontend/src/lib/live-support-channel.ts
++++ b/frontend/src/lib/live-support-channel.ts
+@@ -117,7 +117,7 @@ export function resolveLiveSupportChannelCapabilities(
+ ): LiveSupportChannelCapabilities {
+   const channel = normalizeLiveSupportChannel(source.channel);
+   const fallback = channel === 'WhatsApp' && source.whatsAppAccountId
+-    ? { ...CHANNEL_CAPABILITY_FALLBACKS.WhatsApp, requiresCustomerServiceWindow: false, supportsTemplates: false }
++    ? { ...CHANNEL_CAPABILITY_FALLBACKS.WhatsApp, requiresCustomerServiceWindow: false, supportsTemplates: false, supportsMessageReply: true, supportsMessageMutation: true }
+     : CHANNEL_CAPABILITY_FALLBACKS[channel];
+   const customerServiceWindowOpen = fallback.requiresCustomerServiceWindow
+     ? isWindowOpen(source.customerServiceWindowExpiresAt, currentTime)
+diff --git a/frontend/src/services/platform-finance-service.ts b/frontend/src/services/platform-finance-service.ts
+index 5045cd6e9..8c5bfb554 100644
+--- a/frontend/src/services/platform-finance-service.ts
++++ b/frontend/src/services/platform-finance-service.ts
+@@ -1,3 +1,4 @@
++import type { StudentProfileExtendedDto } from '@/services/admin-service';
+ import apiClient from '@/services/api-client';
+ 
+ export type FinanceAccountBalance = {
+@@ -75,7 +76,17 @@ export type PlatformRefundRow = { id: string; originalSourceId: string; original
+ export type PlatformFinancialReport = { kind: string; from: string; to: string; totalDebit: number; totalCredit: number; rows: Array<{ code: string; name: string; type: number; debit: number; credit: number; balance: number }> };
+ export type WalletFinanceReport = { wallets: Array<{ id: string; label: string; phoneNumber: string; currentBalance: number; incoming: number; outgoing: number; expenses: number; internalTransfers: number; transactions: number }>; teacherRechargeCards: Array<{ walletId: string; teacherName: string; amount: number; count: number }>; transactions: Array<{ id: string; walletId: string; receivedAt: string; amount: number; type: 'incoming' | 'outgoing'; phone?: string | null; body: string }> };
+ 
++export type RefundStudent = Pick<StudentProfileExtendedDto, 'id' | 'fullName' | 'phone' | 'packages'>;
++
+ const platformFinanceService = {
++  async findRefundStudents(phone: string): Promise<Array<{ id: string; fullName: string; phoneNumber: string }>> {
++    const response = await apiClient.get('/admin/platform-finance/refunds/students', { params: { phone } });
++    return response.data;
++  },
++  async getRefundStudent(id: string): Promise<RefundStudent> {
++    const response = await apiClient.get<RefundStudent>(`/admin/platform-finance/refunds/students/${id}`);
++    return response.data;
++  },
+   async getDashboard(from?: string, to?: string) {
+     const response = await apiClient.get<PlatformFinanceDashboard>('/admin/platform-finance/dashboard', { params: { from, to } });
+     return response.data;
+@@ -92,6 +103,10 @@ const platformFinanceService = {
+     const response = await apiClient.get<FinanceTeacherSummary>(`/admin/platform-finance/teachers/${teacherId}/summary`, { params: { from, to } });
+     return response.data;
+   },
++  async refundBootstrap(): Promise<Pick<FinanceBootstrap, 'treasuryAccounts'>> {
++    const response = await apiClient.get<Pick<FinanceBootstrap, 'treasuryAccounts'>>('/admin/platform-finance/refunds/bootstrap');
++    return response.data;
++  },
+   async bootstrap() {
+     const response = await apiClient.get<FinanceBootstrap>('/admin/platform-finance/bootstrap');
+     return response.data;
+diff --git a/tests/admin_ai_frontend_reachable_calls.json b/tests/admin_ai_frontend_reachable_calls.json
+index d93eaa712..400ed4f2b 100644
+--- a/tests/admin_ai_frontend_reachable_calls.json
++++ b/tests/admin_ai_frontend_reachable_calls.json
+@@ -1,7 +1,7 @@
+ {
+   "schemaVersion": 1,
+   "root": "frontend/src/app/admin",
+-  "reachableFileCount": 499,
++  "reachableFileCount": 500,
+   "reachableFiles": [
+     {
+       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
+@@ -1235,6 +1235,10 @@
+       "file": "frontend/src/components/live-support/ai-admin/AIVerificationPolicyEditor.tsx",
+       "route": null
+     },
++    {
++      "file": "frontend/src/components/live-support/LiveSupportMessageActions.tsx",
++      "route": null
++    },
+     {
+       "file": "frontend/src/components/live-support/LiveSupportMessageContent.tsx",
+       "route": null
+@@ -2000,7 +2004,7 @@
+       "route": null
+     }
+   ],
+-  "callCount": 600,
++  "callCount": 603,
+   "calls": [
+     {
+       "method": "DELETE",
+@@ -2764,7 +2768,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 96
++        "line": 111
+       }
+     },
+     {
+@@ -2773,7 +2777,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 145
++        "line": 160
+       }
+     },
+     {
+@@ -2782,7 +2786,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 80
++        "line": 91
+       }
+     },
+     {
+@@ -2791,7 +2795,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 106
++        "line": 121
+       }
+     },
+     {
+@@ -2800,7 +2804,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 84
++        "line": 95
+       }
+     },
+     {
+@@ -2809,7 +2813,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 160
++        "line": 175
+       }
+     },
+     {
+@@ -2827,7 +2831,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 157
++        "line": 172
+       }
+     },
+     {
+@@ -2836,7 +2840,34 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 136
++        "line": 151
++      }
++    },
++    {
++      "method": "GET",
++      "path": "/admin/platform-finance/refunds/bootstrap",
++      "dynamic": false,
++      "source": {
++        "file": "frontend/src/services/platform-finance-service.ts",
++        "line": 107
++      }
++    },
++    {
++      "method": "GET",
++      "path": "/admin/platform-finance/refunds/students",
++      "dynamic": false,
++      "source": {
++        "file": "frontend/src/services/platform-finance-service.ts",
++        "line": 83
++      }
++    },
++    {
++      "method": "GET",
++      "path": "/admin/platform-finance/refunds/students/{id}",
++      "dynamic": true,
++      "source": {
++        "file": "frontend/src/services/platform-finance-service.ts",
++        "line": 87
+       }
+     },
+     {
+@@ -2845,7 +2876,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 154
++        "line": 169
+       }
+     },
+     {
+@@ -2854,7 +2885,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 92
++        "line": 103
+       }
+     },
+     {
+@@ -2863,7 +2894,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 88
++        "line": 99
+       }
+     },
+     {
+@@ -2872,7 +2903,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 109
++        "line": 124
+       }
+     },
+     {
+@@ -2881,7 +2912,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 115
++        "line": 130
+       }
+     },
+     {
+@@ -4204,7 +4235,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 175
++        "line": 176
+       }
+     },
+     {
+@@ -5086,7 +5117,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 142
++        "line": 157
+       }
+     },
+     {
+@@ -5095,7 +5126,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 100
++        "line": 115
+       }
+     },
+     {
+@@ -5104,7 +5135,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 103
++        "line": 118
+       }
+     },
+     {
+@@ -5113,7 +5144,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 124
++        "line": 139
+       }
+     },
+     {
+@@ -5122,7 +5153,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 163
++        "line": 178
+       }
+     },
+     {
+@@ -5140,7 +5171,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 127
++        "line": 142
+       }
+     },
+     {
+@@ -5149,7 +5180,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 133
++        "line": 148
+       }
+     },
+     {
+@@ -5158,7 +5189,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 139
++        "line": 154
+       }
+     },
+     {
+@@ -5167,7 +5198,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 130
++        "line": 145
+       }
+     },
+     {
+@@ -5176,7 +5207,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 151
++        "line": 166
+       }
+     },
+     {
+@@ -5185,7 +5216,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 148
++        "line": 163
+       }
+     },
+     {
+@@ -5194,7 +5225,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 118
++        "line": 133
+       }
+     },
+     {
+@@ -5203,7 +5234,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 121
++        "line": 136
+       }
+     },
+     {
+@@ -5212,7 +5243,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/platform-finance-service.ts",
+-        "line": 112
++        "line": 127
+       }
+     },
+     {
+@@ -5734,7 +5765,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 145
++        "line": 146
+       }
+     },
+     {
+@@ -5743,7 +5774,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 151
++        "line": 152
+       }
+     },
+     {
+@@ -6607,7 +6638,7 @@
+       "dynamic": false,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 157
++        "line": 158
+       }
+     },
+     {
+@@ -6616,7 +6647,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 171
++        "line": 172
+       }
+     },
+     {
+@@ -6625,7 +6656,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 180
++        "line": 181
+       }
+     },
+     {
+@@ -6634,7 +6665,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 188
++        "line": 189
+       }
+     },
+     {
+@@ -6643,7 +6674,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 167
++        "line": 168
+       }
+     },
+     {
+@@ -6652,7 +6683,7 @@
+       "dynamic": true,
+       "source": {
+         "file": "frontend/src/services/video-session-service.ts",
+-        "line": 163
++        "line": 164
+       }
+     },
+     {
+@@ -7847,5 +7878,5 @@
+       }
+     }
+   ],
+-  "digest": "3fc7c4beac1513d0344339ae704df9913e9d1dbad228ca561dbbb33586e11f67"
++  "digest": "cf60c45f13b52a92150d2657acb677aafe75e58a25a10571ab96561b53d60f80"
+ }
+diff --git a/worker/src/whatsapp/server.ts b/worker/src/whatsapp/server.ts
+index 14a0daadf..92e729d83 100644
+--- a/worker/src/whatsapp/server.ts
++++ b/worker/src/whatsapp/server.ts
+@@ -68,9 +68,30 @@ app.post('/sessions/:id/block', async (request, response) => {
+ app.post('/sessions/:id/text', async (request, response) => {
+   const text: unknown = request.body?.text;
+   if (typeof text !== 'string' || text.length < 1 || text.length > 4000) { response.sendStatus(400); return; }
+-  const message = await sessions.socket(request.params.id).sendMessage(contactJid(request.body?.number), { text });
++  const jid = contactJid(request.body?.number);
++  const replyId: unknown = request.body?.replyMessageId;
++  if (replyId !== undefined && (typeof replyId !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(replyId))) { response.sendStatus(400); return; }
++  const quoted = typeof replyId === 'string' ? {
++    key: { remoteJid: jid, id: replyId, fromMe: request.body?.replyFromMe === true },
++    message: { conversation: typeof request.body?.replyText === 'string' ? request.body.replyText.slice(0, 4000) : '' },
++  } : undefined;
++  const message = await sessions.socket(request.params.id).sendMessage(jid, { text }, quoted ? { quoted } : {});
+   response.json({ key: message?.key });
+ });
++app.post('/sessions/:id/message', async (request, response) => {
++  const id: unknown = request.body?.messageId;
++  const text: unknown = request.body?.text;
++  if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(id) ||
++      (text !== null && (typeof text !== 'string' || !text.trim() || text.length > 4000))) {
++    response.sendStatus(400); return;
++  }
++  const jid = contactJid(request.body?.number);
++  const key = { remoteJid: jid, id, fromMe: true };
++  const receipt = await sessions.socket(request.params.id).sendMessage(jid,
++    text === null ? { delete: key } : { text, edit: key });
++  if (!receipt?.key.id) { response.sendStatus(502); return; }
++  response.json({ accepted: true });
++});
+ app.post('/sessions/:id/audio', async (request, response) => {
+   const mimetype: unknown = request.body?.mimetype;
+   if (typeof mimetype !== 'string' || !['audio/mpeg', 'audio/ogg', 'audio/ogg; codecs=opus', 'audio/mp4'].includes(mimetype)) { response.sendStatus(400); return; }
+diff --git a/backend/src/NaderGorge.Infrastructure/Services/WhatsAppMessageMutationService.cs b/backend/src/NaderGorge.Infrastructure/Services/WhatsAppMessageMutationService.cs
+new file mode 100644
+index 000000000..e7633f4a7
+--- /dev/null
++++ b/backend/src/NaderGorge.Infrastructure/Services/WhatsAppMessageMutationService.cs
+@@ -0,0 +1,27 @@
++using Microsoft.EntityFrameworkCore;
++using NaderGorge.Application.Features.LiveSupport.Interfaces;
++using NaderGorge.Domain.Entities.LiveSupport;
++using NaderGorge.Domain.Interfaces;
++
++namespace NaderGorge.Infrastructure.Services;
++
++public sealed class WhatsAppMessageMutationService(IAppDbContext db, BaileysWhatsAppClient client)
++{
++    public async Task ApplyAsync(LiveSupportMessage message, string? content, CancellationToken ct)
++    {
++        var delivery = await db.LiveSupportWhatsAppMessages.AsNoTracking()
++            .SingleOrDefaultAsync(item => item.LiveSupportMessageId == message.Id, ct);
++        if (delivery is null) return;
++        var binding = await db.LiveSupportWhatsAppBindings.AsNoTracking()
++            .SingleAsync(item => item.ConversationId == message.ConversationId, ct);
++        var account = await db.LiveSupportWhatsAppAccounts.AsNoTracking()
++            .SingleOrDefaultAsync(item => item.Id == binding.AccountId && item.IsEnabled, ct);
++        if (account is null || delivery.Direction != "Outbound" || string.IsNullOrEmpty(delivery.MetaMessageId))
++            throw new LiveSupportException("WHATSAPP_MUTATION_UNAVAILABLE", "تعديل وحذف الرسائل متاحان للرسائل المرسلة عبر واتساب QR بعد تأكيد إرسالها.");
++        var prefix = $"baileys:{account.InstanceName}:";
++        if (!delivery.MetaMessageId.StartsWith(prefix, StringComparison.Ordinal))
++            throw new LiveSupportException("WHATSAPP_MESSAGE_ACCOUNT_MISMATCH", "الرسالة لا تتبع رقم واتساب الحالي.");
++        await client.MutateTextAsync(account.InstanceName,
++            new(binding.WhatsAppUserId, delivery.MetaMessageId[prefix.Length..], content), ct);
++    }
++}
+diff --git a/backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppMessageMutationTests.cs b/backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppMessageMutationTests.cs
+new file mode 100644
+index 000000000..ca80e6140
+--- /dev/null
++++ b/backend/tests/NaderGorge.Application.Tests/LiveSupport/WhatsAppMessageMutationTests.cs
+@@ -0,0 +1,49 @@
++using System.Net;
++using System.Text;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.Extensions.Configuration;
++using NaderGorge.Application.Features.LiveSupport.Interfaces;
++using NaderGorge.Domain.Entities.LiveSupport;
++using NaderGorge.Domain.Enums;
++using NaderGorge.Infrastructure.Services;
++
++namespace NaderGorge.Application.Tests.LiveSupport;
++
++public sealed class WhatsAppMessageMutationTests
++{
++    [Theory]
++    [InlineData(true)]
++    [InlineData(false)]
++    public async Task ProviderResultControlsWhetherEditedMessageIsSaved(bool accepted)
++    {
++        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
++        var db = fixture.Db;
++        var conversation = await db.LiveSupportConversations.SingleAsync();
++        var account = new LiveSupportWhatsAppAccount { Name = "Support", InstanceName = "test-session" };
++        var message = new LiveSupportMessage { ConversationId = conversation.Id, Content = "Original", ClientMessageId = "outbound-original",
++            SenderUserId = LiveSupportTestData.StaffAId, SenderType = LiveSupportSenderType.Staff, Type = LiveSupportMessageType.Text, SentAt = DateTime.UtcNow };
++        db.LiveSupportWhatsAppAccounts.Add(account);
++        db.LiveSupportMessages.Add(message);
++        db.LiveSupportWhatsAppBindings.Add(new() { ConversationId = conversation.Id, AccountId = account.Id, WhatsAppUserId = "201099999999" });
++        db.LiveSupportWhatsAppMessages.Add(new() { ConversationId = conversation.Id, LiveSupportMessageId = message.Id,
++            Direction = "Outbound", Status = "Sent", MetaMessageId = "baileys:test-session:ABC123" });
++        await db.SaveChangesAsync();
++        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
++            { ["Baileys:BaseUrl"] = "https://bridge.test", ["Baileys:ApiKey"] = "test-only" }).Build();
++        using var http = new HttpClient(new MutationResponse(accepted));
++        var service = new LiveSupportService(db, new LiveSupportEnabledSettings(), messageMutations:
++            new WhatsAppMessageMutationService(db, new BaileysWhatsAppClient(http, config)));
++        var edit = service.UpdateStaffMessageAsync(LiveSupportTestData.StaffAId, false, conversation.Id, message.Id, "Edited", CancellationToken.None);
++        if (accepted) Assert.Equal("Edited", (await edit).Content);
++        else await Assert.ThrowsAsync<LiveSupportException>(() => edit);
++        db.ChangeTracker.Clear();
++        Assert.Equal(accepted ? "Edited" : "Original", (await db.LiveSupportMessages.SingleAsync()).Content);
++    }
++
++    private sealed class MutationResponse(bool accepted) : HttpMessageHandler
++    {
++        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
++            Task.FromResult(new HttpResponseMessage(accepted ? HttpStatusCode.OK : HttpStatusCode.BadGateway)
++            { Content = new StringContent(accepted ? "{\"accepted\":true}" : "{}", Encoding.UTF8, "application/json") });
++    }
++}
+diff --git a/backend/tests/NaderGorge.Application.Tests/HR/ShiftApiContractTests.cs b/backend/tests/NaderGorge.Application.Tests/HR/ShiftApiContractTests.cs
+new file mode 100644
+index 000000000..60111902f
+--- /dev/null
++++ b/backend/tests/NaderGorge.Application.Tests/HR/ShiftApiContractTests.cs
+@@ -0,0 +1,30 @@
++using System.Text.Json;
++using System.Text.Json.Serialization;
++using MediatR;
++using Microsoft.AspNetCore.Mvc;
++using Microsoft.Extensions.DependencyInjection;
++using NaderGorge.API.Controllers;
++using NaderGorge.Domain.Entities;
++
++namespace NaderGorge.Application.Tests.HR;
++
++public sealed class ShiftApiContractTests
++{
++    [Fact]
++    public async Task WeeklyTemplate_UsesNumericWeekdaysEvenWithStringEnumSerialization()
++    {
++        await using var db = TestAppDbContextFactory.Create();
++        var template = new ShiftTemplate { Code = "WEEK", Name = "Weekly", Segments =
++            [new ShiftSegment { Sequence = 1, DayOfWeek = DayOfWeek.Saturday, StartsAt = TimeSpan.FromHours(10), EndsAt = TimeSpan.FromHours(16) }] };
++        db.ShiftTemplates.Add(template);
++        await db.SaveChangesAsync();
++        using var services = new ServiceCollection().BuildServiceProvider();
++        var controller = new HrShiftsController(db, new Mediator(services));
++        var response = Assert.IsType<OkObjectResult>(await controller.GetTemplates(CancellationToken.None));
++        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
++        options.Converters.Add(new JsonStringEnumConverter());
++        var payload = JsonSerializer.SerializeToElement(response.Value, options);
++        Assert.Equal(6, payload[0].GetProperty("segments")[0].GetProperty("dayOfWeek").GetInt32());
++        Assert.Equal("10:00:00", payload[0].GetProperty("segments")[0].GetProperty("startsAt").GetString());
++    }
++}
+diff --git a/frontend/src/app/assistant/refunds/page.tsx b/frontend/src/app/assistant/refunds/page.tsx
+new file mode 100644
+index 000000000..2c464ba3e
+--- /dev/null
++++ b/frontend/src/app/assistant/refunds/page.tsx
+@@ -0,0 +1,6 @@
++import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
++import RefundManager from '@/components/admin/platform-finance/RefundManager';
++
++export default function AssistantRefundsPage() {
++  return <AssistantShellChrome activePath="/assistant/refunds" sectionLabel="المالية" pageTitle="استردادات الطلاب" subtitle="تسجيل المبلغ المرتجع وإلغاء اشتراك الطالب."><RefundManager staff /></AssistantShellChrome>;
++}

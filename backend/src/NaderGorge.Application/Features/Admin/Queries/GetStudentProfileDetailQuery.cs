@@ -238,7 +238,11 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 ExpiresAt = grant.ExpiresAt,
                 Progress = 0,
                 IsActive = grant.IsActive,
-                PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
+                PurchaseMethod = grant.AccessCodeId.HasValue
+                    ? "Code"
+                    : grant.GiftRecipientId.HasValue
+                        ? "Gift"
+                        : "Balance",
                 Price = price,
                 PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
                 TeacherId = resolvedTeacherId,
@@ -396,6 +400,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 attempt.ScoreAchieved,
                 attempt.IsPassed,
                 attempt.IsTimeExpired,
+                AwardedPoints = attempt.Answers.Sum(answer => answer.PointsAwarded),
                 attempt.Evaluation,
                 AttemptedAt = attempt.StartedAt ?? attempt.CreatedAt,
                 LessonTitle = attempt.Exam.LessonVideo != null
@@ -412,6 +417,10 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var examHistory = examAttemptsRaw.Select(attempt =>
         {
             var snapshot = ReadAssessmentSnapshot(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+            var unsupported = snapshot is null;
+            var scale = unsupported ? null : AssessmentAttemptScaleNormalizer.Project(
+                attempt.DefinitionSnapshotJson, attempt.ExamId, attempt.ScoreAchieved,
+                attempt.IsPassed, attempt.IsTimeExpired, attempt.AwardedPoints);
             var hasFinalGrade = !string.IsNullOrWhiteSpace(attempt.Evaluation)
                 && attempt.Evaluation != "قيد التصحيح";
             return new StudentExamHistoryDto
@@ -421,12 +430,12 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 Title = snapshot?.Title ?? attempt.Title,
                 PackageName = attempt.PackageName,
                 LessonTitle = attempt.LessonTitle,
-                Score = attempt.ScoreAchieved,
-                TotalScore = snapshot?.TotalScore ?? attempt.TotalScore,
+                Score = scale?.ScoreAchieved ?? attempt.ScoreAchieved,
+                TotalScore = scale?.Definition.TotalScore ?? (unsupported ? 0 : attempt.TotalScore),
                 HasFinalGrade = hasFinalGrade,
-                IsPassed = attempt.IsPassed,
+                IsPassed = scale?.IsPassed ?? false,
                 IsTimeExpired = attempt.IsTimeExpired,
-                Status = hasFinalGrade ? "Graded"
+                Status = unsupported ? "ManualReconciliationRequired" : hasFinalGrade ? "Graded"
                     : attempt.Evaluation == "قيد التصحيح" ? "PendingReview" : "InProgress",
                 Evaluation = attempt.Evaluation,
                 AttemptedAt = attempt.AttemptedAt

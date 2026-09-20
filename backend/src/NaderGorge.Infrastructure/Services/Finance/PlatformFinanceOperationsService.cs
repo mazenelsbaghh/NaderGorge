@@ -105,11 +105,8 @@ public sealed class PlatformFinanceOperationsService(
         if (method == PlatformRefundMethod.Cash && !request.TreasuryAccountId.HasValue)
             throw new InvalidOperationException("FINANCE_TREASURY_REQUIRED");
 
-        var sourceAmount = await _db.SalesFinancialEffects
-            .Where(x => x.PurchaseOperationId == request.OriginalSourceId)
-            .Select(x => (decimal?)x.PaidAmount)
-            .SingleOrDefaultAsync(ct);
-        if (sourceAmount is null)
+        var sourceAmount = await ResolveRefundSourceAmountAsync(request, ct);
+        if (sourceAmount is null || sourceAmount <= 0m)
             throw new InvalidOperationException("FINANCE_REFUND_SOURCE_NOT_FOUND");
 
         var alreadyRefunded = await _db.PlatformRefunds
@@ -208,5 +205,31 @@ public sealed class PlatformFinanceOperationsService(
                           where treasury.Id == treasuryAccountId && treasury.IsActive && account.IsActive
                           select account.Code).SingleOrDefaultAsync(ct);
         return code ?? throw new InvalidOperationException("FINANCE_TREASURY_NOT_FOUND");
+    }
+
+    private async Task<decimal?> ResolveRefundSourceAmountAsync(CreatePlatformRefundRequest request, CancellationToken ct)
+    {
+        var paidAmount = await _db.SalesFinancialEffects
+            .Where(x => x.PurchaseOperationId == request.OriginalSourceId)
+            .Select(x => (decimal?)x.PaidAmount)
+            .SingleOrDefaultAsync(ct);
+        if (paidAmount.HasValue || request.OriginalSourceType != "HistoricalAccessGrant" ||
+            request.HistoricalAccessGrantId != request.OriginalSourceId) return paidAmount;
+
+        var grant = await _db.StudentAccessGrants.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == request.OriginalSourceId && x.UserId == request.StudentId, ct);
+        if (grant is null || grant.AccessCodeId.HasValue || grant.GiftRecipientId.HasValue) return null;
+        return grant.GrantType switch
+        {
+            CodeType.Package when grant.PackageId.HasValue => await _db.Packages.AsNoTracking()
+                .Where(x => x.Id == grant.PackageId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+            CodeType.Term when grant.TermId.HasValue => await _db.Terms.AsNoTracking()
+                .Where(x => x.Id == grant.TermId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+            CodeType.Month when grant.ContentSectionId.HasValue => await _db.ContentSections.AsNoTracking()
+                .Where(x => x.Id == grant.ContentSectionId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+            CodeType.Lesson when grant.LessonId.HasValue => await _db.Lessons.AsNoTracking()
+                .Where(x => x.Id == grant.LessonId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+            _ => null
+        };
     }
 }

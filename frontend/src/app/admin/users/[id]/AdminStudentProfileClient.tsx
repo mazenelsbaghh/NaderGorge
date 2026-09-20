@@ -1,5 +1,6 @@
 'use client';
 
+import { videoProgressPercent } from '@/lib/student-learning-progress';
 import { devConsole } from '@/utils/dev-console';
 import { type ReactNode, useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -88,6 +89,19 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
 
     return `${remainingSeconds}ث`;
   };
+
+  const purchaseMethodLabel = (method: string) => ({
+    Code: 'كود شحن',
+    Gift: 'هدية',
+    Balance: 'رصيد محفظة',
+    Direct: 'إضافة مباشرة',
+  }[method] || 'غير محدد');
+
+  const purchaseMethodClass = (method: string) => method === 'Code'
+    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+    : method === 'Gift'
+      ? 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-400'
+      : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400';
 
   const translateAction = (action: string): string => {
     const map: Record<string, string> = {
@@ -831,8 +845,8 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                             <span className="font-medium text-[var(--admin-text)]">{row.price} ج.م</span>
                           )},
                           {key: 'purchaseMethod', label: 'طريقة الشراء', render: (row) => (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.purchaseMethod === 'Code' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
-                              {row.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${purchaseMethodClass(row.purchaseMethod)}`}>
+                              {purchaseMethodLabel(row.purchaseMethod)}
                             </span>
                           ), responsivePriority: 'optional'},
                           {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB', { timeZone: 'Africa/Cairo' }) : 'غير محدد', responsivePriority: 'optional'},
@@ -1387,7 +1401,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                                                                  <span className="font-bold">تقدم الفيديو:</span>{' '}
                                                                  {formatDuration(Math.floor(activity.learningWatchedSeconds ?? 0))} من{' '}
                                                                  {activity.durationSeconds ? formatDuration(activity.durationSeconds) : 'مدة غير متوفرة'}
-                                                                 {activity.durationSeconds ? ` · ${Math.min(100, Math.floor((activity.learningWatchedSeconds ?? 0) * 100 / activity.durationSeconds))}%` : ''}
+                                                                 {activity.durationSeconds ? ` · ${videoProgressPercent(activity)}%` : ''}
                                                                  {activity.isCompleted ? ' · مكتمل' : ''}
                                                                </div>
                                                                <div>
@@ -1865,7 +1879,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                     <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-sm font-bold leading-relaxed">
                         ⚠️ تنبيه هام: أنت تقوم بإلغاء اشتراك الطالب في باقة: <span className="underline">{selectedPackageForCancel.name}</span>.
                         <br />
-                        طريقة الشراء الأصلية: <span className="underline">{selectedPackageForCancel.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}</span>.
+                        طريقة الشراء الأصلية: <span className="underline">{purchaseMethodLabel(selectedPackageForCancel.purchaseMethod)}</span>.
                         {selectedPackageForCancel.purchaseMethod === 'Code' && (
                           <div className="mt-2 text-xs font-semibold text-red-500 bg-red-500/20 p-2 rounded-lg">
                              تحذير: تم تفعيل هذه الباقة بواسطة كود شحن. قد ترغب في عدم إرجاع قيمة الباقة نقدًا كـ رصيد ما لم يطلب الطالب ذلك.

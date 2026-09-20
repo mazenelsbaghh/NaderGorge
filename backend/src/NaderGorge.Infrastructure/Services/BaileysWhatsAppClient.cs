@@ -41,6 +41,20 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
         return Accepted(response, instance, phone);
     }
 
+    public async Task MutateTextAsync(string instance, BaileysMessageMutation mutation, CancellationToken ct)
+    {
+        var response = await RequestAsync(HttpMethod.Post, $"sessions/{Uri.EscapeDataString(instance)}/message",
+            mutation, ct);
+        if (!response.TryGetProperty("accepted", out var accepted) || accepted.ValueKind != JsonValueKind.True)
+            throw Failure("BAILEYS_REQUEST_UNCERTAIN");
+    }
+
+    public async Task<WhatsAppCloudService.SendTestMessageResult> SendReplyAsync(string instance, BaileysTextReply reply, CancellationToken ct)
+    {
+        var response = await RequestAsync(HttpMethod.Post, $"sessions/{Uri.EscapeDataString(instance)}/text", reply, ct);
+        return Accepted(response, instance, reply.Number);
+    }
+
     public async Task<WhatsAppCloudService.SendTestMessageResult> SendMediaAsync(
         string instance, WhatsAppCloudService.MediaMessageRequest media, CancellationToken ct)
     {
@@ -109,3 +123,6 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
     private static LiveSupportException Failure(string code) => new(code,
         code == "BAILEYS_NOT_CONFIGURED" ? "اتصال واتساب QR غير مهيأ على الخادم." : "تعذر إتمام طلب واتساب. راجع حالة الاتصال ثم حاول مجددًا.");
 }
+
+public sealed record BaileysMessageMutation(string Number, string MessageId, string? Text);
+public sealed record BaileysTextReply(string Number, string Text, string ReplyMessageId, bool ReplyFromMe, string ReplyText);

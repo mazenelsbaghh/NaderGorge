@@ -134,13 +134,13 @@ export async function processParentPushNotification(studentId: string, title: st
     .filter((device: { platform: string }) => device.platform === 'ios')
     .map((device: { token: string }) => device.token);
   
+  if (persistInApp) {
+    await persistParentPushNotification(studentId, title, body);
+  }
+
   if (tokens.length === 0) {
     console.log(`[NotificationSender] No parent device tokens found for studentId ${studentId}`);
     return { success: true, reason: 'no_tokens', tokensCount: 0 };
-  }
-
-  if (persistInApp) {
-    await persistParentPushNotification(studentId, title, body);
   }
 
   try {
@@ -151,6 +151,8 @@ export async function processParentPushNotification(studentId: string, title: st
     let apnsSuccessCount = 0;
     let apnsFailureCount = 0;
     let apnsNotConfiguredCount = 0;
+    const failureCodes: Record<string, number> = {};
+    const countFailure = (code: string) => { failureCodes[code] = (failureCodes[code] ?? 0) + 1; };
 
     if (fcmTokens.length > 0) {
       const message = {
@@ -169,12 +171,18 @@ export async function processParentPushNotification(studentId: string, title: st
       fcmFailureCount = response.failureCount;
       successCount += fcmSuccessCount;
       failureCount += fcmFailureCount;
+      for (const result of response.responses) {
+        if (result.success) continue;
+        const code = result.error?.code;
+        countFailure(code && /^messaging\/[a-z-]{1,64}$/.test(code) ? code : 'fcm/unknown');
+      }
     }
 
     if (apnsTokens.length > 0) {
       if (!apnsProvider.isConfigured()) {
         apnsNotConfiguredCount = apnsTokens.length;
         failureCount += apnsNotConfiguredCount;
+        failureCodes['apns/not-configured'] = apnsNotConfiguredCount;
         console.warn(`[NotificationSender] ${apnsNotConfiguredCount} iOS token(s) found, but APNs credentials are not configured.`);
       } else {
         const response = await apnsProvider.sendMany(apnsTokens, { title, body, studentId, category });
@@ -182,12 +190,16 @@ export async function processParentPushNotification(studentId: string, title: st
         apnsFailureCount = response.failureCount;
         successCount += apnsSuccessCount;
         failureCount += apnsFailureCount;
+        for (const result of response.results) {
+          if (!result.success) countFailure(`apns/${result.statusCode ?? 'transport'}`);
+        }
       }
     }
 
     console.log(`[NotificationSender] Sent push notifications. Success: ${successCount}, Failure: ${failureCount}`);
+    if (failureCount > 0) console.warn('[NotificationSender] Push delivery failures by provider code:', failureCodes);
     return {
-      success: true,
+      success: failureCount === 0,
       tokensCount: tokens.length,
       successCount,
       failureCount,

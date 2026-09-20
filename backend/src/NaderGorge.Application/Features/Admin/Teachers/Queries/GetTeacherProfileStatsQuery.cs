@@ -70,7 +70,8 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
             .CountAsync(e => e.CreatedByTeacherId == request.TeacherId, ct);
 
         var essaysPendingCount = await _db.EssaySubmissions
-            .CountAsync(e => e.GradedByTeacherId == request.TeacherId
+            .CountAsync(e => (e.GradedByTeacherId == request.TeacherId
+                    || e.Question.CreatedByTeacherId == request.TeacherId)
                 && e.Status != EssaySubmissionStatus.TeacherGraded, ct);
 
         var essaysGradedCount = await _db.EssaySubmissions

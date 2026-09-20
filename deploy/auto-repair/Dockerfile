@@ -16,6 +16,12 @@ COPY frontend/package.json frontend/package-lock.json /opt/bootstrap/frontend/
 COPY worker/package.json worker/package-lock.json /opt/bootstrap/worker/
 RUN npm --prefix /opt/bootstrap/frontend ci --ignore-scripts --cache /opt/cache/npm \
     && npm --prefix /opt/bootstrap/worker ci --ignore-scripts --cache /opt/cache/npm
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN cd /opt/bootstrap/frontend && ./node_modules/.bin/playwright install --with-deps chromium \
+    && apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/* && chmod -R a+rX /opt/playwright
+COPY deploy/auto-repair/fonts.mjs /opt/repair/fonts.mjs
+RUN node /opt/repair/fonts.mjs --prepare
 # Use a filtered source context: never include appsettings secrets, environment files, or local credentials.
 COPY backend /opt/bootstrap/backend
 RUN dotnet restore /opt/bootstrap/backend/NaderGorge.sln --packages /opt/cache/nuget \

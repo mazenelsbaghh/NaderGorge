@@ -96,7 +96,7 @@ public sealed class DecideAttendanceCorrectionCommandHandler : IRequestHandler<D
                     var breaks = await _db.AttendanceBreaks.Where(item => item.AttendanceSessionId == session.Id && item.EndedAt.HasValue).ToListAsync(ct);
                     var breakMinutes = breaks.Sum(item => (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes);
                     var result = AttendanceCalculator.Calculate(new(session.ClockedInAt, session.ClockedOutAt.Value, scheduledStart, scheduledEnd,
-                        breakMinutes, shiftAssignment!.ShiftTemplate!.GraceMinutes, shiftAssignment.ShiftTemplate.OvertimeAfterMinutes));
+                        breakMinutes, shiftAssignment!.ShiftTemplate!.OvertimeAfterMinutes));
                     session.WorkedMinutes = result.WorkedMinutes; session.LateMinutes = result.LateMinutes; session.EarlyLeaveMinutes = result.EarlyLeaveMinutes; session.OvertimeMinutes = result.OvertimeMinutes;
                 }
                 session.State = AttendanceSessionState.Corrected;

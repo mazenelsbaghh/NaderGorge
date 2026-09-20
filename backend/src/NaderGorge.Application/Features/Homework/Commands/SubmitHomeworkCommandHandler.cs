@@ -58,7 +58,8 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 .OrderByDescending(l => l.Order)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (previousLesson != null)
+            if (previousLesson != null &&
+                await _access.HasAccessToLessonAsync(request.StudentId, previousLesson.Id, cancellationToken))
             {
                 // 1. Previous exam
                 if (previousLesson.ExamId.HasValue)

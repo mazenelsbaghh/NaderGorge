@@ -430,6 +430,28 @@ public class E2eTestingController : ControllerBase
             _dbContext.Set<VideoType>().Add(defaultVideoType);
         }
         var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, SubjectId = subject.Id, TargetGrade = "1st Secondary", TeacherId = teacher.Id };
+        // The fixture must satisfy the same academic eligibility as real content.
+        _dbContext.Set<StudentFacingAcademicScope>().Add(new StudentFacingAcademicScope
+        {
+            OwnerType = StudentFacingScopeOwnerType.Package,
+            OwnerId = packageId,
+            ScopeLevel = AcademicScopeLevel.Exact,
+            EducationStage = EducationStage.Secondary,
+            GradeLevel = GradeLevel.FirstSecondary,
+            SubjectId = subject.Id
+        });
+        if (!await _dbContext.Set<AcademicSubjectEligibility>().AnyAsync(x =>
+            x.SubjectId == subject.Id && x.EducationStage == EducationStage.Secondary
+            && x.GradeLevel == GradeLevel.FirstSecondary))
+        {
+            _dbContext.Set<AcademicSubjectEligibility>().Add(new AcademicSubjectEligibility
+            {
+                SubjectId = subject.Id,
+                EducationStage = EducationStage.Secondary,
+                GradeLevel = GradeLevel.FirstSecondary,
+                IsActive = true
+            });
+        }
         var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };

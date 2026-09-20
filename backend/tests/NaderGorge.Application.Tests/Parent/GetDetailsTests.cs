@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.API.Controllers;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Application.Features.Parent.Queries;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
@@ -246,7 +247,8 @@ public class GetDetailsTests : IDisposable
             ExamId = exam.Id,
             ScoreAchieved = 45,
             IsPassed = true,
-            StartedAt = DateTime.UtcNow.AddHours(-1)
+            StartedAt = DateTime.UtcNow.AddHours(-1),
+            DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(exam).ToJson()
         });
         await _db.SaveChangesAsync();
 
@@ -333,13 +335,19 @@ public class GetDetailsTests : IDisposable
         Assert.Equal("Critical", details.Warnings[0].Severity);
     }
 
-    // 2026-09-13: partial playback was hidden when the consumed-view counter remained zero.
+    // 2026-09-20: parent tracking must distinguish progress started from a completed video.
     [Theory]
-    [InlineData(90, 0, 2, 270)]
-    [InlineData(0, 15, 2, 180)]
-    [InlineData(0, 0, 1, 180)]
+    [InlineData(171, 0, 180, 2, 1, 351)]
+    [InlineData(0, 15, 180, 1, 1, 180)]
+    [InlineData(0, 0, 180, 1, 1, 180)]
+    [InlineData(60, 0, null, 2, 1, 240)]
     public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance(
-        int partialSeconds, int actualSeconds, int expectedWatchedVideos, int expectedWatchedSeconds)
+        int partialSeconds,
+        int actualSeconds,
+        int? partialDurationSeconds,
+        int expectedStartedVideos,
+        int expectedWatchedVideos,
+        int expectedWatchedSeconds)
     {
         var student = new User { FullName = "طالب متابعة", PhoneNumber = "01000000002", PasswordHash = "hash" };
         _db.Users.Add(student);
@@ -546,6 +554,8 @@ public class GetDetailsTests : IDisposable
             UserId = student.Id,
             LessonVideoId = videoA.Id,
             TimeWatchedInSeconds = 180,
+            LearningWatchedSeconds = 180,
+            LearningDurationSeconds = 180,
             WatchCount = 2
         });
         _db.VideoWatchEvents.AddRange(
@@ -554,6 +564,8 @@ public class GetDetailsTests : IDisposable
                 UserId = student.Id,
                 LessonVideoId = visibleUnwatchedVideo.Id,
                 TimeWatchedInSeconds = partialSeconds,
+                LearningWatchedSeconds = partialSeconds,
+                LearningDurationSeconds = partialDurationSeconds,
                 ActualWatchedSeconds = actualSeconds,
                 WatchCount = 0
             },
@@ -662,6 +674,8 @@ public class GetDetailsTests : IDisposable
         Assert.Equal(lessonA.Id, watchLesson.LessonId);
         Assert.Equal(2, watchLesson.TotalVideos);
         Assert.Equal(expectedWatchedVideos, watchLesson.WatchedVideos);
+        Assert.Equal(expectedStartedVideos, watchLesson.StartedVideos);
+        Assert.Equal(expectedWatchedVideos, watchLesson.CompletedVideos);
         Assert.Equal(2, watchLesson.WatchCount);
         Assert.Equal(expectedWatchedSeconds, watchLesson.WatchedSeconds);
         Assert.False(watchLesson.IsCompleted);

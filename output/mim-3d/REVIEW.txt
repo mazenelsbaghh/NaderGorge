@@ -1,0 +1,23 @@
+Mim 3D local prototype, 2026-09-14
+
+Run from repository root:
+python3 -m http.server 8767 --bind 127.0.0.1 --directory output/mim-3d
+Open http://127.0.0.1:8767/
+
+Three.js WebGL renders actual meshes: Mim, museum, exhibits, movable double door,
+and an in-world rotating wheel connected to destination receivers.
+The wheel is controlled by on-screen arrows, Q/R, or pointer drag in mechanism mode.
+E or the Run route button submits. Correct matches light the route; all three
+completed missions unlock the door. Touch direction buttons move Mim in exploration.
+The old question dialog has been removed. The in-game HUD provides accessible controls
+and feedback without leaving or blurring the rendered world.
+
+Content is curated locally from the first lesson summaries; there is no automatic
+generation or production integration. The lesson toggle is local simulation only.
+Mim and scene meshes are procedural approximations, not the detailed rigged assets
+depicted in the supplied concept art. Visual fidelity is below that reference.
+
+Verification: syntax checks passed; browser exercised all ten connections across
+three missions, a wrong connection and retry, progression and final unlock state.
+Browser reported no console errors in that run. Mobile hardware performance and
+touch-camera behavior require device testing before production use.

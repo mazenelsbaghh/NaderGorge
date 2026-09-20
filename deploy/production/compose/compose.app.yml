@@ -58,6 +58,10 @@ x-frontend-internal-api: &frontend-internal-api
 services:
   backend:
     <<: *app-defaults
+    env_file:
+      - /etc/massar/app.env
+      - path: /etc/massar/auto-repair-backend.env
+        required: false
     image: ${MASSAR_BACKEND_IMAGE:?MASSAR_BACKEND_IMAGE is required}
     environment:
       Cluster__NodeId: ${MASSAR_NODE_ID}

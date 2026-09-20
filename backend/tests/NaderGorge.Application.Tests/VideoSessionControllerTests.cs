@@ -47,7 +47,7 @@ public sealed class VideoSessionControllerTests
     }
 
     [Fact]
-    public async Task GetEmbedMaterial_SupersededSession_ReturnsNotFound()
+    public async Task GetEmbedMaterial_SupersededSession_ReturnsConflictWithoutIssuingMaterial()
     {
         await using var db = TestAppDbContextFactory.Create();
         var session = ActiveSession();
@@ -59,7 +59,7 @@ public sealed class VideoSessionControllerTests
 
         var response = await controller.GetEmbedMaterial(session.Id, null!, new AccessCheckService(db), false, CancellationToken.None);
 
-        Assert.IsType<NotFoundObjectResult>(response);
+        Assert.IsType<ConflictObjectResult>(response);
     }
 
     [Theory]
@@ -67,7 +67,7 @@ public sealed class VideoSessionControllerTests
     [InlineData("anonymous", 401)]
     [InlineData("revoked-grant", 403)]
     [InlineData("inactive-account", 403)]
-    [InlineData("expired", 404)]
+    [InlineData("expired", 410)]
     public async Task GetEmbedMaterial_DeniesUnauthorizedSessionBeforeIssuingMaterial(string denial, int expectedStatus)
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -89,6 +89,7 @@ public sealed class VideoSessionControllerTests
             case 401: Assert.IsType<UnauthorizedResult>(result); break;
             case 403: Assert.IsType<ForbidResult>(result); break;
             case 404: Assert.IsType<NotFoundObjectResult>(result); break;
+            case 410: Assert.Equal(410, Assert.IsType<ObjectResult>(result).StatusCode); break;
         }
         Assert.Equal("no-store", controller.Response.Headers.CacheControl);
     }

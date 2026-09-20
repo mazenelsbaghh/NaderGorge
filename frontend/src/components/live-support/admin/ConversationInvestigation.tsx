@@ -16,6 +16,7 @@ import {
   LiveSupportMessageContent,
   LiveSupportMessageMeta,
 } from '@/components/live-support/LiveSupportMessageContent';
+import { LiveSupportMessageActions } from '@/components/live-support/LiveSupportMessageActions';
 import { SupportBlockPanel } from './SupportBlockPanel';
 import { WhatsAppTemplatePicker } from '@/components/live-support/staff/WhatsAppTemplatePicker';
 import { LiveSupportChannelBadge } from '@/components/live-support/shared/LiveSupportChannelBadge';
@@ -54,6 +55,7 @@ export function ConversationInvestigation({
 }: ConversationInvestigationProps) {
   const [messages, setMessages] = useState<LiveSupportMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [replyTarget, setReplyTarget] = useState<LiveSupportMessage>();
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
@@ -328,9 +330,11 @@ export function ConversationInvestigation({
         {
           clientMessageId: createClientId(),
           content,
+          replyToMessageId: replyTarget?.conversationId === conversation.id ? replyTarget.id : undefined,
         }
       );
       appendMessage(message);
+      setReplyTarget(undefined);
       setDraft('');
     } catch (cause) {
       setError(
@@ -743,6 +747,11 @@ export function ConversationInvestigation({
                                 : undefined
                             }
                           />
+                          {message.replyTo ? <blockquote className="mb-2 border-r-2 border-current pr-2 text-xs opacity-80">{message.replyTo.isDeleted ? 'رسالة محذوفة' : message.replyTo.content}</blockquote> : null}
+                          {channelCapabilities.supportsMessageReply && !message.deletedAt && message.conversationId === conversation.id && canSendText ? <button type="button" onClick={() => setReplyTarget(message)} className="min-h-9 px-2 text-xs font-bold">رد على الرسالة</button> : null}
+                          {channelCapabilities.supportsMessageMutation && (message.senderType === 'Admin' || message.senderType === 'Staff') && message.conversationId === conversation.id ? <LiveSupportMessageActions message={message}
+                            onEdit={async (id, content) => { const updated = await liveSupportService.updateStaffMessage(conversation.id, id, content); setMessages(current => current.map(item => item.id === id ? updated : item)); }}
+                            onDelete={async (id) => { const updated = await liveSupportService.deleteStaffMessage(conversation.id, id); setMessages(current => current.map(item => item.id === id ? updated : item)); }} /> : null}
                           <LiveSupportMessageMeta
                             message={message}
                             audience="staff"
@@ -766,6 +775,7 @@ export function ConversationInvestigation({
             </div>
 
             <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-3 sm:p-4">
+              {replyTarget?.conversationId === conversation.id ? <div className="mb-2 flex items-center justify-between gap-2 text-sm"><span className="truncate">رد على: {replyTarget.content}</span><button type="button" onClick={() => setReplyTarget(undefined)} aria-label="إلغاء الرد" className="min-h-11 px-3"><X size={16} /></button></div> : null}
               {error ? (
                 <p
                   role="alert"

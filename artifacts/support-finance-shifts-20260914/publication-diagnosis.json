@@ -1,0 +1,23 @@
+{
+  "liveRelease": "git-0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+  "liveGitCommit": "0710da7b5d59f4f5f6917cec6cd372af92c47b92",
+  "sharedCommit": "ee47a9ecf2b12bb11ec601ea563c9d95590201f0",
+  "integratedUnpublishedCommit": "4578d9011ae1fed0a1b5e1d9f107dfa01e08534a",
+  "files": [
+    {
+      "path": "frontend/src/app/assistant/refunds/page.tsx",
+      "presentInLiveRelease": false,
+      "matchesLocal": false
+    },
+    {
+      "path": "frontend/src/components/assistant/AssistantShellChrome.tsx",
+      "presentInLiveRelease": true,
+      "matchesLocal": false
+    },
+    {
+      "path": "backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs",
+      "presentInLiveRelease": true,
+      "matchesLocal": false
+    }
+  ]
+}

@@ -84,6 +84,9 @@ public class GradeAssessmentCommandHandler(IAppDbContext db, TeacherAuthorizatio
         var attempt = await db.StudentExamAttempts.Include(a => a.Answers).Include(a => a.Exam).ThenInclude(e => e.ExamQuestions).ThenInclude(q => q.Question)
             .SingleOrDefaultAsync(a => a.Id == request.Target.AttemptId && a.ExamId == request.Target.AssessmentId, ct);
         if (attempt == null) return ApiResponse<bool>.Fail("المحاولة غير موجودة.");
+        if (attempt.DefinitionSnapshotJson is null)
+            return ApiResponse<bool>.Fail(AssessmentAttemptScaleNormalizer.UnsupportedLegacyMessage);
+        AssessmentAttemptScaleNormalizer.Normalize(attempt);
         if (attempt.DefinitionSnapshotJson is not null
             && AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId).Revision?.RequiresCompletion == true)
             return ApiResponse<bool>.Fail("انتظر استكمال الطالب للأسئلة المضافة قبل التصحيح الكامل.");

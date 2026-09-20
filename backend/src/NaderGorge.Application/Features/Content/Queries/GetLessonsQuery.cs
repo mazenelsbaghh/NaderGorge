@@ -104,8 +104,9 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 visibleActiveVideoIds,
                 ct);
 
-        var passedExamIds = await _db.StudentExamAttempts
-            .Where(a => a.UserId == request.UserId && a.IsPassed)
+        var examGateSatisfiedIds = await _db.StudentExamAttempts
+            .Where(a => a.UserId == request.UserId &&
+                (a.IsPassed || a.Evaluation == ExamAccessPolicy.PendingReviewEvaluation))
             .Select(a => a.ExamId)
             .Distinct()
             .ToListAsync(ct);
@@ -124,12 +125,14 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         {
             var hasAccess = accessibleLessonIds.Contains(lesson.Id);
             var isCompleted = completedLessonIds.Contains(lesson.Id);
-            // Use the complete section, including hidden lessons, so prerequisites stay enforced.
+            // A separately purchased lesson must not require assessments from an unowned lesson.
             var previousLesson = section.Lessons
                 .Where(candidate => candidate.Order < lesson.Order)
                 .OrderByDescending(candidate => candidate.Order)
                 .FirstOrDefault();
-            var blockingState = await GetBlockingStateAsync(lesson, previousLesson, request.UserId, passedExamIds, ct);
+            if (previousLesson != null && !accessibleLessonIds.Contains(previousLesson.Id))
+                previousLesson = null;
+            var blockingState = await GetBlockingStateAsync(lesson, previousLesson, request.UserId, examGateSatisfiedIds, ct);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
             if (visibleActiveVideoIds is not null)
@@ -180,7 +183,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         Lesson lesson,
         Lesson? previousLesson,
         Guid userId,
-        List<Guid> passedExamIds,
+        List<Guid> examGateSatisfiedIds,
         CancellationToken ct)
     {
         if (previousLesson != null)
@@ -191,7 +194,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
                 if (exam != null && exam.IsActive && exam.IsMandatory)
                 {
-                    var passedExam = passedExamIds.Contains(previousLesson.ExamId.Value);
+                    var passedExam = examGateSatisfiedIds.Contains(previousLesson.ExamId.Value);
 
                     if (!passedExam)
                     {
@@ -215,7 +218,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
             if (prevVideoExams.Any())
             {
-                var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !passedExamIds.Contains(e.Id));
+                var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !examGateSatisfiedIds.Contains(e.Id));
                 if (unpassedVideoExam != null)
                 {
                     return (
@@ -258,7 +261,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
             if (exam != null && exam.IsActive && exam.IsMandatory)
             {
-                var passedExam = passedExamIds.Contains(lesson.ExamId.Value);
+                var passedExam = examGateSatisfiedIds.Contains(lesson.ExamId.Value);
 
                 if (!passedExam)
                 {

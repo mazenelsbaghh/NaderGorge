@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Configuration;
 using NaderGorge.Application.Features.Internal.Commands;
+using NaderGorge.Application.Features.MimGames;
 using NaderGorge.Application.Features.Webhooks.Commands;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
@@ -29,6 +30,25 @@ public class InternalController : ControllerBase
     [HttpGet("live-support-ai/readiness")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]
     public IActionResult LiveSupportAIReadiness() => Ok(new { status = "ready" });
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("lesson-mim-game-completed")]
+    [RequestSizeLimit(128 * 1_024)]
+    public async Task<IActionResult> LessonMimGameCompleted([FromBody] LessonMimGameCompletedRequest request)
+    {
+        var result = await _mediator.Send(new CompleteLessonMimGameCommand(
+            request.GameId, request.RunId, request.SourceFingerprint, request.ContentJson));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("lesson-mim-game-failed")]
+    [RequestSizeLimit(4 * 1_024)]
+    public async Task<IActionResult> LessonMimGameFailed([FromBody] LessonMimGameFailedRequest request)
+    {
+        var result = await _mediator.Send(new FailLessonMimGameCommand(request.GameId, request.RunId, request.ErrorCode));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 
     [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
     [HttpPost("ai-analysis-completed")]
@@ -154,6 +174,21 @@ public class AiAnalysisCompletedWebhookRequest
     public List<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
     public string? JobId { get; set; }
     public Guid? GenerationRunId { get; set; }
+}
+
+public sealed class LessonMimGameCompletedRequest
+{
+    public Guid GameId { get; set; }
+    public Guid RunId { get; set; }
+    public string SourceFingerprint { get; set; } = string.Empty;
+    public string ContentJson { get; set; } = string.Empty;
+}
+
+public sealed class LessonMimGameFailedRequest
+{
+    public Guid GameId { get; set; }
+    public Guid RunId { get; set; }
+    public string? ErrorCode { get; set; }
 }
 
 public class AiProgressWebhookRequest

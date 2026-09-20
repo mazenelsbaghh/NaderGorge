@@ -118,12 +118,12 @@ public class VideoSessionController : ControllerBase
         if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
         var session = await _db.VideoPlaybackSessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId && !s.IsSuperseded && s.ExpiresAt > DateTime.UtcNow, ct);
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, ct);
 
-        if (session == null)
-        {
-            return NotFound("Video session not found or expired.");
-        }
+        if (session == null) return NotFound("Video session not found.");
+        // Ownership stays indistinguishable from a missing session; only the owner sees its lifecycle state.
+        if (session.IsSuperseded) return Conflict("Video session was replaced by another playback session.");
+        if (session.ExpiresAt <= DateTime.UtcNow) return StatusCode(StatusCodes.Status410Gone, "Video session expired.");
 
         if (!await CanReadPlaybackMaterialAsync(session, accessService, ct)) return Forbid();
         string token;

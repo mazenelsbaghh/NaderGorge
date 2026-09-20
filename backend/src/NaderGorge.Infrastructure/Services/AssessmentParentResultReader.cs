@@ -18,9 +18,17 @@ internal static class AssessmentParentResultReader
     public static async Task<AssessmentParentResult?> ReadAsync(IAppDbContext db, OutboxEvent notification, CancellationToken ct)
     {
         using var payload = JsonDocument.Parse(notification.PayloadJson);
-        var kind = notification.Type == "ExamGraded" ? "exam" : "homework";
-        if (!payload.RootElement.TryGetProperty(kind == "exam" ? "attemptId" : "submissionId", out var id)
-            || !id.TryGetGuid(out var attemptId)) return null;
+        var kind = notification.Type is "ExamGraded" or "AssessmentParentRecovery" ? "exam" : "homework";
+        Guid attemptId;
+        if (notification.Type == "AssessmentParentRecovery")
+        {
+            var envelope = JsonSerializer.Deserialize<AssessmentParentRecoveryEnvelope>(notification.PayloadJson);
+            if (envelope is null || envelope.AttemptId == Guid.Empty || envelope.DeliveryId == Guid.Empty
+                || envelope.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(envelope.GradeVersion)) return null;
+            attemptId = envelope.AttemptId;
+        }
+        else if (!payload.RootElement.TryGetProperty(kind == "exam" ? "attemptId" : "submissionId", out var id)
+            || !id.TryGetGuid(out attemptId)) return null;
         var result = kind == "exam" ? await ReadExamAsync(db, attemptId, ct) : await ReadHomeworkAsync(db, attemptId, ct);
         return result is not null && result.Student.Id.ToString() == notification.TargetUserId
             && result.Student.IsActive && !result.Student.IsDeleted ? result : null;
@@ -45,15 +53,17 @@ internal static class AssessmentParentResultReader
     private static async Task<AssessmentParentResult?> ReadExamAsync(IAppDbContext db, Guid attemptId, CancellationToken ct)
     {
         var attempt = await db.StudentExamAttempts.AsNoTracking().Include(attempt => attempt.Exam)
+            .Include(attempt => attempt.Answers)
             .Include(attempt => attempt.User).ThenInclude(student => student.StudentProfile)
             .SingleOrDefaultAsync(attempt => attempt.Id == attemptId, ct);
         if (attempt is null || string.IsNullOrWhiteSpace(attempt.Evaluation) || attempt.Evaluation == "قيد التصحيح") return null;
-        var definition = attempt.DefinitionSnapshotJson is null ? null
-            : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
-        if (definition?.Revision is { } revision && (revision.RequiresCompletion || revision.RequiresReview)) return null;
-        var assignedQuestionIds = definition?.Questions.Select(question => question.BankQuestionId).ToArray();
+        if (attempt.DefinitionSnapshotJson is null) return null;
+        var scale = AssessmentAttemptScaleNormalizer.Project(attempt);
+        var definition = scale.Definition;
+        if (definition.Revision is { } revision && (revision.RequiresCompletion || revision.RequiresReview)) return null;
+        var assignedQuestionIds = definition.Questions.Select(question => question.BankQuestionId).ToArray();
         if (await db.EssaySubmissions.AnyAsync(essay => essay.StudentExamAttemptId == attemptId
-            && (assignedQuestionIds == null || assignedQuestionIds.Contains(essay.QuestionId))
+            && assignedQuestionIds.Contains(essay.QuestionId)
             && essay.Status != EssaySubmissionStatus.TeacherGraded, ct)) return null;
         var lessonId = await db.Lessons.Where(lesson => lesson.ExamId == attempt.ExamId)
             .Select(lesson => (Guid?)lesson.Id).FirstOrDefaultAsync(ct)
@@ -61,8 +71,8 @@ internal static class AssessmentParentResultReader
                 .Select(video => (Guid?)video.LessonId).FirstOrDefaultAsync(ct);
         return new("exam", attempt.ExamId, attempt.Id, attempt.User,
             AssessmentParentNotificationSettings.Read(attempt.Exam.ParentNotificationSettingsJson),
-            attempt.Exam.ParentNotificationEnabledAt, definition?.Title ?? attempt.Exam.Title,
-            attempt.ScoreAchieved, definition?.TotalScore ?? attempt.Exam.TotalScore, attempt.Evaluation, lessonId);
+            attempt.Exam.ParentNotificationEnabledAt, definition.Title,
+            scale.ScoreAchieved, definition.TotalScore, attempt.Evaluation, lessonId);
     }
 
     public static async Task<string[]> ParametersAsync(IAppDbContext db, AssessmentParentResult result, CancellationToken ct)

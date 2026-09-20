@@ -24,6 +24,7 @@ public sealed record AssessmentDefinitionSnapshot(
     public DateTime? CompletionStartedAt { get; init; }
     public Guid? RevisionId { get; init; }
     public bool IsActive { get; init; } = true;
+    public bool UsesAssignedQuestionPoints { get; init; }
     public AssessmentParentNotificationSettings ParentNotification { get; init; } = AssessmentParentNotificationSettings.Disabled;
 
     public string ToJson() => JsonSerializer.Serialize(this);
@@ -41,7 +42,20 @@ public sealed record AssessmentDefinitionSnapshot(
     public static bool ContainsEssay(string snapshotJson, string kind, Guid assessmentId) =>
         Read(snapshotJson, kind, assessmentId).Questions.Any(q => q.Type == (int)QuestionType.Essay);
 
-    public static AssessmentDefinitionSnapshot FromExam(Exam exam, IEnumerable<ExamQuestion>? assignedQuestions = null) => new(
+    public AssessmentDefinitionSnapshot WithAssignedQuestionPoints()
+    {
+        var maximum = Questions.Sum(question => question.Points);
+        return this with
+        {
+            UsesAssignedQuestionPoints = true,
+            TotalScore = maximum,
+            PassingScore = TotalScore > 0 ? (PassingScore ?? 0) / TotalScore * maximum : 0
+        };
+    }
+
+    public static AssessmentDefinitionSnapshot FromExam(Exam exam, IEnumerable<ExamQuestion>? assignedQuestions = null)
+    {
+        var snapshot = new AssessmentDefinitionSnapshot(
         1, "exam", exam.Id, exam.Title, exam.Description, exam.TotalScore, exam.PassingScore,
         exam.DurationMinutes, exam.IsMandatory, exam.IsRandomized, exam.DisplayQuestionCount,
         (assignedQuestions ?? exam.ExamQuestions).Where(x => !x.IsRetired).OrderBy(x => x.Order).ThenBy(x => x.Id).Select(FromExamQuestion).ToArray())
@@ -51,7 +65,11 @@ public sealed record AssessmentDefinitionSnapshot(
         ReserveQuestions = assignedQuestions is null ? [] : exam.ExamQuestions
             .Where(q => !q.IsRetired && !assignedQuestions.Any(assigned => assigned.Id == q.Id))
             .OrderBy(q => q.Order).ThenBy(q => q.Id).Select(FromExamQuestion).ToArray()
-    };
+        };
+        // A sampled attempt is marked so later edits and swaps keep its own points scale.
+        return assignedQuestions is not null && snapshot.ReserveQuestions.Length > 0
+            ? snapshot.WithAssignedQuestionPoints() : snapshot;
+    }
 
     public static IReadOnlyList<ExamQuestion> ResolveSwapCandidates(Exam current, string? snapshotJson)
     {
@@ -65,7 +83,7 @@ public sealed record AssessmentDefinitionSnapshot(
         var snapshot = Read(snapshotJson, "exam", examId);
         var previous = snapshot.Questions.Single(q => q.Id == previousId);
         var replacement = snapshot.ReserveQuestions.Single(q => q.Id == replacementId);
-        return (snapshot with
+        var swapped = snapshot with
         {
             Questions = snapshot.Questions.Select(q => q.Id == previousId ? replacement : q).ToArray(),
             ReserveQuestions = snapshot.ReserveQuestions.Where(q => q.Id != replacementId).Append(previous).ToArray(),
@@ -73,7 +91,8 @@ public sealed record AssessmentDefinitionSnapshot(
                 answer.QuestionId == previousId
                     ? new RevisionAnswer(replacement.Id, replacement.Points, null, false, RequiresCompletion: true)
                     : answer).ToArray() }
-        }).ToJson();
+        };
+        return (snapshot.UsesAssignedQuestionPoints ? swapped.WithAssignedQuestionPoints() : swapped).ToJson();
     }
 
     public static AssessmentDefinitionSnapshot FromHomework(HomeworkEntity homework) => new(

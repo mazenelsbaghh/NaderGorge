@@ -31,6 +31,12 @@ export interface ActiveExamAttemptDto {
   questions: ExamQuestionDto[];
 }
 
+export interface SwapQuestionResultDto {
+  question: ExamQuestionDto;
+  totalScore: number;
+  passingScore: number;
+}
+
 export interface AnswerSubmissionDto {
   examQuestionId: string;
   selectedOptionId?: string;
@@ -89,7 +95,7 @@ export const examService = {
   useFiftyFifty: (examId: string, attemptId: string, questionId: string) =>
     apiClient.get<{ data: string[] }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`),
   swapQuestion: (examId: string, attemptId: string, questionId: string) =>
-    apiClient.post<{ data: ExamQuestionDto; message?: string }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`),
+    apiClient.post<{ data: SwapQuestionResultDto; message?: string }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`),
   startExam: async (examId: string) => {
     const response = await apiClient.post<{ data: ActiveExamAttemptDto }>(`/exams/${examId}/start`);
     invalidateMany(['student:exams', 'assessments']);
@@ -98,7 +104,7 @@ export const examService = {
   getLatestPassedResult: (examId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-passed-result`),
   getLatestResult: (examId: string) =>
-    apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-result`),
+    apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-result`, { suppressErrorToast: true }),
   getGradingStatus: (attemptId: string) =>
     apiClient.get<{ data: ExamAttemptGradingStatusDto }>(`/exams/attempts/${attemptId}/grading-status`),
   getAttemptResult: (attemptId: string) =>

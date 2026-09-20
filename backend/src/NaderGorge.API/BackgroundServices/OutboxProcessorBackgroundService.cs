@@ -183,6 +183,11 @@ public class OutboxProcessorBackgroundService : BackgroundService
         IServiceProvider services,
         CancellationToken ct)
     {
+        if (@event.Type == "AssessmentParentRecovery")
+        {
+            await services.GetRequiredService<AssessmentParentNotificationDispatcher>().DispatchAsync(@event, ct);
+            return;
+        }
         if (@event.Type is "ExamGraded" or "HomeworkGraded")
             await services.GetRequiredService<AssessmentParentNotificationDispatcher>().DispatchAsync(@event, ct);
 

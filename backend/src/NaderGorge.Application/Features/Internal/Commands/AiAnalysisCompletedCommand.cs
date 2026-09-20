@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
@@ -186,6 +187,8 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             };
             _db.OutboxEvents.Add(teacherCompletedEvent);
         }
+
+        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
 
         // The run-id concurrency token rolls every chapter change back if a newer run starts before this save.
         await _db.SaveChangesAsync(ct);

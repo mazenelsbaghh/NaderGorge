@@ -88,7 +88,7 @@ test('processParentPushNotification fetches tokens and sends multicast messages'
   assert.strictEqual(multicastSentPayloads[0]?.data?.category, category);
 });
 
-test('processParentPushNotification handles case when no tokens are found', async () => {
+test('parent notification remains in app even when no device token is registered', async () => {
   const savedTokens = mockDeviceTokens;
   mockDeviceTokens = [];
   poolQueries = [];
@@ -99,6 +99,9 @@ test('processParentPushNotification handles case when no tokens are found', asyn
   assert.strictEqual(res.success, true);
   assert.strictEqual(res.reason, 'no_tokens');
   assert.strictEqual(res.tokensCount, 0);
+  const stored = poolQueries.find(query => query.text.includes('INSERT INTO "notification_events"'));
+  assert.ok(stored);
+  assert.deepStrictEqual(stored.params.slice(1), ['student-no-tokens', 'Title', 'Body']);
   assert.strictEqual(multicastSentPayloads.length, 0);
 
   mockDeviceTokens = savedTokens;
@@ -119,7 +122,7 @@ test('processParentPushNotification never sends iOS APNs tokens through FCM', as
 
   try {
     const res = await processParentPushNotification('ios-student', 'عنوان', 'نص', 'Warning');
-    assert.strictEqual(res.success, true);
+    assert.strictEqual(res.success, false);
     assert.strictEqual(res.tokensCount, 1);
     assert.strictEqual(res.apnsTokensCount, 1);
     assert.strictEqual(res.apnsNotConfiguredCount, 1);
@@ -196,4 +199,22 @@ test('processNotificationJob handles send-warning job by sending WhatsApp to stu
   assert.strictEqual(multicastSentPayloads.length, 1);
   assert.strictEqual(multicastSentPayloads[0]?.notification?.title, 'تنبيه أكاديمي جديد');
   assert.ok(multicastSentPayloads[0]?.notification?.body.includes('غياب متكرر عن الحضور'));
+});
+
+test('failed device delivery is reported as failed while retaining the in-app notification', async () => {
+  const originalSend = firebaseMessaging.sendEachForMulticast;
+  poolQueries = [];
+  firebaseMessaging.sendEachForMulticast = async (payload: any) => ({
+    successCount: 0, failureCount: payload.tokens.length,
+    responses: payload.tokens.map(() => ({ success: false, error: { code: 'messaging/registration-token-not-registered' } }))
+  }) as any;
+  try {
+    const result = await processParentPushNotification('student-failed-push', 'Title', 'Body', 'Exam');
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(result.successCount, 0);
+    assert.strictEqual(result.failureCount, mockDeviceTokens.length);
+    assert.ok(poolQueries.some(query => query.text.includes('INSERT INTO "notification_events"')));
+  } finally {
+    firebaseMessaging.sendEachForMulticast = originalSend;
+  }
 });

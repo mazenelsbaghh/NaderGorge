@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مغامرات ميم | تجربة مسار</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a class="brand" href="./">مسار<span>مغامرات ميم</span></a><span class="preview-tag">معمل التجارب · نسخة محلية</span><button id="settingsButton" class="quiet">إعدادات الحصة ⚙</button></header>
+<main>
+ <section class="intro" id="intro">
+  <div class="intro-copy"><p class="chapter">المحاضرة الأولى · تانية بكالوريا</p><h1>دولة تنتظر<br><em>خطوتك الأولى.</em></h1><p class="lead">رافق ميم في رحلة بناء الدولة المصرية.<br>ساعد المواطنين، شغّل المحطة، وافتح باب المدينة.</p><div class="byline">من شرح مستر نادر جورج <span>٣ مهمات · حوالي ٥ دقائق</span></div><button class="primary start" id="start">ابدأ المغامرة <span>←</span></button><p class="local-note">تجربة للمراجعة، غير منشورة للطلاب.</p></div>
+  <div class="intro-art"><div class="orbit"></div><img src="assets/mim.png" alt="ميم مستكشف مسار" class="hero-mim"><span class="hello">جاهز؟ المدينة مستنيانا!</span><span class="art-label">مـيـم / مستكشف مسار</span></div>
+ </section>
+ <section id="game" hidden aria-label="عالم مغامرات ميم">
+  <div class="game-heading"><div><p class="chapter">مغامرات ميم / المحاضرة الأولى</p><h1>بناء الدولة المصرية</h1></div><div class="toolbar"><button id="sound" class="quiet" aria-pressed="false">الصوت: مغلق</button><button id="pause" class="quiet">إيقاف مؤقت</button></div></div>
+  <div class="quest-bar"><div><b id="questTitle"></b><span id="questText">اضغط على علامة المهمة، وميم هيوصلك ليها.</span></div><div class="seals" id="seals" aria-label="الأختام المكتسبة"></div></div>
+  <div id="world" class="world" tabindex="0" aria-label="ساحة المدينة. تحرّك بالأسهم أو اضغط على الأرض، وافتح المهمة من علامتها.">
+   <div class="world-shade"></div><div class="world-caption">ساحة البدايات<span>بناء الدولة المصرية</span></div>
+   <div id="stations"></div><div class="destination" id="destination" hidden></div>
+   <div id="player" class="player"><span>ميم</span><img src="assets/mim.png" alt="ميم" draggable="false"></div>
+   <div id="victoryWorld" class="victory-world" hidden>✦ المدينة عادت للحياة ✦</div>
+   <div class="world-bottom"><span>المس الأرض للتحرك · الأسهم / WASD · E للتفاعل</span><button id="interact" class="primary">افتح المهمة</button></div>
+   <div id="pauseLayer" class="pause-layer" hidden><h2>ناخد نفس؟</h2><p>تقدّمك محفوظ على الجهاز.</p><button id="resume" class="primary">كمّل المغامرة</button></div>
+  </div>
+  <div class="game-footer"><span id="saveStatus">التقدم يُحفظ على هذا المتصفح</span><button id="hint" class="quiet">✧ تلميح ميم</button></div>
+ </section>
+ <section id="finish" class="finish" hidden><img src="assets/mim.png" alt="ميم يحتفل"><div><p class="chapter">اكتملت المغامرة</p><h1>بنيت دولة…<br>بفهمك!</h1><p>فرّقت بين الشعب والسكان، وحددت اختصاصات السلطات، وجمّعت أركان الدولة الأربعة.</p><div id="finishStats"></div><button id="replay" class="primary">العب من البداية ↶</button><button id="returnMap" class="quiet">شوف المدينة</button></div></section>
+</main>
+<dialog id="puzzle" aria-labelledby="puzzleTitle"><div class="puzzle-head"><div><p id="puzzleStep" class="chapter"></p><h2 id="puzzleTitle"></h2></div><button id="closePuzzle" class="quiet" aria-label="العودة للمدينة">✕</button></div><p id="puzzleInstructions"></p><div id="puzzleProgress" class="puzzle-progress"></div><div class="workbench"><div id="taskCards" class="task-cards"></div><div class="connector">↓</div><div id="choices" class="choices"></div></div><p id="feedback" role="status" class="feedback">اختار عنصرًا من فوق، ثم مكانه المناسب.</p><div class="puzzle-footer"><button id="puzzleHint" class="quiet">✧ محتاج تلميح؟</button><button id="nextMission" class="primary" hidden>ارجع للمدينة ←</button><small id="source"></small></div></dialog>
+<dialog id="settings" aria-labelledby="settingsTitle"><div class="puzzle-head"><h2 id="settingsTitle">لعبة الحصة</h2><button id="closeSettings" class="quiet" aria-label="إغلاق الإعدادات">✕</button></div><p>بناء الدولة المصرية · المحاضرة الأولى</p><label class="toggle-row"><span><b>تفعيل اللعبة للحصة</b><small>محاكاة محلية لشكل الإعداد النهائي</small></span><input id="enabled" type="checkbox" role="switch"></label><p id="visibility"></p><div class="settings-note">المحتوى هنا مجهّز من ملخص الحصة. لا يوجد اتصال بالمنصة أو توليد آلي في هذه التجربة، وهذا الزر لا ينشر شيئًا للطلاب.</div><button id="preview" class="primary">معاينة اللعبة</button><button id="reset" class="quiet">مسح تقدّم التجربة</button></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<script type="module" src="game.mjs"></script>
+</body></html>

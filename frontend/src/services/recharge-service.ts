@@ -65,6 +65,7 @@ export const rechargeService = {
         // Compressed proof images can still need longer than the global timeout
         // on a slow mobile connection.
         timeout: 120_000,
+        suppressErrorToast: true,
         onUploadProgress: (progressEvent) => {
           if (!options.onUploadProgress) return;
 
@@ -80,8 +81,8 @@ export const rechargeService = {
     return data;
   },
 
-  getMyRequests: async () => {
-    const { data } = await apiClient.get<{ success: boolean; data: StudentRechargeRequestDto[] }>('/student/recharge/requests');
+  getMyRequests: async (options: { suppressErrorToast?: boolean } = {}) => {
+    const { data } = await apiClient.get<{ success: boolean; data: StudentRechargeRequestDto[] }>('/student/recharge/requests', options);
     return data.data || [];
   },
 

@@ -2,6 +2,7 @@ import apiClient from './api-client';
 import type { AxiosResponse } from 'axios';
 import type { AiOutputLanguage } from '@/lib/ai-output-language';
 import { isFullPackagePurchaseDisabled } from '@/lib/content-access';
+import type { StudentMimGameDto } from '@/lib/mim-game-contract';
 
 export type { AiOutputLanguage } from '@/lib/ai-output-language';
 
@@ -266,6 +267,7 @@ export interface LessonDetailDto {
   termId?: string;
   sectionId?: string;
   isVideoOnlyAccess?: boolean;
+  mimGame?: StudentMimGameDto | null;
 }
 
 

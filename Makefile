@@ -564,3 +564,22 @@ build-mobile-ios: ## Compile and test the iOS mobile app on host
 	fi
 
 build-mobile: build-mobile-android build-mobile-ios ## Compile and test both mobile apps
+
+# Shared production source; prepare in a separate workspace to preserve local edits.
+.PHONY: prod-source-status prod-source-integrate-preview prod-source-integrate prod-source-export-preview prod-source-export prod-source-publish-preview prod-source-publish
+prod-source-status:
+	python3 deploy/production/scripts/source_sync.py status
+prod-source-integrate-preview:
+	python3 deploy/production/scripts/source_sync.py integrate --destination "$(SOURCE_WORKSPACE)" --dry-run
+prod-source-integrate:
+	test -n "$(SOURCE_WORKSPACE)"
+	python3 deploy/production/scripts/source_sync.py integrate --destination "$(SOURCE_WORKSPACE)" --yes
+prod-source-export-preview:
+	python3 deploy/production/scripts/source_sync.py export --destination "$(SOURCE_WORKSPACE)" --dry-run
+prod-source-export:
+	test -n "$(SOURCE_WORKSPACE)"
+	python3 deploy/production/scripts/source_sync.py export --destination "$(SOURCE_WORKSPACE)" --yes
+prod-source-publish-preview:
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --dry-run
+prod-source-publish:
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --yes

@@ -14,7 +14,7 @@ public sealed class ListUsersPaginationTests
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
-        var roleName = $"PerformanceStudent-{Guid.NewGuid():N}";
+        var roleName = $"Perf-{Guid.NewGuid():N}";
         await SeedUsersAsync(fixture.Db, roleName);
         var handler = new ListUsersQueryHandler(fixture.Db);
 
@@ -101,7 +101,8 @@ public sealed class ListUsersPaginationTests
         {
             Id = Guid.Parse($"00000000-0000-0000-0000-{index:D12}"),
             FullName = $"{seed.NamePrefix}-{index:D3}",
-            PhoneNumber = $"010{index:D8}",
+            // Keep pagination phones separate from support reference users.
+            PhoneNumber = $"01599{index:D6}",
             PasswordHash = "integration",
             CreatedAt = createdAt,
             IsProfileComplete = true

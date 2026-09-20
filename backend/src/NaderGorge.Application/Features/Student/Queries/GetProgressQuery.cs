@@ -93,9 +93,18 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Distinct()
             .ToListAsync(ct);
 
+        var examGateSatisfiedIds = await _db.StudentExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == request.UserId &&
+                (a.IsPassed || a.Evaluation == ExamAccessPolicy.PendingReviewEvaluation))
+            .Select(a => a.ExamId)
+            .Distinct()
+            .ToListAsync(ct);
+
         var failedExamCount = await _db.StudentExamAttempts
             .AsNoTracking()
-            .Where(a => a.UserId == request.UserId && !a.IsPassed)
+            .Where(a => a.UserId == request.UserId && !a.IsPassed &&
+                a.Evaluation != ExamAccessPolicy.PendingReviewEvaluation)
             .Select(a => a.ExamId)
             .Distinct()
             .CountAsync(ct);
@@ -203,14 +212,14 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 {
                     blockedByPrevExam = prevLesson.ExamId.HasValue
                         && visibleExamIds.Contains(prevLesson.ExamId.Value)
-                        && !passedExamIds.Contains(prevLesson.ExamId.Value);
+                        && !examGateSatisfiedIds.Contains(prevLesson.ExamId.Value);
 
                     blockedByPrevHomework = mandatoryHomeworks
                         .Where(h => h.LessonId == prevLesson.Id && visibleMandatoryHomeworkIds.Contains(h.Id))
                         .Any(h => !passedHomeworkIds.Contains(h.Id));
                 }
 
-                bool blockedByCurrentExam = hasExam && !passedExamIds.Contains(lesson.ExamId!.Value);
+                bool blockedByCurrentExam = hasExam && !examGateSatisfiedIds.Contains(lesson.ExamId!.Value);
 
                 if ((blockedByPrevExam || blockedByPrevHomework || blockedByCurrentExam) && !manuallyUnlockedIds.Contains(lesson.Id))
                 {

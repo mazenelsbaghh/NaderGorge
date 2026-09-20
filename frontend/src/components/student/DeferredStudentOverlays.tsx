@@ -14,6 +14,10 @@ const StudentBirthdayCelebration = dynamic(
     ),
   { ssr: false },
 );
+const ParentCodePopup = dynamic(
+  () => import('./ParentCodePopup').then((module) => module.ParentCodePopup),
+  { ssr: false },
+);
 
 export function DeferredStudentOverlays() {
   const [ready, setReady] = useState(false);
@@ -28,6 +32,7 @@ export function DeferredStudentOverlays() {
     <>
       <StudentBirthdayCelebration />
       <PlatformPopup />
+      <ParentCodePopup />
     </>
   );
 }

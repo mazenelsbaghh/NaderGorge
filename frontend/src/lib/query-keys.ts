@@ -2,6 +2,7 @@ export const queryKeys = {
   session: ['session'] as const,
   student: {
     all: ['student'] as const,
+    grades: (userBoundary: string, kind: string, page: number) => ['student', 'grades', userBoundary, kind, page] as const,
     shell: (userBoundary: string) => ['student', 'shell', userBoundary] as const,
     dashboard: (userBoundary: string) => ['student', 'dashboard', userBoundary] as const,
     quickAccess: (userBoundary: string) => ['student', 'quick-access', userBoundary] as const,

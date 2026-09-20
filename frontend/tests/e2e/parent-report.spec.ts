@@ -99,8 +99,8 @@ test.describe('Parent Reporting Integration', () => {
     // Navigate with a fake GUID and token
     await page.goto('http://app.lvh.me:3000/parent-report/ffffffff-ffff-ffff-ffff-ffffffffffff?token=invalid.token');
 
-    // Should see failure/not found notice (تنبيه)
-    await expect(page.locator('h2:has-text("تنبيه")')).toBeVisible({
+    // Invalid links must show the report failure state.
+    await expect(page.getByRole('heading', { name: 'تعذر فتح التقرير' })).toBeVisible({
       timeout: 10000,
     });
   });
@@ -108,7 +108,7 @@ test.describe('Parent Reporting Integration', () => {
   test('Phase 1: Parent report rejects invalid token without report data', async ({ page }) => {
     await page.goto(`http://app.lvh.me:3000/parent-report/${mockStudentId}?token=invalid.token`);
 
-    await expect(page.locator('h2:has-text("تنبيه")')).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'تعذر فتح التقرير' })).toBeVisible({
       timeout: 10000,
     });
     await expect(page.locator('text=تقرير التقدم الأكاديمي')).toHaveCount(0);

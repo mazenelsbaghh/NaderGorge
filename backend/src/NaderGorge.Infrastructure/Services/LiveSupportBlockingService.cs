@@ -14,6 +14,16 @@ public sealed record SupportBlockStatus(LiveSupportContactBlock? Block, IReadOnl
 
 public sealed class LiveSupportBlockingService(IAppDbContext db, ILiveSupportEventWriter events)
 {
+    public async Task RequireStaffAccessAsync(Guid conversationId, Guid actor, bool isAdmin, CancellationToken ct)
+    {
+        if (isAdmin) return;
+        var conversation = await RequireConversationAsync(conversationId, ct);
+        var enabled = await db.LiveSupportStaffConfigs.AsNoTracking().AnyAsync(config => config.UserId == actor && config.IsEnabled, ct);
+        if (!enabled || (conversation.CurrentOwnerUserId != actor &&
+            !await db.LiveSupportContactBlocks.AnyAsync(block => block.ConversationId == conversationId && block.BlockedByUserId == actor, ct)))
+            throw new LiveSupportException("FORBIDDEN", "يمكنك إدارة حظر المحادثات المسندة إليك فقط.");
+    }
+
     public async Task<SupportBlockStatus> GetAsync(Guid conversationId, CancellationToken ct)
     {
         var conversation = await RequireConversationAsync(conversationId, ct);

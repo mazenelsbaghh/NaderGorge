@@ -1207,6 +1207,7 @@ public struct DashboardView: View {
                     .background(isDark ? BrandColors.darkCard : .white)
                     .cornerRadius(12)
                 }
+                .padding()
             }
         }
     }

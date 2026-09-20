@@ -4,7 +4,16 @@ import Combine
 @MainActor
 public class DashboardViewModel: ObservableObject {
     @Published public var linkedProfiles: [StudentProfile] = []
-    @Published public var selectedProfile: StudentProfile? = nil
+    @Published public var selectedProfile: StudentProfile? = nil {
+        didSet {
+            guard oldValue != selectedProfile else { return }
+            detailsRequestId = UUID()
+            studentDetails = nil
+            notifications = []
+            errorMessage = nil
+            isLoading = false
+        }
+    }
     @Published public var studentDetails: StudentDetailsResponse? = nil
     @Published public var notifications: [ParentNotification] = []
     @Published public var appConfig = ParentAppConfig()
@@ -13,6 +22,7 @@ public class DashboardViewModel: ObservableObject {
     
     private let apiService: APIServiceProtocol
     private let keychainService: KeychainService
+    private var detailsRequestId = UUID()
     
     public init(apiService: APIServiceProtocol = APIService.shared, keychainService: KeychainService = KeychainService.shared) {
         self.apiService = apiService
@@ -31,6 +41,7 @@ public class DashboardViewModel: ObservableObject {
     
     public func selectProfile(_ profile: StudentProfile) async {
         selectedProfile = profile
+        keychainService.setActiveStudentId(profile.studentId)
         await fetchDetails()
     }
     
@@ -52,21 +63,31 @@ public class DashboardViewModel: ObservableObject {
             return
         }
         
+        let requestId = UUID()
+        detailsRequestId = requestId
         isLoading = true
+        defer {
+            if detailsRequestId == requestId { isLoading = false }
+        }
         errorMessage = nil
         var didLoadDetails = false
         
         do {
             let details = try await apiService.fetchStudentDetails(token: profile.token)
+            guard detailsRequestId == requestId else { return }
             studentDetails = details
             didLoadDetails = true
         } catch let error as APIError {
+            guard detailsRequestId == requestId else { return }
             errorMessage = error.localizedDescription
         } catch is DecodingError {
+            guard detailsRequestId == requestId else { return }
             errorMessage = "فشل في قراءة بيانات الطالب من الخادم."
         } catch is URLError {
+            guard detailsRequestId == requestId else { return }
             errorMessage = "تعذر الاتصال بالخادم، حاول مرة أخرى."
         } catch {
+            guard detailsRequestId == requestId else { return }
             // Unknown SDK/transport failures are surfaced as a safe retry message.
             errorMessage = "فشل في تحديث بيانات الطالب، حاول مرة أخرى."
         }
@@ -77,7 +98,9 @@ public class DashboardViewModel: ObservableObject {
         }
 
         do {
-            notifications = try await apiService.fetchNotifications(token: profile.token)
+            let refreshedNotifications = try await apiService.fetchNotifications(token: profile.token)
+            guard detailsRequestId == requestId else { return }
+            notifications = refreshedNotifications
         } catch is APIError {
             // Notifications are an optional Android-compatible side channel; keep student details visible.
         } catch is DecodingError {
@@ -87,7 +110,6 @@ public class DashboardViewModel: ObservableObject {
         } catch {
             // Notifications are an optional Android-compatible side channel; keep student details visible.
         }
-        isLoading = false
     }
 
     public func refreshActiveStudent() async {

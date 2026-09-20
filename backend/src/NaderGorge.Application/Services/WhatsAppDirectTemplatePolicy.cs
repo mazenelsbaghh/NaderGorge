@@ -155,6 +155,7 @@ public static class WhatsAppDirectTemplatePolicy
             componentParameters[int.Parse(
                 match.Groups["position"].Value,
                 CultureInfo.InvariantCulture) - 1]);
+        if (type == "HEADER" && preview.Length > 60) return null;
         var providerComponent = parameterCount == 0
             ? null
             : new WhatsAppCloudService.TemplateComponent(type, componentParameters);

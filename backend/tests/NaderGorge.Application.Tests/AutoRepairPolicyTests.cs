@@ -35,6 +35,14 @@ public sealed class AutoRepairPolicyTests
     }
 
     [Theory]
+    [InlineData("Unhandled exception. CorrelationId: e7ce5f9bb4a2497da9584303ccb815c8", "Unhandled exception. CorrelationId: a7ce5f9bb4a2497da9584303ccb815c9")]
+    [InlineData("[14/Sep/2026:16:30:01 +0000] GET /health 500", "[14/Sep/2026:16:31:02 +0000] GET /health 500")]
+    public void Same_production_error_groups_across_request_ids_and_log_timestamps(string first, string second)
+    {
+        Assert.Equal(RepairPolicy.Fingerprint("backend", "Http", first), RepairPolicy.Fingerprint("backend", "Http", second));
+    }
+
+    [Theory]
     [InlineData("", "", false)]
     [InlineData("short", "short", false)]
     [InlineData("0123456789abcdef0123456789abcdef", "wrong", false)]

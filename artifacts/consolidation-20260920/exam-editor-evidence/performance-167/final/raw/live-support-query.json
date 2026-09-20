@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "live-support-query-budget",
+  "source": {
+    "releaseId": "src-d904e2608d693932d693f17ebcc290e8c77f9cdd",
+    "gitCommit": "afc713d095ff69a831e42bf96be1af87ef1a56c0",
+    "sourceStateSha256": "d904e2608d693932d693f17ebcc290e8c77f9cdd5dc279f3bd67e4ea38e44d74",
+    "dirtySourceSnapshot": true,
+    "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
+    "manifestSha256": "a7e280a4aafb4f66cdeec8b74b7aef69133ba99832360e8d359c60a84afec1ae"
+  },
+  "database": {
+    "databaseName": "massar_live_support_query_budget_disposable_final",
+    "identitySha256": "a8d464db91612247726d8340c9657a3995a1fe49443e9171101c4f401086e0f9",
+    "serverVersion": "17.11 (Homebrew)",
+    "serverVersionNumber": 170011
+  },
+  "rowCounts": [
+    1,
+    20,
+    100
+  ],
+  "measurements": [
+    {
+      "rowCount": 1,
+      "dashboard": {
+        "databaseCommands": 12,
+        "returnedRows": 1
+      },
+      "history": {
+        "databaseCommands": 3,
+        "returnedRows": 1
+      },
+      "timeline": {
+        "databaseCommands": 12,
+        "returnedRows": 3
+      }
+    },
+    {
+      "rowCount": 20,
+      "dashboard": {
+        "databaseCommands": 12,
+        "returnedRows": 20
+      },
+      "history": {
+        "databaseCommands": 3,
+        "returnedRows": 20
+      },
+      "timeline": {
+        "databaseCommands": 12,
+        "returnedRows": 41
+      }
+    },
+    {
+      "rowCount": 100,
+      "dashboard": {
+        "databaseCommands": 12,
+        "returnedRows": 100
+      },
+      "history": {
+        "databaseCommands": 3,
+        "returnedRows": 100
+      },
+      "timeline": {
+        "databaseCommands": 12,
+        "returnedRows": 201
+      }
+    }
+  ],
+  "workflows": {
+    "live-support-admin": {
+      "maximumDatabaseCommandsObserved": 12
+    }
+  }
+}

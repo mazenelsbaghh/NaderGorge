@@ -57,7 +57,7 @@ function hasStoredUserSession() {
   return Boolean(readStoredAuth()?.user);
 }
 
-function refreshAccessToken() {
+export function refreshAccessToken() {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {

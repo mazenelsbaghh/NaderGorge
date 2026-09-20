@@ -28,7 +28,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         DbDataReader result)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return result;
     }
 
@@ -38,7 +38,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         DbDataReader result,
         CancellationToken cancellationToken = default)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return ValueTask.FromResult(result);
     }
 
@@ -47,7 +47,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         int result)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return result;
     }
 
@@ -57,7 +57,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return ValueTask.FromResult(result);
     }
 
@@ -66,7 +66,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         object? result)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return result;
     }
 
@@ -76,7 +76,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         object? result,
         CancellationToken cancellationToken = default)
     {
-        RecordCommand(eventData, DbCommandOutcome.Success);
+        RecordCommand(command, eventData, DbCommandOutcome.Success);
         return ValueTask.FromResult(result);
     }
 
@@ -84,7 +84,7 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         DbCommand command,
         CommandErrorEventData eventData)
     {
-        RecordCommand(eventData, DbCommandOutcome.Failure);
+        RecordCommand(command, eventData, DbCommandOutcome.Failure);
     }
 
     public override Task CommandFailedAsync(
@@ -92,14 +92,18 @@ public sealed class DbCommandMetricsInterceptor : DbCommandInterceptor
         CommandErrorEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        RecordCommand(eventData, DbCommandOutcome.Failure);
+        RecordCommand(command, eventData, DbCommandOutcome.Failure);
         return Task.CompletedTask;
     }
 
     private static void RecordCommand(
+        DbCommand command,
         CommandEndEventData eventData,
         DbCommandOutcome outcome)
     {
+        var operation = command.CommandText.Contains("pg_advisory_xact_lock", StringComparison.OrdinalIgnoreCase)
+            ? "advisory_lock" : OperationName(eventData.ExecuteMethod);
+        RequestDbCommandScope.RecordDetail(operation, eventData.Duration, outcome == DbCommandOutcome.Success);
         RecordCommand(eventData.ExecuteMethod, eventData.Duration, outcome);
     }
 

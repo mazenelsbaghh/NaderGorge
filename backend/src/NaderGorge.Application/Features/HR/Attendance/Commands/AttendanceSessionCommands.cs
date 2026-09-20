@@ -56,7 +56,7 @@ public sealed class ClockInAttendanceCommandHandler : IRequestHandler<ClockInAtt
         var workDate = ShiftWorkDateResolver.Resolve(EnsureUtc(request.OccurredAt), segment, cairo);
         var (scheduledStart, _) = ShiftScheduleRules.ScheduledRangeUtc(workDate, segment, cairo);
         var lateMinutes = Math.Max(0,
-            (int)(EnsureUtc(request.OccurredAt) - scheduledStart).TotalMinutes - shift.ShiftTemplate.GraceMinutes);
+            (int)(EnsureUtc(request.OccurredAt) - scheduledStart).TotalMinutes);
         var session = new AttendanceSession
         {
             EmployeeId = employee.Id,
@@ -197,7 +197,6 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
             scheduledStart,
             scheduledEnd,
             breakMinutes,
-            shiftTemplate.GraceMinutes,
             shiftTemplate.OvertimeAfterMinutes));
         session.WorkedMinutes = calculation.WorkedMinutes;
         session.LateMinutes = calculation.LateMinutes;

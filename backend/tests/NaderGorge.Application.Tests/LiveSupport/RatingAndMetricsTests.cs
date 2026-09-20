@@ -16,4 +16,19 @@ public sealed class RatingAndMetricsTests
         var dashboard = await new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence()).GetAdminDashboardAsync(CancellationToken.None);
         Assert.All(dashboard.StaffPerformance.Where(x => x.StaffUserId == LiveSupportTestData.StaffAId || x.StaffUserId == LiveSupportTestData.StaffBId), x => { Assert.Equal(1, x.RatingCount); Assert.Equal(4, x.AverageRating); });
     }
+    [Fact]
+    public async Task ClosedConversationShowsLastAssignedEmployeeAfterOwnershipIsCleared()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync();
+        conversation.Status = NaderGorge.Domain.Enums.LiveSupportConversationStatus.Closed;
+        conversation.CurrentOwnerUserId = null;
+        conversation.ClosedAt = DateTime.UtcNow;
+        fixture.Db.LiveSupportAssignments.Add(new() { ConversationId = conversation.Id, StaffUserId = LiveSupportTestData.StaffBId,
+            StartedAt = DateTime.UtcNow, EndedAt = DateTime.UtcNow, AssignmentSequence = 2 });
+        await fixture.Db.SaveChangesAsync();
+        var expectedName = await fixture.Db.Users.Where(user => user.Id == LiveSupportTestData.StaffBId).Select(user => user.FullName).SingleAsync();
+        var dashboard = await new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence()).GetAdminDashboardAsync(CancellationToken.None);
+        Assert.Equal(expectedName, Assert.Single(dashboard.Conversations).OwnerName);
+    }
 }

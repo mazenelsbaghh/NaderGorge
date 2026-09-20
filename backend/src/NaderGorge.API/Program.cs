@@ -94,6 +94,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // ---------- Database ----------
 builder.Services.AddSingleton<SlowQueryInterceptor>();
 builder.Services.AddSingleton<DbCommandMetricsInterceptor>();
+builder.Services.AddSingleton<DbConnectionTimingInterceptor>();
 builder.Services.AddSingleton<DatabaseTransactionDiagnostics>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -103,6 +104,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.AddInterceptors(
         sp.GetRequiredService<SlowQueryInterceptor>(),
         sp.GetRequiredService<DbCommandMetricsInterceptor>(),
+        sp.GetRequiredService<DbConnectionTimingInterceptor>(),
         sp.GetRequiredService<DatabaseTransactionDiagnostics>());
 });
 builder.Services.AddScoped<NaderGorge.API.AutoRepair.RepairStore>();
@@ -211,6 +213,7 @@ builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationS
 builder.Services.AddScoped<TeacherAccountingService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialPostingService, NaderGorge.Infrastructure.Services.Finance.FinancialPostingService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.PlatformFinanceDashboardService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.PlatformProfitReportQuery>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceOperationsService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceOperationsService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
@@ -275,6 +278,7 @@ builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddScoped<WhatsAppLiveSupportService>();
 builder.Services.AddHttpClient<BaileysWhatsAppClient>();
+builder.Services.AddScoped<WhatsAppMessageMutationService>();
 builder.Services.AddScoped<BaileysAccountService>();
 builder.Services.AddScoped<BaileysWebhookService>();
 builder.Services.AddScoped<LiveSupportBlockingService>();
@@ -292,6 +296,8 @@ builder.Services.AddScoped<FacebookMessengerLiveSupportService>();
 builder.Services.AddScoped<FacebookMessengerAdminService>();
 builder.Services.AddSingleton<IWhatsAppCampaignDataProtector, WhatsAppCampaignDataProtector>();
 builder.Services.AddScoped<AssessmentParentNotificationDispatcher>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Assessments.IAssessmentParentNotificationRecoveryService,
+    AssessmentParentNotificationRecoveryService>();
 builder.Services.AddScoped<WhatsAppCampaignService>();
 builder.Services.AddScoped<IWhatsAppCampaignService>(provider =>
     provider.GetRequiredService<WhatsAppCampaignService>());

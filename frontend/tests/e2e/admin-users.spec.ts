@@ -77,7 +77,7 @@ test.describe('Phase 1 Admin Route Guard', () => {
     expect(response.ok()).toBeTruthy();
 
     await page.goto('http://admin.lvh.me:3000/login');
-    const loginResponse = await request.post('http://api.lvh.me:5245/api/auth/login', {
+    const loginResponse = await page.request.post('http://api.lvh.me:5245/api/auth/login', {
       headers: { 'X-App-Surface': 'assistant' },
       data: {
         phoneNumber: '20000000003',
@@ -99,7 +99,11 @@ test.describe('Phase 1 Admin Route Guard', () => {
 
     for (const path of ['/admin/finance', '/admin/reports', '/admin/hr', '/admin/operations', '/admin/media']) {
       await page.goto(`http://admin.lvh.me:3000${path}`);
-      await expect(page).toHaveURL(/\/admin\/unauthorized|\/login/, { timeout: 15000 });
+      // Streamed Next responses may return 200 before rendering the denial page.
+      await expect.poll(async () =>
+        /\/admin\/unauthorized|\/login/.test(page.url())
+        || await page.getByText('الصفحة غير موجودة أو لا تخص هذا الحساب', { exact: true }).isVisible()
+      ).toBe(true);
     }
   });
 });

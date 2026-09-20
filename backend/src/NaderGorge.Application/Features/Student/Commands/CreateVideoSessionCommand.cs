@@ -197,12 +197,13 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         if (!isAdminPreview && videoExams.Any())
         {
-            var passedVideoExamIds = await _db.StudentExamAttempts
-                .Where(a => a.UserId == request.UserId && videoExams.Contains(a.ExamId) && a.IsPassed)
+            var satisfiedVideoExamIds = await _db.StudentExamAttempts
+                .Where(a => a.UserId == request.UserId && videoExams.Contains(a.ExamId) &&
+                    (a.IsPassed || a.Evaluation == ExamAccessPolicy.PendingReviewEvaluation))
                 .Select(a => a.ExamId)
                 .ToListAsync(ct);
 
-            if (passedVideoExamIds.Count < videoExams.Count)
+            if (satisfiedVideoExamIds.Count < videoExams.Count)
             {
                 return ApiResponse<VideoSessionDto>.Fail("This video is locked by a mandatory exam.", new List<string> { "EXAM_LOCKED" });
             }

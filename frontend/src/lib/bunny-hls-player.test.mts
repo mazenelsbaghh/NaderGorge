@@ -28,6 +28,7 @@ async function runHlsPlayer(runtime: HlsRuntime = 'hlsjs', nativeManifestStatus 
   const timers: Array<{ callback: () => void; active: boolean; due: number }> = [];
   const video = {
     currentTime: 0,
+    readyState: 4,
     duration: Number.NaN,
     ended: false,
     muted: false,
@@ -293,12 +294,14 @@ test('2026-09-07 pointer and touch inside the HLS iframe reveal the parent contr
   assert.equal(player.messages.filter(message => message.type === 'playerInteraction').length, 5);
 });
 
-test('2026-09-07 unreachable tablet CDN switches once to same-origin HLS, then fails visibly', async () => {
+test('2026-09-18 unreachable CDN switches to relay, retries once, then fails visibly', async () => {
   const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
   player.emitFatalNetworkError(0);
   assert.equal(player.hlsInstances.length, 2);
   assert.equal(player.hlsInstances[0].destroyCalls, 1);
   assert.equal(player.hlsInstances[1].source, 'https://app.massar-academy.net/api/video/hls?s=test-session');
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  player.emitFatalNetworkError(0);
   assert.equal(player.messages.some(message => message.type === 'error'), false);
   player.emitFatalNetworkError(0);
   assert.equal(player.hlsInstances.length, 2);
@@ -559,6 +562,9 @@ test('post-start relay honors a pause command and fails once if recovery never l
   player.command('play');
   player.triggerVideoEvent('waiting');
   player.advanceTime(45000);
+  assert.equal(player.messages.filter(message => message.type === 'error').length, 0);
+  assert.equal(player.hlsInstances.at(-1)?.startLoadCalls, 1);
+  player.advanceTime(45000);
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.hlsInstances.length, 2);
   assert.match(player.messages.find(message => message.type === 'error')?.data?.phase ?? '', /^relay_playback_timeout/);
@@ -659,7 +665,7 @@ test('a renewal cannot redirect the player or its authenticated resource request
 });
 
 test('renewal failure retries are bounded and authorization denial never triggers a bandwidth relay', async () => {
-  for (const status of [401, 403, 404, 410, 503]) {
+  for (const status of [401, 403, 404, 409, 410, 503]) {
     const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=session', signedPlaylist(300));
     player.triggerVideoEvent('loadedmetadata');
     player.advanceTime(180000);
@@ -813,3 +819,66 @@ test('an early CDN rejection gets bounded source renewal without a bandwidth rel
   assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
   assert.equal(player.hlsInstances.length, 1);
 });
+
+
+test('2026-09-18 stalled downloads do not stop learning time while buffered media is playing', async () => {
+  const player = await runHlsPlayer();
+  player.triggerVideoEvent('loadedmetadata');
+  player.triggerVideoEvent('play');
+  player.triggerVideoEvent('stalled');
+  const beforeBuffering = player.messages.filter(message => message.type === 'stateChange').at(-1);
+  assert.equal((beforeBuffering?.data as { isPlaying?: boolean }).isPlaying, true);
+  player.video.readyState = 2;
+  player.triggerVideoEvent('stalled');
+  const afterBuffering = player.messages.filter(message => message.type === 'stateChange').at(-1);
+  assert.equal((afterBuffering?.data as { isPlaying?: boolean }).isPlaying, false);
+});
+
+test('2026-09-18 relay stall recovers in place and keeps position and speed', async () => {
+  const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+  player.emitFatalNetworkError(0);
+  player.triggerVideoEvent('loadedmetadata');
+  player.video.playbackRate = 1.5;
+  player.setMediaTime(120);
+  player.triggerVideoEvent('play');
+  player.triggerVideoEvent('waiting');
+  player.advanceTime(45000);
+  assert.equal(player.hlsInstances.at(-1)?.startLoadCalls, 1);
+  assert.equal(player.video.currentTime, 120);
+  assert.equal(player.video.playbackRate, 1.5);
+  player.setMediaTime(121);
+  player.triggerVideoEvent('timeupdate');
+  player.advanceTime(45000);
+  assert.equal(player.messages.some(message => message.type === 'error'), false);
+  assert.equal(player.hlsInstances.length, 2);
+});
+
+for (const status of [0, 408, 502, 503]) {
+  test(`2026-09-18 transient relay failure ${status} resumes current position with one retry`, async () => {
+    const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+    player.emitFatalNetworkError(0);
+    player.triggerVideoEvent('loadedmetadata');
+    player.video.currentTime = 123;
+    player.video.playbackRate = 1.5;
+    player.triggerVideoEvent('play');
+    player.emitFatalNetworkError(status);
+    assert.equal(player.messages.some(message => message.type === 'error'), false);
+    assert.equal(player.video.currentTime, 123);
+    assert.equal(player.video.playbackRate, 1.5);
+    assert.equal(player.hlsInstances.at(-1)?.startLoadCalls, 1);
+    player.setMediaTime(125);
+    player.triggerVideoEvent('timeupdate');
+    player.emitFatalNetworkError(status);
+    assert.equal(player.messages.filter(message => message.type === 'error').length, 1);
+  });
+}
+
+for (const status of [401, 403, 404, 409, 410, 429]) {
+  test(`relay rejection ${status} is not retried as a transient network error`, async () => {
+    const player = await runHlsPlayer('hlsjs', 200, '/api/video/hls?s=test-session');
+    player.emitFatalNetworkError(0);
+    player.emitFatalNetworkError(status);
+    assert.equal(player.messages.find(message => message.type === 'error')?.data?.code, status);
+    assert.equal(player.hlsInstances.at(-1)?.startLoadCalls, 0);
+  });
+}

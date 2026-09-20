@@ -176,7 +176,7 @@ test('English lesson mindmap accepts verified English visible text (2026-08-10 r
   assert.match(imageUrl, /\/mindmaps\/english-language-regression_run_/);
 });
 
-test('essay request sends the exact question, teacher key and student answer to Flash-Lite', async () => {
+test('essay request uses the configured text model with the exact grading inputs', async () => {
   let sent: any;
   const client = { models: { generateContent: async (request: any) => {
     sent = request;
@@ -184,15 +184,26 @@ test('essay request sends the exact question, teacher key and student answer to 
   } } };
   setAIServiceRuntimeFactoryForTests(() => runtime(client));
   assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', 'النموذج الصحيح', 'نص السؤال'), { isCorrect: true, feedback: 'برافو عليك' });
-  assert.equal(sent.model, 'gemini-3.5-flash-lite');
+  assert.equal(sent.model, 'text-model');
   assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: 'النموذج الصحيح', studentAnswer: 'إجابة الطالب' });
   assert.deepEqual(sent.config.responseSchema.required, ['isCorrect', 'feedback']);
 });
 
-test('missing teacher key or question cannot be graded using guessed context', async () => {
+test('missing teacher key uses conservative question-only grading', async () => {
+  let sent: any;
+  const client = { models: { generateContent: async (request: any) => {
+    sent = request;
+    return { text: '{"isCorrect":false,"feedback":"الإجابة محتاجة توضيح أكتر."}' };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال'),
+    { isCorrect: false, feedback: 'الإجابة محتاجة توضيح أكتر.' });
+  assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: '', studentAnswer: 'إجابة الطالب' });
+});
+
+test('missing question text cannot be graded', async () => {
   setAIServiceRuntimeFactoryForTests(() => { throw new Error('Provider must not be used'); });
-  for (const [key, question] of [['', 'سؤال'], ['نموذج', ' '], [undefined, 'سؤال']])
-    await assert.rejects(evaluateEssayWithAI('إجابة', key, question), /requires the question and the teacher answer key/);
+  await assert.rejects(evaluateEssayWithAI('إجابة', 'نموذج', ' '), /requires the question text/);
 });
 
 test('live support returns a valid Developer API decision', async () => {

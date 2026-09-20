@@ -6,7 +6,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <>
       <GlobalNav />
       {children}
-      <DeferredLiveSupportLauncher />
+      <div className="public-support"><DeferredLiveSupportLauncher /></div>
     </>
   );
 }

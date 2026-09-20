@@ -11,7 +11,7 @@ export type ParentAcademicDetails = {
   homeworks: Array<{ homeworkId: string; title: string; packageName: string; teacherName: string; isSubmitted: boolean; grade?: string | null; submittedAt?: string | null }>;
   warnings: Array<{ reason: string; severity: string; createdAt: string }>;
   teachers: Array<{ teacherId: string; teacherName: string; specialization?: string | null }>;
-  watchLessons: Array<{ lessonId: string; lessonTitle: string; packageName: string; termTitle: string; watchedVideos: number; totalVideos: number; isCompleted: boolean; lastWatchedAt?: string | null }>;
+  watchLessons: Array<{ lessonId: string; lessonTitle: string; packageName: string; termTitle: string; watchedVideos: number; totalVideos: number; startedVideos?: number; completedVideos?: number; isCompleted: boolean; lastWatchedAt?: string | null }>;
   balance: { currentBalance: number };
   courses: Array<{ packageId: string; packageName: string; teacherName: string; terms: Array<{ termId: string; termTitle: string; lessonCount: number; examCount: number }> }>;
 };

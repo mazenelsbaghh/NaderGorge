@@ -146,12 +146,27 @@ export interface HomeworkWeaknessDto {
   assistantNotes?: string;
 }
 
+export interface HomeworkMistakeGroupDto {
+  submissionId: string;
+  homeworkId: string;
+  homeworkTitle: string;
+  lessonId: string;
+  packageId?: string;
+  score: number;
+  totalScore: number;
+  items: { questionId: string; order: number; questionText: string; yourAnswer: string;
+    correctAnswer?: string; scoreReceived: number; maxPoints: number; imageUrl?: string }[];
+}
+
 export interface StudentMistakesDto {
   totalExamMistakes: number;
   examsWithMistakes: number;
   weakHomeworkCount: number;
   examMistakes: ExamMistakeGroupDto[];
   homeworkWeaknesses: HomeworkWeaknessDto[];
+  totalHomeworkMistakes: number;
+  homeworkMistakes: HomeworkMistakeGroupDto[];
+  hasMore: boolean;
 }
 
 export interface ThemePaletteOptionDto {
@@ -296,7 +311,29 @@ export interface ShellBootstrapDto {
   hasSeenTrackingCodePopup?: boolean;
 }
 
+export type StudentGradeKind = 'all' | 'exam' | 'homework';
+export interface StudentGradeDto {
+  id: string;
+  kind: 'exam' | 'homework';
+  title: string;
+  lessonTitle: string | null;
+  status: 'Graded' | 'PendingReview' | 'Missed';
+  score: number | null;
+  totalScore: number;
+  attemptedAt: string;
+}
+export interface StudentGradesDto {
+  items: StudentGradeDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
 export const studentService = {
+  getGrades: async (kind: StudentGradeKind, page: number, signal?: AbortSignal): Promise<StudentGradesDto> => {
+    const res = await apiClient.get('/student/grades', { params: { kind, page }, signal });
+    return res.data.data;
+  },
   getDashboard: async (signal?: AbortSignal): Promise<DashboardDto> => {
     const res = await apiClient.get('/student/dashboard', { signal });
     return res.data?.data;
@@ -352,8 +389,8 @@ export const studentService = {
     return res.data?.data || [];
   },
 
-  getMistakes: async (): Promise<StudentMistakesDto> => {
-    const res = await apiClient.get('/student/mistakes');
+  getMistakes: async (skip = 0): Promise<StudentMistakesDto> => {
+    const res = await apiClient.get('/student/mistakes', { params: { skip, take: 10 }, suppressErrorToast: true });
     return res.data?.data;
   },
 

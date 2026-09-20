@@ -841,6 +841,7 @@ export function ExamViewer({
   const [result, setResult] = useState<ExamResultDto | null>(null);
   const [error, setError] = useState('');
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [totalScore, setTotalScore] = useState(attempt.totalScore);
   const [direction, setDirection] = useState(1);
   // Lifelines
   const [hasUsedFiftyFifty, setHasUsedFiftyFifty] = useState(false);
@@ -870,6 +871,7 @@ export function ExamViewer({
     setRevealedHintId(null);
     setHasUsedSwap(false);
     setCurrentIdx(0);
+    setTotalScore(attempt.totalScore);
     setDirection(1);
     setError('');
     setResult(null);
@@ -886,7 +888,7 @@ export function ExamViewer({
     } catch {
       // ignore JSON parse or localStorage errors
     }
-  }, [draftId]);
+  }, [attempt.totalScore, draftId]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<ActiveExamAttemptDto['questions']>([]);
   useEffect(() => {
@@ -943,7 +945,8 @@ export function ExamViewer({
       const res = await examService.swapQuestion(examId, attempt.attemptId, qId);
       if (res.data.data) {
         setHasUsedSwap(true);
-        const newQuestion = { ...res.data.data, options: shuffleArray(res.data.data.options) } as ActiveExamAttemptDto['questions'][number];
+        setTotalScore(res.data.data.totalScore);
+        const newQuestion = { ...res.data.data.question, options: shuffleArray(res.data.data.question.options) } as ActiveExamAttemptDto['questions'][number];
         
         setShuffledQuestions(prev => {
            const next = [...prev];
@@ -1072,7 +1075,7 @@ export function ExamViewer({
           <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{examDescription}</p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-black text-primary">
-          <span>الدرجة الكلية: {attempt.totalScore} نقطة</span>
+          <span>الدرجة الكلية: {totalScore} نقطة</span>
           {attempt.durationMinutes && <span>الزمن: {attempt.durationMinutes} دقيقة</span>}
         </div>
       </div>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Services;
+using NaderGorge.Application.Features.Assessments;
 
 namespace NaderGorge.API.Controllers;
 
@@ -13,15 +14,18 @@ public class WhatsAppController : ControllerBase
     private readonly WhatsAppVerificationService _whatsAppService;
     private readonly WhatsAppCloudService _whatsAppCloudService;
     private readonly WhatsAppExamNotificationService _whatsAppExamNotificationService;
+    private readonly IAssessmentParentNotificationRecoveryService _assessmentRecovery;
 
     public WhatsAppController(
         WhatsAppVerificationService whatsAppService,
         WhatsAppCloudService whatsAppCloudService,
-        WhatsAppExamNotificationService whatsAppExamNotificationService)
+        WhatsAppExamNotificationService whatsAppExamNotificationService,
+        IAssessmentParentNotificationRecoveryService assessmentRecovery)
     {
         _whatsAppService = whatsAppService;
         _whatsAppCloudService = whatsAppCloudService;
         _whatsAppExamNotificationService = whatsAppExamNotificationService;
+        _assessmentRecovery = assessmentRecovery;
     }
 
     public record CheckRequest(string PhoneNumber);
@@ -44,6 +48,9 @@ public class WhatsAppController : ControllerBase
     public record SendExamResultMessageRequest(
         Guid AttemptId,
         string? RecipientPhoneNumber);
+
+    public sealed record AssessmentParentRecoveryApiRequest(
+        Guid OperationId, string ExpectedCohortFingerprint, int MaxBatchSize = 10);
 
     /// <summary>
     /// Check if a phone number is registered on WhatsApp.
@@ -120,6 +127,34 @@ public class WhatsAppController : ControllerBase
 
         return result.Success ? Ok(result) : StatusCode(result.StatusCode, result);
     }
+
+    [HttpGet("admin/assessment-parent-recovery/preview")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> PreviewAssessmentParentRecovery(
+        [FromQuery] int maxBatchSize = 10, CancellationToken cancellationToken = default) =>
+        Ok(await _assessmentRecovery.PreviewAsync(User.RequireUserId(), maxBatchSize, cancellationToken));
+
+    [HttpPost("admin/assessment-parent-recovery/apply")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> ApplyAssessmentParentRecovery(
+        [FromBody] AssessmentParentRecoveryApiRequest request, CancellationToken cancellationToken)
+    {
+        if (request.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(request.ExpectedCohortFingerprint)
+            || request.MaxBatchSize is < 1 or > 10)
+            return BadRequest(new { message = "Invalid recovery request." });
+        return Ok(await _assessmentRecovery.ApplyAsync(User.RequireUserId(),
+            new AssessmentParentRecoveryRequest(request.OperationId,
+                request.ExpectedCohortFingerprint, request.MaxBatchSize), cancellationToken));
+    }
+
+    [HttpGet("admin/assessment-parent-recovery/status/{operationId:guid}")]
+    [Authorize(Roles = "Admin")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> AssessmentParentRecoveryStatus(
+        Guid operationId, CancellationToken cancellationToken) =>
+        Ok(await _assessmentRecovery.StatusAsync(User.RequireUserId(), operationId, cancellationToken));
 
     private static string MaskPhone(string number)
     {

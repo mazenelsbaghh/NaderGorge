@@ -1,8 +1,8 @@
 [Unit]
 Description=Massar Codex incident repair supervisor
-After=network-online.target docker.service
+After=network-online.target docker.service massar-auto-repair-proxy.service
 Wants=network-online.target
-Requires=docker.service
+Requires=docker.service massar-auto-repair-proxy.service
 StartLimitIntervalSec=300
 StartLimitBurst=3
 

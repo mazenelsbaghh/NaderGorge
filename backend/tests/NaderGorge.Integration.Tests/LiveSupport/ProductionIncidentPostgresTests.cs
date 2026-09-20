@@ -84,15 +84,21 @@ public sealed class ProductionIncidentPostgresTests
         fixture.Db.ChangeTracker.Clear();
 
         Assert.Equal(first + 1, second);
-        Assert.Equal(new[] { first, second }, await fixture.Db.LiveSupportEvents
-            .Where(item => item.ConversationId == conversation.Id).OrderBy(item => item.Sequence)
-            .Select(item => item.Sequence).ToArrayAsync());
+        // PostgreSQL assigns the shared cursor at SaveChanges; the writer's
+        // pending numbers are not the persisted multi-node cursor contract.
+        var persisted = await fixture.Db.LiveSupportEvents
+            .Where(item => item.ConversationId == conversation.Id).ToDictionaryAsync(item => item.Id);
+        Assert.Equal(2, persisted.Count);
+        Assert.Equal(2, persisted.Values.Select(item => item.Sequence).Distinct().Count());
+        Assert.All(persisted.Values, item => Assert.True(item.Sequence > 0));
         var payloads = await fixture.Db.OutboxEvents.Select(item => item.PayloadJson).ToArrayAsync();
         Assert.Equal(4, payloads.Length);
         Assert.All(payloads, payload =>
         {
             using var json = JsonDocument.Parse(payload);
-            Assert.Contains(json.RootElement.GetProperty("sequence").GetInt64(), new[] { first, second });
+            var eventId = json.RootElement.GetProperty("eventId").GetGuid();
+            Assert.True(persisted.ContainsKey(eventId));
+            Assert.Equal(persisted[eventId].Sequence, json.RootElement.GetProperty("sequence").GetInt64());
         });
     }
 

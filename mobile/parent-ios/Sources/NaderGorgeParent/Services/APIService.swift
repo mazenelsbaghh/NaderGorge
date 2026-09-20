@@ -169,7 +169,7 @@ private struct ParentNotificationList: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        items = (try? container.decode([ParentNotification].self)) ?? []
+        items = try container.decode([ParentNotification].self)
     }
 }
 

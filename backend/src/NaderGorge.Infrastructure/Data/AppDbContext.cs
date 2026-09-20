@@ -74,6 +74,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ContentSection> ContentSections => Set<ContentSection>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
+    public DbSet<LessonMimGame> LessonMimGames => Set<LessonMimGame>();
     public DbSet<VideoType> VideoTypes => Set<VideoType>();
     public DbSet<BunnyStreamLibrary> BunnyStreamLibraries => Set<BunnyStreamLibrary>();
     public DbSet<BunnyVideoAsset> BunnyVideoAssets => Set<BunnyVideoAsset>();
@@ -1031,6 +1032,24 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(l => l.InternalCode).IsUnique();
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.HasOne(l => l.ContentSection).WithMany(cs => cs.Lessons).HasForeignKey(l => l.ContentSectionId);
+        });
+
+        modelBuilder.Entity<LessonMimGame>(e =>
+        {
+            e.ToTable("lesson_mim_games");
+            e.HasKey(game => game.Id);
+            e.HasIndex(game => game.LessonId).IsUnique();
+            e.Property(game => game.Status).HasDefaultValue(LessonMimGameStatus.Draft);
+            e.Property(game => game.IsEnabled).HasDefaultValue(false);
+            e.Property(game => game.DraftContentJson).HasColumnType("jsonb");
+            e.Property(game => game.PublishedContentJson).HasColumnType("jsonb");
+            e.Property(game => game.DraftFingerprint).HasMaxLength(128);
+            e.Property(game => game.PublishedFingerprint).HasMaxLength(128);
+            e.Property(game => game.LastError).HasMaxLength(1000);
+            e.Property(game => game.Version).IsConcurrencyToken().HasDefaultValue(0L);
+            e.HasOne(game => game.Lesson).WithOne(lesson => lesson.MimGame)
+                .HasForeignKey<LessonMimGame>(game => game.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // LessonVideo

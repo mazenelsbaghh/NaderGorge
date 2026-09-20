@@ -86,10 +86,11 @@ export const InteractiveVideoPlayer = forwardRef<SecureVideoPlayerRef, Props>(fu
     busy={busy} onAnswer={option => void record('answer', String(option), '', a.id, a.seconds)} onSeek={seek} />;
   const tools = snapshot?.document.tools;
   const showNotebook = !!tools && !snapshot?.stale && (tools.notes || tools.bookmarks || tools.understanding || tools.timeline || tools.askTeacher || tools.cards || tools.glossary || tools.experiments || tools.mastery || tools.review || tools.aiTutor);
+  const hasPublishedMindmap = props.chapters?.some(chapter => Boolean(chapter.mindmapImageUrl?.trim())) ?? false;
   return <div className={`grid min-w-0 items-start gap-4 ${showNotebook ? '2xl:grid-cols-[minmax(0,1fr)_20rem]' : ''}`} dir="rtl">
     <div className="min-w-0 space-y-4">
     <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
-      <SecureVideoPlayer {...props} className={`${props.className ?? ""} isolate`} ref={player} onPlaybackTime={timeUpdate} enableChapterAids={!!tools?.chapterAids && !snapshot?.stale} reactionDensity={snapshot?.stale ? [] : snapshot?.density} onEnded={() => setEnded(true)} />
+      <SecureVideoPlayer {...props} className={`${props.className ?? ""} isolate`} ref={player} onPlaybackTime={timeUpdate} enableChapterAids={hasPublishedMindmap || (!!tools?.chapterAids && !snapshot?.stale)} reactionDensity={snapshot?.stale ? [] : snapshot?.density} onEnded={() => setEnded(true)} />
       {ended && finalQuestions.length > 0 && <div className="absolute inset-0 overflow-y-auto bg-[var(--admin-card)] p-4 text-[var(--admin-text)]">
         <h2 className="mb-4 text-xl font-bold">تحدّي ختام الفيديو</h2>
         <div className="space-y-4">{finalQuestions.filter(a => a.id !== blockId).map(showCard)}</div>

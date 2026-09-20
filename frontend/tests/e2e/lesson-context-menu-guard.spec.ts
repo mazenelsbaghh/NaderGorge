@@ -49,10 +49,12 @@ function dispatchKeyboardShortcut({
 
 test.describe('lesson video context-menu guard', () => {
   test('rejects a copied embed URL before requesting backend material', async ({ request }) => {
-    const response = await request.get(`${appUrl}/api/video/embed?s=00000000-0000-0000-0000-000000000000`);
+    const response = await request.get(`${appUrl}/api/video/embed?s=00000000-0000-0000-0000-000000000000`, {
+      headers: { 'sec-fetch-dest': 'document', 'sec-fetch-site': 'none' },
+    });
 
     expect(response.status()).toBe(403);
-    expect(await response.text()).toContain('Embed must be loaded within Massar Academy');
+    expect(await response.text()).toContain('bootstrapError');
   });
 
   // Production regression 2026-09-01: a mouse context menu exposed a browser
@@ -106,6 +108,10 @@ test.describe('lesson video context-menu guard', () => {
       (window as Window & { __lessonGuardDocumentMarker?: string }).__lessonGuardDocumentMarker = marker;
     }, documentMarker);
 
+    const parentPrompt = page.getByRole('dialog', { name: 'تابع مستواك الدراسي مع ولي أمرك' });
+    await expect(parentPrompt).toBeVisible();
+    await parentPrompt.getByRole('button', { name: 'حفظ ومتابعة' }).click();
+    await expect(parentPrompt).toBeHidden();
     await page.getByRole('button', { name: 'إظهار القوائم' }).click();
     await page.getByRole('link', { name: 'باقاتي' }).first().click();
     await expect(page).toHaveURL(/\/student\/packages\/?$/);

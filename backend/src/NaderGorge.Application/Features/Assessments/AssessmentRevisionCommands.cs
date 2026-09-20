@@ -36,9 +36,9 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
     {
         if (!await AssessmentAccess.Allowed(db, auth, request.Target, ct))
             return ApiResponse<AssessmentEditorDto>.Fail("غير مصرح بتعديل هذا الواجب أو الامتحان.");
-        var workspace = await Load(request.Target, ct);
-        return workspace is null ? ApiResponse<AssessmentEditorDto>.Fail("الواجب أو الامتحان غير موجود.")
-            : ApiResponse<AssessmentEditorDto>.Ok(workspace.Editor());
+        var editor = await LoadEditor(request.Target, ct);
+        return editor is null ? ApiResponse<AssessmentEditorDto>.Fail("الواجب أو الامتحان غير موجود.")
+            : ApiResponse<AssessmentEditorDto>.Ok(editor);
     }
 
     public async Task<ApiResponse<AssessmentRevisionPreviewDto>> Handle(PreviewAssessmentRevisionQuery request, CancellationToken ct)
@@ -256,6 +256,28 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         return new(null, homework, [], submissions, new([], []));
     }
 
+    private async Task<AssessmentEditorDto?> LoadEditor(AssessmentTarget target, CancellationToken ct)
+    {
+        if (target.Kind == AssessmentKind.Exam)
+        {
+            var exam = await db.Exams.AsNoTracking().Include(e => e.ExamQuestions)
+                .ThenInclude(q => q.Question).ThenInclude(q => q.Options)
+                .SingleOrDefaultAsync(e => e.Id == target.AssessmentId, ct);
+            if (exam is null) return null;
+            var attemptCount = await db.StudentExamAttempts.CountAsync(a => a.ExamId == exam.Id, ct);
+            // A save token is intentionally issued only by PreviewAssessmentRevisionQuery,
+            // which snapshots all attempt evidence needed to detect stale revisions.
+            return new(AssessmentDefinitionSnapshot.FromExam(exam), attemptCount, string.Empty);
+        }
+
+        var homework = await db.Homeworks.AsNoTracking().Include(h => h.Questions)
+            .SingleOrDefaultAsync(h => h.Id == target.AssessmentId, ct);
+        if (homework is null) return null;
+        var submissionCount = await db.HomeworkSubmissions.CountAsync(s => s.HomeworkId == homework.Id, ct);
+        // The lightweight editor read must not become a save precondition; Preview supplies that token.
+        return new(AssessmentDefinitionSnapshot.FromHomework(homework), submissionCount, string.Empty);
+    }
+
     private static string Hash(string content)
     {
         using var document = JsonDocument.Parse(content);
@@ -339,10 +361,8 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
             var revisions = new List<PreparedRevision>();
             foreach (var attempt in Attempts)
             {
-                var assigned = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-                var previous = attempt.DefinitionSnapshotJson is null
-                    ? AssessmentDefinitionSnapshot.FromExam(Exam!, Exam!.ExamQuestions.Where(q => assigned.Contains(q.Id)))
-                    : AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson, "exam", attempt.ExamId);
+                AssessmentAttemptScaleNormalizer.Normalize(attempt);
+                var previous = AssessmentDefinitionSnapshot.Read(attempt.DefinitionSnapshotJson!, "exam", attempt.ExamId);
                 var answers = previous.Questions.Select(q => ExamAnswer(attempt, q)).ToArray();
                 revisions.Add(new(attempt.Id, attempt.ScoreAchieved, AssessmentAttemptRegrader.Regrade(previous, answers,
                     change with { PreviousScore = attempt.ScoreAchieved })));
@@ -395,9 +415,7 @@ public class AssessmentRevisionCommandHandler(IAppDbContext db, TeacherAuthoriza
         {
             foreach (var attempt in Attempts)
             {
-                var assignedIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-                attempt.DefinitionSnapshotJson ??= AssessmentDefinitionSnapshot.FromExam(Exam!,
-                    Exam!.ExamQuestions.Where(q => assignedIds.Contains(q.Id))).ToJson();
+                AssessmentAttemptScaleNormalizer.Normalize(attempt);
             }
             foreach (var submission in Submissions)
             {

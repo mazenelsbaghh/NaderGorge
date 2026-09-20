@@ -28,6 +28,7 @@ public class ToggleVideoActiveCommandHandler : IRequestHandler<ToggleVideoActive
         if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to this video.");
 
         video.IsActive = !video.IsActive;
+        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<bool>.Ok(video.IsActive);

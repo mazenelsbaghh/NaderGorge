@@ -59,7 +59,7 @@ public sealed class UpdateWorkCalendarCommandHandler : IRequestHandler<UpdateWor
 }
 
 public sealed record CreateShiftTemplateCommand(string Code, string Name, ShiftTemplateMode Mode, Guid WorkCalendarId,
-    int GraceMinutes, int MinimumBreakMinutes, int OvertimeAfterMinutes, IReadOnlyList<ShiftSegmentInput> Segments, Guid ActorUserId)
+    int MinimumBreakMinutes, int OvertimeAfterMinutes, IReadOnlyList<ShiftSegmentInput> Segments, Guid ActorUserId)
     : IRequest<ApiResponse<Guid>>, IHrAuthorizedRequest
 {
     public string RequiredPermission => HrPermissions.ShiftManage;
@@ -86,7 +86,7 @@ public sealed class CreateShiftTemplateCommandHandler : IRequestHandler<CreateSh
         var template = new ShiftTemplate
         {
             Code = request.Code.Trim().ToUpperInvariant(), Name = request.Name.Trim(), Mode = request.Mode,
-            WorkCalendarId = request.WorkCalendarId, GraceMinutes = request.GraceMinutes,
+            WorkCalendarId = request.WorkCalendarId, GraceMinutes = 0,
             MinimumBreakMinutes = request.MinimumBreakMinutes, OvertimeAfterMinutes = request.OvertimeAfterMinutes,
             Segments = segments
         };

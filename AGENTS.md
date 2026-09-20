@@ -1,6 +1,10 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-08-11
+## One canonical working directory
+
+The owner requires all development and integration to happen in `/Users/mazenelsbagh/mazen mac/apps/nader gorge`. Do not create additional project copies, clones, or worktrees for routine planning, editing, integration, or review. Work in this directory and preserve existing local changes.
+
+The owner removed the `massar-startup` skill and its mandatory pre-edit synchronization gate on 2026-09-20. Do not require `startup_check.py` or `startup_edit.py` before ordinary local edits, and do not reinstall that skill. Check relevant Git differences before merging and resolve them here without discarding local work. Production publication, migration, verification, and rollback safeguards still apply when a release is explicitly in scope.
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -108,3 +112,14 @@ Previous implementation plan: `specs/168-platform-financial-center/plan.md` (Uni
 Completed production-cluster plan: `specs/166-three-node-production-cluster/plan.md` (Three-node application load distribution, one HA PostgreSQL database, shared Redis and files, immutable rolling releases, backup/restore evidence, Cloudflare Tunnel, and owner-accepted CPU-steal exception).
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->
+
+## Shared production source (mandatory before release)
+
+GitHub `mazenelsbaghh/NaderGorge`, branch `codex/production`, is the shared application source. Do not deploy an old local snapshot over server repairs. Never force-reset the user's working tree or push its historical artifacts.
+
+1. Inspect shared production changes before a release and integrate applicable changes in the canonical working directory. Preserve local work and resolve conflicts explicitly. Do not create additional working directories for integration.
+2. Keep private history, secrets, and historical build artifacts out of published source. Prepare the reviewed source-only candidate using Git objects or a temporary index in the existing repository; do not create another development checkout. If existing release tooling requires a separate directory, report that incompatibility and adapt it before release rather than silently creating another project copy.
+3. Publish with `prod-source-publish-preview` then `prod-source-publish`, supplying the exported commit's parent as `SOURCE_PARENT` and `SOURCE_BRANCH=codex/release/<unique-name>`. Publication is one forward commit under the shared rollout lock and compare-and-swap. If it rejects a stale parent, integrate and reverify; never force-push around it.
+4. Build, migrate and deploy from that exact published source repository through the existing production gates. Deployment rechecks the shared GitHub tip under the rollout lock. Dirty/unpublished/stale candidates are blocked. Evidence-bound application rollback remains available; reconcile shared source with a forward revert before resuming repairs.
+
+The supervisor publishes verified, approved repairs to `codex/repair/<incident-id>` and advances `codex/production` before rollout. The model never receives GitHub or cluster credentials. An external release with changed dependencies requires refreshing the verified repair image; it cannot silently reuse a stale cache.

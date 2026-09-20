@@ -348,7 +348,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                 align: 'center',
                 render: (row) => (
                   <div className="font-black text-xl text-[var(--admin-text)]">
-                    {row.scoreAchieved.toFixed(1)} <span className="text-sm font-semibold opacity-50">/ {dashboard.totalScore}</span>
+                    {row.scoreAchieved.toFixed(1)} <span className="text-sm font-semibold opacity-50">/ {row.totalScore}</span>
                   </div>
                 )
               },

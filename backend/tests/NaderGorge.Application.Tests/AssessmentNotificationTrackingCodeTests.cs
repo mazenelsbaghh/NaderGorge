@@ -12,6 +12,19 @@ namespace NaderGorge.Application.Tests;
 public sealed class AssessmentNotificationTrackingCodeTests
 {
     [Theory]
+    [InlineData(60, true)]
+    [InlineData(61, false)]
+    public void HydratedHeaderEnforcesMetaLimit(int length, bool accepted)
+    {
+        var template = new LiveSupportWhatsAppTemplate
+        {
+            Status = "APPROVED", Fingerprint = new string('a', 64),
+            ComponentsJson = """[{"type":"HEADER","format":"TEXT","text":"{{1}}"},{"type":"BODY","text":"Result"}]"""
+        };
+        Assert.Equal(accepted, WhatsAppDirectTemplatePolicy.Validate(template, [new string('a', length)]) is not null);
+    }
+
+    [Theory]
     [InlineData("exam", "123456789", -365)]
     [InlineData("homework", "987654321", 0)]
     [InlineData("exam", null, -365)]

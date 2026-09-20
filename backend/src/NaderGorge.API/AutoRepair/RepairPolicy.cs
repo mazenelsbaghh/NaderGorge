@@ -8,9 +8,9 @@ public static class RepairPolicy
 {
     private static readonly Dictionary<string, string[]> Transitions = new()
     {
-        ["diagnosing"] = ["repairing", "failed", "awaiting_approval"],
-        ["repairing"] = ["testing", "failed", "awaiting_approval"],
-        ["testing"] = ["ready", "failed", "awaiting_approval"],
+        ["diagnosing"] = ["repairing", "failed", "needs_evidence", "awaiting_approval"],
+        ["repairing"] = ["testing", "failed", "needs_evidence", "awaiting_approval"],
+        ["testing"] = ["ready", "failed", "needs_evidence", "awaiting_approval"],
         ["ready"] = ["deploying", "failed", "awaiting_approval"],
         ["deploying"] = ["monitoring", "failed", "rolled_back"],
         ["monitoring"] = ["completed", "failed", "rolled_back"],
@@ -30,7 +30,8 @@ public static class RepairPolicy
 
     public static string Fingerprint(string source, string category, string evidence)
     {
-        var stable = Regex.Replace(evidence, @"\b[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}\b|\b\d{5,}\b|(?i)\b(?:record|id|line)\s+\d+", "#");
+        var stable = Regex.Replace(evidence, @"(?i)\b[0-9a-f]{32}\b|\b\d{4}-\d{2}-\d{2}[T ][\d:.]+Z?\b|\[\d{2}/[A-Za-z]{3}/\d{4}:[^\]]+\]", "#");
+        stable = Regex.Replace(stable, @"\b[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}\b|\b\d{5,}\b|(?i)\b(?:record|id|line)\s+\d+", "#");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{source}|{category}|{stable}")));
     }
 }

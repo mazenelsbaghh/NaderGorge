@@ -1,3 +1,4 @@
+import type { StudentProfileExtendedDto } from '@/services/admin-service';
 import apiClient from '@/services/api-client';
 
 export type FinanceAccountBalance = {
@@ -75,7 +76,41 @@ export type PlatformRefundRow = { id: string; originalSourceId: string; original
 export type PlatformFinancialReport = { kind: string; from: string; to: string; totalDebit: number; totalCredit: number; rows: Array<{ code: string; name: string; type: number; debit: number; credit: number; balance: number }> };
 export type WalletFinanceReport = { wallets: Array<{ id: string; label: string; phoneNumber: string; currentBalance: number; incoming: number; outgoing: number; expenses: number; internalTransfers: number; transactions: number }>; teacherRechargeCards: Array<{ walletId: string; teacherName: string; amount: number; count: number }>; transactions: Array<{ id: string; walletId: string; receivedAt: string; amount: number; type: 'incoming' | 'outgoing'; phone?: string | null; body: string }> };
 
+export type RefundStudent = Pick<StudentProfileExtendedDto, 'id' | 'fullName' | 'phone' | 'packages'>;
+export type RefundUsagePreview = {
+  paidAmount: number;
+  previouslyRefundedAmount: number;
+  remainingRefundableAmount: number;
+  scopeLabel: string;
+  usageAvailable: boolean;
+  videosAvailable: boolean;
+  examsAvailable: boolean;
+  unavailableReason?: string | null;
+  totalVideos: number;
+  watchedVideos: number;
+  completedVideos: number;
+  unknownDurationVideos: number;
+  totalExams: number;
+  attemptedExams: number;
+  totalAttempts: number;
+  submittedAttempts: number;
+  historicalUsageNote: string;
+  isHistoricalSource: boolean;
+};
+
 const platformFinanceService = {
+  async findRefundStudents(phone: string): Promise<Array<{ id: string; fullName: string; phoneNumber: string }>> {
+    const response = await apiClient.get('/admin/platform-finance/refunds/students', { params: { phone } });
+    return response.data;
+  },
+  async getRefundStudent(id: string): Promise<RefundStudent> {
+    const response = await apiClient.get<RefundStudent>(`/admin/platform-finance/refunds/students/${id}`);
+    return response.data;
+  },
+  async getRefundUsagePreview(studentId: string, accessGrantId: string, purchaseOperationId?: string | null): Promise<RefundUsagePreview> {
+    const response = await apiClient.get<RefundUsagePreview>(`/admin/platform-finance/refunds/students/${studentId}/grants/${accessGrantId}/preview`, { params: { purchaseOperationId } });
+    return response.data;
+  },
   async getDashboard(from?: string, to?: string) {
     const response = await apiClient.get<PlatformFinanceDashboard>('/admin/platform-finance/dashboard', { params: { from, to } });
     return response.data;
@@ -90,6 +125,10 @@ const platformFinanceService = {
   },
   async getTeacherDetail(teacherId: string, from?: string, to?: string) {
     const response = await apiClient.get<FinanceTeacherSummary>(`/admin/platform-finance/teachers/${teacherId}/summary`, { params: { from, to } });
+    return response.data;
+  },
+  async refundBootstrap(): Promise<Pick<FinanceBootstrap, 'treasuryAccounts'>> {
+    const response = await apiClient.get<Pick<FinanceBootstrap, 'treasuryAccounts'>>('/admin/platform-finance/refunds/bootstrap');
     return response.data;
   },
   async bootstrap() {
@@ -126,7 +165,7 @@ const platformFinanceService = {
   async createRefund(payload: { originalSourceId: string; originalSourceType: string; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; method: number; treasuryAccountId?: string; reason: string; paymentReference?: string }) {
     return (await apiClient.post('/admin/platform-finance/refunds', payload)).data;
   },
-  async createExternalPackageRefund(payload: { accessGrantId: string; purchaseOperationId: string; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; treasuryAccountId: string; reason: string; paymentReference?: string }) {
+  async createExternalPackageRefund(payload: { accessGrantId: string; purchaseOperationId?: string | null; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; treasuryAccountId: string; reason: string; paymentReference?: string }) {
     return (await apiClient.post('/admin/platform-finance/refunds/external-package', payload)).data;
   },
   async postRefund(refundId: string, idempotencyKey: string) {

@@ -119,7 +119,7 @@ export interface EmployeeDetailDto {
 
 export interface WorkCalendarDto { id: string; code: string; name: string; timeZoneId: string; workingDaysMask: number; }
 export interface ShiftSegmentDto { id?: string; sequence: number; dayOfWeek?: number | null; startsAt: string; endsAt: string; unpaidBreakMinutes: number; workDateRule: string; }
-export interface ShiftTemplateDto { id: string; code: string; name: string; mode: string; workCalendarId: string; graceMinutes: number; minimumBreakMinutes: number; overtimeAfterMinutes: number; version: number; segments: ShiftSegmentDto[]; }
+export interface ShiftTemplateDto { id: string; code: string; name: string; mode: string; workCalendarId: string; minimumBreakMinutes: number; overtimeAfterMinutes: number; version: number; segments: ShiftSegmentDto[]; }
 export interface ShiftAssignmentDto { id: string; employeeId: string; employee: string; shiftTemplateId: string; shift: string; effectiveFrom: string; effectiveTo?: string | null; status: string; reason: string; segments: ShiftSegmentDto[]; }
 export interface ShiftAssignmentConflictDto { employeeId: string; existingAssignmentId: string; effectiveFrom: string; effectiveTo?: string | null; }
 export interface ShiftAssignmentPayload { employeeId: string; shiftTemplateId: string; effectiveFrom: string; effectiveTo?: string | null; reason: string; }

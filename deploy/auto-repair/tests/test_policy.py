@@ -16,9 +16,16 @@ def test_agent_cannot_change_release_authority(tmp_path, path):
         assess_patch([path], tmp_path)
 
 
-@pytest.mark.parametrize('path', ['backend/src/Finance/RefundService.cs', 'frontend/src/auth.ts', 'backend/src/Domain/Entities/Student.cs', 'backend/src/API/AutoRepair/RepairPolicy.cs'])
+@pytest.mark.parametrize('path', ['backend/src/Finance/RefundService.cs', 'frontend/src/auth.ts', 'backend/src/Domain/Entities/Student.cs', 'backend/src/API/AutoRepair/RepairPolicy.cs', 'backend/src/API/Middleware/RedisRateLimitingMiddleware.cs'])
 def test_sensitive_change_always_needs_owner(tmp_path, path):
     assert assess_patch([path], tmp_path) == [path]
+
+
+def test_removing_authorization_needs_owner_even_in_an_ordinary_controller(tmp_path):
+    path = 'backend/src/API/Controllers/LessonsController.cs'
+    patch = b'--- a/LessonsController.cs\n+++ b/LessonsController.cs\n-[Authorize]\n+[AllowAnonymous]\n'
+    assert assess_patch([path], tmp_path, patch) == [path]
+    assert assess_patch([path], tmp_path, b'@@ ordinary display fix @@\n-return "bad";\n+return "fixed";\n') == []
 
 
 def test_symlink_cannot_escape_source_workspace(tmp_path):
@@ -53,7 +60,12 @@ def test_agent_patch_survives_sealing_without_exposing_git_authority(tmp_path):
     runner = Runner.__new__(Runner)
     runner.root = tmp_path
     runner.config = {'source_repository': str(source), 'source_ref': git('rev-parse', 'HEAD'), 'baseline_release': 'git-test'}
-    checkout, workspace, baseline = runner.prepare(tmp_path / 'incident')
+    folder = tmp_path / 'incident'
+    folder.mkdir()
+    checkout = folder / 'checkout'
+    git('clone', '--no-hardlinks', str(source), str(checkout))
+    baseline = git('rev-parse', 'HEAD')
+    workspace = runner.source_workspace(checkout, folder, baseline)
     assert not (workspace / '.git').exists()
     (workspace / 'frontend/src/page.tsx').write_text('after\n')
     patch, paths = runner.snapshot(checkout, workspace, baseline)

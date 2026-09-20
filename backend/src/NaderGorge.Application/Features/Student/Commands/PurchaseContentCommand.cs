@@ -441,7 +441,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
 
             _db.StudentAccessGrants.Add(grant);
             decimal teacherShareImpact = 0m;
-            decimal platformShareImpact = funding.PaidAmount;
+            decimal platformShareImpact = funding.TotalPaidAmount;
 
             if (target.TeacherId.HasValue)
             {
@@ -458,11 +458,11 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     var agreement = await _agreementResolver.ResolveAsync(
                         teacherProfile.Id, TeacherAgreementTrigger.ContentSale, scopes, occurredAt, ct);
                     var (allocationMode, teacherShare, basisAmount) = TeacherAgreementResolver.CalculateAllocation(
-                        agreement, grossPrice, funding.PaidAmount);
+                        agreement, grossPrice, funding.TotalPaidAmount);
                     teacherShareImpact = teacherShare;
                     // A negative platform share is intentional: it exposes a deliberately generous agreement
                     // instead of silently hiding a platform loss in an otherwise successful sale.
-                    platformShareImpact = funding.PaidAmount - teacherShareImpact;
+                    platformShareImpact = funding.TotalPaidAmount - teacherShareImpact;
 
                     await _teacherAccounting.RecordEventAsync(new TeacherFinancialEventInput(
                         request.ContentType == CodeType.Exam
@@ -474,8 +474,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                         target.TargetId ?? request.ContentId,
                         grossPrice,
                         discount.TotalDiscountAmount,
-                        funding.PaidAmount,
-                        funding.PromotionalAmount,
+                        funding.TotalPaidAmount,
+                        funding.GiftAmount,
                         platformShareImpact,
                         $"purchase:{purchaseOperationId}",
                         System.Text.Json.JsonSerializer.Serialize(new
@@ -485,7 +485,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                             contentName,
                             discountedPrice = price,
                             discountLines = discount.Lines,
-                            fundingOperationId = funding.OperationId
+                            fundingOperationId = funding.OperationId,
+                            paidTeacherBalanceAmount = funding.PaidTeacherBalanceAmount
                         }),
                         occurredAt,
                         TeacherFinancialReviewStatus.AutoApproved,
@@ -519,8 +520,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 GrossAmount = grossPrice,
                 CouponDiscountAmount = discount.CouponDiscountAmount,
                 PrintableCodeDiscountAmount = discount.PrintableCodeDiscountAmount,
-                PromotionalAmount = funding.PromotionalAmount,
-                PaidAmount = funding.PaidAmount,
+                PromotionalAmount = funding.GiftAmount,
+                PaidAmount = funding.TotalPaidAmount,
                 TeacherId = target.TeacherId,
                 TeacherShareImpact = teacherShareImpact,
                 PlatformShareImpact = platformShareImpact,
@@ -529,25 +530,22 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     request.ContentType,
                     request.ContentId,
                     discountedPrice = price,
-                    discountLines = discount.Lines
+                    discountLines = discount.Lines,
+                    fundingOperationId = funding.OperationId,
+                    paidTeacherBalanceAmount = funding.PaidTeacherBalanceAmount
                 })
             });
 
-            if (_financialPosting is not null && (funding.PaidAmount > 0m || (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)))
+            if (_financialPosting is not null && (funding.TotalPaidAmount > 0m || teacherShareImpact != 0m))
             {
                 var lines = new List<FinancialPostingLine>();
                 if (funding.PaidAmount > 0m)
-                {
                     lines.Add(new FinancialPostingLine("1100", funding.PaidAmount, 0m, StudentId: request.StudentId));
-                    AddSignedCreditLine(lines, "4000", platformShareImpact, request.StudentId, null, "حصة المنصة من عملية الشراء");
-                    if (teacherShareImpact != 0m)
-                        AddSignedCreditLine(lines, "2000", teacherShareImpact, request.StudentId, target.TeacherId, "مستحق المدرس من عملية الشراء");
-                }
-                if (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)
-                {
-                    lines.Add(new FinancialPostingLine("1110", funding.PromotionalAmount, 0m, StudentId: request.StudentId, TeacherId: target.TeacherId));
-                    lines.Add(new FinancialPostingLine("2000", 0m, funding.PromotionalAmount, StudentId: request.StudentId, TeacherId: target.TeacherId, Memo: "تسوية رصيد مدرس مخصص"));
-                }
+                if (funding.PaidTeacherBalanceAmount > 0m)
+                    lines.Add(new FinancialPostingLine("1110", funding.PaidTeacherBalanceAmount, 0m,
+                        StudentId: request.StudentId, TeacherId: target.TeacherId));
+                AddSignedCreditLine(lines, "4000", platformShareImpact, request.StudentId, null, "حصة المنصة من عملية الشراء");
+                AddSignedCreditLine(lines, "2000", teacherShareImpact, request.StudentId, target.TeacherId, "مستحق المدرس من عملية الشراء");
                 await _financialPosting.PostAsync(new FinancialPostingRequest(
                     "Purchase", purchaseOperationId, "PurchaseRecognized", $"purchase:{purchaseOperationId:N}",
                     $"شراء {contentName}", DateTime.UtcNow, request.StudentId, lines), ct);
@@ -581,8 +579,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     grossAmount = grossPrice,
                     couponDiscountAmount = discount.CouponDiscountAmount,
                     printableCodeDiscountAmount = discount.PrintableCodeDiscountAmount,
-                    promotionalAmount = funding.PromotionalAmount,
-                    paidAmount = funding.PaidAmount,
+                    promotionalAmount = funding.GiftAmount,
+                    paidAmount = funding.TotalPaidAmount,
                     fundingOperationId = funding.OperationId
                 })
             };

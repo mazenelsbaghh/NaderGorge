@@ -76,6 +76,8 @@ interface NavOption {
 }
 
 const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
+  'finance.refunds.view': ['/admin/platform-finance/refunds', '/assistant/refunds'],
+  'finance.refunds.create': ['/admin/platform-finance/refunds', '/assistant/refunds'],
   'users.manage': [
     '/admin/students',
     '/admin/overrides',
@@ -297,6 +299,11 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     subItems: [
       { key: '/assistant/codes', label: 'إدارة مجموعات أكواد الوصول' }
     ]
+  },
+  {
+    key: '/assistant/refunds',
+    label: 'استردادات الطلاب',
+    subItems: [{ key: '/assistant/refunds', label: 'عرض الاستردادات وتسجيل المبلغ المرتجع للطالب' }]
   },
   {
     key: '/assistant/students',
@@ -1532,6 +1539,10 @@ function WhatsAppSettingsTab() {
   const [attemptId, setAttemptId] = useState('');
   const [recipientPhoneNumber, setRecipientPhoneNumber] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [recoveryPreview, setRecoveryPreview] = useState<Awaited<ReturnType<typeof adminService.previewAssessmentParentRecovery>> | null>(null);
+  const [recoveryStatus, setRecoveryStatus] = useState<Awaited<ReturnType<typeof adminService.getAssessmentParentRecoveryStatus>> | null>(null);
+  const [recoveryOperationId, setRecoveryOperationId] = useState<string | null>(null);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
   const [lastResult, setLastResult] = useState<{
     success: boolean;
     message: string;
@@ -1579,6 +1590,61 @@ function WhatsAppSettingsTab() {
     }
   };
 
+  const recoveryInFlight = (recoveryStatus?.pending ?? 0) > 0 || (recoveryStatus?.sending ?? 0) > 0;
+  const recoveryStopped = (recoveryStatus?.failed ?? 0) > 0 || (recoveryStatus?.uncertain ?? 0) > 0;
+
+  const refreshRecoveryStatus = useCallback(async (operationId: string) => {
+    try {
+      setRecoveryStatus(await adminService.getAssessmentParentRecoveryStatus(operationId));
+    } catch (err) {
+      devConsole.error(err);
+      toast.error('تعذر تحديث حالة دفعة الاسترداد');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!recoveryOperationId || !recoveryInFlight) return;
+    const timer = window.setInterval(() => {
+      void refreshRecoveryStatus(recoveryOperationId);
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [recoveryInFlight, recoveryOperationId, refreshRecoveryStatus]);
+
+  const handleRecoveryPreview = async () => {
+    setRecoveryBusy(true);
+    try {
+      setRecoveryPreview(await adminService.previewAssessmentParentRecovery(10));
+      toast.success('تم تحديث معاينة دفعة الاسترداد');
+    } catch (err: any) {
+      devConsole.error(err);
+      toast.error(err?.response?.data?.message || 'تعذر تجهيز معاينة الاسترداد');
+    } finally {
+      setRecoveryBusy(false);
+    }
+  };
+
+  const handleRecoveryApply = async () => {
+    if (!recoveryPreview || recoveryPreview.eligibleCount === 0 || recoveryInFlight || recoveryStopped) return;
+    const operationId = crypto.randomUUID();
+    setRecoveryBusy(true);
+    try {
+      await adminService.applyAssessmentParentRecovery({
+        operationId,
+        expectedCohortFingerprint: recoveryPreview.cohortFingerprint,
+        maxBatchSize: 10,
+      });
+      setRecoveryOperationId(operationId);
+      setRecoveryPreview(null);
+      await refreshRecoveryStatus(operationId);
+      toast.success('تم إنشاء دفعة الاسترداد؛ تجري متابعة حالتها الآن');
+    } catch (err: any) {
+      devConsole.error(err);
+      toast.error(err?.response?.data?.message || 'تعذر إنشاء دفعة الاسترداد');
+    } finally {
+      setRecoveryBusy(false);
+    }
+  };
+
   return (
     <motion.div
       key="whatsapp-tab"
@@ -1589,6 +1655,65 @@ function WhatsAppSettingsTab() {
       className="space-y-6"
       dir="rtl"
     >
+      <section className="rounded-2xl border border-amber-300/70 bg-amber-50/70 p-5 text-right dark:border-amber-800/50 dark:bg-amber-950/20 sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300">
+              <Activity size={20} />
+            </span>
+            <div>
+              <h2 className="text-lg font-black text-[var(--admin-text)]">استرداد إشعارات نتيجة الامتحان المتأثرة</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--admin-muted)]">
+                أداة مقيدة بالواقعة المعتمدة فقط. المعاينة لا ترسل رسائل، والتطبيق ينشئ دفعة بحد أقصى 10 مستلمين باستخدام الدرجات الحالية المصححة.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleRecoveryPreview}
+              disabled={recoveryBusy || recoveryInFlight || recoveryStopped}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 text-sm font-bold text-[var(--admin-text)] disabled:opacity-50"
+            >
+              {recoveryBusy ? 'جارٍ التنفيذ...' : 'معاينة الدفعة التالية'}
+            </button>
+            <button
+              type="button"
+              onClick={handleRecoveryApply}
+              disabled={recoveryBusy || recoveryInFlight || recoveryStopped || !recoveryPreview || recoveryPreview.eligibleCount === 0 || recoveryPreview.alreadyApplied}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 text-sm font-black text-white transition hover:bg-amber-700 disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+              تطبيق وإرسال الدفعة
+            </button>
+          </div>
+        </div>
+
+        {recoveryPreview && (
+          <div className="mt-5 grid gap-3 rounded-xl border border-amber-300/60 bg-[var(--admin-card)] p-4 md:grid-cols-3">
+            <div><p className="text-xs text-[var(--admin-muted)]">المؤهلون</p><p className="mt-1 text-2xl font-black text-[var(--admin-text)]">{recoveryPreview.eligibleCount}</p></div>
+            <div className="md:col-span-2"><p className="text-xs text-[var(--admin-muted)]">بصمة المجموعة</p><p dir="ltr" className="mt-1 break-all font-mono text-xs text-[var(--admin-text)]">{recoveryPreview.cohortFingerprint}</p></div>
+            <div className="md:col-span-3"><p className="text-xs text-[var(--admin-muted)]">المستبعدون حسب السبب</p><p className="mt-1 text-sm text-[var(--admin-text)]">{Object.entries(recoveryPreview.excludedByReason).map(([reason, count]) => `${reason}: ${count}`).join(' · ') || 'لا يوجد'}</p></div>
+          </div>
+        )}
+
+        {recoveryStatus && (
+          <div className="mt-5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-black text-[var(--admin-text)]">حالة الدفعة</p>
+              <p dir="ltr" className="break-all font-mono text-xs text-[var(--admin-muted)]">operation: {recoveryStatus.operationId}</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+              {[
+                ['الإجمالي', recoveryStatus.total], ['معلق', recoveryStatus.pending], ['قيد الإرسال', recoveryStatus.sending],
+                ['تم', recoveryStatus.sent], ['فشل', recoveryStatus.failed], ['تم التخطي', recoveryStatus.skipped], ['غير مؤكد', recoveryStatus.uncertain],
+              ].map(([label, value]) => <div key={label} className="rounded-lg bg-[var(--admin-card-soft)] p-3"><p className="text-xs text-[var(--admin-muted)]">{label}</p><p className="mt-1 text-xl font-black text-[var(--admin-text)]">{value}</p></div>)}
+            </div>
+            {recoveryStopped && <p className="mt-4 rounded-lg bg-red-500/10 p-3 text-sm font-bold text-red-700 dark:text-red-300">توقفت الدفعات التالية لوجود حالة فشل أو نتيجة غير مؤكدة. راجع العملية قبل المتابعة.</p>}
+          </div>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-7">
         <div className="mb-6 flex items-start gap-3 text-right">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
