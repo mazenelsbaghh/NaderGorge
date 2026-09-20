@@ -95,15 +95,34 @@ const mimGameSchema = { type: Type.OBJECT, properties: {
 
 const MIM_GAME_GENERATION_ATTEMPTS = 2;
 
+function mimGameSchemaFor(sourcePack: MimSourcePack) {
+  const videoIds = [...new Set(sourcePack.videos.map(video => video.id))];
+  const chapterIds = [...new Set(sourcePack.videos.flatMap(video => video.chapters.map(chapter => chapter.id)))];
+  const sourceRefSchema = { ...mimSourceRefSchema, properties: {
+    ...mimSourceRefSchema.properties,
+    videoId: { type: Type.STRING, enum: videoIds },
+    chapterId: { type: Type.STRING, enum: chapterIds },
+  } };
+  const missionSchema = { ...mimMissionSchema, properties: {
+    ...mimMissionSchema.properties,
+    sourceRefs: { ...mimMissionSchema.properties.sourceRefs, items: sourceRefSchema },
+  } };
+  return { ...mimGameSchema, properties: {
+    ...mimGameSchema.properties,
+    missions: { ...mimGameSchema.properties.missions, items: missionSchema },
+  } };
+}
+
 export async function generateLessonMimGame(sourcePack: MimSourcePack): Promise<MimGameContent> {
   const runtime = createRuntime();
   const basePrompt = lessonMimGamePrompt(sourcePack);
+  const responseSchema = mimGameSchemaFor(sourcePack);
   for (let attempt = 1; attempt <= MIM_GAME_GENERATION_ATTEMPTS; attempt++) {
     const correction = attempt === 1 ? '' : '\n\nYour previous response was rejected by the strict contract. Regenerate from the source. Copy source IDs and timestamps exactly, return exactly 3 missions, 2-4 choices per mission, 3-5 tasks per mission, keep every field within the schema limits, and ensure every correctChoiceIndex exists in that mission choices array.';
     const response = await executeGeminiRequest(abortSignal => runtime.developer.models.generateContent({
       model: runtime.config.textModel,
       contents: `${basePrompt}${correction}`,
-      config: { abortSignal, responseMimeType: 'application/json', responseSchema: mimGameSchema, maxOutputTokens: 8192 },
+      config: { abortSignal, responseMimeType: 'application/json', responseSchema, maxOutputTokens: 8192 },
     }));
     const text = (response.text || '').trim();
     try {

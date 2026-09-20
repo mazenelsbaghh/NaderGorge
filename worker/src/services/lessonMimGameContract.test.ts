@@ -12,8 +12,14 @@ test('MIM contract accepts exactly three grounded missions', () => {
   assert.equal(result.missions.length, 3);
 });
 
+test('MIM contract canonicalizes cited source identity and timestamps (2026-09-20 regression)', () => {
+  const cited = { ...mission, sourceRefs: [{ ...mission.sourceRefs[0], videoId: '44444444-4444-4444-8444-444444444444', startTime: 11, endTime: 21 }] };
+  const result = parseMimGameContent(JSON.stringify({ schemaVersion: 1, title: 'Game', intro: 'Intro', sourceLabel: 'Lesson', missions: [cited, mission, mission] }), source);
+  assert.deepEqual(result.missions[0]!.sourceRefs[0], { videoId, chapterId, startTime: 10, endTime: 20 });
+});
+
 test('MIM contract rejects invented source references', () => {
-  const bad = { ...mission, sourceRefs: [{ ...mission.sourceRefs[0], startTime: 11 }] };
+  const bad = { ...mission, sourceRefs: [{ ...mission.sourceRefs[0], chapterId: '44444444-4444-4444-8444-444444444444' }] };
   assert.throws(() => parseMimGameContent(JSON.stringify({ schemaVersion: 1, title: 'Game', intro: 'Intro', sourceLabel: 'Lesson', missions: [bad, mission, mission] }), source), /MIM_UNGROUNDED/);
 });
 
