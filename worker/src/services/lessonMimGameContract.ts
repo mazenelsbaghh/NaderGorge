@@ -37,7 +37,7 @@ export function parseMimGameContent(json: string, sourcePack: MimSourcePack): Mi
   if (!content || content.schemaVersion !== 1 || !safeText(content.title, 120) || !safeText(content.intro, 500)
     || !safeText(content.sourceLabel, 160) || !Array.isArray(content.missions) || content.missions.length !== 3)
     throw new Error('MIM_INVALID_CONTRACT');
-  const sourceChapters = new Map(sourcePack.videos.flatMap(video => video.chapters.map(chapter => [`${video.id}:${chapter.id}`, chapter] as const)));
+  const sourceChapters = new Map(sourcePack.videos.flatMap(video => video.chapters.map(chapter => [chapter.id, { videoId: video.id, chapter }] as const)));
   for (const mission of content.missions) {
     if (!safeText(mission.title, 100) || !safeText(mission.instruction, 500) || !safeText(mission.hint, 300)
       || !safeText(mission.reward, 100) || !MIM_GAME_ICONS.includes(mission.icon as typeof MIM_GAME_ICONS[number])
@@ -45,8 +45,11 @@ export function parseMimGameContent(json: string, sourcePack: MimSourcePack): Mi
       || mission.choices.length < 2 || mission.choices.length > 4 || mission.choices.some(choice => !safeText(choice, 160))
       || !Array.isArray(mission.tasks) || mission.tasks.length < 3 || mission.tasks.length > 5) throw new Error('MIM_INVALID_MISSION');
     for (const ref of mission.sourceRefs) {
-      const chapter = sourceChapters.get(`${ref.videoId}:${ref.chapterId}`);
-      if (!chapter || ref.startTime !== chapter.startTime || ref.endTime !== chapter.endTime) throw new Error('MIM_UNGROUNDED_SOURCE_REF');
+      const source = sourceChapters.get(ref.chapterId);
+      if (!source) throw new Error('MIM_UNGROUNDED_SOURCE_REF');
+      ref.videoId = source.videoId;
+      ref.startTime = source.chapter.startTime;
+      ref.endTime = source.chapter.endTime;
     }
     if (mission.tasks.some(task => !safeText(task.label, 240) || !safeText(task.explanation, 400)
       || !MIM_GAME_ICONS.includes(task.icon as typeof MIM_GAME_ICONS[number]) || !isInteger(task.correctChoiceIndex)

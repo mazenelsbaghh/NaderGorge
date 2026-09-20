@@ -51,6 +51,24 @@ test('lesson game retries one contract-invalid model response (2026-09-20 regres
   assert.equal(requests.at(-1).config.responseSchema.properties.missions.maxItems, '3');
 });
 
+test('lesson game constrains model source ids and canonicalizes cited timestamps (2026-09-20 regression)', async () => {
+  const requests: any[] = [];
+  const modelGame = JSON.parse(JSON.stringify(validMimGame));
+  modelGame.missions[0].sourceRefs[0] = { ...modelGame.missions[0].sourceRefs[0], startTime: 2, endTime: 99 };
+  const client = { models: { generateContent: async (request: any) => {
+    requests.push(request);
+    return { text: JSON.stringify(modelGame) };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+
+  const result = await generateLessonMimGame(mimSourcePack);
+  const sourceRefSchema = requests[0].config.responseSchema.properties.missions.items.properties.sourceRefs.items;
+
+  assert.deepEqual(sourceRefSchema.properties.videoId.enum, [mimVideoId]);
+  assert.deepEqual(sourceRefSchema.properties.chapterId.enum, [mimChapterId]);
+  assert.deepEqual(result.missions[0]!.sourceRefs[0], { videoId: mimVideoId, chapterId: mimChapterId, startTime: 0, endTime: 10 });
+});
+
 test('lesson game stops after two invalid structured responses', async () => {
   const responses = ['{"schemaVersion":1,"missions":[]}', '{"schemaVersion":1,"missions":[]}'];
   const client = { models: { generateContent: async () => {
