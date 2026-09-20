@@ -12,6 +12,18 @@ test('MIM contract accepts exactly three grounded missions', () => {
   assert.equal(result.missions.length, 3);
 });
 
+test('MIM source accepts bounded untrusted lesson copy and modern GUID versions', () => {
+  const parsed = parseMimSourcePack({
+    lessonId: '018f3f7a-0d1b-7abc-8def-111111111111',
+    lessonTitle: 'Lesson <source>', outputLanguage: 'ar',
+    videos: [{ id: videoId, sourceRevision: 1, title: 'https://example.test/video', chapters: [{
+      id: '018f3f7a-0d1b-7abc-8def-222222222222', title: 'Chapter <one>',
+      summary: 'Untrusted source may contain https://example.test and <markup>.', startTime: 0, endTime: 10,
+    }] }],
+  });
+  assert.equal(parsed.videos[0]!.chapters[0]!.summary.includes('<markup>'), true);
+});
+
 test('MIM contract canonicalizes cited source identity and timestamps (2026-09-20 regression)', () => {
   const cited = { ...mission, sourceRefs: [{ ...mission.sourceRefs[0], videoId: '44444444-4444-4444-8444-444444444444', startTime: 11, endTime: 21 }] };
   const result = parseMimGameContent(JSON.stringify({ schemaVersion: 1, title: 'Game', intro: 'Intro', sourceLabel: 'Lesson', missions: [cited, mission, mission] }), source);
