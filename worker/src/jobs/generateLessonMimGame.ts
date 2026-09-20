@@ -6,7 +6,8 @@ import { parseMimGameContent, parseMimSourcePack, type MimGameContent, type MimS
 interface Payload { gameId: string; lessonId: string; runId: string; sourceFingerprint: string; schemaVersion: number; sourcePack: unknown; generatedContentJson?: string }
 interface Dependencies { generate(source: MimSourcePack): Promise<MimGameContent>; callbacks: LessonMimGameCallbackClient }
 const uuid = (value: unknown): value is string => typeof value === 'string'
-  && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  && value !== '00000000-0000-0000-0000-000000000000';
 
 function payloadOf(value: unknown): { payload: Payload; source: MimSourcePack } {
   if (!value || typeof value !== 'object') throw new UnrecoverableError('MIM_MODEL_INVALID');
@@ -14,7 +15,11 @@ function payloadOf(value: unknown): { payload: Payload; source: MimSourcePack } 
   if (!uuid(payload.gameId) || !uuid(payload.lessonId) || !uuid(payload.runId) || payload.schemaVersion !== 1 || !/^[0-9a-f]{64}$/.test(payload.sourceFingerprint))
     throw new UnrecoverableError('MIM_MODEL_INVALID');
   try { return { payload, source: parseMimSourcePack(payload.sourcePack) }; }
-  catch { throw new UnrecoverableError('MIM_MODEL_INVALID'); }
+  catch (error) {
+    const contractCode = error instanceof Error && /^MIM_[A-Z_]+$/.test(error.message) ? error.message : 'MIM_INVALID_SOURCE_PACK';
+    console.warn('[lesson-mim-worker] Rejected generation source payload.', { contractCode });
+    throw new UnrecoverableError('MIM_MODEL_INVALID');
+  }
 }
 
 export function createLessonMimGameProcessor(deps: Dependencies) {

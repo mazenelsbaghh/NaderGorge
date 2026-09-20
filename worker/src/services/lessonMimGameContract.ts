@@ -8,7 +8,11 @@ export interface MimGameTask { label: string; icon: string; correctChoiceIndex: 
 export interface MimGameMission { title: string; instruction: string; hint: string; reward: string; icon: string; sourceRefs: MimGameSourceRef[]; choices: string[]; tasks: MimGameTask[] }
 export interface MimGameContent { schemaVersion: 1; title: string; intro: string; sourceLabel: string; missions: MimGameMission[] }
 
-const isUuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const isUuid = (value: unknown): value is string => typeof value === 'string'
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  && value !== '00000000-0000-0000-0000-000000000000';
+const boundedSourceText = (value: unknown, max: number): value is string => typeof value === 'string'
+  && value.trim().length > 0 && value.length <= max;
 const safeText = (value: unknown, max: number): value is string => typeof value === 'string' && value.trim().length > 0 && value.length <= max
   && !/[<>]/.test(value) && !/javascript:/i.test(value) && !/^[a-z][a-z\d+.-]*:\/\//i.test(value);
 const isInteger = (value: unknown) => typeof value === 'number' && Number.isInteger(value);
@@ -16,13 +20,13 @@ const isInteger = (value: unknown) => typeof value === 'number' && Number.isInte
 export function parseMimSourcePack(value: unknown): MimSourcePack {
   if (!value || typeof value !== 'object') throw new Error('MIM_INVALID_SOURCE_PACK');
   const pack = value as Partial<MimSourcePack>;
-  if (!isUuid(pack.lessonId) || !safeText(pack.lessonTitle, 200) || !['auto', 'ar', 'en'].includes(String(pack.outputLanguage))
+  if (!isUuid(pack.lessonId) || !boundedSourceText(pack.lessonTitle, 200) || !['auto', 'ar', 'en'].includes(String(pack.outputLanguage))
     || !Array.isArray(pack.videos) || pack.videos.length === 0) throw new Error('MIM_INVALID_SOURCE_PACK');
   for (const video of pack.videos) {
-    if (!isUuid(video?.id) || !isInteger(video.sourceRevision) || video.sourceRevision < 0 || !safeText(video.title, 200)
+    if (!isUuid(video?.id) || !isInteger(video.sourceRevision) || video.sourceRevision < 0 || !boundedSourceText(video.title, 200)
       || !Array.isArray(video.chapters) || video.chapters.length === 0) throw new Error('MIM_INVALID_SOURCE_PACK');
     for (const chapter of video.chapters) {
-      if (!isUuid(chapter?.id) || !safeText(chapter.title, 200) || !safeText(chapter.summary, 2000)
+      if (!isUuid(chapter?.id) || !boundedSourceText(chapter.title, 200) || !boundedSourceText(chapter.summary, 2000)
         || !isInteger(chapter.startTime) || !isInteger(chapter.endTime) || chapter.startTime < 0 || chapter.endTime < chapter.startTime)
         throw new Error('MIM_INVALID_SOURCE_PACK');
     }
