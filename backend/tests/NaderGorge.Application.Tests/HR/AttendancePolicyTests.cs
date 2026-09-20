@@ -178,10 +178,12 @@ public sealed class AttendancePolicyTests
     }
 
     [Theory]
-    [InlineData(15, 0)]
-    [InlineData(17, 50)]
-    public async Task ClockInRelativeToShiftStart_RecordsOnlyDeductibleLateMinutes(
+    [InlineData(15, 0, 0)]
+    [InlineData(16, 30, 30)]
+    [InlineData(17, 0, 60)]
+    public async Task ClockInRelativeToShiftStart_RecordsFullLateMinutes(
         int localHour,
+        int localMinute,
         int expectedLateMinutes)
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -191,7 +193,7 @@ public sealed class AttendancePolicyTests
         segment.StartsAt = TimeSpan.FromHours(16);
         segment.EndsAt = TimeSpan.FromHours(23);
         await db.SaveChangesAsync();
-        var localClockIn = CairoTime.GetCurrentDate().ToDateTime(new TimeOnly(localHour, 0));
+        var localClockIn = CairoTime.GetCurrentDate().ToDateTime(new TimeOnly(localHour, localMinute));
         var command = new ClockInAttendanceCommand(
             seeded.User.Id,
             $"clock-in-{localHour}",

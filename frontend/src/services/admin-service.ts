@@ -897,6 +897,7 @@ export interface LessonCockpitVideoDto {
   isProcessingAI: boolean;
   isProcessingMindmaps: boolean;
   isActive: boolean;
+  hasCompletedAiAnalysis: boolean;
   bunnyPlaybackMode?: BunnyPlaybackMode;
   bunnyLibrary?: BunnyLibraryReferenceDto | null;
   bunnyStatus?: string | null;
@@ -1656,10 +1657,10 @@ export const adminService = {
     );
     return res.data?.data ?? null;
   },
-  generateLessonMimGame: async (lessonId: string) => {
+  generateLessonMimGame: async (lessonId: string, sourceVideoId: string) => {
     const res = await apiClient.post<ApiResponse<string>>(
       `/admin/lessons/${lessonId}/mim-game/generate`,
-      undefined,
+      { sourceVideoId },
       { suppressErrorToast: true }
     );
     return res.data;

@@ -538,7 +538,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var hw = await _db.Homeworks
             .ReadyForStudents()
             .Include(h => h.Questions)
-            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
+            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId && h.IsActive, ct);
 
         LessonHomeworkDto? homeworkDto = null;
         if (hw != null)
@@ -720,7 +720,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .SingleOrDefaultAsync(game => game.LessonId == lesson.Id && game.IsEnabled && game.PublishedContentJson != null, ct) : null;
         if (storedGame is not null)
         {
-            var currentSource = await MimGameSource.BuildAsync(_db, lesson.Id, ct);
+            var currentSource = await MimGameSource.BuildAsync(_db, lesson.Id, storedGame.PublishedSourceVideoId, ct);
             if (currentSource.Success && currentSource.Fingerprint == storedGame.PublishedFingerprint &&
                 MimGameContract.TryValidate(storedGame.PublishedContentJson!, out var publishedJson, out _))
             {
@@ -776,4 +776,5 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 ur.Role.Type == RoleType.Teacher,
                 ct);
     }
+
 }

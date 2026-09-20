@@ -153,6 +153,57 @@ public sealed class GetStudentProfileDetailQueryTests
     }
 
     [Fact]
+    public async Task GiftGrant_IsIdentifiedAsGiftInsteadOfBalancePurchase()
+    {
+        // September 2026: a gifted annual package was exposed as a refundable wallet purchase.
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+
+        var admin = UserFor("مسؤول الهدية", "01093500001");
+        var teacherUser = UserFor("مدرس الهدية", "01093500002");
+        var student = UserFor("طالب الهدية", "01093500003");
+        var teacher = new TeacherProfile { User = teacherUser };
+        var subject = new Subject { Name = "الرياضيات", NormalizedName = "MATH" };
+        var package = new Package
+        {
+            Name = "هدية العام الكامل",
+            Price = 1350m,
+            Teacher = teacher,
+            Subject = subject
+        };
+        var issuance = new GiftIssuance
+        {
+            RequestId = Guid.NewGuid(),
+            TargetType = GiftTargetType.Package,
+            Package = package,
+            IssuedByUser = admin,
+            Reason = "هدية اختبارية"
+        };
+        var recipient = new GiftRecipient
+        {
+            GiftIssuance = issuance,
+            Student = student,
+            Status = GiftRecipientStatus.Active,
+            OutcomeCode = "GRANTED"
+        };
+        var grant = PackageGrant(student.Id, package.Id);
+        grant.GiftRecipient = recipient;
+
+        db.AddRange(admin, teacher, subject, package, student, issuance, recipient, grant);
+        await db.SaveChangesAsync();
+
+        var studentProfile = await new GetStudentProfileDetailQueryHandler(db)
+            .Handle(new GetStudentProfileDetailQuery(student.Id), CancellationToken.None);
+
+        var enrolledContent = Assert.Single(studentProfile.Packages);
+        Assert.Equal("Gift", enrolledContent.PurchaseMethod);
+        Assert.Null(enrolledContent.PurchaseOperationId);
+    }
+
+    [Fact]
     public async Task WatchTracking_IncludesEveryActivePartInAStartedLesson()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

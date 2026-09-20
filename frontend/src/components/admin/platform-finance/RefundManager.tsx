@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import axios from 'axios';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -66,7 +67,12 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
         setPreviewKey(`${student.id}:${selected.accessGrantId}:${sourceKey}`);
         setRefundAmount('');
       })
-      .catch(() => { if (current) setPreviewError('تعذر تحميل استخدام هذا المحتوى. لا تنفذ الاسترداد قبل التحقق.'); })
+      .catch((caught: unknown) => {
+        if (!current) return;
+        setPreviewError(axios.isAxiosError(caught) && caught.response?.status === 404
+          ? 'هذه المنحة هدية أو كود، ولا يوجد مبلغ مدفوع من الطالب يمكن استرداده.'
+          : 'تعذر تحميل استخدام هذا المحتوى. لا تنفذ الاسترداد قبل التحقق.');
+      })
       .finally(() => { if (current) setPreviewLoading(false); });
     return () => { current = false; };
   }, [student, grantId]);
@@ -131,7 +137,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
 
   const activePackages = student?.packages.filter(item => item.isActive && (
     (item.purchaseOperationId && item.paidAmount > 0) ||
-    (!item.purchaseOperationId && item.purchaseMethod !== 'Code' && item.price > 0)
+    (!item.purchaseOperationId && item.purchaseMethod !== 'Code' && item.purchaseMethod !== 'Gift' && item.price > 0)
   )) || [];
 
   return <div className="space-y-6" dir="rtl">
@@ -156,6 +162,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
             <option value="">اختر باقة نشطة</option>
             {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — {item.purchaseOperationId ? `المدفوع ${money(item.paidAmount)}` : `سجل قديم (الحد ${money(item.price)})`}</option>)}
           </select>
+          {student && activePackages.length === 0 ? <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">لا توجد لهذا الطالب باقة مدفوعة قابلة للاسترداد. باقات الهدايا والأكواد لا تحتوي مبلغًا مدفوعًا من الطالب.</p> : null}
         </div>
         <div className="md:col-span-2" aria-live="polite">
           {previewLoading ? <p className="rounded-xl border border-[var(--admin-border)] p-4 text-sm text-[var(--admin-muted)]">جارٍ تحميل المشاهدة ومحاولات الامتحانات…</p> : null}

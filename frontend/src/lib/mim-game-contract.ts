@@ -67,6 +67,9 @@ export interface LessonMimGameStateDto {
   draftContentJson?: string | null;
   draftFingerprint?: string | null;
   publishedFingerprint?: string | null;
+  generationSourceVideoId?: string | null;
+  draftSourceVideoId?: string | null;
+  publishedSourceVideoId?: string | null;
   lastError?: string | null;
   generatedAtUtc?: string | null;
   publishedAtUtc?: string | null;

@@ -8,7 +8,7 @@ Frontend API call count: **667**
 
 Missing frontend route count: **0**
 
-Digest: `8757d541bec21445832565f2290b7f8d728af5f345753014ac824d4ab681b39d`
+Digest: `094adb987a2b34c6542f6b1d0c7a36cb17ccfdc5ff80c0009190518b6771ce8e`
 
 ## Route Findings
 
@@ -169,158 +169,158 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| PUT | `/api/admin/content/{targettype}/{id}/archive` | backend-api | - | `{ archiveMode }` | frontend/src/services/admin-service.ts:1072 |
-| POST | `/api/whatsapp/admin/test-message` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1081 |
-| POST | `/api/whatsapp/admin/exam-result-message` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1090 |
-| GET | `/api/whatsapp/admin/assessment-parent-recovery/preview` | backend-api | maxBatchSize | `-` | frontend/src/services/admin-service.ts:1097 |
-| POST | `/api/whatsapp/admin/assessment-parent-recovery/apply` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1108 |
-| GET | `/api/whatsapp/admin/assessment-parent-recovery/status/{operationid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1115 |
-| GET | `/api/admin/users` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:1135 |
-| POST | `/api/admin/users` | backend-api | - | `{ ...payload, packageIds: payload.packageIds ?? [], }` | frontend/src/services/admin-service.ts:1195 |
-| GET | `/api/admin/packages/list` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1206 |
-| PUT | `/api/admin/users/{id}/status` | backend-api | - | `{ status }` | frontend/src/services/admin-service.ts:1213 |
-| PUT | `/api/admin/users/{id}/roles` | backend-api | - | `{ roles }` | frontend/src/services/admin-service.ts:1218 |
-| POST | `/api/admin/teacher-photos/upload` | backend-api | - | `{ teacherId, base64Image, fileName, }` | frontend/src/services/admin-service.ts:1227 |
-| GET | `/api/admin/teachers/{teacherid}/active-photo` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1239 |
-| GET | `/api/admin/teachers` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1247 |
-| GET | `/api/admin/teachers/{teacherid}/photos` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1254 |
-| POST | `/api/admin/teachers/{teacherid}/photos/{photoid}/active` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1263 |
-| DELETE | `/api/admin/teachers/{teacherid}/photos/{photoid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1270 |
-| POST | `/api/admin/teachers/upload-profile-image` | backend-api | - | `{ teacherId, base64Image, fileName, }` | frontend/src/services/admin-service.ts:1281 |
-| POST | `/api/admin/forms/cover/upload` | backend-api | - | `{ base64Image, fileName, }` | frontend/src/services/admin-service.ts:1293 |
-| GET | `/api/admin/users/students/{id}/profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1305 |
-| GET | `/api/admin/users/{id}/devices` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1310 |
-| GET | `/api/admin/users/{id}/audit-logs` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1317 |
-| DELETE | `/api/admin/users/students/{userid}/devices/{deviceid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1324 |
-| DELETE | `/api/admin/users/students/{userid}/devices` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1331 |
-| DELETE | `/api/admin/devices/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1338 |
-| PATCH | `/api/admin/users/students/{userid}/status` | backend-api | - | `{ isActive, reason }` | frontend/src/services/admin-service.ts:1347 |
-| POST | `/api/admin/users/students/{userid}/overrides` | backend-api | - | `{ videoId, addedViews, reason }` | frontend/src/services/admin-service.ts:1360 |
-| POST | `/api/admin/users/students/{userid}/gamification/adjust` | backend-api | - | `{ points, reason }` | frontend/src/services/admin-service.ts:1372 |
-| POST | `<dynamic>` | external | - | `payload` | frontend/src/services/admin-service.ts:1390 |
-| GET | `<dynamic>` | external | search | `-` | frontend/src/services/admin-service.ts:1397 |
-| GET | `<dynamic>` | external | - | `-` | frontend/src/services/admin-service.ts:1406 |
-| PUT | `/api/admin/codes/groups/{id}/settings` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1414 |
-| DELETE | `/api/admin/codes/groups/{id}/unused` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1422 |
-| GET | `/api/admin/questions` | backend-api | page, pageSize, search | `-` | frontend/src/services/admin-service.ts:1433 |
-| POST | `/api/admin/questions` | backend-api | - | `{ ...payload, type: payload.type \|\| 0, // Default to MCQ if omitted }` | frontend/src/services/admin-service.ts:1456 |
-| POST | `/api/admin/questions/{questionid}/audio` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1469 |
-| GET | `/api/admin/essays/pending` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1482 |
-| POST | `/api/admin/essays/{essaysubmissionid}/grade` | backend-api | - | `{ essaySubmissionId, teacherScore, teacherFeedback, }` | frontend/src/services/admin-service.ts:1493 |
-| POST | `/api/admin/packages` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1506 |
-| POST | `/api/admin/content/{contenttype}/{id}/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1520 |
-| GET | `/api/admin/packages/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1538 |
-| PUT | `/api/admin/packages/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1542 |
-| GET | `/api/admin/packages/{id}/code-profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1549 |
-| PUT | `/api/admin/packages/{id}/code-profile` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1558 |
-| DELETE | `/api/admin/packages/{id}/code-profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1565 |
-| POST | `/api/admin/terms` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1576 |
-| PUT | `/api/admin/terms/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1586 |
-| DELETE | `/api/admin/terms/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1590 |
-| GET | `/api/admin/terms/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1594 |
-| GET | `/api/admin/sections/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1598 |
-| POST | `/api/admin/sections` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1602 |
-| PUT | `/api/admin/sections/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1612 |
-| POST | `/api/admin/lessons` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1619 |
-| PUT | `/api/admin/lessons/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1629 |
-| PUT | `/api/admin/lessons/{lessonid}/homework-coming-soon` | backend-api | - | `{ expectedOn }` | frontend/src/services/admin-service.ts:1639 |
-| GET | `/api/admin/lessons/{id}/cockpit` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1647 |
-| GET | `/api/admin/lessons/{lessonid}/mim-game` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1653 |
-| POST | `/api/admin/lessons/{lessonid}/mim-game/generate` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1660 |
-| POST | `/api/admin/lessons/{lessonid}/mim-game/publish-enable` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1668 |
-| POST | `/api/admin/lessons/{lessonid}/mim-game/disable` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1676 |
-| GET | `/api/admin/video-types` | backend-api | includeInactive | `-` | frontend/src/services/admin-service.ts:1684 |
-| POST | `/api/admin/video-types` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1693 |
-| PUT | `/api/admin/video-types/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1700 |
-| PATCH | `/api/admin/video-types/{id}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:1707 |
-| DELETE | `/api/admin/video-types/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1714 |
-| GET | `/api/admin/community/posts` | backend-api | dynamic:status | `-` | frontend/src/services/admin-service.ts:1717 |
-| POST | `/api/admin/community/posts/{postid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1726 |
-| POST | `/api/admin/community/posts/{postid}/reject` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1732 |
-| GET | `/api/admin/community/comments/pending` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1738 |
-| POST | `/api/admin/community/comments/{commentid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1744 |
-| POST | `/api/admin/community/comments/{commentid}/reject` | backend-api | - | `{ reason }` | frontend/src/services/admin-service.ts:1750 |
-| GET | `/api/admin/lessons/{lessonid}/comments` | backend-api | dynamic:status | `-` | frontend/src/services/admin-service.ts:1756 |
-| GET | `/api/admin/comments` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1765 |
-| POST | `/api/admin/comments/{commentid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1777 |
-| POST | `/api/admin/comments/{commentid}/reply` | backend-api | - | `{ body }` | frontend/src/services/admin-service.ts:1783 |
-| POST | `/api/admin/comments/{commentid}/reject` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1787 |
-| POST | `/api/admin/videos` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1793 |
-| PUT | `/api/admin/videos/{videoid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1800 |
-| PATCH | `/api/admin/videos/{videoid}/toggle-active` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1807 |
-| DELETE | `/api/admin/videos/{videoid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1813 |
-| POST | `/api/admin/videos/{videoid}/analyze-ai` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1817 |
-| POST | `/api/admin/videos/{videoid}/generate-mindmaps` | backend-api | - | `styles ?? {}` | frontend/src/services/admin-service.ts:1826 |
-| POST | `/api/admin/videos/{videoid}/cancel-ai` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1833 |
-| POST | `/api/admin/videos/{videoid}/cancel-mindmap` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1839 |
-| GET | `/api/admin/bunny/libraries` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1845 |
-| GET | `/api/admin/bunny/libraries/available` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1852 |
-| POST | `/api/admin/bunny/libraries` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1859 |
-| PUT | `/api/admin/bunny/libraries/{libraryrecordid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1870 |
-| PATCH | `/api/admin/bunny/libraries/{libraryrecordid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:1878 |
-| DELETE | `/api/admin/bunny/libraries/{libraryrecordid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1886 |
-| POST | `/api/admin/bunny/uploads/tus` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1893 |
-| POST | `/api/admin/bunny/uploads/{assetid}/complete` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1900 |
-| POST | `/api/admin/bunny/uploads/{assetid}/cancel-replacement` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1906 |
-| POST | `/api/admin/bunny/uploads/fetch` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1914 |
-| POST | `/api/admin/bunny/videos/{assetid}/refresh-status` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1921 |
-| POST | `/api/admin/bunny/usage/sync` | backend-api | - | `{ ...payload, forceRefresh: payload.forceRefresh ?? false, }` | frontend/src/services/admin-service.ts:1933 |
-| GET | `/api/admin/bunny/reports/costs` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1944 |
-| POST | `/api/admin/chapters/{chapterid}/regenerate-mindmap` | backend-api | - | `styles ?? {}` | frontend/src/services/admin-service.ts:1954 |
-| POST | `/api/admin/resources` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1966 |
-| POST | `/api/admin/resources/upload` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1976 |
-| POST | `/api/admin/content/lessons/{lessonid}/homework` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2017 |
-| POST | `/api/admin/questions/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2029 |
-| POST | `/api/admin/popup/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2052 |
-| PUT | `/api/admin/lessons/{lessonid}/exam` | backend-api | - | `{ examId }` | frontend/src/services/admin-service.ts:2069 |
-| PUT | `/api/admin/videos/{videoid}/exam` | backend-api | - | `{ examId }` | frontend/src/services/admin-service.ts:2076 |
-| DELETE | `/api/admin/videos/{videoid}/exams/{examid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2083 |
-| PUT | `/api/admin/exams/{examid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:2089 |
-| PUT | `/api/admin/homework/{homeworkid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:2096 |
-| POST | `/api/admin/exams/inline` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2129 |
-| POST | `/api/admin/exams/{examid}/questions` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2154 |
-| GET | `/api/admin/exams/{examid}/dashboard` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2162 |
-| GET | `/api/admin/homework/{homeworkid}/dashboard` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2168 |
-| POST | `/api/admin/assessments/ocr/questions` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2176 |
-| DELETE | `/api/admin/exams/{examid}/questions/{examquestionid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2187 |
-| DELETE | `/api/admin/exams/{examid}/attempts/{attemptid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2193 |
-| DELETE | `/api/admin/homework/{homeworkid}/submissions/{submissionid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2199 |
-| PUT | `/api/admin/exams/{examid}/questions/{examquestionid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2210 |
-| POST | `/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2219 |
-| POST | `/api/admin/overrides/reset-watch` | backend-api | - | `{ lessonVideoId, studentId, }` | frontend/src/services/admin-service.ts:2226 |
-| PUT | `/api/admin/overrides/set-watch-count` | backend-api | - | `{ lessonVideoId, studentId, newWatchCount, }` | frontend/src/services/admin-service.ts:2238 |
-| POST | `/api/admin/users/students/{studentid}/balance/adjust` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2256 |
-| PUT | `/api/admin/users/students/{studentid}/profile` | backend-api | - | `data` | frontend/src/services/admin-service.ts:2267 |
-| PUT | `/api/admin/users/staff/{staffid}/profile` | backend-api | - | `data` | frontend/src/services/admin-service.ts:2278 |
-| POST | `/api/admin/users/students/{studentid}/reset-password` | backend-api | - | `{ newPassword }` | frontend/src/services/admin-service.ts:2286 |
-| POST | `/api/admin/users/admins/{adminid}/reset-password` | backend-api | - | `{ newPassword }` | frontend/src/services/admin-service.ts:2294 |
-| POST | `/api/admin/users/staff/{staffid}/archive` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2298 |
-| POST | `/api/admin/users/students/{studentid}/notes` | backend-api | - | `{ content, isPinned }` | frontend/src/services/admin-service.ts:2306 |
-| DELETE | `/api/admin/users/students/{studentid}/notes/{noteid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2314 |
-| GET | `/api/admin/watch-requests` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2321 |
-| POST | `/api/admin/watch-requests/{id}/approve` | backend-api | - | `{ reason, addedViews }` | frontend/src/services/admin-service.ts:2332 |
-| POST | `/api/admin/watch-requests/{id}/reject` | backend-api | - | `{ reason }` | frontend/src/services/admin-service.ts:2340 |
-| POST | `/api/admin/users/students/{userid}/packages/{accessgrantid}/cancel` | backend-api | - | `{ refundBalance, reason }` | frontend/src/services/admin-service.ts:2353 |
-| GET | `/api/admin/settings` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2361 |
-| PUT | `/api/admin/settings` | backend-api | - | `{ settings, }` | frontend/src/services/admin-service.ts:2366 |
-| GET | `/api/admin/roles` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2373 |
-| POST | `/api/admin/roles` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2383 |
-| PUT | `/api/admin/roles/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2396 |
-| DELETE | `/api/admin/roles/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2404 |
-| GET | `/api/admin/teachers/{teacherid}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2410 |
-| GET | `/api/admin/teachers/{teacherid}/students` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:2424 |
-| GET | `/api/admin/teachers/{teacherid}/essays` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2443 |
-| GET | `/api/admin/teachers/{teacherid}/activations` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2454 |
-| GET | `/api/admin/finance/payouts` | backend-api | dynamic:teacherId | `-` | frontend/src/services/admin-service.ts:2465 |
-| GET | `/api/admin/assistants/{assistantid}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2480 |
-| GET | `/api/admin/assistants/{assistantid}/tasks` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2491 |
-| GET | `/api/admin/assistants/{assistantid}/homework-reviews` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2502 |
-| GET | `/api/admin/assistants/{assistantid}/warnings` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2513 |
-| GET | `/api/admin/packages/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2525 |
-| GET | `/api/admin/terms/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2536 |
-| GET | `/api/admin/sections/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2547 |
-| GET | `/api/admin/{contenttype}s/{id}/subscribers` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:2564 |
-| GET | `/api/admin/{contenttype}s/{id}/subscribers/export` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2576 |
+| PUT | `/api/admin/content/{targettype}/{id}/archive` | backend-api | - | `{ archiveMode }` | frontend/src/services/admin-service.ts:1073 |
+| POST | `/api/whatsapp/admin/test-message` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1082 |
+| POST | `/api/whatsapp/admin/exam-result-message` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1091 |
+| GET | `/api/whatsapp/admin/assessment-parent-recovery/preview` | backend-api | maxBatchSize | `-` | frontend/src/services/admin-service.ts:1098 |
+| POST | `/api/whatsapp/admin/assessment-parent-recovery/apply` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1109 |
+| GET | `/api/whatsapp/admin/assessment-parent-recovery/status/{operationid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1116 |
+| GET | `/api/admin/users` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:1136 |
+| POST | `/api/admin/users` | backend-api | - | `{ ...payload, packageIds: payload.packageIds ?? [], }` | frontend/src/services/admin-service.ts:1196 |
+| GET | `/api/admin/packages/list` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1207 |
+| PUT | `/api/admin/users/{id}/status` | backend-api | - | `{ status }` | frontend/src/services/admin-service.ts:1214 |
+| PUT | `/api/admin/users/{id}/roles` | backend-api | - | `{ roles }` | frontend/src/services/admin-service.ts:1219 |
+| POST | `/api/admin/teacher-photos/upload` | backend-api | - | `{ teacherId, base64Image, fileName, }` | frontend/src/services/admin-service.ts:1228 |
+| GET | `/api/admin/teachers/{teacherid}/active-photo` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1240 |
+| GET | `/api/admin/teachers` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1248 |
+| GET | `/api/admin/teachers/{teacherid}/photos` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1255 |
+| POST | `/api/admin/teachers/{teacherid}/photos/{photoid}/active` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1264 |
+| DELETE | `/api/admin/teachers/{teacherid}/photos/{photoid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1271 |
+| POST | `/api/admin/teachers/upload-profile-image` | backend-api | - | `{ teacherId, base64Image, fileName, }` | frontend/src/services/admin-service.ts:1282 |
+| POST | `/api/admin/forms/cover/upload` | backend-api | - | `{ base64Image, fileName, }` | frontend/src/services/admin-service.ts:1294 |
+| GET | `/api/admin/users/students/{id}/profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1306 |
+| GET | `/api/admin/users/{id}/devices` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1311 |
+| GET | `/api/admin/users/{id}/audit-logs` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1318 |
+| DELETE | `/api/admin/users/students/{userid}/devices/{deviceid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1325 |
+| DELETE | `/api/admin/users/students/{userid}/devices` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1332 |
+| DELETE | `/api/admin/devices/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1339 |
+| PATCH | `/api/admin/users/students/{userid}/status` | backend-api | - | `{ isActive, reason }` | frontend/src/services/admin-service.ts:1348 |
+| POST | `/api/admin/users/students/{userid}/overrides` | backend-api | - | `{ videoId, addedViews, reason }` | frontend/src/services/admin-service.ts:1361 |
+| POST | `/api/admin/users/students/{userid}/gamification/adjust` | backend-api | - | `{ points, reason }` | frontend/src/services/admin-service.ts:1373 |
+| POST | `<dynamic>` | external | - | `payload` | frontend/src/services/admin-service.ts:1391 |
+| GET | `<dynamic>` | external | search | `-` | frontend/src/services/admin-service.ts:1398 |
+| GET | `<dynamic>` | external | - | `-` | frontend/src/services/admin-service.ts:1407 |
+| PUT | `/api/admin/codes/groups/{id}/settings` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1415 |
+| DELETE | `/api/admin/codes/groups/{id}/unused` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1423 |
+| GET | `/api/admin/questions` | backend-api | page, pageSize, search | `-` | frontend/src/services/admin-service.ts:1434 |
+| POST | `/api/admin/questions` | backend-api | - | `{ ...payload, type: payload.type \|\| 0, // Default to MCQ if omitted }` | frontend/src/services/admin-service.ts:1457 |
+| POST | `/api/admin/questions/{questionid}/audio` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1470 |
+| GET | `/api/admin/essays/pending` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1483 |
+| POST | `/api/admin/essays/{essaysubmissionid}/grade` | backend-api | - | `{ essaySubmissionId, teacherScore, teacherFeedback, }` | frontend/src/services/admin-service.ts:1494 |
+| POST | `/api/admin/packages` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1507 |
+| POST | `/api/admin/content/{contenttype}/{id}/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1521 |
+| GET | `/api/admin/packages/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1539 |
+| PUT | `/api/admin/packages/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1543 |
+| GET | `/api/admin/packages/{id}/code-profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1550 |
+| PUT | `/api/admin/packages/{id}/code-profile` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1559 |
+| DELETE | `/api/admin/packages/{id}/code-profile` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1566 |
+| POST | `/api/admin/terms` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1577 |
+| PUT | `/api/admin/terms/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1587 |
+| DELETE | `/api/admin/terms/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1591 |
+| GET | `/api/admin/terms/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1595 |
+| GET | `/api/admin/sections/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1599 |
+| POST | `/api/admin/sections` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1603 |
+| PUT | `/api/admin/sections/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1613 |
+| POST | `/api/admin/lessons` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1620 |
+| PUT | `/api/admin/lessons/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1630 |
+| PUT | `/api/admin/lessons/{lessonid}/homework-coming-soon` | backend-api | - | `{ expectedOn }` | frontend/src/services/admin-service.ts:1640 |
+| GET | `/api/admin/lessons/{id}/cockpit` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1648 |
+| GET | `/api/admin/lessons/{lessonid}/mim-game` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1654 |
+| POST | `/api/admin/lessons/{lessonid}/mim-game/generate` | backend-api | - | `{ sourceVideoId }` | frontend/src/services/admin-service.ts:1661 |
+| POST | `/api/admin/lessons/{lessonid}/mim-game/publish-enable` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1669 |
+| POST | `/api/admin/lessons/{lessonid}/mim-game/disable` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1677 |
+| GET | `/api/admin/video-types` | backend-api | includeInactive | `-` | frontend/src/services/admin-service.ts:1685 |
+| POST | `/api/admin/video-types` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1694 |
+| PUT | `/api/admin/video-types/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1701 |
+| PATCH | `/api/admin/video-types/{id}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:1708 |
+| DELETE | `/api/admin/video-types/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1715 |
+| GET | `/api/admin/community/posts` | backend-api | dynamic:status | `-` | frontend/src/services/admin-service.ts:1718 |
+| POST | `/api/admin/community/posts/{postid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1727 |
+| POST | `/api/admin/community/posts/{postid}/reject` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1733 |
+| GET | `/api/admin/community/comments/pending` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1739 |
+| POST | `/api/admin/community/comments/{commentid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1745 |
+| POST | `/api/admin/community/comments/{commentid}/reject` | backend-api | - | `{ reason }` | frontend/src/services/admin-service.ts:1751 |
+| GET | `/api/admin/lessons/{lessonid}/comments` | backend-api | dynamic:status | `-` | frontend/src/services/admin-service.ts:1757 |
+| GET | `/api/admin/comments` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1766 |
+| POST | `/api/admin/comments/{commentid}/approve` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1778 |
+| POST | `/api/admin/comments/{commentid}/reply` | backend-api | - | `{ body }` | frontend/src/services/admin-service.ts:1784 |
+| POST | `/api/admin/comments/{commentid}/reject` | backend-api | - | `{}` | frontend/src/services/admin-service.ts:1788 |
+| POST | `/api/admin/videos` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1794 |
+| PUT | `/api/admin/videos/{videoid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1801 |
+| PATCH | `/api/admin/videos/{videoid}/toggle-active` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1808 |
+| DELETE | `/api/admin/videos/{videoid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1814 |
+| POST | `/api/admin/videos/{videoid}/analyze-ai` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1818 |
+| POST | `/api/admin/videos/{videoid}/generate-mindmaps` | backend-api | - | `styles ?? {}` | frontend/src/services/admin-service.ts:1827 |
+| POST | `/api/admin/videos/{videoid}/cancel-ai` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1834 |
+| POST | `/api/admin/videos/{videoid}/cancel-mindmap` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1840 |
+| GET | `/api/admin/bunny/libraries` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1846 |
+| GET | `/api/admin/bunny/libraries/available` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1853 |
+| POST | `/api/admin/bunny/libraries` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1860 |
+| PUT | `/api/admin/bunny/libraries/{libraryrecordid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1871 |
+| PATCH | `/api/admin/bunny/libraries/{libraryrecordid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:1879 |
+| DELETE | `/api/admin/bunny/libraries/{libraryrecordid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1887 |
+| POST | `/api/admin/bunny/uploads/tus` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1894 |
+| POST | `/api/admin/bunny/uploads/{assetid}/complete` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1901 |
+| POST | `/api/admin/bunny/uploads/{assetid}/cancel-replacement` | backend-api | - | `undefined` | frontend/src/services/admin-service.ts:1907 |
+| POST | `/api/admin/bunny/uploads/fetch` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1915 |
+| POST | `/api/admin/bunny/videos/{assetid}/refresh-status` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1922 |
+| POST | `/api/admin/bunny/usage/sync` | backend-api | - | `{ ...payload, forceRefresh: payload.forceRefresh ?? false, }` | frontend/src/services/admin-service.ts:1934 |
+| GET | `/api/admin/bunny/reports/costs` | backend-api | - | `-` | frontend/src/services/admin-service.ts:1945 |
+| POST | `/api/admin/chapters/{chapterid}/regenerate-mindmap` | backend-api | - | `styles ?? {}` | frontend/src/services/admin-service.ts:1955 |
+| POST | `/api/admin/resources` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:1967 |
+| POST | `/api/admin/resources/upload` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:1977 |
+| POST | `/api/admin/content/lessons/{lessonid}/homework` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2018 |
+| POST | `/api/admin/questions/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2030 |
+| POST | `/api/admin/popup/image` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2053 |
+| PUT | `/api/admin/lessons/{lessonid}/exam` | backend-api | - | `{ examId }` | frontend/src/services/admin-service.ts:2070 |
+| PUT | `/api/admin/videos/{videoid}/exam` | backend-api | - | `{ examId }` | frontend/src/services/admin-service.ts:2077 |
+| DELETE | `/api/admin/videos/{videoid}/exams/{examid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2084 |
+| PUT | `/api/admin/exams/{examid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:2090 |
+| PUT | `/api/admin/homework/{homeworkid}/status` | backend-api | - | `{ isActive }` | frontend/src/services/admin-service.ts:2097 |
+| POST | `/api/admin/exams/inline` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2130 |
+| POST | `/api/admin/exams/{examid}/questions` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2155 |
+| GET | `/api/admin/exams/{examid}/dashboard` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2163 |
+| GET | `/api/admin/homework/{homeworkid}/dashboard` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2169 |
+| POST | `/api/admin/assessments/ocr/questions` | backend-api | - | `formData` | frontend/src/services/admin-service.ts:2177 |
+| DELETE | `/api/admin/exams/{examid}/questions/{examquestionid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2188 |
+| DELETE | `/api/admin/exams/{examid}/attempts/{attemptid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2194 |
+| DELETE | `/api/admin/homework/{homeworkid}/submissions/{submissionid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2200 |
+| PUT | `/api/admin/exams/{examid}/questions/{examquestionid}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2211 |
+| POST | `/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2220 |
+| POST | `/api/admin/overrides/reset-watch` | backend-api | - | `{ lessonVideoId, studentId, }` | frontend/src/services/admin-service.ts:2227 |
+| PUT | `/api/admin/overrides/set-watch-count` | backend-api | - | `{ lessonVideoId, studentId, newWatchCount, }` | frontend/src/services/admin-service.ts:2239 |
+| POST | `/api/admin/users/students/{studentid}/balance/adjust` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2257 |
+| PUT | `/api/admin/users/students/{studentid}/profile` | backend-api | - | `data` | frontend/src/services/admin-service.ts:2268 |
+| PUT | `/api/admin/users/staff/{staffid}/profile` | backend-api | - | `data` | frontend/src/services/admin-service.ts:2279 |
+| POST | `/api/admin/users/students/{studentid}/reset-password` | backend-api | - | `{ newPassword }` | frontend/src/services/admin-service.ts:2287 |
+| POST | `/api/admin/users/admins/{adminid}/reset-password` | backend-api | - | `{ newPassword }` | frontend/src/services/admin-service.ts:2295 |
+| POST | `/api/admin/users/staff/{staffid}/archive` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2299 |
+| POST | `/api/admin/users/students/{studentid}/notes` | backend-api | - | `{ content, isPinned }` | frontend/src/services/admin-service.ts:2307 |
+| DELETE | `/api/admin/users/students/{studentid}/notes/{noteid}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2315 |
+| GET | `/api/admin/watch-requests` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2322 |
+| POST | `/api/admin/watch-requests/{id}/approve` | backend-api | - | `{ reason, addedViews }` | frontend/src/services/admin-service.ts:2333 |
+| POST | `/api/admin/watch-requests/{id}/reject` | backend-api | - | `{ reason }` | frontend/src/services/admin-service.ts:2341 |
+| POST | `/api/admin/users/students/{userid}/packages/{accessgrantid}/cancel` | backend-api | - | `{ refundBalance, reason }` | frontend/src/services/admin-service.ts:2354 |
+| GET | `/api/admin/settings` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2362 |
+| PUT | `/api/admin/settings` | backend-api | - | `{ settings, }` | frontend/src/services/admin-service.ts:2367 |
+| GET | `/api/admin/roles` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2374 |
+| POST | `/api/admin/roles` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2384 |
+| PUT | `/api/admin/roles/{id}` | backend-api | - | `payload` | frontend/src/services/admin-service.ts:2397 |
+| DELETE | `/api/admin/roles/{id}` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2405 |
+| GET | `/api/admin/teachers/{teacherid}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2411 |
+| GET | `/api/admin/teachers/{teacherid}/students` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:2425 |
+| GET | `/api/admin/teachers/{teacherid}/essays` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2444 |
+| GET | `/api/admin/teachers/{teacherid}/activations` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2455 |
+| GET | `/api/admin/finance/payouts` | backend-api | dynamic:teacherId | `-` | frontend/src/services/admin-service.ts:2466 |
+| GET | `/api/admin/assistants/{assistantid}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2481 |
+| GET | `/api/admin/assistants/{assistantid}/tasks` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2492 |
+| GET | `/api/admin/assistants/{assistantid}/homework-reviews` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2503 |
+| GET | `/api/admin/assistants/{assistantid}/warnings` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2514 |
+| GET | `/api/admin/packages/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2526 |
+| GET | `/api/admin/terms/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2537 |
+| GET | `/api/admin/sections/{id}/stats` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2548 |
+| GET | `/api/admin/{contenttype}s/{id}/subscribers` | backend-api | page, pageSize | `-` | frontend/src/services/admin-service.ts:2565 |
+| GET | `/api/admin/{contenttype}s/{id}/subscribers/export` | backend-api | - | `-` | frontend/src/services/admin-service.ts:2577 |
 
 ### frontend/src/services/advanced-report-service.ts
 
@@ -787,37 +787,37 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| GET | `/api/admin/platform-finance/refunds/students` | backend-api | phone | `-` | frontend/src/services/platform-finance-service.ts:102 |
-| GET | `/api/admin/platform-finance/refunds/students/{id}` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:106 |
-| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | backend-api | purchaseOperationId | `-` | frontend/src/services/platform-finance-service.ts:110 |
-| GET | `/api/admin/platform-finance/dashboard` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:114 |
-| GET | `/api/admin/platform-finance/ledger` | backend-api | from, to, page, pageSize | `-` | frontend/src/services/platform-finance-service.ts:118 |
-| GET | `/api/admin/platform-finance/teachers/summary` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:122 |
-| GET | `/api/admin/platform-finance/teachers/{teacherid}/summary` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:126 |
-| GET | `/api/admin/platform-finance/refunds/bootstrap` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:130 |
-| GET | `/api/admin/platform-finance/bootstrap` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:134 |
-| POST | `/api/admin/platform-finance/expenses` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:138 |
-| POST | `/api/admin/platform-finance/expenses/{expenseid}/post` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:141 |
-| GET | `/api/admin/platform-finance/expenses` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:144 |
-| GET | `/api/admin/platform-finance/wallet-transfers/reviews` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:147 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/backfill` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:150 |
-| GET | `/api/admin/platform-finance/wallets/report` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:153 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:156 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer` | backend-api | - | `{ destinationTreasuryAccountId }` | frontend/src/services/platform-finance-service.ts:159 |
-| POST | `/api/admin/platform-finance/expenses/{expenseid}/reverse` | backend-api | - | `{ reason }` | frontend/src/services/platform-finance-service.ts:162 |
-| POST | `/api/admin/platform-finance/refunds` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:165 |
-| POST | `/api/admin/platform-finance/refunds/external-package` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:168 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | backend-api | - | `{ idempotencyKey }` | frontend/src/services/platform-finance-service.ts:171 |
-| GET | `/api/admin/platform-finance/refunds` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:174 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | backend-api | - | `{ reason }` | frontend/src/services/platform-finance-service.ts:177 |
-| POST | `/api/admin/platform-finance/budgets` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:180 |
-| GET | `/api/admin/platform-finance/budgets/actuals` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:183 |
-| POST | `/api/admin/platform-finance/treasury/transfers` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:186 |
-| POST | `/api/admin/platform-finance/treasury/reconciliations` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:189 |
-| GET | `/api/admin/platform-finance/reports/{kind}` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:192 |
-| GET | `/api/admin/platform-finance/reconciliation` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:195 |
-| GET | `/api/admin/platform-finance/migration/preview` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:198 |
-| POST | `/api/admin/platform-finance/migration/post` | backend-api | from, to | `null` | frontend/src/services/platform-finance-service.ts:201 |
+| GET | `/api/admin/platform-finance/refunds/students` | backend-api | phone | `-` | frontend/src/services/platform-finance-service.ts:103 |
+| GET | `/api/admin/platform-finance/refunds/students/{id}` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:107 |
+| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | backend-api | purchaseOperationId | `-` | frontend/src/services/platform-finance-service.ts:111 |
+| GET | `/api/admin/platform-finance/dashboard` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:115 |
+| GET | `/api/admin/platform-finance/ledger` | backend-api | from, to, page, pageSize | `-` | frontend/src/services/platform-finance-service.ts:119 |
+| GET | `/api/admin/platform-finance/teachers/summary` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:123 |
+| GET | `/api/admin/platform-finance/teachers/{teacherid}/summary` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:127 |
+| GET | `/api/admin/platform-finance/refunds/bootstrap` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:131 |
+| GET | `/api/admin/platform-finance/bootstrap` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:135 |
+| POST | `/api/admin/platform-finance/expenses` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:139 |
+| POST | `/api/admin/platform-finance/expenses/{expenseid}/post` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:142 |
+| GET | `/api/admin/platform-finance/expenses` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:145 |
+| GET | `/api/admin/platform-finance/wallet-transfers/reviews` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:148 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/backfill` | backend-api | - | `-` | frontend/src/services/platform-finance-service.ts:151 |
+| GET | `/api/admin/platform-finance/wallets/report` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:154 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:157 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer` | backend-api | - | `{ destinationTreasuryAccountId }` | frontend/src/services/platform-finance-service.ts:160 |
+| POST | `/api/admin/platform-finance/expenses/{expenseid}/reverse` | backend-api | - | `{ reason }` | frontend/src/services/platform-finance-service.ts:163 |
+| POST | `/api/admin/platform-finance/refunds` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:166 |
+| POST | `/api/admin/platform-finance/refunds/external-package` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:169 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | backend-api | - | `{ idempotencyKey }` | frontend/src/services/platform-finance-service.ts:172 |
+| GET | `/api/admin/platform-finance/refunds` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:175 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | backend-api | - | `{ reason }` | frontend/src/services/platform-finance-service.ts:178 |
+| POST | `/api/admin/platform-finance/budgets` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:181 |
+| GET | `/api/admin/platform-finance/budgets/actuals` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:184 |
+| POST | `/api/admin/platform-finance/treasury/transfers` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:187 |
+| POST | `/api/admin/platform-finance/treasury/reconciliations` | backend-api | - | `payload` | frontend/src/services/platform-finance-service.ts:190 |
+| GET | `/api/admin/platform-finance/reports/{kind}` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:193 |
+| GET | `/api/admin/platform-finance/reconciliation` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:196 |
+| GET | `/api/admin/platform-finance/migration/preview` | backend-api | from, to | `-` | frontend/src/services/platform-finance-service.ts:199 |
+| POST | `/api/admin/platform-finance/migration/post` | backend-api | from, to | `null` | frontend/src/services/platform-finance-service.ts:202 |
 
 ### frontend/src/services/platform-profits-service.ts
 
@@ -1290,39 +1290,39 @@ No missing frontend-called backend routes.
 
 | Method | Path | Action | Auth | Source |
 |---|---|---|---|---|
-| GET | `/api/admin/platform-finance/bootstrap` | Bootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:406 |
-| POST | `/api/admin/platform-finance/budgets` | CreateBudget | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:420 |
-| GET | `/api/admin/platform-finance/budgets/actuals` | BudgetActuals | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:430 |
+| GET | `/api/admin/platform-finance/bootstrap` | Bootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:394 |
+| POST | `/api/admin/platform-finance/budgets` | CreateBudget | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:408 |
+| GET | `/api/admin/platform-finance/budgets/actuals` | BudgetActuals | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:418 |
 | GET | `/api/admin/platform-finance/dashboard` | Dashboard | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:37 |
 | GET | `/api/admin/platform-finance/expenses` | Expenses | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:100 |
 | POST | `/api/admin/platform-finance/expenses` | CreateExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:80 |
 | POST | `/api/admin/platform-finance/expenses/{expenseid}/payments` | PayExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:195 |
 | POST | `/api/admin/platform-finance/expenses/{expenseid}/post` | PostExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:91 |
 | POST | `/api/admin/platform-finance/expenses/{expenseid}/reverse` | ReverseExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:187 |
-| GET | `/api/admin/platform-finance/exports/{format}` | Export | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:453 |
+| GET | `/api/admin/platform-finance/exports/{format}` | Export | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:441 |
 | GET | `/api/admin/platform-finance/journals/{journalid}` | Journal | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:63 |
 | GET | `/api/admin/platform-finance/ledger` | Ledger | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:54 |
-| POST | `/api/admin/platform-finance/migration/post` | PostHistoricalMigration | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:476 |
-| GET | `/api/admin/platform-finance/migration/preview` | MigrationPreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:471 |
-| GET | `/api/admin/platform-finance/periods` | Periods | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:481 |
-| POST | `/api/admin/platform-finance/periods/{periodid}/close` | ClosePeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:486 |
-| POST | `/api/admin/platform-finance/periods/{periodid}/reopen` | ReopenPeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:491 |
+| POST | `/api/admin/platform-finance/migration/post` | PostHistoricalMigration | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:464 |
+| GET | `/api/admin/platform-finance/migration/preview` | MigrationPreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:459 |
+| GET | `/api/admin/platform-finance/periods` | Periods | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:469 |
+| POST | `/api/admin/platform-finance/periods/{periodid}/close` | ClosePeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:474 |
+| POST | `/api/admin/platform-finance/periods/{periodid}/reopen` | ReopenPeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:479 |
 | GET | `/api/admin/platform-finance/profits` | Profits | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:44 |
-| GET | `/api/admin/platform-finance/reconciliation` | Reconciliation | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:466 |
-| GET | `/api/admin/platform-finance/refunds` | Refunds | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:300 |
+| GET | `/api/admin/platform-finance/reconciliation` | Reconciliation | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:454 |
+| GET | `/api/admin/platform-finance/refunds` | Refunds | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:288 |
 | POST | `/api/admin/platform-finance/refunds` | CreateRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:204 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | PostRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:292 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | ReverseRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:360 |
-| GET | `/api/admin/platform-finance/refunds/bootstrap` | RefundBootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:398 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | PostRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:280 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | ReverseRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:348 |
+| GET | `/api/admin/platform-finance/refunds/bootstrap` | RefundBootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:386 |
 | POST | `/api/admin/platform-finance/refunds/external-package` | CreateExternalPackageRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:215 |
-| GET | `/api/admin/platform-finance/refunds/students` | FindRefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:368 |
-| GET | `/api/admin/platform-finance/refunds/students/{studentid}` | RefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:380 |
-| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | RefundUsagePreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:389 |
-| GET | `/api/admin/platform-finance/reports/{kind}` | Report | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:461 |
+| GET | `/api/admin/platform-finance/refunds/students` | FindRefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:356 |
+| GET | `/api/admin/platform-finance/refunds/students/{studentid}` | RefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:368 |
+| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | RefundUsagePreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:377 |
+| GET | `/api/admin/platform-finance/reports/{kind}` | Report | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:449 |
 | GET | `/api/admin/platform-finance/teachers/{teacherid}/summary` | TeacherDetail | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:75 |
 | GET | `/api/admin/platform-finance/teachers/summary` | TeacherSummary | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:68 |
-| POST | `/api/admin/platform-finance/treasury/reconciliations` | Reconcile | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:444 |
-| POST | `/api/admin/platform-finance/treasury/transfers` | Transfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:435 |
+| POST | `/api/admin/platform-finance/treasury/reconciliations` | Reconcile | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:432 |
+| POST | `/api/admin/platform-finance/treasury/transfers` | Transfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:423 |
 | GET | `/api/admin/platform-finance/wallet-transfers/reviews` | WalletTransferReviews | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:110 |
 | POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense` | RecordWalletTransferExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:169 |
 | POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer` | RecordWalletInternalTransfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:178 |

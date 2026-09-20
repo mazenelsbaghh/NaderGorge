@@ -1144,7 +1144,8 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
                                 StringComparison.OrdinalIgnoreCase)
                             || !string.Equals(video.ProviderVideoId, extractedId, StringComparison.OrdinalIgnoreCase)
                             || video.BunnyStreamLibraryId != bunnyStreamLibraryId;
-        var activeOrOrderChanged = video.Order != request.Order ||
+        var metadataOrAvailabilityChanged = !string.Equals(video.Title, title, StringComparison.Ordinal) ||
+            video.Order != request.Order ||
             (request.IsActive.HasValue && video.IsActive != request.IsActive.Value);
 
         if (sourceChanged)
@@ -1167,9 +1168,9 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
                 video.SourceRevision++;
             }
         }
-        else if (activeOrOrderChanged)
+        else if (metadataOrAvailabilityChanged)
         {
-            await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, ct);
+            await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
         }
 
         video.Title = title;
@@ -1299,7 +1300,7 @@ internal static class LessonVideoSourceMutation
             db.VideoChapters.RemoveRange(chapters);
         }
 
-        await InvalidateMimGameAsync(db, video.LessonId, cancellationToken);
+        await InvalidateMimGameAsync(db, video.LessonId, video.Id, cancellationToken);
 
         await SupersedePlaybackSessionsAsync(db, video, cancellationToken);
     }
@@ -1307,15 +1308,20 @@ internal static class LessonVideoSourceMutation
     internal static async Task<int> InvalidateMimGameAsync(
         IAppDbContext db,
         Guid lessonId,
+        Guid videoId,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await db.LessonMimGames.Where(game => game.LessonId == lessonId)
+            return await db.LessonMimGames.Where(game => game.LessonId == lessonId &&
+                    ((game.CurrentGenerationRunId != null && (game.GenerationSourceVideoId == null || game.GenerationSourceVideoId == videoId)) ||
+                     (game.DraftFingerprint != null && (game.DraftSourceVideoId == null || game.DraftSourceVideoId == videoId)) ||
+                     (game.PublishedFingerprint != null && (game.PublishedSourceVideoId == null || game.PublishedSourceVideoId == videoId))))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(game => game.IsEnabled, false)
                     .SetProperty(game => game.Status, LessonMimGameStatus.Stale)
                     .SetProperty(game => game.CurrentGenerationRunId, (Guid?)null)
+                    .SetProperty(game => game.GenerationSourceVideoId, (Guid?)null)
                     .SetProperty(game => game.GenerationStartedAtUtc, (DateTime?)null)
                     .SetProperty(game => game.GenerationExpiresAtUtc, (DateTime?)null)
                     .SetProperty(game => game.Version, game => game.Version + 1)
@@ -1325,9 +1331,18 @@ internal static class LessonVideoSourceMutation
         {
             var tracked = await db.LessonMimGames.SingleOrDefaultAsync(game => game.LessonId == lessonId, cancellationToken);
             if (tracked is null) return 0;
+            var sourceIsAffected =
+                (tracked.CurrentGenerationRunId is not null &&
+                 (tracked.GenerationSourceVideoId is null || tracked.GenerationSourceVideoId == videoId)) ||
+                (tracked.DraftFingerprint is not null &&
+                 (tracked.DraftSourceVideoId is null || tracked.DraftSourceVideoId == videoId)) ||
+                (tracked.PublishedFingerprint is not null &&
+                 (tracked.PublishedSourceVideoId is null || tracked.PublishedSourceVideoId == videoId));
+            if (!sourceIsAffected) return 0;
             tracked.IsEnabled = false;
             tracked.Status = LessonMimGameStatus.Stale;
             tracked.CurrentGenerationRunId = null;
+            tracked.GenerationSourceVideoId = null;
             tracked.GenerationStartedAtUtc = null;
             tracked.GenerationExpiresAtUtc = null;
             tracked.Version++;
@@ -1473,7 +1488,7 @@ public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, Api
             .Where(c => c.LessonVideoId == video.Id).ToListAsync(ct);
         if (chapters.Count > 0) _db.VideoChapters.RemoveRange(chapters);
 
-        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, ct);
+        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
 
         var bunnyAssets = await _db.BunnyVideoAssets
             .Where(a => a.LessonVideoId == video.Id).ToListAsync(ct);

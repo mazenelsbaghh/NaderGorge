@@ -22,7 +22,10 @@ import {
   pollMimGameWhileGenerating,
   type LessonMimGameStateDto,
 } from '@/lib/mim-game-contract';
-import { adminService } from '@/services/admin-service';
+import {
+  adminService,
+  type LessonCockpitVideoDto,
+} from '@/services/admin-service';
 import { useAuthStore } from '@/stores/auth-store';
 
 const POLL_INTERVAL_MS = 4_000;
@@ -44,7 +47,113 @@ function safeRequestError(error: unknown, fallback: string) {
   return getApiErrorSummary(error, fallback);
 }
 
-export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
+function isAnalyzedSource(video: LessonCockpitVideoDto) {
+  return Boolean(
+      video.isActive &&
+      video.archiveMode === 'None' &&
+      !video.isProcessingAI &&
+      video.hasCompletedAiAnalysis
+  );
+}
+
+function MimGameSourceOption({
+  video,
+  selected,
+  generationInProgress,
+  onSelect,
+}: {
+  video: LessonCockpitVideoDto;
+  selected: boolean;
+  generationInProgress: boolean;
+  onSelect: (videoId: string) => void;
+}) {
+  const ready = isAnalyzedSource(video);
+  const stateLabel = ready
+    ? `${video.chapters?.length ?? 0} فصل محلل — جاهز للاختيار`
+    : video.isProcessingAI
+      ? 'جاري التحليل الآن'
+      : 'يحتاج إلى التحليل أولاً';
+
+  return (
+    <label
+      className={`flex min-h-20 items-center gap-3 rounded-xl border p-4 transition-colors ${
+        ready
+          ? selected
+            ? 'cursor-pointer border-[var(--admin-primary)] bg-[var(--admin-primary-15)]'
+            : 'cursor-pointer border-[var(--admin-border)] bg-[var(--admin-card)] hover:border-[var(--admin-primary)]'
+          : 'cursor-not-allowed border-[var(--admin-border)] bg-[var(--admin-card)] opacity-60'
+      }`}
+    >
+      <input
+        type="radio"
+        name="mim-game-source"
+        value={video.id}
+        checked={selected}
+        disabled={!ready || generationInProgress}
+        onChange={() => onSelect(video.id)}
+        className="h-4 w-4 shrink-0 accent-[var(--admin-primary)]"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-black text-[var(--admin-text)]">
+          {video.title}
+        </span>
+        <span
+          className={`mt-1 block text-xs font-bold ${ready ? 'text-emerald-700' : 'text-amber-700'}`}
+        >
+          {stateLabel}
+        </span>
+      </span>
+    </label>
+  );
+}
+
+function MimGameSourceSelector({
+  videos,
+  selectedVideoId,
+  generationInProgress,
+  onSelect,
+}: {
+  videos: LessonCockpitVideoDto[];
+  selectedVideoId: string;
+  generationInProgress: boolean;
+  onSelect: (videoId: string) => void;
+}) {
+  return (
+    <div className="mt-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 sm:p-5">
+      <h3 className="font-black text-[var(--admin-text)]">
+        اختر الجزء الذي ستُبنى منه اللعبة
+      </h3>
+      <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
+        ستستخدم اللعبة تحليل الجزء المختار فقط، ولن تنتظر تحليل باقي أجزاء الحصة.
+      </p>
+      {videos.length > 0 ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {videos.map((video) => (
+            <MimGameSourceOption
+              key={video.id}
+              video={video}
+              selected={selectedVideoId === video.id}
+              generationInProgress={generationInProgress}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm font-bold text-amber-900">
+          لا توجد أجزاء مفعّلة في هذه الحصة.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function LessonMimGameTab({
+  lessonId,
+  videos,
+}: {
+  lessonId: string;
+  videos: LessonCockpitVideoDto[];
+}) {
   const adminId = useAuthStore((state) => state.user?.id);
   const [game, setGame] = useState<LessonMimGameStateDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +161,21 @@ export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
     'generate' | 'publish' | 'disable' | null
   >(null);
   const [error, setError] = useState('');
+  const [selectedVideoId, setSelectedVideoId] = useState('');
+
+  const sourceVideos = useMemo(
+    () =>
+      videos
+        .filter((video) => video.isActive && video.archiveMode === 'None')
+        .sort((left, right) => left.order - right.order),
+    [videos]
+  );
+  const selectedSource = sourceVideos.find(
+    (video) => video.id === selectedVideoId
+  );
+  const selectedSourceIsReady = Boolean(
+    selectedSource && isAnalyzedSource(selectedSource)
+  );
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -76,6 +200,24 @@ export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
     void load(controller.signal);
     return () => controller.abort();
   }, [load]);
+
+  useEffect(() => {
+    const savedSourceId =
+      game?.generationSourceVideoId ??
+      game?.draftSourceVideoId ??
+      game?.publishedSourceVideoId;
+    setSelectedVideoId((current) => {
+      if (savedSourceId && sourceVideos.some((video) => video.id === savedSourceId))
+        return savedSourceId;
+      if (sourceVideos.some((video) => video.id === current)) return current;
+      return sourceVideos.find(isAnalyzedSource)?.id ?? '';
+    });
+  }, [
+    game?.draftSourceVideoId,
+    game?.generationSourceVideoId,
+    game?.publishedSourceVideoId,
+    sourceVideos,
+  ]);
 
   useEffect(() => {
     if (game?.status !== 'Generating') return;
@@ -117,7 +259,11 @@ export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
     setError('');
     try {
       if (kind === 'generate') {
-        await adminService.generateLessonMimGame(lessonId);
+        if (!selectedVideoId || !selectedSourceIsReady) {
+          setError('اختر جزءًا تم تحليله أولاً.');
+          return;
+        }
+        await adminService.generateLessonMimGame(lessonId, selectedVideoId);
         toast.success(
           'بدأ توليد مسودة جديدة. النشر والتفعيل لن يحدثا تلقائيًا.'
         );
@@ -202,7 +348,11 @@ export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={Boolean(action) || game?.status === 'Generating'}
+              disabled={
+                Boolean(action) ||
+                game?.status === 'Generating' ||
+                !selectedSourceIsReady
+              }
               onClick={() => void runAction('generate')}
               className="admin-btn-ghost min-h-11 px-5 disabled:cursor-not-allowed disabled:opacity-55"
             >
@@ -237,6 +387,13 @@ export function LessonMimGameTab({ lessonId }: { lessonId: string }) {
             )}
           </div>
         </div>
+
+        <MimGameSourceSelector
+          videos={sourceVideos}
+          selectedVideoId={selectedVideoId}
+          generationInProgress={game?.status === 'Generating'}
+          onSelect={setSelectedVideoId}
+        />
 
         {error && (
           <div

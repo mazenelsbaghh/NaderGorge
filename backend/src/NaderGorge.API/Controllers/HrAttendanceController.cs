@@ -227,7 +227,7 @@ public sealed class HrAttendanceController : ControllerBase
     public IActionResult Recalculate(AttendanceRecalculationRequest request)
     {
         var result = AttendanceCalculator.Calculate(new AttendanceCalculationInput(request.ClockedInAt, request.ClockedOutAt,
-            request.ScheduledStart, request.ScheduledEnd, request.BreakMinutes, request.GraceMinutes, request.ExpectedMinutes));
+            request.ScheduledStart, request.ScheduledEnd, request.BreakMinutes, request.ExpectedMinutes));
         return Ok(new { dryRun = true, result });
     }
 
@@ -256,6 +256,6 @@ public sealed record RegisterTrustedDeviceRequest(Guid EmployeeId, string Device
 public sealed record SubmitAttendanceCorrectionRequest(Guid AttendanceSessionId, DateTime? ProposedClockedInAt, DateTime? ProposedClockedOutAt, string Reason, string? EvidenceReference);
 public sealed record DecideAttendanceCorrectionRequest(bool Approve, bool IsHrDecision, string Reason, int ExpectedVersion);
 public sealed record AttendanceRecalculationRequest(DateTime ClockedInAt, DateTime ClockedOutAt, DateTime ScheduledStart, DateTime ScheduledEnd,
-    int BreakMinutes, int GraceMinutes, int ExpectedMinutes);
+    int BreakMinutes, int ExpectedMinutes);
 
 public sealed record CancelAttendanceEventRequest(AttendanceEventType EventType, int ExpectedVersion, string Reason);

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.MimGames;
 using NaderGorge.Application.Features.Content.Queries;
 using NaderGorge.Application.Services;
@@ -15,7 +16,9 @@ public class MimGameStateTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var (lesson, game) = await SeedAsync(db);
-        var source = await MimGameSource.BuildAsync(db, lesson.Id, default);
+        var videoId = await db.LessonVideos.Select(video => video.Id).SingleAsync();
+        game.GenerationSourceVideoId = videoId;
+        var source = await MimGameSource.BuildAsync(db, lesson.Id, videoId, default);
         game.IsEnabled = false;
         game.PublishedContentJson = ValidJson("النسخة المنشورة");
         game.PublishedFingerprint = "old-fingerprint";
@@ -29,6 +32,8 @@ public class MimGameStateTests
         Assert.Equal("النسخة المنشورة", JsonDocument.Parse(game.PublishedContentJson!).RootElement.GetProperty("title").GetString());
         Assert.Equal("المسودة الجديدة", JsonDocument.Parse(game.DraftContentJson!).RootElement.GetProperty("title").GetString());
         Assert.Equal(LessonMimGameStatus.Ready, game.Status);
+        Assert.Equal(videoId, game.DraftSourceVideoId);
+        Assert.Null(game.GenerationSourceVideoId);
     }
 
     [Fact]
@@ -72,6 +77,27 @@ public class MimGameStateTests
     }
 
     [Fact]
+    public async Task SelectedAnalyzedVideo_DoesNotWaitForOtherLessonVideos()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (lesson, _) = await SeedAsync(db, includePendingVideo: true);
+        var analyzedVideo = await db.LessonVideos.SingleAsync(video => video.SubtitleUrl != null);
+        var pendingVideo = await db.LessonVideos.SingleAsync(video => video.SubtitleUrl == null);
+
+        var selected = await MimGameSource.BuildAsync(db, lesson.Id, analyzedVideo.Id, default);
+        var wholeLesson = await MimGameSource.BuildAsync(db, lesson.Id, default);
+        var pending = await MimGameSource.BuildAsync(db, lesson.Id, pendingVideo.Id, default);
+
+        Assert.True(selected.Success);
+        Assert.Single(selected.Pack!.Videos);
+        Assert.Equal(analyzedVideo.Id, selected.Pack.Videos[0].Id);
+        Assert.False(wholeLesson.Success);
+        Assert.Equal("MIM_ANALYSIS_REQUIRED", wholeLesson.Error);
+        Assert.False(pending.Success);
+        Assert.Contains(pendingVideo.Title, pending.MissingVideos);
+    }
+
+    [Fact]
     public async Task PublishRejectsDraftFromPreviousSourceRevision()
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -86,6 +112,61 @@ public class MimGameStateTests
         Assert.False(response.Success);
         Assert.False(game.IsEnabled);
         Assert.Null(game.PublishedContentJson);
+    }
+
+    [Fact]
+    public async Task PublishAndStudentRead_UseOnlyTheSelectedVideoSource()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (lesson, game) = await SeedAsync(db, includePendingVideo: true);
+        var selectedVideo = await db.LessonVideos.SingleAsync(video => video.SubtitleUrl != null);
+        var source = await MimGameSource.BuildAsync(db, lesson.Id, selectedVideo.Id, default);
+        game.Status = LessonMimGameStatus.Ready;
+        game.DraftContentJson = ValidJson("مسودة الجزء المختار", source.Pack!);
+        game.DraftFingerprint = source.Fingerprint;
+        game.DraftSourceVideoId = selectedVideo.Id;
+        await db.SaveChangesAsync();
+
+        var publish = await new PublishLessonMimGameCommandHandler(db).Handle(new(lesson.Id), default);
+        var response = await new GetLessonDetailQueryHandler(
+                db,
+                new FullAccess(),
+                new TeacherAuthorizationService(db),
+                archiveAccess: new AllowArchiveAccess())
+            .Handle(new GetLessonDetailQuery(lesson.Id, Guid.NewGuid()), default);
+
+        Assert.True(publish.Success);
+        Assert.True(game.IsEnabled);
+        Assert.Equal(selectedVideo.Id, game.PublishedSourceVideoId);
+        Assert.NotNull(response.Data!.MimGame);
+    }
+
+    [Fact]
+    public async Task ChangingAnUnselectedVideo_DoesNotInvalidateTheSelectedGame()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var (lesson, game) = await SeedAsync(db, includePendingVideo: true);
+        var selectedVideo = await db.LessonVideos.SingleAsync(video => video.SubtitleUrl != null);
+        var unselectedVideo = await db.LessonVideos.SingleAsync(video => video.SubtitleUrl == null);
+        game.CurrentGenerationRunId = null;
+        game.GenerationSourceVideoId = null;
+        game.Status = LessonMimGameStatus.Ready;
+        game.DraftFingerprint = "draft";
+        game.DraftSourceVideoId = selectedVideo.Id;
+        game.PublishedFingerprint = "published";
+        game.PublishedSourceVideoId = selectedVideo.Id;
+        game.IsEnabled = true;
+        await db.SaveChangesAsync();
+
+        var unselectedChanges = await LessonVideoSourceMutation.InvalidateMimGameAsync(
+            db, lesson.Id, unselectedVideo.Id, default);
+        var selectedChanges = await LessonVideoSourceMutation.InvalidateMimGameAsync(
+            db, lesson.Id, selectedVideo.Id, default);
+
+        Assert.Equal(0, unselectedChanges);
+        Assert.Equal(1, selectedChanges);
+        Assert.False(game.IsEnabled);
+        Assert.Equal(LessonMimGameStatus.Stale, game.Status);
     }
 
     [Fact]
@@ -131,7 +212,9 @@ public class MimGameStateTests
         Assert.Null(response.Data.MimGame);
     }
 
-    private static async Task<(Lesson Lesson, LessonMimGame Game)> SeedAsync(NaderGorge.Infrastructure.Data.AppDbContext db)
+    private static async Task<(Lesson Lesson, LessonMimGame Game)> SeedAsync(
+        NaderGorge.Infrastructure.Data.AppDbContext db,
+        bool includePendingVideo = false)
     {
         var package = new Package { Name = "باقة", Description = "", TargetGrade = "3", AiOutputLanguage = NaderGorge.Domain.Enums.AiOutputLanguage.Arabic };
         var term = new Term { Title = "ترم", Package = package, PackageId = package.Id };
@@ -141,6 +224,20 @@ public class MimGameStateTests
             IsActive = true, SubtitleUrl = "/subtitle.srt", SourceRevision = 1 };
         video.VideoChapters.Add(new VideoChapter { Title = "الفصل", SummaryText = "شرح موثوق", StartTime = 0, EndTime = 60, Order = 1, LessonVideo = video, LessonVideoId = video.Id });
         lesson.Videos.Add(video);
+        if (includePendingVideo)
+        {
+            lesson.Videos.Add(new LessonVideo
+            {
+                Title = "جزء آخر غير محلل",
+                Provider = "youtube",
+                ProviderVideoId = "not-analyzed",
+                Lesson = lesson,
+                LessonId = lesson.Id,
+                IsActive = true,
+                SourceRevision = 1,
+                Order = 2
+            });
+        }
         var game = new LessonMimGame { Lesson = lesson, LessonId = lesson.Id, Status = LessonMimGameStatus.Generating,
             CurrentGenerationRunId = Guid.NewGuid(), GenerationExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) };
         db.AddRange(package, term, section, lesson, video, game);

@@ -68,7 +68,7 @@ public sealed class UpdateAttendanceBreakCommandHandler : IRequestHandler<Update
         var (scheduledStart, scheduledEnd) = ShiftScheduleRules.ScheduledRangeUtc(session.WorkDate, segment, ResolveCairo());
         var breakMinutes = session.Breaks.Where(entry => entry.EndedAt.HasValue).Sum(entry => (int)(entry.EndedAt!.Value - entry.StartedAt).TotalMinutes);
         var calculation = AttendanceCalculator.Calculate(new(session.ClockedInAt, session.ClockedOutAt.Value, scheduledStart, scheduledEnd,
-            breakMinutes, template.GraceMinutes, template.OvertimeAfterMinutes));
+            breakMinutes, template.OvertimeAfterMinutes));
         session.WorkedMinutes = calculation.WorkedMinutes;
         session.LateMinutes = calculation.LateMinutes;
         session.EarlyLeaveMinutes = calculation.EarlyLeaveMinutes;

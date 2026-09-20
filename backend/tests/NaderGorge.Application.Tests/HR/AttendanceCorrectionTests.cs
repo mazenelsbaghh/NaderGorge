@@ -9,12 +9,12 @@ namespace NaderGorge.Application.Tests.HR;
 public sealed class AttendanceCorrectionTests
 {
     [Fact]
-    public void Calculator_AppliesGraceBreakEarlyLeaveAndOvertime()
+    public void Calculator_RecordsFullLatenessBreakEarlyLeaveAndOvertime()
     {
         var result = AttendanceCalculator.Calculate(new AttendanceCalculationInput(
             new DateTime(2026, 7, 20, 9, 20, 0, DateTimeKind.Utc), new DateTime(2026, 7, 20, 18, 30, 0, DateTimeKind.Utc),
-            new DateTime(2026, 7, 20, 9, 0, 0, DateTimeKind.Utc), new DateTime(2026, 7, 20, 17, 0, 0, DateTimeKind.Utc), 30, 10, 480));
-        Assert.Equal(10, result.LateMinutes);
+            new DateTime(2026, 7, 20, 9, 0, 0, DateTimeKind.Utc), new DateTime(2026, 7, 20, 17, 0, 0, DateTimeKind.Utc), 30, 480));
+        Assert.Equal(20, result.LateMinutes);
         Assert.Equal(0, result.EarlyLeaveMinutes);
         Assert.Equal(60, result.OvertimeMinutes);
         Assert.Equal(520, result.WorkedMinutes);

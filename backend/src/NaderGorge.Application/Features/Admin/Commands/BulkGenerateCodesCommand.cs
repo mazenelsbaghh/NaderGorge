@@ -363,6 +363,11 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         };
         _db.OutboxEvents.Add(codeGroupExportReadyEvent);
 
+        if (request.AccountingTiming == CodeAccountingTiming.Immediate && request.CodeType != CodeType.Balance)
+        {
+            await RecordImmediateAccountingAsync(group, groupTeacherId, targetPricing, request.Count, ct);
+        }
+
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(

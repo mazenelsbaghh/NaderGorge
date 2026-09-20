@@ -46,9 +46,9 @@ public class AdminController : ControllerBase
 
     [HttpPost("lessons/{lessonId:guid}/mim-game/generate")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> GenerateMimGame(Guid lessonId)
+    public async Task<IActionResult> GenerateMimGame(Guid lessonId, [FromBody] GenerateLessonMimGameRequest request)
     {
-        var result = await _mediator.Send(new GenerateLessonMimGameCommand(lessonId));
+        var result = await _mediator.Send(new GenerateLessonMimGameCommand(lessonId, request.SourceVideoId));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
@@ -1621,6 +1621,7 @@ public record AttachHomeworkRequest(
     DateOnly? HomeworkComingSoonOn = null,
     NaderGorge.Application.Features.Assessments.AssessmentParentNotificationSettings? ParentNotification = null);
 public record LinkLessonExamRequest(Guid? ExamId);
+public record GenerateLessonMimGameRequest(Guid SourceVideoId);
 public record SetContentStatusRequest(bool IsActive);
 public record SetLessonHomeworkComingSoonRequest(DateOnly? ExpectedOn);
 public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);

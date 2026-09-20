@@ -238,7 +238,11 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 ExpiresAt = grant.ExpiresAt,
                 Progress = 0,
                 IsActive = grant.IsActive,
-                PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
+                PurchaseMethod = grant.AccessCodeId.HasValue
+                    ? "Code"
+                    : grant.GiftRecipientId.HasValue
+                        ? "Gift"
+                        : "Balance",
                 Price = price,
                 PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
                 TeacherId = resolvedTeacherId,

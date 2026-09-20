@@ -33,7 +33,7 @@ public sealed class HrShiftsController : ControllerBase
         .OrderBy(item => item.Name).Select(item => new
         {
             item.Id, item.Code, item.Name, mode = item.Mode.ToString(), item.WorkCalendarId,
-            item.GraceMinutes, item.MinimumBreakMinutes, item.OvertimeAfterMinutes, item.Version,
+            item.MinimumBreakMinutes, item.OvertimeAfterMinutes, item.Version,
             segments = item.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
             { segment.Id, segment.Sequence, dayOfWeek = (int?)segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
         }).ToListAsync(ct));
@@ -79,7 +79,7 @@ public sealed class HrShiftsController : ControllerBase
     public async Task<IActionResult> CreateTemplate(CreateShiftTemplateRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateShiftTemplateCommand(request.Code, request.Name, request.Mode,
-            request.WorkCalendarId, request.GraceMinutes, request.MinimumBreakMinutes, request.OvertimeAfterMinutes,
+            request.WorkCalendarId, request.MinimumBreakMinutes, request.OvertimeAfterMinutes,
             request.Segments.Select(item => new ShiftSegmentInput(item.Sequence, item.DayOfWeek, item.StartsAt, item.EndsAt, item.UnpaidBreakMinutes, item.WorkDateRule)).ToList(), User.RequireUserId()), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -174,7 +174,7 @@ public sealed class HrShiftsController : ControllerBase
 public sealed record ShiftSegmentRequest(int Sequence, DayOfWeek? DayOfWeek, TimeSpan StartsAt, TimeSpan EndsAt, int UnpaidBreakMinutes, ShiftWorkDateRule WorkDateRule);
 public sealed record UpdateWorkCalendarRequest(int WorkingDaysMask);
 public sealed record CreateShiftTemplateRequest(string Code, string Name, ShiftTemplateMode Mode, Guid WorkCalendarId,
-    int GraceMinutes, int MinimumBreakMinutes, int OvertimeAfterMinutes, IReadOnlyList<ShiftSegmentRequest> Segments);
+    int MinimumBreakMinutes, int OvertimeAfterMinutes, IReadOnlyList<ShiftSegmentRequest> Segments);
 public sealed record UpdatePublishedShiftAssignmentRequest(DateOnly EffectiveFrom, DateOnly? EffectiveTo, string Reason,
     IReadOnlyList<ShiftSegmentRequest> Segments);
 public sealed record CreateAttendancePolicyRequest(string Code, string Name, AttendancePolicyKind Kind,

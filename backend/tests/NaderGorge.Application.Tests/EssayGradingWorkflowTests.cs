@@ -15,7 +15,7 @@ namespace NaderGorge.Application.Tests;
 public class EssayGradingWorkflowTests
 {
     [Fact]
-    public async Task Missing_teacher_answer_key_routes_essay_to_teacher_without_queueing_ai()
+    public async Task Missing_teacher_answer_key_still_queues_text_essay_for_ai()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var essay = new EssaySubmission
@@ -29,9 +29,10 @@ public class EssayGradingWorkflowTests
 
         EssayEvaluationQueue.Enqueue(db, essay, "Question text", null);
 
-        Assert.Equal(EssaySubmissionStatus.WaitTeacher, essay.Status);
-        Assert.Null(essay.AiNextRetryAt);
-        Assert.Empty(db.OutboxEvents.Local);
+        Assert.Equal(EssaySubmissionStatus.WaitAI, essay.Status);
+        Assert.NotNull(essay.AiNextRetryAt);
+        var queued = Assert.Single(db.OutboxEvents.Local);
+        Assert.Equal("EssayEvaluationQueued", queued.Type);
     }
 
     [Theory]

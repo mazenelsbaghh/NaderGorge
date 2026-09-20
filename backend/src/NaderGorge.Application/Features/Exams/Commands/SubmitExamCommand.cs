@@ -20,9 +20,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     private readonly IPublisher _publisher;
     private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
     private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
+    private readonly WhatsAppExamNotificationService? _whatsAppExamNotificationService;
 
     public SubmitExamCommandHandler(IAppDbContext db, IPublisher publisher, NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
-        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader())
+        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader(), null)
     {
     }
 
@@ -30,12 +31,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IAppDbContext db,
         IPublisher publisher,
         NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
-        ICachedPlatformSettingsReader cachedPlatformSettingsReader)
+        ICachedPlatformSettingsReader cachedPlatformSettingsReader,
+        WhatsAppExamNotificationService? whatsAppExamNotificationService = null)
     {
         _db = db;
         _publisher = publisher;
         _jobEnqueuer = jobEnqueuer;
         _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
+        _whatsAppExamNotificationService = whatsAppExamNotificationService;
     }
 
     public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
@@ -305,6 +308,11 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
             await _db.SaveChangesAsync(ct);
 
+            if (!hasEssayQuestions)
+            {
+                await TrySendWhatsAppExamResultAsync(attempt.Id, ct);
+            }
+
             // Enqueue notification payload for parent push notifications
             await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
             {
@@ -389,6 +397,27 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             resultState: DetermineResultState(_db.EssaySubmissions.Local.Where(e => e.StudentExamAttemptId == attempt.Id)));
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
+    }
+
+    private async Task TrySendWhatsAppExamResultAsync(Guid attemptId, CancellationToken ct)
+    {
+        if (_whatsAppExamNotificationService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _whatsAppExamNotificationService.SendExamResultAsync(attemptId, null, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // WhatsApp is a side-effect. Exam submission must remain successful if delivery fails.
+        }
     }
 
     private void HandleEssaySubmission(

@@ -28,14 +28,19 @@ public sealed class MimGamePostgresConcurrencyTests
         var connection = Connection();
         await ResetAsync(connection);
         Guid lessonId;
-        await using (var seed = Open(connection)) lessonId = (await SeedAsync(seed)).LessonId;
+        Guid sourceVideoId;
+        await using (var seed = Open(connection))
+        {
+            lessonId = (await SeedAsync(seed)).LessonId;
+            sourceVideoId = await seed.LessonVideos.Select(video => video.Id).SingleAsync();
+        }
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var first = Open(connection);
         await using var second = Open(connection);
         var firstHandler = new GenerateLessonMimGameCommandHandler(first, new NoOpJobs());
         var secondHandler = new GenerateLessonMimGameCommandHandler(second, new NoOpJobs());
         async Task<NaderGorge.Application.Common.ApiResponse<Guid>> Claim(GenerateLessonMimGameCommandHandler handler)
-        { await gate.Task; return await handler.Handle(new(lessonId), default); }
+        { await gate.Task; return await handler.Handle(new(lessonId, sourceVideoId), default); }
         var claims = new[] { Claim(firstHandler), Claim(secondHandler) };
         gate.SetResult();
         var results = await Task.WhenAll(claims);

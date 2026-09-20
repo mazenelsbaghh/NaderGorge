@@ -18,7 +18,8 @@ public sealed record MimGameMissionDto(string Title, string Instruction, string 
 public sealed record MimGameContentDto(int SchemaVersion, string Title, string Intro, string SourceLabel,
     IReadOnlyList<MimGameMissionDto> Missions);
 public sealed record LessonMimGameStateDto(Guid Id, string Status, bool IsEnabled, string? DraftContentJson,
-    string? DraftFingerprint, string? PublishedFingerprint, string? LastError, DateTime? GeneratedAtUtc, DateTime? PublishedAtUtc);
+    string? DraftFingerprint, string? PublishedFingerprint, Guid? GenerationSourceVideoId, Guid? DraftSourceVideoId,
+    Guid? PublishedSourceVideoId, string? LastError, DateTime? GeneratedAtUtc, DateTime? PublishedAtUtc);
 public sealed record StudentMimGameDto(string ContentJson, string Fingerprint, int SchemaVersion = 1);
 
 public static class MimGameContract
@@ -76,7 +77,14 @@ public sealed record MimSourceResult(bool Success, string? Error, string? Finger
 
 public static class MimGameSource
 {
-    public static async Task<MimSourceResult> BuildAsync(IAppDbContext db, Guid lessonId, CancellationToken ct)
+    public static Task<MimSourceResult> BuildAsync(IAppDbContext db, Guid lessonId, CancellationToken ct) =>
+        BuildAsync(db, lessonId, null, ct);
+
+    public static async Task<MimSourceResult> BuildAsync(
+        IAppDbContext db,
+        Guid lessonId,
+        Guid? sourceVideoId,
+        CancellationToken ct)
     {
         var lesson = await db.Lessons.AsNoTracking().Where(x => x.Id == lessonId).Select(x => new
         {
@@ -88,11 +96,16 @@ public static class MimGameSource
             }).ToList()
         }).SingleOrDefaultAsync(ct);
         if (lesson is null) return new(false, "MIM_LESSON_NOT_FOUND", null, null, []);
-        var missing = lesson.Videos.Where(v => string.IsNullOrWhiteSpace(v.SubtitleUrl) || v.Chapters.Count == 0 || v.Chapters.Any(c => string.IsNullOrWhiteSpace(c.Summary)))
+        var selectedVideos = sourceVideoId.HasValue
+            ? lesson.Videos.Where(video => video.Id == sourceVideoId.Value).ToList()
+            : lesson.Videos;
+        if (sourceVideoId.HasValue && selectedVideos.Count == 0)
+            return new(false, "MIM_SOURCE_VIDEO_NOT_FOUND", null, null, []);
+        var missing = selectedVideos.Where(v => string.IsNullOrWhiteSpace(v.SubtitleUrl) || v.Chapters.Count == 0 || v.Chapters.Any(c => string.IsNullOrWhiteSpace(c.Summary)))
             .Select(v => v.Title).ToArray();
-        if (lesson.Videos.Count == 0 || missing.Length > 0) return new(false, "MIM_ANALYSIS_REQUIRED", null, null, missing);
+        if (selectedVideos.Count == 0 || missing.Length > 0) return new(false, "MIM_ANALYSIS_REQUIRED", null, null, missing);
         var pack = new MimSourcePack(lesson.Id, lesson.Title, AiOutputLanguageContract.ToWorkerCode(lesson.Language),
-            lesson.Videos.Select(v => new MimSourceVideo(v.Id, v.SourceRevision, v.Title, v.Chapters)).ToArray());
+            selectedVideos.Select(v => new MimSourceVideo(v.Id, v.SourceRevision, v.Title, v.Chapters)).ToArray());
         var canonical = JsonSerializer.Serialize(pack, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         return new(true, null, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant(), pack, []);
     }
@@ -105,18 +118,23 @@ public sealed class GetLessonMimGameQueryHandler(IAppDbContext db) : IRequestHan
     {
         var game = await db.LessonMimGames.AsNoTracking().SingleOrDefaultAsync(x => x.LessonId == request.LessonId, ct);
         return ApiResponse<LessonMimGameStateDto?>.Ok(game is null ? null : new(game.Id, game.Status.ToString(), game.IsEnabled,
-            game.DraftContentJson, game.DraftFingerprint, game.PublishedFingerprint, game.LastError, game.GeneratedAtUtc, game.PublishedAtUtc));
+            game.DraftContentJson, game.DraftFingerprint, game.PublishedFingerprint, game.GenerationSourceVideoId,
+            game.DraftSourceVideoId, game.PublishedSourceVideoId, game.LastError, game.GeneratedAtUtc, game.PublishedAtUtc));
     }
 }
 
-public record GenerateLessonMimGameCommand(Guid LessonId) : IRequest<ApiResponse<Guid>>;
+public record GenerateLessonMimGameCommand(Guid LessonId, Guid SourceVideoId) : IRequest<ApiResponse<Guid>>;
 public sealed class GenerateLessonMimGameCommandHandler(IAppDbContext db, IJobEnqueuer jobs) : IRequestHandler<GenerateLessonMimGameCommand, ApiResponse<Guid>>
 {
     public async Task<ApiResponse<Guid>> Handle(GenerateLessonMimGameCommand request, CancellationToken ct)
     {
-        var source = await MimGameSource.BuildAsync(db, request.LessonId, ct);
-        if (!source.Success) return ApiResponse<Guid>.Fail(source.Error == "MIM_ANALYSIS_REQUIRED"
-            ? $"حلّل الفيديوهات أولاً: {string.Join("، ", source.MissingVideos)}" : "الحصة غير موجودة", [source.Error!]);
+        var source = await MimGameSource.BuildAsync(db, request.LessonId, request.SourceVideoId, ct);
+        if (!source.Success) return ApiResponse<Guid>.Fail(source.Error switch
+        {
+            "MIM_ANALYSIS_REQUIRED" => $"حلّل الجزء المختار أولاً: {string.Join("، ", source.MissingVideos)}",
+            "MIM_SOURCE_VIDEO_NOT_FOUND" => "الجزء المختار غير موجود أو غير مفعّل.",
+            _ => "الحصة غير موجودة"
+        }, [source.Error!]);
         var now = DateTime.UtcNow;
         var game = await db.LessonMimGames.AsNoTracking().SingleOrDefaultAsync(x => x.LessonId == request.LessonId, ct);
         var runId = Guid.NewGuid();
@@ -126,6 +144,7 @@ public sealed class GenerateLessonMimGameCommandHandler(IAppDbContext db, IJobEn
             {
                 Id = Guid.NewGuid(), LessonId = request.LessonId, CreatedAt = now, UpdatedAt = now,
                 Status = LessonMimGameStatus.Generating, CurrentGenerationRunId = runId,
+                GenerationSourceVideoId = request.SourceVideoId,
                 GenerationStartedAtUtc = now, GenerationExpiresAtUtc = now.AddMinutes(20)
             };
             db.LessonMimGames.Add(game);
@@ -139,6 +158,7 @@ public sealed class GenerateLessonMimGameCommandHandler(IAppDbContext db, IJobEn
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Status, LessonMimGameStatus.Generating)
                     .SetProperty(x => x.CurrentGenerationRunId, runId)
+                    .SetProperty(x => x.GenerationSourceVideoId, request.SourceVideoId)
                     .SetProperty(x => x.GenerationStartedAtUtc, now)
                     .SetProperty(x => x.GenerationExpiresAtUtc, now.AddMinutes(20))
                     .SetProperty(x => x.LastError, (string?)null)
@@ -158,7 +178,9 @@ public sealed class GenerateLessonMimGameCommandHandler(IAppDbContext db, IJobEn
         {
             await db.LessonMimGames.Where(x => x.Id == game.Id && x.CurrentGenerationRunId == runId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, LessonMimGameStatus.Failed)
-                    .SetProperty(x => x.CurrentGenerationRunId, (Guid?)null).SetProperty(x => x.LastError, "MIM_QUEUE_FAILED")
+                    .SetProperty(x => x.CurrentGenerationRunId, (Guid?)null)
+                    .SetProperty(x => x.GenerationSourceVideoId, (Guid?)null)
+                    .SetProperty(x => x.LastError, "MIM_QUEUE_FAILED")
                     .SetProperty(x => x.Version, x => x.Version + 1), CancellationToken.None);
             throw;
         }
@@ -171,13 +193,16 @@ public sealed class PublishLessonMimGameCommandHandler(IAppDbContext db) : IRequ
 {
     public async Task<ApiResponse> Handle(PublishLessonMimGameCommand request, CancellationToken ct)
     {
-        var source = await MimGameSource.BuildAsync(db, request.LessonId, ct);
         var game = await db.LessonMimGames.SingleOrDefaultAsync(x => x.LessonId == request.LessonId, ct);
-        if (!source.Success || game is null || game.Status != LessonMimGameStatus.Ready || game.DraftFingerprint != source.Fingerprint ||
+        if (game is null)
+            return ApiResponse.Fail("المسودة غير جاهزة أو لم تعد مطابقة لمحتوى الحصة.", ["MIM_DRAFT_NOT_CURRENT"]);
+        var source = await MimGameSource.BuildAsync(db, request.LessonId, game.DraftSourceVideoId, ct);
+        if (!source.Success || game.Status != LessonMimGameStatus.Ready || game.DraftFingerprint != source.Fingerprint ||
             game.DraftContentJson is null || !MimGameContract.TryValidate(game.DraftContentJson, out var normalized, out _))
             return ApiResponse.Fail("المسودة غير جاهزة أو لم تعد مطابقة لمحتوى الحصة.", ["MIM_DRAFT_NOT_CURRENT"]);
         game.PublishedContentJson = normalized;
         game.PublishedFingerprint = source.Fingerprint;
+        game.PublishedSourceVideoId = game.DraftSourceVideoId;
         game.PublishedAtUtc = game.UpdatedAt = DateTime.UtcNow;
         game.IsEnabled = true;
         game.Version++;
@@ -211,10 +236,11 @@ public sealed class CompleteLessonMimGameCommandHandler(IAppDbContext db) : IReq
         if (game is null) return ApiResponse.Fail("MIM game not found");
         if (game.CurrentGenerationRunId != request.RunId || game.Status != LessonMimGameStatus.Generating)
             return ApiResponse.Ok("تم تجاهل نتيجة قديمة.");
-        var source = await MimGameSource.BuildAsync(db, game.LessonId, ct);
+        var source = await MimGameSource.BuildAsync(db, game.LessonId, game.GenerationSourceVideoId, ct);
         if (!source.Success || source.Fingerprint != request.SourceFingerprint)
         {
-            game.Status = LessonMimGameStatus.Stale; game.CurrentGenerationRunId = null; game.LastError = "MIM_SOURCE_CHANGED"; game.Version++;
+            game.Status = LessonMimGameStatus.Stale; game.CurrentGenerationRunId = null; game.GenerationSourceVideoId = null;
+            game.LastError = "MIM_SOURCE_CHANGED"; game.Version++;
             try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
             return ApiResponse.Ok("تم تجاهل نتيجة لمصدر قديم.");
         }
@@ -222,12 +248,15 @@ public sealed class CompleteLessonMimGameCommandHandler(IAppDbContext db) : IReq
             !MimGameContract.HasGroundedSourceRefs(normalized, source.Pack!))
         {
             error = string.IsNullOrEmpty(error) ? "MIM_UNGROUNDED_SOURCE_REF" : error;
-            game.Status = LessonMimGameStatus.Failed; game.CurrentGenerationRunId = null; game.LastError = error; game.Version++;
+            game.Status = LessonMimGameStatus.Failed; game.CurrentGenerationRunId = null; game.GenerationSourceVideoId = null;
+            game.LastError = error; game.Version++;
             try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
             return ApiResponse.Fail("محتوى اللعبة غير صالح.", [error]);
         }
-        game.DraftContentJson = normalized; game.DraftFingerprint = request.SourceFingerprint; game.Status = LessonMimGameStatus.Ready;
-        game.CurrentGenerationRunId = null; game.GenerationExpiresAtUtc = null; game.LastError = null; game.GeneratedAtUtc = game.UpdatedAt = DateTime.UtcNow;
+        game.DraftContentJson = normalized; game.DraftFingerprint = request.SourceFingerprint;
+        game.DraftSourceVideoId = game.GenerationSourceVideoId; game.Status = LessonMimGameStatus.Ready;
+        game.CurrentGenerationRunId = null; game.GenerationSourceVideoId = null; game.GenerationExpiresAtUtc = null;
+        game.LastError = null; game.GeneratedAtUtc = game.UpdatedAt = DateTime.UtcNow;
         game.Version++;
         try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { return ApiResponse.Ok("تم تجاهل نتيجة قديمة."); }
         return ApiResponse.Ok("تم حفظ مسودة اللعبة.");
@@ -242,6 +271,7 @@ public sealed class FailLessonMimGameCommandHandler(IAppDbContext db) : IRequest
         await db.LessonMimGames.Where(x => x.Id == request.GameId && x.CurrentGenerationRunId == request.RunId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, LessonMimGameStatus.Failed)
                 .SetProperty(x => x.CurrentGenerationRunId, (Guid?)null)
+                .SetProperty(x => x.GenerationSourceVideoId, (Guid?)null)
                 .SetProperty(x => x.GenerationExpiresAtUtc, (DateTime?)null)
                 .SetProperty(x => x.Version, x => x.Version + 1)
                 .SetProperty(x => x.LastError, SafeError(request.ErrorCode)).SetProperty(x => x.UpdatedAt, DateTime.UtcNow), ct);

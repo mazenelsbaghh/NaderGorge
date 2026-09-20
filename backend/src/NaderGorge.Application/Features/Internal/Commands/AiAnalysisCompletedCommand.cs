@@ -188,7 +188,7 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             _db.OutboxEvents.Add(teacherCompletedEvent);
         }
 
-        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, ct);
+        await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
 
         // The run-id concurrency token rolls every chapter change back if a newer run starts before this save.
         await _db.SaveChangesAsync(ct);

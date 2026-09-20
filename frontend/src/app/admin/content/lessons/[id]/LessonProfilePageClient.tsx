@@ -228,7 +228,9 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
         <LessonAIAnalysisTab lessonId={lesson.lessonId} videos={lesson.videos || []} onRefresh={loadData} />
       )}
 
-      {activeTab === 'mim-game' && <LessonMimGameTab lessonId={lesson.lessonId} />}
+      {activeTab === 'mim-game' && (
+        <LessonMimGameTab lessonId={lesson.lessonId} videos={lesson.videos || []} />
+      )}
 
       {activeTab === 'comments' && (
         <LessonCommentsModerationTab

@@ -6934,7 +6934,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("CurrentGenerationRunId")
-                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<string>("DraftContentJson")
@@ -6944,11 +6943,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid?>("DraftSourceVideoId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("GeneratedAtUtc")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("GenerationExpiresAtUtc")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("GenerationSourceVideoId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("GenerationStartedAtUtc")
                         .HasColumnType("timestamp without time zone");
@@ -6975,19 +6980,22 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid?>("PublishedSourceVideoId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L);
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 

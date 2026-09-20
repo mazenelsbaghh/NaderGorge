@@ -115,6 +115,52 @@ public sealed class EssayGradingRecoveryPostgresTests
         Assert.Empty(await fixture.Db.OutboxEvents.Where(e => e.Type == "EssayEvaluationQueued").ToListAsync());
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task LegacyKeylessTextAnswerWaitingForTeacherIsReturnedToAiQueue(string? writtenCorrection)
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var essay = await Seed(fixture.Db);
+        essay.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        essay.Status = EssaySubmissionStatus.WaitTeacher;
+        essay.Question.WrittenCorrection = writtenCorrection;
+        essay.Attempt.DefinitionSnapshotJson = AssessmentDefinitionSnapshot.FromExam(essay.Attempt.Exam).ToJson();
+        await fixture.Db.SaveChangesAsync();
+
+        var recovery = new EssayGradingRecoveryService(fixture.Db);
+        Assert.Contains(essay.Id, await recovery.FindDueAsync(default));
+        Assert.True(await recovery.RecoverAsync(essay.Id, default));
+
+        fixture.Db.ChangeTracker.Clear();
+        var saved = await fixture.Db.EssaySubmissions.FindAsync(essay.Id);
+        Assert.Equal(EssaySubmissionStatus.WaitAI, saved!.Status);
+        Assert.NotNull(saved.AiNextRetryAt);
+        var queued = Assert.Single(await fixture.Db.OutboxEvents
+            .Where(e => e.Type == "EssayEvaluationQueued" && e.ProcessedAt == null)
+            .ToListAsync());
+        using var payload = JsonDocument.Parse(queued.PayloadJson);
+        Assert.Equal(string.Empty, payload.RootElement.GetProperty("expectedAnswer").GetString());
+        Assert.Equal("Original question", payload.RootElement.GetProperty("questionText").GetString());
+    }
+
+    [Fact]
+    public async Task AuthoredKeyWaitingForTeacherIsNotReclassifiedAsLegacyKeylessAnswer()
+    {
+        await using var fixture = new PostgresLiveSupportFixture();
+        await fixture.ResetAsync();
+        var essay = await Seed(fixture.Db);
+        essay.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        essay.Status = EssaySubmissionStatus.WaitTeacher;
+        await fixture.Db.SaveChangesAsync();
+
+        var recovery = new EssayGradingRecoveryService(fixture.Db);
+        Assert.DoesNotContain(essay.Id, await recovery.FindDueAsync(default));
+        Assert.False(await recovery.RecoverAsync(essay.Id, default));
+        Assert.Empty(await fixture.Db.OutboxEvents.Where(e => e.Type == "EssayEvaluationQueued").ToListAsync());
+    }
+
     [Fact]
     public async Task ConcurrentCallbacksFinalizeAllEssaysOnceAndPreserveTheCombinedScore()
     {

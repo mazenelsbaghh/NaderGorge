@@ -189,10 +189,21 @@ test('essay request uses the configured text model with the exact grading inputs
   assert.deepEqual(sent.config.responseSchema.required, ['isCorrect', 'feedback']);
 });
 
-test('missing teacher key or question cannot be graded using guessed context', async () => {
+test('missing teacher key uses conservative question-only grading', async () => {
+  let sent: any;
+  const client = { models: { generateContent: async (request: any) => {
+    sent = request;
+    return { text: '{"isCorrect":false,"feedback":"الإجابة محتاجة توضيح أكتر."}' };
+  } } };
+  setAIServiceRuntimeFactoryForTests(() => runtime(client));
+  assert.deepEqual(await evaluateEssayWithAI('إجابة الطالب', undefined, 'نص السؤال'),
+    { isCorrect: false, feedback: 'الإجابة محتاجة توضيح أكتر.' });
+  assert.deepEqual(JSON.parse(sent.contents), { questionText: 'نص السؤال', expectedAnswer: '', studentAnswer: 'إجابة الطالب' });
+});
+
+test('missing question text cannot be graded', async () => {
   setAIServiceRuntimeFactoryForTests(() => { throw new Error('Provider must not be used'); });
-  for (const [key, question] of [['', 'سؤال'], ['نموذج', ' '], [undefined, 'سؤال']])
-    await assert.rejects(evaluateEssayWithAI('إجابة', key, question), /requires the question and the teacher answer key/);
+  await assert.rejects(evaluateEssayWithAI('إجابة', 'نموذج', ' '), /requires the question text/);
 });
 
 test('live support returns a valid Developer API decision', async () => {

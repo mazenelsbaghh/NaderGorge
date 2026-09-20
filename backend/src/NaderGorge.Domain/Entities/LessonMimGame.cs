@@ -13,12 +13,15 @@ public class LessonMimGame : BaseEntity
 
     public string? DraftContentJson { get; set; }
     public string? DraftFingerprint { get; set; }
+    public Guid? DraftSourceVideoId { get; set; }
     public string? PublishedContentJson { get; set; }
     public string? PublishedFingerprint { get; set; }
+    public Guid? PublishedSourceVideoId { get; set; }
 
     public LessonMimGameStatus Status { get; set; } = LessonMimGameStatus.Draft;
     public bool IsEnabled { get; set; }
     public Guid? CurrentGenerationRunId { get; set; }
+    public Guid? GenerationSourceVideoId { get; set; }
     public string? LastError { get; set; }
     public DateTime? GenerationStartedAtUtc { get; set; }
     public DateTime? GenerationExpiresAtUtc { get; set; }
