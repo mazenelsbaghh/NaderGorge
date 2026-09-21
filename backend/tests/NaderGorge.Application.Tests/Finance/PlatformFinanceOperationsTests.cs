@@ -136,4 +136,55 @@ public sealed class PlatformFinanceOperationsTests
             new CreatePlatformRefundRequest(purchaseId, "PurchaseOperation", studentId, null, 11m, 0m, 1, null,
                 "Exceeds original gross amount", null, Guid.NewGuid()), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Zero_value_purchase_refund_cannot_exceed_nearest_positive_parent_price()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var operations = new PlatformFinanceOperationsService(
+            db,
+            new FinancialPostingService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var purchaseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        var section = new ContentSection
+        {
+            Title = "Paid month",
+            Price = 220m,
+            TermId = Guid.NewGuid()
+        };
+        var lesson = new Lesson
+        {
+            Title = "Free lesson",
+            Price = 0m,
+            ContentSectionId = section.Id
+        };
+        var grant = new StudentAccessGrant
+        {
+            UserId = studentId,
+            GrantType = CodeType.Lesson,
+            ContentSectionId = section.Id,
+            LessonId = lesson.Id,
+            IsActive = true
+        };
+        db.AddRange(section, lesson, grant, new SalesFinancialEffect
+        {
+            PurchaseOperationId = purchaseId,
+            StudentId = studentId,
+            TargetType = SalesTargetType.Lesson,
+            TargetId = lesson.Id,
+            GrossAmount = 0m,
+            PaidAmount = 0m
+        });
+        await db.SaveChangesAsync();
+
+        var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(
+            purchaseId, "PurchaseOperation", studentId, null, 200m, 0m, 1, null,
+            "Zero value purchase regression", null, Guid.NewGuid(), grant.Id), CancellationToken.None);
+
+        Assert.Equal(200m, refund.TotalAmount);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => operations.CreateRefundAsync(
+            new CreatePlatformRefundRequest(purchaseId, "PurchaseOperation", studentId, null, 21m, 0m, 1, null,
+                "Exceeds parent price", null, Guid.NewGuid(), grant.Id), CancellationToken.None));
+    }
 }

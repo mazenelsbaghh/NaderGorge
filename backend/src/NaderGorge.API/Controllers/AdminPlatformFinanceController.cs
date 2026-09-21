@@ -257,7 +257,7 @@ public sealed class AdminPlatformFinanceController(
                 body.Reason,
                 body.PaymentReference,
                 CurrentUserId(),
-                source is null ? grant.Id : null), ct);
+                grant.Id), ct);
             refund = await operations.PostRefundAsync(
                 refund.Id,
                 $"external-refund-{body.AccessGrantId}",

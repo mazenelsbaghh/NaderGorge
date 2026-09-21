@@ -109,6 +109,45 @@ public sealed class RefundUsagePreviewQueryTests
     }
 
     [Fact]
+    public async Task Zero_value_balance_purchase_uses_nearest_positive_parent_price_as_manual_refund_ceiling()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var studentId = Guid.NewGuid();
+        var purchaseId = Guid.NewGuid();
+        var section = new ContentSection
+        {
+            Title = "Paid month",
+            Price = 220m,
+            TermId = Guid.NewGuid()
+        };
+        var lesson = new Lesson
+        {
+            Title = "Free lesson",
+            Price = 0m,
+            ContentSectionId = section.Id
+        };
+        var grant = new StudentAccessGrant
+        {
+            UserId = studentId,
+            GrantType = CodeType.Lesson,
+            ContentSectionId = section.Id,
+            LessonId = lesson.Id,
+            IsActive = true
+        };
+        var sale = Sale(purchaseId, studentId, SalesTargetType.Lesson, lesson.Id, 0m);
+        db.AddRange(section, lesson, grant, sale);
+        await db.SaveChangesAsync();
+
+        var result = await new GetRefundUsagePreviewQueryHandler(db).Handle(
+            new(studentId, grant.Id, purchaseId), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.False(result.IsHistoricalSource);
+        Assert.Equal(220m, result.PaidAmount);
+        Assert.Equal(220m, result.RemainingRefundableAmount);
+    }
+
+    [Fact]
     public async Task Rejects_sale_target_type_mismatch_even_when_target_id_matches()
     {
         await using var db = TestAppDbContextFactory.Create();

@@ -48,8 +48,10 @@ public sealed class GetRefundUsagePreviewQueryHandler(IAppDbContext db)
         if (source is null && !isHistoricalSource) return null;
 
         var sourceAmount = source is null
-            ? await ResolveHistoricalSourceAmount(grant, ct)
+            ? await RefundGrantPriceResolver.ResolveManualCeilingAsync(db, grant, ct)
             : source.PaidAmount > 0m ? source.PaidAmount : source.GrossAmount;
+        if (sourceAmount <= 0m)
+            sourceAmount = await RefundGrantPriceResolver.ResolveManualCeilingAsync(db, grant, ct);
         if (sourceAmount is null || sourceAmount <= 0m) return null;
         var sourceId = source?.PurchaseOperationId ?? grant.Id;
 
@@ -100,23 +102,6 @@ public sealed class GetRefundUsagePreviewQueryHandler(IAppDbContext db)
                 : "قد تشمل الأرقام استخدامًا سابقًا لنفس المحتوى؛ سجلات المشاهدة والمحاولات غير مرتبطة بعملية الشراء نفسها.",
             isHistoricalSource);
     }
-
-    private async Task<decimal?> ResolveHistoricalSourceAmount(StudentAccessGrant grant, CancellationToken ct) => grant.GrantType switch
-    {
-        CodeType.Package when grant.PackageId.HasValue => await db.Packages.AsNoTracking()
-            .Where(x => x.Id == grant.PackageId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        CodeType.Term when grant.TermId.HasValue => await db.Terms.AsNoTracking()
-            .Where(x => x.Id == grant.TermId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        CodeType.Month when grant.ContentSectionId.HasValue => await db.ContentSections.AsNoTracking()
-            .Where(x => x.Id == grant.ContentSectionId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        CodeType.Lesson when grant.LessonId.HasValue => await db.Lessons.AsNoTracking()
-            .Where(x => x.Id == grant.LessonId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        CodeType.Exam when grant.PublicExamProductId.HasValue => await db.PublicExamProducts.AsNoTracking()
-            .Where(x => x.Id == grant.PublicExamProductId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        CodeType.Exam when grant.ExamId.HasValue => await db.PublicExamProducts.AsNoTracking()
-            .Where(x => x.ExamId == grant.ExamId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-        _ => null
-    };
 
     private async Task<List<Guid>?> ResolveLessonIds(StudentAccessGrant grant, CancellationToken ct)
     {

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.Admin.PlatformFinance.Refunds;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
@@ -213,23 +214,13 @@ public sealed class PlatformFinanceOperationsService(
             .Where(x => x.PurchaseOperationId == request.OriginalSourceId)
             .Select(x => (decimal?)(x.PaidAmount > 0m ? x.PaidAmount : x.GrossAmount))
             .SingleOrDefaultAsync(ct);
-        if (sourceAmount.HasValue || request.OriginalSourceType != "HistoricalAccessGrant" ||
-            request.HistoricalAccessGrantId != request.OriginalSourceId) return sourceAmount;
+        if (sourceAmount > 0m || !request.AccessGrantId.HasValue) return sourceAmount;
+        if (request.OriginalSourceType == "HistoricalAccessGrant" && request.AccessGrantId != request.OriginalSourceId)
+            return sourceAmount;
 
         var grant = await _db.StudentAccessGrants.AsNoTracking()
-            .SingleOrDefaultAsync(x => x.Id == request.OriginalSourceId && x.UserId == request.StudentId, ct);
+            .SingleOrDefaultAsync(x => x.Id == request.AccessGrantId.Value && x.UserId == request.StudentId, ct);
         if (grant is null) return null;
-        return grant.GrantType switch
-        {
-            CodeType.Package when grant.PackageId.HasValue => await _db.Packages.AsNoTracking()
-                .Where(x => x.Id == grant.PackageId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-            CodeType.Term when grant.TermId.HasValue => await _db.Terms.AsNoTracking()
-                .Where(x => x.Id == grant.TermId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-            CodeType.Month when grant.ContentSectionId.HasValue => await _db.ContentSections.AsNoTracking()
-                .Where(x => x.Id == grant.ContentSectionId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-            CodeType.Lesson when grant.LessonId.HasValue => await _db.Lessons.AsNoTracking()
-                .Where(x => x.Id == grant.LessonId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
-            _ => null
-        };
+        return await RefundGrantPriceResolver.ResolveManualCeilingAsync(_db, grant, ct);
     }
 }
