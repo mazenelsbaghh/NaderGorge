@@ -175,4 +175,12 @@ def test_release_tool_sync_dry_run_is_read_only_and_reports_all_nodes(
     assert evidence["status"] == "dry-run"
     assert set(evidence["nodes"]) == {"node-1", "node-2", "node-3"}
     assert all(node["action"] == "update" for node in evidence["nodes"].values())
+    assert evidence["tools"] == [
+        "/usr/local/sbin/massar-install-immutable-release",
+        "/usr/local/sbin/massar-produce-release-migration-gate",
+    ]
+    assert all(
+        set(node["tools"]) == set(evidence["tools"])
+        for node in evidence["nodes"].values()
+    )
     assert transport.copies == []

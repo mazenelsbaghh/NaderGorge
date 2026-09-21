@@ -206,6 +206,11 @@ def test_runner_uses_real_primary_operation_and_emits_consumer_valid_gate(
     assert "host.docker.internal" not in remote_script
     assert "pre_target_migration_count" not in remote_script
     assert "post_migration_count - pre_migration_count" in remote_script
+    assert "massar_gate_refund_roles.roles" in remote_script
+    assert "Refund role gate: unexpected assistant role change" in remote_script
+    assert "20260921180957_BackfillAssistantRefundRolePermissions" in remote_script
+    assert "finance.refunds.view" in remote_script
+    assert "finance.refunds.create" in remote_script
     assert "pre_cluster_leases_count" in remote_script
     assert (
         'test "$post_cluster_leases_count" = "$pre_cluster_leases_count"'

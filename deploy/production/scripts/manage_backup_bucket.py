@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import NamedTuple
 
 from clusterctl import Inventory, Node, load_inventory
 from ssh_transport import SshTarget, SshTransportError, StrictSshTransport
@@ -106,6 +107,16 @@ KEY_SECRET_RE = re.compile(r"^Secret key:\s*(\S+)\s*$", re.MULTILINE)
 
 class BackupBucketError(RuntimeError):
     pass
+
+
+class ReleaseToolSpec(NamedTuple):
+    source: Path
+    destination: str
+    staging: str
+
+    @property
+    def expected_sha256(self) -> str:
+        return hashlib.sha256(self.source.read_bytes()).hexdigest()
 
 
 def parse_args() -> argparse.Namespace:
@@ -594,6 +605,72 @@ sudo /usr/bin/systemctl daemon-reload
         transport.run(remote, ("bash", "-lc", script), timeout_seconds=120)
 
 
+def release_tool_specs() -> tuple[ReleaseToolSpec, ...]:
+    return (
+        ReleaseToolSpec(
+            ROOT / "deploy/production/scripts/install_immutable_release.py",
+            "/usr/local/sbin/massar-install-immutable-release",
+            "/tmp/massar-install-immutable-release.next",
+        ),
+        ReleaseToolSpec(
+            ROOT / "deploy/production/scripts/prepare_release_migration_gate.py",
+            "/usr/local/sbin/massar-produce-release-migration-gate",
+            "/tmp/massar-produce-release-migration-gate.next",
+        ),
+    )
+
+
+def release_tool_evidence(
+    transport: StrictSshTransport,
+    remote: SshTarget,
+    tool: ReleaseToolSpec,
+) -> dict[str, str]:
+    current = transport.run(
+        remote,
+        ("sha256sum", tool.destination),
+        timeout_seconds=30,
+        check=False,
+    )
+    current_sha256 = (
+        current.stdout.split()[0]
+        if current.returncode == 0 and current.stdout.split()
+        else "missing"
+    )
+    return {
+        "currentSha256": current_sha256,
+        "expectedSha256": tool.expected_sha256,
+        "action": "unchanged" if current_sha256 == tool.expected_sha256 else "update",
+    }
+
+
+def install_release_tool(
+    transport: StrictSshTransport,
+    remote: SshTarget,
+    tool: ReleaseToolSpec,
+) -> None:
+    transport.copy(remote, tool.source, tool.staging, timeout_seconds=120)
+    try:
+        transport.run(
+            remote,
+            (
+                "bash",
+                "-lc",
+                "set -euo pipefail; "
+                f"printf '%s  %s\\n' '{tool.expected_sha256}' '{tool.staging}' | sha256sum -c -; "
+                f"sudo /usr/bin/install -m 0755 -o root -g root {tool.staging} {tool.destination}; "
+                f"test \"$(sha256sum {tool.destination} | awk '{{print $1}}')\" = '{tool.expected_sha256}'",
+            ),
+            timeout_seconds=120,
+        )
+    finally:
+        transport.run(
+            remote,
+            ("rm", "-f", tool.staging),
+            timeout_seconds=30,
+            check=False,
+        )
+
+
 def sync_release_tools(
     transport: StrictSshTransport,
     inventory: Inventory,
@@ -601,57 +678,31 @@ def sync_release_tools(
     *,
     confirmed: bool,
 ) -> None:
-    source = ROOT / "deploy/production/scripts/install_immutable_release.py"
-    expected_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
-    destination = "/usr/local/sbin/massar-install-immutable-release"
-    staging = "/tmp/massar-install-immutable-release.next"
-    node_evidence: dict[str, dict[str, str]] = {}
+    tools = release_tool_specs()
+    node_evidence: dict[str, dict[str, object]] = {}
     for node in nodes:
         remote = target(inventory, node)
-        current = transport.run(
-            remote,
-            ("sha256sum", destination),
-            timeout_seconds=30,
-            check=False,
-        )
-        current_sha256 = (
-            current.stdout.split()[0]
-            if current.returncode == 0 and current.stdout.split()
-            else "missing"
-        )
-        node_evidence[node.id] = {
-            "currentSha256": current_sha256,
-            "expectedSha256": expected_sha256,
-            "action": "unchanged" if current_sha256 == expected_sha256 else "update",
+        tool_evidence = {
+            tool.destination: release_tool_evidence(transport, remote, tool)
+            for tool in tools
         }
-        if not confirmed or current_sha256 == expected_sha256:
-            continue
-        transport.copy(remote, source, staging, timeout_seconds=120)
-        try:
-            transport.run(
-                remote,
-                (
-                    "bash",
-                    "-lc",
-                    "set -euo pipefail; "
-                    f"printf '%s  %s\\n' '{expected_sha256}' '{staging}' | sha256sum -c -; "
-                    f"sudo /usr/bin/install -m 0755 -o root -g root {staging} {destination}; "
-                    f"test \"$(sha256sum {destination} | awk '{{print $1}}')\" = '{expected_sha256}'",
-                ),
-                timeout_seconds=120,
-            )
-        finally:
-            transport.run(
-                remote,
-                ("rm", "-f", staging),
-                timeout_seconds=30,
-                check=False,
-            )
+        if confirmed:
+            for tool in tools:
+                if tool_evidence[tool.destination]["action"] == "update":
+                    install_release_tool(transport, remote, tool)
+        node_evidence[node.id] = {
+            "action": (
+                "update"
+                if any(item["action"] == "update" for item in tool_evidence.values())
+                else "unchanged"
+            ),
+            "tools": tool_evidence,
+        }
     print(
         json.dumps(
             {
                 "status": "success" if confirmed else "dry-run",
-                "tool": destination,
+                "tools": [tool.destination for tool in tools],
                 "nodes": node_evidence,
             },
             sort_keys=True,

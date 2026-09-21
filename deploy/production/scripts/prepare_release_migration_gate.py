@@ -97,6 +97,61 @@ SELECT count(*) FILTER (WHERE "MigrationId"='20260918213500_CorrectTeacherPaidFu
 FROM "__EFMigrationsHistory";
 """
 
+
+# Preserve the complete pre-migration rows for assistant roles that already expose
+# the refunds page. The reviewed backfill may add only the two permissions needed
+# to use that page; every other role field remains immutable.
+REFUND_ROLE_SNAPSHOT_SQL = r"""
+CREATE SCHEMA massar_gate_refund_roles;
+CREATE TABLE massar_gate_refund_roles.roles AS
+SELECT * FROM public.roles
+WHERE "AllowedDomain" = 'assistant'
+  AND COALESCE(NULLIF("AllowedNavbarItemsJson", ''), '[]')::jsonb
+      ? '/assistant/refunds';
+"""
+
+
+REFUND_ROLE_VALIDATION_SQL = r"""
+DO $$ DECLARE changed bigint; BEGIN
+  SELECT count(*) INTO changed
+  FROM massar_gate_refund_roles.roles old
+  FULL JOIN public.roles current ON current."Id" = old."Id"
+  WHERE old."Id" IS NULL OR current."Id" IS NULL
+    OR (to_jsonb(current) - 'PermissionsJson') IS DISTINCT FROM
+       (to_jsonb(old) - 'PermissionsJson')
+    OR COALESCE(NULLIF(current."PermissionsJson", ''), '[]')::jsonb
+       IS DISTINCT FROM (
+         COALESCE(NULLIF(old."PermissionsJson", ''), '[]')::jsonb
+         || CASE
+              WHEN COALESCE(NULLIF(old."PermissionsJson", ''), '[]')::jsonb
+                   ? 'finance.refunds.view'
+              THEN '[]'::jsonb
+              ELSE '["finance.refunds.view"]'::jsonb
+            END
+         || CASE
+              WHEN COALESCE(NULLIF(old."PermissionsJson", ''), '[]')::jsonb
+                   ? 'finance.refunds.create'
+              THEN '[]'::jsonb
+              ELSE '["finance.refunds.create"]'::jsonb
+            END
+       );
+  IF changed <> 0 THEN
+    RAISE EXCEPTION 'Refund role gate: unexpected assistant role change';
+  END IF;
+  IF (SELECT count(*) FROM public.roles
+      WHERE "AllowedDomain" = 'assistant'
+        AND COALESCE(NULLIF("AllowedNavbarItemsJson", ''), '[]')::jsonb
+            ? '/assistant/refunds') <>
+     (SELECT count(*) FROM massar_gate_refund_roles.roles) THEN
+    RAISE EXCEPTION 'Refund role gate: assistant refund role set changed';
+  END IF;
+  IF (SELECT count(*) FROM "__EFMigrationsHistory"
+      WHERE "MigrationId" = '20260921180957_BackfillAssistantRefundRolePermissions') <> 1 THEN
+    RAISE EXCEPTION 'Refund role gate: reviewed migration is not applied exactly once';
+  END IF;
+END $$;
+"""
+
 FUNDING_VALIDATION_SQL = r"""
 CREATE TEMP TABLE gate_corrections AS
 SELECT e."Id" event_id, e."IdempotencyKey" correction_key, original."SourceId" purchase_id,
@@ -494,7 +549,9 @@ protected_rows_hash() {{
        'd9b8a342-990a-4286-905e-fdebb2e3895e' order by \"Id\") to stdout;"
     psql_restore -c \
       "copy (select row_to_json(t)::text from roles t where \"Name\" not in
-       ('Admin','Teacher','Assistant','Student') order by \"Id\") to stdout;"
+       ('Admin','Teacher','Assistant','Student')
+       and not exists (select 1 from massar_gate_refund_roles.roles allowed
+         where allowed.\"Id\" = t.\"Id\") order by \"Id\") to stdout;"
   }} | sha256sum | awk '{{print $1}}'
 }}
 
@@ -517,6 +574,9 @@ financial_events_hash() {{
 }}
 psql_restore <<'SQL'
 {FUNDING_SNAPSHOT_SQL}
+SQL
+psql_restore <<'SQL'
+{REFUND_ROLE_SNAPSHOT_SQL}
 SQL
 pre_fee_activation="$(finance_activation_count)"
 pre_agreement_count="$(psql_restore -c 'select count(*) from teacher_financial_agreements;')"
@@ -584,8 +644,12 @@ test "$(
     'select count(*) - count(distinct "MigrationId")
      from "__EFMigrationsHistory";'
 )" = 0
+psql_restore <<'SQL'
+{REFUND_ROLE_VALIDATION_SQL}
+SQL
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
+psql_restore -c 'DROP SCHEMA massar_gate_refund_roles CASCADE;'
 # Agreement row growth is allowed only for the exact reviewed activation,
 # while historical monetary events must remain byte-for-byte unchanged.
 stage="finance-activation-validation"
