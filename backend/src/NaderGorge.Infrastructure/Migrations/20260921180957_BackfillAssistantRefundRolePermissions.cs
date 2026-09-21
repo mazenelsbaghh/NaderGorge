@@ -11,7 +11,7 @@ namespace NaderGorge.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
-                UPDATE "Roles"
+                UPDATE roles
                 SET "PermissionsJson" = (
                     COALESCE(NULLIF("PermissionsJson", ''), '[]')::jsonb
                     || CASE
