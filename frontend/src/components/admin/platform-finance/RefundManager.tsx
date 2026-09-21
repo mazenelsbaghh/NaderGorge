@@ -21,7 +21,7 @@ function historicalRefundReviewMessage(purchaseMethod?: string, isZeroCashPurcha
     return `هذه الباقة حصل عليها الطالب عن طريق ${sourceLabel}. أدخل فقط المبلغ الذي رُد فعليًا من الخزنة؛ السعر الظاهر حد أقصى وليس إثبات دفع.`;
   }
   if (isZeroCashPurchase) {
-    return 'عملية الشراء المسجلة مدفوعة بالكامل من رصيد ترويجي، والمدفوع من الطالب فيها صفر. أدخل فقط مبلغًا خارجيًا تأكدت أنه رُد فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.';
+    return 'المبلغ النقدي المسجل على عملية الشراء صفر. أدخل فقط مبلغًا خارجيًا تأكدت أنه رُد فعليًا؛ إجمالي العملية الظاهر حد أقصى وليس إثبات دفع نقدي.';
   }
   return 'لا يوجد مبلغ مدفوع موثّق يمكن الاعتماد عليه لهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.';
 }
@@ -179,7 +179,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
             {studentPackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>
               {item.name} — {purchaseMethodLabels[item.purchaseMethod] || 'طريقة الحصول غير معروفة'}
               {!item.isActive ? ' — غير نشطة' : ''}
-              {isExternallyRefundableGrant(item) ? ` — ${refundablePurchaseOperationId(item) ? `المدفوع ${money(item.paidAmount)}` : `مراجعة يدوية (الحد ${money(item.price)})`}` : ''}
+              {isExternallyRefundableGrant(item) ? ` — ${refundablePurchaseOperationId(item) && item.paidAmount > 0 ? `المدفوع ${money(item.paidAmount)}` : item.price > 0 ? `مراجعة يدوية (الحد ${money(item.price)})` : 'مراجعة يدوية'}` : ''}
             </option>)}
           </select>
           {student && studentPackages.length === 0 ? <p className="mt-2 text-sm text-[var(--admin-muted)]">لا توجد باقات مسجلة لهذا الطالب.</p> : null}
@@ -200,8 +200,8 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
               <p><b>المحاولات:</b> {preview.examsAvailable ? `${preview.totalAttempts} (${preview.submittedAttempts} مُسلّمة)` : 'غير متاح لهذا النطاق'}</p>
             </div>
             {!preview.usageAvailable ? <p className="text-sm font-bold text-amber-700">{preview.unavailableReason}</p> : null}
-            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">{historicalRefundReviewMessage(selectedRefundPackage?.purchaseMethod, isZeroCashExternalReview)}</p> : null}
-            <p className="text-xs text-[var(--admin-muted)]">{preview.isHistoricalSource ? 'الحد الأقصى' : 'المدفوع'} {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {!preview.isHistoricalSource ? preview.historicalUsageNote : null}</p>
+            {preview.isHistoricalSource || isZeroCashExternalReview ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">{historicalRefundReviewMessage(selectedRefundPackage?.purchaseMethod, isZeroCashExternalReview)}</p> : null}
+            <p className="text-xs text-[var(--admin-muted)]">{preview.isHistoricalSource || isZeroCashExternalReview ? 'الحد الأقصى' : 'المدفوع'} {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {!preview.isHistoricalSource ? preview.historicalUsageNote : null}</p>
           </div> : null}
         </div>
         <div>

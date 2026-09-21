@@ -104,4 +104,36 @@ public sealed class PlatformFinanceOperationsTests
             new CreatePlatformRefundRequest(grantId, "HistoricalAccessGrant", studentId, null, 51m, 0m, 1, null,
                 "Exceeds the remaining ceiling", null, Guid.NewGuid(), grantId), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Zero_cash_purchase_refund_cannot_exceed_original_gross_amount()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var operations = new PlatformFinanceOperationsService(
+            db,
+            new FinancialPostingService(db),
+            new BalanceService(db, NullLogger<BalanceService>.Instance));
+        var purchaseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        db.SalesFinancialEffects.Add(new SalesFinancialEffect
+        {
+            PurchaseOperationId = purchaseId,
+            StudentId = studentId,
+            TargetType = SalesTargetType.Lesson,
+            TargetId = Guid.NewGuid(),
+            GrossAmount = 50m,
+            PromotionalAmount = 50m,
+            PaidAmount = 0m
+        });
+        await db.SaveChangesAsync();
+
+        var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(
+            purchaseId, "PurchaseOperation", studentId, null, 40m, 0m, 1, null,
+            "Zero cash purchase regression", null, Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal(40m, refund.TotalAmount);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => operations.CreateRefundAsync(
+            new CreatePlatformRefundRequest(purchaseId, "PurchaseOperation", studentId, null, 11m, 0m, 1, null,
+                "Exceeds original gross amount", null, Guid.NewGuid()), CancellationToken.None));
+    }
 }

@@ -13,7 +13,7 @@ const isGiftOrCode = (grant: RefundableGrantSource) =>
 export function refundablePurchaseOperationId(
   grant: RefundableGrantSource
 ): string | undefined {
-  if (isGiftOrCode(grant) || grant.paidAmount <= 0) return undefined;
+  if (isGiftOrCode(grant)) return undefined;
   return grant.purchaseOperationId || undefined;
 }
 

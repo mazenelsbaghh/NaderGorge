@@ -209,12 +209,12 @@ public sealed class PlatformFinanceOperationsService(
 
     private async Task<decimal?> ResolveRefundSourceAmountAsync(CreatePlatformRefundRequest request, CancellationToken ct)
     {
-        var paidAmount = await _db.SalesFinancialEffects
+        var sourceAmount = await _db.SalesFinancialEffects
             .Where(x => x.PurchaseOperationId == request.OriginalSourceId)
-            .Select(x => (decimal?)x.PaidAmount)
+            .Select(x => (decimal?)(x.PaidAmount > 0m ? x.PaidAmount : x.GrossAmount))
             .SingleOrDefaultAsync(ct);
-        if (paidAmount.HasValue || request.OriginalSourceType != "HistoricalAccessGrant" ||
-            request.HistoricalAccessGrantId != request.OriginalSourceId) return paidAmount;
+        if (sourceAmount.HasValue || request.OriginalSourceType != "HistoricalAccessGrant" ||
+            request.HistoricalAccessGrantId != request.OriginalSourceId) return sourceAmount;
 
         var grant = await _db.StudentAccessGrants.AsNoTracking()
             .SingleOrDefaultAsync(x => x.Id == request.OriginalSourceId && x.UserId == request.StudentId, ct);

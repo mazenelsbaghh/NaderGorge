@@ -75,6 +75,40 @@ public sealed class RefundUsagePreviewQueryTests
     }
 
     [Fact]
+    public async Task Zero_cash_balance_purchase_uses_original_gross_amount_as_manual_refund_ceiling()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var studentId = Guid.NewGuid();
+        var purchaseId = Guid.NewGuid();
+        var lesson = new Lesson
+        {
+            Title = "Zero cash lesson",
+            Price = 0m,
+            ContentSectionId = Guid.NewGuid()
+        };
+        var grant = new StudentAccessGrant
+        {
+            UserId = studentId,
+            GrantType = CodeType.Lesson,
+            LessonId = lesson.Id,
+            IsActive = true
+        };
+        var sale = Sale(purchaseId, studentId, SalesTargetType.Lesson, lesson.Id, 0m);
+        sale.GrossAmount = 50m;
+        sale.PromotionalAmount = 50m;
+        db.AddRange(lesson, grant, sale);
+        await db.SaveChangesAsync();
+
+        var result = await new GetRefundUsagePreviewQueryHandler(db).Handle(
+            new(studentId, grant.Id, purchaseId), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.False(result.IsHistoricalSource);
+        Assert.Equal(50m, result.PaidAmount);
+        Assert.Equal(50m, result.RemainingRefundableAmount);
+    }
+
+    [Fact]
     public async Task Rejects_sale_target_type_mismatch_even_when_target_id_matches()
     {
         await using var db = TestAppDbContextFactory.Create();

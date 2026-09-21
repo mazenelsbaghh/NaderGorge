@@ -47,7 +47,9 @@ public sealed class GetRefundUsagePreviewQueryHandler(IAppDbContext db)
         if (source is not null && (source.TargetId != TargetId(grant) || source.TargetType != TargetType(grant))) return null;
         if (source is null && !isHistoricalSource) return null;
 
-        var sourceAmount = source?.PaidAmount ?? await ResolveHistoricalSourceAmount(grant, ct);
+        var sourceAmount = source is null
+            ? await ResolveHistoricalSourceAmount(grant, ct)
+            : source.PaidAmount > 0m ? source.PaidAmount : source.GrossAmount;
         if (sourceAmount is null || sourceAmount <= 0m) return null;
         var sourceId = source?.PurchaseOperationId ?? grant.Id;
 

@@ -22,10 +22,10 @@ test('cash-backed purchases keep their financial purchase source', () => {
   assert.equal(isExternallyRefundableGrant(grant), true);
 });
 
-test('2026-09-21 zero-cash direct purchases use the reviewed external refund path', () => {
-  const promotionalPurchase = { ...grant, paidAmount: 0 };
-  assert.equal(refundablePurchaseOperationId(promotionalPurchase), undefined);
-  assert.equal(refundSourceKey(promotionalPurchase), 'historical:grant-1');
+test('2026-09-21 zero-cash balance purchases retain their sale for manual review', () => {
+  const promotionalPurchase = { ...grant, paidAmount: 0, price: 0 };
+  assert.equal(refundablePurchaseOperationId(promotionalPurchase), 'purchase-1');
+  assert.equal(refundSourceKey(promotionalPurchase), 'purchase-1');
   assert.equal(isExternallyRefundableGrant(promotionalPurchase), true);
 });
 
