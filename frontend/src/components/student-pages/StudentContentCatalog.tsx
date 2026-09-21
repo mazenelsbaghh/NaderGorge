@@ -643,7 +643,7 @@ export function StudentContentCatalog({
           {packages.length === 0 ? (
             <CatalogEmpty message="لا يوجد محتوى متاح لبياناتك الدراسية حاليًا." />
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {packages.map((pkg) => {
                 const rootReference = getContentRootPurchaseReference(pkg);
                 const rootPurchaseTarget: PurchaseTarget | null = rootReference
@@ -679,7 +679,7 @@ export function StudentContentCatalog({
           emptyMessage="لا توجد أترام متاحة داخل هذه الباقة حاليًا."
           isEmpty={terms.length === 0}
         >
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {terms.map((term, index) => {
               const parentPackage = selectedPackage ?? termParents.get(term.id);
               return (
@@ -721,7 +721,7 @@ export function StudentContentCatalog({
           emptyMessage="لا توجد شهور أو أقسام متاحة داخل هذا المسار حاليًا."
           isEmpty={sections.length === 0}
         >
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {sections.map((section, index) => {
               const parent = selectedPackage
                 ? { pkg: selectedPackage, term: selectedTerm ?? undefined }
@@ -892,14 +892,14 @@ function PackageCatalogCard({
   );
 
   return (
-    <article className="group overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
-      <div className="grid min-h-full sm:grid-cols-[10rem_minmax(0,1fr)]">
+    <article className="group h-full overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
+      <div className="flex h-full flex-col">
         <CatalogCover
           imageUrl={coverUrl}
           alt={`غلاف ${pkg.name}`}
           indexLabel={contentRootLabel}
         />
-        <div className="flex min-w-0 flex-col p-5 text-right">
+        <div className="flex min-w-0 flex-1 flex-col p-5 text-right">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AccessBadge
               state={
@@ -972,14 +972,14 @@ function TermCatalogCard({
   );
 
   return (
-    <article className="group overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
-      <div className="grid min-h-full sm:grid-cols-[9rem_minmax(0,1fr)]">
+    <article className="group h-full overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
+      <div className="flex h-full flex-col">
         <CatalogCover
           imageUrl={coverUrl}
           alt={`غلاف ${term.title}`}
           indexLabel={String(index + 1).padStart(2, '0')}
         />
-        <div className="flex min-w-0 flex-col p-5 text-right">
+        <div className="flex min-w-0 flex-1 flex-col p-5 text-right">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AccessBadge state={isOwned ? 'owned' : 'available'} />
             <SubjectBadge subjectName={getSubjectName(pkg)} />
@@ -1031,14 +1031,14 @@ function SectionCatalogCard({
   );
 
   return (
-    <article className="group overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
-      <div className="grid min-h-full sm:grid-cols-[9rem_minmax(0,1fr)]">
+    <article className="group h-full overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-[var(--admin-primary-30)] hover:shadow-md">
+      <div className="flex h-full flex-col">
         <CatalogCover
           imageUrl={coverUrl}
           alt={`غلاف ${section.title}`}
           indexLabel={String(index + 1).padStart(2, '0')}
         />
-        <div className="flex min-w-0 flex-col p-5 text-right">
+        <div className="flex min-w-0 flex-1 flex-col p-5 text-right">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AccessBadge state={isOwned ? 'owned' : 'available'} />
             <SubjectBadge subjectName={getSubjectName(parent?.pkg)} />
@@ -1347,7 +1347,7 @@ function CatalogCover({
   indexLabel: string;
 }) {
   return (
-    <div className="relative min-h-40 overflow-hidden bg-[var(--admin-card-soft)] sm:min-h-full">
+    <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-[var(--admin-card-soft)]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
@@ -1581,11 +1581,14 @@ function CatalogEmpty({ message }: { message: string }) {
 
 function CatalogSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-2" aria-label="جار تحميل المحتوى">
-      {[1, 2, 3, 4].map((item) => (
+    <div
+      className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+      aria-label="جار تحميل المحتوى"
+    >
+      {[1, 2, 3, 4, 5, 6].map((item) => (
         <div
           key={item}
-          className="h-44 animate-pulse rounded-[1.5rem] bg-[var(--admin-card-strong)]"
+          className="aspect-[4/5] animate-pulse rounded-[1.5rem] bg-[var(--admin-card-strong)]"
         />
       ))}
     </div>
