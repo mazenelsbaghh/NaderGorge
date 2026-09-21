@@ -33,6 +33,10 @@ public sealed class LiveSupportConnectionsController(BaileysAccountService accou
     [HasPermission("live_support.manage")]
     public Task<IActionResult> Refresh(Guid id, CancellationToken ct) => RespondAsync(() => accounts.RefreshAsync(id, ct));
 
+    [HttpPost("whatsapp/{id:guid}/connection")]
+    [HasPermission("live_support.manage")]
+    public Task<IActionResult> Connection(Guid id, CancellationToken ct) => RespondAsync(() => accounts.ObserveAsync(id, ct));
+
     [HttpPost("whatsapp/{id:guid}/disconnect")]
     [HasPermission("live_support.manage")]
     public Task<IActionResult> Disconnect(Guid id, CancellationToken ct) => RespondAsync(() => accounts.DisconnectAsync(id, ct));

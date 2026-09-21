@@ -124,8 +124,11 @@ app.post('/sessions/:id/download', async (request, response) => {
   const extension = mimetype.includes('pdf') ? '.pdf' : mimetype.includes('png') ? '.png' : mimetype.includes('image') ? '.jpg' : mimetype.includes('audio') ? '.ogg' : '.mp4';
   response.json({ base64: Buffer.concat(chunks).toString('base64'), mimetype, fileName: `whatsapp-${message.key.id}${extension}` });
 });
-app.use((_error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
   // Provider errors can contain session credentials and message contents.
+  const operation = typeof request.route?.path === 'string' ? request.route.path : 'unknown';
+  const kind = error instanceof Error ? error.name : typeof error;
+  console.error(`[Baileys] request failed method=${request.method} operation=${operation} kind=${kind}.`);
   response.status(502).json({ code: 'BAILEYS_REQUEST_FAILED' });
 });
 

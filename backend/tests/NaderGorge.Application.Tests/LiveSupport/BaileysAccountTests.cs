@@ -16,6 +16,8 @@ public sealed class BaileysAccountTests
     [InlineData("connect", true)]
     [InlineData("refresh", false)]
     [InlineData("refresh", true)]
+    [InlineData("observe", false)]
+    [InlineData("observe", true)]
     [InlineData("disconnect", true)]
     public async Task BridgeResponse_PreservesNewerWebhookStateAndAppliesAccountEnablement(
         string operation, bool concurrentWebhook)
@@ -50,18 +52,29 @@ public sealed class BaileysAccountTests
         var service = new BaileysAccountService(db, new BaileysWhatsAppClient(http, config));
 
         BaileysAccountDto result;
+        BaileysConnectionDto? connectionResult = null;
         if (operation == "connect")
         {
-            var connected = await service.ConnectAsync(account.Id, CancellationToken.None);
-            result = connected.Account;
-            Assert.Equal(concurrentWebhook ? null : "data:image/png;base64,dGVzdA==", connected.QrDataUrl);
+            connectionResult = await service.ConnectAsync(account.Id, CancellationToken.None);
+            result = connectionResult.Account;
+        }
+        else if (operation == "observe")
+        {
+            connectionResult = await service.ObserveAsync(account.Id, CancellationToken.None);
+            result = connectionResult.Account;
         }
         else result = operation == "refresh"
             ? await service.RefreshAsync(account.Id, CancellationToken.None)
             : await service.DisconnectAsync(account.Id, CancellationToken.None);
 
+        if (connectionResult is not null)
+        {
+            Assert.Equal(concurrentWebhook ? null : "data:image/png;base64,dGVzdA==", connectionResult.QrDataUrl);
+            Assert.Equal(concurrentWebhook, connectionResult.QrExpiresAt is null);
+        }
+
         var expectedStatus = operation == "disconnect" ? "Disconnected" : concurrentWebhook
-            ? "Connected" : operation == "connect" ? "AwaitingQr" : "Connecting";
+            ? "Connected" : "AwaitingQr";
         Assert.Equal(expectedStatus, result.Status);
         Assert.Equal(operation == "connect", result.IsEnabled);
         Assert.Equal(concurrentWebhook ? "201099999999" : null, result.PhoneNumber);

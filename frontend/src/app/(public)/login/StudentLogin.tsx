@@ -57,20 +57,22 @@ export function StudentLogin({ isDark, themeVars, onToggleTheme }: {
             <p>سجّل دخولك وكمّل دروسك</p>
           </header>
 
-          <LoginForm />
+          <div className="student-login__panel auth-card">
+            <LoginForm />
 
-          <div className="student-login__registration">
-            <p className="student-login__divider">جديد على مسار؟</p>
-            <Link href="/register" className="student-login__register">إنشاء حساب طالب</Link>
+            <div className="student-login__registration">
+              <p className="student-login__divider">جديد على مسار؟</p>
+              <Link href="/register" className="student-login__register">إنشاء حساب طالب</Link>
+            </div>
+            <button
+              type="button"
+              className="student-login__help"
+              onClick={() => setShowInstructions(true)}
+              aria-haspopup="dialog"
+            >
+              محتاج مساعدة؟
+            </button>
           </div>
-          <button
-            type="button"
-            className="student-login__help"
-            onClick={() => setShowInstructions(true)}
-            aria-haspopup="dialog"
-          >
-            محتاج مساعدة؟
-          </button>
         </section>
       </main>
 

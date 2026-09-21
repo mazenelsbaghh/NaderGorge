@@ -39,8 +39,12 @@
 
 .student-login__content {
   width: 100%;
-  max-width: 25rem;
+  max-width: 31rem;
   min-width: 0;
+}
+
+.student-login__panel {
+  padding: clamp(1.25rem, 4vw, 2rem);
 }
 
 .student-login__heading {
@@ -233,6 +237,16 @@
 
   .student-login__logo {
     margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .student-login__main {
+    padding-inline: max(1rem, env(safe-area-inset-left));
+  }
+
+  .student-login__panel {
+    padding: 1.25rem;
   }
 }
 

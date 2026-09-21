@@ -580,6 +580,7 @@ export const liveSupportService = {
   createWhatsAppAccount: (name: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>('/live-support/connections/whatsapp', { name }).then(response => response.data.data),
   connectWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppConnection>>(`/live-support/connections/whatsapp/${id}/connect`).then(response => response.data.data),
   refreshWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>(`/live-support/connections/whatsapp/${id}/refresh`).then(response => response.data.data),
+  getWhatsAppConnection: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppConnection>>(`/live-support/connections/whatsapp/${id}/connection`).then(response => response.data.data),
   disconnectWhatsAppAccount: (id: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>(`/live-support/connections/whatsapp/${id}/disconnect`).then(response => response.data.data),
   getSupportBlock: (id: string, signal?: AbortSignal) => apiClient.get<ApiResponse<SupportBlockStatus>>(`/live-support/connections/conversations/${id}/block`, { signal }).then(response => response.data.data),
   retrySupportBlock: (id: string) => apiClient.post<ApiResponse<SupportBlockStatus>>(`/live-support/connections/conversations/${id}/block/retry`).then(response => response.data.data),

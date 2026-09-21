@@ -33,17 +33,21 @@ export function WhatsAppQrSettings() {
     if (!selectedId) return;
     let mounted = true;
     let refreshing = false;
-    const interval = window.setInterval(() => {
+    const refresh = () => {
       setNow(Date.now());
       if (refreshing) return;
       refreshing = true;
-      void liveSupportService.refreshWhatsAppAccount(selectedId).then(account => {
+      void liveSupportService.getWhatsAppConnection(selectedId).then(updated => {
         if (!mounted) return;
+        const account = updated.account;
+        setError('');
         setAccounts(rows => rows.map(row => row.id === account.id ? account : row));
-        if (account.status === 'Connected') setConnection(undefined);
+        setConnection(account.status === 'Connected' ? undefined : updated);
       }).catch(cause => { if (mounted) setError(getLiveSupportApiError(cause, 'تعذر إتمام الطلب. حاول مجددًا.')); })
         .finally(() => { refreshing = false; });
-    }, 3000);
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 3000);
     return () => { mounted = false; window.clearInterval(interval); };
   }, [selectedId]);
 
@@ -75,12 +79,12 @@ export function WhatsAppQrSettings() {
         <div><p className="font-bold text-[var(--admin-text)]">{account.name} {account.phoneNumber && <bdi className="mr-2 font-mono text-sm">{account.phoneNumber}</bdi>}</p><p role="status" className="mt-1 text-sm text-[var(--admin-muted)]">{statusLabels[account.status] ?? 'تعذر تحديد حالة الاتصال'}</p></div>
         <div className="flex flex-wrap gap-2">
           {account.status !== 'Connected' && <button type="button" disabled={busy} className={buttonClass} onClick={() => void operate(async () => { setConnection(await liveSupportService.connectWhatsAppAccount(account.id)); setNow(Date.now()); })}>عرض رمز الربط</button>}
-          <button type="button" disabled={busy} className={buttonClass} onClick={() => void operate(async () => { const updated = await liveSupportService.refreshWhatsAppAccount(account.id); setAccounts(rows => rows.map(row => row.id === account.id ? updated : row)); })}>تحديث الحالة</button>
+          <button type="button" disabled={busy} className={buttonClass} onClick={() => void operate(async () => { const updated = await liveSupportService.getWhatsAppConnection(account.id); setAccounts(rows => rows.map(row => row.id === account.id ? updated.account : row)); if (updated.account.status !== 'Connected' && updated.qrDataUrl) { setConnection(updated); setNow(Date.now()); } })}>تحديث الحالة</button>
           {account.status === 'Connected' && <button type="button" disabled={busy} className={buttonClass} onClick={() => void operate(async () => { const updated = await liveSupportService.disconnectWhatsAppAccount(account.id); setAccounts(rows => rows.map(row => row.id === account.id ? updated : row)); setConnection(undefined); })}>فصل الرقم</button>}
         </div>
       </li>)}</ul>}
     {connection && <div className="flex flex-wrap items-center gap-5 rounded-xl bg-[var(--admin-card-strong)] p-4">
-      {qrValid && connection.qrDataUrl ? <Image unoptimized src={connection.qrDataUrl} width={240} height={240} alt={`رمز ربط واتساب: ${connection.account.name}`} className="max-w-full rounded-lg bg-white p-2" /> : <p role="status" className="text-sm text-[var(--admin-text)]">الرمز غير متاح أو انتهت صلاحيته. اضغط «عرض رمز الربط» للحصول على رمز جديد.</p>}
+      {qrValid && connection.qrDataUrl ? <Image unoptimized src={connection.qrDataUrl} width={240} height={240} alt={`رمز ربط واتساب: ${connection.account.name}`} className="max-w-full rounded-lg bg-white p-2" /> : <p role="status" className="text-sm text-[var(--admin-text)]">جارٍ تجهيز رمز ربط جديد تلقائيًا…</p>}
       <div className="min-w-48 flex-1 text-sm leading-7 text-[var(--admin-text)]"><p className="font-bold">من موبايل رقم {connection.account.name}:</p><ol className="list-inside list-decimal"><li>افتح واتساب ثم الأجهزة المرتبطة.</li><li>اختر ربط جهاز وامسح الرمز.</li><li>انتظر ظهور حالة «متصل» هنا.</li></ol><button type="button" className="mt-2 underline" onClick={() => setConnection(undefined)}>إخفاء رمز الربط</button></div>
     </div>}
     {error && <p role="alert" className="text-sm text-[var(--admin-danger)]">{error}</p>}

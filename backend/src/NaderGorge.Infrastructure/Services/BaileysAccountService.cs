@@ -1,4 +1,5 @@
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Domain.Entities.LiveSupport;
@@ -37,23 +38,23 @@ public sealed class BaileysAccountService(IAppDbContext db, BaileysWhatsAppClien
             await client.CreateAsync(account.InstanceName, ct);
         }
         var response = await client.ConnectAsync(account.InstanceName, ct);
-        var qr = BaileysWhatsAppClient.Text(response, "base64");
-        if (qr is not null && (!qr.StartsWith("data:image/png;base64,", StringComparison.Ordinal) || qr.Length > 300_000))
-            throw new LiveSupportException("BAILEYS_INVALID_QR", "تعذر تحميل رمز الربط. حاول مجددًا.");
-        var state = response.TryGetProperty("instance", out var instance) ? BaileysWhatsAppClient.Text(instance, "state") : null;
-        account.Status = state == "open" ? "Connected" : qr is null ? "Connecting" : "AwaitingQr";
+        var observation = ReadConnection(response);
+        account.Status = observation.Status;
         account = await SaveStateAsync(account, true, ct);
-        if (account.Status == "Connected") qr = null;
-        return new(Map(account), qr, qr is null ? null : DateTime.UtcNow.AddSeconds(30));
+        return Connection(account, observation);
     }
 
-    public async Task<BaileysAccountDto> RefreshAsync(Guid id, CancellationToken ct)
+    public async Task<BaileysAccountDto> RefreshAsync(Guid id, CancellationToken ct) =>
+        (await ObserveAsync(id, ct)).Account;
+
+    public async Task<BaileysConnectionDto> ObserveAsync(Guid id, CancellationToken ct)
     {
         var account = await RequireAsync(id, ct);
         var response = await client.StateAsync(account.InstanceName, ct);
-        var state = response.TryGetProperty("instance", out var instance) ? BaileysWhatsAppClient.Text(instance, "state") : null;
-        account.Status = state == "open" ? "Connected" : state == "connecting" ? "Connecting" : "Disconnected";
-        return Map(await SaveStateAsync(account, null, ct));
+        var observation = ReadConnection(response);
+        account.Status = observation.Status;
+        account = await SaveStateAsync(account, null, ct);
+        return Connection(account, observation);
     }
 
     public async Task<BaileysAccountDto> DisconnectAsync(Guid id, CancellationToken ct)
@@ -85,4 +86,28 @@ public sealed class BaileysAccountService(IAppDbContext db, BaileysWhatsAppClien
 
     private static BaileysAccountDto Map(LiveSupportWhatsAppAccount account) =>
         new(account.Id, account.Name, account.Status, account.PhoneNumber, account.IsEnabled);
+
+    private static ConnectionObservation ReadConnection(JsonElement response)
+    {
+        var qr = BaileysWhatsAppClient.Text(response, "base64");
+        if (qr is not null && (!qr.StartsWith("data:image/png;base64,", StringComparison.Ordinal) || qr.Length > 300_000))
+            throw new LiveSupportException("BAILEYS_INVALID_QR", "تعذر تحميل رمز الربط. حاول مجددًا.");
+        var state = response.TryGetProperty("instance", out var instance) ? BaileysWhatsAppClient.Text(instance, "state") : null;
+        DateTime? expiresAt = null;
+        if (qr is not null)
+        {
+            expiresAt = response.TryGetProperty("qrExpiresAt", out var rawExpiry) &&
+                rawExpiry.ValueKind == JsonValueKind.Number && rawExpiry.TryGetInt64(out var expiry)
+                    ? DateTimeOffset.FromUnixTimeMilliseconds(expiry).UtcDateTime
+                    : DateTime.UtcNow.AddSeconds(30);
+        }
+        return new(state == "open" ? "Connected" : qr is not null ? "AwaitingQr" : state == "connecting" ? "Connecting" : "Disconnected", qr, expiresAt);
+    }
+
+    private static BaileysConnectionDto Connection(LiveSupportWhatsAppAccount account, ConnectionObservation observation) =>
+        account.Status == "Connected"
+            ? new(Map(account), null, null)
+            : new(Map(account), observation.QrDataUrl, observation.QrExpiresAt);
+
+    private sealed record ConnectionObservation(string Status, string? QrDataUrl, DateTime? QrExpiresAt);
 }

@@ -6,11 +6,13 @@ import { BaileysStateStore } from './store.js';
 import { currentWhatsAppVersion } from './version.js';
 
 const logger = pino({ level: 'silent' });
-type Session = { accountId: string; socket: WASocket; state: string; qr?: string; qrExpiresAt?: number; stopped: boolean; retries: number };
+type Session = { accountId: string; socket: WASocket; state: string; qr?: string; qrExpiresAt?: number; stopped: boolean; retries: number; lastProgressAt: number };
+export type ConnectionSnapshot = { instance: { state: string }; base64?: string; qrExpiresAt?: number };
 
 export class BaileysSessions {
   private readonly sessions = new Map<string, Session>();
   private readonly starting = new Map<string, Promise<Session>>();
+  private readonly reconnectTimers = new Map<string, NodeJS.Timeout>();
   private closed = false;
   constructor(private readonly pool: Pool, private readonly store: BaileysStateStore) {}
 
@@ -19,7 +21,10 @@ export class BaileysSessions {
       WHERE "IsEnabled"=TRUE AND "Status"<>'Created'`);
     for (const account of accounts.rows) {
       try { await this.start(account.InstanceName); }
-      catch { console.error('[Baileys] A saved session could not be restored; reconnect it from settings.'); }
+      catch (error) {
+        this.logFailure('restore', error);
+        this.scheduleReconnect(account.InstanceName, 0);
+      }
     }
   }
 
@@ -43,31 +48,40 @@ export class BaileysSessions {
     const socket = makeWASocket({ version, auth: auth.state, logger, markOnlineOnConnect: false,
       syncFullHistory: false, shouldSyncHistoryMessage: () => false,
       shouldIgnoreJid: jid => jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@newsletter') });
-    const session: Session = { accountId: account.Id, socket, state: 'connecting', stopped: false, retries: this.sessions.get(sessionId)?.retries ?? 0 };
+    const session: Session = { accountId: account.Id, socket, state: 'connecting', stopped: false,
+      retries: this.sessions.get(sessionId)?.retries ?? 0, lastProgressAt: Date.now() };
     this.sessions.set(sessionId, session);
     socket.ev.process(async events => {
-      try {
-        if (events['creds.update']) await auth.saveCreds();
-        const update = events['connection.update'];
-        if (update) {
+      if (events['creds.update']) {
+        try { await auth.saveCreds(); }
+        catch (error) { this.recoverSession(sessionId, session, error, 'credentials'); return; }
+      }
+      const update = events['connection.update'];
+      if (update) {
+        try {
           if (update.qr) {
             session.qr = await QRCode.toDataURL(update.qr, { width: 280, margin: 2 });
             session.qrExpiresAt = Date.now() + 30_000;
+            session.lastProgressAt = Date.now();
           }
-          if (update.connection) await this.connectionChanged(sessionId, session, update.connection, update.lastDisconnect?.error);
+          if (update.connection) {
+            session.lastProgressAt = Date.now();
+            await this.connectionChanged(sessionId, session, update.connection, update.lastDisconnect?.error);
+          }
         }
-        for (const message of events['messages.upsert']?.messages ?? []) await this.receive(sessionId, session, message);
-        for (const receipt of events['messages.update'] ?? []) {
+        catch (error) { this.recoverSession(sessionId, session, error, 'connection'); return; }
+      }
+      for (const message of events['messages.upsert']?.messages ?? []) {
+        try { await this.receive(sessionId, session, message); }
+        catch (error) { this.logFailure('inbound-message', error); }
+      }
+      for (const receipt of events['messages.update'] ?? []) {
+        try {
           if (receipt.key.fromMe && receipt.key.id && receipt.update.status != null)
             await this.store.enqueue(session.accountId, { sessionId, event: 'receipt', data: {
               id: receipt.key.id, status: receipt.update.status, timestamp: Math.floor(Date.now() / 1000) } });
         }
-      } catch {
-        session.stopped = true;
-        session.state = 'close';
-        delete session.qr; delete session.qrExpiresAt;
-        socket.end(new Error('Session persistence failed'));
-        console.error('[Baileys] Session paused after persistence failure.');
+        catch (error) { this.logFailure('message-receipt', error); }
       }
     });
     return session;
@@ -76,6 +90,7 @@ export class BaileysSessions {
   private async connectionChanged(sessionId: string, session: Session, state: string, error: unknown): Promise<void> {
     if (state === 'open') {
       session.retries = 0;
+      this.clearReconnect(sessionId);
       const phone = jidNormalizedUser(session.socket.user?.id ?? '').split('@')[0];
       const pinned = await this.pool.query(`UPDATE live_support_whatsapp_accounts SET "PhoneNumber"=$2
         WHERE "Id"=$1 AND ("PhoneNumber" IS NULL OR "PhoneNumber"=$2) RETURNING "Id"`, [session.accountId, phone]);
@@ -93,16 +108,13 @@ export class BaileysSessions {
     await this.store.enqueue(session.accountId, { sessionId, event: 'connection', data: { state, wuid: session.socket.user?.id } });
     if (state !== 'close' || session.stopped || this.closed) return;
     const status = (error as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
+    console.error(`[Baileys] connection closed status=${status ?? 'unknown'}.`);
     if (status === DisconnectReason.loggedOut || status === DisconnectReason.badSession || status === DisconnectReason.forbidden) {
       session.stopped = true;
       await this.store.clear(session.accountId);
       return;
     }
-    const delay = Math.min(30_000, 1000 * 2 ** session.retries++);
-    setTimeout(() => {
-      if (!this.closed && !session.stopped && this.sessions.get(sessionId) === session)
-        void this.start(sessionId).catch(() => console.error('[Baileys] Reconnection failed.'));
-    }, delay).unref();
+    this.scheduleReconnect(sessionId, session.retries++, session);
   }
 
   private async receive(sessionId: string, session: Session, message: WAMessage): Promise<void> {
@@ -117,18 +129,21 @@ export class BaileysSessions {
       ...message, message: content, messageTimestamp: message.messageTimestamp?.toString() } });
   }
 
-  async connection(sessionId: string): Promise<{ instance: { state: string }; base64?: string }> {
+  async connection(sessionId: string): Promise<ConnectionSnapshot> {
     const session = await this.start(sessionId);
     const deadline = Date.now() + 15_000;
     while ((!session.qr || (session.qrExpiresAt ?? 0) <= Date.now())
       && session.state === 'connecting' && Date.now() < deadline)
       await new Promise(resolve => setTimeout(resolve, 200));
-    return { instance: { state: session.state }, ...(session.qr && (session.qrExpiresAt ?? 0) > Date.now() ? { base64: session.qr } : {}) };
+    return connectionSnapshot(session.state, session.qr, session.qrExpiresAt);
   }
 
-  state(sessionId: string): { instance: { state: string } } | undefined {
+  state(sessionId: string): ConnectionSnapshot | undefined {
     const session = this.sessions.get(sessionId);
-    return session ? { instance: { state: session.state } } : undefined;
+    if (session && session.state === 'connecting' && (session.qrExpiresAt ?? 0) <= Date.now() &&
+        Date.now() - session.lastProgressAt > 45_000)
+      this.recoverSession(sessionId, session, new Error('Pairing stalled'), 'pairing-timeout');
+    return session ? connectionSnapshot(session.state, session.qr, session.qrExpiresAt) : undefined;
   }
 
   socket(sessionId: string): WASocket {
@@ -138,6 +153,7 @@ export class BaileysSessions {
   }
 
   async logout(sessionId: string): Promise<void> {
+    this.clearReconnect(sessionId);
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error('Unknown session');
     if (session.stopped && session.state === 'close') return;
@@ -151,8 +167,56 @@ export class BaileysSessions {
 
   close(): void {
     this.closed = true;
+    for (const timer of this.reconnectTimers.values()) clearTimeout(timer);
+    this.reconnectTimers.clear();
     for (const session of this.sessions.values()) { session.stopped = true; session.socket.end(new Error('Bridge stopped')); }
   }
+
+  private recoverSession(sessionId: string, session: Session, error: unknown, operation: string): void {
+    if (session.stopped || this.closed || this.sessions.get(sessionId) !== session) return;
+    session.state = 'close';
+    delete session.qr; delete session.qrExpiresAt;
+    this.logFailure(operation, error);
+    session.socket.end(new Error('Session recovery requested'));
+    this.scheduleReconnect(sessionId, session.retries++, session);
+  }
+
+  private scheduleReconnect(sessionId: string, retries: number, expectedSession?: Session): void {
+    if (this.closed || this.reconnectTimers.has(sessionId)) return;
+    const delay = Math.min(30_000, 1000 * 2 ** Math.min(retries, 5));
+    const timer = setTimeout(() => {
+      this.reconnectTimers.delete(sessionId);
+      if (this.closed || expectedSession?.stopped || (expectedSession && this.sessions.get(sessionId) !== expectedSession)) return;
+      void this.start(sessionId).catch(error => {
+        this.logFailure('reconnect', error);
+        this.scheduleReconnect(sessionId, retries + 1);
+      });
+    }, delay);
+    timer.unref();
+    this.reconnectTimers.set(sessionId, timer);
+  }
+
+  private clearReconnect(sessionId: string): void {
+    const timer = this.reconnectTimers.get(sessionId);
+    if (timer) clearTimeout(timer);
+    this.reconnectTimers.delete(sessionId);
+  }
+
+  private logFailure(operation: string, error: unknown): void {
+    const kind = error instanceof Error ? error.name : typeof error;
+    console.error(`[Baileys] ${operation} failed kind=${kind}.`);
+  }
+}
+
+export function connectionSnapshot(
+  state: string,
+  qr?: string,
+  qrExpiresAt?: number,
+  now = Date.now(),
+): ConnectionSnapshot {
+  if (typeof qr === 'string' && typeof qrExpiresAt === 'number' && qrExpiresAt > now)
+    return { instance: { state }, base64: qr, qrExpiresAt };
+  return { instance: { state } };
 }
 
 export function contactJid(number: unknown): string {
