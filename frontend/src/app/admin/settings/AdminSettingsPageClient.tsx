@@ -4,6 +4,7 @@ import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEdi
 import { WhatsAppQrSettings } from '@/components/live-support/admin/WhatsAppQrSettings';
 import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
 import { watermarkDefaults } from '@/lib/video-watermark';
+import { permissionsForRefundPage } from '@/lib/refund-role-permissions';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -584,12 +585,13 @@ export default function AdminSettingsPageClient() {
       return;
     }
 
+    const rolePermissions = permissionsForRefundPage(selectedPermissions, allowedDomain, allowedNavbarItems);
     try {
       if (currentRole) {
         // Edit Role
         await adminService.updateRole(currentRole.id, {
           name: roleName.trim(),
-          permissions: selectedPermissions,
+          permissions: rolePermissions,
           allowedDomain,
           allowedNavbarItems
         });
@@ -598,7 +600,7 @@ export default function AdminSettingsPageClient() {
         // Create Role
         await adminService.createRole({
           name: roleName.trim(),
-          permissions: selectedPermissions,
+          permissions: rolePermissions,
           allowedDomain,
           allowedNavbarItems
         });
@@ -1392,6 +1394,7 @@ export default function AdminSettingsPageClient() {
                       <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
                         فعّل المجموعة كاملة، أو افتحها واختر الصفحات التي يستطيع الموظف رؤيتها فقط.
                       </p>
+                      {allowedDomain === 'assistant' && allowedNavbarItems.includes('/assistant/refunds') ? <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">تفعيل استردادات الطلاب يمنح صلاحية عرض الاستردادات وتسجيل المبلغ المرتجع وإلغاء الباقة عند حفظ الدور. لا يمنح صلاحية عكس الاسترداد.</p> : null}
                     </div>
                     <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-1 border border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card-soft)]/50">
                       {(allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).map((item) => {

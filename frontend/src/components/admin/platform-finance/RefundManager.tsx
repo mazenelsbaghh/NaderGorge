@@ -9,6 +9,11 @@ import platformFinanceService, { type FinanceBootstrap, type PlatformRefundRow, 
 import { isExternallyRefundableGrant, refundablePurchaseOperationId, refundSourceKey } from '@/lib/refund-source';
 
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
+const purchaseMethodLabels: Record<string, string> = {
+  Balance: 'شراء من الرصيد',
+  Code: 'تفعيل بكود',
+  Gift: 'هدية',
+};
 
 export default function RefundManager({ staff = false }: { staff?: boolean }) {
   const { hasPermission } = useHasPermission();
@@ -47,8 +52,8 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
   useEffect(() => { void load(); }, []);
 
   useEffect(() => {
-    const selected = student?.packages.find(item => item.accessGrantId === grantId && item.isActive);
-    if (!student || !selected) {
+    const selected = student?.packages.find(item => item.accessGrantId === grantId);
+    if (!student || !selected || !isExternallyRefundableGrant(selected)) {
       setPreview(null);
       setPreviewKey('');
       setPreviewError('');
@@ -71,7 +76,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
       .catch((caught: unknown) => {
         if (!current) return;
         setPreviewError(axios.isAxiosError(caught) && caught.response?.status === 404
-          ? 'هذه المنحة هدية أو كود، ولا يوجد مبلغ مدفوع من الطالب يمكن استرداده.'
+          ? 'لا تتوفر بيانات صالحة للاسترداد لهذه الباقة. راجع مصدر الدفع وحالة الباقة.'
           : 'تعذر تحميل استخدام هذا المحتوى. لا تنفذ الاسترداد قبل التحقق.');
       })
       .finally(() => { if (current) setPreviewLoading(false); });
@@ -136,8 +141,8 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
     catch { setError('تعذر عكس الاسترداد'); }
   }
 
-  const activePackages = student?.packages.filter(isExternallyRefundableGrant) || [];
-  const selectedRefundPackage = activePackages.find(item => item.accessGrantId === grantId);
+  const studentPackages = student?.packages || [];
+  const selectedRefundPackage = studentPackages.find(item => item.accessGrantId === grantId);
   const isZeroCashExternalReview = Boolean(selectedRefundPackage?.purchaseOperationId && selectedRefundPackage.paidAmount <= 0);
 
   return <div className="space-y-6" dir="rtl">
@@ -159,10 +164,15 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
         <div>
           <label className="mb-1 block text-xs font-bold">الباقة التي سيتم إلغاؤها</label>
           <select className="admin-input" required value={grantId} onChange={event => { setGrantId(event.target.value); setPreview(null); setPreviewKey(''); setRefundAmount(''); }} disabled={!student}>
-            <option value="">اختر باقة نشطة</option>
-            {activePackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>{item.name} — {refundablePurchaseOperationId(item) ? `المدفوع ${money(item.paidAmount)}` : `مراجعة يدوية (الحد ${money(item.price)})`}</option>)}
+            <option value="">اختر باقة</option>
+            {studentPackages.map(item => <option key={item.accessGrantId} value={item.accessGrantId}>
+              {item.name} — {purchaseMethodLabels[item.purchaseMethod] || 'طريقة الحصول غير معروفة'}
+              {!item.isActive ? ' — غير نشطة' : ''}
+              {isExternallyRefundableGrant(item) ? ` — ${refundablePurchaseOperationId(item) ? `المدفوع ${money(item.paidAmount)}` : `مراجعة يدوية (الحد ${money(item.price)})`}` : ''}
+            </option>)}
           </select>
-          {student && activePackages.length === 0 ? <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">لا توجد لهذا الطالب باقة مدفوعة قابلة للاسترداد. باقات الهدايا والأكواد لا تحتوي مبلغًا مدفوعًا من الطالب.</p> : null}
+          {student && studentPackages.length === 0 ? <p className="mt-2 text-sm text-[var(--admin-muted)]">لا توجد باقات مسجلة لهذا الطالب.</p> : null}
+          {selectedRefundPackage && !isExternallyRefundableGrant(selectedRefundPackage) ? <p role="status" className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">{!selectedRefundPackage.isActive ? 'هذه الباقة غير نشطة ولا يمكن استردادها.' : 'طريقة الحصول على هذه الباقة أو بيانات دفعها لا تدعم الاسترداد النقدي من هذه الشاشة حاليًا.'}</p> : null}
         </div>
         <div className="md:col-span-2" aria-live="polite">
           {previewLoading ? <p className="rounded-xl border border-[var(--admin-border)] p-4 text-sm text-[var(--admin-muted)]">جارٍ تحميل المشاهدة ومحاولات الامتحانات…</p> : null}

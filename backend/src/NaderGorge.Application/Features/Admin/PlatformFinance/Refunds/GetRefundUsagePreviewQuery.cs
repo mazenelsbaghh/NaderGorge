@@ -110,6 +110,10 @@ public sealed class GetRefundUsagePreviewQueryHandler(IAppDbContext db)
             .Where(x => x.Id == grant.ContentSectionId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
         CodeType.Lesson when grant.LessonId.HasValue => await db.Lessons.AsNoTracking()
             .Where(x => x.Id == grant.LessonId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+        CodeType.Exam when grant.PublicExamProductId.HasValue => await db.PublicExamProducts.AsNoTracking()
+            .Where(x => x.Id == grant.PublicExamProductId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
+        CodeType.Exam when grant.ExamId.HasValue => await db.PublicExamProducts.AsNoTracking()
+            .Where(x => x.ExamId == grant.ExamId.Value).Select(x => (decimal?)x.Price).SingleOrDefaultAsync(ct),
         _ => null
     };
 

@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 using NaderGorge.Application.Features.Assessments;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -77,8 +78,28 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .Distinct()
             .ToList();
         var lessonGrantIds = allGrants
-            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Lesson && grant.LessonId.HasValue)
+            .Where(grant => grant.GrantType == CodeType.Lesson && grant.LessonId.HasValue)
             .Select(grant => grant.LessonId!.Value)
+            .Distinct()
+            .ToList();
+        var lessonVideoGrantIds = allGrants
+            .Where(grant => grant.GrantType == CodeType.Video && grant.LessonVideoId.HasValue)
+            .Select(grant => grant.LessonVideoId!.Value)
+            .Distinct()
+            .ToList();
+        var videoTypeGrantIds = allGrants
+            .Where(grant => grant.GrantType == CodeType.Video && grant.VideoTypeId.HasValue)
+            .Select(grant => grant.VideoTypeId!.Value)
+            .Distinct()
+            .ToList();
+        var publicExamProductGrantIds = allGrants
+            .Where(grant => grant.GrantType == CodeType.Exam && grant.PublicExamProductId.HasValue)
+            .Select(grant => grant.PublicExamProductId!.Value)
+            .Distinct()
+            .ToList();
+        var publicExamGrantExamIds = allGrants
+            .Where(grant => grant.GrantType == CodeType.Exam && grant.ExamId.HasValue)
+            .Select(grant => grant.ExamId!.Value)
             .Distinct()
             .ToList();
 
@@ -133,6 +154,39 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 TeacherName = lesson.ContentSection.Term.Package.Teacher.User.FullName
             })
             .ToDictionaryAsync(lesson => lesson.Id, cancellationToken);
+        var grantedLessonVideos = await _context.LessonVideos
+            .AsNoTracking()
+            .Where(video => lessonVideoGrantIds.Contains(video.Id))
+            .Select(video => new
+            {
+                video.Id,
+                PackageName = video.Lesson.ContentSection.Term.Package.Name,
+                video.Title,
+                video.Lesson.ContentSection.Term.Package.TeacherId,
+                TeacherName = video.Lesson.ContentSection.Term.Package.Teacher.User.FullName
+            })
+            .ToDictionaryAsync(video => video.Id, cancellationToken);
+        var grantedVideoTypes = await _context.VideoTypes
+            .AsNoTracking()
+            .Where(videoType => videoTypeGrantIds.Contains(videoType.Id))
+            .Select(videoType => new { videoType.Id, videoType.Name })
+            .ToDictionaryAsync(videoType => videoType.Id, cancellationToken);
+        var grantedPublicExamProducts = await _context.PublicExamProducts
+            .AsNoTracking()
+            .Where(product => publicExamProductGrantIds.Contains(product.Id)
+                || publicExamGrantExamIds.Contains(product.ExamId))
+            .Select(product => new
+            {
+                product.Id,
+                product.ExamId,
+                product.Exam.Title,
+                product.Price,
+                product.TeacherId,
+                TeacherName = product.Teacher != null ? product.Teacher.User.FullName : null
+            })
+            .ToListAsync(cancellationToken);
+        var grantedPublicExamProductsById = grantedPublicExamProducts.ToDictionary(product => product.Id);
+        var grantedPublicExamProductsByExamId = grantedPublicExamProducts.ToDictionary(product => product.ExamId);
 
         var purchaseEffects = await _context.SalesFinancialEffects
             .AsNoTracking()
@@ -140,6 +194,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .Select(effect => new
             {
                 effect.PurchaseOperationId,
+                effect.TargetType,
                 effect.TargetId,
                 effect.TeacherId,
                 TeacherName = effect.Teacher != null ? effect.Teacher.User.FullName : null,
@@ -156,6 +211,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             string name = "غير معروف";
             decimal price = 0m;
             Guid contentId = Guid.Empty;
+            SalesTargetType? salesTargetType = null;
             Guid? contentTeacherId = null;
             string? contentTeacherName = null;
             var codeTeacherId = grant.AccessCode?.CodeGroup?.TeacherId;
@@ -163,7 +219,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
             switch (grant.GrantType)
             {
-                case NaderGorge.Domain.Enums.CodeType.Package:
+                case CodeType.Package:
+                    contentId = grant.PackageId ?? Guid.Empty;
+                    salesTargetType = SalesTargetType.Package;
                     if (grant.PackageId.HasValue && grantedPackages.TryGetValue(grant.PackageId.Value, out var package))
                     {
                         name = package.Name;
@@ -179,7 +237,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                             : $"باكدج عام لمدرس {codeTeacherName}";
                     }
                     break;
-                case NaderGorge.Domain.Enums.CodeType.Term:
+                case CodeType.Term:
+                    contentId = grant.TermId ?? Guid.Empty;
+                    salesTargetType = SalesTargetType.Term;
                     if (grant.TermId.HasValue && grantedTerms.TryGetValue(grant.TermId.Value, out var term))
                     {
                         name = $"{term.PackageName} — {term.Title}";
@@ -189,7 +249,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         contentTeacherName = term.TeacherName;
                     }
                     break;
-                case NaderGorge.Domain.Enums.CodeType.Month:
+                case CodeType.Month:
+                    contentId = grant.ContentSectionId ?? Guid.Empty;
+                    salesTargetType = SalesTargetType.ContentSection;
                     if (grant.ContentSectionId.HasValue && grantedSections.TryGetValue(grant.ContentSectionId.Value, out var section))
                     {
                         name = $"{section.PackageName} — {section.Title}";
@@ -199,7 +261,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         contentTeacherName = section.TeacherName;
                     }
                     break;
-                case NaderGorge.Domain.Enums.CodeType.Lesson:
+                case CodeType.Lesson:
+                    contentId = grant.LessonId ?? Guid.Empty;
+                    salesTargetType = SalesTargetType.Lesson;
                     if (grant.LessonId.HasValue && grantedLessons.TryGetValue(grant.LessonId.Value, out var lesson))
                     {
                         name = $"{lesson.PackageName} — {lesson.Title}";
@@ -209,10 +273,46 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         contentTeacherName = lesson.TeacherName;
                     }
                     break;
+                case CodeType.Video when grant.LessonVideoId.HasValue:
+                    contentId = grant.LessonVideoId.Value;
+                    salesTargetType = SalesTargetType.SpecificVideo;
+                    if (grantedLessonVideos.TryGetValue(grant.LessonVideoId.Value, out var video))
+                    {
+                        name = $"{video.PackageName} — {video.Title}";
+                        contentTeacherId = video.TeacherId;
+                        contentTeacherName = video.TeacherName;
+                    }
+                    break;
+                case CodeType.Video when grant.VideoTypeId.HasValue:
+                    contentId = grant.VideoTypeId.Value;
+                    salesTargetType = SalesTargetType.VideoType;
+                    if (grantedVideoTypes.TryGetValue(grant.VideoTypeId.Value, out var videoType))
+                    {
+                        name = $"نوع فيديو — {videoType.Name}";
+                    }
+                    break;
+                case CodeType.Exam:
+                    var examProduct = grant.PublicExamProductId.HasValue
+                        && grantedPublicExamProductsById.TryGetValue(grant.PublicExamProductId.Value, out var productById)
+                            ? productById
+                            : grant.ExamId.HasValue
+                                && grantedPublicExamProductsByExamId.TryGetValue(grant.ExamId.Value, out var productByExamId)
+                                    ? productByExamId
+                                    : null;
+                    contentId = examProduct?.Id ?? grant.PublicExamProductId ?? grant.ExamId ?? Guid.Empty;
+                    salesTargetType = SalesTargetType.PublicExam;
+                    if (examProduct is not null)
+                    {
+                        name = $"امتحان — {examProduct.Title}";
+                        price = examProduct.Price;
+                        contentTeacherId = examProduct.TeacherId;
+                        contentTeacherName = examProduct.TeacherName;
+                    }
+                    break;
             }
 
             var purchaseEffect = purchaseEffects
-                .Where(effect => effect.TargetId == contentId)
+                .Where(effect => effect.TargetId == contentId && effect.TargetType == salesTargetType)
                 .OrderBy(effect => Math.Abs((effect.CreatedAt - grant.CreatedAt).Ticks))
                 .FirstOrDefault();
 
