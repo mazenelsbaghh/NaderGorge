@@ -41,14 +41,14 @@ public sealed class RefundUsagePreviewQueryTests
     }
 
     [Fact]
-    public async Task Access_code_grant_cannot_be_refunded_as_a_historical_cash_purchase()
+    public async Task Access_code_grant_uses_content_price_as_a_manual_external_refund_ceiling()
     {
         await using var db = TestAppDbContextFactory.Create();
         var studentId = Guid.NewGuid();
         var package = new Package
         {
             Name = "Code package",
-            Description = "Must not become cash",
+            Description = "Manual external refund regression",
             Price = 500m,
             SubjectId = Guid.NewGuid(),
             TeacherId = Guid.NewGuid(),
@@ -68,7 +68,10 @@ public sealed class RefundUsagePreviewQueryTests
         var result = await new GetRefundUsagePreviewQueryHandler(db).Handle(
             new(studentId, grant.Id, null), CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.True(result.IsHistoricalSource);
+        Assert.Equal(500m, result.PaidAmount);
+        Assert.Equal(500m, result.RemainingRefundableAmount);
     }
 
     [Fact]

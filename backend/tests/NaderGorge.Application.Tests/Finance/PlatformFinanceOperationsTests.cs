@@ -66,7 +66,7 @@ public sealed class PlatformFinanceOperationsTests
     }
 
     [Fact]
-    public async Task Historical_grant_refund_cannot_exceed_its_explicit_content_price_ceiling()
+    public async Task Access_code_grant_refund_cannot_exceed_its_explicit_content_price_ceiling()
     {
         await using var db = TestAppDbContextFactory.Create();
         var operations = new PlatformFinanceOperationsService(
@@ -90,6 +90,7 @@ public sealed class PlatformFinanceOperationsTests
             UserId = studentId,
             GrantType = CodeType.Package,
             PackageId = package.Id,
+            AccessCodeId = Guid.NewGuid(),
             IsActive = false
         });
         await db.SaveChangesAsync();

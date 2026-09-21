@@ -15,6 +15,17 @@ const purchaseMethodLabels: Record<string, string> = {
   Gift: 'هدية',
 };
 
+function historicalRefundReviewMessage(purchaseMethod?: string, isZeroCashPurchase = false) {
+  if (purchaseMethod === 'Code' || purchaseMethod === 'Gift') {
+    const sourceLabel = purchaseMethod === 'Code' ? 'كود' : 'هدية';
+    return `هذه الباقة حصل عليها الطالب عن طريق ${sourceLabel}. أدخل فقط المبلغ الذي رُد فعليًا من الخزنة؛ السعر الظاهر حد أقصى وليس إثبات دفع.`;
+  }
+  if (isZeroCashPurchase) {
+    return 'عملية الشراء المسجلة مدفوعة بالكامل من رصيد ترويجي، والمدفوع من الطالب فيها صفر. أدخل فقط مبلغًا خارجيًا تأكدت أنه رُد فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.';
+  }
+  return 'لا يوجد مبلغ مدفوع موثّق يمكن الاعتماد عليه لهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.';
+}
+
 export default function RefundManager({ staff = false }: { staff?: boolean }) {
   const { hasPermission } = useHasPermission();
   const canCreate = hasPermission('finance.refunds.create');
@@ -189,7 +200,7 @@ export default function RefundManager({ staff = false }: { staff?: boolean }) {
               <p><b>المحاولات:</b> {preview.examsAvailable ? `${preview.totalAttempts} (${preview.submittedAttempts} مُسلّمة)` : 'غير متاح لهذا النطاق'}</p>
             </div>
             {!preview.usageAvailable ? <p className="text-sm font-bold text-amber-700">{preview.unavailableReason}</p> : null}
-            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">{isZeroCashExternalReview ? 'عملية الشراء المسجلة مدفوعة بالكامل من رصيد ترويجي، والمدفوع من الطالب فيها صفر. أدخل فقط مبلغًا خارجيًا تأكدت أنه رُد فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.' : 'لا يوجد مبلغ مدفوع موثّق يمكن الاعتماد عليه لهذه المنحة. أدخل فقط المبلغ الذي تأكدت أنه دُفع فعليًا؛ السعر الظاهر حد أقصى وليس إثبات دفع.'}</p> : null}
+            {preview.isHistoricalSource ? <p className="rounded-xl bg-amber-500/10 p-3 text-sm font-bold text-amber-800">{historicalRefundReviewMessage(selectedRefundPackage?.purchaseMethod, isZeroCashExternalReview)}</p> : null}
             <p className="text-xs text-[var(--admin-muted)]">{preview.isHistoricalSource ? 'الحد الأقصى' : 'المدفوع'} {money(preview.paidAmount)}، والاستردادات السابقة {money(preview.previouslyRefundedAmount)}. {!preview.isHistoricalSource ? preview.historicalUsageNote : null}</p>
           </div> : null}
         </div>

@@ -29,15 +29,18 @@ test('2026-09-21 zero-cash direct purchases use the reviewed external refund pat
   assert.equal(isExternallyRefundableGrant(promotionalPurchase), true);
 });
 
-test('gift, code, inactive, and valueless grants remain ineligible', () => {
+test('2026-09-21 code and gift grants use their content price as the manual cash ceiling', () => {
   assert.equal(
     isExternallyRefundableGrant({ ...grant, purchaseMethod: 'Gift' }),
-    false
+    true
   );
   assert.equal(
     isExternallyRefundableGrant({ ...grant, purchaseMethod: 'Code' }),
-    false
+    true
   );
+});
+
+test('inactive and valueless grants remain ineligible', () => {
   assert.equal(
     isExternallyRefundableGrant({ ...grant, isActive: false }),
     false

@@ -20,7 +20,7 @@ export function refundablePurchaseOperationId(
 export function isExternallyRefundableGrant(
   grant: RefundableGrantSource
 ): boolean {
-  if (!grant.isActive || isGiftOrCode(grant)) return false;
+  if (!grant.isActive) return false;
   return Boolean(refundablePurchaseOperationId(grant)) || grant.price > 0;
 }
 

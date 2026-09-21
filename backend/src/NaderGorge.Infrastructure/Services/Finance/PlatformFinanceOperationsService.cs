@@ -218,7 +218,7 @@ public sealed class PlatformFinanceOperationsService(
 
         var grant = await _db.StudentAccessGrants.AsNoTracking()
             .SingleOrDefaultAsync(x => x.Id == request.OriginalSourceId && x.UserId == request.StudentId, ct);
-        if (grant is null || grant.AccessCodeId.HasValue || grant.GiftRecipientId.HasValue) return null;
+        if (grant is null) return null;
         return grant.GrantType switch
         {
             CodeType.Package when grant.PackageId.HasValue => await _db.Packages.AsNoTracking()
