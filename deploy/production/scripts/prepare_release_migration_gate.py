@@ -115,8 +115,8 @@ REFUND_ROLE_VALIDATION_SQL = r"""
 DO $$ DECLARE changed bigint; BEGIN
   SELECT count(*) INTO changed
   FROM massar_gate_refund_roles.roles old
-  FULL JOIN public.roles current ON current."Id" = old."Id"
-  WHERE old."Id" IS NULL OR current."Id" IS NULL
+  LEFT JOIN public.roles current ON current."Id" = old."Id"
+  WHERE current."Id" IS NULL
     OR (to_jsonb(current) - 'PermissionsJson') IS DISTINCT FROM
        (to_jsonb(old) - 'PermissionsJson')
     OR COALESCE(NULLIF(current."PermissionsJson", ''), '[]')::jsonb
@@ -908,7 +908,7 @@ def prepare(
             if re.search(
                 r"(connection refused|failed to connect|permission denied|"
                 r"password authentication failed|database .* does not exist|"
-                r"n-1 backend readiness failed|\b(?:fail|crit):|"
+                r"n-1 backend readiness failed|\b(?:error|fail|crit):|"
                 r"no frameworks were found|unhandled exception|pg_dump:|"
                 r"migration count exceeds|MASSAR_GATE_FAILURE|"
                 r"\b(?:fatal|blocked)\b)",
