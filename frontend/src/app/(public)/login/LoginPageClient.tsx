@@ -22,8 +22,8 @@ import { StudentLogin } from './StudentLogin';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
-import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { getRoleDestination, getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
 
@@ -43,7 +43,7 @@ const StaffLogin = dynamic(
 
 export default function LoginPageClient() {
   const router = useRouter();
-  const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const { isDark, themeVars, toggleTheme } = useAuthTheme();
 
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const surface = getSurfaceName();
@@ -121,7 +121,13 @@ export default function LoginPageClient() {
   }
 
   if (surface === 'student' || surface === 'landing' || surface === 'all') {
-    return <StudentLogin isDark={isDark} onToggleTheme={toggleTheme} />;
+    return (
+      <StudentLogin
+        isDark={isDark}
+        themeVars={authThemeVars}
+        onToggleTheme={toggleTheme}
+      />
+    );
   }
 
   return <StaffLogin surface={surface} isDark={isDark} themeVars={authThemeVars} onToggleTheme={toggleTheme} />;

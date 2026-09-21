@@ -1,41 +1,17 @@
 .student-login {
-  --admin-bg: #ffffff;
-  --admin-text: #021f45;
-  --admin-muted: #52647b;
-  --admin-primary: #021f45;
-  --admin-primary-contrast: #ffffff;
-  --admin-card: #ffffff;
-  --admin-card-soft: #f4f7fa;
-  --admin-border: #c4cfdd;
-  --admin-primary-15: #e7eff6;
-  --admin-danger: #b42318;
-  --admin-danger-10: #fff1f0;
-  --admin-danger-20: #fecdca;
-  --login-link: #007880;
-  --login-focus: #068d96;
+  --login-link: var(--admin-primary);
+  --login-focus: var(--admin-primary);
   color-scheme: light;
   scrollbar-gutter: auto;
 }
 
 .student-login[data-theme='dark'] {
-  --admin-bg: #021f45;
-  --admin-text: #f6f8fc;
-  --admin-muted: #b7c8dc;
-  --admin-primary: #087d86;
-  --admin-card: #0c2b50;
-  --admin-card-soft: #173859;
-  --admin-border: #4f6a87;
-  --admin-primary-15: #153e57;
-  --admin-danger: #ffb4ab;
-  --admin-danger-10: #452735;
-  --admin-danger-20: #995064;
-  --login-link: #42d6de;
-  --login-focus: #42d6de;
   color-scheme: dark;
 }
 
 .student-login__theme {
   position: absolute;
+  z-index: 2;
   top: max(1rem, env(safe-area-inset-top));
   left: max(1rem, env(safe-area-inset-left));
   display: grid;
@@ -52,6 +28,8 @@
 }
 
 .student-login__main {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   align-items: center;

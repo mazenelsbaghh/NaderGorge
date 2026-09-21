@@ -19,13 +19,12 @@ import '../auth.css';
 import Link from 'next/link';
 import { useState } from 'react';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import dynamic from 'next/dynamic';
-const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
-import { useConstrainedMotion } from '@/hooks/useConstrainedMotion';
 import { Info } from 'lucide-react';
 
 const RegistrationInstructionsModal = dynamic(
@@ -39,41 +38,18 @@ const RegistrationInstructionsModal = dynamic(
 export default function RegisterPageClient() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
-  const { allowEnhancedMotion, isPageVisible } = useConstrainedMotion();
   const [showInstructions, setShowInstructions] = useState(true);
 
   const handleCloseInstructions = () => {
     setShowInstructions(false);
   };
-  const rippleGridColor = isDark ? '#36d6d6' : '#0e8f8f'; // design-token-allow: WebGL uniform requires a concrete color value.
-
   return (
     <div 
       className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
       style={themeVars}
     >
 
-      {/* ── Ripple Interactive Background ── */}
-      <div className="auth-shell__static-grid absolute inset-0 z-0 pointer-events-none">
-        {allowEnhancedMotion ? (
-          <RippleGrid
-            active={isPageVisible}
-            gridColor={rippleGridColor}
-            rippleIntensity={0.05}
-            gridSize={10}
-            gridThickness={isDark ? 15 : 12}
-            mouseInteraction
-            mouseInteractionRadius={1.2}
-            opacity={isDark ? 0.45 : 0.25}
-          />
-        ) : null}
-      </div>
-
-      {/* ── Ambient Glow Orbs ── */}
-      <div className="auth-shell__glow pointer-events-none">
-        <div className="auth-shell__glow-top" />
-        <div className="auth-shell__glow-bottom" />
-      </div>
+      <AuthBackdrop isDark={isDark} />
 
       {/* ── Theme Toggle Bar ── */}
       <div className="auth-theme-bar">

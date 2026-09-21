@@ -2,12 +2,13 @@
 
 import './student-login.css';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { LoginForm } from '@/components/forms/LoginForm';
+import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { PLATFORM_IDENTITY } from '@/packages/brand';
 
@@ -17,15 +18,22 @@ const LoginInstructions = dynamic(
   { ssr: false },
 );
 
-export function StudentLogin({ isDark, onToggleTheme }: {
+export function StudentLogin({ isDark, themeVars, onToggleTheme }: {
   isDark: boolean;
+  themeVars: CSSProperties;
   onToggleTheme: () => void;
 }) {
   const [showInstructions, setShowInstructions] = useState(false);
   const closeInstructions = useCallback(() => setShowInstructions(false), []);
 
   return (
-    <div className="auth-shell student-login" data-theme={isDark ? 'dark' : 'light'}>
+    <div
+      className="auth-shell student-login"
+      data-theme={isDark ? 'dark' : 'light'}
+      style={themeVars}
+    >
+      <AuthBackdrop isDark={isDark} />
+
       <AnimatedThemeToggler
         className="student-login__theme"
         checked={isDark}
