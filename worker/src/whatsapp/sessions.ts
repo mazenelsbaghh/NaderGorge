@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, normalizeMessageContent, jidNormalizedUser, type WASocket, type WAMessage } from '@whiskeysockets/baileys';
+import makeWASocket, { Browsers, DisconnectReason, normalizeMessageContent, jidNormalizedUser, type WASocket, type WAMessage } from '@whiskeysockets/baileys';
 import { pino } from 'pino';
 import QRCode from 'qrcode';
 import type { Pool } from 'pg';
@@ -46,7 +46,7 @@ export class BaileysSessions {
     const version = await currentWhatsAppVersion();
     const auth = await this.store.auth(account.Id);
     const socket = makeWASocket({ version, auth: auth.state, logger, markOnlineOnConnect: false,
-      syncFullHistory: false, shouldSyncHistoryMessage: () => false,
+      syncFullHistory: true, browser: Browsers.macOS('Desktop'), emitOwnEvents: false,
       shouldIgnoreJid: jid => jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@newsletter') });
     const session: Session = { accountId: account.Id, socket, state: 'connecting', stopped: false,
       retries: this.sessions.get(sessionId)?.retries ?? 0, lastProgressAt: Date.now() };
@@ -71,9 +71,13 @@ export class BaileysSessions {
         }
         catch (error) { this.recoverSession(sessionId, session, error, 'connection'); return; }
       }
+      for (const message of events['messaging-history.set']?.messages ?? []) {
+        try { await this.receive(sessionId, session, message, true); }
+        catch (error) { this.recoverSession(sessionId, session, error, 'history-message'); return; }
+      }
       for (const message of events['messages.upsert']?.messages ?? []) {
         try { await this.receive(sessionId, session, message); }
-        catch (error) { this.logFailure('inbound-message', error); }
+        catch (error) { this.recoverSession(sessionId, session, error, 'inbound-message'); return; }
       }
       for (const receipt of events['messages.update'] ?? []) {
         try {
@@ -117,16 +121,26 @@ export class BaileysSessions {
     this.scheduleReconnect(sessionId, session.retries++, session);
   }
 
-  private async receive(sessionId: string, session: Session, message: WAMessage): Promise<void> {
+  private async receive(sessionId: string, session: Session, message: WAMessage, history = false): Promise<void> {
     const jid = message.key.remoteJid;
-    if (message.key.fromMe || !message.message || !jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
-    if (jid.endsWith('@lid') && !message.key.remoteJidAlt) {
-      const phoneJid = await session.socket.signalRepository.lidMapping.getPNForLID(jid);
-      if (phoneJid) message.key.remoteJidAlt = phoneJid;
-    }
+    if (!message.message || !jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) return;
     const content = normalizeMessageContent(message.message);
-    await this.store.enqueue(session.accountId, { sessionId, event: 'message', data: {
+    await this.store.enqueue(session.accountId, { sessionId, event: 'message', history, data: {
       ...message, message: content, messageTimestamp: message.messageTimestamp?.toString() } });
+  }
+
+  async prepareCallback(payload: unknown): Promise<unknown> {
+    const callback = payload as { sessionId?: string; event?: string; data?: WAMessage };
+    if (callback.event !== 'message' || !callback.sessionId || !callback.data?.key) return payload;
+    const message = callback.data;
+    const jid = message.key.remoteJid;
+    if (jid?.endsWith('@lid') && !message.key.remoteJidAlt) {
+      const session = this.sessions.get(callback.sessionId);
+      const phoneJid = await session?.socket.signalRepository.lidMapping.getPNForLID(jid);
+      if (!phoneJid) throw new Error('Phone mapping pending');
+      message.key.remoteJidAlt = phoneJid;
+    }
+    return payload;
   }
 
   async connection(sessionId: string): Promise<ConnectionSnapshot> {

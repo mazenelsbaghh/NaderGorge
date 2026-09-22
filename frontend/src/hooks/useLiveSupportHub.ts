@@ -5,12 +5,13 @@ import * as signalR from '@microsoft/signalr';
 import { getBackendHubUrl } from '@/lib/backend-url';
 import { getAccessToken } from '@/lib/auth-memory';
 import { useLiveSupportStore } from '@/stores/live-support-store';
+import { createLiveSupportRefreshScheduler } from '@/lib/live-support-refresh-scheduler';
 import { recordRealtimeMetric } from '@/lib/realtime-observability';
 import { decideLiveSupportSequence, parseLiveSupportEnvelope, type LiveSupportClientEnvelope } from '@/lib/live-support-client-contract';
 
 export type LiveSupportEnvelope = LiveSupportClientEnvelope;
 
-export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: () => void, onParticipantTypingChanged?: (preview: string | null) => void) {
+export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: () => void | Promise<void>, onParticipantTypingChanged?: (preview: string | null) => void) {
   const [connected, setConnected] = useState(false);
   const markEventProcessed = useLiveSupportStore((state) => state.markEventProcessed);
   const recordSequence = useLiveSupportStore((state) => state.recordSequence);
@@ -35,6 +36,10 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       .build();
     connectionRef.current = connection;
     let disposed = false;
+    const snapshots = createLiveSupportRefreshScheduler(
+      async () => { await snapshotCallback.current?.(); },
+      () => recordRealtimeMetric('snapshotReconciliation'),
+    );
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     const join = async () => { if (conversationId && connection.state === signalR.HubConnectionState.Connected) await connection.invoke('JoinConversation', conversationId); };
     const durableEvent = (raw: string | LiveSupportEnvelope) => {
@@ -42,7 +47,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       if (!event) {
         recordRealtimeMetric('invalidEvent');
         recordRealtimeMetric('snapshotReconciliation');
-        snapshotCallback.current?.();
+        snapshots.request();
         return;
       }
       if (!markEventProcessed(event.eventId)) return;
@@ -52,7 +57,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
         if (sequenceDecision === 'duplicate') return;
         if (sequenceDecision === 'reconcile') {
           recordRealtimeMetric('snapshotReconciliation');
-          snapshotCallback.current?.();
+          snapshots.request();
           return;
         }
         recordSequence(event.conversationId, event.sequence);
@@ -61,7 +66,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       // Staff receive events for every conversation assigned to them, including
       // conversations that are not currently open in the workspace. Reconcile
       // the bootstrap for all of those events so the queue never stays stale.
-      if (event.conversationId) snapshotCallback.current?.();
+      if (event.conversationId) snapshots.request();
     };
     connection.on('LiveSupportEvent', durableEvent);
     connection.on('ParticipantTypingChanged', (event: { conversationId: string; preview?: string | null }) => {
@@ -73,9 +78,9 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       recordRealtimeMetric('snapshotReconciliation');
       void join().catch(() => {
         recordRealtimeMetric('snapshotReconciliation');
-        snapshotCallback.current?.();
+        snapshots.request();
       });
-      snapshotCallback.current?.();
+      snapshots.request();
     });
     connection.onreconnecting(() => setConnected(false));
     connection.onclose(() => setConnected(false));
@@ -89,7 +94,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
         setConnected(true);
         void join().catch(() => {
           recordRealtimeMetric('snapshotReconciliation');
-          snapshotCallback.current?.();
+          snapshots.request();
         });
         heartbeat = setInterval(() => void connection.invoke('Heartbeat').catch(() => {
           recordRealtimeMetric('snapshotReconciliation');
@@ -100,6 +105,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       });
     return () => {
       disposed = true;
+      snapshots.dispose();
       if (heartbeat) clearInterval(heartbeat);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = null;

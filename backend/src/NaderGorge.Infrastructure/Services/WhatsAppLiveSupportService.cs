@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
@@ -25,7 +26,8 @@ public sealed class WhatsAppLiveSupportService(
     IConfiguration configuration,
     IWhatsAppCampaignService campaigns,
     IServiceScopeFactory? serviceScopeFactory = null,
-    BaileysWhatsAppClient? baileys = null)
+    BaileysWhatsAppClient? baileys = null,
+    ILogger<WhatsAppLiveSupportService>? logger = null)
 {
     private const string UnsupportedDocumentMessage = "تعذر استلام مرفق واتساب. يُسمح بملفات PDF فقط.";
     private const string UnavailableMediaMessage = "تعذر استلام مرفق واتساب لأن الملف غير متاح أو غير مدعوم.";
@@ -315,7 +317,7 @@ public sealed class WhatsAppLiveSupportService(
         return expired.Count;
     }
 
-    internal async Task IngestAsync(JsonElement envelope, JsonElement message, CancellationToken ct, LiveSupportWhatsAppAccount? account = null, JsonElement? baileysMessage = null)
+    internal async Task IngestAsync(JsonElement envelope, JsonElement message, CancellationToken ct, LiveSupportWhatsAppAccount? account = null, JsonElement? baileysMessage = null, bool isHistory = false)
     {
         // Reactions annotate an existing WhatsApp message; they are not new support
         // requests and must never create or reopen a live-support conversation.
@@ -325,7 +327,8 @@ public sealed class WhatsAppLiveSupportService(
         var whatsAppUserId = Text(message, "from");
         if (metaMessageId is null || whatsAppUserId is null) return;
         var providerTimestamp = ProviderTimestamp(message);
-        if (IsOptOutKeyword(message))
+        var isFromStaff = account is not null && message.TryGetProperty("fromMe", out var fromMe) && fromMe.ValueKind == JsonValueKind.True;
+        if (!isFromStaff && !isHistory && IsOptOutKeyword(message))
             await campaigns.RecordInboundOptOutAsync(whatsAppUserId, metaMessageId, providerTimestamp, ct);
         if (await db.LiveSupportWhatsAppMessages.AnyAsync(item => item.MetaMessageId == metaMessageId, ct)) return;
         var contactBlock = await LiveSupportBlockPolicy.ForParticipant(db, null, null, whatsAppUserId).FirstOrDefaultAsync(ct);
@@ -344,20 +347,25 @@ public sealed class WhatsAppLiveSupportService(
         }
         var displayName = ContactName(envelope, whatsAppUserId);
         var (content, messageType, attachmentId) = await ContentAsync(message, ct, account, baileysMessage);
-        var (conversation, participant, binding) = await ConversationAsync(whatsAppUserId, displayName, providerTimestamp, ct, account);
-        binding.DisplayName = displayName;
-        AdvanceCustomerServiceWindow(binding, providerTimestamp);
+        var (conversation, participant, binding) = await ConversationAsync(whatsAppUserId, displayName, providerTimestamp, ct, account, isHistory || isFromStaff);
+        if (!isFromStaff) binding.DisplayName = displayName;
+        if (!isFromStaff) AdvanceCustomerServiceWindow(binding, providerTimestamp);
         binding.Version++;
         var clientMessageId = metaMessageId.Length <= 100 ? metaMessageId : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(metaMessageId))).ToLowerInvariant();
-        var sent = await support.IngestExternalMessageAsync(new LiveSupportExternalMessage(participant, conversation.Id, clientMessageId, content, messageType, attachmentId), ct);
+        var sent = await support.IngestExternalMessageAsync(new LiveSupportExternalMessage(participant, conversation.Id, clientMessageId, content, messageType, attachmentId)
+        {
+            IsFromStaff = isFromStaff,
+            IsHistory = isHistory,
+            ProviderSentAt = account is null ? null : providerTimestamp
+        }, ct);
         db.LiveSupportWhatsAppMessages.Add(new LiveSupportWhatsAppMessage
         {
             ConversationId = conversation.Id,
             LiveSupportMessageId = sent.Message.Id,
             MetaMessageId = metaMessageId,
-            Direction = "Inbound",
+            Direction = isFromStaff ? "Outbound" : "Inbound",
             MessageType = Text(message, "type") ?? "unknown",
-            Status = "Received",
+            Status = isFromStaff ? "Sent" : "Received",
             ProviderTimestamp = providerTimestamp,
             Version = 1
         });
@@ -369,14 +377,13 @@ public sealed class WhatsAppLiveSupportService(
         string displayName,
         DateTime providerTimestamp,
         CancellationToken ct,
-        LiveSupportWhatsAppAccount? account = null)
+        LiveSupportWhatsAppAccount? account = null,
+        bool importOnly = false)
     {
         var accountId = account?.Id;
-        var openConversationIds = await db.LiveSupportConversations.AsNoTracking()
-            .Where(item => item.Status != LiveSupportConversationStatus.Closed && item.Status != LiveSupportConversationStatus.Abandoned)
-            .Select(item => item.Id).ToListAsync(ct);
         var binding = await db.LiveSupportWhatsAppBindings
-            .Where(item => item.WhatsAppUserId == whatsAppUserId && item.AccountId == accountId && openConversationIds.Contains(item.ConversationId))
+            .Where(item => item.WhatsAppUserId == whatsAppUserId && item.AccountId == accountId && (importOnly || db.LiveSupportConversations.Any(conversation => conversation.Id == item.ConversationId &&
+                conversation.Status != LiveSupportConversationStatus.Closed && conversation.Status != LiveSupportConversationStatus.Abandoned)))
             .OrderByDescending(item => item.LastInboundAt).FirstOrDefaultAsync(ct);
         if (binding is not null)
         {
@@ -417,7 +424,20 @@ public sealed class WhatsAppLiveSupportService(
         if (conversation is null)
         {
             var previousConversationId = await LatestTerminalWhatsAppConversationIdAsync(whatsAppUserId, ct, accountId);
-            conversation = await CreateConversationAsync(participant, previousConversationId, ct);
+            if (importOnly)
+            {
+                // Historical and phone-sent messages must not enqueue support or trigger automated replies.
+                conversation = new LiveSupportConversation
+                {
+                    ParticipantType = LiveSupportParticipantType.Guest, GuestSessionId = guest.Id,
+                    PreviousConversationId = previousConversationId, Status = LiveSupportConversationStatus.Closed,
+                    CreatedAt = providerTimestamp, ClosedAt = providerTimestamp, LastMessageAt = providerTimestamp,
+                    CloseReason = "سجل واتساب المستورد", Version = 1
+                };
+                db.LiveSupportConversations.Add(conversation);
+                await db.SaveChangesAsync(ct);
+            }
+            else conversation = await CreateConversationAsync(participant, previousConversationId, ct);
         }
         var linkedStudentId = await FindStudentAsync(phone, ct);
         if (linkedStudentId.HasValue) conversation.LinkedStudentUserId = linkedStudentId;
@@ -495,6 +515,11 @@ public sealed class WhatsAppLiveSupportService(
                 downloaded = account is null ? await DownloadMediaWithRetryAsync(mediaId, ct)
                     : await baileys!.DownloadMediaAsync(account.InstanceName, baileysMessage!.Value, ct);
             }
+            catch (LiveSupportException exception) when (exception.Code is "BAILEYS_MEDIA_UNAVAILABLE" or "BAILEYS_MEDIA_TOO_LARGE" or "BAILEYS_MEDIA_UNSUPPORTED")
+            {
+                logger?.LogWarning("WhatsApp QR {MediaType} download rejected: {Code}", type, exception.Code);
+                return (Text(media, "caption") is { Length: > 0 } caption ? $"{caption}\n{UnavailableMediaMessage}" : UnavailableMediaMessage, LiveSupportMessageType.Text, null);
+            }
             catch (WhatsAppCloudService.WhatsAppCloudException exception) when (!exception.IsRetryable)
             {
                 return (UnavailableMediaMessage, LiveSupportMessageType.Text, null);
@@ -512,8 +537,10 @@ public sealed class WhatsAppLiveSupportService(
                     downloaded.Content.LongLength,
                     ct);
             }
-            catch (InvalidUploadContentException)
+            catch (InvalidUploadContentException exception)
             {
+                logger?.LogWarning("WhatsApp {Provider} {MediaType} rejected: {Reason}; bytes={SizeBytes}, contentType={ContentType}",
+                    account is null ? "Cloud" : "QR", type, exception.Message, downloaded.Content.LongLength, downloaded.ContentType);
                 return (UnavailableMediaMessage, LiveSupportMessageType.Text, null);
             }
             var attachment = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = "whatsapp" };

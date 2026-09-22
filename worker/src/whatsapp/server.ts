@@ -118,15 +118,22 @@ app.post('/sessions/:id/download', async (request, response) => {
   const message = JSON.parse(JSON.stringify(request.body?.message), BufferJSON.reviver) as WAMessage;
   if (!message?.key || !message.message) { response.sendStatus(400); return; }
   const socket = sessions.socket(request.params.id);
-  const stream = await downloadMediaMessage(message, 'stream', {}, { logger: pino({ level: 'silent' }), reuploadRequest: socket.updateMediaMessage });
+  const stream = await downloadMediaMessage(message, 'stream', {}, { logger: pino({ level: 'silent' }), reuploadRequest: socket.updateMediaMessage }).catch((error: unknown) => {
+    const status = (error as { output?: { statusCode?: number }; response?: { status?: number } })?.output?.statusCode
+      ?? (error as { response?: { status?: number } })?.response?.status;
+    if (status === 404 || status === 410) { response.sendStatus(410); return undefined; }
+    throw error;
+  });
+  if (!stream) return;
+  const content = normalizeMessageContent(message.message);
+  const maximumBytes = content?.documentMessage?.mimetype === 'application/pdf' ? 90 * 1024 * 1024 : 10 * 1024 * 1024;
   let size = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     size += chunk.length;
-    if (size > 10 * 1024 * 1024) { stream.destroy(); response.sendStatus(413); return; }
+    if (size > maximumBytes) { stream.destroy(); response.sendStatus(413); return; }
     chunks.push(Buffer.from(chunk));
   }
-  const content = normalizeMessageContent(message.message);
   const media = content?.imageMessage ?? content?.audioMessage ?? content?.documentMessage ?? content?.videoMessage;
   const mimetype = media?.mimetype ?? 'application/octet-stream';
   const extension = mimetype.includes('pdf') ? '.pdf' : mimetype.includes('png') ? '.png' : mimetype.includes('image') ? '.jpg' : mimetype.includes('audio') ? '.ogg' : '.mp4';
@@ -160,7 +167,7 @@ const heartbeat = setInterval(() => { void lock.query('SELECT 1').catch(() => sh
 const callbacks = setInterval(() => {
   if (delivering || closing) return;
   delivering = true;
-  void store.deliverCallbacks(`${backendUrl.replace(/\/$/, '')}/api/live-support/baileys/webhook`, token)
+  void store.deliverCallbacks(`${backendUrl.replace(/\/$/, '')}/api/live-support/baileys/webhook`, token, payload => sessions.prepareCallback(payload))
     .catch(() => console.error('[Baileys] Callback delivery paused; encrypted messages retained.'))
     .finally(() => { delivering = false; });
 }, 2000);

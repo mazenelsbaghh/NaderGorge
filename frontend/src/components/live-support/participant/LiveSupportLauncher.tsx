@@ -101,7 +101,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   const [activeAction, setActiveAction] = useState<LiveSupportAIPendingDecision | null>(null);
   const [activeVerification, setActiveVerification] = useState<LiveSupportAIVerificationSession | null>(null);
   const [aiTurnState, setAiTurnState] = useState<LiveSupportAITurnState | null>(null);
-  const { sendTyping } = useLiveSupportHub(conversation?.id, () => void refresh());
+  const { sendTyping } = useLiveSupportHub(conversation?.id, refresh);
 
   async function refresh() {
     const generation = ++refreshGeneration.current;

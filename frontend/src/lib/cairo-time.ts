@@ -15,6 +15,10 @@ const cairoDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 
+const cairoTimestampFormatter = new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
+  timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23',
+});
+
 function cairoDateParts(date = new Date()) {
   const parts = cairoDateFormatter.formatToParts(date);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
@@ -52,7 +56,7 @@ export function formatCairoDateTime(dateTime: string | Date, options: Intl.DateT
 }
 
 export function formatCairoTimestamp(dateTime: string | Date) {
-  return formatCairoDateTime(dateTime, { dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23' });
+  return cairoTimestampFormatter.format(parseUtcDateTime(dateTime));
 }
 
 export function cairoDateTimeLocalToUtcISOString(localDateTime: string) {

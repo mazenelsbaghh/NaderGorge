@@ -632,18 +632,18 @@ export const liveSupportService = {
     return response.data.data;
   },
 
-  getAttachmentBlob: async (audience: 'participant' | 'staff', conversationId: string, attachmentId: string) => {
+  getAttachmentBlob: async (audience: 'participant' | 'staff', conversationId: string, attachmentId: string, signal?: AbortSignal) => {
     const response = await apiClient.get<Blob>(
       `/live-support/${audience}/conversations/${conversationId}/attachments/${attachmentId}`,
-      { responseType: 'blob' },
+      { responseType: 'blob', signal },
     );
     return response.data;
   },
 
-  getStaffWhatsAppThreadAttachmentBlob: async (conversationId: string, attachmentId: string) => {
+  getStaffWhatsAppThreadAttachmentBlob: async (conversationId: string, attachmentId: string, signal?: AbortSignal) => {
     const response = await apiClient.get<Blob>(
       `/live-support/staff/conversations/${conversationId}/whatsapp-thread/attachments/${attachmentId}`,
-      { responseType: 'blob' },
+      { responseType: 'blob', signal },
     );
     return response.data;
   },

@@ -381,13 +381,18 @@ public sealed class LiveSupportService(
         var conversation = await RequireParticipantConversationAsync(message.Participant, message.ConversationId, ct);
         return await SendMessageAsync(new PersistMessageRequest(
             conversation,
-            LiveSupportSenderType.Guest,
+            message.IsFromStaff ? LiveSupportSenderType.Staff : LiveSupportSenderType.Guest,
             null,
-            message.Participant.GuestSessionId,
+            message.IsFromStaff ? null : message.Participant.GuestSessionId,
             message.ClientMessageId,
             message.Content,
             message.Type,
-            message.AttachmentId), ct);
+            message.AttachmentId)
+        {
+            ProviderSentAt = message.ProviderSentAt,
+            Imported = message.IsHistory || message.IsFromStaff,
+            SuppressAutomation = message.IsHistory || message.IsFromStaff
+        }, ct);
     }
 
     public async Task<LiveSupportSendResultDto> SendParticipantAttachmentMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, string clientMessageId, Guid attachmentId, string? caption, LiveSupportMessageType type, CancellationToken ct)
@@ -1396,7 +1401,7 @@ public sealed class LiveSupportService(
     {
         var (conversation, senderType, userId, guestId, clientMessageId, content, type, attachmentId, replyToMessageId) = request;
         await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, conversation, ct);
-        if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة. ابدأ محادثة جديدة.");
+        if (!request.Imported && IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة. ابدأ محادثة جديدة.");
         clientMessageId = clientMessageId.Trim(); content = content.Trim();
         if (clientMessageId.Length is < 8 or > 100 || content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "الرسالة غير صالحة.");
         var existing = await _db.LiveSupportMessages.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id && x.ClientMessageId == clientMessageId, ct);
@@ -1411,11 +1416,13 @@ public sealed class LiveSupportService(
             : null;
         if (repliedMessage?.DeletedAt.HasValue == true)
             throw new LiveSupportException("VALIDATION_ERROR", "لا يمكن الرد على رسالة محذوفة.");
-        var message = new LiveSupportMessage { ConversationId = conversation.Id, SenderType = senderType, SenderUserId = userId, SenderGuestSessionId = guestId, ClientMessageId = clientMessageId, Type = type, Content = content, SentAt = DateTime.UtcNow, AttachmentId = attachmentId, ReplyToMessageId = replyToMessageId, ReplyToMessage = repliedMessage };
-        conversation.LastMessageAt = message.SentAt; conversation.Version++;
+        var message = new LiveSupportMessage { ConversationId = conversation.Id, SenderType = senderType, SenderUserId = userId, SenderGuestSessionId = guestId, ClientMessageId = clientMessageId, Type = type, Content = content, SentAt = request.ProviderSentAt ?? DateTime.UtcNow, AttachmentId = attachmentId, ReplyToMessageId = replyToMessageId, ReplyToMessage = repliedMessage };
+        if (!conversation.LastMessageAt.HasValue || message.SentAt > conversation.LastMessageAt.Value)
+            conversation.LastMessageAt = message.SentAt;
+        conversation.Version++;
         _db.LiveSupportMessages.Add(message);
         AddEvent(conversation.Id, LiveSupportEventType.MessageSent, userId, guestId, message.Id, senderType.ToString());
-        if (conversation.AllowsAI && _aiTurnOrchestrator is not null &&
+        if (!request.SuppressAutomation && conversation.AllowsAI && _aiTurnOrchestrator is not null &&
             (senderType == LiveSupportSenderType.Student || senderType == LiveSupportSenderType.Guest))
         {
             await _aiTurnOrchestrator.QueueForParticipantMessageAsync(conversation.Id, message.Id, ct);
@@ -1494,7 +1501,12 @@ public sealed class LiveSupportService(
         string Content,
         LiveSupportMessageType Type,
         Guid? AttachmentId = null,
-        Guid? ReplyToMessageId = null);
+        Guid? ReplyToMessageId = null)
+    {
+        public DateTime? ProviderSentAt { get; init; }
+        public bool Imported { get; init; }
+        public bool SuppressAutomation { get; init; }
+    }
 
     private async Task FinishConversationAsync(LiveSupportConversation c, Guid? actor, LiveSupportConversationStatus status, string reason, LiveSupportAssignmentEndReason endReason, CancellationToken ct)
     {

@@ -227,7 +227,7 @@ export function ConversationInvestigation({
 
   useLiveSupportHub(
     conversation.id,
-    () => void refreshMessages(),
+    refreshMessages,
     showParticipantDraft
   );
 

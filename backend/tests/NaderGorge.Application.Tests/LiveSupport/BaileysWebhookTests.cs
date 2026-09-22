@@ -23,10 +23,9 @@ public sealed class BaileysWebhookTests
     }
 
     [Theory]
-    [InlineData("201099999999@s.whatsapp.net", true)]
     [InlineData("123@g.us", false)]
     [InlineData("status@broadcast", false)]
-    public void OutboundEchoesAndGroups_DoNotCreateSupportConversations(string jid, bool fromMe)
+    public void Groups_DoNotCreateSupportConversations(string jid, bool fromMe)
     {
         var message = JsonSerializer.SerializeToElement(new
         { key = new { id = "message-1", remoteJid = jid, fromMe }, message = new { conversation = "hello" } });

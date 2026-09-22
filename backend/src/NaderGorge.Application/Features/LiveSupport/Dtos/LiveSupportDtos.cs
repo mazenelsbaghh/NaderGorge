@@ -116,7 +116,12 @@ public sealed record LiveSupportExternalMessage(
     string ClientMessageId,
     string Content,
     LiveSupportMessageType Type,
-    Guid? AttachmentId = null);
+    Guid? AttachmentId = null)
+{
+    public bool IsFromStaff { get; init; }
+    public bool IsHistory { get; init; }
+    public DateTime? ProviderSentAt { get; init; }
+}
 public sealed record LiveSupportMessagePageDto(IReadOnlyList<LiveSupportMessageDto> Items, string? NextCursor, long LastEventSequence, IReadOnlyList<LiveSupportTimelineItemDto> MissedEvents);
 public sealed record LiveSupportWhatsAppThreadPageDto(IReadOnlyList<LiveSupportMessageDto> Items, string? NextCursor);
 public sealed record LiveSupportStaffWhatsAppThreadQuery(Guid StaffUserId, bool IsAdmin, Guid ConversationId, int PageSize, string? Cursor);
