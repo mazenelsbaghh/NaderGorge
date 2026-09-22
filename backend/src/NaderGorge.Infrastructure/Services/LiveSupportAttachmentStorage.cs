@@ -16,10 +16,13 @@ public sealed class LiveSupportAttachmentStorage : ILiveSupportAttachmentStorage
 
     public async Task<LiveSupportStoredAttachment> SaveAsync(Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
     {
-        if (sizeBytes is <= 0 or > 10 * 1024 * 1024)
+        if (sizeBytes <= 0 || sizeBytes > LiveSupportAttachmentLimits.MaximumBytes(contentType))
         {
             throw new InvalidUploadContentException("Attachment size is outside the allowed range.");
         }
+
+        if (string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            return await SavePdfAsync(content, fileName, contentType, sizeBytes, ct);
 
         await using var memory = new MemoryStream();
         await content.CopyToAsync(memory, ct);
@@ -44,6 +47,31 @@ public sealed class LiveSupportAttachmentStorage : ILiveSupportAttachmentStorage
         var path = $"{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}";
         await using var input = new MemoryStream(bytes, writable: false);
         var stored = await _sharedStorage.WriteAsync(SharedFileArea.LiveSupport, path, input, ct);
+        return new(path, validation.DisplayFileName, validation.ContentType, stored.SizeBytes, stored.Sha256);
+    }
+
+    private async Task<LiveSupportStoredAttachment> SavePdfAsync(Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
+    {
+        var temporaryPath = Path.Combine(Path.GetTempPath(), $"support-pdf-{Guid.NewGuid():N}.tmp");
+        await using var temporary = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.ReadWrite,
+            FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        var buffer = new byte[128 * 1024];
+        long total = 0;
+        int read;
+        while ((read = await content.ReadAsync(buffer, ct)) > 0)
+        {
+            total += read;
+            if (total > sizeBytes) throw new InvalidUploadContentException("Attachment length does not match.");
+            await temporary.WriteAsync(buffer.AsMemory(0, read), ct);
+        }
+        if (total != sizeBytes) throw new InvalidUploadContentException("Attachment length does not match.");
+        temporary.Position = 0;
+        var prefix = new byte[16];
+        var prefixLength = await temporary.ReadAsync(prefix, ct);
+        var validation = UploadFileSafety.Validate(prefix.AsSpan(0, prefixLength), fileName, contentType, SafeUploadKind.PrivateAttachment);
+        temporary.Position = 0;
+        var path = $"{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}";
+        var stored = await _sharedStorage.WriteAsync(SharedFileArea.LiveSupport, path, temporary, ct);
         return new(path, validation.DisplayFileName, validation.ContentType, stored.SizeBytes, stored.Sha256);
     }
 

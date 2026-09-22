@@ -65,7 +65,8 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/attachments")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(LiveSupportAttachmentLimits.RequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = LiveSupportAttachmentLimits.RequestBytes)]
     [EnableRateLimiting("live-support-public")]
     public async Task<IActionResult> Upload(Guid conversationId, [FromForm] IFormFile file, CancellationToken ct)
     {

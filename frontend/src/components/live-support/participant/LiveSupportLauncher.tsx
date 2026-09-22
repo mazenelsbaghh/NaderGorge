@@ -280,7 +280,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
         setConversation((current) => current ? { ...current, isAiTyping: true } : current);
         setTimeout(() => void refresh().catch(() => undefined), 500);
       }
-    } catch (cause) { setError(getParticipantMutationError(cause, 'تعذر رفع الملف. الأنواع المتاحة: صور وPDF وصوت حتى 10 ميجابايت.')); }
+    } catch (cause) { setError(getParticipantMutationError(cause, 'تعذر رفع الملف. ملفات PDF حتى 90 ميجابايت، والصور حتى 10 ميجابايت.')); }
     finally { setUploading(false); }
   }
 

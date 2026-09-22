@@ -1,4 +1,5 @@
 using System.Globalization;
+using NaderGorge.Application.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -468,9 +469,12 @@ public sealed class WhatsAppCloudService
             !string.Equals(message.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
             return InvalidOutboundMedia(recipient, "WHATSAPP_MEDIA_UNSUPPORTED", 422,
                 "WhatsApp media type is not supported.");
-        var maximumBytes = message.MediaType == "image"
-            ? MaxOutboundImageBytes
-            : MaxOutboundAudioBytes;
+        var maximumBytes = message.MediaType switch
+        {
+            "image" => MaxOutboundImageBytes,
+            "document" => LiveSupportAttachmentLimits.PdfBytes,
+            _ => MaxOutboundAudioBytes
+        };
         if (message.Content.Length > maximumBytes)
             return InvalidOutboundMedia(recipient, "WHATSAPP_MEDIA_TOO_LARGE", 413,
                 "WhatsApp media exceeds the supported size.");

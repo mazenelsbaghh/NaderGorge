@@ -1,4 +1,5 @@
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -32,10 +33,11 @@ public sealed class WhatsAppOutboundMediaNormalizer(IWhatsAppAudioProcess audioP
         WhatsAppOutboundMediaSource source,
         CancellationToken cancellationToken)
     {
-        if (source.SizeBytes is <= 0 or > MaximumStoredBytes)
+        var maximumBytes = source.MessageType == LiveSupportMessageType.Pdf ? (int)LiveSupportAttachmentLimits.PdfBytes : MaximumStoredBytes;
+        if (source.SizeBytes <= 0 || source.SizeBytes > maximumBytes)
             throw Failure("WHATSAPP_MEDIA_SOURCE_SIZE_INVALID", 413,
                 "The stored WhatsApp media size is not supported.");
-        var sourceBytes = await ReadBoundedAsync(source.Content, MaximumStoredBytes, cancellationToken);
+        var sourceBytes = await ReadBoundedAsync(source.Content, maximumBytes, cancellationToken);
         if (sourceBytes.Length == 0)
             throw Failure("WHATSAPP_MEDIA_EMPTY", 422, "The stored WhatsApp media is empty.");
 

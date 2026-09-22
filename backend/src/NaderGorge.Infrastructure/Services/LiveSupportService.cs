@@ -258,7 +258,7 @@ public sealed class LiveSupportService(
         await LiveSupportBlockPolicy.EnsureAllowedAsync(_db, await RequireParticipantConversationAsync(participant, conversationId, ct), ct);
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
-        if (sizeBytes is <= 0 or > 10 * 1024 * 1024) throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو حجمه أكبر من 10 ميجابايت.");
+        if (sizeBytes <= 0 || sizeBytes > LiveSupportAttachmentLimits.MaximumBytes(contentType)) throw new LiveSupportException("VALIDATION_ERROR", "الحد الأقصى لملف PDF هو 90 ميجابايت، وللصور والصوت 10 ميجابايت.");
         if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "رفع الملفات غير متاح مؤقتًا.");
         LiveSupportStoredAttachment stored;
         try
@@ -302,10 +302,10 @@ public sealed class LiveSupportService(
         LiveSupportStoredAttachment stored;
         try { stored = await _attachmentStorage.SaveAsync(content, fileName, contentType, sizeBytes, ct); }
         catch (InvalidUploadContentException) { throw new LiveSupportException("VALIDATION_ERROR", "المرفق غير مدعوم أو لا يطابق محتواه."); }
-        if (!IsImageAttachment(stored.ContentType) && !IsAudioAttachment(stored.ContentType))
+        if (!IsImageAttachment(stored.ContentType) && !IsAudioAttachment(stored.ContentType) && stored.ContentType != "application/pdf")
         {
             await _attachmentStorage.DeleteAsync(stored.StoragePath, ct);
-            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو تسجيلات صوتية.");
+            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو PDF أو تسجيلات صوتية.");
         }
         var entity = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = staffUserId.ToString("N") };
         _db.LiveSupportAttachments.Add(entity);

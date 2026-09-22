@@ -8,10 +8,13 @@ namespace NaderGorge.Application.Tests.LiveSupport;
 
 public sealed class WhatsAppOutboundMediaNormalizerTests
 {
-    [Fact]
-    public async Task PdfAttachment_IsSentAsDocumentWithoutChangingBytes()
+    [Theory]
+    [InlineData(16)]
+    [InlineData(11 * 1024 * 1024)]
+    public async Task PdfAttachment_IsSentAsDocumentWithoutChangingBytes(int length)
     {
-        var bytes = "%PDF-1.4\n%%EOF"u8.ToArray();
+        var bytes = new byte[length];
+        "%PDF-1.4\n%%EOF"u8.CopyTo(bytes);
         await using var stream = new MemoryStream(bytes);
         var normalized = await new WhatsAppOutboundMediaNormalizer(new RejectingAudioProcess())
             .NormalizeAsync(new(LiveSupportMessageType.Pdf, "lesson.pdf", "application/pdf", bytes.Length, stream), default);

@@ -76,7 +76,8 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     }
 
     [HttpPost("conversations/{conversationId:guid}/attachments")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(LiveSupportAttachmentLimits.RequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = LiveSupportAttachmentLimits.RequestBytes)]
     public async Task<IActionResult> Upload(Guid conversationId, [FromForm] IFormFile file, CancellationToken ct)
     {
         try

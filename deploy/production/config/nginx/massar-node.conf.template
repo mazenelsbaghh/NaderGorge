@@ -153,6 +153,13 @@ server {
 server {
     listen 8080;
     server_name api.massar-academy.net;
+    location ~ ^/api/live-support/(staff|participant)/conversations/[0-9a-fA-F-]+/attachments$ {
+        client_max_body_size 91m;
+        client_body_timeout 180s;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+        proxy_pass http://backend:5245;
+    }
     # The AI-media relay is reachable only over the Docker network by the
     # worker. Keep its existence and all media bytes off the public API edge.
     location ^~ /api/v1/internal/ai-media/ { return 404; }

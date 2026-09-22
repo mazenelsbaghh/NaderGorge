@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { databasePoolConfig } from '../config/database.js';
 import { BaileysStateStore } from './store.js';
 import { BaileysSessions, contactJid } from './sessions.js';
+import { pdfMessage } from './pdf-message.js';
 
 const token = process.env.BAILEYS_API_KEY ?? '';
 const authKey = process.env.BAILEYS_AUTH_KEY ?? '';
@@ -37,7 +38,7 @@ app.use((request, response, next) => {
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) { response.sendStatus(401); return; }
   response.setHeader('Cache-Control', 'no-store'); next();
 });
-app.use(express.json({ limit: '24mb' }));
+app.use(express.json({ limit: '128mb' }));
 app.get('/health', (_request, response) => response.json({ ok: true }));
 app.param('id', (request, response, next, id: string) => {
   if (!/^massar-support-[a-f0-9]{32}$/.test(id)) { response.sendStatus(400); return; }
@@ -100,6 +101,13 @@ app.post('/sessions/:id/audio', async (request, response) => {
   response.json({ key: message?.key });
 });
 app.post('/sessions/:id/media', async (request, response) => {
+  if (request.body?.mediatype === 'document') {
+    const document = pdfMessage(request.body);
+    if (!document) { response.sendStatus(400); return; }
+    const message = await sessions.socket(request.params.id).sendMessage(contactJid(request.body?.number), document);
+    response.json({ key: message?.key });
+    return;
+  }
   if (request.body?.mediatype !== 'image') { response.sendStatus(400); return; }
   const image = mediaBytes(request.body?.media);
   const caption = typeof request.body?.caption === 'string' ? request.body.caption.slice(0, 4000) : '';

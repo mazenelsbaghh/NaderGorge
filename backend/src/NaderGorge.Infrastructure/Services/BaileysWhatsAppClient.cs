@@ -101,7 +101,7 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
         request.Headers.Add("X-Baileys-Token", configuration["Baileys:ApiKey"]);
         if (body is not null) request.Content = JsonContent.Create(body);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        timeout.CancelAfter(TimeSpan.FromSeconds(path.EndsWith("/media", StringComparison.Ordinal) ? 180 : 30));
         try
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);

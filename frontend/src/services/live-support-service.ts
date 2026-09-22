@@ -575,6 +575,13 @@ export interface SupportBlockStatus {
   conversationVersion: number;
 }
 
+function validateSupportAttachment(file: File) {
+  const maximumBytes = (file.type === 'application/pdf' ? 90 : 10) * 1024 * 1024;
+  if (file.size === 0 || file.size > maximumBytes) {
+    throw new Error('اختر ملفًا غير فارغ: PDF حتى 90 ميجابايت، والصور والصوت حتى 10 ميجابايت.');
+  }
+}
+
 export const liveSupportService = {
   getWhatsAppAccounts: () => apiClient.get<ApiResponse<SupportWhatsAppAccount[]>>('/live-support/connections/whatsapp').then(response => response.data.data),
   createWhatsAppAccount: (name: string) => apiClient.post<ApiResponse<SupportWhatsAppAccount>>('/live-support/connections/whatsapp', { name }).then(response => response.data.data),
@@ -614,11 +621,12 @@ export const liveSupportService = {
     apiClient.get<ApiResponse<LiveSupportAIParticipantSnapshot>>(`/live-support/participant/conversations/${conversationId}/ai/snapshot`).then((response) => response.data.data),
 
   uploadAttachment: async (conversationId: string, file: File) => {
+    validateSupportAttachment(file);
     const body = new FormData(); body.append('file', file);
     const response = await apiClient.post<ApiResponse<LiveSupportAttachment>>(
       `/live-support/participant/conversations/${conversationId}/attachments`,
       body,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180_000 },
     );
     invalidateSupport(['support:staff']);
     return response.data.data;
@@ -674,12 +682,13 @@ export const liveSupportService = {
     apiClient.get<ApiResponse<LiveSupportStaffBootstrap>>('/live-support/staff/bootstrap', { signal }).then((response) => response.data.data),
 
   uploadStaffAttachment: async (conversationId: string, file: File) => {
+    validateSupportAttachment(file);
     const body = new FormData();
     body.append('file', file);
     const response = await apiClient.post<ApiResponse<LiveSupportAttachment>>(
       `/live-support/staff/conversations/${conversationId}/attachments`,
       body,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180_000 },
     );
     return response.data.data;
   },
