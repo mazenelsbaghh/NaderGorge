@@ -344,6 +344,53 @@ test.describe('live support routing and admin', () => {
 });
 
 test.describe('live support client boundary contracts (synthetic HTTP only)', () => {
+  test('chat loads visible images and downloads PDF only when requested', async ({ page }) => {
+    await installAssistantAuth(page);
+    const conversationId = 'b5000000-0000-0000-0000-000000000001';
+    const conversation = {
+      id: conversationId, subject: 'مرفقات واتساب', status: 'Active', participantType: 'Guest',
+      participantName: 'عميل الاختبار', currentOwnerUserId: 'a0000000-0000-0000-0000-000000000099',
+      channel: 'WhatsApp', customerServiceWindowExpiresAt: '2099-09-22T12:00:00Z',
+      createdAt: '2026-09-22T12:00:00Z', version: 1, canSend: true, canRate: false,
+    };
+    const messages = Array.from({ length: 30 }, (_, index) => ({
+      id: `b5000000-0000-0000-0001-${String(index).padStart(12, '0')}`, conversationId,
+      senderType: 'Guest', clientMessageId: `media-${index}`, type: index === 29 ? 'Pdf' : 'Image',
+      content: index === 29 ? 'lesson.pdf' : `صورة ${index}`,
+      attachmentId: `b5000000-0000-0000-0002-${String(index).padStart(12, '0')}`,
+      sentAt: new Date(Date.UTC(2026, 8, 22, 12, index)).toISOString(),
+    }));
+    const fetched = new Set<string>();
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      json: { success: true, data: { isEnabled: true, isCheckedIn: true, waitingCount: 0,
+        activeCount: 1, maxActiveConversations: 5, conversations: [conversation], cannedReplies: [] } },
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/whatsapp-thread/messages**`, route => route.fulfill({
+      json: { success: true, data: { items: messages, nextCursor: null } },
+    }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/whatsapp-thread/attachments/*`, route => {
+      const id = route.request().url().split('/').at(-1)!;
+      fetched.add(id);
+      return route.fulfill(id === messages[29].attachmentId
+        ? { contentType: 'application/pdf', body: '%PDF-1.7\n' }
+        : { contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') });
+    });
+    await page.goto(`${staffUrl}/assistant/live-support`);
+    const downloadPdf = page.getByRole('button', { name: 'تحميل PDF: lesson.pdf' });
+    await expect(downloadPdf).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => fetched.size).toBeGreaterThan(0);
+    expect(fetched.size).toBeLessThan(29);
+    expect(fetched.has(messages[29].attachmentId)).toBe(false);
+    await downloadPdf.click();
+    await expect(page.getByRole('link', { name: 'فتح ملف PDF: lesson.pdf' })).toBeVisible();
+    expect(fetched.has(messages[29].attachmentId)).toBe(true);
+    const oldest = page.locator(`[data-live-support-message-id="${messages[0].id}"]`);
+    await oldest.scrollIntoViewIfNeeded();
+    await expect.poll(() => fetched.has(messages[0].attachmentId)).toBe(true);
+    await expect(oldest.getByRole('img')).toBeVisible();
+    expect(await oldest.getByRole('img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBe(1);
+  });
+
   test('malformed availability envelope fails closed instead of enabling chat', async ({ page }) => {
     await page.route('**/api/live-support/availability', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { code: 'MALFORMED_NO_AVAILABILITY_FLAG' } }) }));
     await page.goto(appUrl);
@@ -689,13 +736,14 @@ test.describe('live support client boundary contracts (synthetic HTTP only)', ()
     await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
     const firstOlderMessage = page.locator('[data-live-support-message-id="a0000000-0000-0000-0000-000000000001"]');
     await expect(firstOlderMessage).toBeAttached();
-    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
-    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
     await expect(page.getByRole('separator', { name: 'بداية محادثة سابقة' })).toHaveCount(1);
     await expect(page.getByRole('separator', { name: 'بداية المحادثة الحالية' })).toHaveCount(1);
     const afterPrepend = await firstCurrentMessage.boundingBox();
     expect(afterPrepend).toBeTruthy();
     expect(Math.abs(afterPrepend!.y - beforePrepend!.y)).toBeLessThan(4);
+    await firstOlderMessage.scrollIntoViewIfNeeded();
+    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
+    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
 
     const headRequestsBeforeSend = headRequests;
     await page.getByLabel('رد موظف الدعم').fill('رد بعد تحميل القديم');
@@ -909,13 +957,14 @@ test.describe('live support client boundary contracts (synthetic HTTP only)', ()
     await page.getByRole('button', { name: 'تحميل الرسائل الأقدم' }).click();
     const firstOlderMessage = page.locator('[data-live-support-message-id="a3000000-0000-0000-0000-000000000001"]');
     await expect(firstOlderMessage).toBeAttached();
-    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
-    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
     await expect(page.getByRole('separator', { name: 'بداية جلسة واتساب أخرى' })).toHaveCount(1);
     await expect(page.getByRole('separator', { name: 'بداية المحادثة المحددة' })).toHaveCount(1);
     const afterPrepend = await firstCurrentMessage.boundingBox();
     expect(afterPrepend).toBeTruthy();
     expect(Math.abs(afterPrepend!.y - beforePrepend!.y)).toBeLessThan(4);
+    await firstOlderMessage.scrollIntoViewIfNeeded();
+    await expect.poll(() => threadAttachmentGets).toBeGreaterThan(0);
+    await expect(firstOlderMessage.getByRole('link', { name: 'فتح الصورة بالحجم الكامل' })).toBeVisible();
 
     const headRequestsBeforeSend = headRequests;
     await page.getByLabel('رد الإدارة على المحادثة').fill('رد الإدارة بعد تحميل القديم');

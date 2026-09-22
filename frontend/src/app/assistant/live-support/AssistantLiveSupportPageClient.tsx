@@ -270,7 +270,7 @@ export default function AssistantLiveSupportPageClient() {
     if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
     typingClearTimer.current = setTimeout(() => setParticipantDraft(null), 2_000);
   }, []);
-  const { connected } = useLiveSupportHub(selected?.id, () => void refresh(), showParticipantDraft);
+  const { connected } = useLiveSupportHub(selected?.id, refresh, showParticipantDraft);
 
   useEffect(() => {
     setParticipantDraft(null);

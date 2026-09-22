@@ -4,12 +4,52 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Services;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Infrastructure.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
 
 public sealed class BaileysMediaTests
 {
+    [Fact]
+    public async Task Unsupported_image_body_is_a_permanent_media_failure()
+    {
+        using var http = new HttpClient(new ImageResponseHandler("<html>not an image</html>"u8.ToArray(), "image/jpeg"));
+        var exception = await Assert.ThrowsAsync<LiveSupportException>(() => Client(http).DownloadMediaAsync("account-a",
+            JsonSerializer.SerializeToElement(new { message = new { imageMessage = new { } } }), CancellationToken.None));
+        Assert.Equal("BAILEYS_MEDIA_UNSUPPORTED", exception.Code);
+    }
+
+    [Theory]
+    [InlineData("application/octet-stream")]
+    [InlineData("image/png")]
+    [InlineData("image/jpg")]
+    public async Task Qr_image_with_missing_or_stale_mime_is_validated_using_its_actual_bytes(string declaredType)
+    {
+        using var image = new Image<Rgba32>(2, 2);
+        using var encoded = new MemoryStream();
+        await image.SaveAsJpegAsync(encoded);
+        using var http = new HttpClient(new ImageResponseHandler(encoded.ToArray(), declaredType));
+        var downloaded = await Client(http).DownloadMediaAsync("account-a",
+            JsonSerializer.SerializeToElement(new { message = new { imageMessage = new { mimetype = declaredType } } }), CancellationToken.None);
+        var root = Path.Combine(Path.GetTempPath(), $"qr-image-{Guid.NewGuid():N}");
+        try
+        {
+            var storage = new LiveSupportAttachmentStorage(new SharedFileStorage(
+                new Dictionary<SharedFileArea, string> { [SharedFileArea.LiveSupport] = root }));
+            using var input = new MemoryStream(downloaded.Content);
+            var saved = await storage.SaveAsync(input, downloaded.FileName, downloaded.ContentType, input.Length, CancellationToken.None);
+            Assert.Equal("image/webp", saved.ContentType);
+            await using var stored = await storage.OpenReadAsync(saved.StoragePath, CancellationToken.None);
+            using var decoded = await Image.LoadAsync(stored);
+            Assert.Equal(2, decoded.Width);
+            Assert.Equal(2, decoded.Height);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     [Fact]
     public async Task Pdf_larger_than_ten_megabytes_round_trips_through_the_bridge_contract()
     {
@@ -67,5 +107,12 @@ public sealed class BaileysMediaTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
             Task.FromResult(new HttpResponseMessage(status));
+    }
+
+    private sealed class ImageResponseHandler(byte[] bytes, string declaredType) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new
+                { base64 = Convert.ToBase64String(bytes), mimetype = declaredType, fileName = "whatsapp-image.jpg" }) });
     }
 }

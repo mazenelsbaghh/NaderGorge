@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   AudioLines,
@@ -24,7 +24,7 @@ interface LiveSupportMessageContentProps {
   staffWhatsAppThreadConversationId?: string;
 }
 
-export function LiveSupportMessageMeta({
+export const LiveSupportMessageMeta = memo(function LiveSupportMessageMeta({
   message,
   audience,
 }: LiveSupportMessageContentProps) {
@@ -88,9 +88,43 @@ export function LiveSupportMessageMeta({
       ) : null}
     </span>
   );
+});
+
+export const LiveSupportMessageContent = memo(function LiveSupportMessageContent(props: LiveSupportMessageContentProps) {
+  const { message } = props;
+  if (message.deletedAt) return <span className="italic opacity-75">تم حذف الرسالة</span>;
+  if (!message.attachmentId || !['Image', 'Audio', 'Pdf', 'Video'].includes(message.type))
+    return <>{linkifyMessage(message.content)}</>;
+  return <DeferredAttachment key={message.attachmentId} {...props} />;
+});
+
+function DeferredAttachment(props: LiveSupportMessageContentProps) {
+  const placeholder = useRef<HTMLDivElement>(null);
+  const [requested, setRequested] = useState(false);
+  const isPdf = props.message.type === 'Pdf';
+  useEffect(() => {
+    if (isPdf || requested || !placeholder.current) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setRequested(true);
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setRequested(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(placeholder.current);
+    return () => observer.disconnect();
+  }, [isPdf, requested]);
+  return <div ref={placeholder} className={props.message.type === 'Image' ? 'min-h-24' : undefined}>
+    {requested ? <LoadedAttachment {...props} /> : <button type="button" onClick={() => setRequested(true)} className="inline-flex min-h-11 items-center gap-2 underline">
+      {attachmentIcon(props.message.type)}{isPdf ? `تحميل PDF: ${props.message.content || 'ملف مرفق'}` : 'تحميل المرفق'}
+    </button>}
+  </div>;
 }
 
-export function LiveSupportMessageContent({
+function LoadedAttachment({
   message,
   audience,
   staffWhatsAppThreadConversationId,
@@ -107,6 +141,7 @@ export function LiveSupportMessageContent({
       return;
     }
     let active = true;
+    const controller = new AbortController();
     let objectUrl: string | undefined;
     setAttachmentUrl(undefined);
     setAttachmentFailed(false);
@@ -114,11 +149,13 @@ export function LiveSupportMessageContent({
       ? liveSupportService.getStaffWhatsAppThreadAttachmentBlob(
           staffWhatsAppThreadConversationId,
           message.attachmentId,
+          controller.signal,
         )
       : liveSupportService.getAttachmentBlob(
           audience,
           message.conversationId,
           message.attachmentId,
+          controller.signal,
         );
     void attachmentRequest
       .then((blob) => {
@@ -131,6 +168,7 @@ export function LiveSupportMessageContent({
       });
     return () => {
       active = false;
+      controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [

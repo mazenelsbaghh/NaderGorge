@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
@@ -25,7 +26,8 @@ public sealed class WhatsAppLiveSupportService(
     IConfiguration configuration,
     IWhatsAppCampaignService campaigns,
     IServiceScopeFactory? serviceScopeFactory = null,
-    BaileysWhatsAppClient? baileys = null)
+    BaileysWhatsAppClient? baileys = null,
+    ILogger<WhatsAppLiveSupportService>? logger = null)
 {
     private const string UnsupportedDocumentMessage = "تعذر استلام مرفق واتساب. يُسمح بملفات PDF فقط.";
     private const string UnavailableMediaMessage = "تعذر استلام مرفق واتساب لأن الملف غير متاح أو غير مدعوم.";
@@ -513,8 +515,9 @@ public sealed class WhatsAppLiveSupportService(
                 downloaded = account is null ? await DownloadMediaWithRetryAsync(mediaId, ct)
                     : await baileys!.DownloadMediaAsync(account.InstanceName, baileysMessage!.Value, ct);
             }
-            catch (LiveSupportException exception) when (exception.Code is "BAILEYS_MEDIA_UNAVAILABLE" or "BAILEYS_MEDIA_TOO_LARGE")
+            catch (LiveSupportException exception) when (exception.Code is "BAILEYS_MEDIA_UNAVAILABLE" or "BAILEYS_MEDIA_TOO_LARGE" or "BAILEYS_MEDIA_UNSUPPORTED")
             {
+                logger?.LogWarning("WhatsApp QR {MediaType} download rejected: {Code}", type, exception.Code);
                 return (Text(media, "caption") is { Length: > 0 } caption ? $"{caption}\n{UnavailableMediaMessage}" : UnavailableMediaMessage, LiveSupportMessageType.Text, null);
             }
             catch (WhatsAppCloudService.WhatsAppCloudException exception) when (!exception.IsRetryable)
@@ -534,8 +537,10 @@ public sealed class WhatsAppLiveSupportService(
                     downloaded.Content.LongLength,
                     ct);
             }
-            catch (InvalidUploadContentException)
+            catch (InvalidUploadContentException exception)
             {
+                logger?.LogWarning("WhatsApp {Provider} {MediaType} rejected: {Reason}; bytes={SizeBytes}, contentType={ContentType}",
+                    account is null ? "Cloud" : "QR", type, exception.Message, downloaded.Content.LongLength, downloaded.ContentType);
                 return (UnavailableMediaMessage, LiveSupportMessageType.Text, null);
             }
             var attachment = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = "whatsapp" };

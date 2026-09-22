@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Services;
+using SixLabors.ImageSharp;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -84,6 +85,12 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
         try { bytes = Convert.FromBase64String(base64); }
         catch (FormatException) { throw Failure("BAILEYS_MEDIA_INVALID"); }
         if (bytes.LongLength > maximumBytes) throw Failure("BAILEYS_MEDIA_TOO_LARGE");
+        // Provider MIME metadata is optional; storage still validates and decodes the actual image.
+        if (message.TryGetProperty("message", out var content) && content.TryGetProperty("imageMessage", out _))
+        {
+            try { contentType = Image.DetectFormat(bytes).DefaultMimeType; }
+            catch (UnknownImageFormatException) { throw Failure("BAILEYS_MEDIA_UNSUPPORTED"); }
+        }
         return new(bytes, contentType,
             Path.GetFileName(Text(response, "fileName") ?? "whatsapp-attachment"));
     }
