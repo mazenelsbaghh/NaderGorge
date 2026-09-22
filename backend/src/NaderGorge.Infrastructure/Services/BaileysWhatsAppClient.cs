@@ -1,4 +1,5 @@
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Application.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -75,12 +76,15 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
         var response = await RequestAsync(HttpMethod.Post,
             $"sessions/{Uri.EscapeDataString(instance)}/download", new { message }, ct);
         var base64 = Text(response, "base64");
-        if (string.IsNullOrWhiteSpace(base64) || base64.Length > 14_000_000)
+        var contentType = Text(response, "mimetype") ?? "application/octet-stream";
+        var maximumBytes = LiveSupportAttachmentLimits.MaximumBytes(contentType);
+        if (string.IsNullOrWhiteSpace(base64) || base64.Length > ((maximumBytes + 2) / 3) * 4)
             throw Failure("BAILEYS_MEDIA_INVALID");
         byte[] bytes;
         try { bytes = Convert.FromBase64String(base64); }
         catch (FormatException) { throw Failure("BAILEYS_MEDIA_INVALID"); }
-        return new(bytes, Text(response, "mimetype") ?? "application/octet-stream",
+        if (bytes.LongLength > maximumBytes) throw Failure("BAILEYS_MEDIA_TOO_LARGE");
+        return new(bytes, contentType,
             Path.GetFileName(Text(response, "fileName") ?? "whatsapp-attachment"));
     }
 
@@ -101,13 +105,15 @@ public sealed class BaileysWhatsAppClient(HttpClient http, IConfiguration config
         request.Headers.Add("X-Baileys-Token", configuration["Baileys:ApiKey"]);
         if (body is not null) request.Content = JsonContent.Create(body);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(path.EndsWith("/media", StringComparison.Ordinal) ? 180 : 30));
+        timeout.CancelAfter(TimeSpan.FromSeconds((path.EndsWith("/media", StringComparison.Ordinal) || path.EndsWith("/download", StringComparison.Ordinal)) ? 180 : 30));
         try
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            if (path.EndsWith("/download", StringComparison.Ordinal) && response.StatusCode is HttpStatusCode.Gone or HttpStatusCode.RequestEntityTooLarge)
+                throw Failure(response.StatusCode == HttpStatusCode.Gone ? "BAILEYS_MEDIA_UNAVAILABLE" : "BAILEYS_MEDIA_TOO_LARGE");
             if (!response.IsSuccessStatusCode)
                 throw Failure(response.StatusCode == HttpStatusCode.NotFound ? "BAILEYS_INSTANCE_NOT_FOUND" : "BAILEYS_REQUEST_FAILED");
-            await response.Content.LoadIntoBufferAsync(16 * 1024 * 1024, timeout.Token);
+            await response.Content.LoadIntoBufferAsync(path.EndsWith("/download", StringComparison.Ordinal) ? 128 * 1024 * 1024 : 16 * 1024 * 1024, timeout.Token);
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
             return document.RootElement.Clone();
         }

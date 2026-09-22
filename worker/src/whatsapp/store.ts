@@ -90,13 +90,18 @@ export class BaileysStateStore {
       VALUES ($1,$2,$3,0,NOW(),NOW())`, [id, accountId, this.encrypt(payload, `callback:${id}`)]);
   }
 
-  async deliverCallbacks(url: string, token: string): Promise<void> {
+  async deliverCallbacks(url: string, token: string, prepare: (payload: unknown) => Promise<unknown>): Promise<void> {
     const result = await this.pool.query<{ Id: string; Ciphertext: string }>(
       'SELECT "Id","Ciphertext" FROM live_support_baileys_callbacks WHERE "NextAttemptAt"<=NOW() ORDER BY "CreatedAt" LIMIT 20');
     for (const row of result.rows) {
       try {
+        const payload = await prepare(this.decrypt(row.Ciphertext, `callback:${row.Id}`));
+        const content = (payload as { data?: { message?: Record<string, unknown> } })?.data?.message;
+        // The backend can spend up to 180 seconds downloading any media before persisting it.
+        const hasMedia = ['imageMessage', 'audioMessage', 'videoMessage', 'documentMessage'].some(type => content?.[type]);
+        const timeout = hasMedia ? 200_000 : 20_000;
         const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Baileys-Token': token },
-          body: JSON.stringify(this.decrypt(row.Ciphertext, `callback:${row.Id}`), BufferJSON.replacer), signal: AbortSignal.timeout(20_000) });
+          body: JSON.stringify(payload, BufferJSON.replacer), signal: AbortSignal.timeout(timeout) });
         await response.body?.cancel();
         if (!response.ok) throw new Error('Callback rejected');
         await this.pool.query('DELETE FROM live_support_baileys_callbacks WHERE "Id"=$1', [row.Id]);

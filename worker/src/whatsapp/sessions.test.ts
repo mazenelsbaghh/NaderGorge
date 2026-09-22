@@ -18,3 +18,41 @@ test('connection state never exposes an expired QR', () => {
     { instance: { state: 'connecting' } },
   );
 });
+
+test('phone replies and historical messages enter the durable callback queue', async () => {
+  const { BaileysSessions } = await import('./sessions.js');
+  const queued: unknown[] = [];
+  const store = { enqueue: async (_account: string, payload: unknown) => { queued.push(payload); } };
+  const sessions = new BaileysSessions({} as never, store as never);
+  const session = { accountId: 'support-a', socket: {} } as never;
+  await sessions['receive']('session-a', session, {
+    key: { remoteJid: '201099999999@s.whatsapp.net', id: 'mobile-1', fromMe: true },
+    message: { conversation: 'phone reply' }, messageTimestamp: 1789236000,
+  });
+  await sessions['receive']('session-a', session, {
+    key: { remoteJid: '201099999999@s.whatsapp.net', id: 'old-1' },
+    message: { conversation: 'old message' }, messageTimestamp: 1789235000,
+  }, true);
+  assert.equal(queued.length, 2);
+  const callbacks = queued as Array<{ history: boolean; data: { key: { fromMe?: boolean }; messageTimestamp: string } }>;
+  assert.equal(callbacks[0]?.data.key.fromMe, true);
+  assert.equal(callbacks[0]?.history, false);
+  assert.equal(callbacks[1]?.history, true);
+  assert.equal(callbacks[1]?.data.messageTimestamp, '1789235000');
+});
+
+test('a phone mapping arriving late is resolved on a subsequent delivery attempt', async () => {
+  const { BaileysSessions } = await import('./sessions.js');
+  const sessions = new BaileysSessions({} as never, {} as never);
+  let phone: string | null = null;
+  sessions['sessions'].set('session-a', { socket: { signalRepository: { lidMapping: {
+    getPNForLID: async () => phone,
+  } } } } as never);
+  const callback = { sessionId: 'session-a', event: 'message', data: {
+    key: { remoteJid: '123@lid', id: 'message-1' } as { remoteJid: string; id: string; remoteJidAlt?: string },
+  } };
+  await assert.rejects(sessions.prepareCallback(callback), /mapping pending/);
+  phone = '201099999999@s.whatsapp.net';
+  assert.equal(await sessions.prepareCallback(callback), callback);
+  assert.equal(callback.data.key.remoteJidAlt, phone);
+});

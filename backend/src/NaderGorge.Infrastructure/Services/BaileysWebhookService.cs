@@ -51,19 +51,19 @@ public sealed class BaileysWebhookService(IAppDbContext db, WhatsAppLiveSupportS
             if (normalized is null) continue;
             var contact = JsonSerializer.SerializeToElement(new
             {
-                contacts = new[] { new { profile = new { name = BaileysWhatsAppClient.Text(message, "pushName") } } }
+                contacts = new[] { new { profile = new { name = normalized.Value.GetProperty("fromMe").GetBoolean() ? null : BaileysWhatsAppClient.Text(message, "pushName") } } }
             });
-            await support.IngestAsync(contact, normalized.Value, ct, account, message);
+            await support.IngestAsync(contact, normalized.Value, ct, account, message,
+                payload.TryGetProperty("history", out var history) && history.ValueKind == JsonValueKind.True);
         }
     }
 
     internal static JsonElement? NormalizeMessage(string instance, JsonElement envelope)
     {
         if (!envelope.TryGetProperty("key", out var key) ||
-            key.TryGetProperty("fromMe", out var fromMe) && fromMe.ValueKind == JsonValueKind.True ||
             !envelope.TryGetProperty("message", out var message)) return null;
         var jid = BaileysWhatsAppClient.Text(key, "remoteJid");
-        if (jid?.EndsWith("@g.us", StringComparison.Ordinal) == true || jid == "status@broadcast") return null;
+        if (jid?.EndsWith("@g.us", StringComparison.Ordinal) == true || jid?.EndsWith("@broadcast", StringComparison.Ordinal) == true || jid?.EndsWith("@newsletter", StringComparison.Ordinal) == true) return null;
         if (jid?.EndsWith("@lid", StringComparison.Ordinal) == true)
             jid = BaileysWhatsAppClient.Text(key, "remoteJidAlt");
         if (jid?.EndsWith("@s.whatsapp.net", StringComparison.Ordinal) != true)
@@ -83,7 +83,8 @@ public sealed class BaileysWebhookService(IAppDbContext db, WhatsAppLiveSupportS
         return JsonSerializer.SerializeToElement(new Dictionary<string, object?>
         {
             ["id"] = BaileysWhatsAppClient.MessageId(instance, id),
-            ["from"] = jid.Split('@')[0], ["timestamp"] = timestamp, ["type"] = type,
+            ["fromMe"] = key.TryGetProperty("fromMe", out var fromMe) && fromMe.ValueKind == JsonValueKind.True,
+            ["from"] = jid.Split('@')[0].Split(':')[0], ["timestamp"] = timestamp, ["type"] = type,
             [type] = type == "text" ? new { body = text ?? "رسالة واتساب غير نصية" }
                 : new { id, caption = BaileysWhatsAppClient.Text(media, "caption") }
         });

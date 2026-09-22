@@ -360,7 +360,7 @@ export default function AssistantLiveSupportPageClient() {
       }
       return true;
     } catch (cause) {
-      setError(getStaffMutationError(cause, 'تعذر إرسال المرفق. استخدم صورة أو تسجيلًا صوتيًا بحجم لا يتجاوز 10 ميجابايت.'));
+      setError(getStaffMutationError(cause, 'تعذر إرسال المرفق. الحد الأقصى لملف PDF هو 90 ميجابايت، وللصور والصوت 10 ميجابايت.'));
       return false;
     } finally {
       setUploading(false);
