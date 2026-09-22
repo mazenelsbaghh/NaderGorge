@@ -338,6 +338,8 @@ export interface ContentPackageSummaryDto {
   purchasedStudents: number;
   giftStudents: number;
   totalStudents: number;
+  activeStudents: number;
+  refundedStudents: number;
 }
 
 export interface PackageCombinationSummaryDto {

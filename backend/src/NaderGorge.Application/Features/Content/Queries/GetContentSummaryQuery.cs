@@ -24,7 +24,9 @@ public sealed record ContentPackageSummaryDto(
     ContentAcquisitionCountDto Lesson,
     int PurchasedStudents,
     int GiftStudents,
-    int TotalStudents);
+    int TotalStudents,
+    int ActiveStudents,
+    int RefundedStudents);
 
 public sealed record PackageCombinationSummaryDto(
     IReadOnlyList<Guid> PackageIds,
@@ -87,9 +89,18 @@ public sealed class GetContentSummaryQueryHandler
             .ToListAsync(ct);
 
         var packageIds = packages.Select(package => package.Id).ToArray();
-        var grants = await _factSource.LoadAsync(
-            new ContentGrantFactScope(packageIds, request.FromUtc, request.ToUtc),
+        var allGrants = await _factSource.LoadAsync(
+            new ContentGrantFactScope(packageIds, request.FromUtc, request.ToUtc, IncludeCancelled: true),
             ct);
+        var grants = allGrants.Where(grant => !grant.CancelledAt.HasValue).ToArray();
+        var refundedGrantIds = await new ContentRefundFactSource(_db).LoadGrantIdsAsync(allGrants, ct);
+        var currentTime = DateTime.UtcNow;
+        var activeByPackage = ContentAcquisitionCalculator.WhereEffectiveAt(grants, currentTime)
+            .GroupBy(grant => grant.PackageId)
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId).Distinct().Count());
+        var refundedByPackage = allGrants.Where(grant => refundedGrantIds.Contains(grant.GrantId))
+            .GroupBy(grant => grant.PackageId)
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId).Distinct().Count());
         var acquisitionsByPackage = ContentAcquisitionCalculator.SummarizePackages(packageIds, grants);
 
         var summaries = packages.Select(package =>
@@ -106,7 +117,9 @@ public sealed class GetContentSummaryQueryHandler
                 ToDto(acquisitions.Lesson),
                 acquisitions.Overall.Purchased,
                 acquisitions.Overall.GiftOnly,
-                acquisitions.Overall.Total);
+                acquisitions.Overall.Total,
+                activeByPackage.GetValueOrDefault(package.Id),
+                refundedByPackage.GetValueOrDefault(package.Id));
         }).ToArray();
 
         var packageNames = packages.ToDictionary(package => package.Id, package => package.Name);

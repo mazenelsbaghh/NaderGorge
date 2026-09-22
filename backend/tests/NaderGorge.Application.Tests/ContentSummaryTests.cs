@@ -51,6 +51,17 @@ public sealed class ContentSummaryTests
             GrantedAt = from,
             IsActive = true
         });
+        var cancelledGrant = new StudentAccessGrant
+        {
+            Id = Guid.NewGuid(), User = student, GrantType = CodeType.Term, TermId = term.Id,
+            GrantedAt = from, IsActive = false, CancelledAt = from.AddHours(1)
+        };
+        db.StudentAccessGrants.Add(cancelledGrant);
+        db.AuditLogs.Add(new AuditLog
+        {
+            EntityId = cancelledGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+            NewValues = "{\"refundedAmount\":150}"
+        });
         await db.SaveChangesAsync();
 
         var response = await new GetContentSummaryQueryHandler(db)
@@ -59,6 +70,8 @@ public sealed class ContentSummaryTests
         Assert.True(response.Success);
         var packageSummary = Assert.Single(response.Data!.Packages);
         Assert.Equal((1, 0), (packageSummary.Term.Purchased, packageSummary.Term.Gifts));
+        Assert.Equal(1, packageSummary.ActiveStudents);
+        Assert.Equal(1, packageSummary.RefundedStudents);
     }
 
     [Fact]
@@ -248,6 +261,56 @@ public sealed class ContentSummaryTests
         Assert.True(response.Success);
         var packageSummary = Assert.Single(response.Data!.Packages);
         Assert.Equal(0, packageSummary.TotalStudents);
+    }
+
+    [Fact]
+    public async Task Summary_counts_active_and_refunded_students_without_double_counting_rejoins()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01086000001");
+        var teacher = new TeacherProfile { Id = Guid.NewGuid(), UserId = teacherUser.Id, User = teacherUser };
+        var package = PackageFor(teacher, "History");
+        var now = DateTime.UtcNow.AddDays(-1);
+        var rejoinedStudent = Guid.NewGuid();
+        var legacyStudent = Guid.NewGuid();
+        var cancelledStudent = Guid.NewGuid();
+        var term = new Term { Id = Guid.NewGuid(), Title = "Term", Package = package, PackageId = package.Id };
+        var cashGrant = Grant(rejoinedStudent, package.Id, now, cancelled: true);
+        var termRefund = TargetGrant(rejoinedStudent, CodeType.Term, term.Id, now);
+        termRefund.IsActive = false;
+        termRefund.CancelledAt = now;
+        var legacyGrant = Grant(legacyStudent, package.Id, now, cancelled: true);
+        var expired = Grant(Guid.NewGuid(), package.Id, now);
+        expired.ExpiresAt = now;
+        var inactive = Grant(Guid.NewGuid(), package.Id, now);
+        inactive.IsActive = false;
+        var reversed = Grant(Guid.NewGuid(), package.Id, now, cancelled: true);
+        var draft = Grant(Guid.NewGuid(), package.Id, now, cancelled: true);
+        var purchaseId = Guid.NewGuid();
+        db.AddRange(teacher, package, term);
+        db.StudentAccessGrants.AddRange(cashGrant, termRefund, legacyGrant, expired, inactive, reversed, draft,
+            Grant(rejoinedStudent, package.Id, now),
+            Grant(rejoinedStudent, package.Id, now, isGift: true),
+            Grant(cancelledStudent, package.Id, now, cancelled: true));
+        db.AuditLogs.AddRange(
+            new AuditLog { EntityId = termRefund.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { refundedAmount = 0m, purchaseOperationId = purchaseId }) },
+            new AuditLog { EntityId = legacyGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+                NewValues = "{\"refundedAmount\":150,\"refundBalance\":true}" });
+        db.PlatformRefunds.AddRange(
+            new PlatformRefund { OriginalSourceId = cashGrant.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
+            new PlatformRefund { OriginalSourceId = purchaseId, OriginalSourceType = "PurchaseOperation", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
+            new PlatformRefund { OriginalSourceId = reversed.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = reversed.UserId, Status = PlatformRefundStatus.Reversed },
+            new PlatformRefund { OriginalSourceId = draft.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = draft.UserId, Status = PlatformRefundStatus.Draft });
+        await db.SaveChangesAsync();
+
+        var response = await new GetContentSummaryQueryHandler(db)
+            .Handle(new GetContentSummaryQuery(null, now.AddHours(-1), now.AddHours(1), teacher.Id), CancellationToken.None);
+
+        var summary = Assert.Single(response.Data!.Packages);
+        Assert.Equal(1, summary.ActiveStudents);
+        Assert.Equal(2, summary.RefundedStudents);
+        Assert.Equal(3, summary.TotalStudents);
     }
 
     private static Package PackageFor(TeacherProfile teacher, string name) => new()

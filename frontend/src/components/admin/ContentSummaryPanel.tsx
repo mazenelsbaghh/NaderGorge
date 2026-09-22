@@ -102,9 +102,14 @@ function PackageSummary({ packageSummary }: { packageSummary: ContentPackageSumm
         </div>
         <div className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--admin-card)] px-3 py-2 text-sm font-black text-[var(--admin-primary)]">
           <UsersRound className="h-4 w-4" aria-hidden="true" />
-          <span className="tabular-nums">{number.format(packageSummary.totalStudents)} طالب</span>
+          <span className="tabular-nums">{number.format(packageSummary.activeStudents)} مشترك فعلي</span>
         </div>
       </header>
+
+      <div className="grid grid-cols-2 gap-3 border-b border-[var(--admin-border)] px-5 py-4 text-center">
+        <div><strong className="text-xl font-black tabular-nums text-[var(--admin-primary)]">{number.format(packageSummary.activeStudents)}</strong><span className="block text-sm font-bold">المشتركون الفعليون</span></div>
+        <div><strong className="text-xl font-black tabular-nums text-[var(--admin-text)]">{number.format(packageSummary.refundedStudents)}</strong><span className="block text-sm font-bold">طلاب استردوا</span></div>
+      </div>
 
       <div className="px-5">
         <AcquisitionRow label="الباقة كاملة" values={packageSummary.package} />
@@ -116,7 +121,7 @@ function PackageSummary({ packageSummary }: { packageSummary: ContentPackageSumm
       <footer className="grid grid-cols-3 divide-x divide-x-reverse divide-[var(--admin-border)] border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-center">
         <div className="px-2 py-3"><ShoppingBag className="mx-auto mb-1 h-4 w-4 text-[var(--admin-secondary)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.purchasedStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">مشتري</span></div>
         <div className="px-2 py-3"><Gift className="mx-auto mb-1 h-4 w-4 text-[var(--admin-primary)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.giftStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">هدية فقط</span></div>
-        <div className="px-2 py-3"><UsersRound className="mx-auto mb-1 h-4 w-4 text-[var(--admin-text)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.totalStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">الإجمالي</span></div>
+        <div className="px-2 py-3"><UsersRound className="mx-auto mb-1 h-4 w-4 text-[var(--admin-text)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.totalStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">الإجمالي التاريخي</span></div>
       </footer>
     </article>
   );
@@ -391,7 +396,7 @@ export function ContentSummaryPanel(props: ContentSummaryPanelProps) {
       </div>
 
       <p className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs font-medium leading-6 text-[var(--admin-muted)]">
-        كل سطر يحسب الطلاب المختلفين داخل مستواه. إجمالي البطاقة يحسب الطالب مرة واحدة فقط، وإذا كان له شراء وهدية داخل نفس الباقة يُصنَّف كمشترٍ لا كهدية فقط. الأرقام تاريخية للفترة المختارة؛ تشمل الصلاحية المنتهية وتستبعد الملغاة.
+        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. طلاب استردوا: من نُفذ لهم استرداد لاشتراك من نفس الفترة. يُحسب الطالب مرة واحدة في كل عدد؛ وقد يظهر في العددين إذا استرد جزءًا وظل مشتركًا في جزء آخر أو اشترك مجددًا. تفاصيل الشراء والهدايا تاريخية وتشمل المنتهية وتستبعد الملغاة.
       </p>
 
       {period === 'custom' && (

@@ -9,7 +9,8 @@ public sealed record ContentGrantFactScope(
     Guid[] PackageIds,
     DateTime? FromUtc = null,
     DateTime? ToUtc = null,
-    Guid? StudentId = null);
+    Guid? StudentId = null,
+    bool IncludeCancelled = false);
 
 public sealed record ContentGrantFact(
     Guid PackageId,
@@ -18,7 +19,9 @@ public sealed record ContentGrantFact(
     bool IsGift,
     DateTime GrantedAt,
     bool IsActive,
-    DateTime? ExpiresAt);
+    DateTime? ExpiresAt,
+    Guid GrantId = default,
+    DateTime? CancelledAt = null);
 
 public sealed record ContentAcquisitionStudentCounts(
     int Purchased,
@@ -66,7 +69,9 @@ public sealed class ContentGrantFactSource
                 grant.GiftRecipientId.HasValue,
                 grant.GrantedAt,
                 grant.IsActive,
-                grant.ExpiresAt));
+                grant.ExpiresAt,
+                grant.Id,
+                grant.CancelledAt));
 
     private IQueryable<ContentGrantFact> TermFacts(ContentGrantFactScope scope) =>
         from grant in EligibleGrants(scope)
@@ -80,7 +85,9 @@ public sealed class ContentGrantFactSource
             grant.GiftRecipientId.HasValue,
             grant.GrantedAt,
             grant.IsActive,
-            grant.ExpiresAt);
+            grant.ExpiresAt,
+            grant.Id,
+            grant.CancelledAt);
 
     private IQueryable<ContentGrantFact> SectionFacts(ContentGrantFactScope scope) =>
         from grant in EligibleGrants(scope)
@@ -95,7 +102,9 @@ public sealed class ContentGrantFactSource
             grant.GiftRecipientId.HasValue,
             grant.GrantedAt,
             grant.IsActive,
-            grant.ExpiresAt);
+            grant.ExpiresAt,
+            grant.Id,
+            grant.CancelledAt);
 
     private IQueryable<ContentGrantFact> LessonFacts(ContentGrantFactScope scope) =>
         from grant in EligibleGrants(scope)
@@ -111,12 +120,14 @@ public sealed class ContentGrantFactSource
             grant.GiftRecipientId.HasValue,
             grant.GrantedAt,
             grant.IsActive,
-            grant.ExpiresAt);
+            grant.ExpiresAt,
+            grant.Id,
+            grant.CancelledAt);
 
     private IQueryable<StudentAccessGrant> EligibleGrants(ContentGrantFactScope scope)
     {
         var query = _db.StudentAccessGrants.AsNoTracking()
-            .Where(grant => !grant.CancelledAt.HasValue);
+            .Where(grant => scope.IncludeCancelled || !grant.CancelledAt.HasValue);
         if (scope.FromUtc.HasValue)
             query = query.Where(grant => grant.GrantedAt >= scope.FromUtc.Value);
         if (scope.ToUtc.HasValue)
@@ -175,7 +186,7 @@ public static class ContentAcquisitionCalculator
         IEnumerable<ContentGrantFact> facts,
         DateTime asOfUtc) =>
         facts.Where(fact =>
-            fact.IsActive &&
+            fact.IsActive && !fact.CancelledAt.HasValue &&
             (!fact.ExpiresAt.HasValue || fact.ExpiresAt > asOfUtc));
 
     private static ContentPackageAcquisitionSummary SummarizePackage(
