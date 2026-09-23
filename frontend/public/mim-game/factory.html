@@ -12,17 +12,15 @@
   <main>
     <div class="scene" id="scene">
 
-      <div id="sockets" hidden aria-label="فتحات توصيل الآلة"></div>
+      <div id="sockets" aria-label="فتحات توصيل الآلة"></div>
+      <button id="power" disabled>شغّل الآلة</button>
     </div>
-    <section id="panel" hidden aria-label="لعبة السبب والنتيجة">
-      <div class="instructions"><h1>مصنع الأسباب</h1><p>اختار سببًا برتقاليًا على اليمين، ثم نتيجته الزرقاء على اليسار.</p></div>
-      <div class="choices"><div><h2>الأسباب · اليمين</h2><div id="causes"></div></div><div><h2>النتائج · اليسار</h2><div id="results"></div></div></div>
-      <div class="status-bar"><p id="feedback" role="status" aria-live="polite">وصّل الأزواج الثلاثة لتشغيل الآلة.</p><span id="count" dir="ltr">٠ / ٣</span><button id="power" disabled>شغّل الآلة</button></div>
+    <section id="panel" aria-label="مهمة المصنع">
+      <h1>مصنع الأسباب <span id="count" dir="ltr">٠ / ٣</span></h1>
+      <p id="feedback" role="status" aria-live="polite">اضغط سببًا على الآلة البرتقالية، ثم نتيجته على الآلة الزرقاء.</p>
     </section>
   </main>
   <nav class="toolbar" aria-label="أدوات المصنع">
-    <button id="play">ابدأ لعبة المصنع</button>
-    <button id="view" hidden>ارجع للاستكشاف</button>
     <button id="cameraReset">إعادة ضبط الكاميرا</button>
     <button id="again" hidden>العب من جديد</button>
     <a href="preview.html">ارجع للمغامرات</a>

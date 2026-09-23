@@ -48,11 +48,11 @@ export function createFactoryWorld(container) {
     fragmentShader: 'void main(){float a=1.-smoothstep(.05,.5,length(gl_PointCoord-vec2(.5)));gl_FragColor=vec4(.92,.86,.73,a*.08);}',
   });
   const steam = new T.Points(steamGeometry, steamMaterial); steam.frustumCulled = false; scene.add(steam);
-  let yaw = -0.1, pitch = 0.18, distance = 9.8, puzzle = false, powered = false, time = 0, dragging, dragged = false, destination = null;
+  let yaw = -0.1, pitch = 0.18, distance = 9.8, powered = false, time = 0, dragging, dragged = false, destination = null;
   const listeners = new AbortController(), signal = listeners.signal;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const target = new T.Vector3(0, 3, -4), desired = new T.Vector3();
-  const inputs = bindFactoryControls(() => !puzzle && !document.hidden);
+  const desired = new T.Vector3();
+  const inputs = bindFactoryControls(() => !document.hidden);
   const raycaster = new T.Raycaster(), floor = new T.Plane(new T.Vector3(0, 1, 0), 0);
   camera.position.set(-4, 4.2, 14.6);
   const observer = new ResizeObserver(() => {
@@ -70,7 +70,7 @@ export function createFactoryWorld(container) {
     dragged = false; dragging = [event.clientX, event.clientY]; renderer.domElement.setPointerCapture(event.pointerId);
   }, { signal });
   renderer.domElement.addEventListener('pointermove', (event) => {
-    if (!dragging || puzzle) return;
+    if (!dragging) return;
     const dx = event.clientX - dragging[0], dy = event.clientY - dragging[1];
     if (Math.hypot(dx, dy) > 3) dragged = true;
     yaw -= dx * 0.008;
@@ -80,7 +80,7 @@ export function createFactoryWorld(container) {
   renderer.domElement.addEventListener('pointerup', (event) => {
     if (!dragging) return;
     dragging = undefined;
-    if (dragged || puzzle) return;
+    if (dragged) return;
     const bounds = renderer.domElement.getBoundingClientRect();
     raycaster.setFromCamera(new T.Vector2((event.clientX - bounds.left) / bounds.width * 2 - 1, 1 - (event.clientY - bounds.top) / bounds.height * 2), camera);
     const point = raycaster.ray.intersectPlane(floor, new T.Vector3());
@@ -88,13 +88,12 @@ export function createFactoryWorld(container) {
   }, { signal });
   renderer.domElement.addEventListener('pointercancel', stopInput, { signal });
   renderer.domElement.addEventListener('wheel', (event) => {
-    event.preventDefault(); if (!puzzle) distance = T.MathUtils.clamp(distance + event.deltaY * 0.012, 7, 19);
+    event.preventDefault(); distance = T.MathUtils.clamp(distance + event.deltaY * 0.012, 7, 19);
   }, { passive: false, signal });
   renderer.domElement.addEventListener('webglcontextlost', (event) => {
     event.preventDefault(); document.getElementById('loadError').hidden = false;
   }, { signal });
   function move(delta) {
-    if (puzzle) return false;
     const input = inputs.movement(), length = Math.hypot(input.x, input.y);
     let dx = 0, dz = 0;
     if (length) {
@@ -115,7 +114,6 @@ export function createFactoryWorld(container) {
     return Math.hypot(mim.root.position.x - oldX, mim.root.position.z - oldZ) > 0.001;
   }
   return {
-    setPuzzle(active) { puzzle = active; stopInput(); if (active) { yaw = 0; pitch = 0.15; } },
     resetCamera() { yaw = -0.1; pitch = 0.18; distance = 9.8; stopInput(); },
     setConnections(connected, running) {
       powered = running;
@@ -128,13 +126,15 @@ export function createFactoryWorld(container) {
     },
     projectSocket(kind, row) {
       const point = machine.sockets[kind][row].getWorldPosition(new T.Vector3()).project(camera);
-      return { x: (point.x + 1) * 50, y: (1 - point.y) * 50, visible: point.z < 1 && Math.abs(point.x) < 1 && Math.abs(point.y) < 1 };
+      return { x: (point.x + 1) * 50, y: (1 - point.y) * 50, visible: point.z > -1 && point.z < 1 && Math.abs(point.x) < 1 && Math.abs(point.y) < 1 };
+    },
+    projectPower() {
+      const point = new T.Vector3(0, 0.8, -3).project(camera);
+      return { x: (point.x + 1) * 50, y: (1 - point.y) * 50, visible: point.z > -1 && point.z < 1 && Math.abs(point.x) < 1 && Math.abs(point.y) < 1 };
     },
     render(delta) {
-      if (!puzzle) {
-        yaw -= inputs.camera.x * 2.05 * delta;
-        pitch = T.MathUtils.clamp(pitch + inputs.camera.y * 1.05 * delta, 0.05, 0.62);
-      }
+      yaw -= inputs.camera.x * 2.05 * delta;
+      pitch = T.MathUtils.clamp(pitch + inputs.camera.y * 1.05 * delta, 0.05, 0.62);
       const moving = move(delta); time += delta;
       const animation = reduced.matches ? 0 : delta;
       mim.body.position.y = reduced.matches ? 0 : moving ? Math.abs(Math.sin(time * 10)) * 0.07 : Math.sin(time * 2) * 0.015;
@@ -142,11 +142,9 @@ export function createFactoryWorld(container) {
       const x = mim.root.position.x, z = mim.root.position.z;
       const zoom = distance * (camera.aspect < 1 ? 1.4 : 1);
       const orbit = Math.cos(pitch) * zoom;
-      if (puzzle) desired.set(0, 5.4, camera.aspect < 1 ? 23 : 12);
-      else desired.set(x + Math.sin(yaw) * orbit, 2.4 + Math.sin(pitch) * zoom, z + Math.cos(yaw) * orbit);
+      desired.set(x + Math.sin(yaw) * orbit, 2.4 + Math.sin(pitch) * zoom, z + Math.cos(yaw) * orbit);
       camera.position.lerp(desired, reduced.matches ? 1 : 1 - Math.exp(-delta * 5));
-      if (puzzle) camera.lookAt(target);
-      else camera.lookAt(x + 1.1, 2.4, z - 3);
+      camera.lookAt(x + 1.1, 2.4, z - 3);
       architecture.wheel.rotation.z += animation * 0.12;
       architecture.gears.forEach((gear, i) => { gear.rotation.z += animation * (powered ? 0.4 : 0.06) * (i % 2 ? -1 : 1); });
       machine.rotor.rotation.z += animation * (powered ? 3 : 0.08);

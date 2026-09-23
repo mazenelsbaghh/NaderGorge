@@ -33,26 +33,25 @@ function chooseResult(index) {
     : 'وصلة صحيحة! كمّل توصيل باقي الأسباب.';
   refresh();
 }
-function createControl(kind, index, className) {
+function createControl(kind, index) {
   const control = document.createElement('button');
   const label = pairs[index][kind === 'cause' ? 0 : 1];
   control.type = 'button';
-  control.className = className;
+  control.className = 'socket';
   control.setAttribute('aria-label', label);
   control.title = label;
-  if (className === 'choice') control.textContent = label;
+  control.textContent = label;
+  control.dataset.kind = kind;
   control.onclick = () => kind === 'cause' ? chooseCause(index) : chooseResult(index);
   controls.push({ control, kind, index });
   return control;
 }
 function createRow(row) {
-  const cause = createControl('cause', row, 'socket');
+  const cause = createControl('cause', row);
   cause.dataset.row = row;
-  const result = createControl('result', resultOrder[row], 'socket');
+  const result = createControl('result', resultOrder[row]);
   result.dataset.row = row;
   $('sockets').append(cause, result);
-  $('causes').append(createControl('cause', row, 'choice'));
-  $('results').append(createControl('result', resultOrder[row], 'choice'));
 }
 function refresh() {
   world?.setConnections(connected, powered);
@@ -64,21 +63,6 @@ function refresh() {
   });
   $('count').textContent = `${connected.size.toLocaleString('ar-EG')} / ٣`;
   $('power').disabled = connected.size !== pairs.length || powered;
-}
-function showGame() {
-  world.setPuzzle(true);
-  document.body.classList.add('playing');
-  $('sockets').hidden = $('panel').hidden = false;
-  $('play').hidden = true;
-  $('view').hidden = false;
-}
-function showExploration() {
-  world.setPuzzle(false);
-  document.body.classList.remove('playing');
-  $('sockets').hidden = $('panel').hidden = true;
-  $('play').hidden = false;
-  $('play').textContent = 'ارجع للعبة المصنع';
-  $('view').hidden = true;
 }
 $('power').onclick = () => {
   powered = true;
@@ -94,24 +78,24 @@ $('again').onclick = () => {
   $('feedback').textContent = 'وصّل الأزواج الثلاثة لتشغيل الآلة.';
   $('power').textContent = 'شغّل الآلة';
   $('again').hidden = true;
-  showGame();
   refresh();
 };
-$('play').onclick = showGame;
-$('view').onclick = showExploration;
 function animate(now) {
   frame = requestAnimationFrame(animate);
   const delta = Math.min((now - previousTime) / 1000, 0.05);
   previousTime = now;
   if (document.hidden) return;
   world.render(delta);
-  if ($('sockets').hidden) return;
-  controls.filter(({ control }) => control.classList.contains('socket')).forEach(({ control, kind }) => {
+  controls.forEach(({ control, kind }) => {
     const point = world.projectSocket(kind, Number(control.dataset.row));
     control.style.left = `${point.x}%`;
     control.style.top = `${point.y}%`;
     control.style.visibility = point.visible ? 'visible' : 'hidden';
   });
+  const powerPoint = world.projectPower();
+  $('power').style.left = `${powerPoint.x}%`;
+  $('power').style.top = `${powerPoint.y}%`;
+  $('power').style.visibility = powerPoint.visible ? 'visible' : 'hidden';
 }
 try {
   world = createFactoryWorld($('scene'));
@@ -121,7 +105,7 @@ try {
 } catch (error) {
   console.error('Factory initialization failed:', error);
   $('loadError').hidden = false;
-  $('play').disabled = true;
+  $('sockets').hidden = true;
 }
 $('cameraReset').onclick = () => world?.resetCamera();
 window.addEventListener('pagehide', () => { cancelAnimationFrame(frame); world?.dispose(); }, { once: true });
