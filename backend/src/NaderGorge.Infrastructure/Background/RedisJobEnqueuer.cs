@@ -40,6 +40,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
         ("ai-video-queue", "analyze-chapters") => "video analysis",
         ("ai-mindmaps-queue", "generate-mindmaps" or "regenerate-single-mindmap") => "mind maps",
         ("bullmq-bridge-ingest" or "ai-essay-queue", "evaluateEssay" or "evaluate-essay") => "essay",
+        ("ai-homework-queue", "evaluate-homework") => "homework essay",
         ("notifications", _) => "notification",
         ("ai-live-support-turns", "respond") => "live support turn",
         ("ai-admin-agent-turns", "respond") => "admin ai turn",
@@ -51,6 +52,14 @@ public class RedisJobEnqueuer : IJobEnqueuer
     {
         using var document = JsonDocument.Parse(payloadJson);
         var root = document.RootElement;
+
+        if (queueName == "ai-homework-queue")
+        {
+            if (!TryGetString(root, "submissionId", "SubmissionId", out var submissionId) || !Guid.TryParse(submissionId, out var id)
+                || !TryGetString(root, "fingerprint", "Fingerprint", out var fingerprint) || fingerprint?.Length != 64)
+                throw new InvalidOperationException("Homework evaluation requires a submission id and fingerprint.");
+            return $"homework-{id:D}-{fingerprint}";
+        }
 
         if (queueName is "ai-live-support-turns" or "ai-admin-agent-turns")
         {

@@ -1,0 +1,30 @@
+{
+  "quality": "Clear Egyptian Arabic speech audio with natural expression, excellent clarity, and exact matching text.",
+  "segments": [
+    {
+      "start": 0,
+      "end": 2.83,
+      "text": "أهو كده، مسار نوّرت تاني!"
+    },
+    {
+      "start": 2.83,
+      "end": 4.05,
+      "text": "وحشتني يا صاحبي."
+    },
+    {
+      "start": 4.05,
+      "end": 6.1,
+      "text": "جاهز نكمّل من مكان ما وقفنا؟"
+    },
+    {
+      "start": 6.1,
+      "end": 8.9,
+      "text": "خطوة صغيرة النهارده، تقرّبك من حلمك."
+    },
+    {
+      "start": 8.9,
+      "end": 10.05,
+      "text": "يلا بينا!"
+    }
+  ]
+}

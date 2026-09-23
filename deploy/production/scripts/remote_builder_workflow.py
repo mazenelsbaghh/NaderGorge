@@ -7,7 +7,7 @@ from typing import Any, Mapping
 from remote_build_release import create_remote_build_plan
 from remote_distribution_plan import create_remote_distribution_plan
 from remote_distribution_runner import RemoteDistributionRunner, builder_executor_command
-from release_images import ReleaseManifestInputs, assert_source_unchanged, create_release_bundle, create_release_manifest_v2, create_source_snapshot, publish_final_manifest, write_json_atomic
+from release_images import create_committed_archive, ReleaseManifestInputs, assert_source_unchanged, create_release_bundle, create_release_manifest_v2, create_source_snapshot, publish_final_manifest, write_json_atomic
 from ssh_transport import SshTarget
 from registry_distribution import RegistryDistributionRunner, validate_builder
 
@@ -34,26 +34,33 @@ def run_remote_builder_workflow(*, repository: Path, output: Path, inventory: ob
     try:
         temporary.mkdir(mode=0o700,parents=True)
         builder_manifest=temporary/"builder-manifest.json"
-        # The release bundle is assembled locally from the verified source
-        # snapshot even when the OCI build is already cached remotely.  A
-        # cache hit must skip only the upload/build, not silently turn the
-        # deployment bundle into an empty archive because `snapshot` was
-        # never materialised.
-        create_source_snapshot(repository,snapshot,remote.source_state_sha256,
-                               provenance.get("selectedSourceCommit"))
+        commit = provenance.get("selectedSourceCommit")
+        source_archive = temporary / "source.tar.gz"
+        if commit:
+            create_committed_archive(repository, commit, temporary / "release-files.tar.gz",
+                                     remote.source_state_sha256, production_only=True)
+            manifest_repo = repository
+        else:
+            create_source_snapshot(repository, snapshot, remote.source_state_sha256)
+            manifest_repo = snapshot
         cached = fetch_cached_builder_manifest(transport=transport,target=_target(inventory,builder),remote=remote,destination=builder_manifest)
         if cached is None:
-            transport.stream_directory(_target(inventory,builder),snapshot,str(remote.staging_source_root))
+            if commit:
+                create_committed_archive(repository, commit, source_archive, remote.source_state_sha256)
+                transport.stream_archive(_target(inventory,builder), source_archive, str(remote.staging_source_root))
+                source_archive.unlink()
+            else:
+                transport.stream_directory(_target(inventory,builder),snapshot,str(remote.staging_source_root))
             transport.run(_target(inventory,builder),builder_executor_command(remote),timeout_seconds=3600)
             transport.fetch(_target(inventory,builder),str(remote.workspace/"builder-manifest.json"),builder_manifest,timeout_seconds=120,max_bytes=1024*1024)
             transport.fetch(_target(inventory,builder),str(remote.workspace/"build-evidence.json"),temporary/"build-evidence.json",timeout_seconds=120,max_bytes=1024*1024)
         builder_document = _read(builder_manifest)
         if builder_document.get("schemaVersion") == 2:
             artifacts = validate_builder(builder_document, inventory, dict(provenance))
-            create_release_bundle(snapshot, temporary)
+            if not commit: create_release_bundle(snapshot, temporary)
             assert_source_unchanged(repository, dict(provenance))
             initial = create_release_manifest_v2(ReleaseManifestInputs(
-                repo=snapshot, output=temporary, provenance=dict(provenance),
+                repo=manifest_repo, output=temporary, provenance=dict(provenance),
                 images=builder_document["images"], created_at=created_at, registry_artifacts=artifacts,
             ))
             manifest = temporary / "manifest.json"
@@ -64,7 +71,8 @@ def run_remote_builder_workflow(*, repository: Path, output: Path, inventory: ob
             publish_final_manifest(temporary, remote.release_id, nodes, inventory.cluster["ssh_user"], transport)
             os.rename(temporary, output)
             return final
-        plan=create_remote_distribution_plan(inventory,builder_document); create_release_bundle(snapshot,temporary)
+        plan=create_remote_distribution_plan(inventory,builder_document)
+        if not commit: create_release_bundle(snapshot,temporary)
         archive_sha256s = {
             name: next(
                 transfer.archive_sha256
@@ -76,7 +84,7 @@ def run_remote_builder_workflow(*, repository: Path, output: Path, inventory: ob
         assert_source_unchanged(repository, dict(provenance))
         initial=create_release_manifest_v2(
             ReleaseManifestInputs(
-                repo=snapshot,
+                repo=manifest_repo,
                 output=temporary,
                 provenance=dict(provenance),
                 images=dict(plan.images),

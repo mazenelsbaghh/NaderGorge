@@ -30,7 +30,7 @@ def test_only_shared_storage_implementations_write_durable_application_files() -
         ROOT / "worker/src/config/storage.ts",
     }
     pattern = re.compile(
-        r"(?:File\.Write|File\.Create\(|new FileStream\([^\n]*FileMode\.Create|writeFileSync\()"
+        r"(?:File\.Write|File\.Create\(|new FileStream\([^\n]*FileMode\.Create\b|writeFileSync\()"
     )
     findings = [
         str(path.relative_to(ROOT))

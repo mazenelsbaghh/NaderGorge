@@ -209,6 +209,12 @@ public class OutboxProcessorBackgroundService : BackgroundService
                 ?? throw new InvalidOperationException("Live-support AI queue dispatcher is unavailable.");
             await LiveSupportAIOutboxQueueDispatcher.DispatchAsync(@event, jobEnqueuer);
         }
+        else if (@event.Type == NaderGorge.Application.Features.Assessments.HomeworkEvaluationQueue.EventType)
+        {
+            var payload = JsonSerializer.Deserialize<NaderGorge.Application.Features.Assessments.HomeworkEvaluationPayload>(@event.PayloadJson)
+                ?? throw new InvalidOperationException("Homework evaluation payload is empty.");
+            await services.GetRequiredService<IJobEnqueuer>().EnqueueJobAsync("ai-homework-queue", "evaluate-homework", payload);
+        }
         else if (EssayEvaluationOutboxQueueDispatcher.IsEssayEvaluationEvent(@event))
         {
             var jobEnqueuer = services.GetService<IJobEnqueuer>()

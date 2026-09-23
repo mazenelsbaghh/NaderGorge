@@ -42,9 +42,9 @@ export function resolveQueueTarget(jobType: string, jobId: string, parsedPayload
     const vidId = parsedPayload.lessonVideoId || parsedPayload.LessonVideoId;
     physicalBaseJobId = chapId ? `${vidId}_mindmap_${chapId}` : `${vidId}_mindmaps`;
     logicalJobId = `${vidId}_mindmaps`;
-  } else if (jobType === 'essay') {
+  } else if (jobType === 'essay' || jobType === 'homework essay') {
     targetQueue = queues.essayQueue;
-    bullmqJobName = 'evaluate';
+    bullmqJobName = jobType === 'homework essay' ? 'evaluate-homework' : 'evaluate';
     physicalBaseJobId = jobId;
     logicalJobId = jobId;
   } else if (jobType === 'notification') {
@@ -128,7 +128,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     : undefined;
   logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
 
-  if (jobType === 'essay' && await isJobCancellationMarked(targetJobId)) {
+  if ((jobType === 'essay' || jobType === 'homework essay') && await isJobCancellationMarked(targetJobId)) {
     await acknowledge(redis, messageStreamId);
     return { action: 'skipped-existing', targetJobId };
   }
@@ -138,7 +138,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
     const state = await existingJob.getState();
     if (queuedAlias) await storeQueuedJobAlias(redis, queuedAlias, messageStreamId);
     if (state === 'completed' || state === 'failed') {
-      if (jobType === 'essay') {
+      if (jobType === 'essay' || jobType === 'homework essay') {
         // Keep the saved evaluation when redelivering after a callback outage.
         await existingJob.retry(state, { resetAttemptsMade: true, resetAttemptsStarted: true });
         await acknowledge(redis, messageStreamId);
@@ -161,7 +161,7 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
   try {
     const isLiveSupportTurn = jobType === 'live support turn';
     const isAdminAITurn = jobType === 'admin ai turn';
-    const isEssay = jobType === 'essay';
+    const isEssay = jobType === 'essay' || jobType === 'homework essay';
     let attempts = 5;
     if (jobType === 'video analysis' || jobType === 'lesson game') attempts = 3;
     else if (isLiveSupportTurn) attempts = 4;

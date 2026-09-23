@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>الرئيسية · مسار</title>
+    <link rel="stylesheet" href="platform.css" />
+  </head>
+  <body class="student-preview">
+    <svg width="0" height="0" class="svg-defs" aria-hidden="true">
+      <defs>
+        <symbol id="home" viewBox="0 0 24 24">
+          <path d="m3 10 9-7 9 7v11h-7v-7h-4v7H3z" />
+        </symbol>
+        <symbol id="book" viewBox="0 0 24 24">
+          <path d="M3 4h6l3 2 3-2h6v15h-6l-3 2-3-2H3zM12 6v15" />
+        </symbol>
+        <symbol id="layers" viewBox="0 0 24 24">
+          <path d="m12 3 10 6-10 6L2 9zM2 13l10 6 10-6M2 17l10 6 10-6" />
+        </symbol>
+        <symbol id="exam" viewBox="0 0 24 24">
+          <path d="M8 5H4v17h16V5h-4M8 2h8v5H8zM8 12h8M8 17h5" />
+        </symbol>
+        <symbol id="bell" viewBox="0 0 24 24">
+          <path d="M5 16V9a7 7 0 0 1 14 0v7l2 3H3zM9 22h6" />
+        </symbol>
+        <symbol id="menu" viewBox="0 0 24 24">
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </symbol>
+        <symbol id="arrow" viewBox="0 0 24 24">
+          <path d="m14 6-6 6 6 6" />
+        </symbol>
+      </defs>
+    </svg>
+    <aside class="sidebar">
+      <div class="full-logo"><img src="/logo.svg" alt="منصة مسار" /></div>
+      <span class="nav-caption">مسارك الدراسي</span>
+      <nav aria-label="القائمة الرئيسية">
+        <a href="#dashboard" aria-current="page"
+          ><svg><use href="#home" /></svg>الرئيسية</a
+        ><a href="#lessons"
+          ><svg><use href="#book" /></svg>دروسي</a
+        ><a href="#packages"
+          ><svg><use href="#layers" /></svg>باقاتي</a
+        ><a href="#exams"
+          ><svg><use href="#exam" /></svg>امتحاناتي</a
+        >
+      </nav>
+      <div class="sidebar-foot">
+        <img src="/logo-mark.svg" alt="" />
+        <p>تعلّم. نتطور. نحقق.</p>
+        <small>كل خطوة تقرّبك من هدفك.</small>
+      </div>
+    </aside>
+    <div class="shell">
+      <header class="student-header">
+        <div class="mobile-logo">
+          <img src="/logo.svg" alt="مسار، الرئيسية" />
+        </div>
+        <p class="breadcrumb">مسار <span> / </span> الرئيسية</p>
+        <div class="profile-actions">
+          <span class="year">الصف الثالث الثانوي</span
+          ><a href="#exams" class="icon-control" aria-label="المواعيد القادمة"
+            ><svg><use href="#bell" /></svg><i></i></a
+          ><span class="avatar" aria-label="طالب تجريبي">أ</span>
+        </div>
+      </header>
+      <main id="dashboard" class="dashboard">
+        <div class="page-title">
+          <div>
+            <h1>أهلًا يا أحمد</h1>
+            <p>جاهز للمذاكرة؟</p>
+          </div>
+
+        </div>
+        <dialog class="welcome-slot" id="welcomeSlot" aria-label="ترحيب ميم">
+          <iframe
+            id="welcomeFrame"
+            src="embedded.html?welcome=returning"
+            title="ميم يرحّب بك"
+            allow="autoplay"
+          ></iframe>
+        </dialog>
+        <div class="learning-grid">
+          <section class="continue-card" id="lessons">
+            <div class="label">
+              <svg><use href="#book" /></svg><span>خطوتك الآن</span>
+            </div>
+            <h2 id="lessonTitle">تابع من حيث توقّفت</h2>
+            <p id="lessonDescription">التراكيب الجيولوجية · الحصة الثالثة</p>
+            <div class="lesson-progress">
+              <span>وصلت للدقيقة ٢٤ من ٥٠</span><span>٤٨٪</span>
+            </div>
+            <div class="bar"><i></i></div>
+            <button id="continueButton">كمّل الدرس <span>↖</span></button>
+            <div class="brand-steps" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </div>
+          </section>
+          <section class="progress-summary">
+            <div class="section-heading">
+              <h2>رحلتك لحدّ دلوقتي</h2>
+              <span>هذا الأسبوع</span>
+            </div>
+            <div class="progress-ring">
+              <span><b id="progressNumber">٦</b>حصص مكتملة</span>
+            </div>
+            <p>كل حصة بتقرّبك خطوة.</p>
+            <div class="summary-bottom">
+              <span>مستمر من <b>٣ أيام</b></span
+              ><span class="achievement">✦ بداية موفّقة</span>
+            </div>
+          </section>
+        </div>
+        <section id="packages" class="packages">
+          <div class="section-heading">
+            <h2>محتواك الدراسي</h2>
+            <a href="#lessons">عرض الدروس ←</a>
+          </div>
+          <div class="course-row">
+            <div class="course-cover">
+              الجيولوجيا<span>الترم الأول</span>
+              <div class="mini-steps">▰ ▰ ▰</div>
+            </div>
+            <div>
+              <h3>الجيولوجيا وعلوم البيئة</h3>
+              <p>باقة الفصل الأول · ١٢ حصة</p>
+              <div class="course-track"><i></i></div>
+              <span>٦ من ١٢ حصة مكتملة</span>
+            </div>
+            <a
+              class="icon-control"
+              href="#lessons"
+              aria-label="افتح دروس الجيولوجيا"
+              ><svg><use href="#arrow" /></svg
+            ></a>
+          </div>
+        </section>
+        <section class="upcoming" id="exams">
+          <div class="section-heading">
+            <h2>خطواتك الجاية</h2>
+            <span>رتّب وقتك</span>
+          </div>
+          <div class="upcoming-row">
+            <span class="date">٢٦<small>سبتمبر</small></span>
+            <div>
+              <h3>امتحان على الفصل الأول</h3>
+              <p>الجيولوجيا · ٢٠ سؤال</p>
+            </div>
+            <span class="status">قريبًا</span>
+          </div>
+        </section>
+        <p id="demoStatus" role="status" class="demo-status"></p>
+        <footer class="platform-footer">
+          <img src="/logo-mark.svg" alt="مسار" /><span
+            >رحلة تعليمية تبدأ بخطوة.</span
+          ><small>بيانات تجريبية للمعاينة</small>
+        </footer>
+      </main>
+    </div>
+    <nav class="bottom-nav" aria-label="القائمة السفلية للطالب">
+      <a href="#dashboard" aria-current="page"
+        ><svg><use href="#home" /></svg>الرئيسية</a
+      ><a href="#lessons"
+        ><svg><use href="#book" /></svg>دروسي</a
+      ><a href="#packages"
+        ><svg><use href="#layers" /></svg>باقاتي</a
+      ><a href="#exams"
+        ><svg><use href="#exam" /></svg>امتحاناتي</a
+      ><button id="menuButton">
+        <svg><use href="#menu" /></svg>القائمة
+      </button>
+    </nav>
+    <script type="module" src="platform.mjs"></script>
+  </body>
+</html>

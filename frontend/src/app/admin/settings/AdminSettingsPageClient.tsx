@@ -1,5 +1,6 @@
 'use client';
 
+import { StudentWelcomeStats } from '@/components/admin/StudentWelcomeStats';
 import { WatermarkSettingsEditor } from '@/components/admin/WatermarkSettingsEditor';
 import { WhatsAppQrSettings } from '@/components/live-support/admin/WhatsAppQrSettings';
 import { ParentWhatsAppPrioritySettings, defaultParentWhatsAppPriority } from '@/components/admin/ParentWhatsAppPrioritySettings';
@@ -416,7 +417,7 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
 ];
 
 export default function AdminSettingsPageClient() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'bunny-libraries' | 'player' | 'whatsapp' | 'messenger' | 'roles' | 'welcome'>('settings');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -682,6 +683,13 @@ export default function AdminSettingsPageClient() {
           >
             إعدادات المنصة
           </button>
+          <button
+            onClick={() => setActiveTab('welcome')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'welcome'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >ترحيب البداية</button>
           <button
             onClick={() => setActiveTab('bunny-libraries')}
             className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'bunny-libraries'
@@ -1107,6 +1115,8 @@ export default function AdminSettingsPageClient() {
                   </button>
                 </div>
               </motion.div>
+            ) : activeTab === 'welcome' ? (
+              <StudentWelcomeStats key="welcome-stats" />
             ) : activeTab === 'bunny-libraries' ? (
               <motion.div
                 key="bunny-libraries-tab"

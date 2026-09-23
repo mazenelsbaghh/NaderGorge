@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>مسار · معاينة ميم داخل المنصة</title>
+    <link rel="stylesheet" href="platform.css" />
+  </head>
+  <body class="preview-host">
+    <header class="preview-toolbar">
+      <div>
+        <strong>ميم داخل مسار</strong><span>معاينة محلية · بيانات تجريبية</span>
+      </div>
+      <div class="switches" aria-label="مقاس الشاشة">
+        <button data-device="mobile" aria-pressed="false">موبايل</button
+        ><button data-device="tablet" aria-pressed="true">تابلت</button
+        ><button data-device="desktop" aria-pressed="false">كمبيوتر</button>
+      </div>
+      <label
+        >الزيارة
+        <select id="scenario">
+          <option value="first">أول مرة</option>
+          <option value="returning" selected>رجوع الطالب</option>
+        </select></label
+      >
+      <label>دخول ميم
+        <select id="pose">
+          <option value="auto">متغيّر كل مرة</option>
+          <option value="bottom">من تحت</option>
+          <option value="right">من اليمين</option>
+          <option value="left">من الشمال</option>
+        </select>
+      </label>
+    </header>
+    <main class="device-stage">
+      <iframe
+        id="device"
+        class="tablet"
+        src="student-preview.html?welcome=returning"
+        title="معاينة صفحة الطالب في مسار"
+        allow="autoplay"
+      ></iframe>
+    </main>
+    <p class="host-note">الترحيب يبدأ تلقائيًا بصوت ميم، ويختفي بعد نهايته. غيّر نوع الزيارة لإعادة المعاينة.</p>
+    <script type="module">
+      const frame = document.getElementById("device");
+      function replay() {
+        frame.src = `student-preview.html?welcome=${document.getElementById("scenario").value}&pose=${document.getElementById("pose").value}`;
+      }
+      document.getElementById("pose").addEventListener("change", replay);
+      document.querySelectorAll("[data-device]").forEach((button) =>
+        button.addEventListener("click", () => {
+          frame.className = button.dataset.device;
+          replay();
+          document
+            .querySelectorAll("[data-device]")
+            .forEach((other) =>
+              other.setAttribute("aria-pressed", String(other === button)),
+            );
+        }),
+      );
+      document
+        .getElementById("scenario")
+        .addEventListener("change", (event) => {
+          replay();
+        });
+    </script>
+  </body>
+</html>

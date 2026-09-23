@@ -1,0 +1,505 @@
+/* Preview-only HUD: all gameplay stays over the original museum canvas. */
+.immersive header {
+  left: auto;
+  width: auto;
+}
+.badge-label {
+  font-size: 13px;
+  color: #ffe8b5;
+  margin: 8px 0 12px;
+  direction: rtl;
+  text-align: left;
+}
+.inventory .seal {
+  min-height: 44px;
+  padding: 0;
+}
+.immersive .quest-bar {
+  border-right: 0;
+  max-width: 260px;
+  background: #102638c9;
+  border-radius: 8px;
+}
+.immersive .quest-bar b {
+  font-size: 16px;
+}
+.immersive .quest-bar span {
+  display: block;
+  line-height: 1.65;
+}
+.player-hud {
+  pointer-events: none;
+}
+.player-hud button {
+  pointer-events: auto;
+}
+.world-target {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  background: transparent !important;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  min-height: 30px;
+  min-width: 42px;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.world-target:hover {
+  border-color: #ffe9b780;
+  background: #ffe9b711 !important;
+}
+.world-target:active {
+  transform: translate(-50%, -50%);
+}
+.world-target:focus-visible {
+  outline: 3px solid #ffdc8f;
+  outline-offset: 2px;
+}
+.world-target .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.puzzle-hud {
+  position: absolute;
+  z-index: 6;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(780px, 80vw);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #102738ed;
+  color: #fff0d0;
+  border: 1px solid #b99c6366;
+  text-align: center;
+}
+.puzzle-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.puzzle-top .quiet {
+  color: #ffe9b7;
+  font-size: 12px;
+  padding: 4px 10px;
+  min-height: 38px;
+}
+.puzzle-hud h1 {
+  font-size: 18px;
+  margin: 3px 0;
+}
+.puzzle-hud p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 4px 0;
+}
+.puzzle-hud #puzzleInstruction {
+  color: #dce4dc;
+}
+.puzzle-hud #feedback {
+  min-height: 20px;
+  color: #f4db9b;
+}
+.puzzle-hud #feedback.error {
+  color: #ffbfaa;
+}
+.puzzle-hud #feedback.success {
+  color: #91e8c8;
+}
+.puzzle-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.puzzle-buttons .quiet {
+  color: #fff0d0;
+  background: #284553;
+}
+.puzzle-buttons button {
+  font-size: 13px;
+  padding: 8px 16px;
+  min-height: 44px;
+}
+.mechanism-mode .world-bottom,
+.mechanism-mode .touch-controls,
+.mechanism-mode #stations {
+  display: none;
+}
+.mechanism-mode ~ .game-footer {
+  opacity: 0.4;
+}
+.conversation {
+  position: absolute;
+  z-index: 10;
+  bottom: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 90vw);
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  background: #102738f2;
+  border: 1px solid #b99c6380;
+  padding: 20px 25px;
+  border-radius: 12px;
+  color: #fff0d0;
+}
+.conversation > img {
+  width: 90px;
+  height: 125px;
+  object-fit: contain;
+}
+.conversation h2 {
+  font-size: 23px;
+  margin: 0 0 6px;
+}
+.conversation p {
+  font-size: 15px;
+  line-height: 1.8;
+  margin: 6px 0 14px;
+}
+.conversation button {
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 18px;
+}
+.has-conversation .world-bottom,
+.has-conversation .touch-controls {
+  visibility: hidden;
+}
+.game-journal {
+  background: #102738f7;
+  border: 1px solid #b99c63;
+  color: #ffedca;
+  width: min(720px, 90vw);
+  max-height: 84svh;
+  padding: 24px 30px;
+  border-radius: 12px;
+}
+.game-journal::backdrop {
+  background: #06152290;
+  backdrop-filter: blur(2px);
+}
+.game-journal h2 {
+  font-size: 26px;
+  margin: 12px 0 18px;
+  clear: both;
+}
+.game-journal p {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #dedfd3;
+}
+.game-journal .quiet {
+  color: #ffe9b7;
+  background: #244552;
+}
+.journal-close {
+  float: left;
+  font-size: 13px;
+}
+.journal-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #9b885044;
+}
+.journal-row .glyph {
+  font-size: 35px;
+  color: #f5cc75;
+}
+.journal-row strong {
+  font-size: 17px;
+}
+.journal-row small {
+  display: block;
+  font-size: 12px;
+  margin-top: 6px;
+  color: #d2d7ca;
+}
+.journal-row button {
+  margin-inline-start: auto;
+  min-height: 44px;
+  font-size: 13px;
+  background: #255961;
+  color: #fff1d4;
+}
+.game-journal select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 18px;
+  min-height: 44px;
+  background: #193e50;
+  color: #fff0d0;
+  border: 1px solid #aa9258;
+  border-radius: 6px;
+  font: inherit;
+}
+.game-journal label {
+  font-size: 14px;
+}
+.journal-recap {
+  padding: 14px 0;
+  border-bottom: 1px solid #9b885044;
+  line-height: 1.9;
+}
+.summary-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.preview-rotate {
+  position: absolute;
+  inset: 0;
+  background: #07162df5;
+  color: #fff1d4;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+}
+.preview-rotate b {
+  font-size: 24px;
+}
+.preview-rotate p {
+  line-height: 1.8;
+}
+.toast {
+  max-width: min(560px, 90vw);
+  bottom: auto;
+  top: 24%;
+  background: #102738f5;
+  border: 1px solid #b99c6380;
+  color: #fff0d0;
+  font-size: 15px;
+}
+.immersive #world {
+  min-height: 0;
+  height: 100%;
+}
+.immersive .game-footer {
+  pointer-events: none;
+}
+.immersive .game-footer #saveStatus {
+  font-size: 10px;
+}
+.world-bottom .primary {
+  min-width: 140px;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .player-hud {
+    top: 10px;
+    left: 12px;
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+  .immersive header {
+    height: 54px;
+  }
+  .immersive .quest-bar {
+    top: 62px;
+    width: 200px;
+    right: 12px;
+  }
+  .immersive .quest-bar b {
+    font-size: 13px;
+  }
+  .immersive .quest-bar span {
+    font-size: 10px;
+  }
+  .inventory .seal {
+    width: 44px;
+    height: 44px;
+    font-size: 25px;
+  }
+  .puzzle-hud {
+    bottom: 10px;
+    padding: 6px 14px;
+    width: min(680px, 80vw);
+  }
+  .puzzle-hud h1 {
+    font-size: 14px;
+  }
+  .puzzle-hud p {
+    font-size: 11px;
+    margin: 2px;
+  }
+  .puzzle-top {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -34px;
+  }
+  .puzzle-top > * {
+    background: #102738ed;
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  .puzzle-buttons {
+    margin-top: 4px;
+  }
+  .puzzle-buttons button {
+    min-height: 38px;
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .conversation {
+    bottom: 22px;
+    padding: 14px 20px;
+    max-width: 590px;
+  }
+  .conversation > img {
+    width: 65px;
+    height: 90px;
+  }
+  .conversation h2 {
+    font-size: 19px;
+  }
+  .conversation p {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .toast {
+    top: 18%;
+    font-size: 13px;
+    padding: 10px 18px;
+  }
+  .mechanism-mode ~ .game-footer {
+    display: none;
+  }
+  .mechanism-mode .world-target {
+    min-height: 28px;
+  }
+}
+@media (orientation: portrait) and (max-width: 700px) {
+  .player-hud {
+    top: 72px;
+    width: 175px;
+    left: 10px;
+  }
+  .immersive .quest-bar {
+    top: 80px;
+    right: 10px;
+    left: auto;
+    width: 160px;
+  }
+  .inventory .seal {
+    width: 44px;
+    height: 44px;
+  }
+  .puzzle-hud {
+    width: 94vw;
+    bottom: 20px;
+  }
+  .puzzle-hud h1 {
+    font-size: 15px;
+  }
+  .puzzle-hud p {
+    font-size: 12px;
+  }
+  .conversation {
+    padding: 14px;
+    gap: 10px;
+  }
+  .conversation > img {
+    width: 55px;
+    height: 90px;
+  }
+  .conversation h2 {
+    font-size: 19px;
+  }
+  .conversation p {
+    font-size: 13px;
+  }
+  .game-journal {
+    padding: 18px;
+  }
+  .game-actions {
+    gap: 5px;
+  }
+  .immersive header .icon-button {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  .immersive .brand {
+    font-size: 24px;
+  }
+  .toast {
+    top: 28%;
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.immersive:has(.mechanism-mode) .quest-bar,
+.immersive:has(.mechanism-mode) .inventory {
+  display: none;
+}
+.immersive:has(.mechanism-mode) .player-hud {
+  transform: scale(0.72);
+  transform-origin: top left;
+}
+
+.world-name {
+  position: absolute;
+  bottom: 18px;
+  right: 24px;
+  z-index: 5;
+  padding: 8px 14px;
+  background: #102638;
+  color: #f6f7f8;
+  border-radius: 6px;
+  font-size: 14px;
+  pointer-events: none;
+}
+.world-route {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-height: 110px;
+  margin-block: 10px;
+  padding: 18px;
+  text-align: right;
+  color: #f6f7f8;
+  border: 0;
+  border-radius: 8px;
+}
+.world-route strong { font-size: 21px; }
+.world-route span { font-size: 14px; line-height: 1.7; }
+.world-route small { font-size: 12px; }
+.world-route-valley { background: #244b3e; }
+.world-route-factory { background: #55402d; }
+.world-route-cave { background: #213e55; }
+.world-route:hover { filter: brightness(1.15); }
+.world-route:focus-visible { outline: 3px solid #f6f7f8; outline-offset: 3px; }
+#mapButton { font-size: 13px; min-height: 44px; }
+.mechanism-mode .world-name { bottom: auto; top: 88px; }
+@media (max-width: 700px) {
+  #mapButton { font-size: 11px; padding: 6px; }
+  .world-name { right: 12px; bottom: 8px; font-size: 12px; }
+  .mechanism-mode .world-name { top: 140px; }
+}

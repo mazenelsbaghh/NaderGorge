@@ -5,7 +5,7 @@ import { AppProviders } from "./providers";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
-  weight: ["400", "500", "700", "800", "900"],
+  weight: ["400", "500", "700", "800"],
   display: "swap",
   variable: "--font-tajawal",
 });

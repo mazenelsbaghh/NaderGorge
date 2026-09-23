@@ -12986,6 +12986,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("FatherDateOfBirth")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("FirstWelcomeCompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<int>("Gender")
                         .HasColumnType("integer");
 
@@ -13007,6 +13010,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<bool>("IsMotherAlive")
                         .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("LastWelcomeDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("LightThemePaletteId")
                         .HasMaxLength(100)
@@ -13054,6 +13060,15 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("WelcomeClaimDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("WelcomeClaimExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("WelcomeClaimToken")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");

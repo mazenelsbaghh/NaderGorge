@@ -1,0 +1,40 @@
+{
+  "quality": "Clear Egyptian Arabic spoken welcome message, perfectly matched to the provided script with no omitted or extra text.",
+  "segments": [
+    {
+      "start": 0,
+      "end": 1.65,
+      "text": "إيه ده! إنت وصلت؟"
+    },
+    {
+      "start": 1.65,
+      "end": 2.72,
+      "text": "نوّرت مسار!"
+    },
+    {
+      "start": 2.72,
+      "end": 5.6,
+      "text": "أنا ميم، وصاحبك في رحلة التعلّم."
+    },
+    {
+      "start": 5.6,
+      "end": 8.45,
+      "text": "هنفهم، ونجرّب، ونحلّ سوا."
+    },
+    {
+      "start": 8.45,
+      "end": 9.35,
+      "text": "جاهز؟"
+    },
+    {
+      "start": 9.35,
+      "end": 11.1,
+      "text": "يلا نبدأ أول خطوة!"
+    },
+    {
+      "start": 11.1,
+      "end": 12.3,
+      "text": "أشوفك جوّه!"
+    }
+  ]
+}

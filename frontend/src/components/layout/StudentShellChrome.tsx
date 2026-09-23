@@ -30,6 +30,8 @@ import {
   GraduationCap,
   Home,
   LogOut,
+  PanelRightClose,
+  PanelRightOpen,
   Settings,
   User,
   Wallet,
@@ -138,6 +140,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const shouldReduceMotion = useReducedMotion();
   // isThemeSettingsOpen state removed
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const sidebarId = useId();
   const drawerId = useId();
   const shellInstanceId = useId();
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
@@ -234,28 +238,43 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       ) : null}
       {!isFocusMode && (
           <aside
-            className="group/sidebar fixed start-0 top-0 z-50 hidden h-full w-20 flex-col justify-between border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-6 transition-[width] duration-200 ease-out motion-safe:animate-in motion-safe:slide-in-from-right-4 hover:w-64 focus-within:w-64 lg:flex"
+            id={sidebarId}
+            data-expanded={!isSidebarCollapsed}
+            className={`group/sidebar fixed start-0 top-0 z-50 hidden h-dvh flex-col border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] py-5 transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}
             role="navigation"
             aria-label="القائمة الرئيسية"
           >
-            <div className="space-y-7">
-              <Link
-                href="/student/profile"
-                className="flex w-full items-center justify-start gap-3 rounded-full px-5 py-1 text-right transition-colors duration-200 hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
-                aria-label="الملف الشخصي"
-              >
-                <UserAvatar
-                  avatarSlug={user?.avatarSlug}
-                  fullName={user?.fullName}
-                  size="sm"
-                  className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300 flex-shrink-0"
-                />
-                <span className="hidden truncate whitespace-nowrap text-sm font-bold text-[var(--admin-text)] group-hover/sidebar:block group-focus-within/sidebar:block">
-                  {user?.fullName || 'طالب'}
-                </span>
-              </Link>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="relative mb-5 flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+                  aria-label={isSidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+                  aria-expanded={!isSidebarCollapsed}
+                  aria-controls={sidebarId}
+                  title={isSidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
+                  className={`absolute z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-sidebar)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isSidebarCollapsed ? '-end-5' : 'end-3'}`}
+                >
+                  {isSidebarCollapsed ? <PanelRightOpen className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
+                </button>
+                <Link
+                  href="/student/profile"
+                  className={`flex min-w-0 w-full items-center justify-start gap-3 rounded-full ps-5 py-1 text-right transition-colors duration-200 hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isSidebarCollapsed ? 'pe-5' : 'pe-14'}`}
+                  aria-label="الملف الشخصي"
+                >
+                  <UserAvatar
+                    avatarSlug={user?.avatarSlug}
+                    fullName={user?.fullName}
+                    size="sm"
+                    className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300 flex-shrink-0"
+                  />
+                  <span className="hidden truncate whitespace-nowrap text-sm font-bold text-[var(--admin-text)] group-data-[expanded=true]/sidebar:block">
+                    {user?.fullName || 'طالب'}
+                  </span>
+                </Link>
 
-              <nav className="space-y-3 px-3">
+              </div>
+              <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 [scrollbar-width:thin] [scrollbar-color:var(--admin-border)_transparent]">
                 <IntentLink
                   href="/student"
                   aria-label="لوحة التحكم"
@@ -266,7 +285,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     }`}
                 >
                   <Home className="h-5 w-5 flex-shrink-0" />
-                  <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
+                  <span className="hidden truncate whitespace-nowrap text-sm font-bold group-data-[expanded=true]/sidebar:block">
                     لوحة التحكم
                   </span>
                 </IntentLink>
@@ -294,7 +313,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                             <span className="absolute -top-1 -end-1 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
                           )}
                         </div>
-                        <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
+                        <span className="hidden truncate whitespace-nowrap text-sm font-bold group-data-[expanded=true]/sidebar:block">
                           {item.label}
                         </span>
                       </div>
@@ -309,8 +328,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               </nav>
             </div>
 
-            <div className="space-y-3 px-3">
-              <div className="flex flex-col gap-2 justify-start px-4 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 w-full">
+            <div className="mt-4 max-h-[50%] shrink-0 space-y-2 overflow-y-auto overscroll-contain px-3 [scrollbar-width:thin] [scrollbar-color:var(--admin-border)_transparent]">
+              <div className="flex flex-col gap-2 justify-start px-1 transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300 w-full">
                 <SidebarBalance />
                 <SidebarGamification />
               </div>
@@ -322,7 +341,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
                 />
-                <span className="ms-3 hidden self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)] group-hover/sidebar:block group-focus-within/sidebar:block">
+                <span className="ms-3 hidden self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)] group-data-[expanded=true]/sidebar:block">
                   {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
                 </span>
               </div>
@@ -337,7 +356,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 title="الملف الشخصي"
               >
                 <Settings className="h-5 w-5 flex-shrink-0" />
-                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
+                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-data-[expanded=true]/sidebar:block">
                   الملف الشخصي
                 </span>
               </IntentLink>
@@ -350,7 +369,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 aria-label="تسجيل الخروج"
               >
                 <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
+                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-data-[expanded=true]/sidebar:block">
                   تسجيل الخروج
                 </span>
               </button>
@@ -361,10 +380,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       <main
         ref={mainScrollRef}
         id="main-content"
-        className={`app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain ${
+        className={`app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain transition-[margin] duration-200 ease-out motion-reduce:transition-none ${
           isFocusMode
             ? 'px-0 py-0 pb-0 lg:ms-0 lg:px-0 lg:py-0 lg:pb-0'
-            : 'px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:ms-24 lg:px-8 lg:py-10 lg:pb-10'
+            : 'px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:px-8 lg:py-10 lg:pb-10' + (isSidebarCollapsed ? ' lg:ms-20' : ' lg:ms-72')
         }`}
       >
         {!isFocusMode && (

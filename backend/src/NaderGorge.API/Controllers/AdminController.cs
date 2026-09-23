@@ -1190,6 +1190,13 @@ public class AdminController : ControllerBase
         if (result.Success) return Ok(result);
         return BadRequest(result);
     }
+    [HttpGet("settings/student-welcome-stats")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> GetStudentWelcomeStats(CancellationToken ct)
+    {
+        return Ok(await _mediator.Send(new NaderGorge.Application.Features.Student.Welcome.GetStudentWelcomeStatsQuery(), ct));
+    }
+
     [HttpGet("settings")]
     [HasPermission("settings.manage")]
     public async Task<IActionResult> GetPlatformSettings()

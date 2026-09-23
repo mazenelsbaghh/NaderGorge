@@ -12,6 +12,41 @@ namespace NaderGorge.Application.Tests;
 public sealed class HomeworkSubmissionTests
 {
     [Theory]
+    [InlineData("explanation", false, true)]
+    [InlineData("", false, true)]
+    [InlineData("/uploads/audio/answer.webm", false, false)]
+    [InlineData("explanation", true, false)]
+    public async Task SubmittedWrittenHomeworkDurablyQueuesAIWhileAudioAndExpiredAnswersDoNot(string answer, bool expired, bool queued)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "201000000093");
+        var lesson = new Lesson { Title = "Lesson", ContentSectionId = Guid.NewGuid() };
+        var homework = new Homework { LessonId = lesson.Id, Title = "Work", TotalScore = 10, DurationMinutes = 5 };
+        var question = new HomeworkQuestion { HomeworkId = homework.Id, BodyText = "Explain", PointsActive = 1,
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay };
+        homework.Questions.Add(question);
+        db.Lessons.Add(lesson); db.Homeworks.Add(homework);
+        await db.SaveChangesAsync();
+        await new StartHomeworkAttemptQueryHandler(db, new HomeworkAllowAccessService(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id), default);
+        if (expired) { (await db.HomeworkSubmissions.SingleAsync()).StartedAt = DateTime.UtcNow.AddHours(-1); await db.SaveChangesAsync(); }
+        var submitted = await new SubmitHomeworkCommandHandler(db, new HomeworkNoOpPublisher(), new HomeworkAllowAccessService(),
+            new HomeworkNoOpJobEnqueuer(), new HomeworkAllowArchiveAccessService())
+            .Handle(new(homework.Id, student.Id, [new(question.Id, answer)]), default);
+        Assert.True(submitted.Success, submitted.Message);
+        var events = await db.OutboxEvents.Where(e => e.Type == "HomeworkEvaluationQueued").ToListAsync();
+        Assert.Equal(queued ? 1 : 0, events.Count);
+        if (queued)
+        {
+            var payload = System.Text.Json.JsonSerializer.Deserialize<NaderGorge.Application.Features.Assessments.HomeworkEvaluationPayload>(events[0].PayloadJson)!;
+            db.ChangeTracker.Clear();
+            var saved = await db.HomeworkSubmissions.Include(s => s.Answers).SingleAsync();
+            Assert.Equal(NaderGorge.Application.Features.Assessments.HomeworkEvaluationQueue.Fingerprint(saved), payload.Fingerprint);
+            Assert.Equal(Assert.Single(saved.Answers).Id, Assert.Single(payload.Questions).AnswerId);
+        }
+    }
+
+    [Theory]
     [InlineData(5, 60, 0)]
     [InlineData(null, 5, 10)]
     public async Task HomeworkTimerUsesAttemptDefinitionNotLaterSettings(int? originalMinutes, int currentMinutes, decimal expectedScore)

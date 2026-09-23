@@ -144,10 +144,12 @@ def node_ready(
         (
             "bash", "-lc",
             "set -euo pipefail; "
-            f"curl --fail --silent -H 'Host: massar-academy.net' "
+            f"curl --fail --silent --connect-timeout 3 --max-time 10 -H 'Host: massar-academy.net' "
             f"http://{overlay_address}:8080/__node_ready",
         ),
-        timeout_seconds=15,
+        # Allow the SSH handshake to complete under load while bounding the
+        # actual HTTP readiness request independently above.
+        timeout_seconds=60,
     ).stdout
     try:
         value = json.loads(output)

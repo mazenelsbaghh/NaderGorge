@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#eaf4f1" />
+    <title>ميم · أهلاً بيك في مسار</title>
+    <link rel="icon" href="/mim.png" />
+    <link rel="stylesheet" href="preview.css" />
+  </head>
+  <body>
+    <main class="phone" aria-label="معاينة ميم للموبايل">
+      <section
+        id="scene"
+        class="scene"
+        aria-label="ترحيب ميم"
+        data-phase="ready"
+      >
+        <header>
+          <span class="brand">مسار<span>رحلة تبدأ بخطوة</span></span
+          ><button
+            id="mute"
+            class="sound"
+            type="button"
+            aria-pressed="false"
+            aria-label="كتم الصوت"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+            >
+              <path d="M11 4 5 9H2v6h3l6 5V4Z" />
+              <path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+            </svg>
+          </button>
+        </header>
+        <div class="heading" id="heading">
+          <p id="eyebrow">صاحبك في رحلة التعلّم</p>
+          <h1 id="headline">في حدّ هنا<br />مستني <em>يسلّم عليك.</em></h1>
+        </div>
+        <div class="set" aria-hidden="true">
+          <div class="arch"></div>
+          <div class="floor"></div>
+          <div class="stair stair-one"></div>
+          <div class="stair stair-two"></div>
+          <div class="stair stair-three"></div>
+          <div class="floor-line"></div>
+        </div>
+        <div class="character-stage" id="characterStage">
+          <div class="shadow" id="shadow"></div>
+          <div class="character" id="character">
+            <img
+              src="/mim.png"
+              alt="ميم، شخصية مسار"
+              fetchpriority="high"
+              draggable="false"
+            /><svg class="mouth" viewBox="0 0 1145 1374" aria-hidden="true">
+              <defs>
+                <radialGradient id="fur">
+                  <stop offset="0.7" stop-color="#f5e5c9" />
+                  <stop offset="1" stop-color="#f5e5c9" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <ellipse cx="622" cy="680" rx="64" ry="50" fill="url(#fur)" />
+              <g id="lips">
+                <path
+                  d="M578 649 Q622 674 672 662 Q654 726 617 709 Q588 699 578 649"
+                  fill="#462311"
+                />
+                <path
+                  d="M602 699 Q629 682 652 700 Q634 723 612 709"
+                  fill="#c77b5b"
+                />
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="learning" aria-hidden="true">
+          <span id="learn">نفهم <b>✦</b></span
+          ><span id="try">نجرّب <b>＋</b></span
+          ><span id="solve">نحلّ <b>✓</b></span>
+        </div>
+        <div id="speech" class="speech">
+          <div class="speaker">
+            <span class="dot"></span> ميم
+            <span class="waves" aria-hidden="true"
+              ><i></i><i></i><i></i><i></i
+            ></span>
+          </div>
+          <p id="caption">ترحيب صغير… وبداية رحلة كبيرة.</p>
+        </div>
+        <div id="ending" class="ending" aria-hidden="true">
+          <div class="end-symbol">↗</div>
+          <p>كل خطوة بتفرق.</p>
+          <h2 id="endTitle">دي بداية<br /><em>حكايتك.</em></h2>
+          <span id="endMessage">مسار معاك، خطوة بخطوة.</span>
+        </div>
+        <div class="bottom">
+          <button id="play" class="primary" type="button" disabled>
+            <span id="playLabel">اسمع ميم</span
+            ><span id="playIcon" aria-hidden="true">▶</span></button
+          ><button
+            id="restart"
+            class="replay"
+            type="button"
+            aria-label="إعادة الترحيب من البداية"
+            hidden
+          >
+            ↻
+          </button>
+        </div>
+        <div class="progress" aria-hidden="true"><i id="progress"></i></div>
+      </section>
+      <div class="preview-note">
+        <span>معاينة للموبايل · Charon من Gemini</span
+        ><span id="time" dir="ltr">00:00</span>
+      </div>
+      <label class="voice-choice"
+        >جرّب الترحيب
+        <select id="visitChoice">
+          <option value="auto">تلقائي حسب الزيارة</option>
+          <option value="first">أول زيارة</option>
+          <option value="returning">رجوع الطالب</option>
+        </select></label
+      >
+      <p id="visitNote" class="visit-note" role="status"></p>
+      <p id="error" role="alert"></p>
+      <p class="disclosure">تصوّر متحرك بصورة ميم الحالية، وحركة فم تقريبية.</p>
+    </main>
+    <audio
+      id="voice"
+      src="gemini-charon-mobile.m4a"
+      preload="auto"
+      playsinline
+    ></audio>
+    <script type="module" src="preview.mjs"></script>
+  </body>
+</html>

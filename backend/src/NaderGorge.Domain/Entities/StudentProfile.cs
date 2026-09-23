@@ -47,6 +47,13 @@ public class StudentProfile : BaseEntity
     public StudyTrack? StudyTrack { get; set; }
     public string? AvatarSlug { get; set; }
 
+    // Welcome state is account-wide; null also enrolls existing students.
+    public DateTime? FirstWelcomeCompletedAt { get; set; }
+    public DateOnly? LastWelcomeDate { get; set; }
+    public Guid? WelcomeClaimToken { get; set; }
+    public DateTime? WelcomeClaimExpiresAt { get; set; }
+    public DateOnly? WelcomeClaimDate { get; set; }
+
     // ── Parent Tracking ──────────────────────────────────────────────────
     public string? ParentTrackingCode { get; set; }
     public bool HasSeenTrackingCodePopup { get; set; } = false;

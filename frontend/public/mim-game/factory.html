@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ميم · مصنع الأسباب</title>
+  <link rel="icon" href="assets/mim.png">
+  <link rel="stylesheet" href="three.css">
+  <link rel="stylesheet" href="factory.css">
+</head>
+<body>
+  <main>
+    <div class="scene" id="scene">
+
+      <div id="answers" hidden aria-label="بوابات الإجابة"></div>
+    </div>
+    <section id="panel" aria-label="مهمة المصنع">
+      <p id="phase">تعلّق واجمع نقطة الطاقة</p>
+      <h1>مصنع الأسباب <span id="count" dir="ltr">٠ / ٣</span></h1>
+      <p id="question" aria-live="polite"></p>
+      <p id="feedback" role="status" aria-live="polite">اتعلّق بنقطة الطاقة المضيئة، وبعدها اختار بوابة الإجابة بالحركة.</p>
+      <progress id="energy" max="3" value="0" aria-label="دوائر الطاقة المكتملة"></progress>
+    </section>
+    <section id="victory" hidden aria-label="المهمة مكتملة">
+      <p class="eyebrow">مهمة مكتملة</p><h2>المصنع عاد للحياة!</h2>
+      <p id="resultSummary"></p><p>كل توصيلة صحيحة حوّلت المعرفة لطاقة.</p>
+    </section>
+  </main>
+  <nav class="toolbar" aria-label="أدوات المصنع">
+    <button id="cameraReset">إعادة ضبط الكاميرا</button>
+    <button id="again" hidden>العب من جديد</button>
+    <a href="preview.html">ارجع للمغامرات</a>
+  </nav>
+  <p id="moveHelp">تحرّك بـ WASD · لف الكاميرا بالماوس · E للتعلّق · مسافة للقفز · Q للاندفاع</p>
+  <div class="touch-controls" aria-label="عصا الحركة وعصا الكاميرا">
+    <div id="moveStick" class="thumbstick thumbstick-move" role="group" aria-label="عصا الحركة"><span class="thumbstick-label">حركة</span><span class="thumbstick-knob"></span></div>
+    <div id="cameraStick" class="thumbstick thumbstick-camera" role="group" aria-label="عصا الكاميرا"><span class="thumbstick-label">كاميرا</span><span class="thumbstick-knob"></span></div>
+  </div>
+  <div class="action-controls" aria-label="حركات ميم">
+    <button id="jumpButton" type="button" aria-label="اقفز">قفز</button>
+    <button id="dashButton" type="button" aria-label="اندفاع سريع">اندفاع</button>
+    <button id="grappleButton" type="button" aria-label="تعلّق بالحبل">تعلّق</button>
+  </div>
+  <p id="loadError" role="alert" hidden>تعذّر تشغيل العالم ثلاثي الأبعاد. أعد تحميل الصفحة أو جرّب متصفحًا يدعم WebGL.</p>
+  <script type="module" src="factory.mjs?v=11"></script>
+</body>
+</html>

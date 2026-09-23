@@ -100,6 +100,27 @@ test -z "$(find {shlex.quote(str(remote_destination))} -type l -print -quit)"
             consumer_label=f"{target.node_id} source receiver",
         )
 
+    def stream_archive(self, target: SshTarget, source: Path, destination: str,
+                       *, timeout_seconds: int = 600) -> None:
+        """Send an audited Git-object archive without a second local checkout."""
+        if source.is_symlink() or not source.is_file():
+            raise SshTransportError("source archive must be a regular file")
+        remote = _remote_path(destination, label="stream destination")
+        if not str(remote).startswith("/tmp/massar-build-source-"):
+            raise SshTransportError("stream destination must be a remote builder staging path")
+        script = f"""
+set -euo pipefail
+test "$(cat /etc/massar/cluster-id)" = "massar-production"
+test ! -e {shlex.quote(str(remote))}
+install -d -m 0700 {shlex.quote(str(remote))}
+tar -xzf - --no-same-owner --no-same-permissions -C {shlex.quote(str(remote))}
+test -z "$(find {shlex.quote(str(remote))} -type l -print -quit)"
+"""
+        self._stream(["cat", str(source.resolve())],
+                     self._ssh_argv(target, ("bash", "-lc", script)),
+                     timeout_seconds=timeout_seconds, producer_label="committed source archive",
+                     consumer_label=f"{target.node_id} source receiver")
+
     def stream_remote_file(
         self,
         source_target: SshTarget,

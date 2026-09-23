@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const PlatformPopup = dynamic(
   () => import('@/components/platform/PlatformPopup').then((module) => module.PlatformPopup),
@@ -19,7 +19,14 @@ const ParentCodePopup = dynamic(
   { ssr: false },
 );
 
+const StudentWelcome = dynamic(
+  () => import('./welcome/StudentWelcome').then(module => module.StudentWelcome),
+  { ssr: false },
+);
+
 export function DeferredStudentOverlays() {
+  const [welcomeSettled, setWelcomeSettled] = useState(false);
+  const settleWelcome = useCallback(() => setWelcomeSettled(true), []);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -30,9 +37,14 @@ export function DeferredStudentOverlays() {
   if (!ready) return null;
   return (
     <>
-      <StudentBirthdayCelebration />
-      <PlatformPopup />
-      <ParentCodePopup />
+      <StudentWelcome onSettled={settleWelcome} />
+      {welcomeSettled && (
+        <>
+          <StudentBirthdayCelebration />
+          <PlatformPopup />
+          <ParentCodePopup />
+        </>
+      )}
     </>
   );
 }

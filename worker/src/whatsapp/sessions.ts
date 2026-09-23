@@ -65,7 +65,6 @@ export class BaileysSessions {
             session.lastProgressAt = Date.now();
           }
           if (update.connection) {
-            session.lastProgressAt = Date.now();
             await this.connectionChanged(sessionId, session, update.connection, update.lastDisconnect?.error);
           }
         }
@@ -144,6 +143,8 @@ export class BaileysSessions {
   }
 
   async connection(sessionId: string): Promise<ConnectionSnapshot> {
+    // Expire a pairing attempt before start() can return its stale socket again.
+    this.state(sessionId);
     const session = await this.start(sessionId);
     const deadline = Date.now() + 15_000;
     while ((!session.qr || (session.qrExpiresAt ?? 0) <= Date.now())

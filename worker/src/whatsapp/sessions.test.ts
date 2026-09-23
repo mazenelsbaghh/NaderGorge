@@ -19,6 +19,27 @@ test('connection state never exposes an expired QR', () => {
   );
 });
 
+test('a new connect request replaces a pairing session stalled without a QR', async () => {
+  const { BaileysSessions } = await import('./sessions.js');
+  const sessions = new BaileysSessions({} as never, {} as never);
+  let ended = false;
+  let opened = false;
+  sessions['sessions'].set('session-a', {
+    accountId: 'support-a', socket: { end: () => { ended = true; } },
+    state: 'connecting', stopped: false, retries: 0, lastProgressAt: Date.now() - 46_000,
+  } as never);
+  sessions['open'] = async () => {
+    opened = true;
+    return { state: 'connecting', qr: 'data:image/png;base64,dGVzdA==', qrExpiresAt: Date.now() + 30_000 } as never;
+  };
+
+  const snapshot = await sessions.connection('session-a');
+  assert.equal(ended, true);
+  assert.equal(opened, true);
+  assert.equal(snapshot.base64, 'data:image/png;base64,dGVzdA==');
+  sessions.close();
+});
+
 test('phone replies and historical messages enter the durable callback queue', async () => {
   const { BaileysSessions } = await import('./sessions.js');
   const queued: unknown[] = [];

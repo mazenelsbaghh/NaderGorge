@@ -1,0 +1,40 @@
+{
+  "quality": "Clear Egyptian Arabic speech, accurate match to the requested verbatim text with lively voice delivery.",
+  "segments": [
+    {
+      "start": 0,
+      "end": 1.76,
+      "text": "إيه ده! إنت وصلت؟"
+    },
+    {
+      "start": 1.76,
+      "end": 3.1,
+      "text": "نوّرت مسار!"
+    },
+    {
+      "start": 3.1,
+      "end": 6.16,
+      "text": "أنا ميم، وصاحبك في رحلة التعلّم."
+    },
+    {
+      "start": 6.16,
+      "end": 9.1,
+      "text": "هنفهم، ونجرّب، ونحلّ سوا."
+    },
+    {
+      "start": 9.1,
+      "end": 10.05,
+      "text": "جاهز؟"
+    },
+    {
+      "start": 10.05,
+      "end": 11.8,
+      "text": "يلا نبدأ أول خطوة!"
+    },
+    {
+      "start": 11.8,
+      "end": 13.3,
+      "text": "أشوفك جوّه!"
+    }
+  ]
+}

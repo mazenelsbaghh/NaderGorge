@@ -103,6 +103,6 @@ export const homeworkService = {
     startHomework: (homeworkId: string) =>
         apiClient.get<{ data: StartHomeworkAttemptDto }>(`/homework/${homeworkId}/start`),
 
-    getHomeworkResult: (homeworkId: string) =>
-        apiClient.get<{ data: HomeworkResultDto }>(`/homework/${homeworkId}/result`),
+    getHomeworkResult: (homeworkId: string, signal?: AbortSignal) =>
+        apiClient.get<{ data: HomeworkResultDto }>(`/homework/${homeworkId}/result`, { signal }),
 };

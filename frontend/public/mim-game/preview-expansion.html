@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>مغامرات ميم | المعاينة المحلية</title>
+    <link rel="icon" href="assets/mim.png" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="three.css" />
+    <link rel="stylesheet" href="hud.css" />
+    <link rel="stylesheet" href="preview.css" />
+  </head>
+  <body class="immersive">
+    <div id="waiting" class="boot-state">
+      <div>
+        <b>مغامرات ميم</b>
+        <p>بنجهّز المتحف…</p>
+      </div>
+    </div>
+    <div id="unsupported" class="boot-state" hidden>
+      <div>
+        <b>تعذر تشغيل العالم ثلاثي الأبعاد</b>
+        <p>المعاينة تحتاج متصفحًا يدعم WebGL.</p>
+        <button onclick="location.reload()">إعادة المحاولة</button>
+      </div>
+    </div>
+    <div id="shell" hidden>
+      <header>
+        <span class="brand">ميم</span>
+        <nav class="game-actions" aria-label="أدوات المغامرة">
+          <button id="mapButton" class="quiet" aria-label="خريطة المغامرات">خريطة العوالم</button>
+          <button id="pause" class="quiet icon-button" aria-label="إيقاف مؤقت">
+            Ⅱ</button
+          ><button id="hint" class="quiet icon-button" aria-label="تلميح ميم">
+            ✦</button
+          ><button
+            id="recapButton"
+            class="quiet icon-button"
+            aria-label="راجع الشرح"
+          >
+            ▤</button
+          ><button
+            id="collectionButton"
+            class="quiet icon-button"
+            aria-label="حقيبة المقتنيات"
+          >
+            ♧</button
+          ><button
+            id="settingsButton"
+            class="quiet icon-button"
+            aria-label="إعدادات المعاينة"
+          >
+            ☷
+          </button>
+        </nav>
+      </header>
+      <main>
+        <section id="game" aria-label="مغامرة ميم">
+          <aside class="player-hud" aria-label="تقدم الرحلة">
+            <div class="player-vitals">
+              <div class="portrait"><img src="assets/mim.png" alt="ميم" /></div>
+              <div class="vital-bars">
+                <div id="equippedBadge" class="badge-label">مستكشف المعرفة</div>
+                <div class="journey-track">
+                  <progress
+                    id="journeyProgress"
+                    value="0"
+                    max="4"
+                    aria-label="تقدم المغامرة"
+                  ></progress>
+                </div>
+                <span id="journeyCaption" class="journey-caption"></span>
+              </div>
+            </div>
+            <div class="inventory">
+              <div id="seals" class="seals" aria-label="المقتنيات"></div>
+              <span id="collectionCount" class="inventory-caption"></span>
+            </div>
+          </aside>
+          <div class="quest-bar">
+            <b id="questTitle"></b><span id="questText"></span>
+          </div>
+          <div
+            id="world"
+            class="world world3d"
+            tabindex="0"
+            aria-label="عالم ميم. الأسهم أو عصا الحركة للتحرك، والسحب أو العصا اليمنى للكاميرا."
+          >
+            <div id="worldName" class="world-name" aria-live="polite">متحف المعرفة</div>
+            <div id="stations"></div>
+            <div id="worldTargets" aria-label="قطع اللغز داخل العالم"></div>
+            <div class="world-bottom">
+              <span>معاينة محلية · تحرّك واستكشف</span
+              ><button id="interact" class="primary">ابدأ الرحلة</button>
+            </div>
+            <div id="puzzleHud" class="puzzle-hud" hidden>
+              <div class="puzzle-top">
+                <span id="puzzleCount"></span
+                ><button id="exitPuzzle" class="quiet">ارجع للاستكشاف ✕</button>
+              </div>
+              <h1 id="puzzleTitle"></h1>
+              <p id="puzzleInstruction"></p>
+              <p id="feedback" role="status"></p>
+              <div class="puzzle-buttons">
+                <button id="undo" class="quiet">تراجع ↶</button
+                ><button id="confirm" class="primary">ثبّت الترتيب</button>
+              </div>
+            </div>
+            <div class="touch-controls">
+              <div
+                id="moveStick"
+                class="thumbstick thumbstick-move"
+                role="group"
+                aria-label="عصا الحركة"
+              >
+                <span class="thumbstick-label">حركة</span
+                ><span class="thumbstick-knob"></span>
+              </div>
+              <div
+                id="cameraStick"
+                class="thumbstick thumbstick-camera"
+                role="group"
+                aria-label="عصا الكاميرا"
+              >
+                <span class="thumbstick-label">كاميرا</span
+                ><span class="thumbstick-knob"></span>
+              </div>
+            </div>
+            <div
+              id="conversation"
+              class="conversation"
+              hidden
+              role="region"
+              aria-label="حوار ميم"
+            >
+              <img src="assets/mim.png" alt="ميم" />
+              <div>
+                <h2 id="conversationTitle"></h2>
+                <p id="conversationText"></p>
+                <button id="conversationContinue" class="primary">
+                  يلا نبدأ ←
+                </button>
+              </div>
+            </div>
+            <div id="rotatePrompt" class="preview-rotate" hidden>
+              <b>لف الموبايل بالعرض</b>
+              <p>علشان تشوف المتحف وقطع اللغز براحتك.</p>
+              <button id="portraitContinue" class="primary">كمّل بالطول</button>
+            </div>
+          </div>
+          <div class="game-footer">
+            <span id="saveStatus">حفظ تجريبي على هذا الجهاز</span>
+          </div>
+        </section>
+      </main>
+      <dialog id="journal" class="game-journal" aria-labelledby="journalTitle">
+        <button id="closeJournal" class="quiet journal-close">
+          ارجع للعبة ✕
+        </button>
+        <h2 id="journalTitle"></h2>
+        <div id="journalBody"></div>
+      </dialog>
+      <div id="toast" class="toast" role="status" hidden></div>
+    </div>
+    <script type="module" src="preview.mjs"></script>
+  </body>
+</html>

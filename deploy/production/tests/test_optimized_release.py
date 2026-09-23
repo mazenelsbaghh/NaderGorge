@@ -64,7 +64,7 @@ def test_registry_artifacts_preserve_release_contract_and_reject_digest_mismatch
         release_contract.load_release_manifest(path, manifest["releaseId"])
 
 
-def test_selected_source_commit_is_internal_to_persisted_release_manifest(tmp_path):
+def test_selected_source_commit_is_internal_to_persisted_release_manifest(tmp_path, monkeypatch):
     template_path = release_manifest_v2(tmp_path / "template.json")
     template = json.loads(template_path.read_text())
     bundle = tmp_path / "release-files.tar.gz"
@@ -75,6 +75,10 @@ def test_selected_source_commit_is_internal_to_persisted_release_manifest(tmp_pa
     )}
     provenance.update(releaseId="git-" + "a" * 40, dirtySourceSnapshot=False,
                       selectedSourceCommit="a" * 40)
+    def committed_migrations(_repo, commit):
+        assert commit == provenance["selectedSourceCommit"]
+        return template["migrationSet"]
+    monkeypatch.setattr(release_images, "committed_migration_set", committed_migrations)
     images = template["images"]
     registry_artifacts = {name: {"imageDigest": digest,
                                  "registryDigest": "sha256:" + "f" * 64,
