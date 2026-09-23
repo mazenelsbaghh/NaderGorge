@@ -232,17 +232,31 @@ def secret_content_reason(
     path: Path,
     relative: str,
 ) -> tuple[str | None, bool]:
-    size = path.stat().st_size
-    suffix = path.suffix.lower()
+    if path.suffix.lower() in BINARY_SUFFIXES:
+        return None, False
+    if path.stat().st_size > MAX_SECRET_SCAN_BYTES:
+        if classify_path(relative) == "artifact":
+            return None, False
+        raise ManifestSafetyError(
+            f"{path.name}: text-or-unknown file exceeds safe secret-scan limit"
+        )
+    return secret_content_reason_bytes(path.read_bytes(), relative)
+
+
+def secret_content_reason_bytes(
+    content: bytes,
+    relative: str,
+) -> tuple[str | None, bool]:
+    size = len(content)
+    suffix = PurePosixPath(relative).suffix.lower()
     if suffix in BINARY_SUFFIXES:
         return None, False
     if size > MAX_SECRET_SCAN_BYTES:
         if classify_path(relative) == "artifact":
             return None, False
         raise ManifestSafetyError(
-            f"{path.name}: text-or-unknown file exceeds safe secret-scan limit"
+            f"{PurePosixPath(relative).name}: text-or-unknown file exceeds safe secret-scan limit"
         )
-    content = path.read_bytes()
     if b"\0" in content[:8192]:
         return None, False
     for label, pattern in SECRET_PATTERNS:

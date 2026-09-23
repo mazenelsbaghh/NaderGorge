@@ -39,7 +39,8 @@ def run_remote_builder_workflow(*, repository: Path, output: Path, inventory: ob
         # cache hit must skip only the upload/build, not silently turn the
         # deployment bundle into an empty archive because `snapshot` was
         # never materialised.
-        create_source_snapshot(repository,snapshot,remote.source_state_sha256)
+        create_source_snapshot(repository,snapshot,remote.source_state_sha256,
+                               provenance.get("selectedSourceCommit"))
         cached = fetch_cached_builder_manifest(transport=transport,target=_target(inventory,builder),remote=remote,destination=builder_manifest)
         if cached is None:
             transport.stream_directory(_target(inventory,builder),snapshot,str(remote.staging_source_root))

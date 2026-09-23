@@ -211,11 +211,14 @@ public class VideoSessionController : ControllerBase
         if (session is null) return NotFound();
 
         _logger.LogWarning(
-            "Video client player event. Provider={Provider} Event={Event} Phase={Phase} StatusCode={StatusCode} LessonVideoId={LessonVideoId} SessionId={SessionId}",
+            "Video client player event. Provider={Provider} Event={Event} Phase={Phase} StatusCode={StatusCode} ElapsedMs={ElapsedMs} Online={Online} Visibility={Visibility} LessonVideoId={LessonVideoId} SessionId={SessionId}",
             request.Provider,
             request.Event,
             request.Phase,
             request.StatusCode,
+            request.ElapsedMs,
+            request.Online,
+            request.Visibility,
             session.LessonVideoId,
             session.Id);
 
@@ -291,6 +294,9 @@ public sealed partial class VideoPlaybackClientEventRequest
     public string Event { get; set; } = string.Empty;
     public string Phase { get; set; } = string.Empty;
     public int StatusCode { get; set; }
+    public int? ElapsedMs { get; set; }
+    public bool? Online { get; set; }
+    public string? Visibility { get; set; }
 
     public bool IsValid() =>
         ((string.Equals(Provider, "bunny-hls", StringComparison.Ordinal)
@@ -298,6 +304,8 @@ public sealed partial class VideoPlaybackClientEventRequest
          || (string.Equals(Provider, "bunny", StringComparison.Ordinal)
           && string.Equals(Event, "bridge-timeout", StringComparison.Ordinal)))
         && StatusCode is >= 0 and <= 599
+        && (ElapsedMs is null or >= 0 and <= 120000)
+        && (Visibility is null or "visible" or "hidden")
         && !string.IsNullOrWhiteSpace(Phase)
         && Phase.Length <= 80
         && SafePhasePattern().IsMatch(Phase);

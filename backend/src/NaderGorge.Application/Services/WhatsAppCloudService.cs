@@ -636,13 +636,15 @@ public sealed class WhatsAppCloudService
         var messageType = string.Equals(request.MessageType, "text", StringComparison.OrdinalIgnoreCase)
             ? "text"
             : "template";
+        var templateName = request.TemplateName ?? _configuration["WhatsAppCloudApi:DefaultTemplateName"] ?? "hello_world";
+        var templateLanguage = request.TemplateLanguage ?? _configuration["WhatsAppCloudApi:DefaultTemplateLanguage"] ?? "en_US";
 
         object payload = messageType == "text"
             ? CreateTextPayload(recipient, request.TextBody)
             : CreateTemplatePayload(
                 recipient,
-                request.TemplateName ?? _configuration["WhatsAppCloudApi:DefaultTemplateName"] ?? "hello_world",
-                request.TemplateLanguage ?? _configuration["WhatsAppCloudApi:DefaultTemplateLanguage"] ?? "en_US",
+                templateName,
+                templateLanguage,
                 request);
 
         var url = $"https://graph.facebook.com/{apiVersion}/{phoneNumberId}/messages";
@@ -661,9 +663,12 @@ public sealed class WhatsAppCloudService
             {
                 var error = ParseMetaError(responseText);
                 _logger.LogWarning(
-                    "WhatsApp Cloud test message failed. Status={StatusCode}, ErrorCode={ErrorCode}",
+                    "WhatsApp Cloud test message failed. Status={StatusCode}, ErrorCode={ErrorCode}, MessageType={MessageType}, TemplateName={TemplateName}, TemplateLanguage={TemplateLanguage}",
                     statusCode,
-                    error.Code);
+                    error.Code,
+                    messageType,
+                    messageType == "template" ? templateName : null,
+                    messageType == "template" ? templateLanguage : null);
                 return new SendTestMessageResult(false, error.Message, recipient, null, statusCode,
                     error.Code, IsRetryable(response.StatusCode, error.IsTransient));
             }

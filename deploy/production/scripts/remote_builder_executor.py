@@ -238,7 +238,11 @@ def materialize_staged_source(
         shutil.copytree(staging, source, copy_function=shutil.copyfile)
         for path in (source, *source.rglob("*")):
             os.chown(path, 0, 0)
-            os.chmod(path, 0o700 if path.is_dir() else 0o600)
+            if path.is_dir():
+                os.chmod(path, 0o700)
+            else:
+                staged = staging / path.relative_to(source)
+                os.chmod(path, 0o700 if staged.stat().st_mode & 0o111 else 0o600)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 

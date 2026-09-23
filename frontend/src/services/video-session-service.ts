@@ -64,6 +64,9 @@ export interface VideoPlaybackClientEvent {
   event: 'playback-error' | 'bridge-timeout';
   phase: string;
   statusCode: number;
+  elapsedMs?: number;
+  online?: boolean;
+  visibility?: 'visible' | 'hidden';
 }
 
 export interface VideoPlaybackSource {

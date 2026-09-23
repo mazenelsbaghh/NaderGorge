@@ -49,7 +49,7 @@ test('worker database pool budget leaves production connection headroom', () => 
   });
 });
 
-test('2026-09-04 every worker job module receives the same database pool', async () => {
+test('2026-09-23 shared worker pool survives an idle PostgreSQL failover error', async () => {
   let firstPool!: ReturnType<typeof databasePool>;
   let secondPool!: ReturnType<typeof databasePool>;
   withEnvironment({
@@ -62,6 +62,19 @@ test('2026-09-04 every worker job module receives the same database pool', async
   });
 
   assert.strictEqual(firstPool, secondPool);
+  const logged: unknown[][] = [];
+  const previousError = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  try {
+    const error = Object.assign(new Error('private connection details'), { code: '57P01' });
+    assert.doesNotThrow(() => firstPool.emit('error', error));
+    assert.deepEqual(logged, [[
+      '[postgres] Idle database connection failed.',
+      { sqlState: '57P01' },
+    ]]);
+  } finally {
+    console.error = previousError;
+  }
   await firstPool.end();
 });
 

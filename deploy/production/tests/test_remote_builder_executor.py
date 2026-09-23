@@ -3,8 +3,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import sys
+import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -24,6 +27,7 @@ def load(name: str):
 
 load("remote_build_release")
 builder = load("remote_builder_executor")
+optimized = load("optimized_builder")
 
 
 RELEASE = "src-" + "a" * 40
@@ -60,6 +64,40 @@ def workspace(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(builder, "CLUSTER_MARKER", cluster)
     monkeypatch.setattr(builder, "NODE_ID_MARKER", node)
     return target
+
+
+def test_materialized_source_preserves_executable_input_for_build_fingerprint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(builder.pwd, "getpwnam", lambda _name: SimpleNamespace(pw_uid=os.getuid()))
+    fingerprints = []
+    for executable in (False, True):
+        release = "git-" + uuid.uuid4().hex + "a" * 8
+        staging = Path("/tmp") / f"massar-build-source-{release}"
+        staging.mkdir(mode=0o700)
+        try:
+            frontend = staging / "frontend"
+            frontend.mkdir()
+            (frontend / "Dockerfile").write_text("FROM scratch\n")
+            script = frontend / "run.sh"
+            script.write_text("echo safe\n")
+            script.chmod(0o755 if executable else 0o644)
+            policy = staging / "deploy/production/scripts/optimized_builder.py"
+            policy.parent.mkdir(parents=True)
+            policy.write_text("reviewed policy\n")
+            workspace_path = tmp_path / release
+            builder.materialize_staged_source(
+                workspace=workspace_path,
+                release_id=release,
+                expected_source_sha256=builder.source_digest(staging),
+                staging=staging,
+            )
+            materialized = workspace_path / "source/frontend/run.sh"
+            assert bool(materialized.stat().st_mode & 0o111) is executable
+            fingerprints.append(optimized.input_digest(workspace_path / "source", "frontend", {}))
+        finally:
+            shutil.rmtree(staging, ignore_errors=True)
+    assert fingerprints[0] != fingerprints[1]
 
 
 def test_frontend_build_contract_embeds_the_immutable_release_id() -> None:

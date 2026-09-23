@@ -41,7 +41,7 @@ def test_cached_build_still_materializes_source_snapshot_for_release_bundle(tmp_
     seen = {}
 
     monkeypatch.setattr(workflow, "create_remote_build_plan", lambda *_: remote)
-    def snapshot(_repository, destination, _digest):
+    def snapshot(_repository, destination, _digest, _source_commit=None):
         destination.mkdir(parents=True)
         (destination / "deploy" / "production").mkdir(parents=True)
         seen["snapshot"] = destination

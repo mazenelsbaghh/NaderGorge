@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import optimized_builder as builder
 import registry_distribution as distribution
 import release_contract
+import release_images
 from install_image_registry import prepare_certificates, registry_config, registry_unit, repair_ca_usage, openssl
 from test_release_contract import release_manifest_v2, RELEASE
 
@@ -61,6 +62,39 @@ def test_registry_artifacts_preserve_release_contract_and_reject_digest_mismatch
     path.write_text(json.dumps(manifest))
     with pytest.raises(release_contract.ReleaseContractError, match="registry artifact parity"):
         release_contract.load_release_manifest(path, manifest["releaseId"])
+
+
+def test_selected_source_commit_is_internal_to_persisted_release_manifest(tmp_path):
+    template_path = release_manifest_v2(tmp_path / "template.json")
+    template = json.loads(template_path.read_text())
+    bundle = tmp_path / "release-files.tar.gz"
+    bundle.write_bytes(b"reviewed bundle")
+    provenance = {key: template[key] for key in (
+        "releaseId", "gitCommit", "sourceStateSha256", "dirtySourceSnapshot",
+        "sourceDigestAlgorithm", "sourcePaths", "deletedSourcePaths",
+    )}
+    provenance.update(releaseId="git-" + "a" * 40, dirtySourceSnapshot=False,
+                      selectedSourceCommit="a" * 40)
+    images = template["images"]
+    registry_artifacts = {name: {"imageDigest": digest,
+                                 "registryDigest": "sha256:" + "f" * 64,
+                                 "inputSha256": "d" * 64}
+                          for name, digest in images.items()}
+    manifest = release_images.create_release_manifest_v2(release_images.ReleaseManifestInputs(
+        repo=Path(__file__).resolve().parents[3], output=tmp_path,
+        provenance=provenance, images=images,
+        created_at="2026-09-23T12:00:00Z", registry_artifacts=registry_artifacts,
+    ))
+    assert "selectedSourceCommit" not in manifest
+    manifest["digestParity"] = True
+    manifest["distribution"] = {node: {"status": "verified",
+                                       "releaseFilesSha256": release_images.file_sha256(bundle)}
+                                for node in release_contract.NODE_IDS}
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest))
+    loaded = release_contract.load_release_manifest(path, provenance["releaseId"])
+    assert loaded.git_commit == provenance["gitCommit"]
+    assert loaded.source_state_sha256 == provenance["sourceStateSha256"]
 
 
 def registry_builder():

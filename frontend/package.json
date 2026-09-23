@@ -22,6 +22,7 @@
     "check:design-tokens": "node scripts/check-design-tokens.mjs",
     "check:query-client": "node --no-warnings --experimental-strip-types src/lib/query-contracts.test.mts && node scripts/check-auth-query-boundary.mjs",
     "check:route-permissions": "node scripts/check-route-permission-contracts.mjs",
+    "check:worker-staff-authorization": "node --no-warnings --experimental-strip-types --test src/lib/worker-staff-authorization.test.mts",
     "check:admin-ai-capabilities": "node scripts/generate-admin-ai-capability-baseline.mjs --check",
     "check:admin-student-paging": "node scripts/check-admin-student-paging-contracts.mjs",
     "check:ai-output-language": "node --no-warnings --experimental-strip-types --test src/lib/ai-output-language.test.mts",

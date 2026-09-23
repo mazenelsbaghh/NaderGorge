@@ -105,6 +105,51 @@ def source_state(repo: Path) -> dict[str, Any]:
     }
 
 
+def committed_source_entries(repo: Path, commit: str) -> list[dict[str, object]]:
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise RuntimeError("release source commit must be a full Git SHA")
+    if command(["git", "-C", str(repo), "cat-file", "-t", commit]) != "commit":
+        raise RuntimeError("release source object is not a commit")
+    raw = subprocess.check_output(["git", "-C", str(repo), "ls-tree", "-r", "-z", commit])
+    entries: list[dict[str, object]] = []
+    from source_manifest import classify_path, secret_content_reason_bytes, sensitive_path_reason
+    for item in raw.split(b"\0"):
+        if not item:
+            continue
+        metadata, path_bytes = item.split(b"\t", 1)
+        mode, kind, blob = metadata.decode("ascii").split()
+        relative = path_bytes.decode("utf-8", errors="surrogateescape")
+        parts = Path(relative).parts
+        if kind == "commit" or parts[0] in ("artifacts", "output", "outputs") or any(part in SOURCE_EXCLUDED_PARTS for part in parts):
+            continue
+        if kind != "blob" or mode not in ("100644", "100755") or sensitive_path_reason(relative):
+            raise RuntimeError(f"unsafe committed release source: {relative}")
+        content = subprocess.check_output(["git", "-C", str(repo), "cat-file", "blob", blob])
+        secret_reason, _ = secret_content_reason_bytes(content, relative)
+        if secret_reason:
+            raise RuntimeError(f"committed release source contains {secret_reason}: {relative}")
+        entries.append({"path": relative, "status": "tracked", "classification": classify_path(relative),
+                        "sizeBytes": len(content), "sha256": hashlib.sha256(content).hexdigest(), "blob": blob,
+                        "mode": mode})
+    return entries
+
+
+def committed_source_state(repo: Path, commit: str) -> dict[str, Any]:
+    entries = committed_source_entries(repo, commit)
+    digest = hashlib.sha256()
+    for entry in entries:
+        digest.update(str(entry["path"]).encode("utf-8", errors="surrogateescape"))
+        digest.update(b"\0")
+        digest.update(str(entry["sha256"]).encode("ascii"))
+        digest.update(b"\0")
+    public_entries = [{key: value for key, value in entry.items() if key not in ("blob", "mode")} for entry in entries]
+    return {"releaseId": f"git-{commit}", "gitCommit": commit,
+            "sourceStateSha256": digest.hexdigest(), "dirtySourceSnapshot": False,
+            "sourceDigestAlgorithm": "massar-release-snapshot-sha256-v2",
+            "sourcePaths": public_entries, "deletedSourcePaths": [],
+            "selectedSourceCommit": commit}
+
+
 def release_source_entries(repo: Path) -> list[dict[str, object]]:
     manifest = build_manifest(repo)
     return _included_source_entries(repo, manifest)
@@ -156,7 +201,12 @@ def assert_source_unchanged(repo: Path, expected: dict[str, Any]) -> None:
         # Schema-v1 provenance remains readable for retained releases, but only
         # v2 candidates carry enough path evidence to support delta detection.
         return
-    actual = source_state(repo)
+    selected_commit = expected.get("selectedSourceCommit")
+    actual = committed_source_state(repo, selected_commit) if selected_commit else source_state(repo)
+    if selected_commit:
+        from source_sync import tip
+        if tip(repo) != selected_commit:
+            raise RuntimeError("shared production source advanced during release preparation")
     if actual != expected:
         expected_paths = {
             str(entry["path"]): entry
@@ -178,10 +228,28 @@ def assert_source_unchanged(repo: Path, expected: dict[str, Any]) -> None:
         )
 
 
-def create_source_snapshot(repo: Path, destination: Path, expected_sha256: str) -> None:
+def create_source_snapshot(repo: Path, destination: Path, expected_sha256: str,
+                           source_commit: str | None = None) -> None:
     if destination.exists() or destination.is_symlink():
         raise RuntimeError("release source snapshot destination already exists")
     destination.mkdir(mode=0o700, parents=True)
+    if source_commit:
+        entries = committed_source_entries(repo, source_commit)
+        digest = hashlib.sha256()
+        for entry in entries:
+            relative = str(entry["path"])
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            content = subprocess.check_output(["git", "-C", str(repo), "cat-file", "blob", str(entry["blob"])])
+            target.write_bytes(content)
+            target.chmod(0o755 if entry["mode"] == "100755" else 0o644)
+            digest.update(relative.encode("utf-8", errors="surrogateescape"))
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(content).hexdigest().encode("ascii"))
+            digest.update(b"\0")
+        if digest.hexdigest() != expected_sha256:
+            raise RuntimeError("committed source digest changed during snapshot")
+        return
     digest = hashlib.sha256()
     for relative in source_paths(repo):
         source = repo / relative
@@ -246,7 +314,7 @@ def artifact_manifest(inputs: ReleaseManifestInputs) -> dict[str, dict[str, str]
 def create_release_manifest_v2(inputs: ReleaseManifestInputs) -> dict[str, Any]:
     return {
         "schemaVersion": 2,
-        **inputs.provenance,
+        **{key: value for key, value in inputs.provenance.items() if key != "selectedSourceCommit"},
         "sealedAt": inputs.created_at,
         "createdAt": inputs.created_at,
         "platform": "linux/amd64",
@@ -283,7 +351,8 @@ def verify_local_release_artifacts(
         value.get("schemaVersion") not in {1, 2}
         or value.get("status") != "success"
         or value.get("releaseId") != release_id
-        or any(value.get(key) != expected for key, expected in provenance.items())
+        or any(value.get(key) != expected for key, expected in provenance.items()
+               if key != "selectedSourceCommit")
     ):
         raise RuntimeError("existing release output provenance does not match current source")
     images = value.get("images")
@@ -326,7 +395,8 @@ def verify_local_release_artifacts(
 
 
 def resolve_release(repo: Path, requested: str) -> dict[str, Any]:
-    provenance = source_state(repo)
+    selected_commit = os.environ.get("MASSAR_RELEASE_SOURCE_COMMIT")
+    provenance = committed_source_state(repo, selected_commit) if selected_commit else source_state(repo)
     if requested == "auto":
         return provenance
     if not RELEASE_RE.fullmatch(requested):

@@ -231,7 +231,7 @@ verify-backend: ## Restore, build, and test the backend solution
 	fi
 
 verify-frontend: ## Run focused checks, lint, and build the frontend
-	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run check:video-page-protection && npm run check:video-playback-security && npm run lint && npm run build
+	cd frontend && npm run check:recharge-match-diagnosis && npm run check:ai-output-language && npm run check:worker-staff-authorization && npm run check:video-page-protection && npm run check:video-playback-security && npm run lint && npm run build
 
 verify-worker: ## Build the Node.js worker
 	cd worker && npm run build
@@ -580,6 +580,6 @@ prod-source-export:
 	test -n "$(SOURCE_WORKSPACE)"
 	python3 deploy/production/scripts/source_sync.py export --destination "$(SOURCE_WORKSPACE)" --yes
 prod-source-publish-preview:
-	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --dry-run
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" $(if $(SOURCE_CANDIDATE),--candidate "$(SOURCE_CANDIDATE)",) --dry-run
 prod-source-publish:
-	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" --yes
+	python3 deploy/production/scripts/source_sync.py publish --expected "$(SOURCE_PARENT)" --branch "$(SOURCE_BRANCH)" $(if $(SOURCE_CANDIDATE),--candidate "$(SOURCE_CANDIDATE)",) --yes

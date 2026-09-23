@@ -62,29 +62,48 @@ def ancestor(repo: Path, older: str, newer: str):
 
 
 def assert_published(repo: Path, manifest):
-    if manifest.release_id != 'git-' + str(manifest.git_commit):
+    assert_published_provenance(repo, {'releaseId': manifest.release_id,
+                                       'gitCommit': manifest.git_commit})
+
+
+def assert_published_provenance(repo: Path, provenance):
+    if provenance['releaseId'] != 'git-' + str(provenance['gitCommit']):
         raise SourceSyncError('Production requires a clean published source commit')
-    if tip(repo) != manifest.git_commit:
+    if tip(repo) != provenance['gitCommit']:
         raise SourceSyncError('GitHub production advanced or candidate is unpublished; synchronize and verify again')
 
 
-def publish(repo: Path, expected: str, branch: str) -> str:
+def validate_publish_candidate(repo: Path, expected: str, branch: str,
+                               selected_candidate: str | None = None) -> str:
     if not re.fullmatch(r'codex/(?:repair|release)/[a-zA-Z0-9-]+', branch):
         raise SourceSyncError('Invalid candidate branch')
-    candidate = git(repo, 'rev-parse', 'HEAD')
-    if git(repo, 'status', '--porcelain'):
+    candidate = selected_candidate or git(repo, 'rev-parse', 'HEAD')
+    if not SHA.fullmatch(candidate):
+        raise SourceSyncError('Candidate must be a full Git commit SHA')
+    if not selected_candidate and git(repo, 'status', '--porcelain'):
         raise SourceSyncError('Commit the complete verified candidate before publication')
     ancestor(repo, expected, candidate)
-    approved = {str(e['path']) for e in publication_entries(repo)}
-    if set(filter(None, git(repo, 'ls-files', '-z').split('\0'))) != approved:
-        raise SourceSyncError('Publish only an exported source repository; local artifacts/history must stay private')
+    if selected_candidate:
+        from release_images import committed_source_entries
+        approved = {str(e['path']) for e in committed_source_entries(repo, candidate)}
+        tree_paths = set(filter(None, git(repo, 'ls-tree', '-r', '--name-only', '-z', candidate).split('\0')))
+        if tree_paths != approved:
+            raise SourceSyncError('Candidate tree contains excluded or unsafe source paths')
+    else:
+        approved = {str(e['path']) for e in publication_entries(repo)}
+        if set(filter(None, git(repo, 'ls-files', '-z').split('\0'))) != approved:
+            raise SourceSyncError('Publish only an exported source repository; local artifacts/history must stay private')
     if candidate != expected and git(repo, 'rev-list', '--parents', '-n', '1', candidate).split() != [candidate, expected]:
         raise SourceSyncError('Export one source commit on the shared parent before publication')
-    current = tip(repo)
-    if current == candidate:
-        return candidate
-    if current != expected:
+    if tip(repo) not in (expected, candidate):
         raise SourceSyncError('Shared source changed; merge and reverify instead of overwriting it')
+    return candidate
+
+
+def publish(repo: Path, expected: str, branch: str, selected_candidate: str | None = None) -> str:
+    candidate = validate_publish_candidate(repo, expected, branch, selected_candidate)
+    if tip(repo) == candidate:
+        return candidate
     # The first push preserves the candidate even if another publisher wins the CAS.
     git(repo, 'push', URL, candidate + ':refs/heads/' + branch)
     # Ancestry was checked above: the lease implements compare-and-swap, never a history rewrite.
@@ -127,14 +146,14 @@ def mark_failed(repo: Path, expected: str):
         lock.release()
 
 
-def publish_locked(repo: Path, expected: str, branch: str) -> str:
+def publish_locked(repo: Path, expected: str, branch: str, candidate: str | None = None) -> str:
     from clusterctl import load_inventory, target, operator_transport
     from deploy_release import RolloutLock
     inventory = load_inventory(repo / 'deploy/production/inventory/production.yml', require_operator_files=True)
     lock = RolloutLock(operator_transport(inventory), target(inventory, inventory.nodes[0]), str(uuid.uuid4()))
     lock.acquire()
     try:
-        candidate = publish(repo, expected, branch)
+        candidate = publish(repo, expected, branch, candidate)
         record_publication(lock.transport, lock.target, candidate, 'published')
         return candidate
     finally:
@@ -228,15 +247,24 @@ def main():
     parser.add_argument('--destination', type=Path)
     parser.add_argument('--expected')
     parser.add_argument('--branch')
+    parser.add_argument('--candidate', help='reviewed source-only Git commit prepared with a temporary index')
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--dry-run', action='store_true')
     mode.add_argument('--yes', action='store_true')
     args = parser.parse_args()
     repo = args.repo.resolve()
     shared = tip(repo)
+    if args.action == 'publish' and args.dry_run:
+        if not args.expected or not args.branch:
+            raise SourceSyncError('Publication requires expected parent and candidate branch')
+        candidate = validate_publish_candidate(repo, args.expected, args.branch, args.candidate)
+        print(json.dumps({'action': 'publish-preview', 'sharedCommit': shared,
+            'parent': args.expected, 'candidate': candidate, 'branch': args.branch}))
+        return
     if args.action == 'status' or args.dry_run:
         print(json.dumps({'action': args.action, 'sharedCommit': shared, 'localCommit': git(repo, 'rev-parse', 'HEAD'),
-            'dirty': bool(git(repo, 'status', '--porcelain')), 'destination': str(args.destination) if args.destination else None}))
+            'dirty': bool(git(repo, 'status', '--porcelain')), 'destination': str(args.destination) if args.destination else None,
+            'candidate': args.candidate}))
         return
     if not args.yes:
         raise SourceSyncError('Mutation requires --dry-run then --yes')
@@ -258,7 +286,7 @@ def main():
     else:
         if not args.expected or not args.branch:
             raise SourceSyncError('Publication requires expected parent and candidate branch')
-        print(json.dumps({'published': publish_locked(repo, args.expected, args.branch)}))
+        print(json.dumps({'published': publish_locked(repo, args.expected, args.branch, args.candidate)}))
 
 
 if __name__ == '__main__':

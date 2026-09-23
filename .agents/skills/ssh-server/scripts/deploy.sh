@@ -119,9 +119,9 @@ from pathlib import Path
 
 root = Path(sys.argv[1])
 sys.path.insert(0, str(root / "deploy/production/scripts"))
-from release_images import source_state
+from release_images import resolve_release
 
-print(source_state(root)["releaseId"])
+print(resolve_release(root, "auto")["releaseId"])
 PY
 }
 

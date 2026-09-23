@@ -26,6 +26,7 @@ def load(name: str):
 
 clusterctl = load("clusterctl")
 release_images = load("release_images")
+source_sync = load("source_sync")
 RELEASE = "src-" + "a" * 40
 PROVENANCE = {
     "releaseId": RELEASE,
@@ -189,11 +190,14 @@ def test_source_mutation_aborts_before_distribution_and_publishes_no_output(
         evidence_dir=evidence,
     )
     monkeypatch.setattr(clusterctl, "operator_transport", lambda value: object())
-    monkeypatch.setattr(clusterctl, "resolve_release", lambda repo, value: PROVENANCE)
+    published = {**PROVENANCE, "releaseId": "git-" + "b" * 40,
+                 "dirtySourceSnapshot": False}
+    monkeypatch.setattr(source_sync, "tip", lambda _repo: "b" * 40)
+    monkeypatch.setattr(clusterctl, "resolve_release", lambda repo, value: published)
     monkeypatch.setattr(
         clusterctl,
         "create_source_snapshot",
-        lambda repo, snapshot, digest: snapshot.mkdir(parents=True),
+        lambda repo, snapshot, digest, source_commit=None: snapshot.mkdir(parents=True),
     )
     monkeypatch.setattr(
         clusterctl,
@@ -229,7 +233,7 @@ def test_source_mutation_aborts_before_distribution_and_publishes_no_output(
     with pytest.raises(RuntimeError, match="candidate invalidated"):
         clusterctl.execute(args, inventory, inventory.nodes)
     assert distributed is False
-    assert not (evidence / RELEASE).exists()
+    assert not (evidence / published["releaseId"]).exists()
 
 
 @pytest.mark.parametrize("command", ["build", "migrate", "deploy", "rollback"])
@@ -255,7 +259,10 @@ def test_remote_builder_flag_uses_injected_remote_workflow_before_any_local_imag
         "build", "--node", "all", "--release", "auto", "--remote-builder", "--yes",
     ])
     monkeypatch.setattr(clusterctl, "operator_transport", lambda _inventory: object())
-    monkeypatch.setattr(clusterctl, "resolve_release", lambda _repo, _release: PROVENANCE)
+    published = {**PROVENANCE, "releaseId": "git-" + "b" * 40,
+                 "dirtySourceSnapshot": False}
+    monkeypatch.setattr(source_sync, "tip", lambda _repo: "b" * 40)
+    monkeypatch.setattr(clusterctl, "resolve_release", lambda _repo, _release: published)
     monkeypatch.setattr(
         clusterctl,
         "build_release",
@@ -271,7 +278,7 @@ def test_remote_builder_flag_uses_injected_remote_workflow_before_any_local_imag
     assert status == "success"
     assert reason is None
     assert observed["transport"] is not None
-    assert observed["provenance"] == PROVENANCE
+    assert observed["provenance"] == published
 
 
 def test_remote_builder_dry_run_does_not_create_a_transport(

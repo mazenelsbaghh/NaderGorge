@@ -911,6 +911,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               event: 'playback-error',
               phase,
               statusCode: Number.isInteger(statusCode) && statusCode >= 0 && statusCode <= 599 ? statusCode : 0,
+              elapsedMs: Number.isInteger(msg.data?.elapsedMs) ? msg.data.elapsedMs : undefined,
+              online: typeof msg.data?.online === 'boolean' ? msg.data.online : undefined,
+              visibility: msg.data?.visibility === 'hidden' ? 'hidden' : 'visible',
             }).catch(() => {
               // Playback errors must remain visible even if diagnostic delivery fails.
             });

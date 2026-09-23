@@ -101,7 +101,7 @@ def input_digest(source: Path, image: str, bases: dict[str, str]) -> str:
     # Hash the complete immutable context, including Dockerignore and deletions.
     # This is deliberately conservative: no Git diff heuristic may hide an input.
     context = context_path(source, image)
-    digest = hashlib.sha256(f"massar-image-input-v1:{image}:linux/amd64".encode())
+    digest = hashlib.sha256(f"massar-image-input-v2:{image}:linux/amd64".encode())
     dockerfile = (context / "Dockerfile").read_text()
     references = {line.split()[1] for line in dockerfile.splitlines() if line.upper().startswith("FROM ")}
     used_bases = {ref: identity for ref, identity in bases.items() if ref in references}
@@ -114,6 +114,7 @@ def input_digest(source: Path, image: str, bases: dict[str, str]) -> str:
             raise RuntimeError("image inputs must not contain symlinks")
         if path.is_file():
             digest.update(path.relative_to(source).as_posix().encode() + b"\0")
+            digest.update(b"x" if path.stat().st_mode & 0o111 else b"-")
             digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
 

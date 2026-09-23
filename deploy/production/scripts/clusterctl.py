@@ -492,6 +492,8 @@ def execute(
             return "blocked", "--release is required"
         repository = Path(__file__).resolve().parents[3]
         provenance = resolve_release(repository, args.release)
+        from source_sync import assert_published_provenance
+        assert_published_provenance(repository, provenance)
         # This is pure validation only.  The existing local build path remains
         # unchanged until the remote executor has its own reviewed rollout.
         remote_plan = create_remote_build_plan(inventory, provenance)
@@ -523,6 +525,7 @@ def execute(
                     repository,
                     snapshot,
                     str(provenance["sourceStateSha256"]),
+                    provenance.get("selectedSourceCommit"),
                 )
                 digests = build_release(snapshot, release_id, temporary_output)
                 create_release_bundle(snapshot, temporary_output)

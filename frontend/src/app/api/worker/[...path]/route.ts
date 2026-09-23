@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sanitizeAiJobStatus } from '@/lib/ai-job-status';
+import { staffSessionApiUrl, validateStaffAuthorization } from '@/lib/worker-staff-authorization';
 
 /**
  * Next.js API proxy for the worker service (BullMQ status API).
@@ -14,54 +15,17 @@ import { sanitizeAiJobStatus } from '@/lib/ai-job-status';
 
 const WORKER_URL = process.env.WORKER_URL || 'http://worker:3001';
 const WORKER_ADMIN_TOKEN = process.env.WORKER_ADMIN_TOKEN;
-const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
-const PRIVILEGED_ROLES = new Set(['Admin', 'Teacher']);
+const SESSION_API_URL = staffSessionApiUrl(
+  process.env.NODE_ENV,
+  process.env.NEXT_PUBLIC_API_URL,
+  process.env.INTERNAL_API_URL,
+);
 
 function isAllowedWorkerRoute(method: string, path: string[]) {
   if (path.length === 2 && path[0] === 'status' && method === 'GET') return true;
   if (path.length === 2 && path[0] === 'status' && method === 'DELETE') return true;
   if (path.length === 3 && path[0] === 'status' && path[2] === 'retry' && method === 'POST') return true;
   return false;
-}
-
-type CurrentSessionResponse = {
-  data?: {
-    user?: {
-      roles?: string[];
-      permissions?: string[];
-    };
-  };
-};
-
-async function validateStaffAuthorization(authorization: string | null) {
-  if (!authorization?.startsWith('Bearer ')) {
-    return { ok: false as const, status: 401, error: 'Authentication required' };
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/auth/session`, {
-      headers: { Authorization: authorization },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return { ok: false as const, status: 401, error: 'Authentication required' };
-    }
-
-    const session = (await response.json()) as CurrentSessionResponse;
-    const user = session.data?.user;
-    const isStaff = user?.roles?.some(role => PRIVILEGED_ROLES.has(role))
-      || user?.permissions?.some(permission => permission.toLowerCase() === 'content.manage');
-
-    if (!isStaff) {
-      return { ok: false as const, status: 403, error: 'Content management permission required' };
-    }
-
-    return { ok: true as const };
-  } catch (error) {
-    console.error('[worker-proxy] Failed to validate staff authorization:', error);
-    return { ok: false as const, status: 503, error: 'Authentication service unavailable' };
-  }
 }
 
 function getWorkerActionSuccess(method: string) {
@@ -92,7 +56,7 @@ async function proxyToWorker(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: 'Worker route is not allowed' }, { status: 404 });
   }
 
-  const staffAuth = await validateStaffAuthorization(request.headers.get('authorization'));
+  const staffAuth = await validateStaffAuthorization(request.headers.get('authorization'), SESSION_API_URL, fetch);
   if (!staffAuth.ok) {
     return NextResponse.json({ error: staffAuth.error }, { status: staffAuth.status });
   }
