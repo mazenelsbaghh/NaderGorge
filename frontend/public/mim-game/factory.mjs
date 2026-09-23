@@ -124,12 +124,4 @@ try {
   $('play').disabled = true;
 }
 $('cameraReset').onclick = () => world?.resetCamera();
-for (const button of document.querySelectorAll('[data-key]')) {
-  button.addEventListener('pointerdown', (event) => {
-    event.preventDefault(); button.setPointerCapture(event.pointerId);
-    world?.setMovement(button.dataset.key, true);
-  });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
-    button.addEventListener(type, () => world?.setMovement(button.dataset.key, false));
-}
 window.addEventListener('pagehide', () => { cancelAnimationFrame(frame); world?.dispose(); }, { once: true });

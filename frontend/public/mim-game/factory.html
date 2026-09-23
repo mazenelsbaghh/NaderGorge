@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ميم · مصنع الأسباب</title>
   <link rel="icon" href="assets/mim.png">
+  <link rel="stylesheet" href="three.css">
   <link rel="stylesheet" href="factory.css">
 </head>
 <body>
@@ -22,12 +23,15 @@
   <nav class="toolbar" aria-label="أدوات المصنع">
     <button id="play">ابدأ لعبة المصنع</button>
     <button id="view" hidden>ارجع للاستكشاف</button>
-    <button id="cameraReset">زاوية الصورة</button>
+    <button id="cameraReset">إعادة ضبط الكاميرا</button>
     <button id="again" hidden>العب من جديد</button>
     <a href="preview.html">ارجع للمغامرات</a>
   </nav>
-  <p id="moveHelp">اسحب لتدوير الكاميرا · الأسهم أو WASD لتحريك ميم · عجلة الماوس للتقريب</p>
-  <div id="movement" aria-label="تحريك ميم"><button data-key="ArrowUp" aria-label="تحرك للأمام">↑</button><button data-key="ArrowLeft" aria-label="تحرك لليسار">←</button><button data-key="ArrowDown" aria-label="تحرك للخلف">↓</button><button data-key="ArrowRight" aria-label="تحرك لليمين">→</button></div>
+  <p id="moveHelp">تحرّك بالعصا اليسرى · دوّر الكاميرا باليمنى · اضغط الأرض للمشي</p>
+  <div class="touch-controls" aria-label="عصا الحركة وعصا الكاميرا">
+    <div id="moveStick" class="thumbstick thumbstick-move" role="group" aria-label="عصا الحركة"><span class="thumbstick-label">حركة</span><span class="thumbstick-knob"></span></div>
+    <div id="cameraStick" class="thumbstick thumbstick-camera" role="group" aria-label="عصا الكاميرا"><span class="thumbstick-label">كاميرا</span><span class="thumbstick-knob"></span></div>
+  </div>
   <p id="loadError" role="alert" hidden>تعذّر تشغيل العالم ثلاثي الأبعاد. أعد تحميل الصفحة أو جرّب متصفحًا يدعم WebGL.</p>
   <script type="module" src="factory.mjs"></script>
 </body>
