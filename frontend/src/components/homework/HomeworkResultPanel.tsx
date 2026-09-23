@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { homeworkService } from '@/services/homework-service';
+import { invalidateMany } from '@/lib/cache-invalidation';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -19,7 +22,7 @@ import { QuestionImage } from '@/components/assessment/QuestionImage';
 import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
 
 export function HomeworkResultPanel({
-  result,
+  result: initialResult,
   packageId,
   lessonId,
   onRestart,
@@ -30,6 +33,39 @@ export function HomeworkResultPanel({
   onRestart?: () => Promise<void> | void;
 }) {
   const router = useRouter();
+  const [refreshed, setRefreshed] = useState<HomeworkResultDto | null>(null);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const result = initialResult.status === 'PendingReview' && refreshed?.submissionId === initialResult.submissionId
+    ? refreshed : initialResult;
+
+  useEffect(() => {
+    if (result.status !== 'PendingReview') return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      try {
+        if (document.visibilityState !== 'hidden') {
+          const response = await homeworkService.getHomeworkResult(result.homeworkId, controller.signal);
+          if (controller.signal.aborted) return;
+          const updated = response.data.data;
+          if (updated.submissionId !== result.submissionId) return;
+          setRefreshed(updated);
+          setRefreshFailed(false);
+          if (updated.status === 'Graded') {
+            invalidateMany(['student:homeworks', 'assessments', 'content:packages', 'student:lessons']);
+            router.refresh();
+            return;
+          }
+        }
+      } catch {
+        if (controller.signal.aborted) return;
+        setRefreshFailed(true);
+      }
+      timer = setTimeout(refresh, 5000);
+    };
+    timer = setTimeout(refresh, 3000);
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [result.homeworkId, result.submissionId, result.status, router]);
   const isPendingReview = result.status === 'PendingReview';
   const reviewedQuestions = result.questionReviews ?? [];
   const wrongQuestions = reviewedQuestions.filter((q) => q.isCorrect === false);
@@ -39,6 +75,9 @@ export function HomeworkResultPanel({
 
   return (
     <div className="space-y-6 pb-16" dir="rtl">
+      {refreshFailed && isPendingReview && (
+        <p role="status" className="text-sm text-muted-foreground">تعذّر تحديث النتيجة مؤقتًا. سنحاول تلقائيًا؛ إجاباتك محفوظة.</p>
+      )}
       {/* ─── Score Hero ─── */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -87,7 +126,7 @@ export function HomeworkResultPanel({
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
               {isPendingReview
-                ? 'إجاباتك محفوظة وبانتظار التصحيح. ستتاح إعادة الحل إذا لم تجتز الواجب بعد ظهور النتيجة النهائية.'
+                ? 'إجاباتك محفوظة، ويجري تصحيح الإجابات المكتوبة تلقائيًا. ستظهر النتيجة هنا عند اكتمال التصحيح. الإجابات الصوتية تحتاج مراجعة المدرّس.'
                 : result.isPassed
                 ? 'أجدت في هذا الواجب. راجع إجاباتك بالتفصيل أدناه.'
                 : 'إجاباتك وأماكن الخطأ ظاهرة أدناه مع الإجابات الصحيحة.'}

@@ -7,6 +7,7 @@ public sealed class EssayGradingRecoveryBackgroundService(
     IServiceScopeFactory scopes, ILogger<EssayGradingRecoveryBackgroundService> logger) : BackgroundService
 {
     private readonly Guid _ownerToken = Guid.NewGuid();
+    private Guid _lastHomeworkId;
     private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(2);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -17,11 +18,26 @@ public sealed class EssayGradingRecoveryBackgroundService(
             {
                 using var scope = scopes.CreateScope();
                 await ClusterLeaseRunner.TryRunAsync(scope.ServiceProvider, "essay-grading-recovery", _ownerToken,
-                    SweepInterval, RecoverBatchAsync, stoppingToken);
+                    SweepInterval, RecoverAllAsync, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { logger.LogError(ex, "Essay grading recovery sweep failed."); }
             await Task.Delay(SweepInterval, stoppingToken);
+        }
+    }
+
+    private async Task RecoverAllAsync(IServiceProvider services, CancellationToken ct)
+    {
+        await RecoverBatchAsync(services, ct);
+        var recovery = new HomeworkGradingRecoveryService(services.GetRequiredService<IAppDbContext>());
+        var batch = await recovery.FindBatchAsync(_lastHomeworkId, ct);
+        if (batch.Count == 0) { _lastHomeworkId = Guid.Empty; return; }
+        foreach (var submissionId in batch)
+        {
+            _lastHomeworkId = submissionId;
+            try { await recovery.RecoverAsync(submissionId, ct); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex) { logger.LogError(ex, "Homework grading recovery failed. SubmissionId={SubmissionId}", submissionId); }
         }
     }
 

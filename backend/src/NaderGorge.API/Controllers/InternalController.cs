@@ -118,6 +118,15 @@ public class InternalController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("homework-graded")]
+    [RequestSizeLimit(2_500_000)]
+    public async Task<IActionResult> HomeworkGraded([FromBody] WebhookHomeworkGradedCommand request, CancellationToken ct)
+    {
+        var receipt = await _mediator.Send(request, ct);
+        return receipt.Success ? Ok(receipt) : BadRequest(receipt);
+    }
+
     [InternalTokenAuthorize("AI_CALLBACK_SECRET")]
     [HttpPost("live-support-ai/turns/{turnId:guid}/claim")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]

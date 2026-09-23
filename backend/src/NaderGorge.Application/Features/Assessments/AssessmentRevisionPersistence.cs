@@ -47,6 +47,7 @@ public sealed class AssessmentRevisionPersistence(IAppDbContext db)
         submission.GradedAt = submission.Status == SubmissionStatus.Graded ? DateTime.UtcNow : null;
         if (grades.RequiresCompletion) submission.SubmittedAt = null;
         submission.DefinitionSnapshotJson = (submitted ? definition : definition with { Revision = null }).ToJson();
+        HomeworkEvaluationQueue.Enqueue(db, submission);
         Audit(submission.Id, "Homework", before, write);
         if (submission.Status == SubmissionStatus.Graded && submission.SubmittedAt.HasValue)
             db.OutboxEvents.Add(new OutboxEvent
