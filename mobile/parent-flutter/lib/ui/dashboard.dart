@@ -24,7 +24,7 @@ class _DashboardState extends State<Dashboard> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const BrandLogo(),
+        title: const BrandLogo(width: 114),
         leading: IconButton(
           tooltip: 'التنبيهات',
           onPressed: () => openNotifications(context, controller),
@@ -47,10 +47,9 @@ class _DashboardState extends State<Dashboard> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: MassarDataRow(
-              controller.active!.name,
-              subtitle: details?.text('grade'),
-              icon: Icons.person_outline,
+            child: StudentBanner(
+              name: controller.active!.name,
+              grade: details?.text('grade') ?? '',
               onTap: () => openStudents(context, controller),
             ),
           ),
@@ -88,28 +87,38 @@ class _DashboardState extends State<Dashboard> {
                   )
                 : RefreshIndicator(
                     onRefresh: controller.refresh,
-                    child: switch (tab) {
-                      1 => AcademicList(
-                        key: ValueKey(
-                          'lessons:${controller.active!.studentId}',
+                    child: AnimatedSwitcher(
+                      duration: MassarMotion.duration(
+                        context,
+                        MassarMotion.change,
+                      ),
+                      child: switch (tab) {
+                        1 => AcademicList(
+                          key: ValueKey(
+                            'lessons:${controller.active!.studentId}',
+                          ),
+                          details: details,
+                          lessons: true,
                         ),
-                        details: details,
-                        lessons: true,
-                      ),
-                      2 => AcademicList(
-                        key: ValueKey(
-                          'results:${controller.active!.studentId}',
+                        2 => AcademicList(
+                          key: ValueKey(
+                            'results:${controller.active!.studentId}',
+                          ),
+                          details: details,
+                          lessons: false,
                         ),
-                        details: details,
-                        lessons: false,
-                      ),
-                      3 => MoreScreen(controller: controller),
-                      _ => HomeOverview(
-                        controller: controller,
-                        onLessons: () => setState(() => tab = 1),
-                        onResults: () => setState(() => tab = 2),
-                      ),
-                    },
+                        3 => MoreScreen(
+                          key: const ValueKey("more"),
+                          controller: controller,
+                        ),
+                        _ => HomeOverview(
+                          key: const ValueKey("home"),
+                          controller: controller,
+                          onLessons: () => setState(() => tab = 1),
+                          onResults: () => setState(() => tab = 2),
+                        ),
+                      },
+                    ),
                   ),
           ),
         ],
@@ -220,6 +229,7 @@ class MoreScreen extends StatelessWidget {
               icon: Icons.people_outline,
               onTap: () => openStudents(context, controller),
             ),
+            const Divider(height: 1),
             MassarDataRow(
               'بيانات الطالب',
               icon: Icons.person_outline,
@@ -246,16 +256,19 @@ class MoreScreen extends StatelessWidget {
                 ),
               ]),
             ),
+            const Divider(height: 1),
             MassarDataRow(
               'الكورسات المسجلة',
               icon: Icons.menu_book_outlined,
               onTap: () => openCourses(context, controller.details!),
             ),
+            const Divider(height: 1),
             MassarDataRow(
               'الرصيد',
               icon: Icons.account_balance_wallet_outlined,
               onTap: () => openBalance(context, controller.details!),
             ),
+            const Divider(height: 1),
             MassarDataRow(
               'التنبيهات',
               icon: Icons.notifications_none,
@@ -341,11 +354,11 @@ void openStudents(
     builder: (routeContext) => ListenableBuilder(
       listenable: controller,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('الطلاب المرتبطون')),
+        appBar: AppBar(title: const BrandLogo(width: 114), centerTitle: true),
         body: ScreenBody(
           children: [
             const PageHeading(
-              'اختر الطالب',
+              'الطلاب المرتبطون',
               subtitle: 'اختر الطالب لعرض بياناته',
             ),
             ...controller.profiles.map(
@@ -413,80 +426,194 @@ void openStudents(
   ),
 );
 
-void openCourses(
-  BuildContext context,
-  StudentDetails details,
-) => openDetail(context, 'الكورسات المسجلة', [
-  if (details.courses.isEmpty) const EmptyPanel('لا توجد كورسات مفعلة حاليًا.'),
-  ...details.courses.map(
-    (course) => SoftPanel(
-      child: ExpansionTile(
-        title: Text(course.text('packageName')),
-        subtitle: Text(course.text('teacherName')),
-        children: course
-            .rows('terms')
-            .map(
-              (term) => Column(
-                children: [
-                  MassarDataRow(
-                    term.text('termTitle'),
-                    subtitle:
-                        '${term.count('lessonCount')} حصة • ${term.count('examCount')} اختبار',
-                  ),
-                  TextButton(
-                    onPressed: () => openDetail(
-                      context,
-                      term.text('termTitle'),
-                      details.lessons
-                          .where(
-                            (l) =>
-                                l.text('packageId') ==
-                                    course.text('packageId') &&
-                                l.text('termId') == term.text('termId'),
-                          )
-                          .map((l) => LessonTile(row: l))
-                          .toList(),
-                    ),
-                    child: const Text('عرض الحصص'),
-                  ),
-                  TextButton(
-                    onPressed: () => openDetail(
-                      context,
-                      'النتائج',
-                      details.exams
-                          .where(
-                            (e) =>
-                                e.text('packageId') ==
-                                    course.text('packageId') &&
-                                e.text('termId') == term.text('termId'),
-                          )
-                          .map((e) => AssessmentTile(row: e))
-                          .toList(),
-                    ),
-                    child: const Text('عرض النتائج'),
-                  ),
-                ],
-              ),
-            )
-            .toList(),
+void openCourses(BuildContext context, StudentDetails details) =>
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MassarPage(
+          title: 'الكورسات المسجلة',
+          body: CourseCatalog(details: details),
+        ),
       ),
-    ),
-  ),
-]);
+    );
+
+class CourseCatalog extends StatefulWidget {
+  final StudentDetails details;
+  const CourseCatalog({super.key, required this.details});
+  @override
+  State<CourseCatalog> createState() => _CourseCatalogState();
+}
+
+class _CourseCatalogState extends State<CourseCatalog> {
+  String? teacher;
+  @override
+  Widget build(BuildContext context) {
+    final teachers = {
+      for (final c in widget.details.courses)
+        if (c.text('teacherId').isNotEmpty)
+          c.text('teacherId'): c.text('teacherName'),
+    };
+    final courses = widget.details.courses
+        .where((c) => teacher == null || c.text('teacherId') == teacher)
+        .toList();
+    return ScreenBody(
+      children: [
+        const PageHeading(
+          'الكورسات المسجلة',
+          subtitle: 'تابع كورسات ابنك المسجلة ومدرسي كل مادة',
+        ),
+        DropdownButtonFormField<String>(
+          initialValue: teacher,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.people_outline),
+          ),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('كل المدرسين')),
+            ...teachers.entries.map(
+              (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+            ),
+          ],
+          onChanged: (value) => setState(() => teacher = value),
+        ),
+        if (courses.isEmpty) const EmptyPanel('لا توجد كورسات مفعلة حاليًا.'),
+        ...courses.indexed.map((entry) {
+          final course = entry.$2;
+          return SoftPanel(
+            tint: MassarTokens.mint,
+            child: ExpansionTile(
+              key: ValueKey('${course.text('packageId')}:$teacher'),
+              initiallyExpanded: entry.$1 == 0,
+              tilePadding: EdgeInsets.zero,
+              shape: const Border(),
+              collapsedShape: const Border(),
+              leading: const IconBadge(Icons.school_outlined, size: 52),
+              title: Text(
+                course.text('packageName'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              subtitle: Text(course.text('teacherName')),
+              children: course.rows('terms').map((term) {
+                final lessons = widget.details.lessons
+                    .where(
+                      (l) =>
+                          l.text('packageId') == course.text('packageId') &&
+                          l.text('termId') == term.text('termId'),
+                    )
+                    .toList();
+                final exams = widget.details.exams
+                    .where(
+                      (l) =>
+                          l.text('packageId') == course.text('packageId') &&
+                          l.text('termId') == term.text('termId'),
+                    )
+                    .toList();
+                return Column(
+                  children: [
+                    Text(term.text('termTitle')),
+                    StatPair(
+                      firstLabel: 'الحصص',
+                      firstValue: '${term.count('lessonCount')}',
+                      secondLabel: 'الاختبارات',
+                      secondValue: '${term.count('examCount')}',
+                    ),
+                    ...lessons
+                        .take(3)
+                        .map(
+                          (l) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: SoftPanel(
+                              child: MassarDataRow(
+                                l.text('lessonTitle'),
+                                icon: Icons.play_circle_outline,
+                                onTap: () => showLesson(context, l),
+                              ),
+                            ),
+                          ),
+                        ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PrimaryAction(
+                            label: 'عرض الحصص',
+                            onPressed: () =>
+                                openDetail(context, term.text('termTitle'), [
+                                  if (lessons.isEmpty)
+                                    const EmptyPanel('لا توجد حصص متاحة.'),
+                                  ...lessons.map((l) => LessonTile(row: l)),
+                                ]),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => openDetail(context, 'النتائج', [
+                              if (exams.isEmpty)
+                                const EmptyPanel('لا توجد نتائج متاحة.'),
+                              ...exams.map((e) => AssessmentTile(row: e)),
+                            ]),
+                            child: const Text('عرض النتائج'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
 
 void openBalance(BuildContext context, StudentDetails details) {
   final transactions = details.balance.rows('transactions')
     ..sort((a, b) => b.text('createdAt').compareTo(a.text('createdAt')));
   openDetail(context, 'الرصيد', [
+    StudentBanner(
+      name: details.text('studentName'),
+      grade: details.text('grade'),
+    ),
     SoftPanel(
-      child: Column(
+      tint: MassarTokens.mint,
+      child: Row(
         children: [
-          const Text('الرصيد المتاح'),
-          Text(
-            '${number(details.balance.number('currentBalance'))} ج.م',
-            style: Theme.of(context).textTheme.headlineLarge,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'الرصيد المتاح',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${number(details.balance.number('currentBalance'))} ج.م',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineLarge?.copyWith(fontSize: 38),
+                ),
+                const SizedBox(height: 10),
+                const StatusPill('للمتابعة فقط'),
+              ],
+            ),
           ),
-          const StatusPill('للمتابعة فقط'),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: .8),
+                width: 3,
+              ),
+            ),
+            child: const IconBadge(
+              Icons.account_balance_wallet_outlined,
+              size: 70,
+            ),
+          ),
         ],
       ),
     ),
@@ -499,12 +626,17 @@ void openBalance(BuildContext context, StudentDetails details) {
           children: [
             MassarDataRow(
               t.text('description'),
+              icon: t.number('amount') >= 0
+                  ? Icons.add_rounded
+                  : Icons.description_outlined,
               subtitle: displayDate(t.text('createdAt')),
             ),
             Text(
               '${t.number('amount') >= 0 ? '+' : ''}${number(t.number('amount'))} ج.م',
               textDirection: TextDirection.ltr,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: t.number('amount') >= 0 ? MassarTokens.teal : null,
+              ),
             ),
             Text('الرصيد بعدها ${number(t.number('balanceAfter'))} ج.م'),
           ],
@@ -520,16 +652,30 @@ void openNotifications(BuildContext context, ParentController controller) =>
         builder: (_) => ListenableBuilder(
           listenable: controller,
           builder: (context, _) => Scaffold(
-            appBar: AppBar(title: const Text('التنبيهات')),
+            appBar: AppBar(
+              title: const BrandLogo(width: 114),
+              centerTitle: true,
+            ),
             body: RefreshIndicator(
               onRefresh: controller.refresh,
               child: ScreenBody(
                 children: [
+                  const PageHeading(
+                    'التنبيهات',
+                    subtitle: 'كل ما يخص متابعة مستوى ابنك الأكاديمي',
+                  ),
+                  if (controller.active != null)
+                    StudentBanner(
+                      name: controller.active!.name,
+                      grade: controller.details?.text('grade') ?? '',
+                    ),
                   if (controller.notificationError != null)
                     ErrorPanel(
                       controller.notificationError!,
                       retry: controller.refresh,
                     ),
+                  if (controller.details?.warnings.isNotEmpty ?? false)
+                    const PageHeading('تنبيهات المتابعة'),
                   ...?controller.details?.warnings.map(
                     (warning) => SoftPanel(
                       child: Column(
@@ -542,12 +688,15 @@ void openNotifications(BuildContext context, ParentController controller) =>
                           }, color: MassarTokens.warning),
                           MassarDataRow(
                             warning.text('reason'),
+                            icon: Icons.warning_amber_rounded,
                             subtitle: displayDate(warning.text('createdAt')),
                           ),
                         ],
                       ),
                     ),
                   ),
+                  if (controller.notifications.isNotEmpty)
+                    const PageHeading('آخر الإشعارات'),
                   ...controller.notifications.map(
                     (notification) => SoftPanel(
                       child: Column(
@@ -557,6 +706,7 @@ void openNotifications(BuildContext context, ParentController controller) =>
                             const StatusPill('جديد'),
                           MassarDataRow(
                             notification.text('title'),
+                            icon: Icons.notifications_none_rounded,
                             subtitle: notification.text('body'),
                           ),
                           Text(displayDate(notification.text('createdAt'))),
@@ -570,6 +720,14 @@ void openNotifications(BuildContext context, ParentController controller) =>
                             ),
                         ],
                       ),
+                    ),
+                  ),
+                  SoftPanel(
+                    child: MassarDataRow(
+                      'إعدادات إشعارات الجهاز',
+                      icon: Icons.settings_outlined,
+                      onTap: () =>
+                          runAction(context, controller.bridge.openSettings),
                     ),
                   ),
                   if (controller.notifications.isEmpty &&

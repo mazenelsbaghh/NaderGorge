@@ -49,4 +49,4 @@ No store rollout, backend migration or production deployment is performed by thi
 
 ## Verification on 2026-09-24
 
-Flutter analysis and nine tests pass. The debug Android APK builds successfully with Java 17; it is for fresh debug installs and is not signed for upgrading the store application. Swift source parses, but this machine has Command Line Tools rather than full Xcode, so no iOS archive or physical-device migration/push verification has been completed.
+Flutter analysis and twelve tests pass. The debug Android APK builds successfully with Java 17; it is for fresh debug installs and is not signed for upgrading the store application. Swift source parses, but this machine has Command Line Tools rather than full Xcode, so no iOS archive or physical-device migration/push verification has been completed.

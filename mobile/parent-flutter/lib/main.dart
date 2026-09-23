@@ -72,9 +72,16 @@ class _ParentAppState extends State<ParentApp> with WidgetsBindingObserver {
       theme: MassarTokens.theme(Brightness.light),
       darkTheme: MassarTokens.theme(Brightness.dark),
       themeMode: widget.controller.themeMode,
-      builder: (context, child) =>
-          Directionality(textDirection: TextDirection.rtl, child: child!),
-      home: root(),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: MassarBackdrop(child: child!),
+      ),
+      home: Builder(
+        builder: (context) {
+          final screen = root();
+          return Entrance(key: ValueKey(screen.runtimeType), child: screen);
+        },
+      ),
     ),
   );
   Widget root() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'motion.dart';
 
 abstract final class MassarTokens {
   static const navy = Color(0xFF0A1D3D), teal = Color(0xFF0E8F8F);
@@ -18,19 +19,30 @@ abstract final class MassarTokens {
         );
     return ThemeData(
       useMaterial3: true,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: MassarRouteTransition(),
+          TargetPlatform.iOS: MassarRouteTransition(),
+        },
+      ),
       colorScheme: scheme,
       brightness: brightness,
       fontFamily: 'Tajawal',
-      scaffoldBackgroundColor: dark ? const Color(0xFF091525) : canvas,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        toolbarHeight: 78,
+      ),
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: TextTheme(
         headlineLarge: TextStyle(
           fontSize: 30,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: scheme.onSurface,
         ),
         headlineMedium: TextStyle(
           fontSize: 24,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: scheme.onSurface,
         ),
         titleLarge: TextStyle(
@@ -52,7 +64,7 @@ abstract final class MassarTokens {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, controlHeight),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontFamily: 'Tajawal',

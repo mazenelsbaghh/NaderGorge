@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'tokens.dart';
+import 'motion.dart';
 
 class MassarBottomNavigation extends StatelessWidget {
   final int selectedIndex;
@@ -38,6 +39,10 @@ class MassarBottomNavigation extends StatelessWidget {
                 button: true,
                 label: destinations[index].$2,
                 child: Material(
+                  animationDuration: MassarMotion.duration(
+                    context,
+                    MassarMotion.change,
+                  ),
                   color: selected ? MassarTokens.navy : Colors.transparent,
                   borderRadius: BorderRadius.circular(26),
                   child: InkWell(

@@ -59,7 +59,15 @@ Json fixture(String name) => {
     },
   ],
   'homeworks': [],
-  'courses': [],
+  'courses': [
+    {
+      'packageId': 'p1',
+      'packageName': 'الفيزياء',
+      'teacherId': 'teacher',
+      'teacherName': 'أ. محمد علي',
+      'terms': [],
+    },
+  ],
   'warnings': [],
   'balance': {'currentBalance': 250, 'transactions': []},
 };
@@ -239,13 +247,17 @@ void main() {
       ),
     );
     await tester.enterText(find.byType(TextFormField), 'a1b2c3');
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('التحقق من الرمز'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('التحقق من الرمز'));
     await tester.pumpAndSettle();
     expect(find.text('تأكد من بيانات الطالب'), findsOneWidget);
     expect(controller.profiles, isEmpty);
     expect(await controller.store.storage.read(key: ProfileStore.key), isNull);
-    await tester.ensureVisible(find.text('تأكيد الربط'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('تأكيد الربط'), 200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('تأكيد الربط'));
     await tester.pumpAndSettle();
     expect(controller.active!.studentId, 'a');
@@ -284,15 +296,109 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
+        await tester.tap(find.text('اختر المدرس').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('أ. محمد علي').last);
+        await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text('قوانين نيوتن'), 200);
         expect(find.text('قوانين نيوتن'), findsOneWidget);
         await tester.tap(find.text('قوانين نيوتن'));
         await tester.pumpAndSettle();
-        expect(find.text('تفاصيل الحصة'), findsOneWidget);
+        expect(find.text('اكتمال الفيديوهات'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
   }
+  testWidgets(
+    'teacher selection only exposes purchased-course teachers and rows',
+    (tester) async {
+      final data = fixture('أحمد');
+      data['courses'] = [
+        {
+          'packageId': 'p1',
+          'teacherId': 'teacher',
+          'teacherName': 'مدرس الفيزياء',
+        },
+        {
+          'packageId': 'p2',
+          'teacherId': 'math',
+          'teacherName': 'مدرس الرياضيات',
+        },
+      ];
+      data['watchLessons'] = [
+        ...(data['watchLessons'] as List),
+        {
+          'lessonId': 'math1',
+          'lessonTitle': 'الجبر',
+          'packageId': 'p2',
+          'teacherId': 'math',
+          'teacherName': 'مدرس الرياضيات',
+        },
+        {
+          'lessonId': 'foreign',
+          'lessonTitle': 'محتوى غير مشترى',
+          'packageId': 'p3',
+          'teacherId': 'foreign',
+          'teacherName': 'مدرس غير مشترك',
+        },
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: Scaffold(
+            body: AcademicList(details: StudentDetails(data), lessons: true),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('قوانين نيوتن'), findsNothing);
+      expect(find.text('الجبر'), findsNothing);
+      await tester.tap(find.text('اختر المدرس').last);
+      await tester.pumpAndSettle();
+      expect(find.text('مدرس غير مشترك'), findsNothing);
+      expect(find.text('مدرس الرياضيات'), findsOneWidget);
+      await tester.tap(find.text('مدرس الفيزياء').last);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('قوانين نيوتن'), 200);
+      expect(find.text('الجبر'), findsNothing);
+      expect(find.text('محتوى غير مشترى'), findsNothing);
+      await tester.scrollUntilVisible(find.text('مدرس الفيزياء'), -200);
+      await tester.tap(find.text('مدرس الفيزياء').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('مدرس الرياضيات').last);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('الجبر'), 200);
+      expect(find.text('قوانين نيوتن'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'reduced motion presents progress and content without entrance ticks',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: const Scaffold(
+              body: Column(
+                children: [
+                  Entrance(child: Text('جاهز')),
+                  ProgressArc(progress: .25, caption: 'التقدم', detail: ''),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('جاهز'), findsOneWidget);
+      expect(find.text('25%'), findsOneWidget);
+      expect(tester.binding.transientCallbackCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'approved splash and dashboard render from real reusable widgets',
     (tester) async {
@@ -325,7 +431,7 @@ void main() {
             home: RepaintBoundary(key: boundaryKey, child: entry.value),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 1200));
         await tester.pump();
         expect(tester.takeException(), isNull);
         await tester.runAsync(() async {

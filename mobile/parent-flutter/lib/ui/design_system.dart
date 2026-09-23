@@ -6,3 +6,5 @@ export 'design_system/typography.dart';
 export 'design_system/data_display.dart';
 export 'design_system/progress.dart';
 export 'design_system/navigation.dart';
+export 'design_system/patterns.dart';
+export 'design_system/motion.dart';

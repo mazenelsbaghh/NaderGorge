@@ -23,6 +23,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.svg
+    - assets/onboarding.png
   fonts:
     - family: Tajawal
       fonts:

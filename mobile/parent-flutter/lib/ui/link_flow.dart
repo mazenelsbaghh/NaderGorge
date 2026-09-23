@@ -24,7 +24,7 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     SizedBox(height: constraints.maxHeight * .24),
-                    const BrandLogo(width: 310),
+                    const Entrance(child: BrandLogo(width: 310)),
                     const SizedBox(height: 30),
                     Text(
                       'ولي الأمر',
@@ -118,48 +118,102 @@ class _LinkFlowState extends State<LinkFlow> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const BrandLogo(), centerTitle: true),
-    body: WaveCanvas(
+    appBar: AppBar(toolbarHeight: 48, backgroundColor: Colors.transparent),
+    body: AnimatedSwitcher(
+      duration: MassarMotion.duration(
+        context,
+        const Duration(milliseconds: 360),
+      ),
       child: ScreenBody(
-        children: welcome
-            ? welcomeChildren(context)
-            : candidate == null
-            ? codeChildren(context)
-            : confirmationChildren(context),
+        key: ValueKey(
+          welcome
+              ? 'welcome'
+              : candidate == null
+              ? 'code'
+              : 'confirm',
+        ),
+        children: [
+          const Center(child: BrandLogo(width: 190)),
+          const SizedBox(height: 12),
+          ...welcome
+              ? welcomeChildren(context)
+              : candidate == null
+              ? codeChildren(context)
+              : confirmationChildren(context),
+        ],
       ),
     ),
   );
 
   List<Widget> welcomeChildren(BuildContext context) => [
-    const SoftPanel(
+    SoftPanel(
       tint: MassarTokens.mint,
-      child: Column(
-        children: [
-          ProgressArc(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final arc = const ProgressArc(
             progress: .75,
             caption: 'تقدّم الحصص',
             detail: 'مثال توضيحي',
-          ),
-          SizedBox(height: 16),
-          Icon(Icons.menu_book_rounded, size: 64, color: MassarTokens.teal),
-        ],
+          );
+          final illustration = Image.asset(
+            'assets/onboarding.png',
+            height: 230,
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+          );
+          return Column(
+            children: [
+              if (MediaQuery.textScalerOf(context).scale(14) > 20) ...[
+                arc,
+                illustration,
+              ] else
+                Row(
+                  textDirection: TextDirection.ltr,
+                  children: [
+                    Expanded(child: arc),
+                    Expanded(child: Entrance(order: 2, child: illustration)),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              const Text(
+                'مستقبل أفضل يبدأ بالمتابعة اليوم',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+          );
+        },
       ),
     ),
     const PageHeading(
       'تابع تقدّم ابنك بوضوح',
       subtitle: 'الحصص والنتائج والواجبات في مكان واحد',
     ),
-    const SoftPanel(
-      child: Column(
-        children: [
-          MassarDataRow('تقدّم الحصص', icon: Icons.menu_book_rounded),
-          MassarDataRow('نتائج الاختبارات', icon: Icons.bar_chart_rounded),
-          MassarDataRow(
-            'الواجبات والتنبيهات',
-            icon: Icons.notifications_none_rounded,
-          ),
-        ],
-      ),
+    const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Column(
+          children: [
+            IconBadge(Icons.play_arrow_rounded),
+            SizedBox(height: 8),
+            Text('الحصص'),
+          ],
+        ),
+        Column(
+          children: [
+            IconBadge(Icons.bar_chart_rounded),
+            SizedBox(height: 8),
+            Text('النتائج'),
+          ],
+        ),
+        Column(
+          children: [
+            IconBadge(Icons.notifications_rounded),
+            SizedBox(height: 8),
+            Text('التنبيهات'),
+          ],
+        ),
+      ],
     ),
     PrimaryAction(
       label: 'ربط طالب',
@@ -193,7 +247,11 @@ class _LinkFlowState extends State<LinkFlow> {
                 letterSpacing: 5,
                 fontWeight: FontWeight.w700,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: MassarTokens.mint),
+                ),
                 labelText: 'رمز المتابعة',
                 hintText: 'A1B2C3',
                 counterText: '',
@@ -251,13 +309,16 @@ class _LinkFlowState extends State<LinkFlow> {
     SoftPanel(
       child: Column(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 40,
             backgroundColor: MassarTokens.mint,
-            child: Icon(
-              Icons.person_outline,
-              size: 40,
-              color: MassarTokens.teal,
+            child: Text(
+              candidate!.name.characters.first,
+              style: const TextStyle(
+                fontSize: 38,
+                color: MassarTokens.teal,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(height: 20),
