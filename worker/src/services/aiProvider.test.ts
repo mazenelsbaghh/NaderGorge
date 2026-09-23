@@ -95,10 +95,3 @@ test('provider deadlines use the bounded retry policy', async (testContext) => {
   );
   assert.equal(requests, 4);
 });
-
-test('depleted prepaid credit does not enter transient provider retries', async () => {
-  setGeminiRetryWaitForTests(async () => { throw new Error('Billing must not enter transient retries'); });
-  await assert.rejects(executeRetriableGeminiRequest(async () => {
-    throw { status: 429, message: 'Your prepayment credits are depleted.' };
-  }), (error: unknown) => error instanceof GeminiDeveloperApiError && error.category === 'balance-exhausted');
-});

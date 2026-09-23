@@ -159,7 +159,6 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 .Where(a => a.HomeworkSubmissionId == submission.Id)
                 .ToListAsync(cancellationToken);
             _dbContext.HomeworkAnswers.RemoveRange(existingAnswers);
-            submission.Answers.Clear();
         }
 
         // Unanswered questions still belong to the denominator.
@@ -225,7 +224,6 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 }
             }
 
-            submission.Answers.Add(answer);
             _dbContext.HomeworkAnswers.Add(answer);
         }
 
@@ -249,8 +247,6 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             submission.Status = SubmissionStatus.Graded;
             submission.GradedAt = DateTime.UtcNow;
         }
-
-        HomeworkEvaluationQueue.Enqueue(_dbContext, submission);
 
         var outboxEvent = new NaderGorge.Domain.Entities.OutboxEvent
         {

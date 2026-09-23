@@ -255,7 +255,7 @@ test('essay recovery retains the saved evaluation and retries terminal jobs with
   const oldGet = Redis.prototype.get;
   Redis.prototype.get = async () => null;
   context.after(() => { Redis.prototype.get = oldGet; });
-  for (const jobType of ['essay', 'homework essay']) for (const state of ['failed', 'completed']) {
+  for (const state of ['failed', 'completed']) {
     redisRef = redis();
     const evaluation = { isCorrect: true, feedback: 'Original evaluation' };
     const existing = {
@@ -270,7 +270,7 @@ test('essay recovery retains the saved evaluation and retries terminal jobs with
     const queueSet = queues();
     queueSet.essayQueue = queue(existing, 'ai-essay-grading');
     const result = await ingestStreamJob(redisRef as any, queueSet, `retry-${state}`, [
-      'jobType', jobType, 'jobId', 'essay-id', 'payload', JSON.stringify({ essaySubmissionId: 'essay-id' }),
+      'jobType', 'essay', 'jobId', 'essay-id', 'payload', JSON.stringify({ essaySubmissionId: 'essay-id' }),
     ]);
     assert.equal(result.action, 'enqueued');
     assert.equal(existing.state, 'waiting');

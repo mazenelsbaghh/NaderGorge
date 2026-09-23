@@ -3,20 +3,6 @@ import { classifyAIError } from './aiErrors.js';
 const RETRY_DELAYS_MS = [2_000, 5_000, 10_000];
 let waitBeforeRetry = (delayMs: number) => new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 
-type AIProviderObservation = { state: string; requestStartedAt: number };
-let providerObserver: ((observation: AIProviderObservation) => Promise<void>) | undefined;
-
-export function setAIProviderObserver(observer?: (observation: AIProviderObservation) => Promise<void>) {
-  providerObserver = observer;
-}
-
-function reportObservation(state: string, requestStartedAt: number) {
-  // Monitoring is best-effort: unavailable telemetry must not discard an already paid AI result.
-  void providerObserver?.({ state, requestStartedAt }).catch(() => {
-    console.warn('[AI provider] Could not persist provider availability.');
-  });
-}
-
 type GeminiRequest<T> = (abortSignal: AbortSignal) => Promise<T>;
 
 class GeminiRequestDeadlineError extends Error {
@@ -90,25 +76,17 @@ function geminiFailure(error: unknown) {
 }
 
 export async function executeGeminiRequest<T>(request: GeminiRequest<T>, timeoutMs?: number): Promise<T> {
-  const startedAt = Date.now();
   try {
-    const response = await requestBeforeDeadline(request, timeoutMs);
-    reportObservation('healthy', startedAt);
-    return response;
+    return await requestBeforeDeadline(request, timeoutMs);
   } catch (error) {
-    const failure = geminiFailure(error);
-    reportObservation(failure.category, startedAt);
-    throw failure;
+    throw geminiFailure(error);
   }
 }
 
 export async function executeRetriableGeminiRequest<T>(request: GeminiRequest<T>): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
-    const startedAt = Date.now();
     try {
-      const response = await requestBeforeDeadline(request);
-      reportObservation('healthy', startedAt);
-      return response;
+      return await requestBeforeDeadline(request);
     } catch (error) {
       if (error instanceof GeminiRequestDeadlineError) {
         const retryDelay = RETRY_DELAYS_MS[attempt];
@@ -120,10 +98,9 @@ export async function executeRetriableGeminiRequest<T>(request: GeminiRequest<T>
         throw geminiFailure(error);
       }
       const failure = classifyAIError(error);
-      reportObservation(failure.category, startedAt);
       const status = failure.status ?? providerStatus(error);
       const retryDelay = RETRY_DELAYS_MS[attempt];
-      if (failure.category !== 'balance-exhausted' && retryDelay !== undefined && (status === 429 || status === 500 || status === 502 || status === 503 || status === 504)) {
+      if (retryDelay !== undefined && (status === 429 || status === 500 || status === 502 || status === 503 || status === 504)) {
         console.warn('[AI provider] Transient Gemini failure; retrying request.', { status, attempt: attempt + 1 });
         await waitBeforeRetry(retryDelay);
         continue;

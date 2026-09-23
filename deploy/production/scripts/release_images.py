@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import gzip
-import io
 import hashlib
 import json
 import os
@@ -321,8 +320,7 @@ def create_release_manifest_v2(inputs: ReleaseManifestInputs) -> dict[str, Any]:
         "platform": "linux/amd64",
         "images": dict(inputs.images),
         "artifacts": artifact_manifest(inputs),
-        "migrationSet": committed_migration_set(inputs.repo, inputs.provenance["selectedSourceCommit"])
-            if inputs.provenance.get("selectedSourceCommit") else migration_set(inputs.repo),
+        "migrationSet": migration_set(inputs.repo),
         "migrationCompatibility": {
             "status": "pending",
             "emptyDatabaseVerified": False,
@@ -481,41 +479,6 @@ def _stable_bundle_metadata(member: tarfile.TarInfo) -> tarfile.TarInfo:
     member.mtime = 0
     member.pax_headers = {}
     return member
-
-
-def committed_migration_set(repo: Path, commit: str) -> list[str]:
-    paths = command(["git", "-C", str(repo), "ls-tree", "-r", "--name-only", commit,
-                     "--", "backend/src/NaderGorge.Infrastructure/Migrations"]).splitlines()
-    migrations = sorted(Path(path).stem for path in paths
-                        if Path(path).name.startswith("20") and path.endswith(".cs")
-                        and not path.endswith(".Designer.cs"))
-    if not migrations:
-        raise RuntimeError("committed release source is missing EF migrations")
-    return migrations
-
-
-def create_committed_archive(repo: Path, commit: str, archive: Path, expected_sha256: str,
-                             *, production_only: bool = False) -> Path:
-    entries = committed_source_entries(repo, commit)
-    digest = hashlib.sha256()
-    with archive.open("xb") as output, gzip.GzipFile(filename="", mode="wb", fileobj=output, mtime=0) as compressed, tarfile.open(fileobj=compressed, mode="w") as bundle:
-        for entry in entries:
-            relative = str(entry["path"])
-            digest.update(relative.encode("utf-8", errors="surrogateescape") + b"\0")
-            digest.update(str(entry["sha256"]).encode("ascii") + b"\0")
-            if production_only and not relative.startswith("deploy/production/"):
-                continue
-            content = subprocess.check_output(["git", "-C", str(repo), "cat-file", "blob", str(entry["blob"])])
-            member = tarfile.TarInfo(relative)
-            member.size = len(content)
-            member.mode = 0o755 if entry["mode"] == "100755" else 0o644
-            bundle.addfile(_stable_bundle_metadata(member), io.BytesIO(content))
-    if digest.hexdigest() != expected_sha256:
-        archive.unlink()
-        raise RuntimeError("committed release source digest mismatch")
-    if production_only:
-        archive.with_name(archive.name + ".sha256").write_text(file_sha256(archive) + "\n")
-    return archive
 
 
 def create_release_bundle(repo: Path, output: Path) -> Path:

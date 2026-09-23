@@ -7,7 +7,6 @@ import {
   AdminShellChrome,
   getAdminShellDefaults,
 } from "@/components/admin/AdminShellChrome";
-import { AIProviderBalanceAlert } from "@/components/admin/AIProviderBalanceAlert";
 import { AdminGuard } from "@/components/layout/AdminGuard";
 import { useAuthStore } from "@/stores/auth-store";
 import { StaffRealtimeBoundary } from "@/components/layout/StaffRealtimeBoundary";
@@ -53,7 +52,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <PermissionGuard>
         <AdminShellChrome {...shellDefaults} persistentRoot>
           <StaffRealtimeBoundary>{children}</StaffRealtimeBoundary>
-          <AIProviderBalanceAlert />
         </AdminShellChrome>
       </PermissionGuard>
     </AdminGuard>

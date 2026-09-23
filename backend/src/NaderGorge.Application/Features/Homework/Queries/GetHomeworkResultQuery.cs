@@ -157,8 +157,7 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
             ));
         }
 
-        bool isPassed = submission.Status == SubmissionStatus.Graded
-            && submission.OverallScore >= (submission.PassingScoreSnapshot ?? homework.PassingScoreThreshold ?? 0);
+        bool isPassed = submission.OverallScore >= (homework.PassingScoreThreshold ?? 0);
 
         var result = new HomeworkResultDto(
             HomeworkId: homework.Id,

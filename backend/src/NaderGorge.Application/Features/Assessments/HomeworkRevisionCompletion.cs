@@ -61,7 +61,6 @@ public sealed class HomeworkRevisionCompletion(IAppDbContext db)
                 return ApiResponse<bool>.Fail("يمكن إرسال إجابات الأسئلة المطلوبة للاستكمال فقط؛ الإجابات القديمة محفوظة.");
             var previousJson = submission.DefinitionSnapshotJson;
             CompleteAnswers(submission, definition, request);
-            HomeworkEvaluationQueue.Enqueue(db, submission);
             db.AuditLogs.Add(new AuditLog
             {
                 Action = "HomeworkRevisionCompleted", EntityType = "Homework", EntityId = submission.Id,

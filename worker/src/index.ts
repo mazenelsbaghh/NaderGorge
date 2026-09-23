@@ -1,4 +1,3 @@
-import { installAIProviderMonitor } from './services/aiProviderMonitor.js';
 import { generateVideoLearning } from './services/geminiService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -56,7 +55,6 @@ const JOB_RETENTION_OPTIONS = {
 
 const redis = createRedisConnection();
 installSystemLogCapture(redis);
-installAIProviderMonitor(redis);
 monitorRedisSentinelAvailability(redis);
 const pool = databasePool();
 
@@ -210,10 +208,6 @@ async function startAIWorker() {
 
 async function startEssayWorker() {
   const worker = new Worker('ai-essay-grading', async (job) => {
-    if (job.name === 'evaluate-homework') {
-      const homework = await import('./jobs/evaluateHomework.js');
-      return homework.evaluateHomework(job);
-    }
     const processor = await import('./jobs/evaluateEssay.js');
     return await processor.processEvaluateEssayJob(job);
   }, { connection, concurrency: 3 });
