@@ -35,3 +35,40 @@ p { font-size: 13px; line-height: 1.7; margin: 0; }
   .touch-controls { bottom: 105px; }
 }
 @media (prefers-reduced-motion: reduce) { .thumbstick-knob { transition: none; } }
+/* Instrument plates remain attached to their sockets while the player moves. */
+.socket { width: 182px; padding: 7px 12px; border-radius: 3px; background: linear-gradient(135deg, #493622, #211e19); border-color: #d5a25c; }
+.socket small { display: block; font-size: 9px; color: #ffca80; letter-spacing: .04em; margin-bottom: 3px; }
+.socket span { display: block; font-weight: bold; font-size: 12px; }
+.socket[data-kind="result"] { background: linear-gradient(135deg, #204c50, #142b31); }
+.socket[data-kind="result"] small { color: #98e4dd; }
+.socket.dormant { opacity: .5; }
+.socket.done small { color: #b5e8cf; }
+.socket.done { background: #234539; }
+.socket[aria-pressed="true"] { box-shadow: 0 0 20px #ffc77477; }
+#panel { pointer-events: auto; background: linear-gradient(120deg, #142b32f5, #1d2021f5); border-top: 3px solid #d4a65b; }
+#phase, .eyebrow { color: #e9bf7b; font-size: 11px; margin-bottom: 5px; }
+#panel h1 { font-size: 18px; }
+#energy { display: block; width: 100%; height: 5px; margin-top: 12px; border: 0; accent-color: #71dbbe; }
+#energy::-webkit-progress-bar { background: #3b4543; }
+#energy::-webkit-progress-value { background: #71dbbe; }
+#release { margin-top: 8px; min-height: 32px; padding: 5px 12px; font-size: 11px; }
+#victory { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); text-align: center; width: min(460px, 90vw); padding: 22px; background: #182b31f2; border: 1px solid #d5a25c; border-top: 4px solid #e9bf7b; box-shadow: 0 12px 60px #121b2288; }
+#victory h2 { font-size: 28px; margin: 5px 0 10px; color: #ffdfac; }
+@media(max-width: 650px) {
+  .socket { width: 112px; padding: 5px; }
+  .socket span { font-size: 10px; }
+  .socket small { font-size: 8px; }
+  #panel h1 { font-size: 14px; }
+  .touch-controls { bottom: 160px; }
+  #victory { top: 95px; padding: 12px; }
+  #victory h2 { font-size: 22px; }
+}
+.socket { min-height: 38px; height: 40px; padding: 4px 9px; }
+.socket small { font-size: 8px; line-height: 1.1; margin-bottom: 2px; }
+.socket span { font-size: 11px; line-height: 1.2; }
+.socket.done::after { position: absolute; top: 2px; right: 5px; font-size: 10px; }
+@media(max-width: 650px) { .socket { height: 46px; } .socket span { font-size: 10px; } }
+@media(max-width: 650px) {
+  .socket, .socket[data-kind="result"] { transform: translate(-50%, -50%); }
+  .socket::before { display: none; }
+}

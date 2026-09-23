@@ -13,11 +13,18 @@
     <div class="scene" id="scene">
 
       <div id="sockets" aria-label="فتحات توصيل الآلة"></div>
-      <button id="power" disabled>شغّل الآلة</button>
+      <button id="power" disabled>شغّل المصنع</button>
     </div>
     <section id="panel" aria-label="مهمة المصنع">
+      <p id="phase">١ · التقط كابل السبب</p>
       <h1>مصنع الأسباب <span id="count" dir="ltr">٠ / ٣</span></h1>
-      <p id="feedback" role="status" aria-live="polite">اضغط سببًا على الآلة البرتقالية، ثم نتيجته على الآلة الزرقاء.</p>
+      <p id="feedback" role="status" aria-live="polite">المصنع ساكت… التقط الكابل البرتقالي الأول علشان نرجّع الطاقة.</p>
+      <progress id="energy" max="3" value="0" aria-label="دوائر الطاقة المكتملة"></progress>
+      <button id="release" hidden>رجّع الكابل</button>
+    </section>
+    <section id="victory" hidden aria-label="المهمة مكتملة">
+      <p class="eyebrow">مهمة مكتملة</p><h2>المصنع عاد للحياة!</h2>
+      <p id="resultSummary"></p><p>كل توصيلة صحيحة حوّلت المعرفة لطاقة.</p>
     </section>
   </main>
   <nav class="toolbar" aria-label="أدوات المصنع">

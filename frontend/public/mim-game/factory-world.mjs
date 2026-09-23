@@ -2,6 +2,7 @@ import * as T from './vendor/three.module.js';
 import { RoomEnvironment } from './vendor/addons/environments/RoomEnvironment.js';
 import { cinematicPipeline } from './lighting.mjs';
 import { bindFactoryControls } from './factory-controls.mjs';
+import { createFactoryCables } from './factory-cables.mjs';
 import { buildMim } from './mim.mjs';
 import { buildArchitecture, buildMachine, palette } from './factory-architecture.mjs';
 
@@ -32,6 +33,8 @@ export function createFactoryWorld(container) {
   const fill = new T.DirectionalLight(0x82b4c8, 0.45); fill.position.set(10, 6, 12); scene.add(fill);
   const architecture = buildArchitecture(scene), machine = buildMachine(scene), mim = buildMim(palette);
   mim.root.position.set(-4, 0, 5); mim.root.rotation.y = 2.65; scene.add(mim.root);
+  const cables = createFactoryCables(scene, machine.sockets, mim);
+  let arrival = null, carrying = null, progress = 0;
   const camera = new T.PerspectiveCamera(48, 1, 0.1, 110);
   const composer = cinematicPipeline(renderer, scene, camera);
   const steamGeometry = new T.BufferGeometry();
@@ -62,7 +65,8 @@ export function createFactoryWorld(container) {
     camera.fov = width < height ? 65 : 48; camera.updateProjectionMatrix();
   });
   observer.observe(container);
-  const stopInput = () => { inputs.reset(); dragging = undefined; destination = null; };
+  const cancelWalk = () => { const callback = arrival; arrival = null; destination = null; callback?.(false); };
+  const stopInput = () => { inputs.reset(); dragging = undefined; cancelWalk(); };
   window.addEventListener('blur', stopInput, { signal });
   document.addEventListener('visibilitychange', stopInput, { signal });
   renderer.domElement.addEventListener('pointerdown', (event) => {
@@ -84,6 +88,7 @@ export function createFactoryWorld(container) {
     const bounds = renderer.domElement.getBoundingClientRect();
     raycaster.setFromCamera(new T.Vector2((event.clientX - bounds.left) / bounds.width * 2 - 1, 1 - (event.clientY - bounds.top) / bounds.height * 2), camera);
     const point = raycaster.ray.intersectPlane(floor, new T.Vector3());
+    if (point) cancelWalk();
     if (point) destination = new T.Vector3(T.MathUtils.clamp(point.x, -6.5, 6.5), 0, T.MathUtils.clamp(point.z, 0.8, 10));
   }, { signal });
   renderer.domElement.addEventListener('pointercancel', stopInput, { signal });
@@ -97,13 +102,13 @@ export function createFactoryWorld(container) {
     const input = inputs.movement(), length = Math.hypot(input.x, input.y);
     let dx = 0, dz = 0;
     if (length) {
-      destination = null;
+      cancelWalk();
       const scale = Math.min(1, length) / length;
       dx = (input.x * Math.cos(yaw) + input.y * Math.sin(yaw)) * scale * 4.8 * delta;
       dz = (input.y * Math.cos(yaw) - input.x * Math.sin(yaw)) * scale * 9.6 * delta;
     } else if (destination) {
       const offset = destination.clone().sub(mim.root.position), remaining = offset.length();
-      if (remaining < 0.08) { destination = null; return false; }
+      if (remaining < 0.08) { destination = null; const callback = arrival; arrival = null; mim.root.rotation.y = Math.PI; callback?.(true); return false; }
       offset.multiplyScalar(Math.min(remaining, delta * 6) / remaining);
       dx = offset.x; dz = offset.z;
     }
@@ -114,9 +119,16 @@ export function createFactoryWorld(container) {
     return Math.hypot(mim.root.position.x - oldX, mim.root.position.z - oldZ) > 0.001;
   }
   return {
+    walkToMachine(kind, callback) {
+      cancelWalk(); inputs.reset(); renderer.domElement.focus({ preventScroll: true });
+      destination = new T.Vector3(kind === 'cause' ? 4 : kind === 'result' ? -4 : 0, 0, 0.9);
+      arrival = callback;
+    },
+    carryCable(index) { carrying = index; cables.carry(index); },
+    rejectCable() { cables.reject(); },
     resetCamera() { yaw = -0.1; pitch = 0.18; distance = 9.8; stopInput(); },
     setConnections(connected, running) {
-      powered = running;
+      powered = running; progress = connected.size; cables.connect(connected);
       const resultOrder = [1, 2, 0];
       for (let row = 0; row < 3; row++) {
         machine.sockets.cause[row].material.emissiveIntensity = connected.has(row) ? 3 : 0.8;
@@ -126,6 +138,9 @@ export function createFactoryWorld(container) {
     },
     projectSocket(kind, row) {
       const point = machine.sockets[kind][row].getWorldPosition(new T.Vector3()).project(camera);
+      const middle = machine.sockets[kind][1].getWorldPosition(new T.Vector3()).project(camera);
+      const spacing = Math.max(Math.abs(point.y - middle.y), 100 / container.clientHeight);
+      if (row !== 1) point.y = middle.y + (1 - row) * spacing;
       return { x: (point.x + 1) * 50, y: (1 - point.y) * 50, visible: point.z > -1 && point.z < 1 && Math.abs(point.x) < 1 && Math.abs(point.y) < 1 };
     },
     projectPower() {
@@ -139,15 +154,25 @@ export function createFactoryWorld(container) {
       const animation = reduced.matches ? 0 : delta;
       mim.body.position.y = reduced.matches ? 0 : moving ? Math.abs(Math.sin(time * 10)) * 0.07 : Math.sin(time * 2) * 0.015;
       mim.limbs.forEach((limb, i) => { limb.rotation.x = moving && !reduced.matches ? Math.sin(time * 9 + (i % 2 === 0 ? 0 : Math.PI) + (i > 1 ? Math.PI : 0)) * 0.38 : 0; });
+      if (carrying !== null) mim.limbs[3].rotation.x = -0.8;
+      cables.update(animation, reduced.matches ? 0 : time);
       const x = mim.root.position.x, z = mim.root.position.z;
       const zoom = distance * (camera.aspect < 1 ? 1.4 : 1);
       const orbit = Math.cos(pitch) * zoom;
       desired.set(x + Math.sin(yaw) * orbit, 2.4 + Math.sin(pitch) * zoom, z + Math.cos(yaw) * orbit);
+      const atMachines = z < 2.5 || camera.aspect < 1;
+      if (atMachines) {
+        const framing = camera.aspect < 1 ? 26 : 17;
+        desired.set((camera.aspect < 1 ? 0 : x * 0.15) + Math.sin(yaw) * framing, 5.5, -3 + Math.cos(yaw) * framing);
+      }
+      if (powered) desired.set(0, 6.5, camera.aspect < 1 ? 23 : 17);
       camera.position.lerp(desired, reduced.matches ? 1 : 1 - Math.exp(-delta * 5));
-      camera.lookAt(x + 1.1, 2.4, z - 3);
+      if (powered) camera.lookAt(0, 3, -3);
+      else if (atMachines) camera.lookAt(0, 2.5, -3);
+      else camera.lookAt(x + 1.1, 2.4, z - 3);
       architecture.wheel.rotation.z += animation * 0.12;
-      architecture.gears.forEach((gear, i) => { gear.rotation.z += animation * (powered ? 0.4 : 0.06) * (i % 2 ? -1 : 1); });
-      machine.rotor.rotation.z += animation * (powered ? 3 : 0.08);
+      architecture.gears.forEach((gear, i) => { gear.rotation.z += animation * (powered ? 0.4 : 0.02 + progress * 0.08) * (i % 2 ? -1 : 1); });
+      machine.rotor.rotation.z += animation * (powered ? 3 : progress * 0.4);
       architecture.waterfall.material.opacity = 0.62 + Math.sin(time * 3) * (reduced.matches ? 0 : 0.07);
       if (animation) {
         for (let i = 0; i < 120; i++) {
