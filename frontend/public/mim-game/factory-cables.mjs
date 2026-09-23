@@ -33,27 +33,28 @@ function shapeCable(cable, start, end, lane) {
   cable.mesh.geometry.attributes.position.needsUpdate = true;
   cable.mesh.geometry.computeVertexNormals();
 }
-export function createFactoryCables(scene, sockets, mim) {
+export function createFactoryCables(scene, sockets) {
   const cables = [0xffb34e, 0x65dbca, 0xe6bd7b].map((color) => cableMesh(scene, color));
-  const hand = new T.Vector3(), start = new T.Vector3(), end = new T.Vector3();
-  let carrying = null, completed = new Set(), flash = 0;
+  const start = new T.Vector3(), end = new T.Vector3();
+  let completed = new Set();
   return {
-    carry(index) { carrying = index; },
-    connect(indices) { completed = new Set(indices); },
-    reject() { flash = 0.65; },
-    update(delta, time) {
-      flash = Math.max(0, flash - delta);
+    connect(indices) {
+      completed = new Set(indices);
       scene.updateMatrixWorld(true);
-      mim.limbs[3].localToWorld(hand.set(0, -0.62, 0.12));
       cables.forEach((cable, index) => {
-        const done = completed.has(index), held = carrying === index;
-        cable.mesh.visible = cable.bead.visible = done || held;
-        if (!done && !held) return;
+        const done = completed.has(index);
+        cable.mesh.visible = cable.bead.visible = done;
+        if (!done) return;
         sockets.cause[index].getWorldPosition(start);
-        if (done) sockets.result[[2, 0, 1][index]].getWorldPosition(end); else end.copy(hand);
+        sockets.result[[2, 0, 1][index]].getWorldPosition(end);
         shapeCable(cable, start, end, index);
-        cable.mesh.material.emissiveIntensity = held && flash ? 3 : done ? 1.2 : 0.35;
-        cable.mesh.material.emissive.setHex(held && flash ? 0xff3420 : done ? 0x42dac0 : 0xffa33c);
+        cable.mesh.material.emissiveIntensity = 1.2;
+        cable.mesh.material.emissive.setHex(0x42dac0);
+      });
+    },
+    update(time) {
+      cables.forEach((cable, index) => {
+        if (!completed.has(index)) return;
         cable.curve.getPoint((time * 0.35 + index * 0.3) % 1, cable.bead.position);
         cable.bead.position.y = Math.max(0.14 + index * 0.06, cable.bead.position.y);
       });

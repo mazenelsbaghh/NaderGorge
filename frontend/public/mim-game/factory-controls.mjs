@@ -1,7 +1,7 @@
 export function bindFactoryControls(canMove) {
   const move = { x: 0, y: 0 },
     camera = { x: 0, y: 0 },
-    keys = new Set();
+    keys = new Set(), actions = new Set();
   const listeners = new AbortController(),
     releases = [];
   const on = (node, event, action) =>
@@ -45,9 +45,20 @@ export function bindFactoryControls(canMove) {
   }
   bindStick('moveStick', move);
   bindStick('cameraStick', camera);
+  for (const [id, action] of [['jumpButton', 'jump'], ['dashButton', 'dash'], ['grappleButton', 'grapple']]) {
+    on(document.getElementById(id), 'pointerdown', (event) => {
+      if (!canMove()) return;
+      event.preventDefault();
+      actions.add(action);
+    });
+  }
   on(document, 'keydown', (event) => {
     if (!canMove() || event.target.closest('button,a,select,input,textarea,dialog'))
       return;
+    if ([' ', 'q', 'e'].includes(event.key.toLowerCase()) && !event.repeat) {
+      event.preventDefault();
+      actions.add(event.key === ' ' ? 'jump' : event.key.toLowerCase() === 'e' ? 'grapple' : 'dash');
+    }
     if (
       [
         'arrowup',
@@ -58,6 +69,7 @@ export function bindFactoryControls(canMove) {
         'a',
         's',
         'd',
+        'shift',
       ].includes(event.key.toLowerCase())
     ) {
       event.preventDefault();
@@ -67,6 +79,7 @@ export function bindFactoryControls(canMove) {
   on(document, 'keyup', (event) => keys.delete(event.key.toLowerCase()));
   const reset = () => {
     keys.clear();
+    actions.clear();
     releases.forEach((release) => release());
   };
   on(window, 'blur', reset);
@@ -83,6 +96,12 @@ export function bindFactoryControls(canMove) {
       };
     },
     camera,
+    sprinting() { return keys.has('shift'); },
+    consume(action) {
+      const pressed = actions.has(action);
+      actions.delete(action);
+      return pressed;
+    },
     reset,
     dispose() {
       reset();
