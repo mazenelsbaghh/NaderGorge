@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -12,28 +11,16 @@ public sealed class PlatformFinancialReportQueries(IAppDbContext db)
 {
     public async Task<PlatformFinancialReportDto> GetAsync(string kind, DateTime from, DateTime to, CancellationToken ct)
     {
-        var start = from.Date;
-        var end = to.Date.AddDays(1);
-        if (end <= start) throw new ArgumentException("The report end date must be after the start date.");
+        var (start, end) = FinancialLedgerQuery.Period(from, to);
         var normalizedKind = kind.Trim().ToLowerInvariant();
-        var raw = await db.JournalLines.AsNoTracking()
-            .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted && line.JournalEntry.OccurredAt >= start && line.JournalEntry.OccurredAt < end)
-            .GroupBy(line => new { line.FinancialAccount.Code, line.FinancialAccount.Name, line.FinancialAccount.Type })
-            .Select(group => new { group.Key.Code, group.Key.Name, group.Key.Type, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
-            .OrderBy(row => row.Code)
-            .ToListAsync(ct);
-
-        var rows = raw.Select(row => new PlatformFinancialReportRow(
-            row.Code,
-            row.Name,
-            row.Type,
-            row.Debit,
-            row.Credit,
-            row.Type is FinancialAccountType.Asset or FinancialAccountType.Expense or FinancialAccountType.ContraRevenue
-                ? row.Debit - row.Credit
-                : row.Credit - row.Debit)).ToArray();
-
-        return new(normalizedKind, start, end.AddTicks(-1), rows.Sum(row => row.Debit), rows.Sum(row => row.Credit), FilterKind(normalizedKind, rows));
+        var accounts = await new FinancialLedgerQuery(db).GetAccountsAsync(from, to, ct);
+        var closing = normalizedKind is "financial-position" or "financial_position" or "trial-balance" or "trial_balance";
+        var rows = accounts.Select(account => new PlatformFinancialReportRow(account.Code, account.Name, account.Type,
+            closing ? account.ClosingDebit : account.PeriodDebit,
+            closing ? account.ClosingCredit : account.PeriodCredit,
+            closing ? account.ClosingBalance : account.PeriodBalance)).ToArray();
+        var selected = FilterKind(normalizedKind, rows);
+        return new(normalizedKind, start, end.AddTicks(-1), selected.Sum(row => row.Debit), selected.Sum(row => row.Credit), selected);
     }
 
     private static IReadOnlyList<PlatformFinancialReportRow> FilterKind(string kind, IReadOnlyList<PlatformFinancialReportRow> rows) => kind switch

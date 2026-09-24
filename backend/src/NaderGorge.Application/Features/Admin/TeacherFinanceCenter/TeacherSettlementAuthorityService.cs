@@ -1,9 +1,11 @@
+using NaderGorge.Application.Interfaces.Finance;
 using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Admin.TeacherFinanceCenter;
 
@@ -18,7 +20,7 @@ public sealed record SettlementDebtPreview(Guid Id, decimal Amount, string Reaso
 public sealed record TeacherSettlementPreview(string? Error, List<TeacherFinancialAllocation> Allocations,
     List<SettlementDebtPreview> Adjustments, decimal GrossDueAmount, decimal DebtDeductionAmount, decimal NetPayableAmount);
 
-public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
+public sealed class TeacherSettlementAuthorityService(IAppDbContext db, IFinancialPostingService posting)
 {
     public async Task<TeacherSettlementPreview> PreviewAsync(SettlementCreationInput input, CancellationToken ct)
     {
@@ -37,8 +39,11 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
         if (preview.Error is not null) return Invalid(preview.Error);
         if (preview.Allocations.Count == 0) return Invalid("لا توجد مستحقات مؤهلة لإنشاء تسوية");
         var account = await db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == input.TeacherId, ct);
-        if (account is null || account.CurrentBalance - account.ReservedBalance < preview.Gross)
+        var balance = await new TeacherFinanceAccountService(db).GetWithdrawalAsync(input.TeacherId, ct);
+        if (account is null || balance.UnreservedBalance < preview.Gross)
             return Conflict("رصيد المعلم المتاح تغير؛ أعد معاينة التسوية");
+        if (preview.Gross - preview.Debt > balance.WithdrawalAvailable)
+            return Conflict("المتاح للصرف لا يغطي صافي التسوية. أكمل التسوية التي تحجز المديونية أولاً ثم أعد المعاينة.");
         var settlement = NewSettlement(actorId, input, preview);
         ReserveAllocations(settlement, preview);
         account.ReservedBalance += preview.Gross; account.UpdatedAt = DateTime.UtcNow;
@@ -75,6 +80,9 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
         var account = await db.TeacherAccounts.FirstOrDefaultAsync(x => x.TeacherId == settlement.TeacherId, ct);
         if (account is null || account.ReservedBalance < settlement.GrossDueAmount || account.CurrentBalance < settlement.GrossDueAmount)
             return Conflict("رصيد التسوية المحجوز غير متاح");
+        if (settlement.NetPayableAmount > 0m &&
+            !(await new TeacherFinanceAccountService(db).GetWithdrawalAsync(settlement.TeacherId, ct)).CoversReservedPayment)
+            return Conflict("المديونية أو الرصيد تغير بعد الحجز. ألغ التسوية وأعد معاينتها قبل الصرف.");
         var allocationIds = settlement.Lines.Where(x => x.AllocationId.HasValue).Select(x => x.AllocationId!.Value).ToList();
         var allocations = await db.TeacherFinancialAllocations.Where(x => allocationIds.Contains(x.Id)).ToListAsync(ct);
         if (allocations.Count != allocationIds.Count || allocations.Any(x => x.PayoutStatus != TeacherFinancialPayoutStatus.Reserved || x.SettlementLineId == null))
@@ -108,6 +116,12 @@ public sealed class TeacherSettlementAuthorityService(IAppDbContext db)
             AttachmentUrl = input.AttachmentUrl, PaidByUserId = actorId });
         var invoice = await db.FinancialInvoices.FirstOrDefaultAsync(x => x.TeacherSettlementId == settlement.Id, ct);
         if (invoice is not null) { invoice.Status = FinancialInvoiceStatus.Paid; invoice.PaymentReference = input.TransferReference.Trim(); invoice.AttachmentUrl = input.AttachmentUrl; }
+        if (settlement.NetPayableAmount > 0m)
+            await posting.PostAsync(new FinancialPostingRequest("TeacherSettlement", settlement.Id,
+                "TeacherSettlement", $"teacher-settlement:{settlement.Id:N}:paid", "صرف تسوية مدرس",
+                settlement.PaidAt.Value, actorId,
+                [new("2000", settlement.NetPayableAmount, 0m, TeacherId: settlement.TeacherId),
+                 new("1000", 0m, settlement.NetPayableAmount, TeacherId: settlement.TeacherId)]), ct);
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return new(TeacherFinanceCommandStatus.Success);
     }

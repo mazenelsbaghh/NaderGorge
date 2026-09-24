@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 513,
+  "reachableFileCount": 522,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -206,6 +206,10 @@
     {
       "file": "frontend/src/app/admin/crm/page.tsx",
       "route": "/admin/crm"
+    },
+    {
+      "file": "frontend/src/app/admin/emthntak/page.tsx",
+      "route": "/admin/emthntak"
     },
     {
       "file": "frontend/src/app/admin/finance/AdminFinancePageClient.tsx",
@@ -1568,7 +1572,27 @@
       "route": null
     },
     {
+      "file": "frontend/src/features/platform-finance/FinanceLedgerDetails.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/platform-finance/FinancePeriodPicker.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/platform-finance/FinanceProfitSummary.tsx",
+      "route": null
+    },
+    {
       "file": "frontend/src/features/platform-finance/PlatformProfitsPage.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/platform-finance/TeacherProfitList.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherAccountOverview.tsx",
       "route": null
     },
     {
@@ -1577,6 +1601,14 @@
     },
     {
       "file": "frontend/src/features/teacher-finance-center/TeacherAccountSummary.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherAllocationExplanation.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherCodeBatches.tsx",
       "route": null
     },
     {
@@ -1589,6 +1621,10 @@
     },
     {
       "file": "frontend/src/features/teacher-finance-center/TeacherFinanceOperationsWorkspace.tsx",
+      "route": null
+    },
+    {
+      "file": "frontend/src/features/teacher-finance-center/TeacherPayoutRequests.tsx",
       "route": null
     },
     {
@@ -2056,7 +2092,7 @@
       "route": null
     }
   ],
-  "callCount": 615,
+  "callCount": 620,
   "calls": [
     {
       "method": "DELETE",
@@ -2127,7 +2163,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 289
+        "line": 312
       }
     },
     {
@@ -2528,6 +2564,15 @@
     },
     {
       "method": "GET",
+      "path": "/admin/emthntak/configuration",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/app/admin/emthntak/page.tsx",
+        "line": 20
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/essays/pending",
       "dynamic": false,
       "source": {
@@ -2559,7 +2604,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 331
+        "line": 360
       }
     },
     {
@@ -2577,7 +2622,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 304
+        "line": 327
       }
     },
     {
@@ -2586,7 +2631,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 259
+        "line": 282
       }
     },
     {
@@ -2595,7 +2640,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 344
+        "line": 373
       }
     },
     {
@@ -2829,7 +2874,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 135
+        "line": 138
       }
     },
     {
@@ -2838,7 +2883,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 184
+        "line": 187
       }
     },
     {
@@ -2847,7 +2892,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 115
+        "line": 118
       }
     },
     {
@@ -2856,7 +2901,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 145
+        "line": 148
       }
     },
     {
@@ -2865,7 +2910,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 119
+        "line": 122
       }
     },
     {
@@ -2874,7 +2919,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 199
+        "line": 202
       }
     },
     {
@@ -2892,7 +2937,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 19
+        "line": 23
       }
     },
     {
@@ -2901,7 +2946,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 196
+        "line": 199
       }
     },
     {
@@ -2910,7 +2955,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 175
+        "line": 178
       }
     },
     {
@@ -2919,7 +2964,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 131
+        "line": 134
       }
     },
     {
@@ -2928,7 +2973,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 103
+        "line": 106
       }
     },
     {
@@ -2937,7 +2982,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 107
+        "line": 110
       }
     },
     {
@@ -2946,7 +2991,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 111
+        "line": 114
       }
     },
     {
@@ -2955,7 +3000,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 193
+        "line": 196
       }
     },
     {
@@ -2964,7 +3009,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 127
+        "line": 130
       }
     },
     {
@@ -2973,7 +3018,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 123
+        "line": 126
       }
     },
     {
@@ -2982,7 +3027,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 148
+        "line": 151
       }
     },
     {
@@ -2991,7 +3036,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 154
+        "line": 157
       }
     },
     {
@@ -3158,11 +3203,20 @@
     },
     {
       "method": "GET",
+      "path": "/admin/teacher-finance-center/code-groups/{codeGroupId}/account",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 273
+      }
+    },
+    {
+      "method": "GET",
       "path": "/admin/teacher-finance-center/settlements/{settlementId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 235
+        "line": 250
       }
     },
     {
@@ -3171,7 +3225,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 180
+        "line": 194
       }
     },
     {
@@ -3180,7 +3234,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 208
+        "line": 223
       }
     },
     {
@@ -3189,7 +3243,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 216
+        "line": 231
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/teacher-finance-center/teachers/{teacherId}/settlements",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 335
       }
     },
     {
@@ -3198,7 +3261,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 201
+        "line": 216
       }
     },
     {
@@ -4422,7 +4485,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 379
+        "line": 408
       }
     },
     {
@@ -4431,7 +4494,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 401
+        "line": 430
       }
     },
     {
@@ -4440,7 +4503,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 409
+        "line": 438
       }
     },
     {
@@ -4449,7 +4512,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 417
+        "line": 446
       }
     },
     {
@@ -4458,7 +4521,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 390
+        "line": 419
       }
     },
     {
@@ -5003,6 +5066,15 @@
     },
     {
       "method": "POST",
+      "path": "/admin/emthntak/request",
+      "dynamic": false,
+      "source": {
+        "file": "frontend/src/app/admin/emthntak/page.tsx",
+        "line": 40
+      }
+    },
+    {
+      "method": "POST",
       "path": "/admin/essays/{essaySubmissionId}/grade",
       "dynamic": true,
       "source": {
@@ -5034,7 +5106,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 315
+        "line": 344
       }
     },
     {
@@ -5043,7 +5115,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 278
+        "line": 301
       }
     },
     {
@@ -5052,7 +5124,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 296
+        "line": 319
       }
     },
     {
@@ -5061,7 +5133,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 267
+        "line": 290
       }
     },
     {
@@ -5070,7 +5142,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 358
+        "line": 387
       }
     },
     {
@@ -5079,7 +5151,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 370
+        "line": 399
       }
     },
     {
@@ -5259,7 +5331,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 181
+        "line": 184
       }
     },
     {
@@ -5268,7 +5340,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 139
+        "line": 142
       }
     },
     {
@@ -5277,7 +5349,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 142
+        "line": 145
       }
     },
     {
@@ -5286,7 +5358,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 163
+        "line": 166
       }
     },
     {
@@ -5295,7 +5367,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 202
+        "line": 205
       }
     },
     {
@@ -5313,7 +5385,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 166
+        "line": 169
       }
     },
     {
@@ -5322,7 +5394,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 172
+        "line": 175
       }
     },
     {
@@ -5331,7 +5403,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 178
+        "line": 181
       }
     },
     {
@@ -5340,7 +5412,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 169
+        "line": 172
       }
     },
     {
@@ -5349,7 +5421,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 190
+        "line": 193
       }
     },
     {
@@ -5358,7 +5430,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 187
+        "line": 190
       }
     },
     {
@@ -5367,7 +5439,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 157
+        "line": 160
       }
     },
     {
@@ -5376,7 +5448,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 160
+        "line": 163
       }
     },
     {
@@ -5385,7 +5457,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-finance-service.ts",
-        "line": 151
+        "line": 154
       }
     },
     {
@@ -5574,7 +5646,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 254
+        "line": 269
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/admin/teacher-finance-center/code-groups/{codeGroupId}/payments",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 277
       }
     },
     {
@@ -5583,7 +5664,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 245
+        "line": 260
       }
     },
     {
@@ -5592,7 +5673,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 230
+        "line": 245
       }
     },
     {
@@ -5601,7 +5682,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 240
+        "line": 255
       }
     },
     {
@@ -5610,7 +5691,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 241
+        "line": 256
       }
     },
     {
@@ -5619,7 +5700,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 242
+        "line": 257
       }
     },
     {
@@ -5628,7 +5709,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 239
+        "line": 254
       }
     },
     {
@@ -5637,7 +5718,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 224
+        "line": 239
       }
     },
     {
@@ -5646,7 +5727,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 187
+        "line": 202
       }
     },
     {
@@ -6915,7 +6996,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 424
+        "line": 453
       }
     },
     {
@@ -7365,7 +7446,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 194
+        "line": 209
       }
     },
     {
@@ -7374,7 +7455,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
-        "line": 250
+        "line": 265
       }
     },
     {
@@ -8065,5 +8146,5 @@
       }
     }
   ],
-  "digest": "9029d5266990000ad620cf40a033b3b5aaf163b6f250efb67db4e3e565beadf5"
+  "digest": "06088f46e423a671dfea0423c3a0abd99945ff4f05bda2fa2e9a221cd1a63ac1"
 }

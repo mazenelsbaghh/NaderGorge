@@ -3205,10 +3205,16 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(240)
                         .HasColumnType("character varying(240)");
 
+                    b.Property<decimal?>("PlatformAmountDue")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Recipient")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<decimal?>("TeacherRetainedAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -3222,6 +3228,63 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("code_group_delivery_confirmations", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupDeliveryPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("DeliveryConfirmationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<Guid>("JournalEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ReceivedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("TreasuryAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryConfirmationId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.HasIndex("TreasuryAccountId");
+
+                    b.ToTable("code_group_delivery_payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_code_delivery_payment_positive", "\"Amount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupFinancialTerms", b =>
@@ -13379,6 +13442,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int?>("PriceBasis")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("RetainedByTeacher")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("ReversedAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -15763,6 +15829,31 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CodeGroup");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupDeliveryPayment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CodeGroupDeliveryConfirmation", "DeliveryConfirmation")
+                        .WithMany("Payments")
+                        .HasForeignKey("DeliveryConfirmationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
+                        .WithMany()
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", "TreasuryAccount")
+                        .WithMany()
+                        .HasForeignKey("TreasuryAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DeliveryConfirmation");
+
+                    b.Navigation("TreasuryAccount");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupFinancialTerms", b =>
@@ -18933,6 +19024,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("AccessCodes");
 
                     b.Navigation("CodeVideoTargets");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupDeliveryConfirmation", b =>
+                {
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPost", b =>

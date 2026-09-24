@@ -114,39 +114,28 @@ public sealed class GetMyLessonsQueryHandler : IRequestHandler<GetMyLessonsQuery
             .ToListAsync(ct);
 
         var accessibleLessonIds = lessons.Select(lesson => lesson.Id).ToList();
+        var eligibleLessonIds = await _academicScope.GetEligibleLessonIdsForStudentAsync(
+            accessibleLessonIds, request.UserId, ct);
+        var visibleLessonIds = await _archiveAccess.GetViewableLessonIdsAsync(
+            request.UserId, eligibleLessonIds, ct);
+        lessons = lessons.Where(lesson => visibleLessonIds.Contains(lesson.Id)).ToList();
         var completionContext = new StudentLessonCompletionContext(
             _db,
             request.UserId,
-            accessibleLessonIds);
+            lessons.Select(lesson => lesson.Id).ToList());
         var visibleActiveVideoIds = await StudentLessonCompletionReader.GetVisibleActiveVideoIdsAsync(
             completionContext,
             _academicScope,
             _archiveAccess,
             ct);
-        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonIdsAsync(
-            completionContext,
-            visibleActiveVideoIds,
-            ct);
         var videoProgress = await StudentWatchProgressReader.ReadAsync(completionContext, visibleActiveVideoIds, ct);
+        var completedLessonIds = await StudentLessonCompletionReader.GetCompletedLessonsFromProgressAsync(
+            completionContext, videoProgress, ct);
         var progressByLesson = videoProgress.ToLookup(video => video.LessonId);
 
         var result = new List<MyLessonDto>(lessons.Count);
         foreach (var lesson in lessons)
         {
-            if (!await _academicScope.IsOwnerEligibleForStudentAsync(
-                    StudentFacingScopeOwnerType.Lesson,
-                    lesson.Id,
-                    request.UserId,
-                    ct) ||
-                !await _archiveAccess.CanViewAsync(
-                    request.UserId,
-                    ContentArchiveTargetType.Lesson,
-                    lesson.Id,
-                    ct))
-            {
-                continue;
-            }
-
             var lessonVideos = progressByLesson[lesson.Id].ToList();
             result.Add(new MyLessonDto(
                 lesson.Id,

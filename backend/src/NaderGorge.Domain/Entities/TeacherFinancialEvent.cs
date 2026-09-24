@@ -31,6 +31,7 @@ public class TeacherFinancialAllocation : BaseEntity
 {
     public Guid TeacherFinancialEventId { get; set; }
     public TeacherFinancialEvent TeacherFinancialEvent { get; set; } = null!;
+    public bool RetainedByTeacher { get; set; }
     public Guid TeacherId { get; set; }
     public TeacherProfile Teacher { get; set; } = null!;
     public TeacherAllocationMode AllocationMode { get; set; }

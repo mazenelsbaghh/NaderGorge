@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -144,6 +145,101 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
         return viewableLessonIds;
     }
 
+    public async Task<IReadOnlySet<Guid>> GetViewableAssessmentIdsAsync(
+        Guid userId, ContentArchiveTargetType targetType, IReadOnlyCollection<Guid> targetIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = targetIds.Distinct().ToArray();
+        if (ids.Length == 0) return new HashSet<Guid>();
+        if (await IsPrivilegedAsync(userId, cancellationToken)) return ids.ToHashSet();
+        var paths = targetType switch
+        {
+            ContentArchiveTargetType.Exam => await ExamPathsAsync(ids, cancellationToken),
+            ContentArchiveTargetType.Homework => await HomeworkPathsAsync(ids, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(targetType))
+        };
+        var viewableIds = paths.Where(pair => !pair.Value.Modes.Contains(ContentArchiveMode.HiddenFromEveryone) &&
+                !pair.Value.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly))
+            .Select(pair => pair.Key).ToHashSet();
+        var subscriberPaths = paths.Where(pair =>
+            !pair.Value.Modes.Contains(ContentArchiveMode.HiddenFromEveryone) &&
+            pair.Value.Modes.Contains(ContentArchiveMode.ActiveSubscribersOnly)).ToList();
+        if (subscriberPaths.Count == 0) return viewableIds;
+
+        var now = DateTime.UtcNow;
+        var grants = await db.StudentAccessGrants.AsNoTracking()
+            .Where(grant => grant.UserId == userId && grant.IsActive &&
+                (grant.ExpiresAt == null || grant.ExpiresAt > now) &&
+                (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses))
+            .Include(grant => grant.PublicExamProduct)
+            .ToListAsync(cancellationToken);
+        foreach (var pair in subscriberPaths)
+            if (grants.Any(GrantsPathAccess(pair.Value).Compile(preferInterpretation: true))) viewableIds.Add(pair.Key);
+        return viewableIds;
+    }
+
+    private async Task<Dictionary<Guid, ArchivePath>> HomeworkPathsAsync(Guid[] ids, CancellationToken ct) =>
+        await db.Homeworks.AsNoTracking().Where(homework => ids.Contains(homework.Id))
+            .Join(db.Lessons, homework => homework.LessonId, lesson => lesson.Id, (homework, lesson) => new
+            {
+                homework.Id,
+                Path = new ArchivePath(lesson.ContentSection.Term.PackageId, lesson.ContentSection.TermId,
+                    lesson.ContentSectionId, lesson.Id, null, null, null,
+                    new[] { lesson.ContentSection.Term.Package.ArchiveMode, lesson.ContentSection.Term.ArchiveMode,
+                        lesson.ContentSection.ArchiveMode, lesson.ArchiveMode, homework.ArchiveMode })
+            }).ToDictionaryAsync(row => row.Id, row => row.Path, ct);
+
+    private async Task<Dictionary<Guid, ArchivePath>> ExamPathsAsync(Guid[] ids, CancellationToken ct)
+    {
+        var exams = await db.Exams.AsNoTracking().Where(exam => ids.Contains(exam.Id))
+            .Select(exam => new { exam.Id, exam.ArchiveMode, exam.LessonVideoId }).ToListAsync(ct);
+        var lessons = await ExamLessonPathsAsync(ids, ct);
+        var videoIds = exams.Where(exam => exam.LessonVideoId != null).Select(exam => exam.LessonVideoId!.Value).ToArray();
+        var videos = await ExamVideoPathsAsync(ids, videoIds, ct);
+        var paths = new Dictionary<Guid, ArchivePath>();
+        foreach (var exam in exams)
+        {
+            var parent = lessons.FirstOrDefault(path => path.ExamId == exam.Id)
+                ?? (exam.LessonVideoId is Guid videoId
+                    ? videos.FirstOrDefault(path => path.VideoId == videoId)
+                    : videos.FirstOrDefault(path => path.ExamId == exam.Id));
+            paths[exam.Id] = parent is null
+                ? new ArchivePath(null, null, null, null, null, null, exam.Id, [exam.ArchiveMode])
+                : parent with { ExamId = exam.Id, Modes = [..parent.Modes, exam.ArchiveMode] };
+        }
+        return paths;
+    }
+
+    private Task<List<ArchivePath>> ExamLessonPathsAsync(Guid[] ids, CancellationToken ct) =>
+        db.Lessons.AsNoTracking()
+            .Where(lesson => lesson.ExamId != null && ids.Contains(lesson.ExamId.Value))
+            .Select(lesson => new ArchivePath(lesson.ContentSection.Term.PackageId, lesson.ContentSection.TermId,
+                lesson.ContentSectionId, lesson.Id, null, null, lesson.ExamId,
+                new[] { lesson.ContentSection.Term.Package.ArchiveMode, lesson.ContentSection.Term.ArchiveMode,
+                    lesson.ContentSection.ArchiveMode, lesson.ArchiveMode })).ToListAsync(ct);
+
+    private Task<List<ArchivePath>> ExamVideoPathsAsync(Guid[] ids, Guid[] videoIds, CancellationToken ct) =>
+        db.LessonVideos.AsNoTracking()
+            .Where(video => videoIds.Contains(video.Id) || (video.ExamId != null && ids.Contains(video.ExamId.Value)))
+            .Select(video => new ArchivePath(video.Lesson.ContentSection.Term.PackageId, video.Lesson.ContentSection.TermId,
+                video.Lesson.ContentSectionId, video.LessonId, video.Id, video.VideoTypeId, video.ExamId,
+                new[] { video.Lesson.ContentSection.Term.Package.ArchiveMode, video.Lesson.ContentSection.Term.ArchiveMode,
+                    video.Lesson.ContentSection.ArchiveMode, video.Lesson.ArchiveMode, video.ArchiveMode })).ToListAsync(ct);
+
+    private static Expression<Func<StudentAccessGrant, bool>> GrantsPathAccess(ArchivePath path) => grant =>
+        (path.LessonId != null && grant.GrantType == CodeType.Lesson && grant.LessonId == path.LessonId) ||
+        (path.SectionId != null && grant.GrantType == CodeType.Month && grant.ContentSectionId == path.SectionId) ||
+        (path.TermId != null && grant.GrantType == CodeType.Term && grant.TermId == path.TermId) ||
+        (path.PackageId != null && grant.GrantType == CodeType.Package && grant.PackageId == path.PackageId) ||
+        (path.VideoId != null && grant.GrantType == CodeType.Video && grant.LessonVideoId == path.VideoId) ||
+        (path.VideoTypeId != null && grant.GrantType == CodeType.Video && grant.VideoTypeId == path.VideoTypeId &&
+            (grant.LessonId == null || grant.LessonId == path.LessonId) &&
+            (grant.ContentSectionId == null || grant.ContentSectionId == path.SectionId) &&
+            (grant.TermId == null || grant.TermId == path.TermId) &&
+            (grant.PackageId == null || grant.PackageId == path.PackageId)) ||
+        (path.ExamId != null && grant.GrantType == CodeType.Exam &&
+            (grant.ExamId == path.ExamId || (grant.PublicExamProduct != null && grant.PublicExamProduct.ExamId == path.ExamId)));
+
     public async Task<bool> CanAcquireAsync(
         ContentArchiveTargetType targetType,
         Guid targetId,
@@ -258,24 +354,11 @@ public sealed class ContentArchiveAccessService(IAppDbContext db) : IContentArch
     private async Task<bool> HasActiveGrantAsync(Guid userId, ArchivePath path, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        return await db.StudentAccessGrants.AnyAsync(grant =>
+        return await db.StudentAccessGrants.Where(grant =>
             grant.UserId == userId && grant.IsActive &&
             (grant.ExpiresAt == null || grant.ExpiresAt > now) &&
-            (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses) &&
-            ((path.LessonId != null && grant.GrantType == CodeType.Lesson && grant.LessonId == path.LessonId) ||
-             (path.SectionId != null && grant.GrantType == CodeType.Month && grant.ContentSectionId == path.SectionId) ||
-             (path.TermId != null && grant.GrantType == CodeType.Term && grant.TermId == path.TermId) ||
-             (path.PackageId != null && grant.GrantType == CodeType.Package && grant.PackageId == path.PackageId) ||
-             (path.VideoId != null && grant.GrantType == CodeType.Video && grant.LessonVideoId == path.VideoId) ||
-             (path.VideoTypeId != null && grant.GrantType == CodeType.Video && grant.VideoTypeId == path.VideoTypeId &&
-              (grant.LessonId == null || grant.LessonId == path.LessonId) &&
-              (grant.ContentSectionId == null || grant.ContentSectionId == path.SectionId) &&
-              (grant.TermId == null || grant.TermId == path.TermId) &&
-              (grant.PackageId == null || grant.PackageId == path.PackageId)) ||
-             (path.ExamId != null && grant.GrantType == CodeType.Exam &&
-              (grant.ExamId == path.ExamId ||
-               (grant.PublicExamProductId != null && db.PublicExamProducts.Any(product =>
-                   product.Id == grant.PublicExamProductId && product.ExamId == path.ExamId))))), ct);
+            (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses))
+            .AnyAsync(GrantsPathAccess(path), ct);
     }
 
     private static bool GrantsVideoAccess(

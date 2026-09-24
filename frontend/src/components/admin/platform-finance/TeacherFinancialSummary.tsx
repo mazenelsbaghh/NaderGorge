@@ -1,14 +1,21 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth-store';
+import { isFullAdmin } from '@/packages/admin/route-permissions';
+import { TeacherAccountOverview } from '@/features/teacher-finance-center/TeacherAccountOverview';
 import { useEffect, useState } from 'react';
 import platformFinanceService, { FinanceTeacherSummary } from '@/services/platform-finance-service';
 
-const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 export default function TeacherFinancialSummary({ teacherId }: { teacherId?: string }) {
+  const router = useRouter();
+  const fullAdmin = useAuthStore(state => isFullAdmin(state.user));
   const [rows, setRows] = useState<FinanceTeacherSummary[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    if (fullAdmin && teacherId) { router.replace(`/admin/teachers/${teacherId}/account`); return; }
     let active = true;
     setLoading(true);
     setRows([]);
@@ -18,6 +25,15 @@ export default function TeacherFinancialSummary({ teacherId }: { teacherId?: str
       .catch(() => { if (active) setError('تعذر تحميل ملخص المدرسين'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [teacherId]);
-  return <section className="admin-panel rounded-2xl p-6" dir="rtl"><h2 className="mb-4 text-lg font-black">أرصدة المدرسين</h2><p className="mb-4 text-sm text-[var(--admin-muted)]">حركة آخر شهر حتى اليوم؛ المتبقي يشمل رصيد بداية الفترة. المبيعات بعد الخصومات وقبل المرتجعات، والحصص بعد المرتجعات.</p>{loading ? <p role="status">جارٍ تحميل الحسابات...</p> : null}{error ? <p className="text-rose-600">{error}</p> : null}<div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-right"><th>المدرس</th><th>المبيعات قبل المرتجعات</th><th>حصة المنصة</th><th>حصة المدرس</th><th>المرتجعات</th><th>المدفوع</th><th>رصيد نهاية الفترة</th></tr></thead><tbody>{rows.map(row => <tr key={row.teacherId} className="border-t border-[var(--admin-border)]"><td>{row.teacherName}</td><td>{money(row.grossSales)}</td><td>{money(row.platformShare)}</td><td>{money(row.teacherShare)}</td><td>{money(row.refunds)}</td><td>{money(row.paid)}</td><td className="font-bold">{money(row.outstanding)}</td></tr>)}</tbody></table></div></section>;
+  }, [teacherId, fullAdmin, router]);
+  return <section className="admin-panel space-y-5 rounded-2xl p-6" dir="rtl">
+    <h2 className="text-lg font-black">حساب المدرّس</h2>
+    {loading && <p role="status">جارٍ تحميل الحساب...</p>}
+    {error && <p role="alert">{error}</p>}
+    {rows.map(row => <section key={row.teacherId} className="space-y-4">
+      <h3 className="font-bold">{row.teacherName}</h3>
+      {row.account ? <TeacherAccountOverview account={row.account} showSources /> : <p role="alert">تفاصيل الحساب غير متاحة.</p>}
+      {fullAdmin && <Link className="inline-flex min-h-11 items-center underline" href={`/admin/teachers/${row.teacherId}/account`}>فتح حساب المدرّس</Link>}
+    </section>)}
+  </section>;
 }

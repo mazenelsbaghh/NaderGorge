@@ -35,6 +35,7 @@ public sealed class ContentSummaryTests
 
         var teacherUser = UserFor("Relational teacher", "01080500001");
         var student = UserFor("Relational student", "01080500002");
+        var refundedStudent = UserFor("Relational refunded student", "01080500003");
         var teacher = new TeacherProfile { Id = Guid.NewGuid(), User = teacherUser };
         var subject = new Subject { Id = Guid.NewGuid(), Name = "Physics", NormalizedName = "PHYSICS" };
         var package = new Package { Id = Guid.NewGuid(), Name = "Grade 12", Subject = subject, Teacher = teacher };
@@ -53,7 +54,7 @@ public sealed class ContentSummaryTests
         });
         var cancelledGrant = new StudentAccessGrant
         {
-            Id = Guid.NewGuid(), User = student, GrantType = CodeType.Term, TermId = term.Id,
+            Id = Guid.NewGuid(), User = refundedStudent, GrantType = CodeType.Term, TermId = term.Id,
             GrantedAt = from, IsActive = false, CancelledAt = from.AddHours(1)
         };
         db.StudentAccessGrants.Add(cancelledGrant);
@@ -264,7 +265,7 @@ public sealed class ContentSummaryTests
     }
 
     [Fact]
-    public async Task Summary_counts_active_and_refunded_students_without_double_counting_rejoins()
+    public async Task Summary_excludes_rejoined_students_from_current_refund_count()
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01086000001");
@@ -309,7 +310,7 @@ public sealed class ContentSummaryTests
 
         var summary = Assert.Single(response.Data!.Packages);
         Assert.Equal(1, summary.ActiveStudents);
-        Assert.Equal(2, summary.RefundedStudents);
+        Assert.Equal(1, summary.RefundedStudents);
         Assert.Equal(3, summary.TotalStudents);
     }
 

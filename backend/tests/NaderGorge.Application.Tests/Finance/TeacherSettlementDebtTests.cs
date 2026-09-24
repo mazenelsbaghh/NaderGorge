@@ -26,7 +26,7 @@ public sealed class TeacherSettlementDebtTests
             RelatedFinancialEvent = earning, Status = TeacherPayoutAdjustmentStatus.Open, Reason = "previous refund" };
         db.AddRange(allocation, account, debt);
         await db.SaveChangesAsync();
-        var service = new TeacherSettlementAuthorityService(db);
+        var service = new TeacherSettlementAuthorityService(db, new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db));
         var input = new SettlementCreationInput(teacher.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), null, [allocation.Id]);
 
         var preview = await service.PreviewAsync(input, CancellationToken.None);

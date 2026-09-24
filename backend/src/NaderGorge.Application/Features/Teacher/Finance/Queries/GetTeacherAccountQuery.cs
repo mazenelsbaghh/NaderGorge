@@ -1,3 +1,4 @@
+using NaderGorge.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -17,7 +18,8 @@ public record TeacherAccountDto(
     decimal ReservedBalance,
     decimal AvailableBalance,
     decimal DebtBalance,
-    decimal CommissionRate
+    decimal CommissionRate,
+    TeacherFinanceAccountSnapshot? Account = null
 );
 
 public class GetTeacherAccountQueryHandler : IRequestHandler<GetTeacherAccountQuery, ApiResponse<TeacherAccountDto>>
@@ -40,50 +42,10 @@ public class GetTeacherAccountQueryHandler : IRequestHandler<GetTeacherAccountQu
             return ApiResponse<TeacherAccountDto>.Fail("حساب المعلم غير موجود");
         }
 
-        var account = await _db.TeacherAccounts
-            .FirstOrDefaultAsync(ta => ta.TeacherId == teacherProfile.Id, ct);
-
-        if (account == null)
-        {
-            account = new TeacherAccount
-            {
-                Id = Guid.NewGuid(),
-                TeacherId = teacherProfile.Id,
-                TotalEarnings = 0m,
-                CurrentBalance = 0m,
-                ReservedBalance = 0m,
-                CommissionRate = teacherProfile.CommissionRate
-            };
-            _db.TeacherAccounts.Add(account);
-            await _db.SaveChangesAsync(ct);
-        }
-
-        var (todayStartUtc, tomorrowStartUtc) = CairoTime.GetCurrentDayRangeUtc();
-        var todayEarnings = await _db.TeacherFinancialAllocations
-            .Where(a => a.TeacherId == teacherProfile.Id
-                && a.TeacherShareAmount > 0
-                && a.ReviewStatus != Domain.Enums.TeacherFinancialReviewStatus.Rejected
-                && a.TeacherFinancialEvent.OccurredAt >= todayStartUtc
-                && a.TeacherFinancialEvent.OccurredAt < tomorrowStartUtc)
-            .SumAsync(a => a.TeacherShareAmount, ct);
-
-        var debtBalance = Math.Abs(await _db.TeacherPayoutAdjustments
-            .Where(a => a.TeacherId == teacherProfile.Id
-                && a.Status == Domain.Enums.TeacherPayoutAdjustmentStatus.Open
-                && a.Amount < 0)
-            .SumAsync(a => a.Amount, ct));
-
-        var dto = new TeacherAccountDto(
-            teacherProfile.Id,
-            teacherProfile.User?.FullName ?? "Unknown",
-            todayEarnings,
-            account.TotalEarnings,
-            account.CurrentBalance,
-            account.ReservedBalance,
-            account.CurrentBalance - account.ReservedBalance,
-            debtBalance,
-            account.CommissionRate
-        );
+        var account = (await new TeacherFinanceAccountService(_db).GetAsync(teacherProfile.Id, ct))!;
+        var dto = new TeacherAccountDto(account.TeacherId, account.TeacherName, account.TodayEarnings,
+            account.TotalEarned, account.Available, account.Reserved, account.NetPayable, account.Debt,
+            account.CommissionRate, account);
 
         return ApiResponse<TeacherAccountDto>.Ok(dto);
     }

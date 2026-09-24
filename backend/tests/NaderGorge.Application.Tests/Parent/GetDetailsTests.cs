@@ -253,7 +253,7 @@ public class GetDetailsTests : IDisposable
         await _db.SaveChangesAsync();
 
         // 6. Seed homework and submission
-        var homework = new Homework { Title = "واجب المحاضرة الخامسة كيمياء", LessonId = lesson1.Id, TotalScore = 10 };
+        var homework = new Homework { Title = "واجب المحاضرة الخامسة كيمياء", LessonId = lesson1.Id, TotalScore = 20 };
         _db.Homeworks.Add(homework);
         await _db.SaveChangesAsync();
 
@@ -264,6 +264,7 @@ public class GetDetailsTests : IDisposable
             Status = SubmissionStatus.Graded,
             SubmittedAt = DateTime.UtcNow.AddDays(-2),
             OverallScore = 9,
+            TotalScoreSnapshot = 10,
             Evaluation = "A"
         });
         await _db.SaveChangesAsync();
@@ -328,6 +329,9 @@ public class GetDetailsTests : IDisposable
         Assert.True(details.Homeworks[0].IsSubmitted);
         Assert.Equal("Graded", details.Homeworks[0].SubmissionState);
         Assert.Equal("A", details.Homeworks[0].Grade);
+        Assert.Equal(9m, details.Homeworks[0].Score);
+        Assert.Equal(10m, details.Homeworks[0].TotalScore);
+        Assert.Equal(90d, details.Homeworks[0].Percentage);
 
         // Warnings
         Assert.Single(details.Warnings);
@@ -337,17 +341,18 @@ public class GetDetailsTests : IDisposable
 
     // 2026-09-20: parent tracking must distinguish progress started from a completed video.
     [Theory]
-    [InlineData(171, 0, 180, 2, 1, 351)]
-    [InlineData(0, 15, 180, 1, 1, 180)]
-    [InlineData(0, 0, 180, 1, 1, 180)]
-    [InlineData(60, 0, null, 2, 1, 240)]
+    [InlineData(171, 0, 180, 2, 1, 351, 97)]
+    [InlineData(0, 15, 180, 1, 1, 180, 50)]
+    [InlineData(0, 0, 180, 1, 1, 180, 50)]
+    [InlineData(60, 0, null, 2, 1, 240, null)]
     public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance(
         int partialSeconds,
         int actualSeconds,
         int? partialDurationSeconds,
         int expectedStartedVideos,
         int expectedWatchedVideos,
-        int expectedWatchedSeconds)
+        int expectedWatchedSeconds,
+        int? expectedWatchProgressPercentage)
     {
         var student = new User { FullName = "طالب متابعة", PhoneNumber = "01000000002", PasswordHash = "hash" };
         _db.Users.Add(student);
@@ -554,6 +559,8 @@ public class GetDetailsTests : IDisposable
             UserId = student.Id,
             LessonVideoId = videoA.Id,
             TimeWatchedInSeconds = 180,
+            ActualWatchedSeconds = 90,
+            UpdatedAt = new DateTime(2026, 9, 24, 12, 0, 0, DateTimeKind.Utc),
             LearningWatchedSeconds = 180,
             LearningDurationSeconds = 180,
             WatchCount = 2
@@ -589,6 +596,28 @@ public class GetDetailsTests : IDisposable
                 LessonVideoId = inactiveVideo.Id,
                 TimeWatchedInSeconds = 700,
                 WatchCount = 7
+            });
+        var lastPlayback = new DateTime(2026, 9, 23, 17, 30, 0, DateTimeKind.Utc);
+        _db.VideoPlaybackSessions.AddRange(
+            new VideoPlaybackSession
+            {
+                UserId = student.Id, LessonVideoId = videoA.Id,
+                AcceptedWallSeconds = 120, LastProgressAt = lastPlayback.AddHours(-1)
+            },
+            new VideoPlaybackSession
+            {
+                UserId = student.Id, LessonVideoId = videoA.Id,
+                AcceptedWallSeconds = 60, LastProgressAt = lastPlayback
+            },
+            new VideoPlaybackSession
+            {
+                UserId = student.Id, LessonVideoId = videoA.Id,
+                AcceptedWallSeconds = 0, LastProgressAt = lastPlayback.AddDays(1)
+            },
+            new VideoPlaybackSession
+            {
+                UserId = student.Id, LessonVideoId = academicallyHiddenVideo.Id,
+                AcceptedWallSeconds = 999, LastProgressAt = lastPlayback.AddDays(2)
             });
         _db.LessonProgresses.Add(new LessonProgress
         {
@@ -666,6 +695,8 @@ public class GetDetailsTests : IDisposable
         // A legacy completion flag cannot hide the remaining unwatched part.
         Assert.Equal(0, details.Attendance.WatchedLessons);
         Assert.Equal(0, details.Attendance.CompletionRate);
+        // 2026-09-24: partial viewing must remain visible even with no completed lessons.
+        Assert.Equal(expectedWatchProgressPercentage, details.Attendance.WatchProgressPercentage);
         var teacher = Assert.Single(details.Teachers);
         Assert.Equal(teacherA.Id, teacher.TeacherId);
 
@@ -678,6 +709,11 @@ public class GetDetailsTests : IDisposable
         Assert.Equal(expectedWatchedVideos, watchLesson.CompletedVideos);
         Assert.Equal(2, watchLesson.WatchCount);
         Assert.Equal(expectedWatchedSeconds, watchLesson.WatchedSeconds);
+        Assert.Equal(lastPlayback, watchLesson.LastWatchedAt);
+        if (partialSeconds > 0 && actualSeconds == 0)
+            Assert.Null(watchLesson.ActualWatchedSeconds);
+        else
+            Assert.Equal(180 + actualSeconds, watchLesson.ActualWatchedSeconds);
         Assert.False(watchLesson.IsCompleted);
 
         var visibleExam = Assert.Single(details.Exams);
@@ -690,6 +726,8 @@ public class GetDetailsTests : IDisposable
         Assert.Equal(teacherA.Id, visibleHomework.TeacherId);
         Assert.False(visibleHomework.IsSubmitted);
         Assert.Equal("NotSubmitted", visibleHomework.SubmissionState);
+        Assert.Null(visibleHomework.Score);
+        Assert.Null(visibleHomework.Percentage);
 
         Assert.Equal(75m, details.Balance.CurrentBalance);
         Assert.Equal(2, details.Balance.Transactions.Count);

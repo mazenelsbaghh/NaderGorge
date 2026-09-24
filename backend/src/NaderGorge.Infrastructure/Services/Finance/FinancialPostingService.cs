@@ -115,6 +115,7 @@ public sealed class FinancialPostingService(IAppDbContext db, NaderGorge.Infrast
                 line.DimensionKey,
                 line.Memo)).ToArray()), cancellationToken);
 
+        result.ReversalOfId = original.Id;
         original.Status = JournalEntryStatus.Reversed;
         await _db.SaveChangesAsync(cancellationToken);
         return result;
@@ -149,10 +150,10 @@ public sealed class FinancialPostingService(IAppDbContext db, NaderGorge.Infrast
             throw new InvalidOperationException("FINANCE_ENTRY_NEEDS_TWO_LINES");
         if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
             throw new InvalidOperationException("FINANCE_IDEMPOTENCY_REQUIRED");
-        if (request.Lines.Any(x => x.Debit < 0m || x.Credit < 0m || (x.Debit > 0m && x.Credit > 0m) || (x.Debit == 0m && x.Credit == 0m)))
+        if (request.Lines.Any(x => x.Debit < 0m || x.Credit < 0m || (x.Debit > 0m && x.Credit > 0m) || (decimal.Round(x.Debit, 2, MidpointRounding.AwayFromZero) == 0m && decimal.Round(x.Credit, 2, MidpointRounding.AwayFromZero) == 0m)))
             throw new InvalidOperationException("FINANCE_INVALID_LINE");
-        var debit = request.Lines.Sum(x => decimal.Round(x.Debit, 2));
-        var credit = request.Lines.Sum(x => decimal.Round(x.Credit, 2));
+        var debit = request.Lines.Sum(x => decimal.Round(x.Debit, 2, MidpointRounding.AwayFromZero));
+        var credit = request.Lines.Sum(x => decimal.Round(x.Credit, 2, MidpointRounding.AwayFromZero));
         if (debit != credit)
             throw new InvalidOperationException("FINANCE_UNBALANCED_ENTRY");
     }

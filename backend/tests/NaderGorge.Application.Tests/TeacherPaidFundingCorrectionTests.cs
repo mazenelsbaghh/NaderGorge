@@ -108,8 +108,10 @@ public sealed class TeacherPaidFundingCorrectionTests
             new NaderGorge.Application.Features.Admin.PlatformFinance.PlatformFinanceDashboardService(db),
             new NaderGorge.Application.Features.Admin.PlatformFinance.Teachers.GetTeacherFinancialSummaryQuery(db));
         var before = await query.GetAsync(SaleTime.Date, DateTime.UtcNow.Date.AddDays(1), default);
-        Assert.Equal(150, before.Teachers.Single(x => x.Period.TeacherId == TeacherId).ReconciliationDifference);
-        Assert.Equal(250, before.Platform.NetProfit);
+        Assert.Equal(300, before.Teachers.Single(x => x.Period.TeacherId == TeacherId).ReconciliationDifference);
+        Assert.Equal(150, before.Teachers.Single(x => x.Period.TeacherId == TeacherId).HistoricalPeriod.TeacherShare);
+        Assert.Equal(100, before.Platform.NetProfit);
+        Assert.Equal(250, before.HistoricalPlatformNetRevenue);
         await Correct(db);
         db.ChangeTracker.Clear();
         var report = await query.GetAsync(SaleTime.Date, DateTime.UtcNow.Date.AddDays(1), default);

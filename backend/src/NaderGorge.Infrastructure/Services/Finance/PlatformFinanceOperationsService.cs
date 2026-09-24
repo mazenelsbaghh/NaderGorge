@@ -16,8 +16,7 @@ public sealed class PlatformFinanceOperationsService(
 {
     private readonly IAppDbContext _db = db;
     private readonly IFinancialPostingService _posting = posting;
-    private readonly BalanceService _balanceService = balanceService;
-    private readonly RefundPostingService? _refundPosting = refundPosting;
+    private readonly RefundPostingService _refundPosting = refundPosting ?? new RefundPostingService(db, posting, balanceService);
 
     public async Task<PlatformExpense> CreateExpenseAsync(CreatePlatformExpenseRequest request, CancellationToken ct)
     {
@@ -142,61 +141,7 @@ public sealed class PlatformFinanceOperationsService(
         if (refund.Status != PlatformRefundStatus.Draft)
             throw new InvalidOperationException("FINANCE_ALREADY_POSTED");
 
-        if (_refundPosting is not null)
-            return await _refundPosting.PostAsync(refund, idempotencyKey, actorUserId, ct);
-
-        var creditAccount = refund.Method == PlatformRefundMethod.Cash
-            ? await GetTreasuryAccountCodeAsync(refund.TreasuryAccountId!.Value, ct)
-            : "1100";
-        var lines = new List<FinancialPostingLine>
-        {
-            new("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId),
-            new(creditAccount, 0m, refund.TotalAmount, StudentId: refund.StudentId, TreasuryAccountId: refund.TreasuryAccountId)
-        };
-        if (refund.TeacherAmount > 0m)
-        {
-            lines[0] = new FinancialPostingLine("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId);
-            lines.Insert(1, new FinancialPostingLine("2000", refund.TeacherAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId));
-        }
-
-        var transaction = _db is DbContext context
-            && context.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL"
-            && context.Database.CurrentTransaction is null
-            ? await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct)
-            : null;
-        try
-        {
-            var journal = await _posting.PostAsync(new FinancialPostingRequest(
-                "PlatformRefund", refund.Id, "RefundPost", idempotencyKey,
-                refund.Reason, DateTime.UtcNow, actorUserId, lines), ct);
-            if (refund.Method == PlatformRefundMethod.StudentBalance)
-            {
-                await _balanceService.AddCredit(
-                    refund.StudentId,
-                    refund.TotalAmount,
-                    $"استرداد مالي: {refund.Reason}",
-                    refund.Id,
-                    "PlatformRefund",
-                    ct);
-            }
-            refund.JournalEntryId = journal.Id;
-            refund.Status = PlatformRefundStatus.Posted;
-            await _db.SaveChangesAsync(ct);
-            if (transaction is not null)
-                await transaction.CommitAsync(ct);
-            return refund;
-        }
-        catch
-        {
-            if (transaction is not null)
-                await transaction.RollbackAsync(ct);
-            throw;
-        }
-        finally
-        {
-            if (transaction is not null)
-                await transaction.DisposeAsync();
-        }
+        return await _refundPosting.PostAsync(refund, idempotencyKey, actorUserId, ct);
     }
 
     private async Task<string> GetTreasuryAccountCodeAsync(Guid treasuryAccountId, CancellationToken ct)

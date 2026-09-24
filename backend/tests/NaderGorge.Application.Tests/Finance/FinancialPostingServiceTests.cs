@@ -43,6 +43,21 @@ public sealed class FinancialPostingServiceTests
     }
 
     [Fact]
+    public async Task Half_cent_rounding_cannot_persist_an_unbalanced_entry()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        db.FinancialAccounts.AddRange(
+            Account("1000", FinancialAccountType.Asset, FinancialNormalSide.Debit, FinancialAccountRole.Treasury),
+            Account("1100", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.GeneralStudentLiability));
+        await db.SaveChangesAsync();
+        var request = new FinancialPostingRequest("Test", null, "Test", "audit:half-cent", "Rounding audit", DateTime.UtcNow, null,
+            [new("1000", 1.005m, 0m), new("1000", 1.005m, 0m), new("1100", 0m, 2.005m)]);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => new FinancialPostingService(db).PostAsync(request));
+        Assert.Equal("FINANCE_UNBALANCED_ENTRY", error.Message);
+        Assert.Empty(db.JournalEntries);
+    }
+
+    [Fact]
     public async Task PostAsync_rejects_a_line_that_has_both_sides()
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -130,6 +145,30 @@ public sealed class FinancialPostingServiceTests
         Assert.Equal(scoped, entry.Lines.Where(x => x.FinancialAccount.Code == "1110").Sum(x => x.Debit));
         Assert.Equal(100m - scoped, entry.Lines.Where(x => x.FinancialAccount.Code == "1100").Sum(x => x.Debit));
         Assert.Equal(100m, entry.Lines.Sum(x => x.Credit));
+    }
+
+    [Fact]
+    public async Task Historical_settlement_records_net_cash_once_including_debt_deduction()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        db.FinancialAccounts.AddRange(
+            Account("1000", FinancialAccountType.Asset, FinancialNormalSide.Debit, FinancialAccountRole.Treasury),
+            Account("2000", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherPayable));
+        var paidAt = DateTime.UtcNow.AddDays(-1);
+        db.TeacherSettlements.Add(new TeacherSettlement { TeacherId = Guid.NewGuid(), Status = TeacherSettlementStatus.Paid,
+            GrossDueAmount = 100, DebtDeductionAmount = 20, NetPayableAmount = 80, PaidAt = paidAt });
+        await db.SaveChangesAsync();
+        var migration = new PlatformFinanceMigrationService(db, new FinancialPostingService(db));
+        var preview = await migration.PreviewAsync(paidAt.Date, paidAt.Date, default);
+        Assert.Equal(80m, preview.TeacherPayoutAmount);
+        var first = await migration.PostAsync(paidAt.Date, paidAt.Date, Guid.NewGuid(), default);
+        var retry = await migration.PostAsync(paidAt.Date, paidAt.Date, Guid.NewGuid(), default);
+        Assert.Equal(1, first.Posted);
+        Assert.Equal(1, retry.AlreadyPosted);
+        var journal = Assert.Single(db.JournalEntries);
+        Assert.Equal("TeacherSettlement", journal.SourceType);
+        Assert.Equal(80m, journal.Lines.Sum(line => line.Credit));
+        Assert.Equal(80m, journal.Lines.Sum(line => line.Debit));
     }
 
     private static FinancialAccount Account(string code, FinancialAccountType type, FinancialNormalSide side, FinancialAccountRole role) => new()

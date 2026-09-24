@@ -28,7 +28,8 @@ public enum FinancialAccountRole
     Refunds = 7,
     OperatingExpense = 8,
     PayrollExpense = 9,
-    OpeningSuspense = 10
+    OpeningSuspense = 10,
+    TeacherReceivable = 11
 }
 
 public enum JournalEntryStatus

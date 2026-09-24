@@ -96,9 +96,9 @@ public class AdminFinanceController : ControllerBase
     }
 
     [HttpGet("payouts")]
-    public async Task<IActionResult> GetPayouts([FromQuery] PayoutStatus? status = null)
+    public async Task<IActionResult> GetPayouts([FromQuery] PayoutStatus? status = null, [FromQuery] Guid? teacherId = null)
     {
-        var result = await _mediator.Send(new GetPayoutsQuery(status));
+        var result = await _mediator.Send(new GetPayoutsQuery(status, teacherId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

@@ -37,7 +37,8 @@ export interface AdminRootLink {
 }
 
 export const adminMenuItems = [
-  { label: 'أرباح المنصّة', href: '/admin/platform-profits', icon: <Coins className="h-4 w-4" />, adminOnly: true },
+  { label: 'امتحاناتك', href: '/admin/emthntak', icon: <BookOpen className="h-4 w-4" /> },
+  { label: 'ملخص الحسابات', href: '/admin/platform-profits', icon: <Coins className="h-4 w-4" />, adminOnly: true },
   { label: 'التقييم والمتابعة', href: '/admin/learning-center', icon: <BarChart3 className="h-4 w-4" />, adminOnly: true },
   { label: 'وكيل الإدارة AI', href: '/admin/ai-agent', icon: <Bot className="h-4 w-4" />, adminOnly: true },
   { label: 'المستندات والمواد', href: '/admin/subjects', icon: <Library className="h-4 w-4" />, permission: 'content.manage' },
@@ -97,7 +98,8 @@ export const adminAllNavigationRoutePermissions = [
 ];
 
 export const adminRootLinks: AdminRootLink[] = [
-  { href: '/admin/platform-profits', title: 'أرباح المنصّة', body: 'حصة كل مدرّس وحصة المنصّة والمصروفات وصافي الربح، مع تقرير قابل للتصدير.', icon: Coins, adminOnly: true },
+  { href: '/admin/emthntak', title: 'امتحاناتك', body: 'إدارة التطبيق: المدرسون والكتب والامتحانات والاشتراكات.', icon: BookOpen },
+  { href: '/admin/platform-profits', title: 'ملخص الحسابات', body: 'المنصّة كسبت كام، وكل مدرس باقي له كام.', icon: Coins, adminOnly: true },
   { href: '/admin/learning-center', title: 'التقييم والمتابعة', body: 'خريطة فهم المنهج ومتابعة الطلاب وبنك الأسئلة المنظم.', icon: BarChart3, adminOnly: true },
   {
     href: '/admin/ai-agent',
@@ -180,8 +182,8 @@ export const adminRootLinks: AdminRootLink[] = [
   },
   {
     href: '/admin/platform-finance',
-    title: 'المركز المالي العام',
-    body: 'الخزينة، أرصدة الطلاب، مستحقات المدرسين، المصروفات، المرتجعات، الميزانيات والتقارير في دفتر مالي موحد.',
+    title: 'الأرصدة والمحافظ',
+    body: 'الفلوس الموجودة، وأرصدة الطلاب، والمبالغ الباقية للمدرسين والموردين.',
     icon: Wallet,
   },
   {

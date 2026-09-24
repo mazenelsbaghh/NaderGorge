@@ -88,14 +88,22 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (_playbackConcurrency is not null)
             await _playbackConcurrency.AcquireAsync(request.UserId, request.LessonVideoId, ct);
 
-        var sessionState = await _db.VideoPlaybackSessions
-            .Where(candidate => candidate.Id == request.SessionId
+        var sessionState = await (
+            from candidate in _db.VideoPlaybackSessions
+            where candidate.Id == request.SessionId
                  && candidate.UserId == request.UserId
-                 && candidate.LessonVideoId == request.LessonVideoId)
-            .Select(candidate => new
+                 && candidate.LessonVideoId == request.LessonVideoId
+            join watch in _db.VideoWatchEvents
+                on new { candidate.UserId, candidate.LessonVideoId }
+                equals new { watch.UserId, watch.LessonVideoId } into watches
+            from watch in watches.DefaultIfEmpty()
+            select new
             {
                 Session = candidate,
                 Video = candidate.LessonVideo,
+                WatchEvent = watch,
+                IsStaffOrTeacher = _db.UserRoles.Any(role =>
+                    role.UserId == request.UserId && role.Role.Type != RoleType.Student),
                 HasNewerSession = _db.VideoPlaybackSessions.Any(other =>
                     other.UserId == request.UserId
                     && other.LessonVideoId == request.LessonVideoId
@@ -124,8 +132,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         var effectiveDurationSeconds = trackingPolicy.DurationSeconds;
         var thresholdSeconds = trackingPolicy.ThresholdSeconds;
 
-        var watchEvent = await _db.VideoWatchEvents
-            .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);
+        var watchEvent = sessionState.WatchEvent;
 
         var maxLimit = watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount;
 
@@ -155,11 +162,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             watchEvent.TimeWatchedInSeconds = watchEvent.WatchCount * thresholdSeconds;
 
         maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
-        var isStaffOrTeacher = await _db.UserRoles
-            .Include(ur => ur.Role)
-            .AnyAsync(ur => ur.UserId == request.UserId && ur.Role.Type != RoleType.Student, ct);
-
-        var isLocked = !isStaffOrTeacher && maxLimit > 0 && watchEvent.WatchCount >= maxLimit;
+        var isLocked = !sessionState.IsStaffOrTeacher && maxLimit > 0 && watchEvent.WatchCount >= maxLimit;
         if (isLocked)
         {
             watchEvent.WatchCount = Math.Min(watchEvent.WatchCount, maxLimit);
@@ -174,6 +177,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             session,
             now,
             pendingSegments.Count);
+        var acceptedWallSecondsBefore = session.AcceptedWallSeconds;
         var viewRegistered = false;
         foreach (var segment in pendingSegments)
         {
@@ -190,6 +194,9 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 0m,
                 remainingSessionWallSeconds - progressResult.AcceptedWallSeconds);
         }
+
+        if (session.AcceptedWallSeconds > acceptedWallSecondsBefore)
+            session.LastProgressAt = now;
 
         RenewSession(
             session,
@@ -437,7 +444,6 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         DateTime now)
     {
         session.LastProgressSequence = progressSequence;
-        session.LastProgressAt = now;
         session.ExpiresAt = now.Add(VideoPlaybackSessionPolicy.ResolveLifetime(totalDurationSeconds));
         session.UpdatedAt = now;
     }

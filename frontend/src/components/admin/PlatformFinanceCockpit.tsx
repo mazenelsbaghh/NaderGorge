@@ -1,87 +1,79 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { cairoCurrentDate, cairoCurrentMonthPeriod } from '@/lib/cairo-time';
 import { AdminPage } from '@/components/admin';
-import platformFinanceService, { FinanceJournal, PlatformFinanceDashboard, WalletFinanceReport } from '@/services/platform-finance-service';
+import platformFinanceService, { type PlatformFinanceDashboard } from '@/services/platform-finance-service';
+import FinancePeriodPicker from '@/features/platform-finance/FinancePeriodPicker';
+import FinanceProfitSummary, { financeMoney as money } from '@/features/platform-finance/FinanceProfitSummary';
+import FinanceLedgerDetails from '@/features/platform-finance/FinanceLedgerDetails';
+import { canAccessAdminRoute } from '@/packages/admin/route-permissions';
+import { useAuthStore } from '@/stores/auth-store';
 
-const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ج.م`;
-
-function Metric({ label, value, tone = 'default' }: { label: string; value: number; tone?: 'default' | 'positive' | 'negative' }) {
-  return <div className="admin-panel rounded-2xl p-5">
-    <p className="text-sm font-semibold text-[var(--admin-muted)]">{label}</p>
-    <p className={`mt-3 text-2xl font-black ${tone === 'positive' ? 'text-emerald-600' : tone === 'negative' ? 'text-rose-600' : 'text-[var(--admin-text)]'}`}>{money(value)}</p>
-  </div>;
-}
+const balanceLinks = [
+  { href: '/admin/platform-profits', label: 'أرباح المنصّة ومستحقات المدرسين' },
+  { href: '/admin/platform-finance/wallets', label: 'حركة كل محفظة' },
+  { href: '/admin/platform-finance/planning', label: 'تحويل بين المحافظ والخزائن' },
+];
 
 export default function PlatformFinanceCockpit() {
-  const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const [from, setFrom] = useState(monthStart);
-  const [to, setTo] = useState(today.toISOString().slice(0, 10));
+  const user = useAuthStore(state => state.user);
+  const [period, setPeriod] = useState(() => ({ from: cairoCurrentMonthPeriod().first, to: cairoCurrentDate() }));
   const [dashboard, setDashboard] = useState<PlatformFinanceDashboard | null>(null);
-  const [ledger, setLedger] = useState<FinanceJournal[]>([]);
-  const [walletReport, setWalletReport] = useState<WalletFinanceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [showLedger, setShowLedger] = useState(false);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+    setDashboard(null);
     setLoading(true);
     setError('');
-    try {
-      const [nextDashboard, nextLedger, nextWalletReport] = await Promise.all([
-        platformFinanceService.getDashboard(from, to),
-        platformFinanceService.getLedger(from, to),
-        platformFinanceService.getWalletReport(from, to),
-      ]);
-      setDashboard(nextDashboard);
-      setLedger(nextLedger);
-      setWalletReport(nextWalletReport);
-    } catch {
-      setError('تعذر تحميل بيانات المركز المالي. تأكد من الصلاحية ومن تطبيق migration المالية.');
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to]);
+    void platformFinanceService.getDashboard(period.from, period.to)
+      .then(result => { if (active) setDashboard(result); })
+      .catch(() => { if (active) setError('تعذر تحميل الأرصدة. جرّب مرة تانية.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [period, attempt]);
 
-  useEffect(() => { void load(); }, [load]);
-  const accounts = useMemo(() => dashboard?.accounts ?? [], [dashboard]);
-
-  return <AdminPage activePath="/admin/platform-finance" sectionLabel="المالية" pageTitle="المركز المالي العام" subtitle="الخزينة، أرصدة الطلبة، مستحقات المدرسين، الإيرادات والمصروفات في مكان واحد.">
-    <div className="space-y-6" dir="rtl">
-      <div className="admin-panel flex flex-wrap items-end gap-3 rounded-2xl p-4">
-        <label className="text-sm font-bold">من<input className="admin-input mt-2 block" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-        <label className="text-sm font-bold">إلى<input className="admin-input mt-2 block" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
-        <button type="button" className="admin-btn-primary inline-flex items-center gap-2" onClick={() => void load()} disabled={loading}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> تحديث</button>
-        <Link className="admin-btn-ghost" href="/admin/platform-finance/operations">المصروفات والاستردادات</Link>
-        <Link className="admin-btn-ghost" href="/admin/platform-finance/planning">الميزانيات والخزائن</Link>
-        <Link className="admin-btn-ghost" href="/admin/platform-finance/migration">إعادة بناء التاريخ</Link>
-        <a className="admin-btn-ghost" href={`/api/admin/platform-finance/exports/xlsx?from=${from}&to=${to}`}>Excel</a>
-        <a className="admin-btn-ghost" href={`/api/admin/platform-finance/exports/pdf?from=${from}&to=${to}`}>PDF</a>
-      </div>
-      {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">{error}</div> : null}
-      {loading && !dashboard ? <div className="admin-panel rounded-2xl p-8 text-center font-bold">جاري تحميل المركز المالي…</div> : null}
-      {dashboard ? <>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="النقدية والمحافظ" value={dashboard.cash} />
-          <Metric label="أرصدة طلبة عامة" value={dashboard.generalStudentLiability} />
-          <Metric label="مستحقات المدرسين" value={dashboard.teacherPayable} tone="negative" />
-          <Metric label="صافي الربح" value={dashboard.netProfit} tone={dashboard.netProfit >= 0 ? 'positive' : 'negative'} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="أرصدة مرتبطة بمدرس" value={dashboard.teacherStudentLiability} />
-          <Metric label="مستحقات الموردين" value={dashboard.supplierPayable} tone="negative" />
-          <Metric label="إيرادات الشراء" value={dashboard.revenue} tone="positive" />
-          <Metric label="الاستردادات + المصروفات" value={dashboard.refunds + dashboard.expenses} tone="negative" />
-        </div>
-        <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">تقارير المحافظ</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{walletReport?.wallets.map(wallet => <div key={wallet.id} className="rounded-xl border border-[var(--admin-border)] p-4"><div className="flex items-center justify-between"><b>{wallet.label}</b><span className="text-xs text-[var(--admin-muted)]">{wallet.phoneNumber}</span></div><p className="mt-2 text-xl font-black">الرصيد: {money(wallet.currentBalance)}</p><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><span>الوارد: <b className="text-emerald-600">{money(wallet.incoming)}</b></span><span>الصادر: <b className="text-rose-600">{money(wallet.outgoing)}</b></span><span>مصروفات: {money(wallet.expenses)}</span><span>تحويل داخلي: {money(wallet.internalTransfers)}</span><span>المعاملات: {wallet.transactions}</span></div></div>)}</div></section>
-        <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">شحن رصيد المدرسين من المحافظ</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{walletReport?.teacherRechargeCards.map(card => <div key={`${card.walletId}-${card.teacherName}`} className="rounded-xl border border-[var(--admin-border)] p-4"><p className="font-black">{card.teacherName}</p><p className="mt-2 text-lg font-black text-emerald-600">{money(card.amount)}</p><p className="text-sm text-[var(--admin-muted)]">{card.count} عملية شحن</p></div>) ?? <p className="text-[var(--admin-muted)]">لا توجد شحنات رصيد مدرس في الفترة.</p>}</div></section>
-        <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-          <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">أرصدة الحسابات</h2><div className="space-y-3">{accounts.map((account) => <div key={account.accountId} className="flex items-center justify-between border-b border-[var(--admin-border)] pb-3"><span><b>{account.code}</b> <span className="text-sm text-[var(--admin-muted)]">{account.name}</span></span><b>{money(account.balance)}</b></div>)}</div></section>
-          <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">آخر القيود</h2><div className="space-y-3">{ledger.length === 0 ? <p className="text-[var(--admin-muted)]">لا توجد قيود في الفترة.</p> : ledger.map((entry) => <details key={entry.id} className="rounded-xl border border-[var(--admin-border)] p-3"><summary className="cursor-pointer list-none"><div className="flex items-center justify-between gap-3"><span><b>#{entry.sequenceNumber}</b> {entry.description}</span><span className="text-xs text-[var(--admin-muted)]">{new Date(entry.occurredAt).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo' })}</span></div></summary><div className="mt-3 space-y-2 text-sm">{entry.lines.map((line) => <div key={line.id} className="flex justify-between"><span>{line.accountCode} - {line.accountName}</span><span className="font-bold">{line.debit ? <><ArrowDownLeft size={14} className="inline text-rose-600" /> {money(line.debit)}</> : <><ArrowUpRight size={14} className="inline text-emerald-600" /> {money(line.credit)}</>}</span></div>)}</div></details>)}</div></section>
-        </div>
-      </> : null}
+  return <AdminPage activePath="/admin/platform-finance" sectionLabel="الحسابات" pageTitle="الأرصدة والمحافظ" subtitle="عندنا كام، وللطلاب والمدرسين كام.">
+    <div className="mx-auto max-w-6xl space-y-6" dir="rtl">
+      <FinancePeriodPicker period={period} onChange={setPeriod} loading={loading} />
+      {loading ? <div role="status" className="rounded-xl bg-[var(--admin-card)] px-6 py-16 text-center text-[var(--admin-muted)]">جارٍ تحميل الأرصدة...</div> : error ? <div role="alert" className="rounded-xl border border-[var(--admin-border)] p-6"><p>{error}</p><button type="button" className="admin-btn-primary mt-4 min-h-11 px-4" onClick={() => setAttempt(value => value + 1)}>إعادة المحاولة</button></div> : dashboard && <>
+        <section aria-label="الأرصدة في نهاية الفترة" className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 sm:p-6">
+          <h2 className="font-bold">الفلوس في المحافظ والخزائن</h2>
+          <p className="mt-3 text-3xl font-bold tabular-nums">{money(dashboard.cash)}</p>
+          <p className="mt-2 text-sm text-[var(--admin-muted)]">الرصيد المسجّل لحد نهاية الفترة، مش صافي الربح.</p>
+          <dl className="mt-6 divide-y divide-[var(--admin-border)] border-t border-[var(--admin-border)]">
+            {[
+              ['أرصدة الطلاب اللي لسه ما استخدموهاش', dashboard.generalStudentLiability + dashboard.teacherStudentLiability],
+              ['باقي للمدرسين', dashboard.teacherPayable],
+              ['باقي للموردين', dashboard.supplierPayable],
+            ].map(([label, amount]) => <div key={label} className="flex flex-wrap justify-between gap-3 py-4 text-sm"><dt>{label}</dt><dd className="font-bold tabular-nums">{money(Number(amount))}</dd></div>)}
+          </dl>
+          <details className="border-t border-[var(--admin-border)] text-sm">
+            <summary className="cursor-pointer pt-4 font-bold">تفاصيل أرصدة الطلاب</summary>
+            <p className="mt-3">رصيد عام: {money(dashboard.generalStudentLiability)}</p>
+            <p className="mt-2">رصيد مخصص لمدرّس: {money(dashboard.teacherStudentLiability)}</p>
+          </details>
+        </section>
+        <nav aria-label="تفاصيل الأرصدة" className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold">{balanceLinks.filter(link => canAccessAdminRoute(link.href, user)).map(link => <Link key={link.href} className="inline-flex min-h-11 items-center text-[var(--admin-primary)] underline underline-offset-4" href={link.href}>{link.label}</Link>)}</nav>
+        <details className="space-y-4">
+          <summary className="cursor-pointer py-3 font-bold">الدخل والمصاريف في الفترة دي</summary>
+          <FinanceProfitSummary dashboard={dashboard} />
+        </details>
+        <details open={showLedger} className="border-t border-[var(--admin-border)]" onToggle={event => setShowLedger(event.currentTarget.open)}>
+          <summary className="cursor-pointer py-5 text-sm font-bold">تفاصيل محاسبية متقدمة</summary>
+          {showLedger && <FinanceLedgerDetails period={period} accounts={dashboard.accounts} />}
+          <div className="flex flex-wrap gap-3 pb-5">
+            <Link className="admin-btn-ghost inline-flex min-h-11 items-center px-4" href="/admin/platform-finance/reports">التقارير التفصيلية</Link>
+            <a className="admin-btn-ghost inline-flex min-h-11 items-center px-4" href={`/api/admin/platform-finance/exports/xlsx?from=${period.from}&to=${period.to}`}>تنزيل Excel</a>
+            <a className="admin-btn-ghost inline-flex min-h-11 items-center px-4" href={`/api/admin/platform-finance/exports/pdf?from=${period.from}&to=${period.to}`}>تنزيل PDF</a>
+          </div>
+        </details>
+      </>}
     </div>
   </AdminPage>;
 }

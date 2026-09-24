@@ -84,6 +84,12 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 throw new InvalidOperationException("This code group has expired.");
 
             var codeGroup = accessCode.CodeGroup;
+            var financialTerms = await _db.CodeGroupFinancialTerms.AsNoTracking().FirstOrDefaultAsync(x => x.CodeGroupId == codeGroup.Id, ct);
+            var accountingTrigger = CodeGroupFinancePolicy.Trigger(codeGroup, financialTerms);
+            var batchCharged = codeGroup.AccountingRecordedAt.HasValue || await CodeGroupAccountingGuard.HasBatchChargeAsync(_db, codeGroup.Id, ct);
+            if (codeGroup.CodeType != CodeType.Balance && accountingTrigger == TeacherAgreementTrigger.CodeDelivery && !batchCharged)
+                return ApiResponse<ActivateCodeResponse>.Fail("الدفعة لم تُعتمد بعد. تواصل مع الإدارة لتأكيد تسليم الأكواد.", ["CODE_DELIVERY_NOT_CONFIRMED"]);
+
             var availableExamTarget = codeGroup.CodeType == CodeType.Exam
                 ? await ExamCodeAvailability.ResolveAsync(
                     _db,
@@ -395,97 +401,17 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
             }
 
             // Calculate and credit teacher commission (except for balance codes which don't directly purchase items)
-            var financialTerms = await _db.CodeGroupFinancialTerms.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.CodeGroupId == codeGroup.Id, ct);
-            var accountingTrigger = financialTerms?.Trigger
-                ?? (codeGroup.AccountingTiming == CodeAccountingTiming.Immediate
-                    ? TeacherAgreementTrigger.CodeDelivery
-                    : TeacherAgreementTrigger.CodeActivation);
-
-            // Delivery-billed batches were recorded by the audited confirmation endpoint.
-            // Redeeming one of their codes must only grant access, never create a second due.
-            if (codeType != CodeType.Balance && !codeGroup.AccountingRecordedAt.HasValue && accountingTrigger == TeacherAgreementTrigger.CodeActivation
-                && !await CodeGroupAccountingGuard.HasBatchChargeAsync(_db, codeGroup.Id, ct))
+            if (codeType != CodeType.Balance && !batchCharged && accountingTrigger == TeacherAgreementTrigger.CodeActivation)
             {
-                decimal itemPrice = 0;
-                switch (codeType)
-                {
-                    case CodeType.Package:
-                        if (codeGroup.PackageId.HasValue)
-                        {
-                            var pkg = await _db.Packages.FirstOrDefaultAsync(p => p.Id == codeGroup.PackageId.Value, ct);
-                            if (pkg != null) itemPrice = pkg.Price;
-                        }
-                        break;
-                    case CodeType.Term:
-                        if (codeGroup.TermId.HasValue)
-                        {
-                            var term = await _db.Terms.FirstOrDefaultAsync(t => t.Id == codeGroup.TermId.Value, ct);
-                            if (term != null) itemPrice = term.Price;
-                        }
-                        break;
-                    case CodeType.Month:
-                        if (codeGroup.ContentSectionId.HasValue)
-                        {
-                            var section = await _db.ContentSections.FirstOrDefaultAsync(s => s.Id == codeGroup.ContentSectionId.Value, ct);
-                            if (section != null) itemPrice = section.Price;
-                        }
-                        break;
-                    case CodeType.Lesson:
-                        if (codeGroup.LessonId.HasValue)
-                        {
-                            var lesson = await _db.Lessons.FirstOrDefaultAsync(l => l.Id == codeGroup.LessonId.Value, ct);
-                            if (lesson != null) itemPrice = lesson.Price;
-                        }
-                        break;
-                }
-
+                var policy = new CodeGroupFinancePolicy(_db);
+                var (itemPrice, targetType, targetId, contentName) = await policy.ResolvePricingAsync(codeGroup, ct);
                 itemPrice = Math.Max(0m, itemPrice);
-                var discountPercentage = Math.Clamp(codeGroup.DiscountPercentage ?? 0m, 0m, 100m);
-                var finalPrice = itemPrice * (1m - discountPercentage / 100m);
-
+                var finalPrice = decimal.Round(itemPrice * (1m - Math.Clamp(codeGroup.DiscountPercentage ?? 0m, 0m, 100m) / 100m), 2, MidpointRounding.AwayFromZero);
                 var teacherProfile = codeGroup.TeacherId.HasValue
-                    ? await _db.TeacherProfiles.FirstOrDefaultAsync(tp => tp.Id == codeGroup.TeacherId.Value, ct)
-                    : null;
-
-                var targetType = codeType switch
-                {
-                    CodeType.Package => SalesTargetType.Package,
-                    CodeType.Term => SalesTargetType.Term,
-                    CodeType.Month => SalesTargetType.ContentSection,
-                    CodeType.Lesson => SalesTargetType.Lesson,
-                    CodeType.Exam => SalesTargetType.PublicExam,
-                    _ => SalesTargetType.Platform
-                };
-                var targetId = codeType switch
-                {
-                    CodeType.Package => codeGroup.PackageId ?? codeGroup.Id,
-                    CodeType.Term => codeGroup.TermId ?? codeGroup.Id,
-                    CodeType.Month => codeGroup.ContentSectionId ?? codeGroup.Id,
-                    CodeType.Lesson => codeGroup.LessonId ?? codeGroup.Id,
-                    CodeType.Exam => codeGroup.PublicExamProductId ?? codeGroup.ExamId ?? codeGroup.Id,
-                    _ => codeGroup.Id
-                };
+                    ? await _db.TeacherProfiles.FirstOrDefaultAsync(tp => tp.Id == codeGroup.TeacherId.Value, ct) : null;
                 var occurredAt = DateTime.UtcNow;
-                TeacherAgreementResolution? agreement = null;
-                if (teacherProfile != null)
-                {
-                    if (financialTerms?.AgreementId is Guid agreementId)
-                    {
-                        var selected = await _db.TeacherFinancialAgreements.AsNoTracking()
-                            .FirstOrDefaultAsync(x => x.Id == agreementId && x.TeacherId == teacherProfile.Id && x.IsActive
-                                && x.Trigger == TeacherAgreementTrigger.CodeActivation
-                                && x.EffectiveFrom <= occurredAt && (x.EffectiveTo == null || x.EffectiveTo >= occurredAt), ct);
-                        if (selected != null)
-                        {
-                            agreement = new TeacherAgreementResolution(selected.Id, selected.ScopeType, selected.ScopeId,
-                                selected.AllocationMode, selected.AllocationValue, selected.PriceBasis);
-                        }
-                    }
-                    var contentScopes = await _agreementResolver.BuildScopesAsync(targetType, targetId, ct);
-                    agreement ??= await _agreementResolver.ResolveAsync(teacherProfile.Id, TeacherAgreementTrigger.CodeActivation,
-                        [(TeacherAgreementScopeType.CodeGroup, codeGroup.Id), .. contentScopes], occurredAt, ct);
-                }
+                var agreement = teacherProfile == null ? null : await policy.ResolveAgreementAsync(codeGroup,
+                    financialTerms ?? new CodeGroupFinancialTerms(), targetType, targetId, TeacherAgreementTrigger.CodeActivation, occurredAt, ct);
                 var (allocationMode, teacherShare, basisAmount) = agreement is null
                     ? (TeacherAllocationMode.CommissionRate, 0m, finalPrice)
                     : TeacherAgreementResolver.CalculateAllocation(agreement, itemPrice, finalPrice);
@@ -531,7 +457,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                     }),
                     occurredAt,
                     TeacherFinancialReviewStatus.AutoApproved,
-                    teacherProfile != null && teacherShare > 0m
+                    teacherProfile != null
                         ? new[]
                         {
                             new TeacherFinancialAllocationInput(
@@ -543,7 +469,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                                 platformShare,
                                 user.FullName,
                                 user.PhoneNumber,
-                                codeGroup.Name,
+                                contentName,
                                 accessCode.SerialNumber,
                                 AgreementId: agreement!.AgreementId,
                                 AgreementScopeType: agreement.ScopeType,

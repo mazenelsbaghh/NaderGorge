@@ -1,5 +1,7 @@
 'use client';
 
+import { cairoCurrentDate } from '@/lib/cairo-time';
+
 import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeftRight, Calculator, RefreshCw } from 'lucide-react';
 import { AdminPage } from '@/components/admin';
@@ -9,7 +11,7 @@ const idempotency = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2 }).format(value)} ج.م`;
 
 export default function PlatformFinancePlanning() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = cairoCurrentDate();
   const [bootstrap, setBootstrap] = useState<FinanceBootstrap | null>(null);
   const [name, setName] = useState('ميزانية شهرية');
   const [from, setFrom] = useState(today.slice(0, 8) + '01');

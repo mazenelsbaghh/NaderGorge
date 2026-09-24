@@ -15,6 +15,20 @@ public sealed record StudentLessonCompletionContext(
 /// </summary>
 public static class StudentLessonCompletionReader
 {
+    public static async Task<HashSet<Guid>> GetCompletedLessonsFromProgressAsync(
+        StudentLessonCompletionContext context,
+        IReadOnlyCollection<StudentVideoProgress> visibleActiveProgress,
+        CancellationToken cancellationToken)
+    {
+        if (context.CandidateLessonIds.Count == 0) return [];
+        var completed = await GetLegacyCompletedLessonIdsAsync(
+            context, context.CandidateLessonIds, cancellationToken);
+        completed.ExceptWith(visibleActiveProgress.Select(video => video.LessonId));
+        completed.UnionWith(visibleActiveProgress.GroupBy(video => video.LessonId)
+            .Where(parts => parts.All(part => part.IsCompleted)).Select(parts => parts.Key));
+        return completed;
+    }
+
     public static Task<HashSet<Guid>> GetCompletedLessonIdsAsync(
         StudentLessonCompletionContext context,
         CancellationToken cancellationToken) =>

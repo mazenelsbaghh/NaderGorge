@@ -23,7 +23,8 @@ public record TeacherFinancialAllocationInput(
     Guid? AgreementScopeId = null,
     TeacherAgreementAllocationMode? AgreementAllocationMode = null,
     TeacherPriceBasis? PriceBasis = null,
-    TeacherDiscountBearer DiscountBearer = TeacherDiscountBearer.Platform
+    TeacherDiscountBearer DiscountBearer = TeacherDiscountBearer.Platform,
+    bool RetainedByTeacher = false
 );
 
 public record TeacherFinancialEventInput(
@@ -50,7 +51,7 @@ public sealed record TeacherRefundScope(Guid PurchaseOperationId, decimal Fracti
 
 public class TeacherAccountingService
 {
-    private sealed record ApprovedTeacherCredit(Guid TeacherId, decimal Amount);
+    private sealed record ApprovedTeacherCredit(Guid TeacherId, decimal Amount, decimal AvailableAmount);
 
     private readonly IAppDbContext _db;
 
@@ -112,12 +113,13 @@ public class TeacherAccountingService
             var payoutStatus = allocationInput.ReviewStatus == TeacherFinancialReviewStatus.Rejected
                 || allocationInput.TeacherShareAmount == 0m
                     ? TeacherFinancialPayoutStatus.NotEligible
-                    : TeacherFinancialPayoutStatus.Unpaid;
+                    : allocationInput.RetainedByTeacher ? TeacherFinancialPayoutStatus.Paid : TeacherFinancialPayoutStatus.Unpaid;
 
             evt.Allocations.Add(new TeacherFinancialAllocation
             {
                 Id = Guid.NewGuid(),
                 TeacherId = allocationInput.TeacherId,
+                RetainedByTeacher = allocationInput.RetainedByTeacher,
                 AllocationMode = allocationInput.AllocationMode,
                 AllocationValue = allocationInput.AllocationValue,
                 GrossBasisAmount = allocationInput.GrossBasisAmount,
@@ -289,7 +291,8 @@ public class TeacherAccountingService
             .GroupBy(a => a.TeacherId)
             .Select(group => new ApprovedTeacherCredit(
                 group.Key,
-                group.Sum(allocation => allocation.TeacherShareAmount)));
+                group.Sum(allocation => allocation.TeacherShareAmount),
+                group.Where(allocation => !allocation.RetainedByTeacher).Sum(allocation => allocation.TeacherShareAmount)));
     }
 
     private async Task<bool> TryCreditExistingAccountAtomically(ApprovedTeacherCredit credit, CancellationToken ct)
@@ -303,7 +306,7 @@ public class TeacherAccountingService
             .Where(account => account.TeacherId == credit.TeacherId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(account => account.TotalEarnings, account => account.TotalEarnings + credit.Amount)
-                .SetProperty(account => account.CurrentBalance, account => account.CurrentBalance + credit.Amount)
+                .SetProperty(account => account.CurrentBalance, account => account.CurrentBalance + credit.AvailableAmount)
                 .SetProperty(account => account.Version, account => account.Version + 1)
                 .SetProperty(account => account.UpdatedAt, now), ct);
 
@@ -330,7 +333,7 @@ public class TeacherAccountingService
         }
 
         account.TotalEarnings += credit.Amount;
-        account.CurrentBalance += credit.Amount;
+        account.CurrentBalance += credit.AvailableAmount;
         account.UpdatedAt = DateTime.UtcNow;
     }
 }

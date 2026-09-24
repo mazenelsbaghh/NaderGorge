@@ -1,3 +1,4 @@
+using NaderGorge.Application.Features.Admin.PlatformFinance;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Entities;
@@ -45,10 +46,10 @@ public sealed class PlatformFinancePlanningService(
 
     public async Task<IReadOnlyList<object>> GetBudgetActualsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var actuals = await _db.JournalLines.AsNoTracking()
-            .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
-                && line.JournalEntry.OccurredAt >= from.Date
-                && line.JournalEntry.OccurredAt < to.Date.AddDays(1))
+        var (start, end) = FinancialLedgerQuery.Period(from, to);
+        var actuals = await new FinancialLedgerQuery(_db).Lines
+            .Where(line => line.JournalEntry.OccurredAt >= start
+                && line.JournalEntry.OccurredAt < end)
             .GroupBy(line => new { line.FinancialAccountId, line.FinancialAccount.Code, line.FinancialAccount.Name })
             .Select(group => new
             {
@@ -94,11 +95,11 @@ public sealed class PlatformFinancePlanningService(
     {
         var treasury = await _db.TreasuryAccounts.FindAsync([request.TreasuryAccountId], ct)
             ?? throw new InvalidOperationException("FINANCE_TREASURY_NOT_FOUND");
-        var systemBalance = await (from line in _db.JournalLines
+        var (_, end) = FinancialLedgerQuery.Period(request.AsOfDate, request.AsOfDate);
+        var systemBalance = await (from line in new FinancialLedgerQuery(_db).Lines
                                    join entry in _db.JournalEntries on line.JournalEntryId equals entry.Id
-                                   where entry.Status == JournalEntryStatus.Posted
-                                       && line.TreasuryAccountId == request.TreasuryAccountId
-                                       && entry.OccurredAt <= request.AsOfDate
+                                   where line.TreasuryAccountId == request.TreasuryAccountId
+                                       && entry.OccurredAt < end
                                    select line.Debit - line.Credit).SumAsync(ct);
         var reconciliation = new TreasuryReconciliation
         {

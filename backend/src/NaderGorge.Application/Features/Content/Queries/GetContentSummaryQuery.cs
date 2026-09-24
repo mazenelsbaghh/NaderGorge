@@ -95,12 +95,14 @@ public sealed class GetContentSummaryQueryHandler
         var grants = allGrants.Where(grant => !grant.CancelledAt.HasValue).ToArray();
         var refundedGrantIds = await new ContentRefundFactSource(_db).LoadGrantIdsAsync(allGrants, ct);
         var currentTime = DateTime.UtcNow;
-        var activeByPackage = ContentAcquisitionCalculator.WhereEffectiveAt(grants, currentTime)
+        var activeStudentIdsByPackage = ContentAcquisitionCalculator.WhereEffectiveAt(grants, currentTime)
             .GroupBy(grant => grant.PackageId)
-            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId).Distinct().Count());
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId).ToHashSet());
         var refundedByPackage = allGrants.Where(grant => refundedGrantIds.Contains(grant.GrantId))
             .GroupBy(grant => grant.PackageId)
-            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId).Distinct().Count());
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.UserId)
+                .Distinct()
+                .Count(studentId => !activeStudentIdsByPackage.GetValueOrDefault(group.Key, []).Contains(studentId)));
         var acquisitionsByPackage = ContentAcquisitionCalculator.SummarizePackages(packageIds, grants);
 
         var summaries = packages.Select(package =>
@@ -118,7 +120,7 @@ public sealed class GetContentSummaryQueryHandler
                 acquisitions.Overall.Purchased,
                 acquisitions.Overall.GiftOnly,
                 acquisitions.Overall.Total,
-                activeByPackage.GetValueOrDefault(package.Id),
+                activeStudentIdsByPackage.GetValueOrDefault(package.Id)?.Count ?? 0,
                 refundedByPackage.GetValueOrDefault(package.Id));
         }).ToArray();
 

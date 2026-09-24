@@ -31,11 +31,32 @@ public class TeacherAgreementResolver
             .AsNoTracking()
             .Where(x => x.TeacherId == teacherId
                 && x.IsActive
-                && x.Trigger == trigger
+                && (x.Trigger == trigger || x.Trigger == TeacherAgreementTrigger.AllSources)
                 && x.EffectiveFrom <= occurredAt
-                && (x.EffectiveTo == null || x.EffectiveTo >= occurredAt))
+                && (x.EffectiveTo == null || x.EffectiveTo > occurredAt))
             .ToListAsync(ct);
 
+        var resolution = ResolveFromAgreements(candidates, scopes);
+        if (resolution is not null) return resolution;
+
+        var teacherRate = await _db.TeacherProfiles
+            .Where(x => x.Id == teacherId)
+            .Select(x => (decimal?)x.CommissionRate)
+            .FirstOrDefaultAsync(ct) ?? 0m;
+
+        return new TeacherAgreementResolution(
+            null,
+            TeacherAgreementScopeType.Default,
+            null,
+            TeacherAgreementAllocationMode.Percentage,
+            teacherRate,
+            TeacherPriceBasis.Gross);
+    }
+
+    public static TeacherAgreementResolution? ResolveFromAgreements(
+        IReadOnlyList<TeacherFinancialAgreement> candidates,
+        IReadOnlyList<(TeacherAgreementScopeType ScopeType, Guid ScopeId)> scopes)
+    {
         foreach (var scope in scopes)
         {
             var match = candidates
@@ -72,18 +93,7 @@ public class TeacherAgreementResolver
             return ToResolution(fallback);
         }
 
-        var teacherRate = await _db.TeacherProfiles
-            .Where(x => x.Id == teacherId)
-            .Select(x => (decimal?)x.CommissionRate)
-            .FirstOrDefaultAsync(ct) ?? 0m;
-
-        return new TeacherAgreementResolution(
-            null,
-            TeacherAgreementScopeType.Default,
-            null,
-            TeacherAgreementAllocationMode.Percentage,
-            teacherRate,
-            TeacherPriceBasis.Gross);
+        return null;
     }
 
     private static TeacherAgreementResolution ToResolution(TeacherFinancialAgreement agreement) => new(
@@ -185,6 +195,6 @@ public class TeacherAgreementResolver
         };
         return (agreement.AllocationMode == TeacherAgreementAllocationMode.Percentage
                 ? TeacherAllocationMode.Percentage : TeacherAllocationMode.FixedAmount,
-            Math.Max(0m, share), basis);
+            decimal.Round(Math.Max(0m, share), 2, MidpointRounding.AwayFromZero), basis);
     }
 }

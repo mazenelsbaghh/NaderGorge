@@ -396,7 +396,7 @@ export interface UpdateCodeGroupSettingsPayload {
   teacherId?: string | null;
   expiresAt?: string | null;
   revenueOwner?: CodeRevenueOwner | null;
-  revenueAllocationMode?: CodeRevenueAllocationMode | null;
+  revenueAllocationMode?: CodeRevenueAllocationMode | 'CommissionRate' | null;
   revenueAllocationValue?: number | null;
   accountingTiming?: CodeAccountingTiming;
 }

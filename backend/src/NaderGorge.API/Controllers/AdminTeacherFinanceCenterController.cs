@@ -1,3 +1,4 @@
+using NaderGorge.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.TeacherFinanceCenter.SharedPackages;
 using NaderGorge.Application.Features.Admin.TeacherFinanceCenter;
+using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -25,11 +27,11 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     private readonly IMediator _mediator;
     private readonly TeacherSettlementAuthorityService _settlements;
 
-    public AdminTeacherFinanceCenterController(IAppDbContext db, IMediator mediator)
+    public AdminTeacherFinanceCenterController(IAppDbContext db, IMediator mediator, IFinancialPostingService posting)
     {
         _db = db;
         _mediator = mediator;
-        _settlements = new TeacherSettlementAuthorityService(db);
+        _settlements = new TeacherSettlementAuthorityService(db, posting);
     }
 
     private Guid ActorId() => User.RequireUserId();
@@ -94,7 +96,7 @@ public class AdminTeacherFinanceCenterController : ControllerBase
             .Where(x => x.TeacherId == teacherId)
             .OrderByDescending(x => x.EffectiveFrom)
             .Select(x => new TeacherAgreementDto(x.Id, x.TeacherId, x.ScopeType, x.ScopeId, x.Trigger, x.AllocationMode,
-                x.AllocationValue, x.PriceBasis, x.EffectiveFrom, x.EffectiveTo, x.IsActive, x.Reason))
+                x.AllocationValue, x.PriceBasis, x.EffectiveFrom, x.EffectiveTo, x.IsActive && (x.EffectiveTo == null || x.EffectiveTo > DateTime.UtcNow), x.Reason))
             .ToListAsync(ct);
         return Ok(new { success = true, data = items });
     }
@@ -118,22 +120,9 @@ public class AdminTeacherFinanceCenterController : ControllerBase
     [HttpGet("teachers/{teacherId:guid}/summary")]
     public async Task<IActionResult> GetTeacherSummary(Guid teacherId, CancellationToken ct)
     {
-        var account = await _db.TeacherAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.TeacherId == teacherId, ct);
-        var debt = await _db.TeacherPayoutAdjustments.AsNoTracking()
-            .Where(x => x.TeacherId == teacherId && x.Status == TeacherPayoutAdjustmentStatus.Open && x.Amount < 0m)
-            .SumAsync(x => (decimal?)-x.Amount, ct) ?? 0m;
-        var paid = (await _db.TeacherSettlementPayments.AsNoTracking()
-            .Where(x => x.TeacherSettlement.TeacherId == teacherId && x.TeacherSettlement.Status == TeacherSettlementStatus.Paid)
-            .SumAsync(x => (decimal?)x.Amount, ct) ?? 0m)
-            + (await _db.TeacherPayouts.AsNoTracking()
-                .Where(x => x.TeacherId == teacherId && x.Status == PayoutStatus.Paid)
-                .SumAsync(x => (decimal?)x.Amount, ct) ?? 0m);
-        return Ok(new
-        {
-            success = true,
-            data = new { teacherId, totalEarned = account?.TotalEarnings ?? 0m, available = account?.CurrentBalance ?? 0m,
-                reserved = account?.ReservedBalance ?? 0m, paid, debt, netPayable = Math.Max(0m, (account?.CurrentBalance ?? 0m) - debt) }
-        });
+        var snapshot = await new TeacherFinanceAccountService(_db).GetAsync(teacherId, ct);
+        return snapshot is null ? NotFound(new { success = false, message = "حساب المدرس غير موجود" })
+            : Ok(new { success = true, data = snapshot });
     }
 
     [HttpGet("teachers/{teacherId:guid}/ledger")]
@@ -149,7 +138,8 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         var total = await query.CountAsync(ct);
         var items = await query.OrderByDescending(x => x.TeacherFinancialEvent.OccurredAt).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(x => new { x.Id, x.TeacherFinancialEventId, x.ContentNameSnapshot, x.TeacherShareAmount, x.PlatformShareAmount,
-                x.PayoutStatus, x.ReviewStatus, x.ReversedAmount, x.AgreementId, x.TeacherFinancialEvent.OccurredAt,
+                x.PayoutStatus, x.RetainedByTeacher, x.ReviewStatus, x.ReversedAmount, x.AgreementId, x.AllocationMode, x.AllocationValue,
+                x.GrossBasisAmount, x.PriceBasis, x.AgreementAllocationMode, x.TeacherFinancialEvent.OccurredAt,
                 sourceType = x.TeacherFinancialEvent.SourceType.ToString(), x.TeacherFinancialEvent.GrossAmount, x.TeacherFinancialEvent.DiscountAmount,
                 x.TeacherFinancialEvent.PlatformDiscountAmount, x.TeacherFinancialEvent.TeacherDiscountAmount })
             .ToListAsync(ct);
@@ -180,6 +170,17 @@ public class AdminTeacherFinanceCenterController : ControllerBase
         var settlement = await _db.TeacherSettlements.AsNoTracking().Include(x => x.Lines).Include(x => x.Payments)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         return settlement is null ? NotFound(new { success = false, message = "التسوية غير موجودة" }) : Ok(new { success = true, data = settlement });
+    }
+
+    [HttpGet("teachers/{teacherId:guid}/settlements")]
+    public async Task<IActionResult> ListSettlements(Guid teacherId, [FromQuery] int page = 1, CancellationToken ct = default)
+    {
+        page = Math.Max(1, page);
+        var query = _db.TeacherSettlements.AsNoTracking().Where(x => x.TeacherId == teacherId);
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(x => x.CreatedAt).ThenBy(x => x.Id).Skip((page - 1) * 20).Take(20)
+            .Select(x => new { x.Id, x.Status, x.PeriodFrom, x.PeriodTo, x.GrossDueAmount, x.DebtDeductionAmount, x.NetPayableAmount }).ToListAsync(ct);
+        return Ok(new { success = true, data = new { items, total, page, pageSize = 20 } });
     }
 
     [HttpPost("settlements/{id:guid}/review")]

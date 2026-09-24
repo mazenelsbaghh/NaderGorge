@@ -273,6 +273,7 @@ public interface IAppDbContext
     DbSet<TeacherFinancialAgreement> TeacherFinancialAgreements { get; }
     DbSet<CodeGroupFinancialTerms> CodeGroupFinancialTerms { get; }
     DbSet<CodeGroupDeliveryConfirmation> CodeGroupDeliveryConfirmations { get; }
+    DbSet<CodeGroupDeliveryPayment> CodeGroupDeliveryPayments { get; }
     DbSet<TeacherSettlement> TeacherSettlements { get; }
     DbSet<TeacherSettlementLine> TeacherSettlementLines { get; }
     DbSet<TeacherSettlementPayment> TeacherSettlementPayments { get; }

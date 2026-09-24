@@ -58,7 +58,8 @@ public enum TeacherAgreementTrigger
 {
     ContentSale = 0,
     CodeDelivery = 1,
-    CodeActivation = 2
+    CodeActivation = 2,
+    AllSources = 3
 }
 
 public enum TeacherAgreementAllocationMode

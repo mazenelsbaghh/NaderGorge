@@ -1,6 +1,9 @@
+import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
 import apiClient from './api-client';
 import type {
   CodeGroupFinancialTerms,
+  CodeBatchAccount,
+  CodeCollectionInput,
   PagedTeacherLedger,
   SettlementPreview,
   TeacherAgreement,
@@ -13,6 +16,13 @@ export interface ApiResponse<T = any> {
   data: T;
   success: boolean;
   message: string;
+}
+
+
+function financeDateBoundary(value: string | undefined, end: boolean) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const minute = cairoDateTimeLocalToUtcISOString(`${value}T${end ? '23:59' : '00:00'}`);
+  return end ? new Date(Date.parse(minute) + 59_999).toISOString() : minute;
 }
 
 // DTOs matching backend
@@ -62,6 +72,7 @@ export interface AdminPayoutDto {
 }
 
 export interface TeacherAccountDto {
+  account: TeacherFinanceSummary;
   teacherId: string;
   teacherName: string;
   todayEarnings: number;
@@ -89,6 +100,8 @@ export interface TeacherTransactionDto {
   teacherShareAmount: number;
   platformShareAmount: number;
   allocationMode: string;
+  agreementAllocationMode?: string;
+  retainedByTeacher?: boolean;
   allocationValue: number;
   reviewStatus: string;
   payoutStatus: string;
@@ -131,6 +144,7 @@ export interface TeacherFinanceDayTransactionDto {
   sourceType: string;
   reviewStatus: string;
   payoutStatus: string;
+  retainedByTeacher?: boolean;
 }
 
 export interface PagedResult<T> {
@@ -180,7 +194,8 @@ export const financeService = {
     const res = await apiClient.get<ApiResponse<TeacherAgreement[]>>(
       `/admin/teacher-finance-center/teachers/${teacherId}/agreements`,
     );
-    return res.data?.data ?? [];
+    if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل الاتفاقات');
+    return res.data.data;
   },
 
   createTeacherAgreement: async (teacherId: string, payload: Omit<TeacherAgreement, 'id' | 'teacherId' | 'isActive'>): Promise<ApiResponse<{ id: string }>> => {
@@ -214,20 +229,20 @@ export const financeService = {
 
   getTeacherLedger: async (teacherId: string, params?: { from?: string; to?: string; status?: string; page?: number; pageSize?: number }): Promise<PagedTeacherLedger> => {
     const res = await apiClient.get<ApiResponse<PagedTeacherLedger>>(
-      `/admin/teacher-finance-center/teachers/${teacherId}/ledger`, { params },
+      `/admin/teacher-finance-center/teachers/${teacherId}/ledger`, { params: params ? { ...params, from: financeDateBoundary(params.from, false), to: financeDateBoundary(params.to, true) } : undefined },
     );
     if (!res.data?.success || !res.data.data) throw new Error('تعذر تحميل كشف حساب المدرس');
     return res.data.data;
   },
 
   previewTeacherSettlement: async (payload: { teacherId: string; periodFrom: string; periodTo: string; note?: string; allocationIds?: string[] }): Promise<SettlementPreview> => {
-    const res = await apiClient.post<ApiResponse<SettlementPreview>>('/admin/teacher-finance-center/settlements/preview', payload);
+    const res = await apiClient.post<ApiResponse<SettlementPreview>>('/admin/teacher-finance-center/settlements/preview', { ...payload, periodFrom: financeDateBoundary(payload.periodFrom, false), periodTo: financeDateBoundary(payload.periodTo, true) });
     if (!res.data?.success) throw new Error(res.data?.message || 'تعذر معاينة التسوية');
     return res.data.data;
   },
 
   createTeacherSettlement: async (payload: { teacherId: string; periodFrom: string; periodTo: string; note?: string; allocationIds?: string[] }): Promise<ApiResponse<{ id: string }>> => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/teacher-finance-center/settlements', payload);
+    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/teacher-finance-center/settlements', { ...payload, periodFrom: financeDateBoundary(payload.periodFrom, false), periodTo: financeDateBoundary(payload.periodTo, true) });
     return res.data;
   },
 
@@ -250,8 +265,16 @@ export const financeService = {
     await apiClient.put<ApiResponse<boolean>>(`/admin/teacher-finance-center/code-groups/${codeGroupId}/financial-terms`, payload)
   ).data,
 
-  confirmCodeGroupDelivery: async (codeGroupId: string, payload: { recipient: string; attachmentUrl?: string; deliveredAt?: string }): Promise<ApiResponse<{ id: string; confirmedAt: string }>> => (
+  confirmCodeGroupDelivery: async (codeGroupId: string, payload: { recipient: string; attachmentUrl?: string; quoteKey: string; payment?: CodeCollectionInput }): Promise<ApiResponse<{ id: string; confirmedAt: string }>> => (
     await apiClient.post<ApiResponse<{ id: string; confirmedAt: string }>>(`/admin/teacher-finance-center/code-groups/${codeGroupId}/confirm-delivery`, payload)
+  ).data,
+
+  getCodeBatchAccount: async (codeGroupId: string): Promise<CodeBatchAccount> => (
+    await apiClient.get<ApiResponse<CodeBatchAccount>>(`/admin/teacher-finance-center/code-groups/${codeGroupId}/account`)
+  ).data.data,
+
+  collectCodeBatchPayment: async (codeGroupId: string, payload: CodeCollectionInput): Promise<ApiResponse<boolean>> => (
+    await apiClient.post<ApiResponse<boolean>>(`/admin/teacher-finance-center/code-groups/${codeGroupId}/payments`, payload)
   ).data,
 
   // --- Administrative Payroll Management ---
@@ -300,12 +323,18 @@ export const financeService = {
   },
 
   // --- Teacher Payout Reviews (Admin/Supervisor) ---
-  getPayouts: async (status?: number): Promise<AdminPayoutDto[]> => {
+  getPayouts: async (status?: number, teacherId?: string): Promise<AdminPayoutDto[]> => {
     const res = await apiClient.get<ApiResponse<AdminPayoutDto[]>>(
       '/admin/finance/payouts',
-      { params: status !== undefined ? { status } : {} }
+      { params: { status, teacherId } }
     );
     return res.data?.data ?? [];
+  },
+
+  getTeacherSettlements: async (teacherId: string, page: number) => {
+    const response = await apiClient.get<ApiResponse<{ items: Pick<TeacherSettlement, 'id' | 'status' | 'periodFrom' | 'periodTo' | 'grossDueAmount' | 'debtDeductionAmount' | 'netPayableAmount'>[]; total: number; page: number; pageSize: number }>>(`/admin/teacher-finance-center/teachers/${teacherId}/settlements`, { params: { page } });
+    if (!response.data.success || !response.data.data) throw new Error('تعذر تحميل التسويات');
+    return response.data.data;
   },
 
   resolvePayout: async (

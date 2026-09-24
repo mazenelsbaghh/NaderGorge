@@ -57,3 +57,23 @@ test('parent portal keeps legacy payloads explicit during a rolling deployment',
   await expect(page.getByText('أكمل 1 من 4')).toBeVisible();
   await expect(page.getByText(/بدأ مشاهدة/)).toHaveCount(0);
 });
+
+
+for (const percentage of [95, 0, null]) {
+  test(`parent shows watch progress ${percentage} separately from completed lessons`, async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem('parent-tracking-token', 'test-parent-token'));
+    await page.route('**/parent/student-details', route => fulfillJson(route, {
+        success: true,
+        data: {
+          studentName: 'طالب اختبار',
+          attendance: { totalLessons: 5, watchedLessons: 0, completionRate: 0, watchProgressPercentage: percentage },
+          balance: { currentBalance: 0 },
+          exams: [], homeworks: [], warnings: [], teachers: [], watchLessons: [], courses: [],
+        },
+    }));
+    await page.goto('/parent');
+    await expect(page.getByText('نسبة مشاهدة الفيديوهات', { exact: true })).toBeVisible();
+    await expect(page.getByText(percentage === null ? 'غير متاحة' : `${percentage}%`, { exact: true })).toBeVisible();
+    await expect(page.getByText('0 من 5 حصة مكتملة', { exact: true })).toBeVisible();
+  });
+}

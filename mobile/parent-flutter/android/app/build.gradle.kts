@@ -19,7 +19,9 @@ android {
                 keyAlias = releaseKeys.getProperty("keyAlias")
                 keyPassword = releaseKeys.getProperty("keyPassword")
                 storePassword = releaseKeys.getProperty("storePassword")
-                storeFile = File(releaseKeyFile.parentFile.resolve("app"), releaseKeys.getProperty("storeFile"))
+                val configuredStore = File(releaseKeys.getProperty("storeFile"))
+                storeFile = if (configuredStore.isAbsolute) configuredStore
+                    else releaseKeyFile.parentFile.resolve("app").resolve(configuredStore.path)
             }
         }
     }

@@ -150,6 +150,9 @@ builder.Services.AddScoped<NaderGorge.Application.Features.HR.Reporting.Workforc
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
+builder.Services.AddHttpClient("EmthntakAdmin", client => client.Timeout = TimeSpan.FromSeconds(25))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+
 builder.Services.AddHttpClient("BunnyStream", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);

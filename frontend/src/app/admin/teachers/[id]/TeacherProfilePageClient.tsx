@@ -2,6 +2,7 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
 import { adminService, type TeacherProfileStatsDto, type UserAuditLogDto } from '@/services/admin-service';
@@ -11,7 +12,7 @@ import { TeacherCollectionsPanel } from '@/features/teacher-finance-center/Teach
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
-  Users, Package, BookOpen, PenLine, DollarSign, Wallet,
+  Users, Package, BookOpen, PenLine, DollarSign,
   GraduationCap, Activity, Phone, User, Clock3,
   FileText, ArrowLeft, Download, X, Check, Eye,
   Image as ImageIcon, Loader2
@@ -540,7 +541,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   <InfoField label="رقم الهاتف" value={teacher?.phoneNumber || ''} mono />
                   <InfoField label="أرقام هواتف المساعدين" value={teacher?.assistantPhoneNumbers || ''} mono />
                   <InfoField label="معلومات الاتصال" value={teacher?.contactInfo || ''} />
-                  <InfoField label="نسبة العمولة" value={teacher?.commissionRate != null ? `${teacher.commissionRate}%` : 'غير محددة'} />
+                  <InfoField label="النسبة القديمة عند عدم وجود اتفاق" value={teacher?.commissionRate != null ? `${teacher.commissionRate}%` : 'غير محددة'} />
                 </div>
               )}
             </SectionCard>
@@ -826,7 +827,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             <TeacherCollectionsPanel key={`collections-${id}`} teacherId={id} />
             <TeacherAccountSummary key={id} teacherId={id} />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <AdminStatCard variant="accent" icon={Wallet} label="نسبة العمولة" value={`${teacher?.commissionRate ?? 0}%`} />
               <AdminStatCard variant="light" icon={DollarSign} label="عدد التحويلات" value={payouts.length} />
               <AdminStatCard variant="muted" icon={Package} label="عدد التفعيلات" value={activations.length} />
             </div>
@@ -1136,18 +1136,8 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة العمولة (%)</label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      max={100}
-                      disabled={isSaving}
-                      value={commissionRate}
-                      onChange={(e) => setCommissionRate(Number(e.target.value))}
-                      placeholder="0"
-                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
-                    />
+                    <p className="text-sm text-[var(--admin-muted)]">طريقة حساب الأرباح بتتحدد من اتفاقات المدرّس المالية.</p>
+                    <Link href={`/admin/teachers/${id}/account`} className="inline-flex min-h-11 items-center underline">فتح حساب المدرّس واتفاقاته</Link>
                   </div>
                 </div>
 

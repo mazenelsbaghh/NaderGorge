@@ -67,15 +67,23 @@ public sealed class AdminPlatformFinanceController(
 
     [HttpGet("teachers/summary")]
     [HasPermission("finance.teacher-summary.view")]
-    public Task<IReadOnlyList<PlatformFinanceTeacherSummaryDto>> TeacherSummary(
+    public async Task<IReadOnlyList<PlatformFinanceTeacherSummaryDto>> TeacherSummary(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
-        CancellationToken ct) => finance.GetTeacherSummaryAsync(from, to, ct);
+        CancellationToken ct)
+    {
+        var accounts = (await new TeacherFinanceAccountService(db).GetAllAsync(ct)).ToDictionary(x => x.TeacherId);
+        return (await finance.GetTeacherSummaryAsync(from, to, ct))
+            .Select(x => x with { Account = accounts.GetValueOrDefault(x.TeacherId) }).ToArray();
+    }
 
     [HttpGet("teachers/{teacherId:guid}/summary")]
     [HasPermission("finance.teacher-summary.view")]
     public async Task<ActionResult<TeacherFinancialSummaryDto>> TeacherDetail(Guid teacherId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
-        => await teacherSummary.GetAsync(teacherId, from, to, ct) is { } result ? Ok(result) : NotFound();
+    {
+        var result = await teacherSummary.GetAsync(teacherId, from, to, ct);
+        return result is null ? NotFound() : Ok(result with { Account = await new TeacherFinanceAccountService(db).GetAsync(teacherId, ct) });
+    }
 
     [HttpPost("expenses")]
     [HasPermission("finance.expenses.create")]

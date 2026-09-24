@@ -83,6 +83,7 @@ class StudentDetails extends AcademicRow {
   List<AcademicRow> get homeworks => rows('homeworks');
   List<AcademicRow> get warnings => rows('warnings');
   List<AcademicRow> get courses => rows('courses');
-  double get progress =>
-      (attendance.number('completionRate') / 100).clamp(0, 1);
+  double? get watchProgress =>
+      (attendance.json['watchProgressPercentage'] as num?)?.toDouble();
+  double get progress => ((watchProgress ?? 0) / 100).clamp(0, 1);
 }

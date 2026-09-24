@@ -29,11 +29,16 @@ public sealed class RemoveUnusedCodesCommandHandler : IRequestHandler<RemoveUnus
             .AnyAsync(role => role.Role != null && (role.Role.Type == RoleType.Admin || (role.Role.PermissionsJson ?? string.Empty).Contains("codes.manage")), ct);
         if (!isAllowed) return ApiResponse<RemoveUnusedCodesResult>.Fail("Unauthorized: You do not have permission to manage codes.");
 
+        await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var group = await _db.CodeGroups
             .Include(item => item.AccessCodes)
             .Include(item => item.CodeVideoTargets)
             .FirstOrDefaultAsync(item => item.Id == request.GroupId, ct);
         if (group == null) return ApiResponse<RemoveUnusedCodesResult>.Fail("Code Group not found");
+
+        if (group.AccountingRecordedAt.HasValue || await CodeGroupAccountingGuard.HasBatchChargeAsync(_db, group.Id, ct)
+            || await _db.CodeGroupDeliveryConfirmations.AnyAsync(x => x.CodeGroupId == group.Id, ct))
+            return ApiResponse<RemoveUnusedCodesResult>.Fail("الدفعة اتحسبت بالفعل. لا يمكن حذف أكوادها أو سجل تسليمها؛ راجع حساب المدرّس لتصحيح أي مبلغ.");
 
         var unusedCodes = group.AccessCodes.Where(code => !code.IsConsumed).ToList();
         var keptUsedCount = group.AccessCodes.Count - unusedCodes.Count;
@@ -60,6 +65,7 @@ public sealed class RemoveUnusedCodesCommandHandler : IRequestHandler<RemoveUnus
             oldValues: new { TotalCodes = group.TotalCodes + unusedCodes.Count, UnusedCodes = unusedCodes.Count },
             newValues: new { RemovedCount = unusedCodes.Count, KeptUsedCount = keptUsedCount, GroupDeleted = deleteGroup });
 
+        await transaction.CommitAsync(ct);
         return ApiResponse<RemoveUnusedCodesResult>.Ok(new RemoveUnusedCodesResult(unusedCodes.Count, keptUsedCount, deleteGroup));
     }
 }

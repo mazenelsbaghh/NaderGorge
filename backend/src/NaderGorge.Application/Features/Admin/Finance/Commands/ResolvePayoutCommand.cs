@@ -1,3 +1,4 @@
+using NaderGorge.Application.Interfaces.Finance;
 using System.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -5,6 +6,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Admin.Finance.Commands;
 
@@ -19,17 +21,27 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
 {
     private readonly IAppDbContext _db;
     private readonly IAuditRepository _audit;
+    private readonly IFinancialPostingService _posting;
 
-    public ResolvePayoutCommandHandler(IAppDbContext db, IAuditRepository audit)
+    public ResolvePayoutCommandHandler(IAppDbContext db, IAuditRepository audit, IFinancialPostingService posting)
     {
         _db = db;
         _audit = audit;
+        _posting = posting;
     }
 
     public async Task<ApiResponse<bool>> Handle(ResolvePayoutCommand request, CancellationToken ct)
     {
         return await SerializationRetryHelper.ExecuteAsync(
-            retryCt => HandleOnce(request, retryCt),
+            async retryCt =>
+            {
+                try { return await HandleOnce(request, retryCt); }
+                catch (Exception ex) when (SerializationRetryHelper.IsSerializationFailure(ex))
+                {
+                    if (_db is DbContext context) context.ChangeTracker.Clear();
+                    throw;
+                }
+            },
             ct);
     }
 
@@ -71,6 +83,9 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
             }
 
             var oldStatus = payout.Status;
+            if (request.Status is PayoutStatus.Approved or PayoutStatus.Paid
+                && !(await new TeacherFinanceAccountService(_db).GetWithdrawalAsync(payout.TeacherId, ct)).CoversReservedPayment)
+                return ApiResponse<bool>.Fail("المتاح للصرف تغير بعد الحجز بسبب مديونية أو تعديل. راجع حساب المدرس قبل الصرف.");
 
             if (request.Status == PayoutStatus.Approved)
             {
@@ -104,6 +119,10 @@ public class ResolvePayoutCommandHandler : IRequestHandler<ResolvePayoutCommand,
                 account.UpdatedAt = DateTime.UtcNow;
                 payout.PaidByUserId = request.AdminUserId;
                 payout.PaidAt = DateTime.UtcNow;
+                await _posting.PostAsync(new FinancialPostingRequest("TeacherPayout", payout.Id,
+                    "TeacherPayout", $"teacher-payout:{payout.Id:N}:paid", "صرف مستحقات مدرس", payout.PaidAt.Value,
+                    request.AdminUserId, [new("2000", payout.Amount, 0m, TeacherId: payout.TeacherId),
+                        new("1000", 0m, payout.Amount, TeacherId: payout.TeacherId)]), ct);
             }
             else if (request.Status == PayoutStatus.Rejected)
             {

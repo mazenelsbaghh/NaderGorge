@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Interfaces;
 
@@ -31,7 +32,7 @@ public sealed class TeacherFinanceExportService(IAppDbContext db) : ITeacherFina
             .ToListAsync(ct);
         var rows = allocations.Select(allocation => new ExportRow(
                 allocation.TeacherFinancialEvent.OccurredAt,
-                allocation.StudentNameSnapshot ?? "طالب غير معروف",
+                allocation.StudentNameSnapshot ?? (allocation.RetainedByTeacher ? "دفعة أكواد للمدرّس" : "طالب غير معروف"),
                 allocation.StudentPhoneSnapshot,
                 allocation.ContentNameSnapshot,
                 allocation.CodeSerialNumber,
@@ -40,7 +41,8 @@ public sealed class TeacherFinanceExportService(IAppDbContext db) : ITeacherFina
                 allocation.PlatformShareAmount,
                 allocation.TeacherFinancialEvent.SourceType.ToString(),
                 allocation.ReviewStatus.ToString(),
-                allocation.PayoutStatus.ToString()))
+                allocation.RetainedByTeacher ? "نصيب محتفظ به من الأكواد" : allocation.PayoutStatus.ToString(),
+                TeacherFinanceAccountService.RecognizedStatuses.Contains(allocation.ReviewStatus)))
             .ToList();
 
         var workbookBytes = BuildWorkbook(date, rows);
@@ -53,15 +55,15 @@ public sealed class TeacherFinanceExportService(IAppDbContext db) : ITeacherFina
     private static byte[] BuildWorkbook(DateTime date, IReadOnlyList<ExportRow> rows)
     {
         using var workbook = new XLWorkbook();
-        var sheet = workbook.Worksheets.Add("مدفوعات اليوم");
+        var sheet = workbook.Worksheets.Add("حركات أرباح اليوم");
         sheet.RightToLeft = true;
-        sheet.Cell("A1").Value = $"مدفوعات يوم {date:yyyy-MM-dd}";
+        sheet.Cell("A1").Value = $"حركات أرباح يوم {date:yyyy-MM-dd}";
         sheet.Range("A1:K1").Merge().Style.Font.SetBold().Font.SetFontSize(16);
 
-        sheet.Cell("A3").Value = "إجمالي المدفوع";
-        sheet.Cell("B3").Value = rows.Sum(row => row.PaidAmount);
+        sheet.Cell("A3").Value = "قيمة العمليات المعتمدة";
+        sheet.Cell("B3").Value = rows.Where(row => row.Recognized).Sum(row => row.PaidAmount);
         sheet.Cell("D3").Value = "ربح المدرس";
-        sheet.Cell("E3").Value = rows.Sum(row => row.TeacherShareAmount);
+        sheet.Cell("E3").Value = rows.Where(row => row.Recognized).Sum(row => row.TeacherShareAmount);
         sheet.Cell("G3").Value = "عدد العمليات";
         sheet.Cell("H3").Value = rows.Count;
         sheet.Range("A3:H3").Style.Font.SetBold();
@@ -86,7 +88,7 @@ public sealed class TeacherFinanceExportService(IAppDbContext db) : ITeacherFina
         var headers = new[]
         {
             "التاريخ والوقت", "اسم الطالب", "رقم الهاتف", "المحتوى", "رقم الكود",
-            "دفع الطالب", "ربح المدرس", "حصة المنصة", "مصدر العملية", "حالة المراجعة", "حالة الصرف"
+            "قيمة البيع (قد تكون آجلة)", "ربح المدرس", "حصة المنصة", "مصدر العملية", "حالة المراجعة", "حالة الصرف"
         };
         for (var index = 0; index < headers.Length; index++) sheet.Cell(5, index + 1).Value = headers[index];
         sheet.Row(5).Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#0A1D3D"));
@@ -119,5 +121,6 @@ public sealed class TeacherFinanceExportService(IAppDbContext db) : ITeacherFina
         decimal PlatformShareAmount,
         string SourceType,
         string ReviewStatus,
-        string PayoutStatus);
+        string PayoutStatus,
+        bool Recognized);
 }

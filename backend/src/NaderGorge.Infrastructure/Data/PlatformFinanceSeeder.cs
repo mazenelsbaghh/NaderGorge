@@ -12,6 +12,7 @@ public static class PlatformFinanceSeeder
         ("1000", "الخزينة والمحافظ", FinancialAccountType.Asset, FinancialNormalSide.Debit, FinancialAccountRole.Treasury),
         ("1100", "رصيد الطالب العام", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.GeneralStudentLiability),
         ("1110", "رصيد الطالب المقيد بمدرس", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherStudentLiability),
+        ("1200", "مبالغ الأكواد المطلوبة من المدرسين", FinancialAccountType.Asset, FinancialNormalSide.Debit, FinancialAccountRole.TeacherReceivable),
         ("2000", "مستحقات المدرسين", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherPayable),
         ("2100", "مستحقات الموردين", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.SupplierPayable),
         ("4000", "إيرادات المنصة", FinancialAccountType.Revenue, FinancialNormalSide.Credit, FinancialAccountRole.PlatformRevenue),

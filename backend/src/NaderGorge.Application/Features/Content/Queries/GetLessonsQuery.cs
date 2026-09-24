@@ -5,6 +5,7 @@ using NaderGorge.Application.Features.Homework;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using HomeworkEntity = NaderGorge.Domain.Entities.Homework.Homework;
 
 namespace NaderGorge.Application.Features.Content.Queries;
 
@@ -120,6 +121,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             lessons.SelectMany(lesson => lesson.Videos).Select(video => video.Id).ToArray(),
             ct);
 
+        var blockingData = await LoadBlockingDataAsync(request.UserId, lessons, accessibleLessonIds, ct);
+        var satisfiedExamIds = examGateSatisfiedIds.ToHashSet();
         var dtos = new List<LessonSummaryDto>();
         foreach (var lesson in lessons)
         {
@@ -132,7 +135,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 .FirstOrDefault();
             if (previousLesson != null && !accessibleLessonIds.Contains(previousLesson.Id))
                 previousLesson = null;
-            var blockingState = await GetBlockingStateAsync(lesson, previousLesson, request.UserId, examGateSatisfiedIds, ct);
+            var blockingState = GetBlockingState(lesson, previousLesson, satisfiedExamIds, blockingData);
             var videoSummaries = new List<LessonVideoSummaryDto>();
             var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
             if (visibleActiveVideoIds is not null)
@@ -179,19 +182,18 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         return ApiResponse<List<LessonSummaryDto>>.Ok(dtos);
     }
 
-    private async Task<(bool IsLocked, string? LockedReason, Guid? BlockingExamId, Guid? BlockingHomeworkLessonId)> GetBlockingStateAsync(
+    private static (bool IsLocked, string? LockedReason, Guid? BlockingExamId, Guid? BlockingHomeworkLessonId) GetBlockingState(
         Lesson lesson,
         Lesson? previousLesson,
-        Guid userId,
-        List<Guid> examGateSatisfiedIds,
-        CancellationToken ct)
+        IReadOnlySet<Guid> examGateSatisfiedIds,
+        LessonBlockingData blockingData)
     {
         if (previousLesson != null)
         {
             // 1. Check if previous lesson has a mandatory exam and if it is passed
             if (previousLesson.ExamId.HasValue)
             {
-                var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
+                var exam = blockingData.Exams.GetValueOrDefault(previousLesson.ExamId.Value);
                 if (exam != null && exam.IsActive && exam.IsMandatory)
                 {
                     var passedExam = examGateSatisfiedIds.Contains(previousLesson.ExamId.Value);
@@ -209,12 +211,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             }
 
             // 1b. Check if any video in the previous lesson has a mandatory exam and if it is passed
-            var prevVideoExams = await _db.Exams
-                .Where(e => e.IsActive && e.IsMandatory && (
-                    (e.LessonVideo != null && e.LessonVideo.LessonId == previousLesson.Id) ||
-                    _db.LessonVideos.Any(lv => lv.LessonId == previousLesson.Id && lv.ExamId == e.Id)
-                ))
-                .ToListAsync(ct);
+            var prevVideoExams = blockingData.VideoExams[previousLesson.Id];
 
             if (prevVideoExams.Any())
             {
@@ -231,17 +228,10 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             }
 
             // 2. Check if previous lesson's mandatory homework is passed
-            var prevHomework = await _db.Homeworks
-                .Where(h => h.LessonId == previousLesson.Id)
-                .FirstAccessibleToStudentAsync(userId, _access, _archiveAccess, ct);
+            var prevHomework = blockingData.Homeworks.GetValueOrDefault(previousLesson.Id);
             if (prevHomework != null && prevHomework.IsMandatory)
             {
-                var prevHwSubmission = await _db.HomeworkSubmissions
-                    .Where(s => s.StudentId == userId && s.HomeworkId == prevHomework.Id && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
-                    .OrderByDescending(s => s.SubmittedAt)
-                    .FirstOrDefaultAsync(ct);
-
-                bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHwSubmission.PassingScoreSnapshot ?? prevHomework.PassingScoreThreshold ?? 0);
+                var prevHwPassed = blockingData.PassedHomeworkIds.Contains(prevHomework.Id);
                 if (!prevHwPassed)
                 {
                     return (
@@ -258,7 +248,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
         // 3. Check if current lesson's own exam is passed
         if (lesson.ExamId.HasValue)
         {
-            var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+            var exam = blockingData.Exams.GetValueOrDefault(lesson.ExamId.Value);
             if (exam != null && exam.IsActive && exam.IsMandatory)
             {
                 var passedExam = examGateSatisfiedIds.Contains(lesson.ExamId.Value);
@@ -278,6 +268,69 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
         return (false, null, null, null);
     }
+
+    private async Task<LessonBlockingData> LoadBlockingDataAsync(
+        Guid userId, IReadOnlyCollection<Lesson> lessons, IReadOnlySet<Guid> accessibleLessonIds,
+        CancellationToken ct)
+    {
+        var previousLessonIds = lessons
+            .Where(previous => accessibleLessonIds.Contains(previous.Id) && lessons.Any(lesson => lesson.Order > previous.Order))
+            .Select(lesson => lesson.Id).ToArray();
+        var examIds = lessons.Where(lesson => lesson.ExamId.HasValue).Select(lesson => lesson.ExamId!.Value).ToArray();
+        var exams = examIds.Length == 0 ? new Dictionary<Guid, Exam>()
+            : await _db.Exams.AsNoTracking().Where(exam => examIds.Contains(exam.Id)).ToDictionaryAsync(exam => exam.Id, ct);
+        var videoExams = await LoadVideoExamGatesAsync(previousLessonIds, ct);
+        var homeworks = await LoadHomeworkGatesAsync(userId, previousLessonIds, ct);
+        var passedIds = await GetPassedHomeworkIdsAsync(userId, homeworks.Values.ToArray(), ct);
+        return new(exams, videoExams, homeworks, passedIds);
+    }
+
+    private async Task<ILookup<Guid, Exam>> LoadVideoExamGatesAsync(Guid[] lessonIds, CancellationToken ct)
+    {
+        if (lessonIds.Length == 0) return Array.Empty<Exam>().ToLookup(exam => Guid.Empty);
+        var videoExams = await (
+            from lesson in _db.Lessons.Where(lesson => lessonIds.Contains(lesson.Id))
+            from exam in _db.Exams.Where(exam => exam.IsActive && exam.IsMandatory &&
+                ((exam.LessonVideo != null && exam.LessonVideo.LessonId == lesson.Id) ||
+                 _db.LessonVideos.Any(video => video.LessonId == lesson.Id && video.ExamId == exam.Id)))
+            select new { LessonId = lesson.Id, Exam = exam }).AsNoTracking().ToListAsync(ct);
+        return videoExams.ToLookup(row => row.LessonId, row => row.Exam);
+    }
+
+    private async Task<Dictionary<Guid, HomeworkEntity>> LoadHomeworkGatesAsync(Guid userId, Guid[] lessonIds, CancellationToken ct)
+    {
+        if (lessonIds.Length == 0) return [];
+        var homeworks = await _db.Homeworks.AsNoTracking().ReadyForStudents()
+            .Where(homework => lessonIds.Contains(homework.LessonId)).ToListAsync(ct);
+        var visibleIds = await _archiveAccess.GetViewableAssessmentIdsAsync(
+            userId, ContentArchiveTargetType.Homework, homeworks.Select(homework => homework.Id).ToArray(), ct);
+        return homeworks.Where(homework => visibleIds.Contains(homework.Id))
+            .GroupBy(homework => homework.LessonId).ToDictionary(group => group.Key, group => group.First());
+    }
+
+    private async Task<HashSet<Guid>> GetPassedHomeworkIdsAsync(
+        Guid userId, IReadOnlyCollection<HomeworkEntity> homeworks, CancellationToken ct)
+    {
+        var homeworkIds = homeworks.Select(homework => homework.Id).ToArray();
+        if (homeworkIds.Length == 0) return [];
+        var submissions = await _db.HomeworkSubmissions.AsNoTracking()
+            .Where(submission => submission.StudentId == userId && homeworkIds.Contains(submission.HomeworkId) &&
+                submission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+            .Select(submission => new { submission.HomeworkId, submission.SubmittedAt, submission.OverallScore, submission.PassingScoreSnapshot })
+            .ToListAsync(ct);
+        var latestSubmissions = submissions.GroupBy(submission => submission.HomeworkId)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(submission => submission.SubmittedAt).First());
+        return homeworks.Where(homework =>
+                latestSubmissions.TryGetValue(homework.Id, out var submission) &&
+                submission.OverallScore >= (submission.PassingScoreSnapshot ?? homework.PassingScoreThreshold ?? 0))
+            .Select(homework => homework.Id).ToHashSet();
+    }
+
+    private sealed record LessonBlockingData(
+        IReadOnlyDictionary<Guid, Exam> Exams,
+        ILookup<Guid, Exam> VideoExams,
+        IReadOnlyDictionary<Guid, HomeworkEntity> Homeworks,
+        IReadOnlySet<Guid> PassedHomeworkIds);
 
     private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
     {

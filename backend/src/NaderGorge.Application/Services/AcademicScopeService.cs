@@ -184,6 +184,12 @@ public sealed class AcademicScopeService : IAcademicScopeService
 
     public async Task<bool> IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, Guid studentId, CancellationToken ct = default)
     {
+        if (ownerType == StudentFacingScopeOwnerType.Lesson)
+        {
+            var eligibleLessonIds = await GetEligibleLessonIdsForStudentAsync([ownerId], studentId, ct);
+            return eligibleLessonIds.Contains(ownerId);
+        }
+
         if (ownerType == StudentFacingScopeOwnerType.LessonVideo)
         {
             var eligibleVideoIds = await GetEligibleLessonVideoIdsForStudentAsync(

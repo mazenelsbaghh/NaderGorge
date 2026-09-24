@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Finance.Queries;
 
-public record GetPayoutsQuery(PayoutStatus? Status = null) : IRequest<ApiResponse<List<AdminPayoutDto>>>;
+public record GetPayoutsQuery(PayoutStatus? Status = null, Guid? TeacherId = null) : IRequest<ApiResponse<List<AdminPayoutDto>>>;
 
 public record AdminPayoutDto(
     Guid Id,
@@ -49,6 +49,7 @@ public class GetPayoutsQueryHandler : IRequestHandler<GetPayoutsQuery, ApiRespon
         {
             query = query.Where(tp => tp.Status == request.Status.Value);
         }
+        if (request.TeacherId.HasValue) query = query.Where(tp => tp.TeacherId == request.TeacherId);
 
         var payouts = await query
             .OrderByDescending(tp => tp.CreatedAt)

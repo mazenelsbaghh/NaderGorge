@@ -47,13 +47,6 @@ public record BulkGenerateCodesCommand(
 
 public record BulkGenerateCodesResponse(Guid CodeGroupId, int CodesGenerated, List<string> Codes);
 
-internal sealed record CodeTargetPricing(
-    decimal Price,
-    SalesTargetType TargetType,
-    Guid TargetId,
-    string ContentName
-);
-
 public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodesCommand, ApiResponse<BulkGenerateCodesResponse>>
 {
     private readonly IAppDbContext _db;
@@ -69,6 +62,10 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
 
     public async Task<ApiResponse<BulkGenerateCodesResponse>> Handle(BulkGenerateCodesCommand request, CancellationToken ct)
     {
+        if (request.RevenueOwner != null || request.RevenueAllocationMode != null || request.RevenueAllocationValue != null)
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("طريقة توزيع الأرباح تُحدد من اتفاقات حساب المدرّس فقط");
+        if (!Enum.IsDefined(request.AccountingTiming))
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("موعد حساب الدفعة غير صالح");
         var expiresAt = request.ExpiresAt.HasValue ? CairoTime.ToUtc(request.ExpiresAt.Value) : (DateTime?)null;
 
         if (request.Count <= 0 || request.Count > 10_000)
@@ -190,7 +187,6 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         var groupTeacherId = targetTeacherId ?? explicitTeacherId;
         var activationOnly = groupTeacherId.HasValue && await _db.TeacherProfiles.AnyAsync(x => x.Id == groupTeacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct);
         var accountingTiming = activationOnly ? CodeAccountingTiming.OnActivation : request.AccountingTiming;
-        var targetPricing = await ResolveTargetPricingAsync(request, ct);
 
         var scopeValidation = await ValidateAcademicTargetsHaveScopeAsync(request, ct);
         if (!scopeValidation.IsEligible)
@@ -363,11 +359,6 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         };
         _db.OutboxEvents.Add(codeGroupExportReadyEvent);
 
-        if (request.AccountingTiming == CodeAccountingTiming.Immediate && request.CodeType != CodeType.Balance)
-        {
-            await RecordImmediateAccountingAsync(group, groupTeacherId, targetPricing, request.Count, ct);
-        }
-
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(
@@ -449,151 +440,6 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             CodeType.Balance when (request.BalanceAmount == null || request.BalanceAmount <= 0) => "BalanceAmount must be > 0 for Balance codes",
             _ => null
         };
-    }
-
-    private async Task<CodeTargetPricing> ResolveTargetPricingAsync(BulkGenerateCodesCommand request, CancellationToken ct)
-    {
-        if (request.PackageId.HasValue)
-        {
-            var item = await _db.Packages.FirstOrDefaultAsync(x => x.Id == request.PackageId.Value, ct);
-            if (item != null) return new(item.Price, SalesTargetType.Package, item.Id, item.Name);
-        }
-
-        if (request.TermId.HasValue)
-        {
-            var item = await _db.Terms.FirstOrDefaultAsync(x => x.Id == request.TermId.Value, ct);
-            if (item != null) return new(item.Price, SalesTargetType.Term, item.Id, item.Title);
-        }
-
-        if (request.ContentSectionId.HasValue)
-        {
-            var item = await _db.ContentSections.FirstOrDefaultAsync(x => x.Id == request.ContentSectionId.Value, ct);
-            if (item != null) return new(item.Price, SalesTargetType.ContentSection, item.Id, item.Title);
-        }
-
-        if (request.LessonId.HasValue)
-        {
-            var item = await _db.Lessons.FirstOrDefaultAsync(x => x.Id == request.LessonId.Value, ct);
-            if (item != null) return new(item.Price, SalesTargetType.Lesson, item.Id, item.Title);
-        }
-
-        if (request.PublicExamProductId.HasValue)
-        {
-            var publicExam = await _db.PublicExamProducts
-                .Include(x => x.Exam)
-                .FirstOrDefaultAsync(x => x.Id == request.PublicExamProductId.Value, ct);
-            if (publicExam != null)
-                return new(publicExam.Price, SalesTargetType.PublicExam, publicExam.Id, publicExam.Exam.Title);
-        }
-
-        if (request.ExamId.HasValue)
-        {
-            var publicExam = await _db.PublicExamProducts
-                .Include(x => x.Exam)
-                .FirstOrDefaultAsync(x => x.ExamId == request.ExamId.Value || x.Id == request.ExamId.Value, ct);
-
-            if (publicExam != null)
-                return new(publicExam.Price, SalesTargetType.PublicExam, publicExam.Id, publicExam.Exam.Title);
-        }
-
-        return new(0m, SalesTargetType.Platform, request.PackageId ?? request.TermId ?? request.ContentSectionId ?? request.LessonId ?? request.ExamId ?? request.VideoTypeId ?? Guid.Empty, request.GroupName);
-    }
-
-    private async Task RecordImmediateAccountingAsync(
-        CodeGroup group,
-        Guid? teacherId,
-        CodeTargetPricing targetPricing,
-        int count,
-        CancellationToken ct)
-    {
-        var grossTotal = Math.Max(0m, targetPricing.Price) * count;
-        var teacher = teacherId.HasValue
-            ? await _db.TeacherProfiles.FirstOrDefaultAsync(x => x.Id == teacherId.Value, ct)
-            : null;
-
-        var (teacherShare, platformShare, allocationMode, allocationValue, basisAmount) =
-            CalculateShares(grossTotal, teacher, group.RevenueOwner, group.RevenueAllocationMode, group.RevenueAllocationValue);
-
-        await new TeacherAccountingService(_db).RecordEventAsync(new TeacherFinancialEventInput(
-            TeacherFinancialSourceType.AccessCodeGeneration,
-            group.Id,
-            null,
-            targetPricing.TargetType,
-            targetPricing.TargetId == Guid.Empty ? group.Id : targetPricing.TargetId,
-            grossTotal,
-            0m,
-            grossTotal,
-            0m,
-            platformShare,
-            $"access-code-group-immediate:{group.Id}",
-            System.Text.Json.JsonSerializer.Serialize(new
-            {
-                codeGroupId = group.Id,
-                group.Name,
-                group.CodeType,
-                count,
-                accountingTiming = group.AccountingTiming.ToString(),
-                revenueOwner = group.RevenueOwner?.ToString()
-            }),
-            DateTime.UtcNow,
-            TeacherFinancialReviewStatus.AutoApproved,
-            teacher != null && teacherShare > 0m
-                ? new[]
-                {
-                    new TeacherFinancialAllocationInput(
-                        teacher.Id,
-                        allocationMode,
-                        allocationValue,
-                        basisAmount,
-                        teacherShare,
-                        platformShare,
-                        null,
-                        null,
-                        group.Name,
-                        null)
-                }
-                : Array.Empty<TeacherFinancialAllocationInput>()), ct);
-
-        group.AccountingRecordedAt = DateTime.UtcNow;
-    }
-
-    internal static (decimal TeacherShare, decimal PlatformShare, TeacherAllocationMode AllocationMode, decimal AllocationValue, decimal BasisAmount) CalculateShares(
-        decimal grossAmount,
-        TeacherProfile? teacher,
-        SalesOwnerType? revenueOwner,
-        TeacherAllocationMode? allocationMode,
-        decimal? allocationValue)
-    {
-        if (grossAmount <= 0m)
-            return (0m, 0m, TeacherAllocationMode.CommissionRate, teacher?.CommissionRate ?? 0m, grossAmount);
-
-        if (teacher == null)
-            return (0m, grossAmount, allocationMode ?? TeacherAllocationMode.CommissionRate, allocationValue ?? 0m, grossAmount);
-
-        if (allocationMode.HasValue && allocationValue.HasValue)
-        {
-            var selectedShare = allocationMode.Value == TeacherAllocationMode.FixedAmount
-                ? allocationValue.Value
-                : grossAmount * allocationValue.Value / 100m;
-
-            selectedShare = Math.Clamp(selectedShare, 0m, grossAmount);
-
-            if (revenueOwner == SalesOwnerType.Platform)
-                return (grossAmount - selectedShare, selectedShare, allocationMode.Value, allocationValue.Value, grossAmount);
-
-            return (selectedShare, grossAmount - selectedShare, allocationMode.Value, allocationValue.Value, grossAmount);
-        }
-
-        // CommissionRate is stored as a percentage (for example, 20 means 20%),
-        // not as a fractional multiplier. Keeping the calculation here also makes
-        // access-code sales use the same accounting rule as direct purchases.
-        var commissionRate = Math.Clamp(teacher.CommissionRate, 0m, 100m);
-        var defaultTeacherShare = Math.Round(
-            grossAmount * commissionRate / 100m,
-            2,
-            MidpointRounding.AwayFromZero);
-
-        return (defaultTeacherShare, grossAmount - defaultTeacherShare, TeacherAllocationMode.CommissionRate, commissionRate, grossAmount);
     }
 
     private static string GenerateSecureCode(int length)

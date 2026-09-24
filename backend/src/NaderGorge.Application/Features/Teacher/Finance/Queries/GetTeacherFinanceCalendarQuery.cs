@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Teacher.Finance.Queries;
 
@@ -33,7 +34,8 @@ public record TeacherFinanceDayTransactionDto(
     decimal TeacherShareAmount,
     string SourceType,
     string ReviewStatus,
-    string PayoutStatus
+    string PayoutStatus,
+    bool RetainedByTeacher = false
 );
 
 public class GetTeacherFinanceCalendarQueryHandler
@@ -70,9 +72,9 @@ public class GetTeacherFinanceCalendarQueryHandler
             .GroupBy(a => CairoTime.ToLocal(a.TeacherFinancialEvent.OccurredAt).Date)
             .Select(g => new TeacherFinanceDayDto(
                 g.Key,
-                g.Sum(a => a.TeacherFinancialEvent.GrossAmount),
-                g.Sum(a => a.TeacherShareAmount),
-                g.Sum(a => a.PlatformShareAmount),
+                g.Where(a => TeacherFinanceAccountService.RecognizedStatuses.Contains(a.ReviewStatus)).Sum(a => a.GrossBasisAmount),
+                g.Where(a => TeacherFinanceAccountService.RecognizedStatuses.Contains(a.ReviewStatus)).Sum(a => a.TeacherShareAmount),
+                g.Where(a => TeacherFinanceAccountService.RecognizedStatuses.Contains(a.ReviewStatus)).Sum(a => a.PlatformShareAmount),
                 g.Count(),
                 g.Count(a => a.ReviewStatus == TeacherFinancialReviewStatus.PendingReview),
                 g.OrderByDescending(a => a.TeacherFinancialEvent.OccurredAt)
@@ -87,7 +89,7 @@ public class GetTeacherFinanceCalendarQueryHandler
                         a.TeacherShareAmount,
                         a.TeacherFinancialEvent.SourceType.ToString(),
                         a.ReviewStatus.ToString(),
-                        a.PayoutStatus.ToString()
+                        a.PayoutStatus.ToString(), a.RetainedByTeacher
                     ))
                     .ToList()
             ))

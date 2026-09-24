@@ -1,3 +1,4 @@
+using NaderGorge.Application.Features.Admin.PlatformFinance;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
@@ -43,12 +44,13 @@ public sealed class PlatformFinanceMigrationService(
             .Select(item => new { item.Id, item.Amount })
             .ToListAsync(ct);
         var balanceCandidates = await CountMissingAsync("BalanceTransaction", balanceAdjustments.Select(item => item.Id), ct);
-        var payouts = await _db.TeacherPayouts.AsNoTracking()
-            .Where(item => item.Status == PayoutStatus.Paid && item.Amount > 0m
-                && item.PaidAt >= range.From && item.PaidAt < range.To)
-            .Select(item => new { item.Id, item.Amount })
-            .ToListAsync(ct);
-        var payoutCandidates = await CountMissingAsync("TeacherPayout", payouts.Select(item => item.Id), ct);
+        var payouts = await ReadTeacherPaymentsAsync(range, ct);
+        var missingPayouts = new List<HistoricalTeacherPayment>();
+        foreach (var source in payouts.GroupBy(payment => payment.SourceType))
+        {
+            var missingIds = await CountMissingAsync(source.Key, source.Select(payment => payment.Id), ct);
+            missingPayouts.AddRange(source.Where(payment => missingIds.Contains(payment.Id)));
+        }
         var payroll = await ApprovedPayrollAsync(range, ct);
         var payrollCandidates = await CountMissingAsync("Payroll", payroll.Select(item => item.Id), ct);
         var teacherEvidenceRows = await _db.TeacherFinancialEvents.AsNoTracking()
@@ -66,8 +68,8 @@ public sealed class PlatformFinanceMigrationService(
             sales.Where(item => saleCandidates.Contains(item.PurchaseOperationId)).Sum(item => item.PaidAmount),
             balanceCandidates.Count,
             balanceAdjustments.Where(item => balanceCandidates.Contains(item.Id)).Sum(item => Math.Abs(item.Amount)),
-            payoutCandidates.Count,
-            payouts.Where(item => payoutCandidates.Contains(item.Id)).Sum(item => item.Amount),
+            missingPayouts.Count,
+            missingPayouts.Sum(item => item.Amount),
             payrollCandidates.Count,
             payroll.Where(item => payrollCandidates.Contains(item.Id)).Sum(item => item.Amount),
             teacherEvidenceRows,
@@ -203,23 +205,20 @@ public sealed class PlatformFinanceMigrationService(
             }
         }
 
-        var payouts = await _db.TeacherPayouts
-            .Where(item => item.Status == PayoutStatus.Paid && item.Amount > 0m
-                && item.PaidAt >= range.From && item.PaidAt < range.To)
-            .ToListAsync(ct);
+        var payouts = await ReadTeacherPaymentsAsync(range, ct);
         foreach (var payout in payouts)
         {
-            var key = $"teacher-payout:{payout.Id:N}:paid";
+            var key = payout.IdempotencyKey;
             if (await _db.JournalEntries.AnyAsync(item => item.IdempotencyKey == key, ct))
             {
                 alreadyPosted++;
-                await AddItemAsync(batch, "TeacherPayout", payout.Id, payout.Amount, FinanceMigrationItemStatus.AlreadyPosted, null, ct);
+                await AddItemAsync(batch, payout.SourceType, payout.Id, payout.Amount, FinanceMigrationItemStatus.AlreadyPosted, null, ct);
                 continue;
             }
 
             var payoutPosted = await PostSimpleAsync(new HistoricalPostingContext(batch, actorUserId, errors), new HistoricalPosting(
-                "TeacherPayout", payout.Id, payout.Amount, key, "HistoricalTeacherPayout", "إعادة بناء سداد مستحقات مدرس",
-                payout.PaidAt ?? payout.CreatedAt,
+                payout.SourceType, payout.Id, payout.Amount, key, "HistoricalTeacherPayout", "إعادة بناء سداد مستحقات مدرس",
+                payout.OccurredAt,
                 [new("2000", payout.Amount, 0m, TeacherId: payout.TeacherId), new("1000", 0m, payout.Amount, TeacherId: payout.TeacherId)]), ct);
             if (payoutPosted) posted++; else failed++;
         }
@@ -299,6 +298,25 @@ public sealed class PlatformFinanceMigrationService(
             : [new("1100", -adjustment.Amount, 0m, StudentId: studentId), new(counterpart, 0m, -adjustment.Amount, StudentId: studentId)];
     }
 
+    private async Task<List<HistoricalTeacherPayment>> ReadTeacherPaymentsAsync((DateTime From, DateTime To) range, CancellationToken ct)
+    {
+        var payouts = await _db.TeacherPayouts.AsNoTracking()
+            .Where(payment => payment.Status == PayoutStatus.Paid && payment.Amount > 0m
+                && payment.PaidAt >= range.From && payment.PaidAt < range.To)
+            .Select(payment => new { payment.Id, payment.TeacherId, payment.Amount, payment.PaidAt }).ToListAsync(ct);
+        var settlements = await _db.TeacherSettlements.AsNoTracking()
+            .Where(payment => payment.Status == TeacherSettlementStatus.Paid && payment.NetPayableAmount > 0m
+                && payment.PaidAt >= range.From && payment.PaidAt < range.To)
+            .Select(payment => new { payment.Id, payment.TeacherId, payment.NetPayableAmount, payment.PaidAt }).ToListAsync(ct);
+        return payouts.Select(payment => new HistoricalTeacherPayment("TeacherPayout", payment.Id, payment.TeacherId,
+                payment.Amount, payment.PaidAt!.Value, $"teacher-payout:{payment.Id:N}:paid"))
+            .Concat(settlements.Select(payment => new HistoricalTeacherPayment("TeacherSettlement", payment.Id, payment.TeacherId,
+                payment.NetPayableAmount, payment.PaidAt!.Value, $"teacher-settlement:{payment.Id:N}:paid"))).ToList();
+    }
+
+    private sealed record HistoricalTeacherPayment(string SourceType, Guid Id, Guid TeacherId,
+        decimal Amount, DateTime OccurredAt, string IdempotencyKey);
+
     private async Task<List<HistoricalPayroll>> ApprovedPayrollAsync((DateTime From, DateTime To) range, CancellationToken ct)
     {
         var payroll = await _db.PayrollRecords.AsNoTracking()
@@ -340,9 +358,6 @@ public sealed class PlatformFinanceMigrationService(
 
     private static (DateTime From, DateTime To) Normalize(DateTime from, DateTime to)
     {
-        var start = from.Date;
-        var end = to.Date.AddDays(1);
-        if (end <= start) throw new ArgumentException("The migration end date must be after the start date.");
-        return (start, end);
+        return FinancialLedgerQuery.Period(from, to);
     }
 }

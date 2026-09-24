@@ -9,9 +9,8 @@ public static class TeacherFinanceDefaults
     {
         var lessonFee = preset == TeacherFinancePreset.SandyAshraf ? 12.5m : 15m;
         var monthFee = preset switch { TeacherFinancePreset.Nader => 30m, TeacherFinancePreset.SandyAshraf => 50m, _ => 60m };
-        foreach (var trigger in Enum.GetValues<TeacherAgreementTrigger>())
+        foreach (var trigger in new[] { TeacherAgreementTrigger.AllSources })
         {
-            if (preset == TeacherFinancePreset.Nader && trigger == TeacherAgreementTrigger.CodeDelivery) continue;
             foreach (var scope in new[] { TeacherAgreementScopeType.Lesson, TeacherAgreementScopeType.LessonVideo,
                 TeacherAgreementScopeType.ContentSection, TeacherAgreementScopeType.Term, TeacherAgreementScopeType.Package })
             {

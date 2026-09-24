@@ -1,3 +1,5 @@
+using NaderGorge.Application.Features.Admin.PlatformFinance;
+using NaderGorge.Application.Common;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
@@ -16,12 +18,11 @@ public sealed class PlatformFinanceExportService(IAppDbContext db) : IPlatformFi
     public async Task<FinanceExportResult> ExportLedgerAsync(string format, DateTime from, DateTime to, Guid actorUserId, CancellationToken ct)
     {
         if (format is not ("xlsx" or "pdf")) throw new ArgumentException("FINANCE_EXPORT_FORMAT");
-        var startDate = from.Date;
-        var endDate = to.Date.AddDays(1);
-        var rows = await (from entry in _db.JournalEntries.AsNoTracking()
+        var (startDate, endDate) = FinancialLedgerQuery.Period(from, to);
+        var rows = await (from entry in new FinancialLedgerQuery(_db).Entries
                           join line in _db.JournalLines.AsNoTracking() on entry.Id equals line.JournalEntryId
                           join account in _db.FinancialAccounts.AsNoTracking() on line.FinancialAccountId equals account.Id
-                          where entry.Status == JournalEntryStatus.Posted && entry.OccurredAt >= startDate && entry.OccurredAt < endDate
+                          where entry.OccurredAt >= startDate && entry.OccurredAt < endDate
                           orderby entry.OccurredAt descending, entry.SequenceNumber descending
                           select new FinanceExportRow(entry.OccurredAt, entry.SequenceNumber, entry.Description, account.Code, account.Name, line.Debit, line.Credit))
             .ToListAsync(ct);
@@ -44,7 +45,7 @@ public sealed class PlatformFinanceExportService(IAppDbContext db) : IPlatformFi
         for (var index = 0; index < rows.Count; index++)
         {
             var row = rows[index];
-            sheet.Cell(index + 2, 1).Value = row.OccurredAt.ToString("yyyy-MM-dd");
+            sheet.Cell(index + 2, 1).Value = CairoTime.ToLocal(row.OccurredAt).ToString("yyyy-MM-dd");
             sheet.Cell(index + 2, 2).Value = row.SequenceNumber;
             sheet.Cell(index + 2, 3).Value = row.Description;
             sheet.Cell(index + 2, 4).Value = row.Code;
@@ -71,7 +72,7 @@ public sealed class PlatformFinanceExportService(IAppDbContext db) : IPlatformFi
                 table.Cell().Background(Colors.Grey.Lighten2).Padding(3).Text(header).Bold();
             foreach (var row in rows)
             {
-                foreach (var value in new[] { row.OccurredAt.ToString("yyyy-MM-dd"), row.SequenceNumber.ToString(), row.Description, row.Code, row.Name, row.Debit.ToString("N2"), row.Credit.ToString("N2") })
+                foreach (var value in new[] { CairoTime.ToLocal(row.OccurredAt).ToString("yyyy-MM-dd"), row.SequenceNumber.ToString(), row.Description, row.Code, row.Name, row.Debit.ToString("N2"), row.Credit.ToString("N2") })
                     table.Cell().Padding(3).Text(value);
             }
         });

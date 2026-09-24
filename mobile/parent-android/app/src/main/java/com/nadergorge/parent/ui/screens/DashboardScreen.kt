@@ -412,8 +412,8 @@ fun HomeTabView(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     MetricWidgetCard(
                         title = "المشاهدات",
-                        value = "${details.attendance.completionRate.toInt()}%",
-                        sub = "نسبة إكمال الحصص",
+                        value = details.attendance.watchProgressPercentage?.let { "$it%" } ?: "غير متاحة",
+                        sub = "${details.attendance.watchedLessons} من ${details.attendance.totalLessons} حصة مكتملة",
                         icon = Icons.Default.CheckCircle,
                         color = BrandTeal,
                         modifier = Modifier.weight(1f)

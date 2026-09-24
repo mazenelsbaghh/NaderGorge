@@ -106,6 +106,7 @@ export type AdminShellRoute =
   | '/admin/codes'
   | '/admin/codes/templates'
   | '/admin/sales'
+  | '/admin/emthntak'
   | '/admin/public-exams'
   | '/admin/community'
   | '/admin/comments'
@@ -409,6 +410,11 @@ const navItems: AdminNavItem[] = [
     permission: 'exams.manage',
   },
   {
+    href: '/admin/emthntak',
+    label: 'امتحاناتك',
+    icon: ClipboardList,
+  },
+  {
     href: '/admin/public-exams',
     label: 'الامتحانات العامة',
     icon: ClipboardList,
@@ -441,25 +447,25 @@ const navItems: AdminNavItem[] = [
   ...HR_NAV_ITEMS,
   {
     href: '/admin/finance',
-    label: 'المالية والرواتب',
+    label: 'الرواتب وطلبات السحب',
     icon: Coins,
     permission: 'finance.manage',
   },
   {
     href: '/admin/platform-profits',
-    label: 'أرباح المنصّة',
+    label: 'ملخص الحسابات',
     icon: CircleDollarSign,
     adminOnly: true,
   },
   {
     href: '/admin/platform-finance',
-    label: 'المركز المالي العام',
+    label: 'الأرصدة والمحافظ',
     icon: WalletCards,
     permission: 'finance.dashboard.view',
   },
   {
     href: '/admin/platform-finance/operations',
-    label: 'العمليات والمصروفات والمرتجعات',
+    label: 'تسجيل مصروف',
     icon: Briefcase,
     permission: 'finance.dashboard.view',
   },
@@ -471,13 +477,13 @@ const navItems: AdminNavItem[] = [
   },
   {
     href: '/admin/platform-finance/expenses',
-    label: 'مصروفات المنصة',
+    label: 'مراجعة المصاريف',
     icon: Coins,
     permission: 'finance.expenses.view',
   },
   {
     href: '/admin/platform-finance/refunds',
-    label: 'استردادات الطلاب',
+    label: 'إرجاع فلوس للطلاب',
     icon: BadgeDollarSign,
     permission: 'finance.refunds.view',
   },
@@ -507,7 +513,7 @@ const navItems: AdminNavItem[] = [
   },
   {
     href: '/admin/teacher-finance',
-    label: 'مركز مالية المدرسين',
+    label: 'اتفاقات وحسابات المدرسين',
     icon: BadgeDollarSign,
     permission: 'finance.manage',
   },
@@ -638,6 +644,12 @@ export function getAdminShellDefaults(
 
 const GROUP_CONFIG = [
   {
+    id: 'emthntak',
+    label: 'تطبيق امتحاناتك',
+    icon: ClipboardList,
+    hrefs: ['/admin/emthntak'],
+  },
+  {
     id: 'admin_ai_agent',
     label: 'وكيل الإدارة AI',
     icon: Bot,
@@ -669,21 +681,28 @@ const GROUP_CONFIG = [
   },
   {
     id: 'finance',
-    label: 'الحسابات والميزانيات',
+    label: 'الحسابات',
     icon: CircleDollarSign,
     hrefs: [
       '/admin/platform-profits',
       '/admin/platform-finance',
       '/admin/platform-finance/operations',
-      '/admin/platform-finance/planning',
       '/admin/platform-finance/expenses',
       '/admin/platform-finance/refunds',
+      '/admin/finance',
+      '/admin/teacher-finance',
+    ],
+  },
+  {
+    id: 'finance_tools',
+    label: 'أدوات الحسابات المتقدمة',
+    icon: ChartNoAxesCombined,
+    hrefs: [
+      '/admin/platform-finance/planning',
       '/admin/platform-finance/reports',
       '/admin/platform-finance/wallets',
       '/admin/platform-finance/treasury',
       '/admin/platform-finance/migration',
-      '/admin/finance',
-      '/admin/teacher-finance',
     ],
   },
   {
@@ -1242,9 +1261,9 @@ function AdminShellFrame({
             {filteredNavItems.some((item) => item.href === '/admin/platform-profits') && (
               <IntentLink
                 href="/admin/platform-profits"
-                aria-label="أرباح المنصّة"
+                aria-label="ملخص الحسابات"
                 aria-current={activePath === '/admin/platform-profits' ? 'page' : undefined}
-                title="أرباح المنصّة"
+                title="ملخص الحسابات"
                 className={`flex h-11 items-center rounded-xl transition-colors gap-3 ${isSidebarCollapsed ? 'justify-center px-3' : 'justify-start px-3'} ${
                   activePath === '/admin/platform-profits'
                     ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
@@ -1252,7 +1271,7 @@ function AdminShellFrame({
                 }`}
               >
                 <CircleDollarSign className="h-5 w-5 flex-shrink-0" />
-                {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">أرباح المنصّة</span>}
+                {!isSidebarCollapsed && <span className="text-sm font-bold truncate whitespace-nowrap">ملخص الحسابات</span>}
               </IntentLink>
             )}
 

@@ -46,6 +46,13 @@ interface RoleDto {
 }
 
 const PERMISSION_DEFINITIONS = [
+  { key: 'emthntak.content', label: 'محتوى امتحاناتك', desc: 'المدرسون والكتب والفصول والأسئلة' },
+  { key: 'emthntak.review', label: 'مراجعة امتحاناتك', desc: 'مراجعة المحتوى وتصحيح الإجابات' },
+  { key: 'emthntak.publish', label: 'نشر امتحاناتك', desc: 'نشر وإيقاف المحتوى' },
+  { key: 'emthntak.finance', label: 'مالية امتحاناتك', desc: 'الأسعار والباقات والأكواد' },
+  { key: 'emthntak.support', label: 'دعم امتحاناتك', desc: 'الطلاب والبلاغات' },
+  { key: 'emthntak.settings', label: 'إعدادات امتحاناتك', desc: 'إعدادات التطبيق المستقل' },
+
   { key: 'users.manage', label: 'إدارة الطلاب والمستخدمين', desc: 'تنشيط وتعليق حسابات الطلاب والمشرفين وإضافتهم' },
   { key: 'content.manage', label: 'إدارة المحتوى والمحاضرات', desc: 'إضافة وتعديل وحذف الباقات، الدروس، الفيديوهات، والملفات' },
   { key: 'exams.manage', label: 'إدارة الامتحانات والأسئلة', desc: 'إنشاء وتعديل الامتحانات وبنوك الأسئلة وتصحيح المقالي' },
@@ -78,6 +85,13 @@ interface NavOption {
 }
 
 const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
+  'emthntak.content': ['/admin/emthntak'],
+  'emthntak.review': ['/admin/emthntak'],
+  'emthntak.publish': ['/admin/emthntak'],
+  'emthntak.support': ['/admin/emthntak'],
+  'emthntak.finance': ['/admin/emthntak'],
+  'emthntak.settings': ['/admin/emthntak'],
+
   'finance.refunds.view': ['/admin/platform-finance/refunds', '/assistant/refunds'],
   'finance.refunds.create': ['/admin/platform-finance/refunds', '/assistant/refunds'],
   'users.manage': [
@@ -184,6 +198,7 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
 };
 
 const ADMIN_NAV_OPTIONS: NavOption[] = [
+  { key: '/admin/emthntak', label: 'امتحاناتك — التطبيق المستقل' },
   {
     key: '/admin/gifts',
     label: 'الهدايا والوصول المجاني'

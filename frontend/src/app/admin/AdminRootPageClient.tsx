@@ -10,13 +10,14 @@ import {
 import { adminRootLinks } from '@/packages/admin';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import { useAuthStore } from '@/stores/auth-store';
-import { isFullAdmin } from '@/packages/admin/route-permissions';
+import { canAccessAdminRoute, isFullAdmin } from '@/packages/admin/route-permissions';
 
 export default function AdminRootPageClient() {
   const { hasPermission } = useHasPermission();
   const user = useAuthStore((state) => state.user);
 
   const getPermissionForHref = (href: string) => {
+    if (href === '/admin/emthntak') return canAccessAdminRoute(href, user);
     if (href.startsWith('/admin/subjects')) return 'content.manage';
     if (href.startsWith('/admin/teachers')) return 'users.manage';
     if (href.startsWith('/admin/students')) return 'users.manage';

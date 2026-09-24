@@ -1036,10 +1036,10 @@ export default function AdminTeachersPageClient() {
                     <p className="text-sm">الحصة: {financePreset === 'SandyAshraf' ? '12.50' : '15'} جنيه · الشهر: {financePreset === 'Nader' ? '30' : financePreset === 'SandyAshraf' ? '50' : '60'} جنيه · {financePreset === 'Nader' ? 'الترم: 100 جنيه · السنة: 250 جنيه' : 'الترم والسنة: 25% من سعر البيع بعد الخصم'}</p>
                     <p className="text-xs text-[var(--admin-muted)]">تُحفظ القواعد للمبيعات والأكواد، والباقي للمدرس. يمكن تعديل الاتفاقات من مركز حساب المدرس. {financePreset === 'Nader' ? 'أكواد نادر تُحسب عند أول استخدام فقط.' : 'الأكواد تُحسب عند التفعيل افتراضيًا، أو عند تأكيد التسليم حسب إعداد الدفعة.'}</p>
                   </div>}
-                  <div>
+                  {editingTeacher ? <div className="text-sm"><p>اتفاقات الأرباح موجودة في حساب المدرّس.</p><a className="inline-flex min-h-11 items-center underline" href={`/admin/teachers/${editingTeacher.id}/account`}>فتح الحساب والاتفاقات</a></div> :                   <div>
                     <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة المدرس للحالات خارج الاتفاقات (%)</label>
                     <input type="number" min="0" max="100" step="0.01" disabled={isSaving} value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition" />
-                  </div>
+                  </div>}
 
                   <div>
                     <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">أرقام هواتف المساعدين (اختياري)</label>

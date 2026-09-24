@@ -98,6 +98,123 @@ FROM "__EFMigrationsHistory";
 """
 
 
+
+# Model the exact reviewed code-collection backfill on private expected tables.
+# Compare complete historical rows and the multiset of added rows before allowing
+# the older funding guard to accept these additions. No production table is written.
+CODE_COLLECTION_SNAPSHOT_SQL = r"""
+CREATE SCHEMA massar_gate_codes;
+CREATE TABLE massar_gate_codes.state AS SELECT
+ EXISTS (SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId"='20260924152917_UnifiedTeacherCodeCollections') AS applied,
+ CURRENT_TIMESTAMP::timestamp AS snapshot_at, NULL::timestamp AS migration_at, 0::bigint AS added_agreements;
+DO $$ DECLARE name text; BEGIN
+ FOREACH name IN ARRAY ARRAY['teacher_financial_agreements','teacher_profiles','financial_accounts','code_group_delivery_confirmations'] LOOP
+  EXECUTE format('CREATE TABLE massar_gate_codes.%I AS TABLE public.%I',name,name);
+ END LOOP;
+END $$;
+ALTER TABLE massar_gate_codes.financial_accounts ADD UNIQUE ("Code");
+CREATE TABLE massar_gate_codes.original_ids AS
+ SELECT 'teacher_financial_agreements'::text AS name, "Id" FROM public.teacher_financial_agreements
+ UNION ALL SELECT 'financial_accounts', "Id" FROM public.financial_accounts;
+"""
+
+CODE_COLLECTION_VALIDATION_SQL = r"""
+DO $$ DECLARE name text; changed boolean; pending boolean; at_time timestamp; BEGIN
+ SELECT NOT applied INTO pending FROM massar_gate_codes.state;
+ IF pending THEN
+  IF (SELECT count(*) FROM "__EFMigrationsHistory" WHERE "MigrationId"='20260924152917_UnifiedTeacherCodeCollections') <> 1 THEN
+   RAISE EXCEPTION 'Code collection gate: reviewed migration missing';
+  END IF;
+  IF (SELECT activation FROM massar_gate_funding.migration_state) <> 1 THEN
+   RAISE EXCEPTION 'Code collection gate: fee defaults must already be applied';
+  END IF;
+  SELECT min(at) INTO at_time FROM (
+   SELECT current."EffectiveFrom" AS at FROM public.teacher_financial_agreements current
+    WHERE NOT EXISTS (SELECT 1 FROM massar_gate_codes.teacher_financial_agreements old WHERE old."Id"=current."Id")
+   UNION ALL
+   SELECT current."CreatedAt" FROM public.financial_accounts current
+    WHERE NOT EXISTS (SELECT 1 FROM massar_gate_codes.financial_accounts old WHERE old."Id"=current."Id")
+  ) added;
+  at_time := COALESCE(at_time, CURRENT_TIMESTAMP::timestamp);
+  IF at_time < (SELECT snapshot_at FROM massar_gate_codes.state) OR at_time > CURRENT_TIMESTAMP::timestamp THEN
+   RAISE EXCEPTION 'Code collection gate: invalid backfill time';
+  END IF;
+  UPDATE massar_gate_codes.state SET migration_at=at_time;
+INSERT INTO massar_gate_codes.financial_accounts ("Id", "Code", "Name", "Type", "NormalSide", "Role", "IsActive", "CreatedAt")
+VALUES (gen_random_uuid(), '1200', 'مبالغ الأكواد المطلوبة من المدرسين', 1, 1, 11, true, (SELECT migration_at FROM massar_gate_codes.state))
+ON CONFLICT ("Code") DO NOTHING;
+
+-- Only identical complete source variants are consolidated. Different agreements stay explicit.
+WITH matching AS (
+    SELECT a."TeacherId", a."ScopeType", a."ScopeId", a."AllocationMode", a."AllocationValue", a."PriceBasis",
+        array_agg(a."Id") AS old_ids, (array_agg(a."CreatedByUserId" ORDER BY a."CreatedAt"))[1] AS actor_id
+    FROM massar_gate_codes.teacher_financial_agreements a JOIN massar_gate_codes.teacher_profiles t ON t."Id" = a."TeacherId"
+    WHERE a."IsActive" AND a."EffectiveTo" IS NULL AND a."EffectiveFrom" < (SELECT migration_at FROM massar_gate_codes.state)
+        AND a."Trigger" IN (0, 1, 2) AND a."AllocationMode" <> 3
+        AND NOT EXISTS (SELECT 1 FROM massar_gate_codes.teacher_financial_agreements u
+            WHERE u."TeacherId" = a."TeacherId" AND u."ScopeType" = a."ScopeType"
+                AND u."ScopeId" IS NOT DISTINCT FROM a."ScopeId" AND u."Trigger" = 3 AND u."IsActive")
+    GROUP BY a."TeacherId", a."ScopeType", a."ScopeId", a."AllocationMode", a."AllocationValue", a."PriceBasis", t."FinancePreset"
+    HAVING count(*) = CASE WHEN t."FinancePreset" = 2 THEN 2 ELSE 3 END
+        AND count(DISTINCT a."Trigger") = count(*)
+        AND bool_and(t."FinancePreset" <> 2 OR a."Trigger" IN (0, 2))
+), inserted AS (
+    INSERT INTO massar_gate_codes.teacher_financial_agreements
+        ("Id", "TeacherId", "ScopeType", "ScopeId", "Trigger", "AllocationMode", "AllocationValue", "PriceBasis",
+         "EffectiveFrom", "IsActive", "Reason", "CreatedByUserId", "CreatedAt")
+    SELECT gen_random_uuid(), "TeacherId", "ScopeType", "ScopeId", 3, "AllocationMode", "AllocationValue", "PriceBasis",
+        (SELECT migration_at FROM massar_gate_codes.state), true, 'توحيد القواعد المتطابقة للشراء والأكواد — 2026-09-24', actor_id, (SELECT migration_at FROM massar_gate_codes.state) FROM matching
+    RETURNING "Id"
+)
+UPDATE massar_gate_codes.teacher_financial_agreements a SET "EffectiveTo" = (SELECT migration_at FROM massar_gate_codes.state), "UpdatedAt" = (SELECT migration_at FROM massar_gate_codes.state)
+WHERE a."Id" IN (SELECT unnest(old_ids) FROM matching) AND EXISTS (SELECT 1 FROM inserted);
+  IF EXISTS (SELECT 1 FROM public.code_group_delivery_payments) THEN
+   RAISE EXCEPTION 'Code collection gate: migration created payments';
+  END IF;
+  ALTER TABLE massar_gate_codes.code_group_delivery_confirmations ADD COLUMN IF NOT EXISTS "PlatformAmountDue" numeric(18,2);
+  ALTER TABLE massar_gate_codes.code_group_delivery_confirmations ADD COLUMN IF NOT EXISTS "TeacherRetainedAmount" numeric(18,2);
+  ALTER TABLE massar_gate_funding.teacher_financial_allocations ADD COLUMN IF NOT EXISTS "RetainedByTeacher" boolean NOT NULL DEFAULT false;
+ END IF;
+ -- Existing row IDs and every field must match the independently computed expectation.
+ FOREACH name IN ARRAY ARRAY['teacher_financial_agreements','financial_accounts'] LOOP
+  EXECUTE format('SELECT EXISTS (SELECT 1 FROM massar_gate_codes.original_ids old
+    LEFT JOIN public.%I actual ON actual."Id"=old."Id"
+    WHERE old.name=%L AND actual."Id" IS NULL)',name,name) INTO changed;
+  IF changed THEN RAISE EXCEPTION 'Code collection gate: historical row deleted in %',name; END IF;
+  EXECUTE format('SELECT EXISTS (SELECT 1 FROM massar_gate_codes.%I expected
+    JOIN public.%I actual ON actual."Id"=expected."Id"
+    WHERE to_jsonb(actual) IS DISTINCT FROM to_jsonb(expected))',name,name) INTO changed;
+  IF changed THEN RAISE EXCEPTION 'Code collection gate: historical row changed in %',name; END IF;
+  -- Random IDs may differ only on inserted rows; compare full row multisets otherwise.
+  EXECUTE format('SELECT EXISTS (
+    (SELECT to_jsonb(expected)-''Id'' FROM massar_gate_codes.%I expected
+      WHERE NOT EXISTS (SELECT 1 FROM public.%I actual WHERE actual."Id"=expected."Id")
+     EXCEPT ALL
+     SELECT to_jsonb(actual)-''Id'' FROM public.%I actual
+      WHERE NOT EXISTS (SELECT 1 FROM massar_gate_codes.%I expected WHERE actual."Id"=expected."Id"))
+    UNION ALL
+    (SELECT to_jsonb(actual)-''Id'' FROM public.%I actual
+      WHERE NOT EXISTS (SELECT 1 FROM massar_gate_codes.%I expected WHERE actual."Id"=expected."Id")
+     EXCEPT ALL
+     SELECT to_jsonb(expected)-''Id'' FROM massar_gate_codes.%I expected
+      WHERE NOT EXISTS (SELECT 1 FROM public.%I actual WHERE actual."Id"=expected."Id")))',
+    name,name,name,name,name,name,name,name) INTO changed;
+  IF changed THEN RAISE EXCEPTION 'Code collection gate: unexpected added/deleted rows in %',name; END IF;
+ END LOOP;
+ IF EXISTS (SELECT 1 FROM massar_gate_codes.code_group_delivery_confirmations expected
+  FULL JOIN public.code_group_delivery_confirmations actual ON actual."Id"=expected."Id"
+  WHERE to_jsonb(actual) IS DISTINCT FROM to_jsonb(expected)) THEN
+  RAISE EXCEPTION 'Code collection gate: historical delivery changed';
+ END IF;
+ -- The exact transformation is now proven; retain byte-for-byte funding checks
+ -- against this reviewed expectation, including the new false allocation default.
+ UPDATE massar_gate_codes.state SET added_agreements=
+  (SELECT count(*) FROM public.teacher_financial_agreements)-(SELECT count(*) FROM massar_gate_funding.teacher_financial_agreements);
+ TRUNCATE massar_gate_funding.teacher_financial_agreements;
+ INSERT INTO massar_gate_funding.teacher_financial_agreements SELECT * FROM public.teacher_financial_agreements;
+END $$;
+"""
+
 # Preserve the complete pre-migration rows for assistant roles that already expose
 # the refunds page. The reviewed backfill may add only the two permissions needed
 # to use that page; every other role field remains immutable.
@@ -574,6 +691,7 @@ financial_events_hash() {{
 }}
 psql_restore <<'SQL'
 {FUNDING_SNAPSHOT_SQL}
+{CODE_COLLECTION_SNAPSHOT_SQL}
 SQL
 psql_restore <<'SQL'
 {REFUND_ROLE_SNAPSHOT_SQL}
@@ -593,7 +711,7 @@ psql_restore -c "
       '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
       'teacher_profiles','teacher_subjects','subjects','thanaweya_results',
       'teacher_financial_agreements','teacher_financial_events','teacher_financial_allocations',
-      'financial_journal_entries','financial_journal_lines'
+      'financial_journal_entries','financial_journal_lines','financial_accounts'
     )
   order by tablename;" > "$pre_unaffected_tables"
 pre_unaffected_hash="$(unaffected_counts_hash)"
@@ -646,6 +764,7 @@ test "$(
 )" = 0
 psql_restore <<'SQL'
 {REFUND_ROLE_VALIDATION_SQL}
+{CODE_COLLECTION_VALIDATION_SQL}
 SQL
 test "$(unaffected_counts_hash)" = "$pre_unaffected_hash"
 test "$(protected_rows_hash)" = "$pre_protected_rows_hash"
@@ -654,7 +773,8 @@ psql_restore -c 'DROP SCHEMA massar_gate_refund_roles CASCADE;'
 # while historical monetary events must remain byte-for-byte unchanged.
 stage="finance-activation-validation"
 post_fee_activation="$(finance_activation_count)"
-expected_agreement_count="$pre_agreement_count"
+code_agreement_additions="$(psql_restore -c 'select added_agreements from massar_gate_codes.state;')"
+expected_agreement_count="$((pre_agreement_count + code_agreement_additions))"
 if test "$pre_fee_activation" = 0 && test "$post_fee_activation" = 1; then
   new_default_count="$(psql_restore -c 'select COALESCE(sum(case when "FinancePreset" = 2 then 10 else 15 end), 0) from teacher_profiles;')"
   expected_agreement_count="$((pre_agreement_count + new_default_count))"
@@ -698,6 +818,7 @@ fi
 stage="teacher-funding-validation"
 psql_restore <<'SQL'
 {FUNDING_VALIDATION_SQL}
+DROP SCHEMA massar_gate_codes CASCADE;
 SQL
 post_migration_schema_hash="$(schema_hash)"
 stage="post-migration-validation"

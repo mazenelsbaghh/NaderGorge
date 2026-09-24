@@ -8,7 +8,7 @@ namespace NaderGorge.Infrastructure.Services.AdminAI.Actions;
 public sealed record AdminAICreateTeacherAgreementInput(Guid TeacherId, TeacherAgreementTerms Terms);
 public sealed record AdminAIReplaceTeacherAgreementInput(Guid AgreementId, TeacherAgreementTerms Terms);
 public sealed record AdminAISetCodeGroupFinancialTermsInput(Guid CodeGroupId, TeacherAgreementTrigger Trigger, Guid? AgreementId, string? Recipient);
-public sealed record AdminAIConfirmCodeGroupDeliveryInput(Guid CodeGroupId, string Recipient, string? AttachmentUrl, DateTime? DeliveredAt);
+public sealed record AdminAIConfirmCodeGroupDeliveryInput(Guid CodeGroupId, string Recipient, string? AttachmentUrl, DateTime? DeliveredAt, string QuoteKey = "");
 public sealed record AdminAICreateTeacherSettlementInput(SettlementCreationInput Settlement);
 public sealed record AdminAITransitionTeacherSettlementInput(Guid SettlementId, TeacherSettlementStatus Expected, TeacherSettlementStatus Next);
 public sealed record AdminAIPayTeacherSettlementInput(Guid SettlementId, SettlementPaymentInput Payment);
@@ -44,7 +44,7 @@ public sealed class AdminAIConfirmCodeGroupDeliveryAction(IMediator mediator, IA
     : AdminAIMediatRActionCapability<AdminAIConfirmCodeGroupDeliveryInput, TeacherFinanceCommandResult>(mediator, preview)
 {
     public override string Key => "admin.teacher-finance.code-group.delivery.confirm";
-    protected override IRequest<TeacherFinanceCommandResult> CreateCommand(AdminAIConfirmCodeGroupDeliveryInput i, Guid actor, string operationId) => new ConfirmCodeGroupDeliveryCommand(actor, i.CodeGroupId, i.Recipient, i.AttachmentUrl, i.DeliveredAt);
+    protected override IRequest<TeacherFinanceCommandResult> CreateCommand(AdminAIConfirmCodeGroupDeliveryInput i, Guid actor, string operationId) => new ConfirmCodeGroupDeliveryCommand(actor, i.CodeGroupId, i.Recipient, i.AttachmentUrl, i.DeliveredAt, i.QuoteKey);
     protected override AdminAIActionOutcome ToOutcome(TeacherFinanceCommandResult r) => TeacherFinanceOutcome.From(r, ["code-groups", "teacher-finance"]);
 }
 

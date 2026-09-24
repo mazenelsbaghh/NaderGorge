@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -59,7 +58,7 @@ public sealed record PlatformFinanceTeacherSummaryDto(
     decimal TeacherShare,
     decimal Refunds,
     decimal Paid,
-    decimal Outstanding);
+    decimal Outstanding, decimal Adjustments, NaderGorge.Application.Services.TeacherFinanceAccountSnapshot? Account = null);
 
 public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 {
@@ -67,75 +66,35 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
 
     public async Task<PlatformFinanceDashboardDto> GetDashboardAsync(DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
-        if (end <= start) throw new ArgumentException("The report end date must be after the start date.");
-
-        var groupedAccounts = await _db.JournalLines.AsNoTracking()
-            .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
-                && line.JournalEntry.OccurredAt >= start
-                && line.JournalEntry.OccurredAt < end)
-            .GroupBy(line => new
-            {
-                line.FinancialAccountId,
-                line.FinancialAccount.Code,
-                line.FinancialAccount.Name,
-                line.FinancialAccount.Type,
-                line.FinancialAccount.Role
-            })
-            .Select(group => new { group.Key.FinancialAccountId, group.Key.Code, group.Key.Name, group.Key.Type, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
-            .ToListAsync(ct);
-        var rows = groupedAccounts
-            .Select(row => new PlatformFinanceAccountBalanceDto(row.FinancialAccountId, row.Code, row.Name, row.Type, row.Debit, row.Credit,
-                row.Type is FinancialAccountType.Asset or FinancialAccountType.Expense or FinancialAccountType.ContraRevenue ? row.Debit - row.Credit : row.Credit - row.Debit))
-            .OrderBy(row => row.Code)
-            .ToArray();
-
-        // Resolve roles in the same query shape so dashboard calculations never
-        // depend on translated string account names.
-        var groupedRoles = await _db.JournalLines.AsNoTracking()
-            .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
-                && line.JournalEntry.OccurredAt >= start
-                && line.JournalEntry.OccurredAt < end)
-            .GroupBy(line => line.FinancialAccount.Role)
-            .Select(group => new { Role = group.Key, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
-            .ToListAsync(ct);
-        var roleTypes = await _db.FinancialAccounts.AsNoTracking().Select(account => new { account.Role, account.Type }).ToListAsync(ct);
-        var roleBalances = groupedRoles.ToDictionary(item => item.Role, item =>
-        {
-            var type = roleTypes.FirstOrDefault(candidate => candidate.Role == item.Role)?.Type;
-            return type is FinancialAccountType.Asset or FinancialAccountType.Expense or FinancialAccountType.ContraRevenue ? item.Debit - item.Credit : item.Credit - item.Debit;
-        });
-
-        decimal GetRole(FinancialAccountRole role) => roleBalances.GetValueOrDefault(role);
-        var revenue = GetRole(FinancialAccountRole.PlatformRevenue);
-        var refunds = GetRole(FinancialAccountRole.Refunds);
-        var expenses = GetRole(FinancialAccountRole.OperatingExpense) + GetRole(FinancialAccountRole.PayrollExpense);
-
-        return new PlatformFinanceDashboardDto(
-            start,
-            end.AddTicks(-1),
-            GetRole(FinancialAccountRole.Treasury),
-            GetRole(FinancialAccountRole.GeneralStudentLiability),
-            GetRole(FinancialAccountRole.TeacherStudentLiability),
-            GetRole(FinancialAccountRole.TeacherPayable),
-            GetRole(FinancialAccountRole.SupplierPayable),
-            revenue,
-            refunds,
-            expenses,
-            revenue - refunds - expenses,
-            rows);
+        var (start, end) = FinancialLedgerQuery.Period(from, to);
+        var accounts = await new FinancialLedgerQuery(_db).GetAccountsAsync(from, to, ct);
+        var rows = accounts.Select(account => new PlatformFinanceAccountBalanceDto(
+            account.AccountId, account.Code, account.Name, account.Type,
+            account.IsBalanceSheet ? account.ClosingDebit : account.PeriodDebit,
+            account.IsBalanceSheet ? account.ClosingCredit : account.PeriodCredit,
+            account.IsBalanceSheet ? account.ClosingBalance : account.PeriodBalance)).ToArray();
+        decimal Closing(FinancialAccountRole role) => accounts.Where(account => account.Role == role).Sum(account => account.ClosingBalance);
+        decimal Period(FinancialAccountType type) => accounts.Where(account => account.Type == type).Sum(account => account.PeriodBalance);
+        var revenue = Period(FinancialAccountType.Revenue);
+        var refunds = Period(FinancialAccountType.ContraRevenue);
+        var expenses = Period(FinancialAccountType.Expense);
+        return new PlatformFinanceDashboardDto(start, end.AddTicks(-1),
+            Closing(FinancialAccountRole.Treasury), Closing(FinancialAccountRole.GeneralStudentLiability),
+            Closing(FinancialAccountRole.TeacherStudentLiability), Closing(FinancialAccountRole.TeacherPayable),
+            Closing(FinancialAccountRole.SupplierPayable), revenue, refunds, expenses,
+            revenue - refunds - expenses, rows);
     }
 
     public async Task<IReadOnlyList<PlatformFinanceJournalDto>> GetLedgerAsync(DateTime? from, DateTime? to, int page, int pageSize, CancellationToken ct)
     {
-        var (start, end) = CairoTime.GetRollingMonthRangeUtc(from, to);
+        var (start, end) = FinancialLedgerQuery.Period(from, to);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        var entries = await _db.JournalEntries.AsNoTracking()
+        var entries = await new FinancialLedgerQuery(_db).Entries
             .Include(entry => entry.Lines)
             .ThenInclude(line => line.FinancialAccount)
-            .Where(entry => entry.Status == JournalEntryStatus.Posted && entry.OccurredAt >= start && entry.OccurredAt < end)
+            .Where(entry => entry.OccurredAt >= start && entry.OccurredAt < end)
             .OrderByDescending(entry => entry.OccurredAt)
             .ThenByDescending(entry => entry.SequenceNumber)
             .Skip((page - 1) * pageSize)
@@ -177,7 +136,7 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
     {
         var summaries = await new Teachers.GetTeacherFinancialSummaryQuery(_db).GetAllAsync(from, to, ct);
         return summaries.Select(x => new PlatformFinanceTeacherSummaryDto(x.TeacherId, x.TeacherName,
-            x.GrossSales, x.PlatformShare, x.TeacherShare, x.Refunds, x.Paid, x.Outstanding)).ToArray();
+            x.GrossSales, x.PlatformShare, x.TeacherShare, x.Refunds, x.Paid, x.Outstanding, x.Adjustments)).ToArray();
     }
 
     private static PlatformFinanceJournalDto MapEntry(Domain.Entities.JournalEntry entry) => new(

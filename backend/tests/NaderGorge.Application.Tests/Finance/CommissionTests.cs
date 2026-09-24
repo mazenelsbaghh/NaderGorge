@@ -119,6 +119,9 @@ public class CommissionTests
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
 
+        db.FinancialAccounts.AddRange(
+            new FinancialAccount { Code = "1000", Name = "Cash", Type = FinancialAccountType.Asset, Role = FinancialAccountRole.Treasury },
+            new FinancialAccount { Code = "2000", Name = "Teacher payable", Type = FinancialAccountType.Liability, Role = FinancialAccountRole.TeacherPayable });
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Test Teacher 4", "01099999999");
         var teacherProfile = new TeacherProfile
         {
@@ -151,7 +154,7 @@ public class CommissionTests
 
         var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01010101010");
         var audit = new TestAuditRepository();
-        var handler = new ResolvePayoutCommandHandler(db, audit);
+        var handler = new ResolvePayoutCommandHandler(db, audit, new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db));
 
         var approveResult = await handler.Handle(
             new ResolvePayoutCommand(payout.Id, PayoutStatus.Approved, null, adminUser.Id),
@@ -179,6 +182,10 @@ public class CommissionTests
         Assert.Equal(adminUser.Id, updatedPayout.PaidByUserId);
 
         updatedAccount = await db.TeacherAccounts.FindAsync(account.Id);
+        var paymentJournal = Assert.Single(db.JournalEntries);
+        Assert.Equal("TeacherPayout", paymentJournal.SourceType);
+        Assert.Equal(200m, paymentJournal.Lines.Sum(line => line.Debit));
+        Assert.Equal(200m, paymentJournal.Lines.Sum(line => line.Credit));
         Assert.Equal(300.00m, updatedAccount!.CurrentBalance);
         Assert.Equal(0.00m, updatedAccount.ReservedBalance);
     }
@@ -221,7 +228,7 @@ public class CommissionTests
 
         var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01010101011");
         var audit = new TestAuditRepository();
-        var handler = new ResolvePayoutCommandHandler(db, audit);
+        var handler = new ResolvePayoutCommandHandler(db, audit, new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db));
 
         var result = await handler.Handle(
             new ResolvePayoutCommand(payout.Id, PayoutStatus.Rejected, "Invalid paperwork", adminUser.Id),

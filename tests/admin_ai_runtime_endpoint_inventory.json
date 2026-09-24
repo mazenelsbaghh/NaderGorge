@@ -255,6 +255,23 @@
     "permissions": []
   },
   {
+    "route": "api/admin/ai-provider-status",
+    "controller": "AIProviderStatus",
+    "action": "Get",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/Admin/assessments/ocr/questions",
     "controller": "Admin",
     "action": "ExtractAssessmentQuestionsFromImages",
@@ -1129,6 +1146,40 @@
       "users.manage",
       "users.manage"
     ]
+  },
+  {
+    "route": "api/admin/emthntak/configuration",
+    "controller": "AdminEmthntak",
+    "action": "Configuration",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/emthntak/request",
+    "controller": "AdminEmthntak",
+    "action": "ForwardRequest",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
   },
   {
     "route": "api/Admin/essays/{essaySubmissionId:guid}/grade",
@@ -4795,6 +4846,26 @@
     ]
   },
   {
+    "route": "api/Admin/settings/student-welcome-stats",
+    "controller": "Admin",
+    "action": "GetStudentWelcomeStats",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "settings.manage",
+      "settings.manage"
+    ]
+  },
+  {
     "route": "api/admin/shared-packages",
     "controller": "AdminSharedPackages",
     "action": "Create",
@@ -5099,6 +5170,23 @@
     "permissions": []
   },
   {
+    "route": "api/admin/teacher-finance-center/code-groups/{codeGroupId:guid}/account",
+    "controller": "AdminTeacherCodeFinance",
+    "action": "GetAccount",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/admin/teacher-finance-center/code-groups/{codeGroupId:guid}/confirm-delivery",
     "controller": "AdminTeacherCodeFinance",
     "action": "ConfirmDelivery",
@@ -5121,6 +5209,23 @@
     "action": "SetFinancialTerms",
     "methods": [
       "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/teacher-finance-center/code-groups/{codeGroupId:guid}/payments",
+    "controller": "AdminTeacherCodeFinance",
+    "action": "CollectPayment",
+    "methods": [
+      "POST"
     ],
     "authorization": [
       {
@@ -5357,6 +5462,23 @@
     "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/ledger",
     "controller": "AdminTeacherFinanceCenter",
     "action": "GetLedger",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/admin/teacher-finance-center/teachers/{teacherId:guid}/settlements",
+    "controller": "AdminTeacherFinanceCenter",
+    "action": "ListSettlements",
     "methods": [
       "GET"
     ],
@@ -11019,6 +11141,26 @@
     ]
   },
   {
+    "route": "api/live-support/connections/whatsapp/{id:guid}/connection",
+    "controller": "LiveSupportConnections",
+    "action": "Connection",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Admin,Assistant,AssistantReviewer,Staff",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": [
+      "live_support.manage",
+      "live_support.manage"
+    ]
+  },
+  {
     "route": "api/live-support/connections/whatsapp/{id:guid}/disconnect",
     "controller": "LiveSupportConnections",
     "action": "Disconnect",
@@ -12944,6 +13086,57 @@
     "permissions": []
   },
   {
+    "route": "api/student/welcome/claim",
+    "controller": "StudentWelcome",
+    "action": "Claim",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Student",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/student/welcome/complete",
+    "controller": "StudentWelcome",
+    "action": "Complete",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Student",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/student/welcome/release",
+    "controller": "StudentWelcome",
+    "action": "Release",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [
+      {
+        "Policy": null,
+        "Roles": "Student",
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/teacher/activity",
     "controller": "Teacher",
     "action": "GetActivity",
@@ -14089,6 +14282,17 @@
     "route": "api/v1/internal/callbacks/essay-graded",
     "controller": "Internal",
     "action": "EssayGraded",
+    "methods": [
+      "POST"
+    ],
+    "authorization": [],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/callbacks/homework-graded",
+    "controller": "Internal",
+    "action": "HomeworkGraded",
     "methods": [
       "POST"
     ],

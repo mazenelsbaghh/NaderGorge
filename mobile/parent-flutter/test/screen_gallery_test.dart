@@ -52,6 +52,7 @@ void main() {
     final data = jsonDecode(jsonEncode(fixture('أحمد محمد'))) as Json;
     final lessons = data['watchLessons'] as List;
     lessons[0]['watchedSeconds'] = 1920;
+    lessons[0]['actualWatchedSeconds'] = 1920;
     lessons[0]['lastWatchedAt'] = '2026-09-23T17:30:00Z';
     lessons.add({
       ...lessons[0] as Json,
@@ -98,7 +99,10 @@ void main() {
         'title': 'واجب الحركة',
         'isSubmitted': true,
         'submissionState': 'Graded',
-        'grade': '8 من 10',
+        'grade': 'جيد جدًا',
+        'score': 8,
+        'totalScore': 10,
+        'percentage': 80,
         'packageId': 'p1',
         'packageName': 'الفيزياء',
         'termId': 't1',
@@ -289,6 +293,8 @@ void main() {
       }
       if (entry.key == '10-homeworks') {
         await tester.tap(find.text('الواجبات'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('8 من 10'));
         await tester.pumpAndSettle();
       }
       await save(entry.key);

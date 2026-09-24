@@ -17,11 +17,12 @@ public sealed class RefundPostingService(IAppDbContext db, IFinancialPostingServ
             : "1100";
         var lines = new List<FinancialPostingLine>
         {
-            new("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId),
             new(creditAccount, 0m, refund.TotalAmount, StudentId: refund.StudentId, TreasuryAccountId: refund.TreasuryAccountId)
         };
+        if (refund.PlatformAmount > 0m)
+            lines.Add(new("4100", refund.PlatformAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId));
         if (refund.TeacherAmount > 0m)
-            lines.Insert(1, new FinancialPostingLine("2000", refund.TeacherAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId));
+            lines.Add(new FinancialPostingLine("2000", refund.TeacherAmount, 0m, StudentId: refund.StudentId, TeacherId: refund.TeacherId));
 
         var transaction = db is DbContext context && context.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL" && context.Database.CurrentTransaction is null
             ? await db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct)

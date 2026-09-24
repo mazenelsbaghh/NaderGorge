@@ -1,5 +1,5 @@
+using NaderGorge.Application.Features.Admin.PlatformFinance;
 using Microsoft.EntityFrameworkCore;
-using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services.Finance.Migration;
@@ -12,10 +12,9 @@ public sealed class FinancialReconciliationService(IAppDbContext db)
 {
     public async Task<FinancialReconciliationReport> GetAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var start = from.Date;
-        var end = to.Date.AddDays(1);
-        var rows = await db.JournalEntries.AsNoTracking()
-            .Where(entry => entry.Status == JournalEntryStatus.Posted && entry.OccurredAt >= start && entry.OccurredAt < end)
+        var (start, end) = FinancialLedgerQuery.Period(from, to);
+        var rows = await new FinancialLedgerQuery(db).Entries
+            .Where(entry => entry.OccurredAt >= start && entry.OccurredAt < end)
             .SelectMany(entry => entry.Lines.Select(line => new { entry.SourceType, Month = new DateTime(entry.OccurredAt.Year, entry.OccurredAt.Month, 1), line.Debit, line.Credit }))
             .GroupBy(row => new { row.SourceType, row.Month })
             .Select(group => new FinancialReconciliationRow(group.Key.SourceType, group.Key.Month, group.Count(), group.Sum(row => row.Debit), group.Sum(row => row.Credit), group.Sum(row => row.Debit) - group.Sum(row => row.Credit)))

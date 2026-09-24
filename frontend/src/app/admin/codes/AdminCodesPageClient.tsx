@@ -3,7 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Banknote, Building2, Clock3, Eye, KeyRound, Layers, LayoutTemplate, Percent, Plus, Search, Sparkles, UserRound, Zap } from 'lucide-react';
+import { Eye, KeyRound, Layers, LayoutTemplate, Plus, Search, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -59,10 +59,6 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
   const [genSelection, setGenSelection] = useState<CodeTypeSelection>({ codeType: 'Package' });
   const [genTeacherId, setGenTeacherId] = useState('');
   const [genGroupName, setGenGroupName] = useState('');
-  const [genRevenueOwner, setGenRevenueOwner] = useState<'Teacher' | 'Platform'>('Teacher');
-  const [genRevenueAllocationMode, setGenRevenueAllocationMode] = useState<'Percentage' | 'FixedAmount'>('Percentage');
-  const [genRevenueAllocationValue, setGenRevenueAllocationValue] = useState('');
-  const [genAccountingTiming, setGenAccountingTiming] = useState<'OnActivation' | 'Immediate'>('OnActivation');
   const [genAcademicScopes, setGenAcademicScopes] = useState<AcademicScopePayload[]>([
     { scopeLevel: 'GradeAllSubjects', educationStage: 'Secondary', gradeLevel: 'FirstSecondary' },
   ]);
@@ -70,12 +66,6 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const generationTeacher = teachers.find((teacher) => teacher.id === (genTeacherId || packages.find((pkg) => pkg.id === genSelection.packageId)?.teacherId));
-  const naderCodes = generationTeacher?.financePreset === 'Nader';
-  const generationPreset = generationTeacher?.financePreset ?? 'Standard';
-  const platformFeeLabel = genSelection.codeType === 'Package' ? (naderCodes ? '250 جنيه' : '25% من سعر البيع بعد الخصم')
-    : genSelection.codeType === 'Term' ? (naderCodes ? '100 جنيه' : '25% من سعر البيع بعد الخصم')
-    : genSelection.codeType === 'Month' ? `${naderCodes ? 30 : generationPreset === 'SandyAshraf' ? 50 : 60} جنيه`
-    : genSelection.codeType === 'Lesson' ? `${generationPreset === 'SandyAshraf' ? 12.5 : 15} جنيه` : null;
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
@@ -158,10 +148,7 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
         videoTargetIds: genSelection.codeType === 'Video' && genSelection.videoTargetIds && genSelection.videoTargetIds.length > 0 ? genSelection.videoTargetIds : undefined,
         balanceAmount: genSelection.balanceAmount || undefined,
         teacherId: genTeacherId || undefined,
-        revenueOwner: genSelection.codeType === 'Balance' ? undefined : genRevenueOwner,
-        revenueAllocationMode: genSelection.codeType === 'Balance' || !genRevenueAllocationValue ? undefined : genRevenueAllocationMode,
-        revenueAllocationValue: genSelection.codeType === 'Balance' || !genRevenueAllocationValue ? undefined : Number(genRevenueAllocationValue),
-        accountingTiming: naderCodes || genSelection.codeType === 'Balance' ? 'OnActivation' : genAccountingTiming,
+        accountingTiming: 'OnActivation',
         expiresAt: genSelection.expiresAt || undefined,
         expireActivatedAccess: genSelection.expiresAt ? genSelection.expireActivatedAccess !== false : undefined,
         academicScopes: genAcademicScopes,
@@ -174,10 +161,6 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
       setGenTeacherId('');
       setGenGroupName('');
       setGenCount(10);
-      setGenRevenueOwner('Teacher');
-      setGenRevenueAllocationMode('Percentage');
-      setGenRevenueAllocationValue('');
-      setGenAccountingTiming('OnActivation');
       setGenAcademicScopes([{ scopeLevel: 'GradeAllSubjects', educationStage: 'Secondary', gradeLevel: 'FirstSecondary' }]);
       await loadData();
     } catch (error: unknown) {
@@ -501,129 +484,10 @@ export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin
             />
           </div>
 
-          {genSelection.codeType !== 'Balance' ? (
-            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--admin-text-strong)]">تفعيل الأرباح</h3>
-                  <p className="mt-1 text-xs font-semibold text-[var(--admin-muted)]">
-                    اختر هل قيمة الدفعة تتحسب للمدرس أم للمنصة، ومتى يظهر الربح في الحسابات.
-                  </p>
-                </div>
-                <div className="rounded-xl bg-[var(--admin-card-strong)] p-3 text-[var(--admin-primary)]">
-                  <Banknote className="h-5 w-5" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--admin-muted)]">الربح تابع لـ</label>
-                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--admin-bg)] p-1">
-                    {[
-                      { value: 'Teacher' as const, label: 'المدرس', icon: UserRound },
-                      { value: 'Platform' as const, label: 'المنصة', icon: Building2 },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      const active = genRevenueOwner === item.value;
-                      return (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => setGenRevenueOwner(item.value)}
-                          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                            active
-                              ? 'bg-[var(--admin-primary)] text-white shadow-sm'
-                              : 'text-[var(--admin-muted)] hover:bg-[var(--admin-card)]'
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {genRevenueOwner === 'Teacher' && !genTeacherId ? (
-                    <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">اختيار المدرس مطلوب لو الربح تابع للمدرس.</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[var(--admin-muted)]">طريقة الحساب</label>
-                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--admin-bg)] p-1">
-                    {[
-                      { value: 'Percentage' as const, label: 'نسبة', icon: Percent },
-                      { value: 'FixedAmount' as const, label: 'مبلغ ثابت', icon: Banknote },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      const active = genRevenueAllocationMode === item.value;
-                      return (
-                        <button
-                          key={item.value}
-                          type="button"
-                          onClick={() => setGenRevenueAllocationMode(item.value)}
-                          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                            active
-                              ? 'bg-[var(--admin-primary)] text-white shadow-sm'
-                              : 'text-[var(--admin-muted)] hover:bg-[var(--admin-card)]'
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <input
-                    type="number"
-                    min={0}
-                    max={genRevenueAllocationMode === 'Percentage' ? 100 : undefined}
-                    step="0.01"
-                    value={genRevenueAllocationValue}
-                    onChange={(e) => setGenRevenueAllocationValue(e.target.value)}
-                    placeholder={genRevenueAllocationMode === 'Percentage' ? 'مثلاً: 30' : 'مثلاً: 500'}
-                    className="admin-input"
-                    dir="ltr"
-                  />
-                  <p className="text-xs text-[var(--admin-muted)]">
-                    لو سيبتها فاضية هيستخدم اتفاقات المدرس ونصيب المنصة حسب نوع الاشتراك.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  {platformFeeLabel && generationTeacher && <p className="rounded-xl bg-[var(--admin-bg)] p-3 text-sm font-bold">نصيب المنصة الافتراضي: {platformFeeLabel} لكل كود. {naderCodes ? 'أكواد نادر تُحسب عند أول استخدام فقط.' : 'يُحسب الكود مرة واحدة حسب توقيت الدفعة.'}</p>}
-                  <label className="text-xs font-bold text-[var(--admin-muted)]">توقيت التسجيل</label>
-                  <div className="grid gap-2">
-                    {[
-                      { value: 'Immediate' as const, label: 'عند تأكيد تسليم الدفعة', icon: Zap },
-                      { value: 'OnActivation' as const, label: 'لا، حسب تفعيل الكود', icon: Clock3 },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      const active = (naderCodes ? 'OnActivation' : genAccountingTiming) === item.value;
-                      return (
-                        <button
-                          key={item.value}
-                          type="button"
-                          disabled={naderCodes && item.value === 'Immediate'}
-                          onClick={() => setGenAccountingTiming(item.value)}
-                          className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-bold transition ${
-                            active
-                              ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
-                              : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
-                          }`}
-                        >
-                          <span>{item.label}</span>
-                          <Icon className="h-4 w-4" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-[var(--admin-muted)]">
-                    الفوري يسجل إجمالي الدفعة الآن، أما حسب التفعيل فيسجل ربح كل كود عند استخدامه.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          {genSelection.codeType !== 'Balance' && <div className="rounded-xl border border-[var(--admin-border)] p-4 text-sm leading-6">
+            الحساب من اتفاق المدرّس. الدفعة الجديدة بتتحاسب عند استخدام الأكواد؛ لو هتتحاسب كاملة عند التسليم، افتح حساب المدرّس واضبطها قبل توزيعها.
+            {generationTeacher && !isAssistant && <Link href={`/admin/teachers/${generationTeacher.id}/account#code-batches`} className="block min-h-11 pt-3 font-bold text-[var(--admin-primary)]">فتح حساب المدرّس والاتفاقات</Link>}
+          </div>}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
             <NeumorphButton type="button" onClick={() => setShowGenModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>

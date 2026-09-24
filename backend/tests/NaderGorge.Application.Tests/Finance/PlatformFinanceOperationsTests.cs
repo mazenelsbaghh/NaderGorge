@@ -30,8 +30,11 @@ public sealed class PlatformFinanceOperationsTests
         Assert.Equal(250m, journal.Lines.Sum(line => line.Credit));
     }
 
-    [Fact]
-    public async Task Cash_refund_requires_treasury_and_posts_platform_and_teacher_lines()
+    [Theory]
+    [InlineData(80, 20)]
+    [InlineData(100, 0)]
+    [InlineData(0, 100)]
+    public async Task Cash_refund_requires_treasury_and_posts_platform_and_teacher_lines(decimal platformAmount, decimal teacherAmount)
     {
         await using var db = TestAppDbContextFactory.Create();
         db.FinancialAccounts.AddRange(
@@ -55,7 +58,7 @@ public sealed class PlatformFinanceOperationsTests
         });
         await db.SaveChangesAsync();
         var operations = new PlatformFinanceOperationsService(db, new FinancialPostingService(db), new BalanceService(db, NullLogger<BalanceService>.Instance));
-        var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(purchaseId, "Purchase", Guid.NewGuid(), Guid.NewGuid(), 80m, 20m, 2, treasury.Id, "Student request", "REF-1", Guid.NewGuid()), CancellationToken.None);
+        var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(purchaseId, "Purchase", Guid.NewGuid(), Guid.NewGuid(), platformAmount, teacherAmount, 2, treasury.Id, "Student request", "REF-1", Guid.NewGuid()), CancellationToken.None);
 
         await operations.PostRefundAsync(refund.Id, "refund-post-1", Guid.NewGuid(), CancellationToken.None);
 

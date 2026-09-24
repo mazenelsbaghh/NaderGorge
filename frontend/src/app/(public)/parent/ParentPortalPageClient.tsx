@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, ClipboardCheck, LockKeyhole, LogOut, TrendingUp, UserRound } from 'lucide-react';
 import { parentService, type ParentAcademicDetails } from '@/services/parent-service';
@@ -77,7 +77,7 @@ export default function ParentPortalPageClient() {
     }
   };
 
-  const completion = useMemo(() => Math.max(0, Math.min(100, details?.attendance.completionRate ?? 0)), [details]);
+  const watchProgress = details?.attendance.watchProgressPercentage;
 
   if (loading) {
     return <main className="grid min-h-screen place-items-center bg-[var(--landing-bg)] px-4 text-[var(--landing-ink)]"><span role="status" className="text-base font-bold">جاري فتح متابعة الطالب...</span></main>;
@@ -114,7 +114,7 @@ export default function ParentPortalPageClient() {
         </header>
 
         <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl bg-[var(--landing-ink)] p-6 text-white sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold text-white/75">تقدم الدروس</p><p className="mt-2 text-4xl font-black">{Math.round(completion)}%</p><p className="mt-2 text-sm font-semibold text-white/75">{details.attendance.watchedLessons} من {details.attendance.totalLessons} درس تمت متابعته</p></div><TrendingUp className="h-8 w-8 text-[var(--accent)]" /></div><div className="mt-7 h-3 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-[var(--landing-accent)] transition-[width] duration-500" style={{ width: `${completion}%` }} /></div></div>
+          <div className="rounded-2xl bg-[var(--landing-ink)] p-6 text-white sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold text-white/75">نسبة مشاهدة الفيديوهات</p><p className="mt-2 text-4xl font-black">{watchProgress == null ? 'غير متاحة' : `${watchProgress}%`}</p><p className="mt-2 text-sm font-semibold text-white/75">{details.attendance.watchedLessons} من {details.attendance.totalLessons} حصة مكتملة</p></div><TrendingUp className="h-8 w-8 text-[var(--accent)]" /></div><div className="mt-7 h-3 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-[var(--landing-accent)] transition-[width] duration-500" style={{ width: `${watchProgress ?? 0}%` }} /></div></div>
           <div className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-bold text-[var(--landing-muted)]">الرصيد المتاح</p><p className="mt-3 text-3xl font-black text-[var(--landing-accent)]">{new Intl.NumberFormat('ar-EG-u-nu-latn', { maximumFractionDigits: 2 }).format(details.balance.currentBalance)} ج.م</p><p className="mt-4 text-xs font-semibold leading-6 text-[var(--landing-muted)]">البيانات المعروضة للمتابعة فقط، ولا يمكن تنفيذ عمليات شراء من هذه الصفحة.</p></div>
         </section>
 

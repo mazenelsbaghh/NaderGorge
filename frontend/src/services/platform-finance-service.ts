@@ -1,3 +1,4 @@
+import type { TeacherFinanceSummary } from '@/features/teacher-finance-center/types';
 import type { StudentProfileExtendedDto } from '@/services/admin-service';
 import apiClient from '@/services/api-client';
 
@@ -60,6 +61,7 @@ export type FinanceBootstrap = {
 };
 
 export type FinanceTeacherSummary = {
+  account?: TeacherFinanceSummary | null;
   teacherId: string;
   teacherName: string;
   grossSales: number;
@@ -68,6 +70,7 @@ export type FinanceTeacherSummary = {
   refunds: number;
   paid: number;
   outstanding: number;
+  adjustments: number;
 };
 
 export type PlatformExpenseRow = { id: string; documentNumber: string; amount: number; occurredAt: string; status: number; description: string; paid: number };
@@ -136,7 +139,7 @@ const platformFinanceService = {
     return response.data;
   },
   async createExpense(payload: { amount: number; occurredAt: string; categoryId: string; description: string; documentNumber?: string }) {
-    return (await apiClient.post('/admin/platform-finance/expenses', payload)).data;
+    return (await apiClient.post<{ id: string; documentNumber: string; status: number; amount: number }>('/admin/platform-finance/expenses', payload)).data;
   },
   async postExpense(expenseId: string, payload: { treasuryAccountId?: string; idempotencyKey: string }) {
     return (await apiClient.post(`/admin/platform-finance/expenses/${expenseId}/post`, payload)).data;
@@ -163,7 +166,7 @@ const platformFinanceService = {
     return (await apiClient.post(`/admin/platform-finance/expenses/${expenseId}/reverse`, { reason })).data;
   },
   async createRefund(payload: { originalSourceId: string; originalSourceType: string; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; method: number; treasuryAccountId?: string; reason: string; paymentReference?: string }) {
-    return (await apiClient.post('/admin/platform-finance/refunds', payload)).data;
+    return (await apiClient.post<{ id: string; totalAmount: number; method: number; status: number }>('/admin/platform-finance/refunds', payload)).data;
   },
   async createExternalPackageRefund(payload: { accessGrantId: string; purchaseOperationId?: string | null; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; treasuryAccountId: string; reason: string; paymentReference?: string }) {
     return (await apiClient.post('/admin/platform-finance/refunds/external-package', payload)).data;

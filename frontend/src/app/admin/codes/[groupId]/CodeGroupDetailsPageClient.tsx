@@ -2,9 +2,8 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { useEffect, useMemo, useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowRight, Banknote, Building2, Clock3, Download, KeyRound, Link as LinkIcon, PencilLine, Percent, Printer, Save, Search, Sparkles, Trash2, User as UserIcon, UserRound, Zap } from 'lucide-react';
+import { ArrowRight, Banknote, Download, KeyRound, Link as LinkIcon, PencilLine, Printer, Save, Search, Sparkles, Trash2, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { isAxiosError } from 'axios';
 
@@ -45,48 +44,6 @@ function InfoCell({ label, value }: { label: string; value: string | number }) {
     <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2">
       <div className="text-sm font-bold text-[var(--admin-muted)]">{label}</div>
       <div className="mt-1 break-all text-xs font-black text-[var(--admin-text)]">{value}</div>
-    </div>
-  );
-}
-
-function Segmented({
-  label,
-  value,
-  options,
-  disabled = false,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ value: string; label: string; icon: LucideIcon }>;
-  disabled?: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <div className="mb-1 text-xs font-bold text-[var(--admin-muted)]">{label}</div>
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--admin-card)] p-1">
-        {options.map((option) => {
-          const Icon = option.icon;
-          const active = value === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(option.value)}
-              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                active
-                  ? 'bg-[var(--admin-primary)] text-white shadow-sm'
-                  : 'text-[var(--admin-muted)] hover:bg-[var(--admin-card-strong)]'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -279,16 +236,10 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
         name: overviewForm.name.trim() || group.name,
         teacherId: overviewForm.teacherId || null,
         expiresAt: overviewForm.expiresAt ? cairoDateTimeLocalToIso(overviewForm.expiresAt) : null,
-        revenueOwner: group.codeType === 'Balance' ? null : overviewForm.revenueOwner,
-        revenueAllocationMode:
-          group.codeType === 'Balance' || !overviewForm.revenueAllocationValue
-            ? null
-            : overviewForm.revenueAllocationMode,
-        revenueAllocationValue:
-          group.codeType === 'Balance' || !overviewForm.revenueAllocationValue
-            ? null
-            : Number(overviewForm.revenueAllocationValue),
-        accountingTiming: group.codeType === 'Balance' ? 'OnActivation' : overviewForm.accountingTiming,
+        revenueOwner: group.revenueOwner ?? null,
+        revenueAllocationMode: group.revenueAllocationMode ?? null,
+        revenueAllocationValue: group.revenueAllocationValue ?? null,
+        accountingTiming: group.accountingTiming,
       });
 
       if (!response.success) {
@@ -546,56 +497,10 @@ export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 
                     ))}
                   </select>
                 </label>
-                {group.codeType !== 'Balance' ? (
-                  <>
-                    <Segmented
-                      label="الربح تابع لـ"
-                      value={overviewForm.revenueOwner}
-                      options={[
-                        { value: 'Teacher', label: 'المدرس', icon: UserRound },
-                        { value: 'Platform', label: 'المنصة', icon: Building2 },
-                      ]}
-                      onChange={(value) => setOverviewForm((current) => ({ ...current, revenueOwner: value as 'Teacher' | 'Platform' }))}
-                    />
-                    <Segmented
-                      label="طريقة الحساب"
-                      value={overviewForm.revenueAllocationMode}
-                      options={[
-                        { value: 'Percentage', label: 'نسبة', icon: Percent },
-                        { value: 'FixedAmount', label: 'مبلغ ثابت', icon: Banknote },
-                      ]}
-                      onChange={(value) => setOverviewForm((current) => ({ ...current, revenueAllocationMode: value as 'Percentage' | 'FixedAmount' }))}
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      max={overviewForm.revenueAllocationMode === 'Percentage' ? 100 : undefined}
-                      step="0.01"
-                      value={overviewForm.revenueAllocationValue}
-                      onChange={(event) => setOverviewForm((current) => ({ ...current, revenueAllocationValue: event.target.value }))}
-                      placeholder={overviewForm.revenueAllocationMode === 'Percentage' ? 'مثلاً: 30' : 'مثلاً: 500'}
-                      className="admin-input"
-                      dir="ltr"
-                    />
-                    <Segmented
-                      label="توقيت التسجيل"
-                      value={overviewForm.accountingTiming}
-                      disabled={Boolean(group.accountingRecordedAt)}
-                      options={[
-                        { value: 'Immediate', label: 'فوري', icon: Zap },
-                        { value: 'OnActivation', label: 'حسب التفعيل', icon: Clock3 },
-                      ]}
-                      onChange={(value) => setOverviewForm((current) => ({ ...current, accountingTiming: value as 'OnActivation' | 'Immediate' }))}
-                    />
-                    {group.accountingRecordedAt ? (
-                      <p className="text-xs font-bold text-[var(--admin-muted)]">توقيت التسجيل مقفول لأن أرباح فورية اتسجلت بالفعل.</p>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-xs font-bold text-[var(--admin-muted)]">
-                    كود شحن الرصيد لا يسجل أرباح محتوى.
-                  </div>
-                )}
+                {group.codeType !== 'Balance' ? <div className="rounded-xl border border-[var(--admin-border)] p-3 text-sm leading-6">
+                  الاتفاقات وحساب الدفعة والسداد موجودين في حساب المدرّس.
+                  {group.teacherId && !isAssistant && <Link href={`/admin/teachers/${group.teacherId}/account?codeGroup=${group.id}#code-batches`} className="block min-h-11 pt-3 font-bold text-[var(--admin-primary)]">فتح حساب الدفعة</Link>}
+                </div> : <p className="text-sm text-[var(--admin-muted)]">كود شحن الرصيد لا يسجل أرباح محتوى.</p>}
               </div>
             </div>
           </section>

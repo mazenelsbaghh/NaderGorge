@@ -68,21 +68,26 @@ public class AccessCheckService : IAccessCheckService
             return false;
 
         var lesson = await _db.Lessons
-            .Include(l => l.ContentSection)
-            .ThenInclude(cs => cs.Term)
+            .AsNoTracking()
+            .Select(l => new
+            {
+                l.Id,
+                l.ContentSectionId,
+                TermId = (Guid?)l.ContentSection.TermId,
+                PackageId = (Guid?)l.ContentSection.Term.PackageId,
+                TeacherVisible = _db.TeacherProfiles
+                    .Where(teacher => teacher.Id == l.ContentSection.Term.Package.TeacherId)
+                    .Select(teacher => (bool?)teacher.IsContentVisibleToStudents)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(l => l.Id == lessonId, ct);
 
         if (lesson == null) return false;
 
         var sectionId = lesson.ContentSectionId;
-        var termId = lesson.ContentSection?.TermId;
-        var packageId = lesson.ContentSection?.Term?.PackageId;
-
-        var teacherVisible = await _db.Lessons
-            .Where(item => item.Id == lessonId)
-            .Select(item => (bool?)item.ContentSection.Term.Package.Teacher.IsContentVisibleToStudents)
-            .FirstOrDefaultAsync(ct);
-        if (teacherVisible == false)
+        var termId = lesson.TermId;
+        var packageId = lesson.PackageId;
+        if (lesson.TeacherVisible == false)
             return false;
 
         // Check cascading access: Lesson → Section → Term → Package
@@ -171,18 +176,18 @@ public class AccessCheckService : IAccessCheckService
                 ContentSectionId = v.Lesson.ContentSectionId,
                 TermId = v.Lesson.ContentSection.TermId,
                 PackageId = v.Lesson.ContentSection.Term.PackageId,
-                TeacherId = v.Lesson.ContentSection.Term.Package.TeacherId
+                TeacherId = v.Lesson.ContentSection.Term.Package.TeacherId,
+                TeacherVisible = _db.TeacherProfiles
+                    .Where(teacher => teacher.Id == v.Lesson.ContentSection.Term.Package.TeacherId)
+                    .Select(teacher => (bool?)teacher.IsContentVisibleToStudents)
+                    .FirstOrDefault()
             })
             .FirstOrDefaultAsync(ct);
 
         if (video == null)
             return false;
 
-        var videoTeacherVisible = await _db.TeacherProfiles
-            .Where(teacher => teacher.Id == video.TeacherId)
-            .Select(teacher => (bool?)teacher.IsContentVisibleToStudents)
-            .FirstOrDefaultAsync(ct);
-        if (videoTeacherVisible == false)
+        if (video.TeacherVisible == false)
             return false;
 
         if (await HasAccessToLessonAsync(userId, video.LessonId, ct))

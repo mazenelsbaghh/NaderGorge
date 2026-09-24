@@ -31,6 +31,7 @@ const navigationRules: AdminRouteRule[] =
  * specific routes before their parent prefix.
  */
 export const adminRouteRules: readonly AdminRouteRule[] = [
+ { pattern: '/admin/emthntak', permissions: ['emthntak.content','emthntak.review','emthntak.publish','emthntak.finance','emthntak.support','emthntak.settings'], match: 'prefix' },
   {
     pattern: '/admin/teachers/:id/account',
     adminOnly: true,

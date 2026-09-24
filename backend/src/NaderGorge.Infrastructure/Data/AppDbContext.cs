@@ -290,6 +290,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<TeacherPayoutAdjustment> TeacherPayoutAdjustments => Set<TeacherPayoutAdjustment>();
     public DbSet<TeacherFinancialAgreement> TeacherFinancialAgreements => Set<TeacherFinancialAgreement>();
     public DbSet<CodeGroupFinancialTerms> CodeGroupFinancialTerms => Set<CodeGroupFinancialTerms>();
+    public DbSet<CodeGroupDeliveryPayment> CodeGroupDeliveryPayments => Set<CodeGroupDeliveryPayment>();
     public DbSet<CodeGroupDeliveryConfirmation> CodeGroupDeliveryConfirmations => Set<CodeGroupDeliveryConfirmation>();
     public DbSet<TeacherSettlement> TeacherSettlements => Set<TeacherSettlement>();
     public DbSet<TeacherSettlementLine> TeacherSettlementLines => Set<TeacherSettlementLine>();
@@ -2663,12 +2664,27 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("code_group_delivery_confirmations");
             e.HasKey(x => x.Id);
+            e.Property(x => x.PlatformAmountDue).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TeacherRetainedAmount).HasColumnType("decimal(18,2)");
             e.Property(x => x.Recipient).HasMaxLength(300).IsRequired();
             e.Property(x => x.AttachmentUrl).HasMaxLength(1000);
             e.Property(x => x.IdempotencyKey).HasMaxLength(240).IsRequired();
             e.HasIndex(x => x.CodeGroupId).IsUnique();
             e.HasIndex(x => x.IdempotencyKey).IsUnique();
             e.HasOne(x => x.CodeGroup).WithMany().HasForeignKey(x => x.CodeGroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CodeGroupDeliveryPayment>(e =>
+        {
+            e.ToTable("code_group_delivery_payments", t => t.HasCheckConstraint("CK_code_delivery_payment_positive", "\"Amount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Reference).HasMaxLength(300).IsRequired();
+            e.Property(x => x.IdempotencyKey).HasMaxLength(240).IsRequired();
+            e.HasIndex(x => x.IdempotencyKey).IsUnique();
+            e.HasOne(x => x.DeliveryConfirmation).WithMany(x => x.Payments).HasForeignKey(x => x.DeliveryConfirmationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.TreasuryAccount).WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<TeacherSettlement>(e =>

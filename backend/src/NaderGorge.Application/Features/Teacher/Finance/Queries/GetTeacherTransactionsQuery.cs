@@ -32,7 +32,9 @@ public record TeacherTransactionDto(
     string AllocationMode,
     decimal AllocationValue,
     string ReviewStatus,
-    string PayoutStatus
+    string PayoutStatus,
+    string? AgreementAllocationMode = null,
+    bool RetainedByTeacher = false
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -123,7 +125,9 @@ public class GetTeacherTransactionsQueryHandler : IRequestHandler<GetTeacherTran
             a.AllocationMode.ToString(),
             a.AllocationValue,
             a.ReviewStatus.ToString(),
-            a.PayoutStatus.ToString()
+            a.PayoutStatus.ToString(),
+            a.AgreementAllocationMode?.ToString(),
+            a.RetainedByTeacher
         )).ToList();
 
         return ApiResponse<PagedResult<TeacherTransactionDto>>.Ok(

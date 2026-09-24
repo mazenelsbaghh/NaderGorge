@@ -21,7 +21,7 @@ public sealed class TeacherPlatformFeeDefaultsTests
     public void Defaults_charge_platform_fee_and_leave_remainder_for_teacher(TeacherFinancePreset preset, TeacherAgreementScopeType scope, decimal price, decimal platformFee)
     {
         var rules = TeacherFinanceDefaults.CreateAgreements(Guid.NewGuid(), Guid.NewGuid(), preset, DateTime.UtcNow).ToList();
-        foreach (var trigger in new[] { TeacherAgreementTrigger.ContentSale, TeacherAgreementTrigger.CodeActivation })
+        foreach (var trigger in new[] { TeacherAgreementTrigger.AllSources })
         {
             var rule = Assert.Single(rules, x => x.ScopeType == scope && x.Trigger == trigger);
             var agreement = new TeacherAgreementResolution(rule.Id, rule.ScopeType, null, rule.AllocationMode, rule.AllocationValue, rule.PriceBasis);

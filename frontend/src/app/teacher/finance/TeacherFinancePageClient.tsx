@@ -2,9 +2,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Coins,
-  DollarSign,
-  TrendingUp,
   Clock,
   Plus,
   RefreshCw,
@@ -23,7 +20,6 @@ import {
   AdminDataTable,
   AdminColumn,
   AdminModal,
-  AdminStatCard,
   AdminTab,
   AdminTabBar,
 } from '@/components/admin';
@@ -36,11 +32,13 @@ import {
   TeacherFinanceDayDto,
 } from '@/services/finance-service';
 import toast from 'react-hot-toast';
+import { TeacherAccountOverview } from '@/features/teacher-finance-center/TeacherAccountOverview';
+import { allocationRuleLabel } from '@/features/teacher-finance-center/TeacherAllocationExplanation';
 
 type TabType = 'transactions' | 'payouts';
 
 const FINANCE_TABS: AdminTab<TabType>[] = [
-  { key: 'transactions', label: 'حركات عمولات الأكواد المفعلة', icon: Sparkles },
+  { key: 'transactions', label: 'كل حركات الأرباح', icon: Sparkles },
   { key: 'payouts', label: 'تاريخ طلبات السحب', icon: Clock },
 ];
 
@@ -83,6 +81,7 @@ export default function TeacherFinancePageClient() {
   // Load account statistics
   const fetchAccountSummary = useCallback(async () => {
     setAccountLoading(true);
+    setAccount(null);
     try {
       const summary = await financeService.getTeacherAccountSummary();
       setAccount(summary);
@@ -161,7 +160,7 @@ export default function TeacherFinancePageClient() {
   // Handle new payout request submission
   const handleSubmitPayout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!account) return;
+    if (!account?.account) return;
 
     const amountNum = parseFloat(payoutAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
@@ -169,8 +168,8 @@ export default function TeacherFinancePageClient() {
       return;
     }
 
-    if (amountNum > account.availableBalance) {
-      toast.error(`المبلغ المطلوب أكبر من رصيدك الحالي المتاح (${formatEGP(account.availableBalance)})`);
+    if (amountNum > account.account.netPayable) {
+      toast.error(`المبلغ المطلوب أكبر من رصيدك الحالي المتاح (${formatEGP(account.account.netPayable)})`);
       return;
     }
 
@@ -205,9 +204,6 @@ export default function TeacherFinancePageClient() {
     return `${amount.toLocaleString('en-US')} ج`;
   };
 
-  const formatPercent = (value: number) => {
-    return `${value.toLocaleString('en-US')}%`;
-  };
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString('ar-EG-u-nu-latn', { timeZone: 'Africa/Cairo',
@@ -304,7 +300,7 @@ export default function TeacherFinancePageClient() {
     },
     {
       key: 'contentName',
-      label: 'الباقة الكورس المفعلة',
+      label: 'المحتوى',
       render: (item) => <span className="font-bold text-[var(--admin-text)]">{item.contentName ?? item.packageName}</span>,
     },
     {
@@ -319,22 +315,27 @@ export default function TeacherFinancePageClient() {
     },
     {
       key: 'price',
-      label: 'سعر الباقة الإجمالي',
+      label: 'قيمة العملية',
       render: (item) => <span className="font-mono text-xs text-[var(--admin-muted)]">{formatEGP(item.grossAmount ?? item.price ?? 0)}</span>,
     },
     {
       key: 'commissionRate',
-      label: 'نسبة عمولتك',
-      render: (item) => <span className="font-mono text-xs font-bold text-emerald-600">{formatPercent(item.allocationValue ?? item.commissionRate ?? 0)}</span>,
+      label: 'طريقة حساب نصيبك',
+      render: (item) => <span className="font-mono text-xs font-bold text-emerald-600">{allocationRuleLabel(item.allocationMode, item.allocationValue, item.agreementAllocationMode)}</span>,
     },
     {
       key: 'commissionEarned',
-      label: 'الأرباح المستحقة المضافة',
+      label: 'نصيبك في الحركة',
       render: (item) => (
         <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
-          +{formatEGP(item.teacherShareAmount ?? item.commissionEarned ?? 0)}
+          {formatEGP(item.teacherShareAmount)}
         </span>
       ),
+    },
+    {
+      key: 'reviewStatus',
+      label: 'حالة الحساب',
+      render: (item) => <span className="text-xs">{item.reviewStatus === 'PendingReview' ? 'تحت المراجعة · خارج الأرباح' : item.reviewStatus === 'Rejected' ? 'مرفوض · خارج الأرباح' : item.reviewStatus === 'Reversed' ? 'مرتجع مسجل' : 'داخل الأرباح'}</span>,
     },
   ];
 
@@ -379,17 +380,17 @@ export default function TeacherFinancePageClient() {
       activePath="/teacher/finance"
       sectionLabel="المالية والأرباح"
       pageTitle="سجل الأرباح والمسحوبات الخاصة بك"
-      subtitle="تتبع تفاصيل أرباحك وعمولاتك المحتسبة من تفعيل أكواد الباقات الدراسية وطلب سحب الأرصدة المتاحة."
+      subtitle="أرباحك من كل المصادر، اللي استلمته، والمتاح للسحب بعد الحجز والمديونية."
       action={
         <button
           onClick={() => {
-            if (account && account.availableBalance > 0) {
+            if (account?.account && account.account.netPayable > 0) {
               setShowPayoutModal(true);
             } else {
               toast.error('ليس لديك رصيد كافٍ متاح للسحب حالياً');
             }
           }}
-          disabled={accountLoading || !account || account.availableBalance <= 0}
+          disabled={accountLoading || !account?.account || account.account.netPayable <= 0}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-3 py-2 text-xs font-black text-[var(--admin-primary-contrast)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:py-2.5 sm:text-sm"
         >
           <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -398,29 +399,8 @@ export default function TeacherFinancePageClient() {
         </button>
       }
     >
-      {/* Stats Overview */}
-      <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <AdminStatCard
-          variant="light"
-          icon={Coins}
-          label="الرصيد المتاح للسحب"
-          value={accountLoading ? '...' : formatEGP(account?.availableBalance ?? 0)}
-          subtitle="يمكنك تقديم طلب سحب جديد بهذا الرصيد"
-        />
-        <AdminStatCard
-          variant="accent"
-          icon={TrendingUp}
-          label="إجمالي الأرباح التاريخية"
-          value={accountLoading ? '...' : formatEGP(account?.totalEarnings ?? 0)}
-          subtitle="مجموع عمولاتك التراكمية على المنصة"
-        />
-        <AdminStatCard
-          variant="muted"
-          icon={DollarSign}
-          label="نسبة عمولتك الحالية"
-          value={accountLoading ? '...' : formatPercent(account?.commissionRate ?? 0)}
-          subtitle="نسبة ربحك المضافة لكل تفعيل كود باقة"
-        />
+      <section className="admin-panel mb-8 rounded-2xl p-5" aria-label="ملخص حساب المدرس">
+        {accountLoading ? <p role="status">جارٍ تحميل الحساب...</p> : account?.account ? <TeacherAccountOverview account={account.account} showSources /> : <p role="alert">تعذر تحميل الحساب. <button type="button" className="min-h-11 px-3 underline" onClick={() => void fetchAccountSummary()}>إعادة المحاولة</button></p>}
       </section>
 
       <section className="mb-8 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm">
@@ -431,7 +411,7 @@ export default function TeacherFinancePageClient() {
               تقويم دخل الشهر
             </h3>
             <p className="mt-1 text-sm font-bold text-[var(--admin-muted)]">
-              اضغط على أي يوم لمعرفة الطلاب الذين دفعوا فيه، وسيتم فلترة الجدول لنفس اليوم.
+              اضغط على اليوم لعرض حركاته. إجمالي اليوم يشمل الأرباح المعتمدة والمرتجعات، ولا يشمل البنود تحت المراجعة.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -526,7 +506,7 @@ export default function TeacherFinancePageClient() {
         <div>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h4 className="text-sm font-black text-[var(--admin-text)]">تفاصيل العمولات المستحقة المودعة</h4>
+              <h4 className="text-sm font-black text-[var(--admin-text)]">تفاصيل حركات الأرباح</h4>
               {selectedDate && (
                 <button type="button" onClick={() => { setSelectedDate(''); setTxPage(1); }} className="mt-1 text-xs font-bold text-[var(--admin-primary)]">
                   مسح فلتر يوم {selectedDate}
@@ -548,14 +528,14 @@ export default function TeacherFinancePageClient() {
             columns={transactionColumns}
             loading={transactionsLoading}
             rowKey={(item) => item.id}
-            emptyMessage="لم يتم تسجيل عمولات تفعيل أكواد لحسابك بعد."
+            emptyMessage="لم يتم تسجيل حركات أرباح لحسابك بعد."
           />
 
           {/* Transactions Pagination */}
           {txTotalCount > txPageSize && (
             <div className="mt-6 flex items-center justify-between border-t border-[var(--admin-border)] pt-4">
               <span className="text-xs font-semibold text-[var(--admin-muted)]">
-                عرض {transactions.length} من أصل {txTotalCount} عمولة مسجلة
+                عرض {transactions.length} من أصل {txTotalCount} حركة مسجلة
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -611,13 +591,13 @@ export default function TeacherFinancePageClient() {
         open={showPayoutModal}
         onClose={() => setShowPayoutModal(false)}
         title="تقديم طلب سحب رصيد جديد"
-        subtitle="سيتم إرسال الطلب لمراجعة الإدارة وصرفه لك فورياً"
+        subtitle="المبلغ هيتحجز لحين مراجعة الإدارة وتسجيل الصرف."
       >
         <form onSubmit={handleSubmitPayout} className="space-y-4">
           <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 flex justify-between items-center">
             <span className="text-xs font-bold text-[var(--admin-muted)]">الرصيد الكلي المتاح حالياً</span>
             <span className="font-mono text-sm font-black text-[var(--admin-text)]">
-              {account ? formatEGP(account.availableBalance) : ''}
+              {account?.account ? formatEGP(account.account.netPayable) : ''}
             </span>
           </div>
 
@@ -627,7 +607,7 @@ export default function TeacherFinancePageClient() {
               type="number"
               step="0.01"
               required
-              max={account?.availableBalance ?? 0}
+              max={account?.account?.netPayable ?? 0}
               placeholder="أدخل قيمة السحب..."
               value={payoutAmount}
               onChange={(e) => setPayoutAmount(e.target.value)}
@@ -746,7 +726,7 @@ export default function TeacherFinancePageClient() {
                         {transaction.reviewStatus}
                       </span>
                       <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-muted)]">
-                        {transaction.payoutStatus}
+                        {transaction.retainedByTeacher && transaction.payoutStatus === 'Paid' ? 'نصيب محتفظ به من الأكواد' : transaction.payoutStatus}
                       </span>
                     </div>
                   </div>

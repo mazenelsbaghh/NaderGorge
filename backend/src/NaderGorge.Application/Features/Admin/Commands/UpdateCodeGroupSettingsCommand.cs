@@ -89,12 +89,13 @@ public class UpdateCodeGroupSettingsCommandHandler : IRequestHandler<UpdateCodeG
             && request.RevenueAllocationValue.Value > 100)
             return ApiResponse.Fail("النسبة لا يمكن أن تزيد عن 100%.");
 
-        if (request.AccountingTiming == CodeAccountingTiming.Immediate && await _db.TeacherProfiles.AnyAsync(x => x.Id == teacherId && x.FinancePreset == TeacherFinancePreset.Nader, ct))
-            return ApiResponse.Fail("أكواد نادر تُحسب عند الاستخدام فقط.");
         var financialTerms = await _db.CodeGroupFinancialTerms.FirstOrDefaultAsync(x => x.CodeGroupId == group.Id, ct);
         var financialChange = teacherId != group.TeacherId || request.RevenueOwner != group.RevenueOwner
             || request.RevenueAllocationMode != group.RevenueAllocationMode || request.RevenueAllocationValue != group.RevenueAllocationValue
             || request.AccountingTiming != group.AccountingTiming;
+        if (request.RevenueOwner != group.RevenueOwner || request.RevenueAllocationMode != group.RevenueAllocationMode
+            || request.RevenueAllocationValue != group.RevenueAllocationValue || request.AccountingTiming != group.AccountingTiming)
+            return ApiResponse.Fail("طريقة الحساب تُحدد من حساب المدرّس فقط. حدّث الصفحة لو البيانات تغيرت.");
         if (financialChange && await CodeGroupAccountingGuard.HasStartedAsync(_db, group, ct))
             return ApiResponse.Fail("لا يمكن تغيير الشروط المالية بعد بدء استخدام أو حساب دفعة الأكواد.");
         var oldValues = new

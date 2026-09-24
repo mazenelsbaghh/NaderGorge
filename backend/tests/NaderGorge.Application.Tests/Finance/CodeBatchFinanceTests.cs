@@ -32,7 +32,7 @@ public sealed class CodeBatchFinanceTests
         await db.SaveChangesAsync();
 
         var accounting = new TeacherAccountingService(db);
-        var service = new CodeGroupFinancialAccountingService(db, accounting, new TeacherAgreementResolver(db));
+        var service = new CodeGroupFinancialAccountingService(db, accounting);
         await service.RecordDeliveryAsync(group, terms, DateTime.UtcNow, CancellationToken.None);
         await service.RecordDeliveryAsync(group, terms, DateTime.UtcNow, CancellationToken.None);
 
@@ -40,7 +40,8 @@ public sealed class CodeBatchFinanceTests
         Assert.Equal(TeacherFinancialSourceType.AccessCodeGeneration, evt.SourceType);
         var allocation = Assert.Single(db.TeacherFinancialAllocations);
         Assert.Equal(45m, allocation.TeacherShareAmount);
-        Assert.Equal(45m, Assert.Single(db.TeacherAccounts).CurrentBalance);
+        Assert.Equal(0m, Assert.Single(db.TeacherAccounts).CurrentBalance);
+        Assert.Equal(45m, Assert.Single(db.TeacherAccounts).TotalEarnings);
         Assert.NotNull(group.AccountingRecordedAt);
     }
 
@@ -57,7 +58,7 @@ public sealed class CodeBatchFinanceTests
         db.CodeGroupFinancialTerms.Add(terms);
         await db.SaveChangesAsync();
 
-        var service = new CodeGroupFinancialAccountingService(db, new TeacherAccountingService(db), new TeacherAgreementResolver(db));
+        var service = new CodeGroupFinancialAccountingService(db, new TeacherAccountingService(db));
         await service.RecordDeliveryAsync(group, terms, DateTime.UtcNow, CancellationToken.None);
 
         Assert.Empty(db.TeacherFinancialEvents);

@@ -16,6 +16,9 @@ public sealed class AdminFinanceCenterTests
     public async Task Settlement_reserves_each_allocation_once_then_allows_only_valid_state_transitions()
     {
         await using var db = TestAppDbContextFactory.Create();
+        db.FinancialAccounts.AddRange(
+            new FinancialAccount { Code = "1000", Name = "Cash", Type = FinancialAccountType.Asset, Role = FinancialAccountRole.Treasury },
+            new FinancialAccount { Code = "2000", Name = "Teacher payable", Type = FinancialAccountType.Liability, Role = FinancialAccountRole.TeacherPayable });
         var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Finance Admin", "01000000031");
         var teacher = await SeedTeacherAsync(db, "Settlement Teacher", "01000000032");
         var allocation = await RecordAllocationAsync(db, teacher, 60m, "settlement-line");
@@ -45,6 +48,10 @@ public sealed class AdminFinanceCenterTests
         Assert.Equal(0m, (await db.TeacherAccounts.SingleAsync()).ReservedBalance);
         Assert.Equal(FinancialInvoiceStatus.Paid, (await db.FinancialInvoices.SingleAsync()).Status);
         Assert.Single(db.TeacherSettlementPayments);
+        var journal = Assert.Single(db.JournalEntries);
+        Assert.Equal("TeacherSettlement", journal.SourceType);
+        Assert.Equal(60m, journal.Lines.Sum(line => line.Debit));
+        Assert.Equal(60m, journal.Lines.Sum(line => line.Credit));
     }
 
     [Fact]
@@ -88,7 +95,7 @@ public sealed class AdminFinanceCenterTests
         original.StudentId = student.Id;
         allocation.PayoutStatus = TeacherFinancialPayoutStatus.Paid;
         await db.SaveChangesAsync();
-        var settlement = new NaderGorge.Application.Features.Admin.TeacherFinanceCenter.TeacherSettlementAuthorityService(db);
+        var settlement = new NaderGorge.Application.Features.Admin.TeacherFinanceCenter.TeacherSettlementAuthorityService(db, new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db));
         var partial = await settlement.ReverseAsync(new([new(allocation.Id, 25m)], "partial",
             TeacherReversalDisposition.NextSettlementDeduction, "partial-refund"), CancellationToken.None);
         Assert.Equal(NaderGorge.Application.Features.Admin.TeacherFinanceCenter.TeacherFinanceCommandStatus.Success, partial.Status);
@@ -101,7 +108,7 @@ public sealed class AdminFinanceCenterTests
         Assert.Equal(60m, allocation.ReversedAmount);
     }
 
-    private static AdminTeacherFinanceCenterController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorId) => new(db, new NoopMediator())
+    private static AdminTeacherFinanceCenterController CreateController(NaderGorge.Infrastructure.Data.AppDbContext db, Guid actorId) => new(db, new NoopMediator(), new NaderGorge.Infrastructure.Services.Finance.FinancialPostingService(db))
     {
         ControllerContext = new ControllerContext
         {

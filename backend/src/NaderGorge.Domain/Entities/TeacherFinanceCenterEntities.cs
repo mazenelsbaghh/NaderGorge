@@ -41,7 +41,25 @@ public class CodeGroupDeliveryConfirmation : BaseEntity
     public string? AttachmentUrl { get; set; }
     public Guid ConfirmedByUserId { get; set; }
     public DateTime ConfirmedAt { get; set; } = DateTime.UtcNow;
+    // Null preserves the meaning of legacy confirmations; they are never inferred as collections.
+    public decimal? PlatformAmountDue { get; set; }
+    public decimal? TeacherRetainedAmount { get; set; }
+    public ICollection<CodeGroupDeliveryPayment> Payments { get; set; } = new List<CodeGroupDeliveryPayment>();
     public string IdempotencyKey { get; set; } = string.Empty;
+}
+
+public class CodeGroupDeliveryPayment : BaseEntity
+{
+    public Guid DeliveryConfirmationId { get; set; }
+    public CodeGroupDeliveryConfirmation DeliveryConfirmation { get; set; } = null!;
+    public decimal Amount { get; set; }
+    public Guid TreasuryAccountId { get; set; }
+    public TreasuryAccount TreasuryAccount { get; set; } = null!;
+    public string Reference { get; set; } = string.Empty;
+    public Guid ReceivedByUserId { get; set; }
+    public DateTime ReceivedAt { get; set; }
+    public string IdempotencyKey { get; set; } = string.Empty;
+    public Guid JournalEntryId { get; set; }
 }
 
 public class TeacherSettlement : BaseEntity

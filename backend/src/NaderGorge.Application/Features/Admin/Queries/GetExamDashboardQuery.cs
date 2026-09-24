@@ -81,19 +81,35 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             .CanAccessExamAsync(request.ActorId, request.ExamId, cancellationToken))
             return ApiResponse<ExamDashboardDto>.Fail("غير مصرح بعرض هذا الامتحان.");
         var exam = await _context.Exams
+            .AsNoTracking()
             .Include(e => e.ExamQuestions.Where(q => !q.IsRetired))
                 .ThenInclude(eq => eq.Question)
                     .ThenInclude(q => q.Options)
-            .Include(e => e.Attempts)
-                .ThenInclude(a => a.User)
-            .Include(e => e.Attempts)
-                .ThenInclude(a => a.Answers)
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
 
         if (exam == null)
             return ApiResponse<ExamDashboardDto>.Fail("Exam not found");
 
-        var attemptsDto = exam.Attempts
+        var attempts = await _context.StudentExamAttempts
+            .AsNoTracking()
+            .Where(attempt => attempt.ExamId == request.ExamId)
+            .Select(attempt => new
+            {
+                attempt.Id,
+                attempt.UserId,
+                StudentName = attempt.User.FullName,
+                StudentPhone = attempt.User.PhoneNumber,
+                attempt.StartedAt,
+                attempt.CreatedAt,
+                attempt.ScoreAchieved,
+                attempt.Evaluation,
+                attempt.IsPassed,
+                attempt.IsTimeExpired,
+                attempt.DefinitionSnapshotJson,
+                AwardedPoints = attempt.Answers.Sum(answer => answer.PointsAwarded)
+            })
+            .ToListAsync(cancellationToken);
+        var attemptsDto = attempts
             .OrderByDescending(a => a.CreatedAt)
             .Select(a =>
             {
@@ -106,7 +122,9 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                     eval = "يحتاج تسوية يدوية";
                 else
                 {
-                    scale = AssessmentAttemptScaleNormalizer.Project(a);
+                    scale = AssessmentAttemptScaleNormalizer.Project(
+                        a.DefinitionSnapshotJson, exam.Id, a.ScoreAchieved, a.IsPassed,
+                        a.IsTimeExpired, a.AwardedPoints);
                     score = scale.ScoreAchieved;
                     isPassed = scale.IsPassed;
                 }
@@ -127,8 +145,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 return new StudentExamResultSummaryDto(
                     a.Id,
                     a.UserId,
-                    a.User?.FullName ?? "طالب محذوف",
-                    a.User?.PhoneNumber ?? "غير متوفر",
+                    a.StudentName ?? "طالب محذوف",
+                    a.StudentPhone ?? "غير متوفر",
                     a.StartedAt,
                     a.CreatedAt,
                     score,
@@ -139,17 +157,24 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 );
             }).ToList();
 
-        var answers = await _context.StudentAnswers
+        var answerCounts = await _context.StudentAnswers
             .Where(sa => sa.ExamQuestion.ExamId == request.ExamId)
-            .ToListAsync(cancellationToken);
+            .GroupBy(answer => answer.ExamQuestionId)
+            .Select(group => new
+            {
+                ExamQuestionId = group.Key,
+                Total = group.Count(),
+                Correct = group.Count(answer => answer.IsCorrect)
+            })
+            .ToDictionaryAsync(count => count.ExamQuestionId, cancellationToken);
 
         var questionsDto = exam.ExamQuestions
             .OrderBy(eq => eq.Order)
             .Select(eq =>
             {
-                var qAnswers = answers.Where(sa => sa.ExamQuestionId == eq.Id).ToList();
-                var total = qAnswers.Count;
-                var correct = qAnswers.Count(sa => sa.IsCorrect);
+                var counts = answerCounts.GetValueOrDefault(eq.Id);
+                var total = counts?.Total ?? 0;
+                var correct = counts?.Correct ?? 0;
                 var wrong = total - correct;
                 var pct = total > 0 ? Math.Round((decimal)correct / total * 100, 2) : 0m;
 

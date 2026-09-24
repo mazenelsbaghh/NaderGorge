@@ -310,6 +310,13 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var hasPreviousLessonAccess = previousLesson != null &&
             await _access.HasAccessToLessonAsync(request.UserId, previousLesson.Id, ct);
 
+        // Both gates use the same previous-homework snapshot within this read request.
+        Task<NaderGorge.Domain.Entities.Homework.Homework?>? previousHomeworkRead = null;
+        Task<NaderGorge.Domain.Entities.Homework.Homework?> ReadPreviousHomeworkAsync() =>
+            previousHomeworkRead ??= _db.Homeworks
+                .Where(homework => homework.LessonId == previousLesson!.Id)
+                .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
+
         if (previousLesson != null && hasPreviousLessonAccess)
         {
             // 1. Check if previous lesson has an exam and if it is mandatory and passed
@@ -385,9 +392,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             // 2. Check if previous lesson's mandatory homework is passed
             if (!isLocked)
             {
-                var prevHomework = await _db.Homeworks
-                    .Where(h => h.LessonId == previousLesson.Id)
-                    .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
+                var prevHomework = await ReadPreviousHomeworkAsync();
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _db.HomeworkSubmissions
@@ -461,12 +466,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         if (!isPrivilegedUser)
         {
-            var visibleVideoExamIds = new List<Guid>();
-            foreach (var videoExam in allVideoExams)
-            {
-                if (await _archiveAccess.CanViewAsync(request.UserId, ContentArchiveTargetType.Exam, videoExam.Id, ct))
-                    visibleVideoExamIds.Add(videoExam.Id);
-            }
+            var visibleVideoExamIds = await _archiveAccess.GetViewableAssessmentIdsAsync(
+                request.UserId, ContentArchiveTargetType.Exam,
+                allVideoExams.Select(exam => exam.Id).ToArray(), ct);
             allVideoExams = allVideoExams.Where(exam => visibleVideoExamIds.Contains(exam.Id)).ToList();
         }
 
@@ -602,9 +604,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         if (lesson.ExamId.HasValue && previousLesson != null && hasPreviousLessonAccess)
         {
-            var prevHomework = await _db.Homeworks
-                .Where(h => h.LessonId == previousLesson.Id)
-                .FirstAccessibleToStudentAsync(request.UserId, _access, _archiveAccess, ct);
+            var prevHomework = await ReadPreviousHomeworkAsync();
             if (prevHomework != null && prevHomework.IsMandatory)
             {
                 var prevHwSubmission = await _db.HomeworkSubmissions

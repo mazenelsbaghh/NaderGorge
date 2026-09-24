@@ -36,7 +36,10 @@ public record AttendanceDetailsDto(
     int TotalLessons,
     int WatchedLessons,
     double CompletionRate
-);
+)
+{
+    public int? WatchProgressPercentage { get; init; }
+}
 
 public record ExamDetailDto(
     Guid ExamId,
@@ -70,7 +73,12 @@ public record HomeworkDetailDto(
     string? Grade,
     DateTime? SubmittedAt,
     List<HomeworkAnswerReviewDto> Mistakes
-);
+)
+{
+    public decimal? Score { get; init; }
+    public decimal? TotalScore { get; init; }
+    public double? Percentage { get; init; }
+}
 
 public record WarningDetailDto(
     string Reason,
@@ -117,7 +125,10 @@ public record WatchLessonDetailDto(
     DateTime? LastWatchedAt,
     int StartedVideos,
     int CompletedVideos
-);
+)
+{
+    public int? ActualWatchedSeconds { get; init; }
+}
 
 public record QuestionReviewDto(
     string QuestionText,
@@ -323,7 +334,10 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
 
         var completionRate = totalLessons > 0 ? Math.Round((double)watchedLessons / totalLessons * 100, 2) : 0.0;
 
-        var attendance = new AttendanceDetailsDto(totalLessons, watchedLessons, completionRate);
+        var attendance = new AttendanceDetailsDto(totalLessons, watchedLessons, completionRate)
+        {
+            WatchProgressPercentage = StudentWatchProgressReader.CalculatePercent(videoProgress)
+        };
 
         var teachers = lessonRows
             .GroupBy(l => new { l.TeacherId, l.TeacherName, l.Specialization, l.ProfileImageUrl })
@@ -344,11 +358,27 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
             {
                 w.LessonVideo.LessonId,
                 w.LessonVideoId,
-                w.TimeWatchedInSeconds,
-                w.WatchCount,
-                LastWatchedAt = w.UpdatedAt ?? w.CreatedAt
+                w.ActualWatchedSeconds,
+                w.WatchCount
             })
             .ToListAsync(ct);
+
+        // Session wall time continues after the quota view is registered. Entity
+        // UpdatedAt also changes during administrative edits, so it is not watch evidence.
+        var playbackSessions = await _db.VideoPlaybackSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == profile.UserId
+                && visibleActiveVideoIds.Contains(s.LessonVideoId)
+                && s.AcceptedWallSeconds > 0)
+            .GroupBy(s => s.LessonVideoId)
+            .Select(g => new
+            {
+                LessonVideoId = g.Key,
+                AcceptedWallSeconds = g.Sum(s => s.AcceptedWallSeconds),
+                LastProgressAt = g.Max(s => s.LastProgressAt)
+            })
+            .ToListAsync(ct);
+        var playbackByVideo = playbackSessions.ToLookup(s => s.LessonVideoId);
 
         var videoCounts = await _db.LessonVideos
             .AsNoTracking()
@@ -366,6 +396,18 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                 var lessonWatchEvents = watchEvents.Where(w => w.LessonId == lesson.LessonId).ToList();
                 var lessonProgress = progressByLesson[lesson.LessonId];
                 var completedVideos = lessonProgress.Count(video => video.IsCompleted);
+                var actualSeconds = lessonWatchEvents.Select(w =>
+                {
+                    var seconds = Math.Max(w.ActualWatchedSeconds,
+                        playbackByVideo[w.LessonVideoId].Sum(s => s.AcceptedWallSeconds));
+                    // Historical media progress cannot be converted back into elapsed time.
+                    return seconds > 0 ? (decimal?)seconds : null;
+                }).ToList();
+                var lastWatchedAt = lessonProgress
+                    .SelectMany(video => playbackByVideo[video.VideoId])
+                    .Select(s => s.LastProgressAt)
+                    .DefaultIfEmpty()
+                    .Max();
                 return new WatchLessonDetailDto(
                     lesson.PackageId,
                     lesson.PackageName,
@@ -380,10 +422,15 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                     lessonWatchEvents.Sum(w => w.WatchCount),
                     (int)Math.Floor(lessonProgress.Sum(video => video.CompletionWatchedSeconds)),
                     completedLessonIds.Contains(lesson.LessonId),
-                    lessonWatchEvents.Count == 0 ? null : lessonWatchEvents.Max(w => w.LastWatchedAt),
+                    lastWatchedAt,
                     lessonProgress.Count(video => video.WatchedSeconds > 0),
                     completedVideos
-                );
+                )
+                {
+                    ActualWatchedSeconds = actualSeconds.Any(s => s == null)
+                        ? null
+                        : (int)Math.Floor(actualSeconds.Sum(s => s ?? 0))
+                };
             })
             .OrderBy(w => w.TeacherName)
             .ThenBy(w => w.LessonTitle)
@@ -500,6 +547,7 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                 h.Id,
                 h.LessonId,
                 h.Title,
+                h.TotalScore,
                 Submission = h.Submissions.FirstOrDefault(s => s.StudentId == profile.UserId)
             })
             .ToListAsync(ct);
@@ -507,6 +555,8 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
         var homeworks = homeworksRaw.Select(h =>
         {
             var teacher = lessonIdsByTeacher[h.LessonId];
+            var graded = h.Submission?.Status == SubmissionStatus.Graded;
+            var totalScore = h.Submission?.TotalScoreSnapshot ?? h.TotalScore;
             return new HomeworkDetailDto(
                 h.Id,
                 teacher.TeacherId,
@@ -532,7 +582,14 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
                         answer.Question.PointsActive
                     ))
                     .ToList() ?? new List<HomeworkAnswerReviewDto>()
-            );
+            )
+            {
+                Score = graded ? h.Submission!.OverallScore : null,
+                TotalScore = graded ? totalScore : null,
+                Percentage = graded && totalScore > 0
+                    ? (double)(h.Submission!.OverallScore / totalScore * 100m)
+                    : null
+            };
         }).ToList();
 
         // Fetch Warning events

@@ -4,6 +4,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Teacher.Finance.Commands;
 
@@ -34,8 +35,19 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
 
     public async Task<ApiResponse<TeacherPayoutRequestDto>> Handle(RequestPayoutCommand request, CancellationToken ct)
     {
+        if (_db is DbContext outerContext && outerContext.Database.CurrentTransaction is not null)
+            return await HandleOnce(request, ct);
         return await SerializationRetryHelper.ExecuteAsync(
-            retryCt => HandleOnce(request, retryCt),
+            async retryCt =>
+            {
+                try { return await HandleOnce(request, retryCt); }
+                catch (Exception ex) when (SerializationRetryHelper.IsSerializationFailure(ex))
+                {
+                    // A retry must not save pending entities from the rolled-back attempt.
+                    if (_db is DbContext context) context.ChangeTracker.Clear();
+                    throw;
+                }
+            },
             ct);
     }
 
@@ -49,6 +61,11 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
             return ApiResponse<TeacherPayoutRequestDto>.Fail("حساب المعلم غير موجود");
         }
 
+        if (request.Amount <= 0m || decimal.Round(request.Amount, 2) != request.Amount)
+            return ApiResponse<TeacherPayoutRequestDto>.Fail("أدخل مبلغًا أكبر من صفر، بحد أقصى رقمين بعد العلامة العشرية");
+
+        var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
+        await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var account = await _db.TeacherAccounts
             .FirstOrDefaultAsync(ta => ta.TeacherId == teacherProfile.Id, ct);
 
@@ -67,19 +84,12 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
             await _db.SaveChangesAsync(ct);
         }
 
-        if (request.Amount <= 0)
-        {
-            return ApiResponse<TeacherPayoutRequestDto>.Fail("المبلغ المطلوب يجب أن يكون أكبر من صفر");
-        }
-
-        var availableBalance = account.CurrentBalance - account.ReservedBalance;
-        if (request.Amount > availableBalance)
+        var finance = new TeacherFinanceAccountService(_db);
+        var balance = await finance.GetWithdrawalAsync(teacherProfile.Id, ct);
+        if (request.Amount > balance.WithdrawalAvailable)
         {
             return ApiResponse<TeacherPayoutRequestDto>.Fail($"رصيدك المتاح لا يكفي لطلب دفعة قيمتها ({request.Amount} ج.م)");
         }
-
-        var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
-        await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
 
         if (_db is DbContext efDb2 && efDb2.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
@@ -90,7 +100,7 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
         else
         {
             var reservedRows = await _db.TeacherAccounts
-                .Where(ta => ta.Id == account.Id && ta.CurrentBalance - ta.ReservedBalance >= request.Amount)
+                .Where(ta => ta.Id == account.Id && ta.CurrentBalance - ta.ReservedBalance >= request.Amount + balance.UnreservedDebt)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(ta => ta.ReservedBalance, ta => ta.ReservedBalance + request.Amount)
                     .SetProperty(ta => ta.Version, ta => ta.Version + 1)
@@ -135,7 +145,7 @@ public class RequestPayoutCommandHandler : IRequestHandler<RequestPayoutCommand,
             payout.Amount,
             payout.Status.ToString(),
             account.ReservedBalance,
-            account.CurrentBalance - account.ReservedBalance,
+            (await finance.GetWithdrawalAsync(teacherProfile.Id, ct)).WithdrawalAvailable,
             payout.CreatedAt
         );
 
