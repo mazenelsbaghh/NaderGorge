@@ -341,17 +341,18 @@ public class GetDetailsTests : IDisposable
 
     // 2026-09-20: parent tracking must distinguish progress started from a completed video.
     [Theory]
-    [InlineData(171, 0, 180, 2, 1, 351)]
-    [InlineData(0, 15, 180, 1, 1, 180)]
-    [InlineData(0, 0, 180, 1, 1, 180)]
-    [InlineData(60, 0, null, 2, 1, 240)]
+    [InlineData(171, 0, 180, 2, 1, 351, 97)]
+    [InlineData(0, 15, 180, 1, 1, 180, 50)]
+    [InlineData(0, 0, 180, 1, 1, 180, 50)]
+    [InlineData(60, 0, null, 2, 1, 240, null)]
     public async Task GetStudentDetails_ShouldUsePurchasedLessonTeacherForWatchExamsHomeworkAndBalance(
         int partialSeconds,
         int actualSeconds,
         int? partialDurationSeconds,
         int expectedStartedVideos,
         int expectedWatchedVideos,
-        int expectedWatchedSeconds)
+        int expectedWatchedSeconds,
+        int? expectedWatchProgressPercentage)
     {
         var student = new User { FullName = "طالب متابعة", PhoneNumber = "01000000002", PasswordHash = "hash" };
         _db.Users.Add(student);
@@ -694,6 +695,8 @@ public class GetDetailsTests : IDisposable
         // A legacy completion flag cannot hide the remaining unwatched part.
         Assert.Equal(0, details.Attendance.WatchedLessons);
         Assert.Equal(0, details.Attendance.CompletionRate);
+        // 2026-09-24: partial viewing must remain visible even with no completed lessons.
+        Assert.Equal(expectedWatchProgressPercentage, details.Attendance.WatchProgressPercentage);
         var teacher = Assert.Single(details.Teachers);
         Assert.Equal(teacherA.Id, teacher.TeacherId);
 

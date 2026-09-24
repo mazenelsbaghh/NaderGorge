@@ -337,7 +337,7 @@ public struct DashboardView: View {
             // Grid Metrics
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    metricWidgetCard(title: "المشاهدات", value: "\(details.attendance.completionRate.toInt())%", sub: "نسبة إكمال الحصص", icon: "checkmark.circle.fill", color: BrandColors.teal) {
+                    metricWidgetCard(title: "المشاهدات", value: details.attendance.watchProgressPercentage.map { "\($0)%" } ?? "غير متاحة", sub: "\(details.attendance.watchedLessons) من \(details.attendance.totalLessons) حصة مكتملة", icon: "checkmark.circle.fill", color: BrandColors.teal) {
                         activeSubScreen = "attendance"
                     }
                     metricWidgetCard(title: "امتحانات", value: "\(details.exams.count)", sub: "محاولات مسجلة", icon: "star.fill", color: BrandColors.warmGold) {
@@ -416,7 +416,7 @@ public struct DashboardView: View {
                     .font(.custom("Tajawal-Medium", size: 12))
                     .foregroundColor(.white.opacity(0.8))
                 
-                Text("مستوى إكمال الحصص")
+                Text("نسبة مشاهدة الفيديوهات")
                     .font(.custom("Tajawal-Bold", size: 18))
                     .fontWeight(.black)
                     .foregroundColor(.white)
@@ -431,12 +431,12 @@ public struct DashboardView: View {
                             
                             Capsule()
                                 .fill(Color.white)
-                                .frame(width: geometry.size.width * min(max(details.attendance.completionRate / 100, 0), 1), height: 8)
+                                .frame(width: geometry.size.width * min(max(Double(details.attendance.watchProgressPercentage ?? 0) / 100, 0), 1), height: 8)
                         }
                     }
                     .frame(height: 8)
                     
-                    Text("\(details.attendance.completionRate.toInt())% مكتمل")
+                    Text(details.attendance.watchProgressPercentage.map { "\($0)% مشاهدة" } ?? "نسبة المشاهدة غير متاحة")
                         .font(.custom("Tajawal-Regular", size: 11))
                         .foregroundColor(.white.opacity(0.8))
                         .frame(maxWidth: .infinity, alignment: .trailing)

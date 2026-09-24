@@ -18,7 +18,8 @@ data class StudentDetailsResponse(
 data class AttendanceInfo(
     val totalLessons: Int,
     val watchedLessons: Int,
-    val completionRate: Double
+    val completionRate: Double,
+    val watchProgressPercentage: Int? = null
 )
 
 data class ExamInfo(

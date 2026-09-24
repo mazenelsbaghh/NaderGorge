@@ -138,11 +138,13 @@ public struct AttendanceSummary: Codable, Equatable {
     public let totalLessons: Int
     public let watchedLessons: Int
     public let completionRate: Double
+    public let watchProgressPercentage: Int?
     
-    public init(totalLessons: Int, watchedLessons: Int, completionRate: Double) {
+    public init(totalLessons: Int, watchedLessons: Int, completionRate: Double, watchProgressPercentage: Int? = nil) {
         self.totalLessons = totalLessons
         self.watchedLessons = watchedLessons
         self.completionRate = completionRate
+        self.watchProgressPercentage = watchProgressPercentage
     }
 }
 

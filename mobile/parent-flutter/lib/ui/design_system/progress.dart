@@ -16,7 +16,7 @@ class ProgressArc extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Semantics(
-    label: '$caption، ${(progress * 100).round()}%، $detail',
+    label: '$caption، ${valueLabel ?? '${(progress * 100).round()}%'}، $detail',
     child: ExcludeSemantics(
       child: Column(
         children: [

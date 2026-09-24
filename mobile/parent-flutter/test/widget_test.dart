@@ -29,6 +29,7 @@ Json fixture(String name) => {
     'totalLessons': 24,
     'watchedLessons': 18,
     'completionRate': 75,
+    'watchProgressPercentage': 95,
   },
   'watchLessons': [
     {
@@ -434,6 +435,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 1200));
         await tester.pump();
         expect(tester.takeException(), isNull);
+        if (entry.key == 'dashboard') {
+          expect(find.text('95%'), findsOneWidget);
+          expect(find.text('18 من 24 حصة مكتملة'), findsOneWidget);
+        }
         await tester.runAsync(() async {
           final boundary =
               boundaryKey.currentContext!.findRenderObject()!

@@ -6,7 +6,7 @@ export type ParentAcademicDetails = {
   studentName: string;
   grade: string;
   school?: string | null;
-  attendance: { totalLessons: number; watchedLessons: number; completionRate: number };
+  attendance: { totalLessons: number; watchedLessons: number; completionRate: number; watchProgressPercentage?: number | null };
   exams: Array<{ examId: string; examTitle: string; packageName: string; termTitle: string; percentage: number; submittedAt?: string | null; status: string }>;
   homeworks: Array<{ homeworkId: string; title: string; packageName: string; teacherName: string; isSubmitted: boolean; grade?: string | null; submittedAt?: string | null }>;
   warnings: Array<{ reason: string; severity: string; createdAt: string }>;

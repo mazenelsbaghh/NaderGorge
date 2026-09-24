@@ -36,7 +36,10 @@ public record AttendanceDetailsDto(
     int TotalLessons,
     int WatchedLessons,
     double CompletionRate
-);
+)
+{
+    public int? WatchProgressPercentage { get; init; }
+}
 
 public record ExamDetailDto(
     Guid ExamId,
@@ -331,7 +334,10 @@ public class GetStudentAcademicDetailsQueryHandler : IRequestHandler<GetStudentA
 
         var completionRate = totalLessons > 0 ? Math.Round((double)watchedLessons / totalLessons * 100, 2) : 0.0;
 
-        var attendance = new AttendanceDetailsDto(totalLessons, watchedLessons, completionRate);
+        var attendance = new AttendanceDetailsDto(totalLessons, watchedLessons, completionRate)
+        {
+            WatchProgressPercentage = StudentWatchProgressReader.CalculatePercent(videoProgress)
+        };
 
         var teachers = lessonRows
             .GroupBy(l => new { l.TeacherId, l.TeacherName, l.Specialization, l.ProfileImageUrl })

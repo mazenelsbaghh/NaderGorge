@@ -172,9 +172,10 @@ class HomeOverview extends StatelessWidget {
             children: [
               ProgressArc(
                 progress: details.progress,
-                caption: 'الحصص المكتملة',
+                caption: 'نسبة مشاهدة الفيديوهات',
+                valueLabel: details.watchProgress == null ? 'غير متاحة' : null,
                 detail:
-                    '${details.attendance.count('watchedLessons')} من ${details.attendance.count('totalLessons')} حصة',
+                    '${details.attendance.count('watchedLessons')} من ${details.attendance.count('totalLessons')} حصة مكتملة',
               ),
               const Divider(),
               MassarDataRow(
