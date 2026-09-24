@@ -174,6 +174,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             session,
             now,
             pendingSegments.Count);
+        var acceptedWallSecondsBefore = session.AcceptedWallSeconds;
         var viewRegistered = false;
         foreach (var segment in pendingSegments)
         {
@@ -190,6 +191,9 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 0m,
                 remainingSessionWallSeconds - progressResult.AcceptedWallSeconds);
         }
+
+        if (session.AcceptedWallSeconds > acceptedWallSecondsBefore)
+            session.LastProgressAt = now;
 
         RenewSession(
             session,
@@ -437,7 +441,6 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         DateTime now)
     {
         session.LastProgressSequence = progressSequence;
-        session.LastProgressAt = now;
         session.ExpiresAt = now.Add(VideoPlaybackSessionPolicy.ResolveLifetime(totalDurationSeconds));
         session.UpdatedAt = now;
     }

@@ -438,6 +438,28 @@ public class VideoWatchProgressTests
     }
 
     [Fact]
+    public async Task TrackWatchProgress_OnlyAcceptedPlaybackAdvancesLastWatchedTime()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        var handler = CreateHandler(db);
+        var session = await db.VideoPlaybackSessions.SingleAsync();
+        var previousWatch = DateTime.UtcNow.AddMinutes(-2);
+        session.CreatedAt = previousWatch;
+        session.LastProgressAt = previousWatch;
+        session.AcceptedWallSeconds = 10;
+        await db.SaveChangesAsync();
+
+        var empty = await handler.Handle(Command(fixture, sequence: 1, seconds: 0), CancellationToken.None);
+        Assert.True(empty.Success, empty.Message);
+        Assert.Equal(previousWatch, session.LastProgressAt);
+
+        var playback = await handler.Handle(Command(fixture, sequence: 2, seconds: 10), CancellationToken.None);
+        Assert.True(playback.Success, playback.Message);
+        Assert.True(session.LastProgressAt > previousWatch);
+    }
+
+    [Fact]
     public async Task TrackWatchProgress_BatchSkipsCommittedPrefixAndAppliesSuffix()
     {
         await using var db = TestAppDbContextFactory.Create();

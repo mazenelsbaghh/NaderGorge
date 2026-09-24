@@ -345,7 +345,9 @@ List<Widget> lessonDetailChildren(AcademicRow row) => [
       children: [
         MetricRow(
           'وقت المشاهدة',
-          subtitle: duration(row.count('watchedSeconds')),
+          subtitle: row.json['actualWatchedSeconds'] is num
+              ? duration(row.count('actualWatchedSeconds'))
+              : 'غير متاح',
           icon: Icons.access_time,
         ),
         const Divider(),
@@ -385,6 +387,9 @@ class AssessmentTile extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final color = academicColor(row, homework: homework);
+          final hasPercentage = homework
+              ? row.hasHomeworkGrade && row.json['percentage'] is num
+              : row.hasExamGrade;
           final title = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -406,15 +411,12 @@ class AssessmentTile extends StatelessWidget {
           final result = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!homework)
-                ProgressRing(
-                  progress: row.hasExamGrade
-                      ? row.number('percentage') / 100
-                      : null,
-                  label: row.hasExamGrade
-                      ? '${number(row.number('percentage'))}%'
-                      : '—',
-                ),
+              ProgressRing(
+                progress: hasPercentage ? row.number('percentage') / 100 : null,
+                label: hasPercentage
+                    ? '${number(row.number('percentage'))}%'
+                    : '—',
+              ),
               const SizedBox(height: 8),
               Text(
                 homework
@@ -435,10 +437,6 @@ class AssessmentTile extends StatelessWidget {
           }
           return Row(
             children: [
-              if (homework) ...[
-                IconBadge(Icons.description_outlined, color: color),
-                const SizedBox(width: 10),
-              ],
               Expanded(child: title),
               const SizedBox(width: 12),
               Flexible(child: result),
@@ -452,13 +450,17 @@ class AssessmentTile extends StatelessWidget {
   );
 }
 
-String assessmentGrade(AcademicRow row, bool homework) => homework
-    ? row.hasHomeworkGrade && row.text('grade').isNotEmpty
-          ? row.text('grade')
-          : '—'
-    : row.hasExamGrade
-    ? '${number(row.number('score'))} من ${number(row.number('totalScore'))} • ${number(row.number('percentage'))}%'
-    : '—';
+String assessmentGrade(AcademicRow row, bool homework) {
+  if (homework) {
+    if (!row.hasHomeworkGrade) return '—';
+    if (row.json['score'] is num && row.json['totalScore'] is num) {
+      return '${number(row.number('score'))} من ${number(row.number('totalScore'))}';
+    }
+    return row.text('grade').isNotEmpty ? row.text('grade') : '—';
+  }
+  if (!row.hasExamGrade) return '—';
+  return '${number(row.number('score'))} من ${number(row.number('totalScore'))} • ${number(row.number('percentage'))}%';
+}
 
 void showAssessment(BuildContext context, AcademicRow row, bool homework) =>
     openDetail(
