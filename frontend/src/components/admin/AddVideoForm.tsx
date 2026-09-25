@@ -221,7 +221,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : null,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
-          youTubeQualityEnabled: provider === 'youtube' && youTubeQualityEnabled,
+          youTubeQualityEnabled: provider === 'YouTube' && youTubeQualityEnabled,
           preserveSourceDerivedData: keepsVideoContent,
         });
       } else {
@@ -236,7 +236,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : undefined,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
-          youTubeQualityEnabled: provider === 'youtube' && youTubeQualityEnabled,
+          youTubeQualityEnabled: provider === 'YouTube' && youTubeQualityEnabled,
         });
       }
       toast.success(isBunny && bunnyMode !== 'manual'
@@ -343,7 +343,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           </div>
         )}
       </div>
-      {provider === 'youtube' && (
+      {provider === 'YouTube' && (
         <label className="flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
           <input type="checkbox" checked={youTubeQualityEnabled} onChange={event => setYouTubeQualityEnabled(event.target.checked)} className="mt-1 size-5 shrink-0 accent-[var(--admin-primary)]" />
           <span>
