@@ -1063,6 +1063,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.Property(l => l.SourceRevision).HasDefaultValue(0).IsConcurrencyToken();
             e.Property(l => l.BunnyPlaybackMode).HasDefaultValue(BunnyPlaybackMode.BunnyPlayer);
+            e.Property(l => l.YouTubeQualityEnabled).HasDefaultValue(false);
             e.Property(l => l.CurrentAiAnalysisRunId).IsConcurrencyToken();
             e.Property(l => l.CurrentMindmapGenerationRunId).IsConcurrencyToken();
             e.HasOne(l => l.Lesson).WithMany(le => le.Videos).HasForeignKey(l => l.LessonId);

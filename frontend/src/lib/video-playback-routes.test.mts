@@ -187,3 +187,17 @@ test('in-app browser without optional metadata still needs an authorized playbac
   assert.equal((await embedRoute.GET(new Request(`${origin}/api/video/embed?s=${sessionId}`, { headers }))).status, 200);
   assert.equal((await materialRoute.GET(new Request(`${origin}/api/video/material?s=${sessionId}`, { headers }))).status, 200);
 });
+
+for (const enabled of [false, true]) {
+  test(`YouTube native quality follows server choice (${enabled}), never the request query`, async t => {
+    t.mock.method(globalThis, 'fetch', async () => Response.json({ ...backendMaterial(), youTubeQualityEnabled: enabled }));
+    const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+    const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
+    const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+    const response = await materialRoute.GET(browserRequest(`material?s=${sessionId}&youtubeQualityEnabled=true`, { cookie: started.headers.get('Set-Cookie')! }));
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.equal(html.includes('function closeNativeQualityArea()'), enabled);
+    assert.match(html, /window\.onYouTubeIframeAPIReady/);
+  });
+}

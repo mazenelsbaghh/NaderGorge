@@ -714,7 +714,8 @@ public class AdminController : ControllerBase
             dto.IsActive,
             dto.BunnyPlaybackMode)
         {
-            PreserveSourceDerivedData = dto.PreserveSourceDerivedData
+            PreserveSourceDerivedData = dto.PreserveSourceDerivedData,
+            YouTubeQualityEnabled = dto.YouTubeQualityEnabled
         });
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -1616,6 +1617,7 @@ public record UpdateVideoRequest(
     Domain.Enums.BunnyPlaybackMode BunnyPlaybackMode = Domain.Enums.BunnyPlaybackMode.BunnyPlayer)
 {
     public bool PreserveSourceDerivedData { get; init; }
+    public bool? YouTubeQualityEnabled { get; init; }
 }
 public record AttachHomeworkRequest(
     string Title,

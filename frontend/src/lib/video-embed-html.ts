@@ -1,3 +1,4 @@
+import { youtubeQualityPreviewScript, youtubeQualityPreviewStyles } from '@/lib/youtube-quality-preview';
 import {
   isBunnyLibraryId,
   isBunnyVideoGuid,
@@ -26,7 +27,7 @@ try {
 
 /** Shared by secured lesson sessions and public teacher-introduction videos. */
 export function generateVideoEmbedHtml(provider: string, videoId: string, options: {
-  studentName?: string; studentPhone?: string; bunnyEmbedQuery?: string;
+  studentName?: string; studentPhone?: string; bunnyEmbedQuery?: string; youtubeQualityEnabled?: boolean;
 } = {}): string {
   const { studentName = 'Massar Academy', studentPhone = '', bunnyEmbedQuery } = options;
   const normalizedProvider = provider.toLowerCase();
@@ -40,7 +41,7 @@ export function generateVideoEmbedHtml(provider: string, videoId: string, option
   if (normalizedProvider === 'bunny-hls') {
     return generateBunnyHlsEmbedHtml(videoId, studentName, studentPhone);
   }
-  return generateYouTubeEmbedHtml(videoId, studentName, studentPhone);
+  return generateYouTubeEmbedHtml(videoId, studentName, studentPhone, options.youtubeQualityEnabled === true);
 }
 
 function configuredLegacyBunnyLibraryId() {
@@ -594,7 +595,7 @@ function inlineScriptString(value: string): string {
   return JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 }
 
-function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentPhone: string): string {
+function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentPhone: string, qualityPreview = false): string {
   // ── Server-side: XOR-encode the video ID so it never appears as plain text ──
   const xorKey = Math.floor(Math.random() * 200) + 50;
   const encodedId = Array.from(videoId).map(c => c.charCodeAt(0) ^ xorKey);
@@ -616,6 +617,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    ${qualityPreview ? youtubeQualityPreviewStyles() : ''}
     #shell { position: relative; width: 100%; height: 100%; }
     .click-overlay {
       position: absolute; inset: 0; z-index: 10;
@@ -638,6 +640,7 @@ var _k = ${xorKey};
 var _d = [${encodedId.join(',')}];
 var _vid = _d.map(function(c) { return String.fromCharCode(c ^ _k); }).join('');
 var _requiresTouchStart = navigator.maxTouchPoints > 0;
+var _qualityPreview = ${qualityPreview};
 
 // ═══════════════════════════════════════════════════════
 // LAYER 2: Closed Shadow DOM
@@ -753,8 +756,9 @@ window.onYouTubeIframeAPIReady = function () {
   player = new YT.Player(ytDivId, {
     videoId: _vid,  // use decoded variable, not plain string
     playerVars: {
-      autoplay: _requiresTouchStart ? 0 : 1,
-      controls: _requiresTouchStart ? 1 : 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 1, iv_load_policy: 3,
+      autoplay: _qualityPreview || _requiresTouchStart ? 0 : 1,
+      controls: _qualityPreview || _requiresTouchStart ? 1 : 0, disablekb: 1, modestbranding: 1, rel: 0, fs: _qualityPreview ? 0 : 1, iv_load_policy: 3,
+      ...(_qualityPreview ? { hl: 'ar' } : {}),
       // Touch users can enter YouTube's native fullscreen through its own controls.
       playsinline: 1,
       // Explicit client identity is required by YouTube when an embed is nested in our secure player.
@@ -773,7 +777,8 @@ window.onYouTubeIframeAPIReady = function () {
           duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube',
           requiresDirectPlayback: _requiresTouchStart
         });
-        if (_requiresTouchStart) enableDirectYouTubeStart(e.target);
+        if (_qualityPreview) { e.target.getIframe().style.pointerEvents = 'auto'; }
+        else if (_requiresTouchStart) enableDirectYouTubeStart(e.target);
         else e.target.playVideo();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
@@ -788,11 +793,24 @@ window.onYouTubeIframeAPIReady = function () {
       onStateChange: function (e) {
         if (__videoEmbedSuspended) return;
         var isPlayingState = e.data === YT.PlayerState.PLAYING;
+        if (_qualityPreview && e.data === YT.PlayerState.ENDED) {
+          document.body.classList.remove('quality-started');
+        }
         if (isPlayingState) {
+          if (_qualityPreview) {
+            document.body.classList.add('quality-started');
+          }
           document.getElementById('click-overlay').style.display = '';
-          player.getIframe().style.pointerEvents = 'none';
+          player.getIframe().style.pointerEvents = _qualityPreview ? 'auto' : 'none';
         }
         postToParent('stateChange', { state: e.data, isPlaying: isPlayingState });
+        if (_qualityPreview) syncNativeQualityPlaybackState(e.data);
+      },
+      onPlaybackQualityChange: function (e) {
+        if (_qualityPreview) {
+          postToParent('nativeQualityChanged', { quality: e.data });
+          closeNativeQualityArea();
+        }
       },
       onAutoplayBlocked: function () {
         if (__videoEmbedSuspended) return;
@@ -879,6 +897,7 @@ document.getElementById('click-overlay').addEventListener('click', function () {
     else { player.playVideo(); }
   }
 });
+${qualityPreview ? youtubeQualityPreviewScript() : ''}
 })();
 </script>
 </body>

@@ -82,6 +82,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [order, setOrder] = useState(() => editingVideo?.order ?? 1);
   const [limit, setLimit] = useState(() => editingVideo?.maxWatchCount ?? 3);
   const [isActive, setIsActive] = useState(() => editingVideo?.isActive ?? true);
+  const [youTubeQualityEnabled, setYouTubeQualityEnabled] = useState(() => editingVideo?.youTubeQualityEnabled ?? false);
   const [videoTypeId, setVideoTypeId] = useState(() => editingVideo?.videoType.id ?? '');
   const [videoTypesAvailable, setVideoTypesAvailable] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -152,6 +153,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     // input is unmounted. Clear every transient Bunny input while changing
     // source so a later save can never submit a hidden, stale file or URL.
     setProvider(nextProvider);
+    setYouTubeQualityEnabled(false);
     setBunnyMode('manual');
     setBunnyFile(null);
     setBunnySourceUrl('');
@@ -219,6 +221,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : null,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
+          youTubeQualityEnabled: provider === 'youtube' && youTubeQualityEnabled,
           preserveSourceDerivedData: keepsVideoContent,
         });
       } else {
@@ -233,6 +236,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : undefined,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
+          youTubeQualityEnabled: provider === 'youtube' && youTubeQualityEnabled,
         });
       }
       toast.success(isBunny && bunnyMode !== 'manual'
@@ -242,6 +246,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
         : isEditing ? 'تم تعديل الفيديو بنجاح.' : 'تمت إضافة الفيديو بنجاح.');
       if (!isEditing) {
         setTitle('');
+        setYouTubeQualityEnabled(false);
         setUrlOrEmbedCode('');
         setBunnyFile(null);
         setBunnySourceUrl('');
@@ -338,6 +343,15 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           </div>
         )}
       </div>
+      {provider === 'youtube' && (
+        <label className="flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
+          <input type="checkbox" checked={youTubeQualityEnabled} onChange={event => setYouTubeQualityEnabled(event.target.checked)} className="mt-1 size-5 shrink-0 accent-[var(--admin-primary)]" />
+          <span>
+            <span className="block text-sm font-bold text-[var(--admin-text)]">السماح بتغيير الجودة</span>
+            <span className="mt-1 block text-xs text-[var(--admin-muted)]">يعرض إعدادات جودة يوتيوب، بما فيها «تلقائي». قد تظهر عناصر وروابط من يوتيوب أثناء الاختيار.</span>
+          </span>
+        </label>
+      )}
       {isBunny && (
         <div className="space-y-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4">
           <div className="mb-3 flex flex-wrap gap-2">

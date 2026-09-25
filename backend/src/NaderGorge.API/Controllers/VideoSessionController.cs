@@ -137,15 +137,18 @@ public class VideoSessionController : ControllerBase
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "Video playback configuration is unavailable.");
         }
+        var youTubeQualityEnabled = await _db.LessonVideos.AsNoTracking()
+            .Where(video => video.Id == session.LessonVideoId && video.Provider == "youtube")
+            .Select(video => video.YouTubeQualityEnabled).SingleOrDefaultAsync(ct);
         if (!includeWatermark)
         {
-            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, BunnyEmbedQuery: bunnyEmbedQuery));
+            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, BunnyEmbedQuery: bunnyEmbedQuery, YouTubeQualityEnabled: youTubeQualityEnabled));
         }
 
         var watermark = await _db.PlatformSettings.AsNoTracking()
             .Where(setting => setting.Key == "EnableWatermark" || setting.Key.StartsWith("Watermark"))
             .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct);
-        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery));
+        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery, youTubeQualityEnabled));
     }
 
     private async Task<bool> CanReadPlaybackMaterialAsync(Domain.Entities.VideoPlaybackSession session, IAccessCheckService access, CancellationToken ct)
@@ -315,4 +318,4 @@ public sealed partial class VideoPlaybackClientEventRequest
 }
 
 public record VideoEmbedMaterialResponse(string Token, string Key, DateTime ExpiresAt,
-    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null);
+    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null, bool YouTubeQualityEnabled = false);

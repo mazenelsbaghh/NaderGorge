@@ -13,7 +13,7 @@ public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
 public record LessonCockpitBunnyLibraryDto(Guid Id, string Name, string LibraryId, bool IsActive, bool ApiKeyConfigured, bool HlsConfigured);
 public record LessonCockpitBunnyReplacementDto(Guid AssetId, string Status, int? EncodeProgress);
 public record LessonCockpitBunnyReplacementOutcomeDto(Guid AssetId, string Status, string? ErrorMessage, DateTime? RetiredAtUtc);
-public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, bool HasCompletedAiAnalysis, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, LessonCockpitBunnyLibraryDto? BunnyLibrary = null, string? BunnyStatus = null, int? BunnyEncodeProgress = null, LessonCockpitBunnyReplacementDto? PendingBunnyReplacement = null, LessonCockpitBunnyReplacementOutcomeDto? LastBunnyReplacementOutcome = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer);
+public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, bool HasCompletedAiAnalysis, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null, ContentArchiveMode ArchiveMode = ContentArchiveMode.None, DateTime? ArchivedAt = null, LessonCockpitBunnyLibraryDto? BunnyLibrary = null, string? BunnyStatus = null, int? BunnyEncodeProgress = null, LessonCockpitBunnyReplacementDto? PendingBunnyReplacement = null, LessonCockpitBunnyReplacementOutcomeDto? LastBunnyReplacementOutcome = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer, bool YouTubeQualityEnabled = false);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, bool IsActive, int QuestionCount, decimal? PassingScoreThreshold, ContentArchiveMode ArchiveMode, DateTime? ArchivedAt);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
@@ -192,7 +192,8 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                             lastBunnyReplacementOutcome.Status,
                             lastBunnyReplacementOutcome.ErrorMessage,
                             lastBunnyReplacementOutcome.RetiredAtUtc),
-                    v.BunnyPlaybackMode
+                    v.BunnyPlaybackMode,
+                    v.Provider == VideoProviders.YouTube && v.YouTubeQualityEnabled
                 );
             }).ToList(),
             lesson.Resources.Select(r => new LessonCockpitResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType, r.ArchiveMode, r.ArchivedAt)).ToList(),

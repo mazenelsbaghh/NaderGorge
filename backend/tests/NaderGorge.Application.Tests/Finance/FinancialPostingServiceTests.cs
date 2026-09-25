@@ -154,7 +154,7 @@ public sealed class FinancialPostingServiceTests
         db.FinancialAccounts.AddRange(
             Account("1000", FinancialAccountType.Asset, FinancialNormalSide.Debit, FinancialAccountRole.Treasury),
             Account("2000", FinancialAccountType.Liability, FinancialNormalSide.Credit, FinancialAccountRole.TeacherPayable));
-        var paidAt = DateTime.UtcNow.AddDays(-1);
+        var paidAt = new DateTime(2026, 9, 24, 12, 0, 0, DateTimeKind.Utc);
         db.TeacherSettlements.Add(new TeacherSettlement { TeacherId = Guid.NewGuid(), Status = TeacherSettlementStatus.Paid,
             GrossDueAmount = 100, DebtDeductionAmount = 20, NetPayableAmount = 80, PaidAt = paidAt });
         await db.SaveChangesAsync();

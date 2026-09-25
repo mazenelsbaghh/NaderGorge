@@ -31,7 +31,8 @@ public record VideoSessionDto(
     string VideoTitle,
     int ThresholdPercentage,
     int? DurationSeconds,
-    bool IsPreview
+    bool IsPreview,
+    bool YouTubeQualityEnabled = false
 );
 
 public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds, decimal LearningWatchedSeconds = 0);
@@ -391,7 +392,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             video.Title,
             thresholdPercentage,
             knownDurationSeconds,
-            isAdminPreview
+            isAdminPreview,
+            normalizedProvider == VideoProviders.YouTube && video.YouTubeQualityEnabled
         );
 
         return ApiResponse<VideoSessionDto>.Ok(dto);

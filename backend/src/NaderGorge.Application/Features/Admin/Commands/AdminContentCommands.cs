@@ -865,7 +865,7 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer, bool YouTubeQualityEnabled = false) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
@@ -956,7 +956,8 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             VideoTypeId = request.VideoTypeId,
             IsActive = request.IsActive,
             BunnyStreamLibraryId = bunnyStreamLibraryId,
-            BunnyPlaybackMode = normalizedProvider == VideoProviders.Bunny ? request.BunnyPlaybackMode : BunnyPlaybackMode.BunnyPlayer
+            BunnyPlaybackMode = normalizedProvider == VideoProviders.Bunny ? request.BunnyPlaybackMode : BunnyPlaybackMode.BunnyPlayer,
+            YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube && request.YouTubeQualityEnabled
         };
         _db.LessonVideos.Add(video);
 
@@ -992,6 +993,7 @@ public record UpdateVideoCommand(
     BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer) : IRequest<ApiResponse>
 {
     public bool PreserveSourceDerivedData { get; init; }
+    public bool? YouTubeQualityEnabled { get; init; }
 }
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
@@ -1174,6 +1176,8 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         }
 
         video.Title = title;
+        video.YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube
+            && (request.YouTubeQualityEnabled ?? (video.Provider == VideoProviders.YouTube && video.YouTubeQualityEnabled));
         video.Provider = normalizedProvider;
         video.ProviderVideoId = extractedId;
         video.Order = request.Order;

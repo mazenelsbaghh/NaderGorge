@@ -240,6 +240,7 @@ interface PlayerControlsProps {
   onPlaybackRateChange?: (rate: number) => void;
   visible: boolean;
   compact?: boolean;
+  docked?: boolean;
   provider?: string;
   onControlHover?: (hovering: boolean) => void;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
@@ -265,6 +266,7 @@ export default function PlayerControls({
   onPlaybackRateChange,
   visible,
   compact = false,
+  docked = false,
   provider,
   onControlHover,
   chapters,
@@ -294,25 +296,31 @@ export default function PlayerControls({
         onSeek(Math.max(0, Math.min(100, progress + seconds / durationSeconds * 100)));
       }
     };
-    const action = "flex size-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white";
-    return <div className="pointer-events-none absolute inset-0 z-[var(--z-modal)]" dir="ltr">
-      <div className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-5" onClick={e => e.stopPropagation()}>
-        <button type="button" className={`${action} bg-black/65`} aria-label="ترجيع 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(-10)}>↶10</button>
-        <button type="button" className={`${action} size-14 bg-black/65`} aria-label={isPlaying ? 'إيقاف الفيديو مؤقتًا' : 'تشغيل الفيديو'} onClick={onTogglePlay}>{isPlaying ? <Pause className="size-6" /> : <Play className="size-6" fill="currentColor" />}</button>
-        <button type="button" className={`${action} bg-black/65`} aria-label="تقديم 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(10)}>10↷</button>
-      </div>
-      {onHide && <button type="button" className={`pointer-events-auto absolute left-2 top-2 ${action} bg-black/65`} aria-label="إخفاء عناصر التحكم" onClick={e => { e.stopPropagation(); onHide(); }}>×</button>}
-      <div className="secure-player-controls pointer-events-auto absolute inset-x-0 bottom-0 bg-black/80 px-2 text-white" onClick={e => e.stopPropagation()}>
+    const action = cn("flex shrink-0 items-center justify-center rounded-full text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white", docked ? "size-[44px]" : "size-11");
+    const transport = <>
+      <button type="button" className={cn(action, !docked && "bg-black/65")} aria-label="ترجيع 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(-10)}>↶10</button>
+      <button type="button" className={cn(action, !docked && "size-14 bg-black/65")} aria-label={isPlaying ? 'إيقاف الفيديو مؤقتًا' : 'تشغيل الفيديو'} onClick={onTogglePlay}>{isPlaying ? <Pause className={docked ? "size-5" : "size-6"} /> : <Play className={docked ? "size-5" : "size-6"} fill="currentColor" />}</button>
+      <button type="button" className={cn(action, !docked && "bg-black/65")} aria-label="تقديم 10 ثوانٍ" disabled={!durationSeconds} onClick={() => seekBy(10)}>10↷</button>
+    </>;
+    return <div className={docked ? "relative w-full shrink-0 bg-black" : "pointer-events-none absolute inset-0 z-[var(--z-modal)]"} dir="ltr">
+      {!docked && <div className="pointer-events-auto absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-5" onClick={e => e.stopPropagation()}>
+        {transport}
+      </div>}
+      {!docked && onHide && <button type="button" className={`pointer-events-auto absolute left-2 top-2 ${action} bg-black/65`} aria-label="إخفاء عناصر التحكم" onClick={e => { e.stopPropagation(); onHide(); }}>×</button>}
+      <div className={cn("secure-player-controls pointer-events-auto bg-black/80 text-white", docked ? "px-[8px]" : "absolute inset-x-0 bottom-0 px-2")} onClick={e => e.stopPropagation()}>
         <div className="flex min-w-0 items-center gap-2 text-[11px] tabular-nums">
           <span className="shrink-0">{currentTimeFormatted}</span>
-          <CustomSlider value={Number.isFinite(progress) ? progress : 0} onChange={onSeek} className="min-w-0 flex-1" chapters={chapters} ariaLabel="تقدم الفيديو" keyboardStepPercent={durationSeconds ? 1000 / durationSeconds : undefined} />
+          <CustomSlider value={Number.isFinite(progress) ? progress : 0} onChange={onSeek} className={cn("min-w-0 flex-1", docked && "h-[44px]")} chapters={chapters} ariaLabel="تقدم الفيديو" keyboardStepPercent={durationSeconds ? 1000 / durationSeconds : undefined} />
           <span className="shrink-0">{durationFormatted}</span>
         </div>
-        <div className="flex h-11 items-center justify-end gap-1">
+        <div className={cn("flex items-center", docked ? "flex-wrap justify-between" : "h-11 justify-end gap-1")}>
+          {docked && <div className="flex h-[44px] items-center">{transport}</div>}
+          <div className={cn("flex items-center", docked ? "ml-auto h-[44px]" : "gap-1")}>
           <button type="button" className={action} aria-label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'} onClick={onToggleMute}>{isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}</button>
-          {provider !== 'vk' && <select aria-label="سرعة التشغيل" value={playbackSpeed} onChange={e => setSpeed(Number(e.target.value))} className="h-11 w-16 bg-black text-xs text-white">{VIDEO_PLAYBACK_RATES.map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>}
+          {provider !== 'vk' && <select aria-label="سرعة التشغيل" value={playbackSpeed} onChange={e => setSpeed(Number(e.target.value))} className={cn("bg-black text-xs text-white", docked ? "h-[44px] w-[56px]" : "h-11 w-16")}>{VIDEO_PLAYBACK_RATES.map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>}
           {qualityLevels.length > 0 && onQualityChange && <select aria-label="جودة الفيديو" value={currentQuality} onChange={e => onQualityChange(e.target.value)} className="h-11 max-w-24 bg-black text-xs text-white">{[{ id: 'auto', label: 'تلقائي' }, ...qualityLevels.filter(level => level.id !== 'auto')].map(level => <option key={level.id} value={level.id}>{level.label}</option>)}</select>}
           <button type="button" className={action} aria-label="ملء الشاشة" onClick={onToggleFullscreen}><Maximize className="size-4" /></button>
+          </div>
         </div>
       </div>
     </div>;

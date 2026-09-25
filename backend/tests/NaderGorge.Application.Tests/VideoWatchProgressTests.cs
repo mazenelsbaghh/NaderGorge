@@ -740,6 +740,23 @@ public class VideoWatchProgressTests
         Assert.NotEqual(fixture.SessionId, result.Data!.SessionId);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task YouTubeQuality_UsesSavedChoiceWithoutTurningStudentSessionIntoPreview(bool enabled)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        fixture.Video.YouTubeQualityEnabled = enabled;
+        await db.SaveChangesAsync();
+        var handler = new CreateVideoSessionCommandHandler(db, AllowAccess.Instance, FakeEncryption.Instance);
+        var response = await handler.Handle(new CreateVideoSessionCommand(fixture.Video.Id, fixture.UserId), default);
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(enabled, response.Data!.YouTubeQualityEnabled);
+        Assert.False(response.Data.IsPreview);
+        Assert.Equal(3, response.Data.WatchInfo.MaxCount);
+    }
+
     [Fact]
     public async Task AdminPreview_BypassesMandatoryExamAndWatchLimit_WithoutExposingWatchState()
     {

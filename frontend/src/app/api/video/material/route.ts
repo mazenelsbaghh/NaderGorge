@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const html = provider === 'bunny-hls'
       ? generateBunnyHlsEmbedHtml(video.VideoId, name, phone, { relaySource: `/api/video/hls?s=${encodeURIComponent(sessionId)}` })
       : generateVideoEmbedHtml(provider, video.VideoId, {
+        youtubeQualityEnabled: (material.youTubeQualityEnabled ?? material.YouTubeQualityEnabled) === true,
         studentName: name, studentPhone: phone, bunnyEmbedQuery: material.bunnyEmbedQuery ?? material.BunnyEmbedQuery,
       });
     return videoPlayerResponse(configureWatermarkHtml(html, material.watermarkSettings ?? {}, {

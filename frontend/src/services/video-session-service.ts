@@ -22,6 +22,7 @@ export interface VideoSession {
   thresholdPercentage: number;
   durationSeconds?: number | null;
   isPreview: boolean;
+  youTubeQualityEnabled?: boolean;
 }
 
 export interface TrackProgressRequest {

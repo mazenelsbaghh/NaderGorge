@@ -14,6 +14,8 @@ export type PlaybackMaterial = VideoEmbedMaterial & {
   studentId?: string;
   bunnyEmbedQuery?: string;
   BunnyEmbedQuery?: string;
+  youTubeQualityEnabled?: boolean;
+  YouTubeQualityEnabled?: boolean;
 };
 
 type BrowserPlaybackSession = {
