@@ -60,6 +60,8 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
         EnsureDefault(settings, PlatformSettingKeys.EnabledPlayerShadowProviders, CachedPlatformSettings.Default.EnabledPlayerShadowProviders);
         EnsureDefault(settings, PlatformSettingKeys.PlayerShadowTopSolid, CachedPlatformSettings.Default.PlayerShadowTopSolid.ToString());
         EnsureDefault(settings, PlatformSettingKeys.PlayerShadowBottomSolid, CachedPlatformSettings.Default.PlayerShadowBottomSolid.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.YouTubeQualityBottomCoverPercent, "0");
+        EnsureDefault(settings, PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent, "0");
 
         settings = settings
             .OrderBy(setting => setting.Key)

@@ -28,6 +28,8 @@ try {
 /** Shared by secured lesson sessions and public teacher-introduction videos. */
 export function generateVideoEmbedHtml(provider: string, videoId: string, options: {
   studentName?: string; studentPhone?: string; bunnyEmbedQuery?: string; youtubeQualityEnabled?: boolean;
+  youtubeQualityBottomCoverPercent?: number;
+  youtubeQualityMobileBottomCoverPercent?: number;
 } = {}): string {
   const { studentName = 'Massar Academy', studentPhone = '', bunnyEmbedQuery } = options;
   const normalizedProvider = provider.toLowerCase();
@@ -41,7 +43,11 @@ export function generateVideoEmbedHtml(provider: string, videoId: string, option
   if (normalizedProvider === 'bunny-hls') {
     return generateBunnyHlsEmbedHtml(videoId, studentName, studentPhone);
   }
-  return generateYouTubeEmbedHtml(videoId, studentName, studentPhone, options.youtubeQualityEnabled === true);
+  return generateYouTubeEmbedHtml(videoId, studentName, studentPhone, {
+    qualityPreview: options.youtubeQualityEnabled === true,
+    bottomCoverPercent: options.youtubeQualityBottomCoverPercent,
+    mobileBottomCoverPercent: options.youtubeQualityMobileBottomCoverPercent,
+  });
 }
 
 function configuredLegacyBunnyLibraryId() {
@@ -595,7 +601,7 @@ function inlineScriptString(value: string): string {
   return JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 }
 
-function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentPhone: string, qualityPreview = false): string {
+function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentPhone: string, { qualityPreview = false, bottomCoverPercent = 0, mobileBottomCoverPercent = 0 }: { qualityPreview?: boolean; bottomCoverPercent?: number; mobileBottomCoverPercent?: number } = {}): string {
   // ── Server-side: XOR-encode the video ID so it never appears as plain text ──
   const xorKey = Math.floor(Math.random() * 200) + 50;
   const encodedId = Array.from(videoId).map(c => c.charCodeAt(0) ^ xorKey);
@@ -617,7 +623,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-    ${qualityPreview ? youtubeQualityPreviewStyles() : ''}
+    ${qualityPreview ? youtubeQualityPreviewStyles({ bottomCoverPercent, mobileBottomCoverPercent }) : ''}
     #shell { position: relative; width: 100%; height: 100%; }
     .click-overlay {
       position: absolute; inset: 0; z-index: 10;

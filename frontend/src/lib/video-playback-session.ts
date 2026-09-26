@@ -16,6 +16,10 @@ export type PlaybackMaterial = VideoEmbedMaterial & {
   BunnyEmbedQuery?: string;
   youTubeQualityEnabled?: boolean;
   YouTubeQualityEnabled?: boolean;
+  youTubeQualityBottomCoverPercent?: number;
+  YouTubeQualityBottomCoverPercent?: number;
+  youTubeQualityMobileBottomCoverPercent?: number;
+  YouTubeQualityMobileBottomCoverPercent?: number;
 };
 
 type BrowserPlaybackSession = {

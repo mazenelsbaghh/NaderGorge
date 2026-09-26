@@ -20,6 +20,8 @@ export async function GET(request: Request) {
       ? generateBunnyHlsEmbedHtml(video.VideoId, name, phone, { relaySource: `/api/video/hls?s=${encodeURIComponent(sessionId)}` })
       : generateVideoEmbedHtml(provider, video.VideoId, {
         youtubeQualityEnabled: (material.youTubeQualityEnabled ?? material.YouTubeQualityEnabled) === true,
+        youtubeQualityBottomCoverPercent: material.youTubeQualityBottomCoverPercent ?? material.YouTubeQualityBottomCoverPercent,
+        youtubeQualityMobileBottomCoverPercent: material.youTubeQualityMobileBottomCoverPercent ?? material.YouTubeQualityMobileBottomCoverPercent,
         studentName: name, studentPhone: phone, bunnyEmbedQuery: material.bunnyEmbedQuery ?? material.BunnyEmbedQuery,
       });
     return videoPlayerResponse(configureWatermarkHtml(html, material.watermarkSettings ?? {}, {

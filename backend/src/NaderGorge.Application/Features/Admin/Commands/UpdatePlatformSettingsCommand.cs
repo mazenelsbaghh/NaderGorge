@@ -21,6 +21,13 @@ public class UpdatePlatformSettingsCommandHandler : IRequestHandler<UpdatePlatfo
 
     public async Task<ApiResponse<bool>> Handle(UpdatePlatformSettingsCommand request, CancellationToken cancellationToken)
     {
+        foreach (var key in new[] { PlatformSettingKeys.YouTubeQualityBottomCoverPercent, PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent })
+        {
+            if (request.Settings.TryGetValue(key, out var bottomCover)
+                && (!int.TryParse(bottomCover, out var bottomCoverPercent) || bottomCoverPercent is < 0 or > 40))
+                return ApiResponse<bool>.Fail("رفع الشريط الأسود يجب أن يكون من 0 إلى 40٪.");
+        }
+
         if (request.Settings.TryGetValue(ParentWhatsAppRecipients.SettingKey, out var priority)
             && !ParentWhatsAppRecipients.IsValidPriority(priority))
             return ApiResponse<bool>.Fail("رتّب رقم ولي الأمر الإضافي والأب والأم، كل نوع مرة واحدة.");

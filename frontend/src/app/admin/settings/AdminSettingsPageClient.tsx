@@ -35,6 +35,7 @@ import { devConsole } from '@/utils/dev-console';
 import { BunnyLibraryManager } from '@/components/admin/BunnyLibraryManager';
 import { FacebookMessengerSettingsPanel } from '@/components/admin/FacebookMessengerSettingsPanel';
 import { parseBunnyVideoReference } from '@/lib/bunny-video-reference';
+import { YouTubeQualityCoverPreview } from '@/components/admin/YouTubeQualityCoverPreview';
 
 interface RoleDto {
   id: string;
@@ -469,10 +470,14 @@ export default function AdminSettingsPageClient() {
     PlayerShadowBottomCoverage: '38',
     EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive',
     PlayerShadowTopSolid: '10',
-    PlayerShadowBottomSolid: '12'
+    PlayerShadowBottomSolid: '12',
+    YouTubeQualityBottomCoverPercent: '0',
+    YouTubeQualityMobileBottomCoverPercent: '0'
   });
   const [previewProvider, setPreviewProvider] = useState<'youtube' | 'bunny'>('youtube');
   const [previewVideo, setPreviewVideo] = useState('');
+  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
+  const [previewQualityCover, setPreviewQualityCover] = useState(true);
 
   // Roles States
   const [roles, setRoles] = useState<RoleDto[]>([]);
@@ -1167,10 +1172,25 @@ export default function AdminSettingsPageClient() {
                         <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'رابط Bunny الكامل أو Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
                       </div>
                       <p className="text-xs text-[var(--admin-muted)]">انسخ رابط أو معرّف أي فيديو موجود. المعاينة لا تُحسب مشاهدة ولا تغيّر رصيد أي طالب.</p>
-                      <PlayerPreview provider={previewProvider} value={previewVideo} settings={settings} />
+                      {previewProvider === 'youtube' && <div className="flex flex-wrap gap-2">
+                        <button type="button" aria-pressed={previewQualityCover} onClick={() => setPreviewQualityCover(true)} className="admin-btn-ghost min-h-11 aria-pressed:bg-[var(--admin-primary-15)]">معاينة الشريط الأسود</button>
+                        <button type="button" aria-pressed={!previewQualityCover} onClick={() => setPreviewQualityCover(false)} className="admin-btn-ghost min-h-11 aria-pressed:bg-[var(--admin-primary-15)]">معاينة الظلال</button>
+                      </div>}
+                      {previewProvider === 'youtube' && previewQualityCover ? <>
+                        <div className="flex gap-2" aria-label="جهاز المعاينة">
+                          <button type="button" aria-pressed={previewDevice === 'mobile'} onClick={() => setPreviewDevice('mobile')} className="admin-btn-ghost min-h-11 aria-pressed:bg-[var(--admin-primary-15)]">موبايل</button>
+                          <button type="button" aria-pressed={previewDevice === 'desktop'} onClick={() => setPreviewDevice('desktop')} className="admin-btn-ghost min-h-11 aria-pressed:bg-[var(--admin-primary-15)]">كمبيوتر</button>
+                        </div>
+                        <YouTubeQualityCoverPreview videoId={extractYouTubeId(previewVideo)} device={previewDevice} coverPercent={Number(settings[previewDevice === 'mobile' ? 'YouTubeQualityMobileBottomCoverPercent' : 'YouTubeQualityBottomCoverPercent'] || 0)} />
+                      </> : <PlayerPreview provider={previewProvider} value={previewVideo} settings={settings} />}
                     </div>
 
                     <div className="space-y-5 rounded-2xl bg-[var(--admin-card-soft)] p-5">
+                      <div className="space-y-3 border-b border-[var(--admin-border)] pb-5">
+                        <RangeSettingPercentage label="رفع الشريط الأسود — الموبايل" max={40} value={settings.YouTubeQualityMobileBottomCoverPercent} onChange={(value) => { handleSettingChange('YouTubeQualityMobileBottomCoverPercent', value); setPreviewDevice('mobile'); setPreviewQualityCover(true); setPreviewProvider('youtube'); }} />
+                        <RangeSettingPercentage label="رفع الشريط الأسود — الكمبيوتر" max={40} value={settings.YouTubeQualityBottomCoverPercent} onChange={(value) => { handleSettingChange('YouTubeQualityBottomCoverPercent', value); setPreviewDevice('desktop'); setPreviewQualityCover(true); setPreviewProvider('youtube'); }} />
+                        <p className="text-xs leading-6 text-[var(--admin-muted)]">زِد القيمة لتمديد الشريط لأعلى فوق الفيديو. يطبّق على فيديوهات يوتيوب المفعّل لها تغيير الجودة بعد إعادة فتح الفيديو. تظل مساحة قائمة الجودة متاحة أثناء الاختيار، بما فيها «تلقائي».</p>
+                      </div>
                       <RangeSetting label="شدة الظل العلوي" value={settings.PlayerShadowTopOpacity} onChange={(value) => handleSettingChange('PlayerShadowTopOpacity', value)} />
                       <RangeSetting label="شدة الظل السفلي" value={settings.PlayerShadowBottomOpacity} onChange={(value) => handleSettingChange('PlayerShadowBottomOpacity', value)} />
                       <RangeSettingPercentage label="مدى انتشار الظل العلوي (التغطية)" value={settings.PlayerShadowTopCoverage} onChange={(value) => handleSettingChange('PlayerShadowTopCoverage', value)} />
@@ -1907,7 +1927,7 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
   </div>;
 }
 
-function RangeSettingPercentage({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function RangeSettingPercentage({ label, value, onChange, max = 100 }: { label: string; value: string; onChange: (value: string) => void; max?: number }) {
   const numericValue = Number(value || 0);
   return (
     <label className="block">
@@ -1918,11 +1938,11 @@ function RangeSettingPercentage({ label, value, onChange }: { label: string; val
       <input
         type="range"
         min="0"
-        max="100"
+        max={max}
         step="1"
         value={numericValue}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full accent-[var(--admin-primary)]"
+        className="min-h-11 w-full accent-[var(--admin-primary)]"
       />
     </label>
   );

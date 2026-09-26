@@ -58,6 +58,8 @@ public static class PlatformSettingKeys
     public const string EnabledPlayerShadowProviders = "EnabledPlayerShadowProviders";
     public const string PlayerShadowTopSolid = "PlayerShadowTopSolid";
     public const string PlayerShadowBottomSolid = "PlayerShadowBottomSolid";
+    public const string YouTubeQualityBottomCoverPercent = "YouTubeQualityBottomCoverPercent";
+    public const string YouTubeQualityMobileBottomCoverPercent = "YouTubeQualityMobileBottomCoverPercent";
 
     public const string PlatformPopupEnabled = "PlatformPopupEnabled";
     public const string PlatformPopupTitle = "PlatformPopupTitle";

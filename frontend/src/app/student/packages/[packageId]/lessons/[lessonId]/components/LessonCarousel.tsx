@@ -362,7 +362,7 @@ export function LessonCarousel({
                                         <div className="relative w-full">
                                             <InteractiveVideoPlayer
                                                 ref={playerRef}
-                                                className="h-full w-full !rounded-none !border-0 !shadow-none"
+                                                className="w-full !rounded-none !border-0 !shadow-none"
                                                 lessonVideoId={activeVideo.id}
                                                 isExamLocked={activeVideo.isExamLocked}
                                                 blockingExamId={activeVideo.isExamLocked ? videos.find(v => v.examId && !v.examPassed)?.examId : undefined}

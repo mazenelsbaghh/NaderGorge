@@ -15,7 +15,11 @@ export function youtubeQualityPreviewGeometry(width: number, height: number) {
   };
 }
 
-export function youtubeQualityPreviewStyles(): string {
+export function youtubeQualityCoverPercent(value: number): number {
+  return Number.isFinite(value) ? Math.min(40, Math.max(0, value)) : 0;
+}
+
+export function youtubeQualityPreviewStyles({ bottomCoverPercent = 0, mobileBottomCoverPercent = 0 }: { bottomCoverPercent?: number; mobileBottomCoverPercent?: number } = {}): string {
   return `
     body { --menu-width:min(400px,calc(100% - 24px)); --menu-left:calc((100% - var(--menu-width)) / 2); }
     @media (max-height:${YOUTUBE_QUALITY_COMPACT_HEIGHT}px) { body { --quality-gear-left:2px; } }
@@ -23,7 +27,8 @@ export function youtubeQualityPreviewStyles(): string {
     .quality-mask { position:absolute; z-index:11; left:0; right:0; background:#000; pointer-events:none; }
     #quality-top-mask { top:0; height:48px; }
     body:not(.quality-started) #quality-top-mask { pointer-events:auto; }
-    #quality-bottom-mask { bottom:0; height:76px; }
+    #quality-bottom-mask { bottom:0; height:calc(76px + ${youtubeQualityCoverPercent(bottomCoverPercent)}%); max-height:calc(100% - 48px); pointer-events:auto; }
+    @media (any-pointer:coarse) { #quality-bottom-mask { height:calc(76px + ${youtubeQualityCoverPercent(mobileBottomCoverPercent)}%); } }
     #quality-start-mask { top:48px; bottom:76px; }
     body.quality-started #quality-start-mask { display:none; }
     body.quality-open #click-overlay { clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,var(--quality-gear-left,26px) 2px,calc(var(--quality-gear-left,26px) + 44px) 2px,calc(var(--quality-gear-left,26px) + 44px) 46px,var(--quality-gear-left,26px) 46px,var(--quality-gear-left,26px) 2px,0 0,var(--menu-left) 48px,calc(var(--menu-left) + var(--menu-width)) 48px,calc(var(--menu-left) + var(--menu-width)) calc(100% - 24px),var(--menu-left) calc(100% - 24px),var(--menu-left) 48px,0 0); }

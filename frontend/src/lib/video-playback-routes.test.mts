@@ -190,14 +190,17 @@ test('in-app browser without optional metadata still needs an authorized playbac
 
 for (const enabled of [false, true]) {
   test(`YouTube native quality follows server choice (${enabled}), never the request query`, async t => {
-    t.mock.method(globalThis, 'fetch', async () => Response.json({ ...backendMaterial(), youTubeQualityEnabled: enabled }));
+    t.mock.method(globalThis, 'fetch', async () => Response.json({ ...backendMaterial(), youTubeQualityEnabled: enabled, youTubeQualityBottomCoverPercent: 20, youTubeQualityMobileBottomCoverPercent: 10 }));
     const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
     const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
     const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
-    const response = await materialRoute.GET(browserRequest(`material?s=${sessionId}&youtubeQualityEnabled=true`, { cookie: started.headers.get('Set-Cookie')! }));
+    const response = await materialRoute.GET(browserRequest(`material?s=${sessionId}&youtubeQualityEnabled=true&youtubeQualityBottomCoverPercent=40`, { cookie: started.headers.get('Set-Cookie')! }));
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.equal(html.includes('function closeNativeQualityArea()'), enabled);
+    assert.equal(html.includes('height:calc(76px + 20%)'), enabled);
+    assert.equal(html.includes('height:calc(76px + 10%)'), enabled);
+    assert.equal(html.includes('height:calc(76px + 40%)'), false);
     assert.match(html, /window\.onYouTubeIframeAPIReady/);
   });
 }

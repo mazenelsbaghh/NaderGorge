@@ -8,6 +8,7 @@ using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
 using NaderGorge.API.Filters;
+using NaderGorge.Application.Common;
 
 using Microsoft.AspNetCore.RateLimiting;
 using System.Text.RegularExpressions;
@@ -148,7 +149,15 @@ public class VideoSessionController : ControllerBase
         var watermark = await _db.PlatformSettings.AsNoTracking()
             .Where(setting => setting.Key == "EnableWatermark" || setting.Key.StartsWith("Watermark"))
             .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct);
-        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery, youTubeQualityEnabled));
+        var coverSettings = youTubeQualityEnabled
+            ? await _db.PlatformSettings.AsNoTracking()
+                .Where(setting => setting.Key == PlatformSettingKeys.YouTubeQualityBottomCoverPercent
+                    || setting.Key == PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent)
+                .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct)
+            : new Dictionary<string, string>();
+        int CoverPercent(string key) => int.TryParse(coverSettings.GetValueOrDefault(key), out var value) ? Math.Clamp(value, 0, 40) : 0;
+        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery, youTubeQualityEnabled,
+            CoverPercent(PlatformSettingKeys.YouTubeQualityBottomCoverPercent), CoverPercent(PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent)));
     }
 
     private async Task<bool> CanReadPlaybackMaterialAsync(Domain.Entities.VideoPlaybackSession session, IAccessCheckService access, CancellationToken ct)
@@ -318,4 +327,5 @@ public sealed partial class VideoPlaybackClientEventRequest
 }
 
 public record VideoEmbedMaterialResponse(string Token, string Key, DateTime ExpiresAt,
-    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null, bool YouTubeQualityEnabled = false);
+    Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null, bool YouTubeQualityEnabled = false,
+    int YouTubeQualityBottomCoverPercent = 0, int YouTubeQualityMobileBottomCoverPercent = 0);
