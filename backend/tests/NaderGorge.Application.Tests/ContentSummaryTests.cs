@@ -72,7 +72,7 @@ public sealed class ContentSummaryTests
         var packageSummary = Assert.Single(response.Data!.Packages);
         Assert.Equal((1, 0), (packageSummary.Term.Purchased, packageSummary.Term.Gifts));
         Assert.Equal(1, packageSummary.ActiveStudents);
-        Assert.Equal(1, packageSummary.RefundedStudents);
+        Assert.Equal(1, packageSummary.RefundOperations);
     }
 
     [Fact]
@@ -157,6 +157,9 @@ public sealed class ContentSummaryTests
         var now = DateTime.UtcNow;
 
         db.AddRange(teacher, package, firstTerm, secondTerm, section, lesson);
+        var expiredPurchase = TargetGrant(giftOnlyStudent.Id, CodeType.Lesson, lesson.Id, now.AddDays(-1));
+        expiredPurchase.ExpiresAt = now.AddHours(-1);
+        db.StudentAccessGrants.Add(expiredPurchase);
         db.StudentAccessGrants.AddRange(
             TargetGrant(mixedStudent.Id, CodeType.Term, firstTerm.Id, now, isGift: true),
             TargetGrant(mixedStudent.Id, CodeType.Term, secondTerm.Id, now.AddMinutes(1)),
@@ -175,7 +178,7 @@ public sealed class ContentSummaryTests
     }
 
     [Fact]
-    public async Task Summary_counts_expired_historical_grants_but_excludes_cancelled_and_end_boundary()
+    public async Task Summary_excludes_expired_inactive_cancelled_and_end_boundary_grants()
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01084000001");
@@ -205,7 +208,7 @@ public sealed class ContentSummaryTests
 
         Assert.True(response.Success);
         var packageSummary = Assert.Single(response.Data!.Packages);
-        Assert.Equal((2, 0, 2),
+        Assert.Equal((0, 0, 0),
             (packageSummary.PurchasedStudents, packageSummary.GiftStudents, packageSummary.TotalStudents));
     }
 
@@ -265,7 +268,7 @@ public sealed class ContentSummaryTests
     }
 
     [Fact]
-    public async Task Summary_excludes_rejoined_students_from_current_refund_count()
+    public async Task Summary_counts_each_refund_operation_even_when_student_rejoins()
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01086000001");
@@ -294,11 +297,14 @@ public sealed class ContentSummaryTests
             Grant(rejoinedStudent, package.Id, now, isGift: true),
             Grant(cancelledStudent, package.Id, now, cancelled: true));
         db.AuditLogs.AddRange(
+            new AuditLog { EntityId = cashGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+                NewValues = "{\"refundedAmount\":150}" },
             new AuditLog { EntityId = termRefund.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
                 NewValues = System.Text.Json.JsonSerializer.Serialize(new { refundedAmount = 0m, purchaseOperationId = purchaseId }) },
             new AuditLog { EntityId = legacyGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
                 NewValues = "{\"refundedAmount\":150,\"refundBalance\":true}" });
         db.PlatformRefunds.AddRange(
+            new PlatformRefund { OriginalSourceId = cashGrant.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = cashGrant.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = purchaseId, OriginalSourceType = "PurchaseOperation", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = reversed.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = reversed.UserId, Status = PlatformRefundStatus.Reversed },
@@ -310,8 +316,10 @@ public sealed class ContentSummaryTests
 
         var summary = Assert.Single(response.Data!.Packages);
         Assert.Equal(1, summary.ActiveStudents);
-        Assert.Equal(1, summary.RefundedStudents);
-        Assert.Equal(3, summary.TotalStudents);
+        Assert.Equal(4, summary.RefundOperations);
+        Assert.Equal(1, summary.PurchasedStudents);
+        Assert.Equal(0, summary.GiftStudents);
+        Assert.Equal(1, summary.TotalStudents);
     }
 
     private static Package PackageFor(TeacherProfile teacher, string name) => new()
