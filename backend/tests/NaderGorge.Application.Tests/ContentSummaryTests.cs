@@ -156,6 +156,9 @@ public sealed class ContentSummaryTests
         var now = DateTime.UtcNow;
 
         db.AddRange(teacher, package, firstTerm, secondTerm, section, lesson);
+        var expiredPurchase = TargetGrant(giftOnlyStudent.Id, CodeType.Lesson, lesson.Id, now.AddDays(-1));
+        expiredPurchase.ExpiresAt = now.AddHours(-1);
+        db.StudentAccessGrants.Add(expiredPurchase);
         db.StudentAccessGrants.AddRange(
             TargetGrant(mixedStudent.Id, CodeType.Term, firstTerm.Id, now, isGift: true),
             TargetGrant(mixedStudent.Id, CodeType.Term, secondTerm.Id, now.AddMinutes(1)),
@@ -174,7 +177,7 @@ public sealed class ContentSummaryTests
     }
 
     [Fact]
-    public async Task Summary_counts_expired_historical_grants_but_excludes_cancelled_and_end_boundary()
+    public async Task Summary_excludes_expired_inactive_cancelled_and_end_boundary_grants()
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01084000001");
@@ -204,7 +207,7 @@ public sealed class ContentSummaryTests
 
         Assert.True(response.Success);
         var packageSummary = Assert.Single(response.Data!.Packages);
-        Assert.Equal((2, 0, 2),
+        Assert.Equal((0, 0, 0),
             (packageSummary.PurchasedStudents, packageSummary.GiftStudents, packageSummary.TotalStudents));
     }
 
@@ -313,7 +316,9 @@ public sealed class ContentSummaryTests
         var summary = Assert.Single(response.Data!.Packages);
         Assert.Equal(1, summary.ActiveStudents);
         Assert.Equal(4, summary.RefundOperations);
-        Assert.Equal(3, summary.TotalStudents);
+        Assert.Equal(1, summary.PurchasedStudents);
+        Assert.Equal(0, summary.GiftStudents);
+        Assert.Equal(1, summary.TotalStudents);
     }
 
     private static Package PackageFor(TeacherProfile teacher, string name) => new()

@@ -121,7 +121,7 @@ function PackageSummary({ packageSummary }: { packageSummary: ContentPackageSumm
       <footer className="grid grid-cols-3 divide-x divide-x-reverse divide-[var(--admin-border)] border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-center">
         <div className="px-2 py-3"><ShoppingBag className="mx-auto mb-1 h-4 w-4 text-[var(--admin-secondary)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.purchasedStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">مشتري</span></div>
         <div className="px-2 py-3"><Gift className="mx-auto mb-1 h-4 w-4 text-[var(--admin-primary)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.giftStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">هدية فقط</span></div>
-        <div className="px-2 py-3"><UsersRound className="mx-auto mb-1 h-4 w-4 text-[var(--admin-text)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.totalStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">الإجمالي التاريخي</span></div>
+        <div className="px-2 py-3"><UsersRound className="mx-auto mb-1 h-4 w-4 text-[var(--admin-text)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.totalStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">إجمالي المشتركين الفعليين</span></div>
       </footer>
     </article>
   );
@@ -396,7 +396,7 @@ export function ContentSummaryPanel(props: ContentSummaryPanelProps) {
       </div>
 
       <p className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs font-medium leading-6 text-[var(--admin-muted)]">
-        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. عمليات الاسترداد: عدد عمليات الاسترداد المنفَّذة لاشتراكات من نفس الفترة داخل الباقة. تُحسب كل عملية حتى لو تكررت لنفس الطالب أو اشترك مجددًا. تفاصيل الشراء والهدايا تشمل المنتهية وتستبعد الملغاة.
+        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. عمليات الاسترداد: عدد عمليات الاسترداد المنفَّذة لاشتراكات من نفس الفترة داخل الباقة. تُحسب كل عملية حتى لو تكررت لنفس الطالب أو اشترك مجددًا. أعداد الشراء والهدايا تشمل الاشتراكات السارية الآن فقط وتستبعد المنتهية والملغاة.
       </p>
 
       {period === 'custom' && (
