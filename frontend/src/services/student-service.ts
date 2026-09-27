@@ -115,7 +115,6 @@ export interface ExamMistakeItemDto {
   timesMissed: number;
   lastMissedAt: string;
   canRevealCorrectAnswer: boolean;
-  aiFeedback?: string | null;
 }
 
 export interface ExamMistakeGroupDto {

@@ -166,12 +166,8 @@ export default function StudentMistakesPageClient() {
                           dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(item.questionText) }}
                         />
                         <p className="mt-3 text-sm font-bold text-[var(--admin-muted)]">
-                          إجابتك الأخيرة: <span className="text-[var(--admin-text)]">{item.yourAnswer || "لم تقدم إجابة"}</span>
+                          إجابتك الأخيرة: <span className="text-[var(--admin-text)]">{item.yourAnswer || "ماختارتش إجابة"}</span>
                         </p>
-                        {item.canRevealCorrectAnswer && item.aiFeedback && <div className="mt-3 text-sm leading-7">
-                          <p className="font-bold">تعليل تصحيح الذكاء الاصطناعي</p>
-                          <p dir="auto" className="whitespace-pre-wrap break-words">{item.aiFeedback}</p>
-                        </div>}
                         <p className="mt-2 text-sm font-bold text-[var(--admin-muted)]">
                           {item.canRevealCorrectAnswer
                             ? <>الإجابة الصح: <span className="text-[var(--admin-success)]">{item.correctAnswer || "مش متاحة"}</span></>

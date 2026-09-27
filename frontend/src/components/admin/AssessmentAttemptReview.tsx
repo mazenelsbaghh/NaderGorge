@@ -13,7 +13,7 @@ import { Trash2 } from 'lucide-react';
 
 interface AnswerReview {
   questionId: string; order: number; text: string; imageUrl?: string;
-  answer?: string; audioUrl?: string; correction?: string; maximum: number; score: number | null; aiFeedback?: string | null; aiScore?: number | null;
+  answer?: string; audioUrl?: string; correction?: string; maximum: number; score: number | null;
 }
 interface AttemptReview {
   attemptId: string; studentName: string; title: string; score: number; total: number;
@@ -106,10 +106,6 @@ export function AssessmentAttemptReview({ kind, assessmentId, attemptId, student
             {q.audioUrl && <audio controls preload="none" className="mt-2 w-full" src={resolveMediaUrl(q.audioUrl)} aria-label={`إجابة السؤال ${index + 1} الصوتية`} />}
           </div>
           {q.correction && <div><p className="text-sm font-bold">الإجابة المرجعية</p><div dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correction) }} /></div>}
-          {q.aiFeedback && <div className="rounded-lg bg-[var(--admin-card-soft)] p-3">
-            <p className="mb-1 text-sm font-bold">تعليل تصحيح الذكاء الاصطناعي{q.aiScore != null ? ` — درجته: ${q.aiScore} / ${q.maximum}` : ''}</p>
-            <p dir="auto" className="whitespace-pre-wrap break-words">{q.aiFeedback}</p>
-          </div>}
           <label className="flex flex-wrap items-center gap-3 text-sm font-bold">درجة السؤال (من {q.maximum})
             <input aria-label={`درجة السؤال ${index + 1}`} type="number" required min={0} max={q.maximum} step={kind === 'homework' ? 1 : '0.01'} disabled={!review.canGrade || busy} value={scores[q.questionId] ?? ''} onChange={e => setScores(previous => ({ ...previous, [q.questionId]: e.target.value }))} className="min-h-11 w-28 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3" />
             {q.score == null && <span className="text-[var(--admin-muted)]">لم تُصحّح بعد</span>}

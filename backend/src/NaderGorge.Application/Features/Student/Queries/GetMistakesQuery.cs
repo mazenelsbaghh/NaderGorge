@@ -45,8 +45,7 @@ public record ExamMistakeItemDto(
     string? CorrectAnswer,
     int TimesMissed,
     DateTime LastMissedAt,
-    bool CanRevealCorrectAnswer,
-    string? AiFeedback = null
+    bool CanRevealCorrectAnswer
 );
 
 public record HomeworkWeaknessDto(
@@ -119,13 +118,6 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .ToListAsync(ct);
 
         var attemptIds = attempts.Select(a => a.Id).ToList();
-        var essayFeedback = (await _db.EssaySubmissions.AsNoTracking()
-            .Where(e => e.StudentId == request.UserId && attemptIds.Contains(e.StudentExamAttemptId)
-                && e.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded)
-            .Select(e => new { e.StudentExamAttemptId, e.QuestionId, e.AnswerText, e.AiFeedback, e.UpdatedAt, e.CreatedAt })
-            .ToListAsync(ct))
-            .GroupBy(e => (e.StudentExamAttemptId, e.QuestionId))
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.UpdatedAt ?? e.CreatedAt).First());
 
         var exams = await _db.Exams
             .AsNoTracking()
@@ -137,7 +129,6 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 Questions = e.ExamQuestions.Select(eq => new {
                     eq.Id,
                     eq.Order,
-                    eq.QuestionBankItemId,
                     QuestionText = eq.Question.Text,
                     Options = eq.Question.Options.Select(o => new {
                         o.Id,
@@ -209,7 +200,6 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                             .OrderByDescending(answer => attemptsById[answer.StudentExamAttemptId].UpdatedAt ?? attemptsById[answer.StudentExamAttemptId].CreatedAt)
                             .First();
 
-                        essayFeedback.TryGetValue((latestWrongAnswer.StudentExamAttemptId, examQuestion.QuestionBankItemId), out var essay);
                         var selectedOption = examQuestion.Options.FirstOrDefault(option => option.Id == latestWrongAnswer.SelectedOptionId);
                         var correctOption = examQuestion.Options.FirstOrDefault(option => option.IsCorrect);
                         var lastMissedAt = attemptsById[latestWrongAnswer.StudentExamAttemptId].UpdatedAt
@@ -219,12 +209,11 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                             examQuestion.Id,
                             examQuestion.Order,
                             examQuestion.QuestionText,
-                            essay?.AnswerText ?? selectedOption?.Text ?? latestWrongAnswer.SubmittedText,
+                            selectedOption?.Text,
                             passedExamsSet.Contains(group.Key) ? correctOption?.Text : null,
                             questionGroup.Count(),
                             lastMissedAt,
-                            passedExamsSet.Contains(group.Key),
-                            passedExamsSet.Contains(group.Key) ? essay?.AiFeedback : null
+                            passedExamsSet.Contains(group.Key)
                         );
                     })
                     .Where(item => item != null)

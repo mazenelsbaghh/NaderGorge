@@ -10,7 +10,7 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 public enum AssessmentKind { Homework, Exam }
 public record AssessmentTarget(AssessmentKind Kind, Guid AssessmentId, Guid AttemptId, Guid ActorId);
 public record AssessmentAnswerReview(Guid QuestionId, int Order, string Text, string? ImageUrl,
-    string? Answer, string? AudioUrl, string? Correction, decimal Maximum, decimal? Score, string? AiFeedback = null, decimal? AiScore = null);
+    string? Answer, string? AudioUrl, string? Correction, decimal Maximum, decimal? Score);
 public record AssessmentReviewDto(Guid AttemptId, string StudentName, string Title, decimal Score,
     decimal Total, string Status, bool CanGrade, string? Feedback, List<AssessmentAnswerReview> Questions);
 public record GetAssessmentReviewQuery(AssessmentTarget Target) : IRequest<ApiResponse<AssessmentReviewDto>>;
@@ -106,8 +106,7 @@ public class GetAssessmentReviewQueryHandler(IAppDbContext db, TeacherAuthorizat
                     ? q.Question.Options.FirstOrDefault(o => o.Id == answer?.SelectedOptionId)?.Text : null)
                     ?? answer?.SubmittedText ?? answer?.SelectedOption?.Text, essay?.AudioUrl,
                 q.Question.WrittenCorrection ?? q.Question.Options.FirstOrDefault(o => o.IsCorrect)?.Text,
-                q.Points, essay != null ? essay.TeacherFinalScore : answer?.PointsAwarded,
-                essay?.AiFeedback, essay?.AiInitialScore is { } aiScore ? aiScore * q.Points : null);
+                q.Points, essay != null ? essay.TeacherFinalScore : answer?.PointsAwarded);
         }).ToList();
         var pending = essays.Any(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded);
         return new(attempt.Id, attempt.User.FullName, definition.Title, scale.ScoreAchieved, definition.TotalScore,
