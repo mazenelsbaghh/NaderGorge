@@ -650,6 +650,8 @@ public sealed class AssessmentReviewPostgresTests
         var attempt = await fixture.Db.StudentExamAttempts.Include(a => a.Exam).ThenInclude(e => e.ExamQuestions)
             .SingleAsync(a => a.Id == essay.StudentExamAttemptId);
         var assigned = attempt.Exam.ExamQuestions.Single().Id;
+        essay.AiFeedback = "إجابتك مطابقة للنموذج المرجعي.";
+        essay.AiInitialScore = 1;
         fixture.Db.ExamQuestions.Add(new ExamQuestion
         {
             ExamId = attempt.ExamId, Points = 20, Order = 2, Question = new QuestionBankItem
@@ -663,6 +665,8 @@ public sealed class AssessmentReviewPostgresTests
         var review = await new GetAssessmentReviewQueryHandler(fixture.Db, auth).Handle(new(target), default);
         Assert.Equal(assigned, Assert.Single(review.Data!.Questions).QuestionId);
         Assert.Equal("شرح", review.Data.Questions[0].Answer);
+        Assert.Equal(essay.AiFeedback, review.Data.Questions[0].AiFeedback);
+        Assert.Equal(4m, review.Data.Questions[0].AiScore);
         var result = await new GradeAssessmentCommandHandler(fixture.Db, auth).Handle(new(target, [new(assigned, 3)], "manual"), default);
         Assert.True(result.Success);
         fixture.Db.ChangeTracker.Clear();
