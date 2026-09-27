@@ -3,6 +3,7 @@ namespace NaderGorge.Application.Common;
 public static class VideoProviders
 {
     public const string YouTube = "youtube";
+    public const string YouTubeHls = "youtube-hls";
     public const string Vk = "vk";
     public const string Bunny = "bunny";
 
@@ -17,6 +18,9 @@ public static class VideoProviders
     {
         return !string.IsNullOrWhiteSpace(provider) && SupportedProviders.Contains(provider.Trim());
     }
+
+    public static bool IsYouTubeVideoId(string videoId) => videoId.Length == 11
+        && videoId.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 
     public static string Normalize(string provider)
     {

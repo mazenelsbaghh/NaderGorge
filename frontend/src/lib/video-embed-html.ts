@@ -7,6 +7,7 @@ import {
 } from '@/lib/bunny-video-reference';
 import { createDevToolsSuspensionScript } from '@/lib/video-embed-devtools-guard';
 import { generateBunnyHlsEmbedHtml } from '@/lib/bunny-hls-embed';
+import { generateYouTubeHlsEmbedHtml } from '@/lib/youtube-hls-embed';
 
 function embedErrorHtml(message: string) {
   const safeMessage = inlineScriptString(message);
@@ -30,6 +31,7 @@ export function generateVideoEmbedHtml(provider: string, videoId: string, option
   studentName?: string; studentPhone?: string; bunnyEmbedQuery?: string; youtubeQualityEnabled?: boolean;
   youtubeQualityBottomCoverPercent?: number;
   youtubeQualityMobileBottomCoverPercent?: number;
+  youtubeHlsPlaylistSource?: string;
 } = {}): string {
   const { studentName = 'Massar Academy', studentPhone = '', bunnyEmbedQuery } = options;
   const normalizedProvider = provider.toLowerCase();
@@ -42,6 +44,11 @@ export function generateVideoEmbedHtml(provider: string, videoId: string, option
   }
   if (normalizedProvider === 'bunny-hls') {
     return generateBunnyHlsEmbedHtml(videoId, studentName, studentPhone);
+  }
+  if (normalizedProvider === 'youtube-hls') {
+    return options.youtubeHlsPlaylistSource
+      ? generateYouTubeHlsEmbedHtml(options.youtubeHlsPlaylistSource, studentName, studentPhone)
+      : embedErrorHtml('يلزم فتح الفيديو من جلسة مشاهدة معتمدة.');
   }
   return generateYouTubeEmbedHtml(videoId, studentName, studentPhone, {
     qualityPreview: options.youtubeQualityEnabled === true,

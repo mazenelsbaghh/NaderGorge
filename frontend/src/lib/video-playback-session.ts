@@ -114,17 +114,29 @@ export function createPlaybackCookie(request: Request, sessionId: string, watchE
 export async function fetchPlaybackMaterial(request: Request, sessionId: string, options: {
   authorization: string; surface?: string; includeWatermark?: boolean; nativeHls?: boolean;
 }): Promise<PlaybackMaterial> {
-  const apiUrl = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
   const query = new URLSearchParams({ includeWatermark: String(Boolean(options.includeWatermark)), nativeHls: String(Boolean(options.nativeHls)) });
-  const response = await fetch(`${apiUrl}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/embed-material?${query}`, {
-    headers: { 'X-Internal-Token': internalSecret(), Authorization: options.authorization, 'X-App-Surface': options.surface ?? '' },
+  const response = await fetchPlaybackInternalResponse(request, sessionId, { ...options, resource: 'embed-material', query });
+  if (!response.ok) await rejectPlaybackResponse(response);
+  return response.json() as Promise<PlaybackMaterial>;
+}
+
+export async function fetchPlaybackInternalResponse(request: Request, sessionId: string, options: {
+  authorization: string; surface?: string; resource: 'embed-material' | 'youtube-hls-source';
+  query?: URLSearchParams; body?: string;
+}): Promise<Response> {
+  const apiUrl = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
+  const query = options.query ? `?${options.query}` : '';
+  return fetch(`${apiUrl}/v1/internal/video-sessions/${encodeURIComponent(sessionId)}/${options.resource}${query}`, {
+    method: options.body === undefined ? 'GET' : 'PUT', body: options.body,
+    headers: { 'X-Internal-Token': internalSecret(), Authorization: options.authorization,
+      'X-App-Surface': options.surface ?? '', ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     cache: 'no-store', redirect: 'error', signal: AbortSignal.any([request.signal, AbortSignal.timeout(15_000)]),
   });
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new PlaybackRequestError([401, 403, 404, 409, 410, 429, 503].includes(response.status) ? response.status : 502);
-  }
-  return response.json() as Promise<PlaybackMaterial>;
+}
+
+export async function rejectPlaybackResponse(response: Response): Promise<never> {
+  await response.body?.cancel();
+  throw new PlaybackRequestError([401, 403, 404, 409, 410, 413, 422, 429, 503].includes(response.status) ? response.status : 502);
 }
 
 export function playbackErrorResponse(error: unknown) {

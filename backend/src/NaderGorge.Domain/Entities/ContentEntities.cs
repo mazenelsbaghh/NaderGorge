@@ -86,6 +86,7 @@ public class LessonVideo : BaseEntity, IArchivableContent
     public string Provider { get; set; } = string.Empty;
     public string ProviderVideoId { get; set; } = string.Empty;
     public bool YouTubeQualityEnabled { get; set; }
+    public bool YouTubeHlsEnabled { get; set; }
 
     /// <summary>
     /// Monotonically advances only when the playable source changes. Pending Bunny

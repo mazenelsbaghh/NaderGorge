@@ -715,7 +715,8 @@ public class AdminController : ControllerBase
             dto.BunnyPlaybackMode)
         {
             PreserveSourceDerivedData = dto.PreserveSourceDerivedData,
-            YouTubeQualityEnabled = dto.YouTubeQualityEnabled
+            YouTubeQualityEnabled = dto.YouTubeQualityEnabled,
+            YouTubeHlsEnabled = dto.YouTubeHlsEnabled
         });
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -1618,6 +1619,7 @@ public record UpdateVideoRequest(
 {
     public bool PreserveSourceDerivedData { get; init; }
     public bool? YouTubeQualityEnabled { get; init; }
+    public bool? YouTubeHlsEnabled { get; init; }
 }
 public record AttachHomeworkRequest(
     string Title,

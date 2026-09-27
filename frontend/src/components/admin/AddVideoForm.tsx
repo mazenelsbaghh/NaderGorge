@@ -19,6 +19,7 @@ import { BunnyLibrarySelect } from './BunnyLibrarySelect';
 import { VideoTypeSelect } from './VideoTypeSelect';
 import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 import { bunnyPlaybackSelection } from '@/lib/bunny-playback-mode';
+import { YouTubePlaybackOptions } from './YouTubePlaybackOptions';
 
 interface AddVideoFormProps {
   lessonId: string;
@@ -83,6 +84,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
   const [limit, setLimit] = useState(() => editingVideo?.maxWatchCount ?? 3);
   const [isActive, setIsActive] = useState(() => editingVideo?.isActive ?? true);
   const [youTubeQualityEnabled, setYouTubeQualityEnabled] = useState(() => editingVideo?.youTubeQualityEnabled ?? false);
+  const [youTubeHlsEnabled, setYouTubeHlsEnabled] = useState(() => editingVideo?.youTubeHlsEnabled ?? false);
   const [videoTypeId, setVideoTypeId] = useState(() => editingVideo?.videoType.id ?? '');
   const [videoTypesAvailable, setVideoTypesAvailable] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -154,6 +156,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
     // source so a later save can never submit a hidden, stale file or URL.
     setProvider(nextProvider);
     setYouTubeQualityEnabled(false);
+    setYouTubeHlsEnabled(false);
     setBunnyMode('manual');
     setBunnyFile(null);
     setBunnySourceUrl('');
@@ -221,7 +224,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : null,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
-          youTubeQualityEnabled: provider === 'YouTube' && youTubeQualityEnabled,
+          youTubeQualityEnabled: provider === 'YouTube' && !youTubeHlsEnabled && youTubeQualityEnabled,
+          youTubeHlsEnabled: provider === 'YouTube' && youTubeHlsEnabled,
           preserveSourceDerivedData: keepsVideoContent,
         });
       } else {
@@ -236,7 +240,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           isActive,
           bunnyStreamLibraryId: isBunny ? bunnyStreamLibraryId : undefined,
           bunnyPlaybackMode: isBunny ? bunnyPlaybackMode : 0,
-          youTubeQualityEnabled: provider === 'YouTube' && youTubeQualityEnabled,
+          youTubeQualityEnabled: provider === 'YouTube' && !youTubeHlsEnabled && youTubeQualityEnabled,
+          youTubeHlsEnabled: provider === 'YouTube' && youTubeHlsEnabled,
         });
       }
       toast.success(isBunny && bunnyMode !== 'manual'
@@ -247,6 +252,7 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
       if (!isEditing) {
         setTitle('');
         setYouTubeQualityEnabled(false);
+        setYouTubeHlsEnabled(false);
         setUrlOrEmbedCode('');
         setBunnyFile(null);
         setBunnySourceUrl('');
@@ -343,15 +349,8 @@ export function AddVideoForm({ lessonId, onSuccess, editingVideo, onCancel }: Ad
           </div>
         )}
       </div>
-      {provider === 'YouTube' && (
-        <label className="flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
-          <input type="checkbox" checked={youTubeQualityEnabled} onChange={event => setYouTubeQualityEnabled(event.target.checked)} className="mt-1 size-5 shrink-0 accent-[var(--admin-primary)]" />
-          <span>
-            <span className="block text-sm font-bold text-[var(--admin-text)]">السماح بتغيير الجودة</span>
-            <span className="mt-1 block text-xs text-[var(--admin-muted)]">يعرض إعدادات جودة يوتيوب، بما فيها «تلقائي». قد تظهر عناصر وروابط من يوتيوب أثناء الاختيار.</span>
-          </span>
-        </label>
-      )}
+      {provider === 'YouTube' && <YouTubePlaybackOptions hlsEnabled={youTubeHlsEnabled} qualityEnabled={youTubeQualityEnabled}
+        onHlsChange={setYouTubeHlsEnabled} onQualityChange={setYouTubeQualityEnabled} />}
       {isBunny && (
         <div className="space-y-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4">
           <div className="mb-3 flex flex-wrap gap-2">

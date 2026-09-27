@@ -325,6 +325,108 @@ public class ContentIdentityAndVideoTypesTests
         Assert.False(video.YouTubeQualityEnabled);
     }
 
+    [Theory]
+    [InlineData(" YouTube ", true, true)]
+    [InlineData("youtube", false, false)]
+    [InlineData(" VK ", true, false)]
+    public async Task YouTubeHls_CreateNormalizesProvider_AndOnlyEnablesYouTube(string provider, bool requested, bool expected)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var type = new VideoType { Name = "شرح", NormalizedName = "شرح", IsActive = true };
+        var lesson = new Lesson { Title = "Lesson", Summary = "Summary" };
+        db.AddRange(type, lesson);
+        await db.SaveChangesAsync();
+        var auth = new TeacherAuthorizationService(db);
+        var bunny = new RecordingBunnyClient(740733);
+        var libraries = new StaticBunnyLibraryAccessService(new BunnyStreamLibraryAccess(Guid.NewGuid(), "Default", bunny.LibraryId, "api-key", true));
+        var handler = new CreateVideoCommandHandler(db, [new NaderGorge.Infrastructure.Providers.YouTubeVideoProvider()],
+            auth, libraries, new RecordingBunnyClientFactory(bunny));
+
+        var created = await handler.Handle(new CreateVideoCommand("Video", provider, "https://youtu.be/dQw4w9WgXcQ", 1, 3,
+            lesson.Id, type.Id, YouTubeQualityEnabled: true, YouTubeHlsEnabled: requested), default);
+
+        Assert.True(created.Success, created.Message);
+        var video = await db.LessonVideos.SingleAsync();
+        Assert.Equal(provider.Trim().ToLowerInvariant(), video.Provider);
+        Assert.Equal(expected, video.YouTubeHlsEnabled);
+        Assert.Equal(video.Provider == "youtube" && !expected, video.YouTubeQualityEnabled);
+        var cockpit = await new GetLessonCockpitQueryHandler(db, auth).Handle(new GetLessonCockpitQuery(lesson.Id), default);
+        Assert.Equal(expected, Assert.Single(cockpit.Data!.Videos).YouTubeHlsEnabled);
+    }
+
+    [Theory]
+    [InlineData("https://example.com/video.m3u8")]
+    [InlineData("invalid-id")]
+    [InlineData("abcdefghij!")]
+    public async Task YouTubeHls_RejectsNonYouTubeSourceBeforeSavingCreateOrUpdate(string source)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var type = new VideoType { Name = "شرح", NormalizedName = "شرح", IsActive = true };
+        db.VideoTypes.Add(type);
+        await db.SaveChangesAsync();
+        var bunny = new RecordingBunnyClient(740733);
+        var libraries = new StaticBunnyLibraryAccessService(new BunnyStreamLibraryAccess(Guid.NewGuid(), "Default", bunny.LibraryId, "api-key", true));
+        var handler = new CreateVideoCommandHandler(db, [new NaderGorge.Infrastructure.Providers.YouTubeVideoProvider()],
+            new TeacherAuthorizationService(db), libraries, new RecordingBunnyClientFactory(bunny));
+
+        var response = await handler.Handle(new CreateVideoCommand("Video", "youtube", source, 1, 3, Guid.NewGuid(), type.Id,
+            YouTubeHlsEnabled: true), default);
+
+        Assert.False(response.Success);
+        Assert.Contains("YOUTUBE_HLS_SOURCE_INVALID", response.Errors!);
+        Assert.Empty(db.LessonVideos);
+        Assert.Empty(db.OutboxEvents);
+
+        var created = await handler.Handle(new CreateVideoCommand("Video", "youtube", "dQw4w9WgXcQ", 1, 3, Guid.NewGuid(), type.Id,
+            YouTubeHlsEnabled: true), default);
+        Assert.True(created.Success, created.Message);
+        var update = new UpdateVideoCommandHandler(db, [new NaderGorge.Infrastructure.Providers.YouTubeVideoProvider()],
+            new TeacherAuthorizationService(db), libraries, new RecordingBunnyClientFactory(bunny));
+        var rejected = await update.Handle(new UpdateVideoCommand(created.Data, "Video", "youtube", source, 1, 3, type.Id), default);
+        Assert.False(rejected.Success);
+        Assert.Contains("YOUTUBE_HLS_SOURCE_INVALID", rejected.Errors!);
+        var video = await db.LessonVideos.SingleAsync();
+        Assert.Equal("dQw4w9WgXcQ", video.ProviderVideoId);
+        Assert.True(video.YouTubeHlsEnabled);
+        Assert.Equal(0, video.SourceRevision);
+    }
+
+    [Fact]
+    public async Task YouTubeHls_OmittedUpdatePreservesChoice_ModeChangeSupersedesSessionsWithoutDeletingContent()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var video = new LessonVideo { Title = "Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ",
+            Order = 1, YouTubeHlsEnabled = true, YouTubeQualityEnabled = true, SubtitleUrl = "/subtitles/current.vtt", SourceRevision = 7 };
+        var chapter = new VideoChapter { LessonVideoId = video.Id, Title = "Introduction" };
+        var session = new VideoPlaybackSession { LessonVideoId = video.Id, ExpiresAt = DateTime.UtcNow.AddMinutes(10) };
+        db.AddRange(video, chapter, session);
+        await db.SaveChangesAsync();
+        var bunny = new RecordingBunnyClient(740733);
+        var libraries = new StaticBunnyLibraryAccessService(new BunnyStreamLibraryAccess(Guid.NewGuid(), "Default", bunny.LibraryId, "api-key", true));
+        var handler = new UpdateVideoCommandHandler(db, [], new TeacherAuthorizationService(db), libraries, new RecordingBunnyClientFactory(bunny));
+        var command = new UpdateVideoCommand(video.Id, video.Title, " YouTube ", video.ProviderVideoId, 1, 3, video.VideoTypeId);
+
+        Assert.True((await handler.Handle(command, default)).Success);
+        Assert.True(video.YouTubeHlsEnabled);
+        Assert.False(video.YouTubeQualityEnabled);
+        Assert.False(session.IsSuperseded);
+        Assert.Equal(7, video.SourceRevision);
+
+        Assert.True((await handler.Handle(command with { YouTubeHlsEnabled = false }, default)).Success);
+        Assert.False(video.YouTubeHlsEnabled);
+        Assert.False(video.YouTubeQualityEnabled);
+        Assert.True(session.IsSuperseded);
+        Assert.Equal(7, video.SourceRevision);
+        Assert.Equal("/subtitles/current.vtt", video.SubtitleUrl);
+        Assert.Equal(chapter.Id, (await db.VideoChapters.SingleAsync()).Id);
+
+        Assert.True((await handler.Handle(command with { YouTubeQualityEnabled = true }, default)).Success);
+        Assert.True(video.YouTubeQualityEnabled);
+
+        Assert.True((await handler.Handle(command with { Provider = "vk", UrlOrEmbedCode = "oid=-1&id=2", YouTubeHlsEnabled = true }, default)).Success);
+        Assert.False(video.YouTubeHlsEnabled);
+    }
+
     [Fact]
     public async Task BunnyCreation_RejectsInactiveTypeBeforeCallingExternalProvider()
     {

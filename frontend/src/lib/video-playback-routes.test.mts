@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { createYouTubeHlsFetchFixture } from './youtube-hls-test-fixtures.mts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const nativeRequire = createRequire(import.meta.url);
@@ -25,6 +26,7 @@ function loadModule(path: string): RouteExports {
   } }).outputText;
   vm.runInNewContext(code, {
     module: compiledModule, exports: compiledModule.exports, process, Buffer, URL, URLSearchParams, Request, Response, Headers, AbortSignal,
+    setTimeout, clearTimeout, DOMException, Uint8Array,
     fetch: (...args: Parameters<typeof fetch>) => globalThis.fetch(...args),
     require: (specifier: string) => specifier.startsWith('@/') ? loadModule(resolve(root, specifier.slice(2)))
       : specifier.startsWith('.') ? loadModule(resolve(dirname(filename), specifier)) : nativeRequire(specifier),
@@ -61,7 +63,10 @@ function browserRequest(path: string, options: { cookie?: string; method?: strin
 }
 
 test('authorized bootstrap keeps the initial document ID-free and rejects a copied link in another browser', async t => {
-  t.mock.method(globalThis, 'fetch', async () => Response.json(backendMaterial()));
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+    assert.equal(new URL(String(input)).pathname, `/api/v1/internal/video-sessions/${sessionId}/embed-material`);
+    return Response.json(backendMaterial());
+  });
   const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
   const embedRoute = loadModule(resolve(root, 'app/api/video/embed/route'));
   const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
@@ -204,3 +209,98 @@ for (const enabled of [false, true]) {
     assert.match(html, /window\.onYouTubeIframeAPIReady/);
   });
 }
+
+test('YouTube HLS material keeps the video ID private and uses the authorized platform player', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json(backendMaterial(
+    '</script><script>window.stolen=true</script>', 'youtube-hls', 'testVideo12',
+  )));
+  const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+  const materialRoute = loadModule(resolve(root, 'app/api/video/material/route'));
+  const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+  const response = await materialRoute.GET(browserRequest(`material?s=${sessionId}`, { cookie: started.headers.get('Set-Cookie')! }));
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<video\b/);
+  assert.match(html, /\/api\/video\/youtube-hls\?s=/);
+  assert.doesNotMatch(html, /testVideo12|onYouTubeIframeAPIReady|hls\.js|<script>window\.stolen/);
+});
+
+test('YouTube HLS playlists reject copied grants, cross-origin requests and videos using the ordinary player', async t => {
+  const upstream = t.mock.method(globalThis, 'fetch', async () => Response.json(backendMaterial()));
+  const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+  const hlsRoute = loadModule(resolve(root, 'app/api/video/youtube-hls/route'));
+  const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+  const cookie = started.headers.get('Set-Cookie')!;
+  const endpoint = `youtube-hls?s=${sessionId}&playlist=master`;
+  const initialRequests = upstream.mock.callCount();
+  assert.equal((await hlsRoute.GET(browserRequest(endpoint))).status, 401);
+  const crossOrigin = browserRequest(endpoint, { cookie });
+  crossOrigin.headers.set('Sec-Fetch-Site', 'cross-site');
+  assert.equal((await hlsRoute.GET(crossOrigin)).status, 403);
+  assert.equal(upstream.mock.callCount(), initialRequests);
+  const disabled = await hlsRoute.GET(browserRequest(endpoint, { cookie }));
+  assert.equal(disabled.status, 403);
+  assert.doesNotMatch(await disabled.text(), /testVideo12|googlevideo/);
+});
+
+test('authorized YouTube HLS delivers versioned playlists with Google media and rechecks permission on cached sources', async t => {
+  const fixture = createYouTubeHlsFetchFixture();
+  let revoked = false;
+  const sharedSources = new Map<string, object>();
+  let latestSourceVersion = '';
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, options?: RequestInit) => {
+    if (String(input).includes('/youtube-hls-source')) {
+      if (revoked) return new Response(null, { status: 403 });
+      if (options?.method === 'PUT') {
+        const source = JSON.parse(String(options.body));
+        sharedSources.set(source.version, source);
+        latestSourceVersion = source.version;
+        return new Response(null, { status: 204 });
+      }
+      const version = new URL(String(input)).searchParams.get('v') ?? latestSourceVersion;
+      const source = sharedSources.get(version);
+      return source ? Response.json(source) : new Response(null, { status: 404 });
+    }
+    if (String(input).includes('/v1/internal/video-sessions/')) {
+      return revoked ? new Response(null, { status: 403 }) : Response.json(backendMaterial('طالب', 'youtube-hls', 'routeTest12'));
+    }
+    return fixture.fetch(input, options);
+  });
+  const sessionRoute = loadModule(resolve(root, 'app/api/video/session/route'));
+  const route = loadModule(resolve(root, 'app/api/video/youtube-hls/route'));
+  const started = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'start' } }));
+  const cookie = started.headers.get('Set-Cookie')!;
+  const information = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&info=1`, { cookie }));
+  assert.equal(information.status, 200);
+  const metadata = await information.json();
+  assert.deepEqual(metadata.qualities.map((level: { height: number }) => level.height), [360, 720]);
+  assert.doesNotMatch(JSON.stringify(metadata), /googlevideo|routeTest12/);
+  const master = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=master&quality=720&v=${metadata.version}`, { cookie }));
+  const masterText = await master.text();
+  assert.equal(master.status, 200);
+  assert.match(masterText, /playlist=audio&v=/);
+  assert.match(masterText, /playlist=720&v=/);
+  assert.doesNotMatch(masterText, /playlist=360/);
+  const media = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=720&v=${metadata.version}`, { cookie }));
+  assert.equal(media.status, 200);
+  const mediaText = await media.text();
+  assert.match(mediaText, /#EXT-X-BYTERANGE:/);
+  assert.match(mediaText, /https:\/\/rr1\.googlevideo\.com\/videoplayback/);
+  assert.doesNotMatch(mediaText, /\/api\/video\//);
+  // A second Next process has no local source cache and must still serve this version.
+  modules.clear();
+  const secondRoute = loadModule(resolve(root, 'app/api/video/youtube-hls/route'));
+  const extractionRequests = fixture.requests.length;
+  const secondNode = await secondRoute.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=720&v=${metadata.version}`, { cookie }));
+  assert.equal(secondNode.status, 200);
+  assert.equal(await secondNode.text(), mediaText);
+  assert.equal(fixture.requests.length, extractionRequests);
+  const stale = await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=master&v=missingVersion12`, { cookie }));
+  assert.equal(stale.status, 410);
+  const renewed = await sessionRoute.POST(browserRequest('session', { method: 'POST', body: { sessionId, purpose: 'renew', nativeHls: true } }));
+  assert.equal(renewed.status, 200);
+  assert.equal((await renewed.json()).data.source, `/api/video/youtube-hls?s=${sessionId}&playlist=master`);
+  assert.match(renewed.headers.get('Set-Cookie') ?? '', /HttpOnly/);
+  revoked = true;
+  assert.equal((await route.GET(browserRequest(`youtube-hls?s=${sessionId}&playlist=audio&v=${metadata.version}`, { cookie }))).status, 403);
+});

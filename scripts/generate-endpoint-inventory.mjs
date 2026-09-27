@@ -773,7 +773,7 @@ function generateRouteFindings(frontendCalls, endpoints) {
 
 function generateInventory() {
   const endpoints = readdirSync(controllersDir)
-    .filter((file) => file.endsWith('Controller.cs'))
+    .filter((file) => /Controller(?:\.[^.]+)*\.cs$/.test(file))
     .flatMap((file) => parseController(normalizeSlashes(resolve(controllersDir, file))))
     .sort((a, b) => `${a.controller}:${a.path}:${a.method}`.localeCompare(`${b.controller}:${b.path}:${b.method}`));
   const frontendCalls = generateFrontendCalls();

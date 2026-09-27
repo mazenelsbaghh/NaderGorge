@@ -90,6 +90,7 @@ export type CreateVideoPayload = {
   bunnyStreamLibraryId?: string | null;
   bunnyPlaybackMode?: 0 | 1;
   youTubeQualityEnabled?: boolean;
+  youTubeHlsEnabled?: boolean;
 };
 
 export type UpdateVideoPayload = Omit<
@@ -901,6 +902,7 @@ export interface LessonCockpitVideoDto {
   hasCompletedAiAnalysis: boolean;
   bunnyPlaybackMode?: BunnyPlaybackMode;
   youTubeQualityEnabled?: boolean;
+  youTubeHlsEnabled?: boolean;
   bunnyLibrary?: BunnyLibraryReferenceDto | null;
   bunnyStatus?: string | null;
   bunnyEncodeProgress?: number | null;

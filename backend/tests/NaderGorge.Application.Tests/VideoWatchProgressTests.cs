@@ -757,6 +757,51 @@ public class VideoWatchProgressTests
         Assert.Equal(3, response.Data.WatchInfo.MaxCount);
     }
 
+    [Theory]
+    [InlineData("youtube", false, "youtube")]
+    [InlineData(" YouTube ", true, "youtube-hls")]
+    [InlineData("vk", true, "vk")]
+    public async Task CreateVideoSession_YouTubeHlsUsesEncryptedIdAndPreservesWatchPolicy(string provider, bool enabled, string expectedProvider)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        fixture.Video.Provider = provider;
+        fixture.Video.ProviderVideoId = "dQw4w9WgXcQ";
+        fixture.Video.YouTubeHlsEnabled = enabled;
+        await db.SaveChangesAsync();
+        var encryption = new NaderGorge.Infrastructure.Services.VideoEncryptionService();
+        var handler = new CreateVideoSessionCommandHandler(db, AllowAccess.Instance, encryption);
+
+        var response = await handler.Handle(new CreateVideoSessionCommand(fixture.Video.Id, fixture.UserId), default);
+
+        Assert.True(response.Success, response.Message);
+        Assert.Equal(expectedProvider, response.Data!.Provider);
+        Assert.Equal(expectedProvider == "youtube-hls", response.Data.YouTubeHlsEnabled);
+        Assert.Equal(3, response.Data.WatchInfo.MaxCount);
+        var session = await db.VideoPlaybackSessions.SingleAsync(session => session.Id == response.Data.SessionId);
+        var material = encryption.DecryptVideoInfo(session.SessionToken, session.EncryptionKey);
+        Assert.Equal(expectedProvider, material.ProviderName);
+        Assert.Equal("dQw4w9WgXcQ", material.ProviderVideoId);
+    }
+
+    [Fact]
+    public async Task CreateVideoSession_YouTubeHlsRejectsStoredStreamUrl()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
+        fixture.Video.YouTubeHlsEnabled = true;
+        fixture.Video.ProviderVideoId = "https://example.com/video.m3u8";
+        await db.SaveChangesAsync();
+        var handler = new CreateVideoSessionCommandHandler(db, AllowAccess.Instance, FakeEncryption.Instance);
+
+        var response = await handler.Handle(new CreateVideoSessionCommand(fixture.Video.Id, fixture.UserId), default);
+
+        Assert.False(response.Success);
+        Assert.Contains("YOUTUBE_HLS_SOURCE_INVALID", response.Errors!);
+        Assert.Single(db.VideoPlaybackSessions);
+        Assert.False((await db.VideoPlaybackSessions.SingleAsync()).IsSuperseded);
+    }
+
     [Fact]
     public async Task AdminPreview_BypassesMandatoryExamAndWatchLimit_WithoutExposingWatchState()
     {

@@ -1,6 +1,7 @@
 import { decryptVideoEmbedMaterial } from '@/lib/video-embed-material';
 import { validateVideoMediaRequest } from '@/lib/video-embed-request-guard';
 import { createPlaybackCookie, fetchPlaybackMaterial, isPlaybackSessionId, playbackCookieName, playbackErrorResponse, PlaybackRequestError } from '@/lib/video-playback-session';
+import { resolveSessionYouTubeHlsSource } from '@/lib/youtube-hls-session-source';
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +20,15 @@ export async function POST(request: Request) {
     const headers = { 'Cache-Control': 'no-store, private', 'Set-Cookie': createPlaybackCookie(request, sessionId, expiresAt) };
     if (purpose === 'start') return Response.json({ data: { expiresAt } }, { headers });
     const video = decryptVideoEmbedMaterial(material);
+    if (video.Provider?.toLowerCase() === 'youtube-hls') {
+      const source = await resolveSessionYouTubeHlsSource(request, {
+        sessionId, videoId: video.VideoId, authorization, surface: request.headers.get('x-app-surface') ?? '',
+      });
+      return Response.json({ data: {
+        source: `/api/video/youtube-hls?s=${encodeURIComponent(sessionId)}&playlist=master`,
+        serverNowMs: Date.now(), signedSourceExpiresAtMs: source.expiresAt, sessionExpiresAtMs: Date.parse(expiresAt),
+      } }, { headers });
+    }
     if (video.Provider?.toLowerCase() !== 'bunny-hls') throw new PlaybackRequestError(400);
     const signedSourceExpiresAtMs = Number(new URL(video.VideoId).pathname.match(/(?:^|&)expires=(\d+)(?:&|$)/)?.[1]) * 1000;
     if (!Number.isFinite(signedSourceExpiresAtMs) || signedSourceExpiresAtMs <= Date.now()) throw new PlaybackRequestError(410);

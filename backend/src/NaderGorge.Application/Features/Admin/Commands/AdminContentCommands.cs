@@ -865,7 +865,7 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer, bool YouTubeQualityEnabled = false) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null, Guid? BunnyStreamLibraryId = null, BunnyPlaybackMode BunnyPlaybackMode = BunnyPlaybackMode.BunnyPlayer, bool YouTubeQualityEnabled = false, bool YouTubeHlsEnabled = false) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
@@ -945,6 +945,10 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             extractedId = providerImpl?.ExtractVideoId(request.UrlOrEmbedCode) ?? request.UrlOrEmbedCode;
         }
 
+        var youTubeHlsEnabled = normalizedProvider == VideoProviders.YouTube && request.YouTubeHlsEnabled;
+        if (youTubeHlsEnabled && !VideoProviders.IsYouTubeVideoId(extractedId))
+            return ApiResponse<Guid>.Fail("أدخل رابط يوتيوب أو معرّف فيديو صالحاً لتشغيل HLS.", ["YOUTUBE_HLS_SOURCE_INVALID"]);
+
         var video = new LessonVideo
         {
             Title = request.Title,
@@ -957,7 +961,8 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             IsActive = request.IsActive,
             BunnyStreamLibraryId = bunnyStreamLibraryId,
             BunnyPlaybackMode = normalizedProvider == VideoProviders.Bunny ? request.BunnyPlaybackMode : BunnyPlaybackMode.BunnyPlayer,
-            YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube && request.YouTubeQualityEnabled
+            YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube && !youTubeHlsEnabled && request.YouTubeQualityEnabled,
+            YouTubeHlsEnabled = youTubeHlsEnabled
         };
         _db.LessonVideos.Add(video);
 
@@ -994,6 +999,7 @@ public record UpdateVideoCommand(
 {
     public bool PreserveSourceDerivedData { get; init; }
     public bool? YouTubeQualityEnabled { get; init; }
+    public bool? YouTubeHlsEnabled { get; init; }
 }
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
@@ -1140,6 +1146,11 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             if (hlsFailure is not null) return ApiResponse.Fail(hlsFailure.Message, [hlsFailure.ErrorCode]);
         }
 
+        var youTubeHlsEnabled = normalizedProvider == VideoProviders.YouTube
+            && (request.YouTubeHlsEnabled ?? (VideoProviders.Normalize(video.Provider) == VideoProviders.YouTube && video.YouTubeHlsEnabled));
+        if (youTubeHlsEnabled && !VideoProviders.IsYouTubeVideoId(extractedId))
+            return ApiResponse.Fail("أدخل رابط يوتيوب أو معرّف فيديو صالحاً لتشغيل HLS.", ["YOUTUBE_HLS_SOURCE_INVALID"]);
+        var playbackModeChanged = video.YouTubeHlsEnabled != youTubeHlsEnabled;
         var sourceChanged = !string.Equals(
                                 VideoProviders.Normalize(video.Provider),
                                 normalizedProvider,
@@ -1165,19 +1176,25 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
                 await LessonVideoSourceMutation.SupersedePlaybackSessionsAsync(_db, video, ct);
             else
                 await LessonVideoSourceMutation.InvalidateSourceDerivedDataAsync(_db, video, ct);
-            checked
-            {
-                video.SourceRevision++;
-            }
         }
-        else if (metadataOrAvailabilityChanged)
+        else if (playbackModeChanged)
+        {
+            // The content is unchanged, but sessions encrypted for the previous player must expire.
+            await LessonVideoSourceMutation.SupersedePlaybackSessionsAsync(_db, video, ct);
+        }
+        if (sourceChanged)
+        {
+            checked { video.SourceRevision++; }
+        }
+        if (!sourceChanged && metadataOrAvailabilityChanged)
         {
             await LessonVideoSourceMutation.InvalidateMimGameAsync(_db, video.LessonId, video.Id, ct);
         }
 
         video.Title = title;
-        video.YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube
+        video.YouTubeQualityEnabled = normalizedProvider == VideoProviders.YouTube && !youTubeHlsEnabled
             && (request.YouTubeQualityEnabled ?? (video.Provider == VideoProviders.YouTube && video.YouTubeQualityEnabled));
+        video.YouTubeHlsEnabled = youTubeHlsEnabled;
         video.Provider = normalizedProvider;
         video.ProviderVideoId = extractedId;
         video.Order = request.Order;

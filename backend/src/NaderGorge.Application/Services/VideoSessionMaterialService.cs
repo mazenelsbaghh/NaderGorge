@@ -17,6 +17,12 @@ public sealed class VideoSessionMaterialService(
     public async Task<string> GetTokenAsync(VideoPlaybackSession session, CancellationToken ct, bool nativeHls = false)
     {
         var material = encryption.DecryptVideoInfo(session.SessionToken, session.EncryptionKey);
+        if (string.Equals(material.ProviderName, VideoProviders.YouTubeHls, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(material.ProviderName, VideoProviders.YouTube, StringComparison.OrdinalIgnoreCase))
+        {
+            await ValidateYouTubeSourceAsync(session.LessonVideoId, material, ct);
+            return session.SessionToken;
+        }
         if (!string.Equals(material.ProviderName, "bunny-hls", StringComparison.OrdinalIgnoreCase))
             return session.SessionToken;
 
@@ -37,6 +43,29 @@ public sealed class VideoSessionMaterialService(
         // Generate response material only: never overwrite concurrent watch progress.
         return encryption.EncryptVideoInfo(material.ProviderName, signedUrl, session.EncryptionKey,
             material.StudentName, material.StudentPhone);
+    }
+
+    private async Task ValidateYouTubeSourceAsync(Guid lessonVideoId,
+        (string ProviderName, string ProviderVideoId, string? StudentName, string? StudentPhone) material, CancellationToken ct)
+    {
+        var video = await db.LessonVideos.AsNoTracking()
+            .Where(video => video.Id == lessonVideoId)
+            .Select(video => new { video.Provider, video.ProviderVideoId, video.YouTubeHlsEnabled })
+            .SingleOrDefaultAsync(ct);
+        var expectsHls = string.Equals(material.ProviderName, VideoProviders.YouTubeHls, StringComparison.OrdinalIgnoreCase);
+        if (video is null || video.YouTubeHlsEnabled != expectsHls
+            || VideoProviders.Normalize(video.Provider) != VideoProviders.YouTube
+            || (expectsHls && !VideoProviders.IsYouTubeVideoId(material.ProviderVideoId))
+            || !string.Equals(video.ProviderVideoId, material.ProviderVideoId, StringComparison.Ordinal))
+            throw new InvalidOperationException("YouTube session source is no longer available.");
+    }
+
+    public async Task<string?> GetYouTubeHlsVideoIdAsync(VideoPlaybackSession session, CancellationToken ct)
+    {
+        var material = encryption.DecryptVideoInfo(session.SessionToken, session.EncryptionKey);
+        if (!string.Equals(material.ProviderName, VideoProviders.YouTubeHls, StringComparison.OrdinalIgnoreCase)) return null;
+        await ValidateYouTubeSourceAsync(session.LessonVideoId, material, ct);
+        return material.ProviderVideoId;
     }
 
     public async Task<string?> GetBunnyEmbedQueryAsync(VideoPlaybackSession session, CancellationToken ct)

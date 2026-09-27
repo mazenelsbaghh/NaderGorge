@@ -14,18 +14,23 @@ using NaderGorge.Infrastructure.Services;
 
 namespace NaderGorge.Application.Tests;
 
-public sealed class VideoSessionControllerTests
+public sealed partial class VideoSessionControllerTests
 {
-    [Fact]
-    public async Task GetEmbedMaterial_ConsumedButActiveSession_ReturnsMaterial()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetEmbedMaterial_ConsumedButActiveSession_ReturnsMaterial(bool youTubeHlsEnabled)
     {
         await using var db = TestAppDbContextFactory.Create();
         var session = ActiveSession();
         await SeedPlaybackAccessAsync(db, session);
+        var video = await db.LessonVideos.FindAsync(session.LessonVideoId);
+        video!.YouTubeHlsEnabled = youTubeHlsEnabled;
+        video.ProviderVideoId = "dQw4w9WgXcQ";
         session.IsConsumed = true;
         var encryption = new VideoEncryptionService();
         session.EncryptionKey = encryption.GenerateSessionKey();
-        session.SessionToken = encryption.EncryptVideoInfo("youtube", "example", session.EncryptionKey);
+        session.SessionToken = encryption.EncryptVideoInfo(youTubeHlsEnabled ? "youtube-hls" : "youtube", video.ProviderVideoId, session.EncryptionKey);
         db.VideoPlaybackSessions.Add(session);
         db.PlatformSettings.Add(new PlatformSetting { Key = PlatformSettingKeys.WatermarkShowName, Value = "false" });
         await db.SaveChangesAsync();
@@ -43,7 +48,36 @@ public sealed class VideoSessionControllerTests
         Assert.Equal("false", material.WatermarkSettings?[PlatformSettingKeys.WatermarkShowName]);
         Assert.Equal(session.UserId.ToString(), material.StudentId);
         Assert.Equal(session.ExpiresAt, material.ExpiresAt);
+        Assert.Equal(youTubeHlsEnabled, material.YouTubeHlsEnabled);
         Assert.Equal("no-store", controller.Response.Headers.CacheControl);
+    }
+
+    [Theory]
+    [InlineData("disabled")]
+    [InlineData("enabled")]
+    [InlineData("source-changed")]
+    [InlineData("provider-changed")]
+    public async Task GetEmbedMaterial_YouTubeHlsRejectsStaleModeOrSource(string change)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var session = ActiveSession();
+        await SeedPlaybackAccessAsync(db, session);
+        var video = await db.LessonVideos.FindAsync(session.LessonVideoId);
+        video!.YouTubeHlsEnabled = change != "disabled";
+        video.Provider = change == "provider-changed" ? "vk" : "youtube";
+        video.ProviderVideoId = change == "source-changed" ? "aqz-KE-bpKQ" : "dQw4w9WgXcQ";
+        var encryption = new VideoEncryptionService();
+        session.EncryptionKey = encryption.GenerateSessionKey();
+        session.SessionToken = encryption.EncryptVideoInfo(change == "enabled" ? "youtube" : "youtube-hls", "dQw4w9WgXcQ", session.EncryptionKey);
+        db.VideoPlaybackSessions.Add(session);
+        await db.SaveChangesAsync();
+        var controller = StudentController(session.UserId, db, NullLogger<VideoSessionController>.Instance);
+        var service = new VideoSessionMaterialService(db, encryption, new BunnyHlsUrlSigner(),
+            new BunnyStreamLibrarySecretProtector(new EphemeralDataProtectionProvider()));
+
+        var response = await controller.GetEmbedMaterial(session.Id, service, new AccessCheckService(db), false, CancellationToken.None);
+
+        Assert.Equal(503, Assert.IsType<ObjectResult>(response).StatusCode);
     }
 
     [Fact]

@@ -19,7 +19,7 @@ namespace NaderGorge.API.Controllers;
 [Route("api/student/video-session")]
 [Authorize(Policy = VideoPlaybackAuthorization.Policy)]
 [EnableRateLimiting("video-session")]
-public class VideoSessionController : ControllerBase
+public partial class VideoSessionController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IAppDbContext _db;
@@ -114,36 +114,29 @@ public class VideoSessionController : ControllerBase
         CancellationToken ct,
         [FromQuery] bool nativeHls = false)
     {
-        Response.Headers.CacheControl = "no-store";
-        var userIdClaim = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
-        var session = await _db.VideoPlaybackSessions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, ct);
-
-        if (session == null) return NotFound("Video session not found.");
-        // Ownership stays indistinguishable from a missing session; only the owner sees its lifecycle state.
-        if (session.IsSuperseded) return Conflict("Video session was replaced by another playback session.");
-        if (session.ExpiresAt <= DateTime.UtcNow) return StatusCode(StatusCodes.Status410Gone, "Video session expired.");
-
-        if (!await CanReadPlaybackMaterialAsync(session, accessService, ct)) return Forbid();
+        var (session, denied) = await ReadAuthorizedPlaybackSessionAsync(sessionId, accessService, ct);
+        if (denied is not null) return denied;
         string token;
         string? bunnyEmbedQuery;
         try
         {
-            token = await materialService.GetTokenAsync(session, ct, nativeHls);
-            bunnyEmbedQuery = await materialService.GetBunnyEmbedQueryAsync(session, ct);
+            token = await materialService.GetTokenAsync(session!, ct, nativeHls);
+            bunnyEmbedQuery = await materialService.GetBunnyEmbedQueryAsync(session!, ct);
         }
         catch (Exception error) when (error is InvalidOperationException or System.Security.Cryptography.CryptographicException or ArgumentException)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "Video playback configuration is unavailable.");
         }
-        var youTubeQualityEnabled = await _db.LessonVideos.AsNoTracking()
-            .Where(video => video.Id == session.LessonVideoId && video.Provider == "youtube")
-            .Select(video => video.YouTubeQualityEnabled).SingleOrDefaultAsync(ct);
+        var youTubeSettings = await _db.LessonVideos.AsNoTracking()
+            .Where(video => video.Id == session!.LessonVideoId)
+            .Select(video => new { video.Provider, video.YouTubeQualityEnabled, video.YouTubeHlsEnabled }).SingleOrDefaultAsync(ct);
+        var isYouTube = youTubeSettings is not null && VideoProviders.Normalize(youTubeSettings.Provider) == VideoProviders.YouTube;
+        var youTubeQualityEnabled = isYouTube && youTubeSettings!.YouTubeQualityEnabled;
+        var youTubeHlsEnabled = isYouTube && youTubeSettings!.YouTubeHlsEnabled;
         if (!includeWatermark)
         {
-            return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, BunnyEmbedQuery: bunnyEmbedQuery, YouTubeQualityEnabled: youTubeQualityEnabled));
+            return Ok(new VideoEmbedMaterialResponse(token, session!.EncryptionKey, session.ExpiresAt, BunnyEmbedQuery: bunnyEmbedQuery,
+                YouTubeQualityEnabled: youTubeQualityEnabled, YouTubeHlsEnabled: youTubeHlsEnabled));
         }
 
         var watermark = await _db.PlatformSettings.AsNoTracking()
@@ -156,8 +149,23 @@ public class VideoSessionController : ControllerBase
                 .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct)
             : new Dictionary<string, string>();
         int CoverPercent(string key) => int.TryParse(coverSettings.GetValueOrDefault(key), out var value) ? Math.Clamp(value, 0, 40) : 0;
-        return Ok(new VideoEmbedMaterialResponse(token, session.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery, youTubeQualityEnabled,
-            CoverPercent(PlatformSettingKeys.YouTubeQualityBottomCoverPercent), CoverPercent(PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent)));
+        return Ok(new VideoEmbedMaterialResponse(token, session!.EncryptionKey, session.ExpiresAt, watermark, session.UserId.ToString(), bunnyEmbedQuery, youTubeQualityEnabled,
+            CoverPercent(PlatformSettingKeys.YouTubeQualityBottomCoverPercent), CoverPercent(PlatformSettingKeys.YouTubeQualityMobileBottomCoverPercent), youTubeHlsEnabled));
+    }
+
+    private async Task<(Domain.Entities.VideoPlaybackSession? Session, IActionResult? Denied)> ReadAuthorizedPlaybackSessionAsync(
+        Guid sessionId, IAccessCheckService access, CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+        var userIdClaim = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId)) return (null, Unauthorized());
+        var session = await _db.VideoPlaybackSessions.AsNoTracking()
+            .FirstOrDefaultAsync(session => session.Id == sessionId && session.UserId == userId, ct);
+        // Ownership stays indistinguishable from a missing session; only the owner sees its lifecycle state.
+        if (session is null) return (null, NotFound("Video session not found."));
+        if (session.IsSuperseded) return (null, Conflict("Video session was replaced by another playback session."));
+        if (session.ExpiresAt <= DateTime.UtcNow) return (null, StatusCode(StatusCodes.Status410Gone, "Video session expired."));
+        return await CanReadPlaybackMaterialAsync(session, access, ct) ? (session, null) : (null, Forbid());
     }
 
     private async Task<bool> CanReadPlaybackMaterialAsync(Domain.Entities.VideoPlaybackSession session, IAccessCheckService access, CancellationToken ct)
@@ -328,4 +336,4 @@ public sealed partial class VideoPlaybackClientEventRequest
 
 public record VideoEmbedMaterialResponse(string Token, string Key, DateTime ExpiresAt,
     Dictionary<string, string>? WatermarkSettings = null, string? StudentId = null, string? BunnyEmbedQuery = null, bool YouTubeQualityEnabled = false,
-    int YouTubeQualityBottomCoverPercent = 0, int YouTubeQualityMobileBottomCoverPercent = 0);
+    int YouTubeQualityBottomCoverPercent = 0, int YouTubeQualityMobileBottomCoverPercent = 0, bool YouTubeHlsEnabled = false);

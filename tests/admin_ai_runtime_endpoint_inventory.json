@@ -14417,6 +14417,40 @@
     "permissions": []
   },
   {
+    "route": "api/v1/internal/video-sessions/{sessionId:guid}/youtube-hls-source",
+    "controller": "VideoSession",
+    "action": "GetYouTubeHlsSource",
+    "methods": [
+      "GET"
+    ],
+    "authorization": [
+      {
+        "Policy": "VideoPlayback",
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
+    "route": "api/v1/internal/video-sessions/{sessionId:guid}/youtube-hls-source",
+    "controller": "VideoSession",
+    "action": "PutYouTubeHlsSource",
+    "methods": [
+      "PUT"
+    ],
+    "authorization": [
+      {
+        "Policy": "VideoPlayback",
+        "Roles": null,
+        "AuthenticationSchemes": null
+      }
+    ],
+    "AllowsAnonymous": false,
+    "permissions": []
+  },
+  {
     "route": "api/v1/metrics/web-vitals",
     "controller": "WebVitals",
     "action": "ReportWebVitals",

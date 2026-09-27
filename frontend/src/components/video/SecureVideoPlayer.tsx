@@ -34,7 +34,7 @@ import {
   isBunnyPlaybackStable,
   isCurrentVideoSession,
 } from '@/lib/video-playback-recovery';
-import { VIDEO_PLAYBACK_RATES, usesNativeProviderControls } from '@/lib/video-player-provider';
+import { VIDEO_PLAYBACK_RATES, usesNativeProviderControls, usesRenewableHlsSource } from '@/lib/video-player-provider';
 import {
   exitVideoFullscreen,
   enterNativeVideoFullscreen,
@@ -744,7 +744,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'renewSourceRequired': {
           const sessionId = activeSessionIdRef.current;
           const playerWindow = iframeRef.current?.contentWindow;
-          if (!sessionId || !playerWindow || providerRef.current !== 'bunny-hls'
+          if (!sessionId || !playerWindow || !usesRenewableHlsSource(providerRef.current)
             || sourceRenewalInFlightRef.current === playerWindow) break;
           sourceRenewalInFlightRef.current = playerWindow;
           void videoSessionService.renewPlaybackSource(sessionId, msg.data?.native === true)
@@ -810,9 +810,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             providerRef.current = loadedProvider;
             serverCanResolveDurationRef.current = true;
             setProvider(loadedProvider);
-          } else if (loadedProvider === 'bunny-hls') {
+          } else if (usesRenewableHlsSource(loadedProvider)) {
             providerRef.current = loadedProvider;
-            serverCanResolveDurationRef.current = true;
+            serverCanResolveDurationRef.current = loadedProvider === 'bunny-hls';
             setProvider(loadedProvider);
           }
           break;
@@ -827,8 +827,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setVolume(msg.data.volume ?? 100);
           setIsMuted(msg.data.isMuted ?? false);
           const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
-          if (embedProvider === 'bunny-hls') {
-          }
           providerRef.current = embedProvider;
           serverCanResolveDurationRef.current = embedProvider === 'bunny' || embedProvider === 'bunny-hls';
           bunnyReadyAtRef.current = ['bunny', 'bunny-hls'].includes(embedProvider) ? Date.now() : 0;
@@ -836,7 +834,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setNativeProviderSurfaceLoaded(embedProvider === 'bunny');
           showPersistentPlayerShadows();
 
-          if (embedProvider === 'bunny' || embedProvider === 'bunny-hls') {
+          if (embedProvider === 'bunny' || usesRenewableHlsSource(embedProvider)) {
             const resumeTime = bunnyRecoveryResumeTimeRef.current;
             if (resumeTime > 0) {
               iframeRef.current?.contentWindow?.postMessage(
@@ -1031,7 +1029,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               // Playback errors must remain visible even if diagnostic delivery fails.
             });
           }
-          if (msg.data?.provider === 'bunny-hls' && Number(msg.data?.code) === 410
+          if (usesRenewableHlsSource(String(msg.data?.provider ?? '')) && Number(msg.data?.code) === 410
             && String(msg.data?.phase ?? '').endsWith('source_authorization')) {
             bunnyRecoveryResumeTimeRef.current = currentTimeRef.current;
             recoveryPlaybackRateRef.current = playbackRateRef.current;

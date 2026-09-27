@@ -23,6 +23,7 @@ export interface VideoSession {
   durationSeconds?: number | null;
   isPreview: boolean;
   youTubeQualityEnabled?: boolean;
+  youTubeHlsEnabled?: boolean;
 }
 
 export interface TrackProgressRequest {

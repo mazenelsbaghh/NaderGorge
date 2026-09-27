@@ -32,7 +32,8 @@ public record VideoSessionDto(
     int ThresholdPercentage,
     int? DurationSeconds,
     bool IsPreview,
-    bool YouTubeQualityEnabled = false
+    bool YouTubeQualityEnabled = false,
+    bool YouTubeHlsEnabled = false
 );
 
 public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds, decimal LearningWatchedSeconds = 0);
@@ -98,7 +99,10 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
         var normalizedProvider = VideoProviders.Normalize(video.Provider);
-        var sessionProvider = video.Provider;
+        var youTubeHlsEnabled = normalizedProvider == VideoProviders.YouTube && video.YouTubeHlsEnabled;
+        if (youTubeHlsEnabled && !VideoProviders.IsYouTubeVideoId(video.ProviderVideoId))
+            return ApiResponse<VideoSessionDto>.Fail("مصدر فيديو يوتيوب غير صالح لتشغيل HLS.", ["YOUTUBE_HLS_SOURCE_INVALID"]);
+        var sessionProvider = youTubeHlsEnabled ? VideoProviders.YouTubeHls : normalizedProvider;
         var encryptedVideoId = video.ProviderVideoId;
         int? knownDurationSeconds = null;
         if (normalizedProvider == VideoProviders.Bunny)
@@ -393,7 +397,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             thresholdPercentage,
             knownDurationSeconds,
             isAdminPreview,
-            normalizedProvider == VideoProviders.YouTube && video.YouTubeQualityEnabled
+            normalizedProvider == VideoProviders.YouTube && video.YouTubeQualityEnabled,
+            youTubeHlsEnabled
         );
 
         return ApiResponse<VideoSessionDto>.Ok(dto);

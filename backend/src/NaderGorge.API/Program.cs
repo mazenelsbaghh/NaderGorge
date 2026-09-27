@@ -205,6 +205,7 @@ builder.Services.AddScoped<IDiscountEngine, DiscountEngine>();
 builder.Services.AddScoped<ISalesRedemptionService, SalesRedemptionService>();
 builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.VideoSessionMaterialService>();
+builder.Services.AddScoped<YouTubeHlsSourceCache>();
 builder.Services.AddScoped<IVideoPlaybackConcurrency, PostgresVideoPlaybackConcurrency>();
 builder.Services.AddSingleton<IJobEnqueuer, RedisJobEnqueuer>();
 builder.Services.AddSingleton<IAiJobCancellationStore, RedisAiJobCancellationStore>();
