@@ -7,11 +7,11 @@ namespace NaderGorge.Application.Features.Content;
 
 public sealed class ContentRefundFactSource(IAppDbContext db)
 {
-    public async Task<HashSet<Guid>> LoadGrantIdsAsync(IReadOnlyList<ContentGrantFact> grants, CancellationToken ct)
+    public async Task<IReadOnlyDictionary<Guid, int>> LoadCountsByPackageAsync(IReadOnlyList<ContentGrantFact> grants, CancellationToken ct)
     {
         var cancelledIds = grants.Where(grant => grant.CancelledAt.HasValue)
             .Select(grant => grant.GrantId).ToArray();
-        if (cancelledIds.Length == 0) return [];
+        if (cancelledIds.Length == 0) return new Dictionary<Guid, int>();
 
         var audits = await db.AuditLogs.AsNoTracking()
             .Where(audit => audit.EntityType == "StudentAccessGrant" &&
@@ -37,17 +37,25 @@ public sealed class ContentRefundFactSource(IAppDbContext db)
         var posted = await db.PlatformRefunds.AsNoTracking()
             .Where(refund => refund.Status == PlatformRefundStatus.Posted &&
                 sourceIds.Contains(refund.OriginalSourceId))
-            .Select(refund => new { refund.OriginalSourceId, refund.OriginalSourceType, refund.StudentId })
+            .Select(refund => new { refund.Id, refund.OriginalSourceId, refund.OriginalSourceType, refund.StudentId })
             .ToListAsync(ct);
-        var postedSources = posted.Select(refund =>
-            (refund.OriginalSourceId, refund.OriginalSourceType, refund.StudentId)).ToHashSet();
+        var postedSources = posted.ToLookup(refund =>
+            (refund.OriginalSourceId, refund.OriginalSourceType, refund.StudentId), refund => refund.Id);
+        var operationsByPackage = new Dictionary<Guid, HashSet<Guid>>();
         foreach (var grant in grants.Where(grant => grant.CancelledAt.HasValue))
         {
-            if (postedSources.Contains((grant.GrantId, "HistoricalAccessGrant", grant.UserId)) ||
-                (purchaseByGrant.TryGetValue(grant.GrantId, out var purchaseId) &&
-                 postedSources.Contains((purchaseId, "PurchaseOperation", grant.UserId))))
-                refundedIds.Add(grant.GrantId);
+            var operationIds = postedSources[(grant.GrantId, "HistoricalAccessGrant", grant.UserId)].ToHashSet();
+            if (purchaseByGrant.TryGetValue(grant.GrantId, out var purchaseId))
+                operationIds.UnionWith(postedSources[(purchaseId, "PurchaseOperation", grant.UserId)]);
+
+            // Legacy balance refunds have only an audit record; don't duplicate a financial refund.
+            if (operationIds.Count == 0 && refundedIds.Contains(grant.GrantId))
+                operationIds.Add(grant.GrantId);
+
+            if (!operationsByPackage.TryGetValue(grant.PackageId, out var packageOperations))
+                operationsByPackage[grant.PackageId] = packageOperations = [];
+            packageOperations.UnionWith(operationIds);
         }
-        return refundedIds;
+        return operationsByPackage.ToDictionary(pair => pair.Key, pair => pair.Value.Count);
     }
 }

@@ -108,7 +108,7 @@ function PackageSummary({ packageSummary }: { packageSummary: ContentPackageSumm
 
       <div className="grid grid-cols-2 gap-3 border-b border-[var(--admin-border)] px-5 py-4 text-center">
         <div><strong className="text-xl font-black tabular-nums text-[var(--admin-primary)]">{number.format(packageSummary.activeStudents)}</strong><span className="block text-sm font-bold">المشتركون الفعليون</span></div>
-        <div><strong className="text-xl font-black tabular-nums text-[var(--admin-text)]">{number.format(packageSummary.refundedStudents)}</strong><span className="block text-sm font-bold">طلاب استردوا</span></div>
+        <div><strong className="text-xl font-black tabular-nums text-[var(--admin-text)]">{number.format(packageSummary.refundOperations)}</strong><span className="block text-sm font-bold">عمليات الاسترداد</span></div>
       </div>
 
       <div className="px-5">
@@ -396,7 +396,7 @@ export function ContentSummaryPanel(props: ContentSummaryPanelProps) {
       </div>
 
       <p className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs font-medium leading-6 text-[var(--admin-muted)]">
-        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. طلاب استردوا: من نُفذ لهم استرداد لاشتراك من نفس الفترة. يُحسب الطالب مرة واحدة في كل عدد؛ وقد يظهر في العددين إذا استرد جزءًا وظل مشتركًا في جزء آخر أو اشترك مجددًا. تفاصيل الشراء والهدايا تاريخية وتشمل المنتهية وتستبعد الملغاة.
+        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. عمليات الاسترداد: عدد عمليات الاسترداد المنفَّذة لاشتراكات من نفس الفترة داخل الباقة. تُحسب كل عملية حتى لو تكررت لنفس الطالب أو اشترك مجددًا. تفاصيل الشراء والهدايا تشمل المنتهية وتستبعد الملغاة.
       </p>
 
       {period === 'custom' && (

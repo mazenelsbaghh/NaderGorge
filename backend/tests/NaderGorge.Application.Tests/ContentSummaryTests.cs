@@ -71,7 +71,7 @@ public sealed class ContentSummaryTests
         var packageSummary = Assert.Single(response.Data!.Packages);
         Assert.Equal((1, 0), (packageSummary.Term.Purchased, packageSummary.Term.Gifts));
         Assert.Equal(1, packageSummary.ActiveStudents);
-        Assert.Equal(1, packageSummary.RefundedStudents);
+        Assert.Equal(1, packageSummary.RefundOperations);
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public sealed class ContentSummaryTests
     }
 
     [Fact]
-    public async Task Summary_counts_active_and_refunded_students_without_double_counting_rejoins()
+    public async Task Summary_counts_each_refund_operation_even_when_student_rejoins()
     {
         await using var db = TestAppDbContextFactory.Create();
         var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher", "01086000001");
@@ -293,11 +293,14 @@ public sealed class ContentSummaryTests
             Grant(rejoinedStudent, package.Id, now, isGift: true),
             Grant(cancelledStudent, package.Id, now, cancelled: true));
         db.AuditLogs.AddRange(
+            new AuditLog { EntityId = cashGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
+                NewValues = "{\"refundedAmount\":150}" },
             new AuditLog { EntityId = termRefund.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
                 NewValues = System.Text.Json.JsonSerializer.Serialize(new { refundedAmount = 0m, purchaseOperationId = purchaseId }) },
             new AuditLog { EntityId = legacyGrant.Id, EntityType = "StudentAccessGrant", Action = "CANCEL_PACKAGE_GRANT",
                 NewValues = "{\"refundedAmount\":150,\"refundBalance\":true}" });
         db.PlatformRefunds.AddRange(
+            new PlatformRefund { OriginalSourceId = cashGrant.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = cashGrant.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = purchaseId, OriginalSourceType = "PurchaseOperation", StudentId = rejoinedStudent, Status = PlatformRefundStatus.Posted },
             new PlatformRefund { OriginalSourceId = reversed.Id, OriginalSourceType = "HistoricalAccessGrant", StudentId = reversed.UserId, Status = PlatformRefundStatus.Reversed },
@@ -309,7 +312,7 @@ public sealed class ContentSummaryTests
 
         var summary = Assert.Single(response.Data!.Packages);
         Assert.Equal(1, summary.ActiveStudents);
-        Assert.Equal(2, summary.RefundedStudents);
+        Assert.Equal(4, summary.RefundOperations);
         Assert.Equal(3, summary.TotalStudents);
     }
 
