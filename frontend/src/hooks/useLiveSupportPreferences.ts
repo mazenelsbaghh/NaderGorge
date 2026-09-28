@@ -30,6 +30,25 @@ function storageKey(userId: string) {
   return `massar:live-support-preferences:${userId}`;
 }
 
+function normalizePreferences(value: unknown): LiveSupportPreferences {
+  if (!value || typeof value !== 'object') return defaults;
+  const saved = value as Partial<Record<keyof LiveSupportPreferences, unknown>>;
+  const color = (candidate: unknown, fallback: string) =>
+    typeof candidate === 'string' && /^#[\da-f]{6}$/i.test(candidate) ? candidate : fallback;
+
+  return {
+    staffBubbleColor: color(saved.staffBubbleColor, defaults.staffBubbleColor),
+    studentBubbleColor: color(saved.studentBubbleColor, defaults.studentBubbleColor),
+    fontScale: saved.fontScale === 'small' || saved.fontScale === 'large' ? saved.fontScale : defaults.fontScale,
+    notificationsEnabled: typeof saved.notificationsEnabled === 'boolean' ? saved.notificationsEnabled : defaults.notificationsEnabled,
+    soundEnabled: typeof saved.soundEnabled === 'boolean' ? saved.soundEnabled : defaults.soundEnabled,
+    sound: saved.sound === 'bell' || saved.sound === 'chime' ? saved.sound : defaults.sound,
+    soundVolume: typeof saved.soundVolume === 'number' && Number.isFinite(saved.soundVolume)
+      ? Math.min(100, Math.max(0, saved.soundVolume))
+      : defaults.soundVolume,
+  };
+}
+
 export function useLiveSupportPreferences() {
   const userId = useAuthStore((state) => state.user?.id);
   const [preferences, setPreferences] = useState<LiveSupportPreferences>(defaults);
@@ -38,7 +57,7 @@ export function useLiveSupportPreferences() {
     if (!userId) return;
     try {
       const stored = window.localStorage.getItem(storageKey(userId));
-      setPreferences(stored ? { ...defaults, ...JSON.parse(stored) } : defaults);
+      setPreferences(stored ? normalizePreferences(JSON.parse(stored)) : defaults);
     } catch {
       setPreferences(defaults);
     }
@@ -46,8 +65,14 @@ export function useLiveSupportPreferences() {
 
   const updatePreferences = useCallback((change: Partial<LiveSupportPreferences>) => {
     setPreferences((current) => {
-      const next = { ...current, ...change };
-      if (userId) window.localStorage.setItem(storageKey(userId), JSON.stringify(next));
+      const next = normalizePreferences({ ...current, ...change });
+      if (userId) {
+        try {
+          window.localStorage.setItem(storageKey(userId), JSON.stringify(next));
+        } catch {
+          // Browser storage can be unavailable; keep the current session usable.
+        }
+      }
       return next;
     });
   }, [userId]);
@@ -57,6 +82,8 @@ export function useLiveSupportPreferences() {
 
 export function playLiveSupportSound(sound: LiveSupportSound, volume = defaults.soundVolume) {
   if (typeof window === 'undefined') return;
+  const notificationPeakGain = Math.min(1, Math.max(0, volume / 100));
+  if (notificationPeakGain === 0) return;
   const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextConstructor) return;
 
@@ -66,8 +93,6 @@ export function playLiveSupportSound(sound: LiveSupportSound, volume = defaults.
     bell: [784, 1047],
     chime: [523, 659, 784],
   };
-  const notificationPeakGain = Math.min(1, Math.max(0, volume / 100));
-
   notes[sound].forEach((frequency, index) => {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
