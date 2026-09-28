@@ -126,6 +126,18 @@ internal static class ExamResultBuilder
                 });
     }
 
+    public static QuestionReviewSnapshot BuildEssayReviewSnapshot(EssaySubmission essay, decimal maximumPoints)
+    {
+        var isGraded = essay.Status == EssaySubmissionStatus.TeacherGraded;
+        var awardedPoints = isGraded ? essay.TeacherFinalScore ?? 0m : 0m;
+        return new QuestionReviewSnapshot(
+            essay.AnswerText,
+            !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
+            isGraded && awardedPoints > 0m && awardedPoints >= maximumPoints,
+            awardedPoints,
+            essay.AudioUrl);
+    }
+
     public static string? GetCorrectReviewText(QuestionBankItem question)
     {
         if (question is FindTheMistakeQuestion findTheMistake)

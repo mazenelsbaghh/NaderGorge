@@ -1,6 +1,7 @@
 using NaderGorge.Application.Features.Exams.Queries;
 using NaderGorge.Application.Features.Assessments;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Data;
 
 namespace NaderGorge.Application.Tests;
@@ -150,6 +151,47 @@ public class GetLatestPassedExamResultQueryTests
         Assert.True(latest.Data!.IsPassed);
         Assert.Equal(0m, latest.Data.ScoreAchieved);
         Assert.Equal(saved.Questions.Sum(question => question.Points), latest.Data.TotalScore);
+    }
+
+    // Regression: completed essay grading displayed a green correct badge even for zero marks.
+    [Theory]
+    [InlineData(0, EssaySubmissionStatus.TeacherGraded, false)]
+    [InlineData(4, EssaySubmissionStatus.TeacherGraded, false)]
+    [InlineData(8, EssaySubmissionStatus.TeacherGraded, true)]
+    [InlineData(null, EssaySubmissionStatus.TeacherGraded, false)]
+    [InlineData(8, EssaySubmissionStatus.WaitAI, false)]
+    public async Task EssayResultCorrectnessUsesFinalMarksInBothResultViews(
+        int? finalScore, EssaySubmissionStatus status, bool expectedCorrect)
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Essay result student", "510");
+        var (exam, _, essayQuestion, _, bankQuestion, _, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+        attempt.IsPassed = true;
+        attempt.Evaluation = "مكتمل";
+        db.EssaySubmissions.Add(new EssaySubmission
+        {
+            Id = Guid.NewGuid(), StudentId = student.Id, QuestionId = bankQuestion.Id,
+            StudentExamAttemptId = attempt.Id, AnswerText = "fe2o2",
+            TeacherFinalScore = finalScore, Status = status
+        });
+        essayQuestion.Points = 100;
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var direct = await new GetExamAttemptResultQueryHandler(db).Handle(new(attempt.Id, student.Id), default);
+        var latest = await new GetLatestPassedExamResultQueryHandler(db, AllowAccess.Instance)
+            .Handle(new(exam.Id, student.Id), default);
+
+        foreach (var response in new[] { direct, latest })
+        {
+            Assert.True(response.Success, response.Message);
+            var review = Assert.Single(response.Data!.Questions, question => question.ExamQuestionId == essayQuestion.Id);
+            Assert.Equal(expectedCorrect, review.IsCorrect);
+            Assert.Equal(status == EssaySubmissionStatus.TeacherGraded ? finalScore ?? 0 : 0, review.PointsAwarded);
+            Assert.Equal("fe2o2", review.SelectedOptionText);
+            Assert.True(review.IsAnswered);
+        }
     }
 
     private sealed class AllowAccess : IAccessCheckService

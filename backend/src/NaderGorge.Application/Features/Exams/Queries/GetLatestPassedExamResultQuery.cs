@@ -95,21 +95,15 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
             .ToListAsync(ct);
 
         var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
-        var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
+        var questionsByBankId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id);
         foreach (var essay in essays)
         {
-            if (!questionIdToExamQuestionId.TryGetValue(essay.QuestionId, out var examQuestionId))
+            if (!questionsByBankId.TryGetValue(essay.QuestionId, out var examQuestion))
             {
                 continue;
             }
 
-            snapshots[examQuestionId] = new QuestionReviewSnapshot(
-                essay.AnswerText,
-                !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
-                essay.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded,
-                essay.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded ? essay.TeacherFinalScore ?? 0 : 0,
-                essay.AudioUrl
-            );
+            snapshots[examQuestion.Id] = ExamResultBuilder.BuildEssayReviewSnapshot(essay, examQuestion.Points);
         }
 
         var result = ExamResultBuilder.Build(

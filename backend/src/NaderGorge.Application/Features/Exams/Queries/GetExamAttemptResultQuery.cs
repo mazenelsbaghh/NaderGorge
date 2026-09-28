@@ -110,22 +110,16 @@ public class GetExamAttemptResultQueryHandler : IRequestHandler<GetExamAttemptRe
         Exam exam)
     {
         var snapshots = ExamResultBuilder.BuildQuestionReviewSnapshots(answers, exam);
-        var questionIdToExamQuestionId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id, eq => eq.Id);
+        var questionsByBankId = exam.ExamQuestions.ToDictionary(eq => eq.Question.Id);
 
         foreach (var essay in essays)
         {
-            if (!questionIdToExamQuestionId.TryGetValue(essay.QuestionId, out var examQuestionId))
+            if (!questionsByBankId.TryGetValue(essay.QuestionId, out var examQuestion))
             {
                 continue;
             }
 
-            var isTeacherGraded = essay.Status == EssaySubmissionStatus.TeacherGraded;
-            snapshots[examQuestionId] = new QuestionReviewSnapshot(
-                essay.AnswerText,
-                !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
-                isTeacherGraded,
-                isTeacherGraded ? essay.TeacherFinalScore ?? 0 : 0,
-                essay.AudioUrl);
+            snapshots[examQuestion.Id] = ExamResultBuilder.BuildEssayReviewSnapshot(essay, examQuestion.Points);
         }
 
         return snapshots;
