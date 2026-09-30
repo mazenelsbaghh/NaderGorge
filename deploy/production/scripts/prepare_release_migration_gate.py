@@ -701,6 +701,8 @@ pre_agreement_count="$(psql_restore -c 'select count(*) from teacher_financial_a
 pre_financial_events_hash="$(financial_events_hash)"
 
 pre_migration_hash="$(migration_hash)"
+pre_migration_ids="$restore_root/pre-migration-ids.txt"
+psql_restore -c 'select "MigrationId" from "__EFMigrationsHistory" order by "MigrationId";' > "$pre_migration_ids"
 source_table_counts_hash="$(table_counts_hash)"
 pre_unaffected_tables="$restore_root/pre-unaffected-tables.txt"
 psql_restore -c "
@@ -745,6 +747,8 @@ sudo docker run --pull=never --rm --network host \
    exec setpriv --reuid=65532 --regid=65532 --clear-groups dotnet NaderGorge.Migrator.dll' >&2
 
 post_migration_hash="$(migration_hash)"
+post_migration_ids="$restore_root/post-migration-ids.txt"
+psql_restore -c 'select "MigrationId" from "__EFMigrationsHistory" order by "MigrationId";' > "$post_migration_ids"
 post_migration_schema_hash="$(schema_hash)"
 post_migration_count="$(
   psql_restore -c 'select count(*) from "__EFMigrationsHistory";'
@@ -752,10 +756,21 @@ post_migration_count="$(
 stage="post-migration-validation"
 test "$post_migration_count" -ge "$pre_migration_count"
 migration_delta="$((post_migration_count - pre_migration_count))"
+test -z "$(comm -23 "$pre_migration_ids" "$post_migration_ids")"
 if test "$migration_delta" -gt 5; then
-  printf 'migration count exceeds reviewed limit: pre=%s post=%s delta=%s\n' \
-    "$pre_migration_count" "$post_migration_count" "$migration_delta" >&2
-  exit 72
+  reviewed_six="$(printf '%s\n' \
+    '20260930062928_AddWatchApprovalOperationIdentity' \
+    '20260930070023_AddTeacherFinancialReviewOperationIdentity' \
+    '20260930081150_AddAuthoritativeOperationReceipts' \
+    '20260930084208_AddAuthoritativeOperationSafeResult' \
+    '20260930093917_AddAdminAIReadBatchReceipts' \
+    '20260930130047_AddExternalRefundGrantIdentity')"
+  applied_additions="$(comm -13 "$pre_migration_ids" "$post_migration_ids")"
+  if test "$migration_delta" != 6 || test "$applied_additions" != "$reviewed_six"; then
+    printf 'migration set exceeds reviewed limit: pre=%s post=%s delta=%s\n' \
+      "$pre_migration_count" "$post_migration_count" "$migration_delta" >&2
+    exit 72
+  fi
 fi
 test "$(
   psql_restore -c \
@@ -1031,7 +1046,7 @@ def prepare(
                 r"password authentication failed|database .* does not exist|"
                 r"n-1 backend readiness failed|\b(?:error|fail|crit):|"
                 r"no frameworks were found|unhandled exception|pg_dump:|"
-                r"migration count exceeds|MASSAR_GATE_FAILURE|"
+                r"migration (?:count|set) exceeds|MASSAR_GATE_FAILURE|"
                 r"\b(?:fatal|blocked)\b)",
                 line,
                 flags=re.IGNORECASE,
