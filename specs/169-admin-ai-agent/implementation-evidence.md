@@ -1,10 +1,16 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 watch-request operation recovery
+
+- The original watch-approval command now accepts an optional operation identifier. It records that identifier and the request ID on the persisted `VideoOverride`, with a unique non-null database index. Replaying the same request, actor, reason, and view increment returns success without another view increase or notification; reuse with different inputs fails. AI approvals refuse an unbounded or missing watch event because that path cannot leave a durable override marker.
+- A dedicated resolver recognizes a persisted override only when its identifier matches the execution ID. The existing recovery sweep can then mark the execution and proposal succeeded after an interrupted response. The generated additive migration changes only `video_overrides` with two nullable columns and indexes.
+- The migrated PostgreSQL flow passed 1/1. It verified two approved view increases, harmless direct replay, conflicting replay rejection, and restoration of a simulated `RecoveryRequired` execution and proposal without a third override. This closes the operation-level replay gap for this candidate; the other blocked mutations and the full T171 inventory remain open.
+
 ## 2026-09-30 watch-request approval candidate
 
 - The original Admin screen intentionally lets an already approved request receive another explicit view increase. The authoritative command now rejects a reason longer than its database field and a view increment that would overflow `int`, before mutating tracked state. The AdminAI candidate previews the exact student's video limit, watch lock and request status, and invalidates a changed limit before execution.
 - The implementation plan places watch mutations in the high-risk family, so this candidate uses TypedStrong confirmation and the existing high-risk MediatR bridge. The generated diagnostic baseline currently labels the Admin watch-approval route ordinary; this risk mismatch must be reconciled during T172/T176 before activation.
-- A migrated PostgreSQL flow passed 1/1 with 18 confirmed executions. It rejected an overflowing direct command without changing request status, invalidated a stale AI proposal without a video override, then confirmed two distinct view increases (4→6→7) with two overrides and four notifications. The complete application suite passed 1,644 tests with 20 skips. Durable operation-level idempotency/recovery for this original command remains part of T171; this candidate alone does not seal the baseline.
+- A migrated PostgreSQL flow passed 1/1 with 18 confirmed executions. It rejected an overflowing direct command without changing request status, invalidated a stale AI proposal without a video override, then confirmed two distinct view increases (4→6→7) with two overrides and four notifications. The complete application suite passed 1,644 tests with 20 skips. This candidate alone does not seal the baseline.
 
 ## 2026-09-30 moderation candidates
 

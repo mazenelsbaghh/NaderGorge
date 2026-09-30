@@ -393,6 +393,41 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.Equal(-1, finalWatch.TimeWatchedInSeconds);
         Assert.Equal(new[] { 6, 7 }, await verifyDb.VideoOverrides.AsNoTracking()
             .OrderBy(item => item.NewLimit).Select(item => item.NewLimit).ToArrayAsync());
+        var firstApproval = await verifyDb.VideoOverrides.AsNoTracking()
+            .SingleAsync(item => item.NewLimit == 6);
+        Assert.Equal(extraWatchRequest.Id, firstApproval.WatchRequestId);
+        Assert.False(string.IsNullOrWhiteSpace(firstApproval.OperationId));
+        var approvalExecution = await verifyDb.AdminAIActionExecutions.AsNoTracking()
+            .SingleAsync(item => item.ExternalOperationId == firstApproval.OperationId);
+        Assert.Equal("admin.identity.watch-request.approve", approvalExecution.CapabilityKey);
+        var resolver = new AdminAIWatchRequestApprovalResultResolver(verifyDb);
+        var recovered = await resolver.ResolveAsync(firstApproval.OperationId!, approvalExecution.Id.ToString("N"), default);
+        Assert.Equal(AdminAIExecutionStatus.Succeeded, recovered?.Status);
+        Assert.Null(await resolver.ResolveAsync(firstApproval.OperationId!, Guid.NewGuid().ToString("N"), default));
+        var replayedApproval = await mediator.Send(new ApproveWatchRequestCommand(
+            extraWatchRequest.Id, actor.Id, null, 2, firstApproval.OperationId));
+        Assert.True(replayedApproval.Success);
+        var conflictedApproval = await mediator.Send(new ApproveWatchRequestCommand(
+            extraWatchRequest.Id, actor.Id, null, 3, firstApproval.OperationId));
+        Assert.False(conflictedApproval.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", conflictedApproval.Errors!);
+        Assert.Equal(2, await verifyDb.VideoOverrides.AsNoTracking().CountAsync());
+        Assert.Equal(7, (await verifyDb.VideoWatchEvents.AsNoTracking()
+            .SingleAsync(item => item.Id == watchEvent.Id)).CustomMaxWatchCount);
+        var recoveringExecution = await verifyDb.AdminAIActionExecutions
+            .SingleAsync(item => item.Id == approvalExecution.Id);
+        var recoveringProposal = await verifyDb.AdminAIActionProposals
+            .SingleAsync(item => item.Id == recoveringExecution.ProposalId);
+        recoveringExecution.Status = AdminAIExecutionStatus.RecoveryRequired;
+        recoveringExecution.CompletedAt = null;
+        recoveringProposal.Status = AdminAIProposalStatus.RecoveryRequired;
+        recoveringProposal.CompletedAt = null;
+        await verifyDb.SaveChangesAsync();
+        var reconciler = new AdminAIExternalOperationReconciler(verifyDb, [resolver]);
+        Assert.Equal(1, await reconciler.ReconcileAsync(100, default));
+        Assert.Equal(AdminAIExecutionStatus.Succeeded, recoveringExecution.Status);
+        Assert.Equal(AdminAIProposalStatus.Succeeded, recoveringProposal.Status);
+        Assert.Equal(2, await verifyDb.VideoOverrides.AsNoTracking().CountAsync());
         Assert.Equal(4, await verifyDb.OutboxEvents.AsNoTracking()
             .CountAsync(item => item.Type == "ExtraWatchRequestUpdated"));
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()

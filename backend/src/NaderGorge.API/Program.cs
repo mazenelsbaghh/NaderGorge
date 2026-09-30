@@ -335,6 +335,7 @@ builder.Services.AddHostedService<AdminAIRecoveryBackgroundService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIAccessGate, NaderGorge.Infrastructure.Services.AdminAI.AdminAIAccessGate>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIRecoveryService, NaderGorge.Infrastructure.Services.AdminAI.AdminAIRecoveryService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalOperationReconciler, NaderGorge.Infrastructure.Services.AdminAI.AdminAIExternalOperationReconciler>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAIWatchRequestApprovalResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIConversationService, NaderGorge.Application.Features.AdminAI.Commands.AdminAIConversationService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAITurnOrchestrator, NaderGorge.Infrastructure.Services.AdminAI.AdminAITurnOrchestrator>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAITurnCompletionService, NaderGorge.Infrastructure.Services.AdminAI.AdminAITurnCompletionService>();

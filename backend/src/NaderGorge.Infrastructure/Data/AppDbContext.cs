@@ -1404,6 +1404,9 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("video_overrides");
             e.HasKey(o => o.Id);
+            e.Property(o => o.OperationId).HasMaxLength(200);
+            e.HasIndex(o => o.OperationId).IsUnique().HasFilter("\"OperationId\" IS NOT NULL");
+            e.HasIndex(o => o.WatchRequestId);
             e.HasIndex(o => o.UserId);
             e.HasIndex(o => o.LessonVideoId);
             e.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId);

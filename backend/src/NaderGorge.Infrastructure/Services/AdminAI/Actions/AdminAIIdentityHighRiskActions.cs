@@ -103,7 +103,7 @@ public sealed class AdminAIApproveWatchRequestAction(IMediator mediator, IAdminA
     : AdminAIMediatRActionCapability<AdminAIApproveWatchRequestInput, ApiResponse<bool>>(mediator, preview)
 {
     public override string Key => "admin.identity.watch-request.approve";
-    protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIApproveWatchRequestInput input, Guid actorId, string operationId) => new ApproveWatchRequestCommand(input.RequestId, actorId, input.Reason, input.AddedViews);
+    protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIApproveWatchRequestInput input, Guid actorId, string operationId) => new ApproveWatchRequestCommand(input.RequestId, actorId, input.Reason, input.AddedViews, operationId);
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<bool> response) => IdentityOutcome.From(response, ["watch-progress", "watch-requests"]);
 }
 
