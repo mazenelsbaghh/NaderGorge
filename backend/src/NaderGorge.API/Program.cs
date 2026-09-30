@@ -342,6 +342,15 @@ builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IA
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAICommunityCommentApprovalResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAILessonCommentApprovalResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITaskCommentResultResolver>();
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>
+    new NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITaskOperationResultResolver(
+        services.GetRequiredService<NaderGorge.Domain.Interfaces.IAppDbContext>(),
+        "admin.operations.task.status.update", "operations.task.status.update", ["operations-tasks"]));
+builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>
+    new NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAITaskOperationResultResolver(
+        services.GetRequiredService<NaderGorge.Domain.Interfaces.IAppDbContext>(),
+        "admin.operations.task.approval.resolve", "operations.task.approval.resolve",
+        ["operations-tasks", "media-pipelines", "task-comments"]));
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAISubjectCreateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver, NaderGorge.Infrastructure.Services.AdminAI.Actions.AdminAISubjectUpdateResultResolver>();
 builder.Services.AddScoped<NaderGorge.Application.Features.AdminAI.Interfaces.IAdminAIExternalResultResolver>(services =>

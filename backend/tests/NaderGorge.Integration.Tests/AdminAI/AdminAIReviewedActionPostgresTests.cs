@@ -199,7 +199,7 @@ public sealed class AdminAIReviewedActionPostgresTests
         var executor = new AdminAIActionExecutor(db, access, protector, secureInputs, adapters);
         var commands = new AdminAIProposalCommands(db, access, challenges, executor);
 
-        async Task ConfirmAsync(string key, object input)
+        async Task<Guid> ConfirmAsync(string key, object input)
         {
             var proposal = await builder.BuildAsync(actor.Id, turn.Id, key, input, default);
             Assert.Equal(AdminAIProposalStatus.PendingConfirmation, proposal.Status);
@@ -207,6 +207,7 @@ public sealed class AdminAIReviewedActionPostgresTests
             var result = await commands.ConfirmAsync(actor.Id, proposal.Id,
                 proposal.Version, null, intent, default);
             Assert.Equal(AdminAIExecutionStatus.Succeeded, result.Status);
+            return result.Id;
         }
 
         async Task ConfirmStrongAsync(string key, object input)
@@ -261,9 +262,9 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.NotNull(approvedTask.CompletedAt);
         Assert.Equal(MediaStage.Approved,
             (await db.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
-        await ConfirmAsync(adapters[6].Key,
+        var finalStatusExecutionId = await ConfirmAsync(adapters[6].Key,
             new { taskId = task.Id, status = (int)NaderGorge.Domain.Enums.TaskStatus.Review });
-        await ConfirmAsync(adapters[7].Key,
+        var rejectionExecutionId = await ConfirmAsync(adapters[7].Key,
             new { taskId = task.Id, approve = false, rejectionReason = "Needs another pass" });
         await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() => builder.BuildAsync(
             actor.Id, turn.Id, adapters[8].Key, new { commentId = replyComment.Id }, default));
@@ -415,6 +416,42 @@ public sealed class AdminAIReviewedActionPostgresTests
         Assert.Null(finalTask.CompletedAt);
         Assert.Equal(MediaStage.Editing,
             (await verifyDb.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
+        var statusReceipt = await verifyDb.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleAsync(item => item.OperationId == finalStatusExecutionId.ToString("N"));
+        var approvalReceipt = await verifyDb.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleAsync(item => item.OperationId == rejectionExecutionId.ToString("N"));
+        Assert.Equal("operations.task.status.update", statusReceipt.Scope);
+        Assert.Equal("operations.task.approval.resolve", approvalReceipt.Scope);
+        var statusReplay = await new UpdateTaskStatusCommandHandler(verifyDb).Handle(
+            new UpdateTaskStatusCommand(task.Id, NaderGorge.Domain.Enums.TaskStatus.Review, actor.Id)
+            { OperationId = statusReceipt.OperationId }, default);
+        var approvalReplay = await new AdminResolveApprovalCommandHandler(verifyDb).Handle(
+            new AdminResolveApprovalCommand(task.Id, actor.Id, false, "Needs another pass")
+            { OperationId = approvalReceipt.OperationId }, default);
+        Assert.True(statusReplay.Success);
+        Assert.True(approvalReplay.Success);
+        var statusConflict = await new UpdateTaskStatusCommandHandler(verifyDb).Handle(
+            new UpdateTaskStatusCommand(task.Id, NaderGorge.Domain.Enums.TaskStatus.Completed, actor.Id)
+            { OperationId = statusReceipt.OperationId }, default);
+        var approvalConflict = await new AdminResolveApprovalCommandHandler(verifyDb).Handle(
+            new AdminResolveApprovalCommand(task.Id, actor.Id, true)
+            { OperationId = approvalReceipt.OperationId }, default);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", statusConflict.Errors!);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", approvalConflict.Errors!);
+        Assert.Equal(2, await verifyDb.TaskComments.CountAsync());
+        Assert.Equal(MediaStage.Editing,
+            (await verifyDb.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
+        var statusResolver = new AdminAITaskOperationResultResolver(verifyDb,
+            "admin.operations.task.status.update", statusReceipt.Scope, ["operations-tasks"]);
+        var approvalResolver = new AdminAITaskOperationResultResolver(verifyDb,
+            "admin.operations.task.approval.resolve", approvalReceipt.Scope,
+            ["operations-tasks", "media-pipelines", "task-comments"]);
+        var resolvedStatus = await statusResolver.ResolveAsync(statusReceipt.OperationId, statusReceipt.OperationId, default);
+        var resolvedApproval = await approvalResolver.ResolveAsync(approvalReceipt.OperationId, approvalReceipt.OperationId, default);
+        Assert.True(System.Text.Json.JsonSerializer.SerializeToElement(resolvedStatus?.SafeResult)
+            .GetProperty("updated").GetBoolean());
+        Assert.True(System.Text.Json.JsonSerializer.SerializeToElement(resolvedApproval?.SafeResult)
+            .GetProperty("resolved").GetBoolean());
         Assert.Equal(2, await verifyDb.LessonComments.AsNoTracking()
             .CountAsync(item => item.Status == LessonCommentStatus.Approved));
         Assert.Equal(4, await verifyDb.OutboxEvents.AsNoTracking()

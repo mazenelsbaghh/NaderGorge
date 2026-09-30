@@ -30,6 +30,8 @@ Lesson-comment and community-comment approvals now use the same durable operatio
 
 Task-comment creation now carries the same durable operation identity. A PostgreSQL retry after comment deletion returned the original ID without adding another comment; changed input was rejected and recovery found the safe result. The AdminAI PostgreSQL group passed 37/37 and the application group 264/264. This is one reviewed operations action, not complete operations catalog coverage.
 
+Task status changes and manager approval/rejection now carry durable operation identities into their original commands. A PostgreSQL proposal/confirmation scenario replayed the final status and rejection without changing the task, pipeline, or comments again; changed decisions were rejected. Receipt-backed recovery returned each safe result. The complete AdminAI PostgreSQL group passed 37/37 and the application group passed 264/264. These remain candidate actions pending complete operations coverage and release verification.
+
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.
 
 Startup no longer auto-approves a read-only AdminAI baseline when the feature flag is enabled. It now requires a manually approved active manifest matching the running action catalog and rejecting unsupported inventory items. The activation guard passed 9/9 tests and the focused application group passed 255/255; the current catalog is still read-only, so the gate correctly prevents activation.

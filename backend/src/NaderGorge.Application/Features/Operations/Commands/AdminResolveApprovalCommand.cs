@@ -1,3 +1,7 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +18,10 @@ public record AdminResolveApprovalCommand(
     Guid UserId,
     bool Approve,
     string? RejectionReason = null
-) : IRequest<ApiResponse<bool>>;
+) : IRequest<ApiResponse<bool>>
+{
+    public string? OperationId { get; init; }
+}
 
 public class AdminResolveApprovalCommandValidator : AbstractValidator<AdminResolveApprovalCommand>
 {
@@ -36,6 +43,31 @@ public class AdminResolveApprovalCommandHandler : IRequestHandler<AdminResolveAp
     }
 
     public async Task<ApiResponse<bool>> Handle(AdminResolveApprovalCommand request, CancellationToken ct)
+    {
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse<bool>.Fail("Invalid operation identifier.", ["INVALID_OPERATION_ID"]);
+        if (operationId is null)
+            return await ResolveOnceAsync(request, null, null, ct);
+
+        var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { request.TaskId, request.UserId, request.Approve, request.RejectionReason }))));
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "operations.task.approval.resolve" && prior.ActorUserId == request.UserId
+                && prior.RequestHash == requestHash && prior.ResultEntityId == request.TaskId
+                ? ApiResponse<bool>.Ok(true, request.Approve ? "Task completion approved." : "Task completion rejected.")
+                : ApiResponse<bool>.Fail("Operation identifier already used for another action.", ["IDEMPOTENCY_CONFLICT"]);
+
+        var resolved = await ResolveOnceAsync(request, operationId, requestHash, ct);
+        await transaction.CommitAsync(ct);
+        return resolved;
+    }
+
+    private async Task<ApiResponse<bool>> ResolveOnceAsync(AdminResolveApprovalCommand request,
+        string? operationId, string? requestHash, CancellationToken ct)
     {
         var task = await _db.TaskItems.FirstOrDefaultAsync(t => t.Id == request.TaskId, ct);
         if (task == null)
@@ -122,6 +154,14 @@ public class AdminResolveApprovalCommandHandler : IRequestHandler<AdminResolveAp
                 : $"Status: {task.Status}, RejectionReason: {request.RejectionReason}",
             CreatedAt = DateTime.UtcNow
         });
+
+        if (operationId is not null)
+            _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+            {
+                OperationId = operationId, Scope = "operations.task.approval.resolve",
+                ActorUserId = request.UserId, RequestHash = requestHash!, ResultEntityId = request.TaskId,
+                SafeResultJson = JsonSerializer.Serialize(new { resolved = true })
+            });
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse<bool>.Ok(true, request.Approve ? "Task completion approved." : "Task completion rejected.");
