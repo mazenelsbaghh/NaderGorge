@@ -18,6 +18,8 @@ Two PostgreSQL restart-context recovery tests passed, and the complete AdminAI P
 
 Internal lease renewal and read continuation now cap expiry at the absolute turn deadline; completion and failure callbacks also reject an expired turn. Recovery preserves a worker step while its renewed lease is still live. The focused controller tests passed 2/2, the AdminAI application group 262/262, and both PostgreSQL restart tests passed with a disposable database. Worker/Redis restart delivery remains unverified, so T181 and activation remain open.
 
+The saved model decision can now survive a worker replacement when its callback lease has expired: the replacement reclaims the same active step under the current baseline and policy, then retries the saved decision without another inference. Matching delivered callbacks receive an idempotent acknowledgment. A disposable Redis/BullMQ worker-replacement test passed twice with one inference across a failed callback, a lease conflict, and duplicate stream delivery. The worker suite passed 229/229 and the AdminAI application suite 264/264. Full real-backend/worker/Redis process-restart coverage and the rest of T181 remain open.
+
 The action bridges now consume exact camelCase JSON from the worker and reject casing drift before dispatch. The AdminAI application group passed 246/246 after ordinary and secure-action wire tests. The missing production action catalog remains a release blocker.
 
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.

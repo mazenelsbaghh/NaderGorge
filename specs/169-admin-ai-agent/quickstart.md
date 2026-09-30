@@ -161,6 +161,10 @@ Required:
 
     npm --prefix worker test
     npm --prefix worker run build
+    ADMIN_AI_TEST_REDIS_URL='redis://127.0.0.1:<disposable-port>/14' \
+      npm --prefix worker run test:admin-ai-redis-restart
+
+The restart command requires an isolated disposable Redis 7 instance. It exercises stream ingestion, BullMQ worker replacement, duplicate delivery, and saved callback replay; it does not replace the combined real-backend restart gate.
 
 Required:
 

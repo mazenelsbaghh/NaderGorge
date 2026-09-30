@@ -11,6 +11,7 @@
     "telegram-login": "tsc -p tsconfig.json && node dist/scripts/telegram-login.js",
     "dump-tg-history": "tsc -p tsconfig.json && node dist/scripts/dump-tg-history.js",
     "test": "npm run build && node scripts/run-tests.mjs",
+    "test:admin-ai-redis-restart": "npm run build && node --test dist/jobs/adminAIRedisRestart.integration.js",
     "accept:real-ai": "npm run build && node dist/scripts/accept-real-ai-provider.js",
     "accept:essay-grading": "npm run build && node dist/scripts/accept-essay-grading.js",
     "whatsapp:bridge": "node dist/whatsapp/server.js"

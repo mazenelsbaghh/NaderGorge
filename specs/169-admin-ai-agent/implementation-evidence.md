@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 Redis callback replay after worker replacement
+
+- An expired callback lease no longer forces a second model inference. A replacement worker first tries the saved completion; on a lease conflict it claims the same active turn and step again, verifies the baseline and sensitive-policy versions, saves the renewed callback fields in the BullMQ job, and resubmits the original decision. A second claim while any worker lease remains live is rejected without advancing the turn version. The backend accepts a matching already-delivered decision as an idempotent acknowledgment even after the turn deadline, while a wrong callback identity is rejected.
+- A disposable Redis 7 instance exercised actual stream ingestion, BullMQ delayed retry, worker instance replacement, and duplicate stream delivery. The first callback failed transiently, the replacement saw a stale lease, then reclaimed and delivered the persisted decision. The observed counts were one inference, two claims, and three delivery attempts; the test passed twice. The temporary Redis container was removed. The worker suite passed 229/229, and the AdminAI application suite passed 264/264, including backend claim-after-reads and terminal callback replay tests.
+- T181 still needs a combined real-backend/worker process restart with PostgreSQL and Redis for every specified restart point. This isolated Redis test uses a simulated callback service and does not establish the full end-to-end gate.
+
 ## 2026-09-30 turn deadline and restart lease safety
 
 - Internal claim, lease renewal, read continuation, completion, and failure callbacks now use the same absolute turn deadline. Renewal cannot extend a live lease beyond it; expired callbacks return HTTP 410. The application test covers renewal near the deadline and rejection of all four callback paths after it, and passed 2/2 with the existing readiness test.

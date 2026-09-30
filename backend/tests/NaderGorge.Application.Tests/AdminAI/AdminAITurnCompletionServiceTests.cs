@@ -2,8 +2,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NaderGorge.API.BackgroundServices;
+using NaderGorge.API.Controllers;
+using NaderGorge.Application.Features.AdminAI.Catalog;
 using NaderGorge.Application.Features.AdminAI.Dtos;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
 using NaderGorge.Domain.Entities;
@@ -75,6 +80,35 @@ public sealed class AdminAITurnCompletionServiceTests
 
         Assert.Equal(AdminAITurnStatus.Completed, first.Status);
         Assert.True(replay.Replayed);
+        Assert.Single(db.AdminAIMessages.Where(x => x.Role == AdminAIMessageRole.Assistant));
+    }
+
+    [Fact]
+    public async Task CompletedCallback_AcknowledgesMatchingReplayAfterLeaseAndTurnDeadlineExpire()
+    {
+        await using var db = CreateDb();
+        var state = await SeedAsync(db);
+        var decision = Json("{\"schemaVersion\":\"1\",\"type\":\"refuse\",\"refusal\":{\"reasonCode\":\"OUT_OF_SCOPE\",\"messageAr\":\"مرفوض\"}}");
+        var request = Request(state, decision) with { CallbackIdempotencyKey = $"turn-{state.Turn.Id:N}" };
+        await Service(db).CompleteAsync(state.Turn.Id, request, default);
+        state.Turn.QueuedAt = DateTime.UtcNow.AddMinutes(-5);
+        await db.SaveChangesAsync();
+
+        var controller = new AdminAIInternalController(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AdminAI:Enabled"] = "true", ["AdminAI:CallbackSecret"] = "test-secret"
+            }).Build(), db, AdminAICapabilityRegistry.CreateProductionReadRegistry(), null!, null!, Service(db))
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        controller.Request.Headers["X-Internal-Token"] = "test-secret";
+
+        Assert.IsType<OkObjectResult>(await controller.Complete(state.Turn.Id, request, default));
+        Assert.Single(db.AdminAIMessages.Where(x => x.Role == AdminAIMessageRole.Assistant));
+        var mismatched = Assert.IsType<ConflictObjectResult>(await controller.Complete(state.Turn.Id,
+            request with { CallbackIdempotencyKey = "wrong-callback" }, default));
+        Assert.Equal(StatusCodes.Status409Conflict, mismatched.StatusCode);
         Assert.Single(db.AdminAIMessages.Where(x => x.Role == AdminAIMessageRole.Assistant));
     }
 

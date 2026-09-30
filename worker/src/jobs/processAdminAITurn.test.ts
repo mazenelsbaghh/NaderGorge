@@ -17,6 +17,25 @@ test('provider-completed callback-pending retry persists completion and performs
   await assert.rejects(() => processor(job), /CALLBACK_UNAVAILABLE/); assert.ok(job.data.completion); await processor(job);
   assert.equal(inference, 1); assert.equal(completed, 2);
 });
+test('saved completion cannot be replayed against a changed baseline', async () => {
+  const context = claim(); const job = fakeJob(context); let inference = 0; let callbacksSent = 0; let claims = 0;
+  const callback = clients(context, async () => {
+    callbacksSent++;
+    throw callbacksSent === 1
+      ? new AdminAICallbackError('CALLBACK_UNAVAILABLE', true)
+      : new AdminAICallbackError('CALLBACK_REJECTED', false, 409);
+  });
+  callback.claim = async () => ++claims === 1 ? context : {
+    ...context, capabilityBaseline: { ...context.capabilityBaseline, version: 'different-baseline' },
+  };
+  const processor = createAdminAITurnProcessor({ callbacks: callback, runAgent: async () => { inference++; return agentResult; }, cancelled: async () => false });
+
+  await assert.rejects(() => processor(job), /CALLBACK_UNAVAILABLE/);
+  await assert.rejects(() => processor(job), /CALLBACK_REJECTED/);
+  assert.equal(inference, 1);
+  assert.equal(callbacksSent, 2);
+  assert.equal(claims, 2);
+});
 test('stale queue job fails safely without provider inference', async () => {
   const context = claim(); let inference = 0; let reported: unknown;
   const processor = createAdminAITurnProcessor({ callbacks: clients(context, async () => ({}), async (_id, payload) => { reported = payload; return {}; }), runAgent: async () => { inference++; return agentResult; }, cancelled: async () => false });

@@ -113,6 +113,9 @@ public sealed class AdminAIInternalRuntimeBaselineTests
             Assert.IsType<OkObjectResult>(await controller.Claim(turn.Id, new("1", "worker-1"), default)).Value);
         var deadline = turn.QueuedAt.AddSeconds(120);
         Assert.True(claimed.GetProperty("leaseExpiresAt").GetDateTime() <= deadline);
+        var claimedVersion = turn.Version;
+        Assert.IsType<ConflictObjectResult>(await controller.Claim(turn.Id, new("1", "worker-1"), default));
+        Assert.Equal(claimedVersion, turn.Version);
 
         var renewed = JsonSerializer.SerializeToElement(
             Assert.IsType<OkObjectResult>(await controller.Renew(turn.Id,
@@ -138,6 +141,59 @@ public sealed class AdminAIInternalRuntimeBaselineTests
                 null, null, 0), default));
         Assert.Equal(StatusCodes.Status410Gone, deniedFailure.StatusCode);
         Assert.Equal(0, turn.ReadInvocationCount);
+    }
+
+    [Fact]
+    public async Task ExpiredWorkerLease_CanBeClaimedAgainAfterReadsWithoutLosingTheTurnPhase()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"admin-ai-resume-{Guid.NewGuid()}").Options);
+        var actorId = Guid.NewGuid();
+        var registry = AdminAICapabilityRegistry.CreateProductionReadRegistry();
+        var baseline = new AdminAICapabilityBaseline
+        {
+            Version = "resume-test", ManifestHash = new string('a', 64), SourceRevision = "test",
+            RuntimeInventoryHash = registry.BaselineHash, FrontendInventoryHash = new string('b', 64),
+            Status = AdminAICapabilityBaselineStatus.Active
+        };
+        var policy = new AdminAISensitiveDataPolicyVersion
+        {
+            Version = "resume-test", PolicyHash = new string('c', 64),
+            Status = AdminAISensitiveDataPolicyStatus.Active
+        };
+        var conversation = new AdminAIConversation { OwnerAdminUserId = actorId, Title = "Resume test" };
+        var message = new AdminAIMessage
+        {
+            ConversationId = conversation.Id, Sequence = 1, Role = AdminAIMessageRole.Admin, Content = "Test"
+        };
+        var step = new AdminAITurnStep
+        {
+            StepNumber = 1, Status = AdminAITurnStepStatus.ReadsCompleted, CallbackStatus = "Claimed",
+            Provider = "stopped-worker", NextCallbackAttemptAt = DateTime.UtcNow.AddSeconds(-1)
+        };
+        var turn = new AdminAITurn
+        {
+            Conversation = conversation, SourceMessageId = message.Id, ActorAdminUserId = actorId,
+            CapabilityBaselineId = baseline.Id, SensitiveDataPolicyVersionId = policy.Id,
+            Status = AdminAITurnStatus.Retrieving, CurrentStepNumber = 1,
+            QueuedAt = DateTime.UtcNow.AddSeconds(-20), Steps = [step]
+        };
+        db.AddRange(baseline, policy, conversation, message, turn);
+        await db.SaveChangesAsync();
+        var controller = new AdminAIInternalController(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AdminAI:Enabled"] = "true", ["AdminAI:CallbackSecret"] = "test-secret"
+            }).Build(), db, registry, new AllowAccess(actorId), null!, null!)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        controller.Request.Headers["X-Internal-Token"] = "test-secret";
+
+        Assert.IsType<OkObjectResult>(await controller.Claim(turn.Id, new("1", "replacement-worker"), default));
+        Assert.Equal(AdminAITurnStatus.Retrieving, turn.Status);
+        Assert.Equal("replacement-worker", step.Provider);
+        Assert.True(step.NextCallbackAttemptAt > DateTime.UtcNow);
     }
 
     private sealed class AllowAccess(Guid actorId) : IAdminAIAccessGate

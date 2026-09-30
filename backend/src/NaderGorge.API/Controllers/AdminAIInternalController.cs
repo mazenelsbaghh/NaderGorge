@@ -52,7 +52,8 @@ public sealed class AdminAIInternalController(
         if (turn.Status.IsTerminal() || turn.CancellationRequestedAt is not null) return Conflict(SafeError(AdminAIErrorCodes.TurnNotClaimable));
         try { await access.RequireCurrentAdminAsync(turn.ActorAdminUserId, checked((int)turn.ExpectedSecurityVersion), ct); }
         catch { return StatusCode(403, SafeError(AdminAIErrorCodes.AccessRevoked)); }
-        if (turn.Status != AdminAITurnStatus.Queued && turn.Status != AdminAITurnStatus.Planning) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict));
+        if (turn.Status is not (AdminAITurnStatus.Queued or AdminAITurnStatus.Planning or AdminAITurnStatus.Retrieving or AdminAITurnStatus.Answering))
+            return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict));
         var baseline = await db.AdminAICapabilityBaselines.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.CapabilityBaselineId && x.Status == AdminAICapabilityBaselineStatus.Active, ct);
         var policy = await db.AdminAISensitiveDataPolicyVersions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == turn.SensitiveDataPolicyVersionId && x.Status == AdminAISensitiveDataPolicyStatus.Active, ct);
         if (baseline is null || !MatchesRuntimeInventory(baseline.RuntimeInventoryHash))
@@ -64,9 +65,10 @@ public sealed class AdminAIInternalController(
         var deadline = TurnDeadline(turn);
         if (deadline <= now) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         var leaseExpiry = LeaseExpiry(turn, now);
-        if (step.CallbackStatus == "Claimed" && step.NextCallbackAttemptAt > now && step.Provider != request.WorkerInstanceId)
+        if (step.CallbackStatus == "Claimed" && step.NextCallbackAttemptAt > now)
             return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseConflict));
-        turn.Status = AdminAITurnStatus.Planning; turn.StartedAt ??= now; turn.CurrentStepNumber = step.StepNumber; turn.Version++;
+        if (turn.Status == AdminAITurnStatus.Queued) turn.Status = AdminAITurnStatus.Planning;
+        turn.StartedAt ??= now; turn.CurrentStepNumber = step.StepNumber; turn.Version++;
         step.Status = AdminAITurnStepStatus.Claimed; step.StartedAt ??= now; step.ExpectedTurnVersion = turn.Version; step.CallbackStatus = "Claimed"; step.Provider = request.WorkerInstanceId; step.NextCallbackAttemptAt = leaseExpiry; step.Version++;
         var leaseToken = IssueLease(turn.Id, step.StepNumber, turn.Version, leaseExpiry);
         step.CanonicalDecisionHash = HashToken(leaseToken);
@@ -165,18 +167,24 @@ public sealed class AdminAIInternalController(
         if (!ValidVersion(request.SchemaVersion) || !Bounded(request.DecisionHash, 64) || request.LatencyMs < 0) return BadRequest(SafeError(AdminAIErrorCodes.DecisionSchemaInvalid));
         var turn = await db.AdminAITurns.Include(x => x.Steps).SingleOrDefaultAsync(x => x.Id == turnId, ct);
         if (turn is null) return NotFound(SafeError(AdminAIErrorCodes.TurnNotFound));
-        if (TurnDeadline(turn) <= DateTime.UtcNow) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
         var step = turn.Steps.SingleOrDefault(x => x.StepNumber == request.ExpectedStepNumber);
-        if (step is null || turn.Version != request.ExpectedTurnVersion || !ValidateLease(request.LeaseToken, turnId, request.ExpectedStepNumber, turn.Version, step)) return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
-        if (turn.CancellationRequestedAt is not null || turn.Status.IsTerminal()) return Conflict(SafeError(AdminAIErrorCodes.CallbackDiscarded));
-        var runtimeInventoryHash = await db.AdminAICapabilityBaselines.AsNoTracking()
-            .Where(baseline =>
-                baseline.Id == turn.CapabilityBaselineId &&
-                baseline.Status == AdminAICapabilityBaselineStatus.Active)
-            .Select(baseline => baseline.RuntimeInventoryHash)
-            .SingleOrDefaultAsync(ct);
-        if (!MatchesRuntimeInventory(runtimeInventoryHash))
-            return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
+        if (step is null) return Conflict(SafeError(AdminAIErrorCodes.StepVersionConflict));
+        if (step.CallbackStatus == "Delivered")
+        {
+            if (request.CallbackIdempotencyKey != $"turn-{turn.Id:N}")
+                return Conflict(SafeError(AdminAIErrorCodes.IdempotencyPayloadConflict));
+        }
+        else
+        {
+            if (TurnDeadline(turn) <= DateTime.UtcNow) return StatusCode(410, SafeError(AdminAIErrorCodes.TurnLeaseExpired));
+            if (turn.Version != request.ExpectedTurnVersion || !ValidateLease(request.LeaseToken, turnId, request.ExpectedStepNumber, turn.Version, step))
+                return Conflict(SafeError(AdminAIErrorCodes.TurnLeaseExpired));
+            if (turn.CancellationRequestedAt is not null || turn.Status.IsTerminal()) return Conflict(SafeError(AdminAIErrorCodes.CallbackDiscarded));
+            var runtimeInventoryHash = await db.AdminAICapabilityBaselines.AsNoTracking()
+                .Where(baseline => baseline.Id == turn.CapabilityBaselineId && baseline.Status == AdminAICapabilityBaselineStatus.Active)
+                .Select(baseline => baseline.RuntimeInventoryHash).SingleOrDefaultAsync(ct);
+            if (!MatchesRuntimeInventory(runtimeInventoryHash)) return Conflict(SafeError(AdminAIErrorCodes.BaselineChanged));
+        }
         try
         {
             var result = await completion.CompleteAsync(turnId, request, ct);
