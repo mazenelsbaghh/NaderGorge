@@ -12,7 +12,7 @@ The owner requested an urgent refund and gift correction before the next month. 
 
 - `make ops-check`: passed; API build and EF pending-model check passed, 1,651 application tests passed with 20 environment-dependent skips, frontend lint and typecheck passed (one existing hook warning), 230 worker tests passed, and Compose validated.
 - `RefundLedgerDisplayTests` and `RefundLedgerPostgresTests`: passed; PostgreSQL test used a disposable PostgreSQL 16.10 instance and checked the posting actor, amount, and reason.
-- Chrome browser tests: Admin refund visibility passed 1/1 with mocked API data; gift ledger, promotional balance, and teacher-to-lesson issuance passed 3/3 with mocked API data.
+- Chrome browser tests: Admin refund visibility and refund form submission passed 2/2 with mocked API data; gift ledger, promotional balance, and teacher-to-lesson issuance passed 3/3 with mocked API data. The refund form labels are now associated with their fields.
 - Three-node read-only status: success. The bounded backend log sample on node-2 did not contain a refund event, so it cannot establish the cause of the reported live failure.
 
 ## Release gates
