@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 closed action-input contract
+
+- Proposal construction now validates every nested field against a closed, recursively checked action schema before invoking an authoritative preview or persisting a proposal. Unknown or duplicate fields, malformed UUIDs, enum/range/length/item-count violations, and ignored or open schema keywords fail closed. Optional nested schemas are checked even when omitted from the input.
+- Focused proposal tests passed 21/21 and the full AdminAI application group passed 242/242. Negative cases assert zero preview calls and zero persisted proposals. This validates the proposal boundary; it does not supply the missing production action catalog or complete action parity.
+
 ## 2026-09-30 serializable confirmation claim
 
 - T110: a disposable PostgreSQL 16.10 database exposed `40001` during two simultaneous confirmations of one proposal. The executor now retries only a failed pre-effect claim in a fresh serializable transaction; it never retries after invoking an authoritative adapter. Matching retries may observe the durable `Claimed` row while the first request is still executing, and a later replay returns the same terminal execution ID.

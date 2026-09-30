@@ -70,7 +70,7 @@ public sealed class AdminAIProposalNoSideEffectTests
     {
         var definition = new AdminAICapabilityDefinition(
             adapter.Key, "1", "action", "ordinary", "ordinary",
-            "{\"type\":\"object\",\"additionalProperties\":true}", "{}", 1, 4096, 5000,
+            "{\"type\":\"object\",\"properties\":{\"note\":{\"type\":\"string\"},\"password\":{\"type\":\"string\"}},\"additionalProperties\":false}", "{}", 1, 4096, 5000,
             "Fake.AuthoritativeCommand", ["users"]);
         return new AdminAIProposalBuilder(
             db,
