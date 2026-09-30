@@ -1,8 +1,8 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `5afdb75ccb1c0115d12541f94193bddecc909b25e85dd463b0fd6cece0a27fae`
+Digest: `a36f6eb806d1b79fea4100b175a5a3c32d18344bc6aac092cd5c25fb53e571f3`
 
-Items: 995; external-side-effect=65, mutation=533, read=375, export=16, preview=6.
+Items: 1010; external-side-effect=65, mutation=540, read=384, export=15, preview=6.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -15,6 +15,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:delete:api-admin-exams-examid-questions-questionid:backend-src-nadergorge-api-controllers-admincontroller-cs:1020 | DELETE | /api/admin/exams/{examid}/questions/{questionid} | mutation | content | strong | blocked |
 | be:delete:api-admin-finance-payroll-payrollid-adjustments-adjustmentid:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:75 | DELETE | /api/admin/finance/payroll/{payrollid}/adjustments/{adjustmentid} | mutation | finance | strong | blocked |
 | be:delete:api-admin-forms-id:backend-src-nadergorge-api-controllers-adminformscontroller-cs:63 | DELETE | /api/admin/forms/{id} | mutation | other | strong | blocked |
+| be:delete:api-admin-homework-id-submissions-attemptid:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:105 | DELETE | /api/admin/homework/{id}/submissions/{attemptid} | mutation | content | strong | blocked |
 | be:delete:api-admin-live-support-messenger-pages-pagerecordid:backend-src-nadergorge-api-controllers-adminfacebookmessengercontroller-cs:72 | DELETE | /api/admin/live-support/messenger/pages/{pagerecordid} | mutation | support | strong | blocked |
 | be:delete:api-admin-packages-id-code-profile:backend-src-nadergorge-api-controllers-admincontroller-cs:587 | DELETE | /api/admin/packages/{id}/code-profile | mutation | identity | strong | blocked |
 | be:delete:api-admin-reports-definitions-id:backend-src-nadergorge-api-controllers-adminreportscontroller-cs:120 | DELETE | /api/admin/reports/definitions/{id} | mutation | reporting | strong | blocked |
@@ -35,6 +36,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-admin-ai-agent-conversations-conversationid-snapshot:backend-src-nadergorge-api-controllers-adminaiagentcontroller-cs:40 | GET | /api/admin/ai-agent/conversations/{conversationid}/snapshot | read | other | none | candidate |
 | be:get:api-admin-ai-agent-conversations:backend-src-nadergorge-api-controllers-adminaiagentcontroller-cs:20 | GET | /api/admin/ai-agent/conversations | read | other | none | candidate |
 | be:get:api-admin-ai-agent-proposals-proposalid:backend-src-nadergorge-api-controllers-adminaiagentcontroller-cs:53 | GET | /api/admin/ai-agent/proposals/{proposalid} | read | other | none | candidate |
+| be:get:api-admin-ai-provider-status:backend-src-nadergorge-api-controllers-aiproviderstatuscontroller-cs:14 | GET | /api/admin/ai-provider-status | read | other | none | candidate |
 | be:get:api-admin-assistants-id-homework-reviews:backend-src-nadergorge-api-controllers-adminassistantcontroller-cs:43 | GET | /api/admin/assistants/{id}/homework-reviews | read | content | none | candidate |
 | be:get:api-admin-assistants-id-stats:backend-src-nadergorge-api-controllers-adminassistantcontroller-cs:22 | GET | /api/admin/assistants/{id}/stats | read | other | none | candidate |
 | be:get:api-admin-assistants-id-tasks:backend-src-nadergorge-api-controllers-adminassistantcontroller-cs:30 | GET | /api/admin/assistants/{id}/tasks | read | other | none | candidate |
@@ -56,6 +58,9 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-admin-essays-pending:backend-src-nadergorge-api-controllers-admincontroller-cs:1096 | GET | /api/admin/essays/pending | read | other | none | candidate |
 | be:get:api-admin-exams-examid-attempts-attemptid-review:backend-src-nadergorge-api-controllers-admincontroller-cs:1004 | GET | /api/admin/exams/{examid}/attempts/{attemptid}/review | read | content | none | candidate |
 | be:get:api-admin-exams-examid-dashboard:backend-src-nadergorge-api-controllers-admincontroller-cs:996 | GET | /api/admin/exams/{examid}/dashboard | read | content | none | candidate |
+| be:get:api-admin-exams-id-attempts-attemptid-assessment-review:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:87 | GET | /api/admin/exams/{id}/attempts/{attemptid}/assessment-review | read | content | none | candidate |
+| be:get:api-admin-exams-id-editor:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:50 | GET | /api/admin/exams/{id}/editor | read | content | none | candidate |
+| be:get:api-admin-exams-notification-templates:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:21 | GET | /api/admin/exams/notification-templates | read | content | none | candidate |
 | be:get:api-admin-finance-code-accounting:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:112 | GET | /api/admin/finance/code-accounting | read | finance | none | candidate |
 | be:get:api-admin-finance-payouts:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:98 | GET | /api/admin/finance/payouts | read | finance | none | candidate |
 | be:get:api-admin-finance-payroll:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:37 | GET | /api/admin/finance/payroll | read | finance | none | candidate |
@@ -69,6 +74,10 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:get:api-admin-gifts-lookups-teachers:backend-src-nadergorge-api-controllers-admingiftscontroller-cs:68 | GET | /api/admin/gifts/lookups/teachers | read | content | none | candidate |
 | be:get:api-admin-gifts:backend-src-nadergorge-api-controllers-admingiftscontroller-cs:22 | GET | /api/admin/gifts | read | commercial | none | candidate |
 | be:get:api-admin-homework-homeworkid-dashboard:backend-src-nadergorge-api-controllers-admincontroller-cs:1012 | GET | /api/admin/homework/{homeworkid}/dashboard | read | content | none | candidate |
+| be:get:api-admin-homework-id-editor:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:46 | GET | /api/admin/homework/{id}/editor | read | content | none | candidate |
+| be:get:api-admin-homework-id-missing-students:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:112 | GET | /api/admin/homework/{id}/missing-students | read | identity | none | candidate |
+| be:get:api-admin-homework-id-submissions-attemptid-review:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:83 | GET | /api/admin/homework/{id}/submissions/{attemptid}/review | read | content | none | candidate |
+| be:get:api-admin-homework-notification-templates:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:18 | GET | /api/admin/homework/notification-templates | read | content | none | candidate |
 | be:get:api-admin-hr-attendance:backend-src-nadergorge-api-controllers-adminhrcontroller-cs:78 | GET | /api/admin/hr/attendance | read | hr | none | candidate |
 | be:get:api-admin-hr-employees:backend-src-nadergorge-api-controllers-adminhrcontroller-cs:24 | GET | /api/admin/hr/employees | read | hr | none | candidate |
 | be:get:api-admin-lessons-id-subscribers-export:backend-src-nadergorge-api-controllers-admincontroller-cs:394 | GET | /api/admin/lessons/{id}/subscribers/export | export | content | none | candidate |
@@ -268,6 +277,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-admin-emthntak-request:backend-src-nadergorge-api-controllers-adminemthntakcontroller-cs:31 | POST | /api/admin/emthntak/request | mutation | other | ordinary | blocked |
 | be:post:api-admin-essays-essaysubmissionid-grade:backend-src-nadergorge-api-controllers-admincontroller-cs:1087 | POST | /api/admin/essays/{essaysubmissionid}/grade | mutation | other | ordinary | blocked |
 | be:post:api-admin-exams-examid-questions:backend-src-nadergorge-api-controllers-admincontroller-cs:988 | POST | /api/admin/exams/{examid}/questions | mutation | content | ordinary | blocked |
+| be:post:api-admin-exams-id-revision-preview:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:58 | POST | /api/admin/exams/{id}/revision-preview | mutation | content | ordinary | blocked |
 | be:post:api-admin-exams-inline:backend-src-nadergorge-api-controllers-admincontroller-cs:979 | POST | /api/admin/exams/inline | mutation | content | ordinary | blocked |
 | be:post:api-admin-finance-payouts-id-resolve:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:105 | POST | /api/admin/finance/payouts/{id}/resolve | mutation | finance | strong | blocked |
 | be:post:api-admin-finance-payroll-generate:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:47 | POST | /api/admin/finance/payroll/generate | mutation | finance | strong | blocked |
@@ -279,6 +289,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:post:api-admin-forms:backend-src-nadergorge-api-controllers-adminformscontroller-cs:46 | POST | /api/admin/forms | mutation | other | ordinary | blocked |
 | be:post:api-admin-gifts-id-revoke:backend-src-nadergorge-api-controllers-admingiftscontroller-cs:51 | POST | /api/admin/gifts/{id}/revoke | mutation | commercial | strong | blocked |
 | be:post:api-admin-gifts:backend-src-nadergorge-api-controllers-admingiftscontroller-cs:39 | POST | /api/admin/gifts | mutation | commercial | ordinary | blocked |
+| be:post:api-admin-homework-id-revision-preview:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:54 | POST | /api/admin/homework/{id}/revision-preview | mutation | content | ordinary | blocked |
 | be:post:api-admin-hr-employees-provision:backend-src-nadergorge-api-controllers-adminhrcontroller-cs:46 | POST | /api/admin/hr/employees/provision | mutation | hr | ordinary | blocked |
 | be:post:api-admin-hr-employees:backend-src-nadergorge-api-controllers-adminhrcontroller-cs:32 | POST | /api/admin/hr/employees | mutation | hr | ordinary | blocked |
 | be:post:api-admin-lessons-lessonid-mim-game-disable:backend-src-nadergorge-api-controllers-admincontroller-cs:63 | POST | /api/admin/lessons/{lessonid}/mim-game/disable | mutation | content | strong | blocked |
@@ -477,9 +488,13 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | be:put:api-admin-content-targettype-id-archive:backend-src-nadergorge-api-controllers-admincontroller-cs:421 | PUT | /api/admin/content/{targettype}/{id}/archive | mutation | content | ordinary | blocked |
 | be:put:api-admin-exams-examid-questions-questionid:backend-src-nadergorge-api-controllers-admincontroller-cs:1036 | PUT | /api/admin/exams/{examid}/questions/{questionid} | mutation | content | ordinary | blocked |
 | be:put:api-admin-exams-examid-status:backend-src-nadergorge-api-controllers-admincontroller-cs:939 | PUT | /api/admin/exams/{examid}/status | mutation | content | ordinary | blocked |
+| be:put:api-admin-exams-id-attempts-attemptid-grade:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:98 | PUT | /api/admin/exams/{id}/attempts/{attemptid}/grade | mutation | content | ordinary | blocked |
+| be:put:api-admin-exams-id-definition:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:66 | PUT | /api/admin/exams/{id}/definition | mutation | content | ordinary | blocked |
 | be:put:api-admin-forms-id:backend-src-nadergorge-api-controllers-adminformscontroller-cs:54 | PUT | /api/admin/forms/{id} | mutation | other | ordinary | blocked |
 | be:put:api-admin-forms-submissions-submissionid-status:backend-src-nadergorge-api-controllers-adminformscontroller-cs:79 | PUT | /api/admin/forms/submissions/{submissionid}/status | mutation | other | ordinary | blocked |
 | be:put:api-admin-homework-homeworkid-status:backend-src-nadergorge-api-controllers-admincontroller-cs:947 | PUT | /api/admin/homework/{homeworkid}/status | mutation | content | ordinary | blocked |
+| be:put:api-admin-homework-id-definition:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:62 | PUT | /api/admin/homework/{id}/definition | mutation | content | ordinary | blocked |
+| be:put:api-admin-homework-id-submissions-attemptid-grade:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:91 | PUT | /api/admin/homework/{id}/submissions/{attemptid}/grade | mutation | content | ordinary | blocked |
 | be:put:api-admin-lessons-id-homework-coming-soon:backend-src-nadergorge-api-controllers-admincontroller-cs:671 | PUT | /api/admin/lessons/{id}/homework-coming-soon | mutation | content | ordinary | blocked |
 | be:put:api-admin-lessons-id:backend-src-nadergorge-api-controllers-admincontroller-cs:663 | PUT | /api/admin/lessons/{id} | mutation | content | ordinary | blocked |
 | be:put:api-admin-lessons-lessonid-exam:backend-src-nadergorge-api-controllers-admincontroller-cs:955 | PUT | /api/admin/lessons/{lessonid}/exam | mutation | content | ordinary | blocked |
@@ -571,7 +586,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:admin-gifts:frontend-src-services-admin-gifts-service-ts:126 | GET | /admin/gifts | read | commercial | none | candidate |
 | fe:get:admin-homework-assessmentid-submissions-attemptid-review:frontend-src-components-admin-assessmentattemptreview-tsx:45 | GET | /admin/homework/{assessmentId}/submissions/{attemptId}/review | read | content | none | candidate |
 | fe:get:admin-homework-homeworkid-dashboard:frontend-src-services-admin-service-ts:2173 | GET | /admin/homework/{homeworkId}/dashboard | read | content | none | candidate |
-| fe:get:admin-homework-homeworkid-missing-students:frontend-src-components-admin-missinghomeworkexport-tsx:18 | GET | /admin/homework/{homeworkId}/missing-students | export | identity | none | candidate |
+| fe:get:admin-homework-homeworkid-missing-students:frontend-src-components-admin-missinghomeworkexport-tsx:18 | GET | /admin/homework/{homeworkId}/missing-students | read | identity | none | candidate |
 | fe:get:admin-hr-attendance:frontend-src-services-hr-service-ts:396 | GET | /admin/hr/attendance | read | hr | none | candidate |
 | fe:get:admin-hr-employees:frontend-src-services-hr-service-ts:208 | GET | /admin/hr/employees | read | hr | none | candidate |
 | fe:get:admin-kindexamexamshomework-id-editor:frontend-src-services-assessment-revision-service-ts:52 | GET | /admin/{kindexamexamshomework}/{id}/editor | read | content | none | candidate |

@@ -71,7 +71,8 @@ function semantics(method, descriptor, route) {
 }
 
 function includeEndpoint(endpoint) {
-  return endpoint.controller.startsWith('Admin') ||
+  return /^\/api\/admin(?:\/|$)/.test(endpoint.path) ||
+    endpoint.controller.startsWith('Admin') ||
     endpoint.controller.startsWith('Hr') ||
     ['CrmController', 'InternalChatController', 'LiveSupportAdminController', 'LiveSupportAIAdminController', 'WhatsAppController'].includes(endpoint.controller) ||
     endpoint.path.startsWith('/api/hr/');

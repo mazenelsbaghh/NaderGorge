@@ -77,6 +77,18 @@ def test_unresolved_frontend_deletes_require_strong_confirmation():
                for item in deletes)
 
 
+def test_admin_routes_are_inventoried_even_when_controller_name_is_not_admin():
+    items = json.loads(BASELINE.read_text())["items"]
+    backend = [item for item in items if item["kind"] == "backend-endpoint"]
+    assessment = [item for item in backend
+                  if item["authoritativeOperation"].startswith("diagnostic:AssessmentReviewController.")]
+
+    assert len(assessment) == 14
+    assert all(item["route"].startswith("/api/admin/") for item in assessment)
+    assert any(item["authoritativeOperation"] == "diagnostic:AssessmentReviewController.GradeHomework"
+               and item["risk"] == "ordinary" for item in assessment)
+
+
 def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
     items = json.loads(BASELINE.read_text())["items"]
     approvals = [item for item in items

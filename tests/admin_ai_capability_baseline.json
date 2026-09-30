@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "e15e4df83518458deae8918d46fa6f1ce905fc3c3c2121fce010058544cac99c"
+      "digest": "b4eb2e958f52d1ab522e60b13dbd43671e842bd7ead537be739bd04dbae36b38"
     }
   },
   "items": [
@@ -224,6 +224,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
         "line": 63
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:delete:api-admin-homework-id-submissions-attemptid:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:105",
+      "kind": "backend-endpoint",
+      "method": "DELETE",
+      "route": "/api/admin/homework/{id}/submissions/{attemptid}",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.DeleteHomework",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-deletehomework:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-deletehomework:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 105
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -813,6 +843,33 @@
       }
     },
     {
+      "id": "be:get:api-admin-ai-provider-status:backend-src-nadergorge-api-controllers-aiproviderstatuscontroller-cs:14",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/ai-provider-status",
+      "effect": "read",
+      "domain": "other",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AIProviderStatusController.Get",
+      "inputSchema": "backend-endpoint:aiproviderstatuscontroller-get:input:v1",
+      "outputSchema": "backend-endpoint:aiproviderstatuscontroller-get:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AIProviderStatusController.cs",
+        "line": 14
+      }
+    },
+    {
       "id": "be:get:api-admin-assistants-id-homework-reviews:backend-src-nadergorge-api-controllers-adminassistantcontroller-cs:43",
       "kind": "backend-endpoint",
       "method": "GET",
@@ -1380,6 +1437,87 @@
       }
     },
     {
+      "id": "be:get:api-admin-exams-id-attempts-attemptid-assessment-review:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:87",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/exams/{id}/attempts/{attemptid}/assessment-review",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.ExamReview",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-examreview:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-examreview:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 87
+      }
+    },
+    {
+      "id": "be:get:api-admin-exams-id-editor:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:50",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/exams/{id}/editor",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.ExamEditor",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-exameditor:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-exameditor:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 50
+      }
+    },
+    {
+      "id": "be:get:api-admin-exams-notification-templates:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:21",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/exams/notification-templates",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.ExamNotificationTemplates",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-examnotificationtemplates:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-examnotificationtemplates:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 21
+      }
+    },
+    {
       "id": "be:get:api-admin-finance-code-accounting:backend-src-nadergorge-api-controllers-adminfinancecontroller-cs:112",
       "kind": "backend-endpoint",
       "method": "GET",
@@ -1728,6 +1866,114 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
         "line": 1012
+      }
+    },
+    {
+      "id": "be:get:api-admin-homework-id-editor:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:46",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/homework/{id}/editor",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.HomeworkEditor",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-homeworkeditor:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-homeworkeditor:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 46
+      }
+    },
+    {
+      "id": "be:get:api-admin-homework-id-missing-students:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:112",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/homework/{id}/missing-students",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.MissingStudents",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-missingstudents:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-missingstudents:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 112
+      }
+    },
+    {
+      "id": "be:get:api-admin-homework-id-submissions-attemptid-review:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:83",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/homework/{id}/submissions/{attemptid}/review",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.HomeworkReview",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-homeworkreview:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-homeworkreview:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 83
+      }
+    },
+    {
+      "id": "be:get:api-admin-homework-notification-templates:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:18",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/admin/homework/notification-templates",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.HomeworkNotificationTemplates",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-homeworknotificationtemplates:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-homeworknotificationtemplates:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 18
       }
     },
     {
@@ -7221,6 +7467,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:post:api-admin-exams-id-revision-preview:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:58",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/exams/{id}/revision-preview",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewExamRevision",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-previewexamrevision:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-previewexamrevision:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 58
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:post:api-admin-exams-inline:backend-src-nadergorge-api-controllers-admincontroller-cs:979",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -7547,6 +7823,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminGiftsController.cs",
         "line": 39
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-admin-homework-id-revision-preview:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:54",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/admin/homework/{id}/revision-preview",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewHomeworkRevision",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-previewhomeworkrevision:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-previewhomeworkrevision:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 54
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -13491,6 +13797,66 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:put:api-admin-exams-id-attempts-attemptid-grade:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:98",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/exams/{id}/attempts/{attemptid}/grade",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.GradeExam",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-gradeexam:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-gradeexam:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 98
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-admin-exams-id-definition:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:66",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/exams/{id}/definition",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveExamRevision",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-saveexamrevision:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-saveexamrevision:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 66
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:put:api-admin-forms-id:backend-src-nadergorge-api-controllers-adminformscontroller-cs:54",
       "kind": "backend-endpoint",
       "method": "PUT",
@@ -13577,6 +13943,66 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
         "line": 947
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-admin-homework-id-definition:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:62",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/homework/{id}/definition",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveHomeworkRevision",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-savehomeworkrevision:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-savehomeworkrevision:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 62
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-admin-homework-id-submissions-attemptid-grade:backend-src-nadergorge-api-controllers-assessmentreviewcontroller-cs:91",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/admin/homework/{id}/submissions/{attemptid}/grade",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.GradeHomework",
+      "inputSchema": "backend-endpoint:assessmentreviewcontroller-gradehomework:input:v1",
+      "outputSchema": "backend-endpoint:assessmentreviewcontroller-gradehomework:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
+        "line": 91
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -14790,7 +15216,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.DeleteHomework",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -14820,7 +15246,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.DeleteHomework",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -15759,7 +16185,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.ExamReview",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -16164,7 +16590,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.HomeworkReview",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -16213,12 +16639,12 @@
       "kind": "frontend-call",
       "method": "GET",
       "route": "/admin/homework/{homeworkId}/missing-students",
-      "effect": "export",
+      "effect": "read",
       "domain": "identity",
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.MissingStudents",
       "inputSchema": "frontend-call:frontend-src-components-admin-missinghomeworkexport-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-missinghomeworkexport-tsx:output:v1",
       "limits": {
@@ -27516,7 +27942,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.GradeExam",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -27636,7 +28062,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.GradeHomework",
       "inputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:input:v1",
       "outputSchema": "frontend-call:frontend-src-components-admin-assessmentattemptreview-tsx:output:v1",
       "limits": {
@@ -28678,5 +29104,5 @@
     }
   ],
   "exclusions": [],
-  "digest": "5afdb75ccb1c0115d12541f94193bddecc909b25e85dd463b0fd6cece0a27fae"
+  "digest": "a36f6eb806d1b79fea4100b175a5a3c32d18344bc6aac092cd5c25fb53e571f3"
 }
