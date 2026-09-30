@@ -12,6 +12,7 @@ The owner requested an urgent refund and gift correction before the next month. 
 
 - `make ops-check`: passed; API build and EF pending-model check passed, 1,651 application tests passed with 20 environment-dependent skips, frontend lint and typecheck passed (one existing hook warning), 230 worker tests passed, and Compose validated.
 - `RefundLedgerDisplayTests` and `RefundLedgerPostgresTests`: passed; both PostgreSQL tests used a disposable PostgreSQL 16.10 instance. One checked the posting actor, amount, and reason in the listing; the other exercised the external package refund action through cancellation, cash journal posting, and final grant state in a real transaction.
+- `GiftHierarchyPostgresTests`: passed 1/1 on a disposable PostgreSQL 16.10 instance; selected teacher, package, system term, system section, and lesson remained parent-scoped, while a different teacher could not receive the selected section's lesson.
 - Chrome browser tests: Admin refund visibility and refund form submission passed 2/2 with mocked API data; gift ledger, promotional balance, and teacher-to-lesson issuance passed 3/3 with mocked API data. The refund form labels are now associated with their fields.
 - Three-node read-only status: success. The bounded backend log sample on node-2 did not contain a refund event, so it cannot establish the cause of the reported live failure. The local PostgreSQL path passes, but a real authenticated production submission still needs post-release acceptance.
 
