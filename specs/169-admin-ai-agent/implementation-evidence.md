@@ -32,6 +32,11 @@
 - The task-create candidate now has an authoritative, read-only preview. It verifies the assignee is not a student, verifies the actor exists, and fingerprints the assignee and supervisor workroom participants. On PostgreSQL the preview left task and workroom counts unchanged; renaming the assignee changed the fingerprint before confirmation. The focused replay/preview test passed 1/1, the complete AdminAI PostgreSQL group passed 38/38, and the AdminAI plus operations application group passed 273/273.
 - Its action adapter is now registered in the API service container alongside the preview and recovery resolver. The production catalog still exposes reads only, so this candidate is not enabled for users.
 
+## 2026-09-30 media pipeline creation identity
+
+- The original media-pipeline create command now accepts an optional server-owned operation identity. The pipeline, audit, and result receipt commit together for AdminAI calls; the original Admin path remains available. The adapter passes the identity, a resolver returns the pipeline ID from the receipt, and the API service container registers both.
+- A read-only preview checks the assigned agent's current role and fingerprints its name and student status. It reports whether an asset folder was provided without displaying a URL that may contain a token. A focused PostgreSQL test passed preview without writes, changed fingerprint after an agent rename, one pipeline after replay, changed-payload conflict, receipt recovery, refusal to assign a student, and a token-sentinel exclusion from the preview. The complete AdminAI PostgreSQL group passed 39/39 on the final code, the AdminAI plus operations application group passed 273/273, and the API build passed. The production action catalog remains read-only.
+
 ## 2026-09-30 concurrent worker claim
 
 - The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.

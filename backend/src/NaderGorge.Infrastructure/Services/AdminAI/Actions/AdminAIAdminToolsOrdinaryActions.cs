@@ -13,7 +13,8 @@ public sealed class AdminAICreateMediaPipelineAction(IMediator mediator, IAdminA
 {
     public override string Key => "admin.tools.media-pipeline.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateMediaPipelineInput input, Guid actorId, string operationId) =>
-        new CreateMediaPipelineCommand(input.Title, input.Description, input.AssignedAgentId, input.AssetFolderUrl, actorId);
+        new CreateMediaPipelineCommand(input.Title, input.Description, input.AssignedAgentId, input.AssetFolderUrl, actorId)
+        { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { pipelineId = response.Data }, 1, ["media-pipelines"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["media-pipelines"]);

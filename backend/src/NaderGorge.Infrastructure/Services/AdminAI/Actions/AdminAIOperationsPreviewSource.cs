@@ -15,6 +15,8 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
         input switch
         {
+            AdminAICreateMediaPipelineInput pipeline when capabilityKey == "admin.tools.media-pipeline.create" =>
+                PreviewMediaPipelineCreateAsync(capabilityKey, actorId, pipeline, ct),
             AdminAICreateTaskInput create when capabilityKey == "admin.operations.task.create" =>
                 PreviewTaskCreateAsync(capabilityKey, actorId, create, ct),
             AdminAIAddTaskCommentInput comment when capabilityKey == "admin.operations.task-comment.create" =>
@@ -25,6 +27,40 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
                 PreviewTaskApprovalAsync(capabilityKey, actorId, approval, ct),
             _ => throw new NotSupportedException("Admin AI action preview capability is unavailable.")
         };
+
+    private async Task<AdminAIActionPreview> PreviewMediaPipelineCreateAsync(
+        string capabilityKey, Guid actorId, AdminAICreateMediaPipelineInput input, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title) || input.Title.Length > 250
+            || input.Description?.Length > 2000 || input.AssetFolderUrl?.Length > 2000)
+            throw new ArgumentException("Media pipeline input is invalid.", nameof(input));
+        if (!await db.Users.AsNoTracking().AnyAsync(item => item.Id == actorId, ct))
+            throw new AdminAIActionPreviewUnavailableException("The actor is unavailable.");
+
+        var assignedAgentId = input.AssignedAgentId.GetValueOrDefault();
+        var agent = await db.Users.AsNoTracking()
+            .Where(item => item.Id == assignedAgentId)
+            .Select(item => new
+            {
+                item.Id, item.FullName,
+                IsStudent = item.UserRoles.Any(role => role.Role.Type == RoleType.Student)
+            })
+            .SingleOrDefaultAsync(ct);
+        if (assignedAgentId != Guid.Empty && agent is null)
+            throw new AdminAIActionPreviewUnavailableException("The assigned agent is unavailable.");
+        if (agent?.IsStudent == true)
+            throw new AdminAIActionPreviewUnavailableException("Media work cannot be assigned to students.");
+
+        return new AdminAIActionPreview(
+            "media-pipeline", assignedAgentId == Guid.Empty ? "media-pipeline:new"
+                : $"agent:{assignedAgentId:D}",
+            new { agentName = agent?.FullName, agentIsStudent = agent?.IsStudent },
+            new { input.Title, input.Description, input.AssignedAgentId,
+                assetFolderProvided = !string.IsNullOrWhiteSpace(input.AssetFolderUrl) },
+            new { pipelineWillBeCreated = true, affected = 1 },
+            new { valid = true },
+            Fingerprint(capabilityKey, new { actorId, agent?.Id, agent?.FullName, agent?.IsStudent }));
+    }
 
     private async Task<AdminAIActionPreview> PreviewTaskCreateAsync(
         string capabilityKey, Guid actorId, AdminAICreateTaskInput input, CancellationToken ct)
@@ -221,7 +257,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
         {
             "admin.finance.teacher-event.review" =>
                 teacherFinance.PreviewAsync(capabilityKey, actorId, input, ct),
-            "admin.operations.task.create" or "admin.operations.task-comment.create" or "admin.operations.task.status.update"
+            "admin.tools.media-pipeline.create" or "admin.operations.task.create"
+                or "admin.operations.task-comment.create" or "admin.operations.task.status.update"
                 or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
             "admin.assessment.lesson-comment.approve" or "admin.assessment.community-post.approve"

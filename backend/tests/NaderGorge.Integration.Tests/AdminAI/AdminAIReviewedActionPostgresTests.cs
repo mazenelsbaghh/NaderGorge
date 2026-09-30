@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Admin.Media.Commands;
 using NaderGorge.Application.Features.AdminAI.Catalog;
 using NaderGorge.Application.Features.AdminAI.Commands;
 using NaderGorge.Application.Features.AdminAI.Interfaces;
@@ -23,6 +24,60 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 
 public sealed class AdminAIReviewedActionPostgresTests
 {
+    [Fact]
+    public async Task RealPostgres_MediaPipelineCreation_HasReadOnlyPreviewAndDurableReplay()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var actor = new User { FullName = "Media Admin", PhoneNumber = "01000000997", PasswordHash = "test" };
+        var agent = new User { FullName = "Media Agent", PhoneNumber = "01000000998", PasswordHash = "test" };
+        db.Users.AddRange(actor, agent);
+        await db.SaveChangesAsync();
+
+        var previewSource = new AdminAIOperationsPreviewSource(db);
+        var input = new AdminAICreateMediaPipelineInput("Video production", "Prepare lesson", agent.Id,
+            "https://storage.example/folder?token=preview-secret-sentinel");
+        var pipelineCount = await db.MediaProductionPipelines.CountAsync();
+        var preview = await previewSource.PreviewAsync("admin.tools.media-pipeline.create", actor.Id,
+            input, CancellationToken.None);
+        Assert.DoesNotContain("preview-secret-sentinel", System.Text.Json.JsonSerializer.Serialize(preview));
+        Assert.Equal(pipelineCount, await db.MediaProductionPipelines.CountAsync());
+        agent.FullName = "Renamed Media Agent";
+        await db.SaveChangesAsync();
+        var changedPreview = await previewSource.PreviewAsync("admin.tools.media-pipeline.create", actor.Id,
+            input, CancellationToken.None);
+        Assert.NotEqual(preview.StateFingerprint, changedPreview.StateFingerprint);
+
+        var operationId = $"admin-ai-media-pipeline-{Guid.NewGuid():N}";
+        var request = new CreateMediaPipelineCommand(input.Title, input.Description, agent.Id,
+            input.AssetFolderUrl, actor.Id) { OperationId = operationId };
+        var created = await new CreateMediaPipelineCommandHandler(db).Handle(request, CancellationToken.None);
+        Assert.True(created.Success);
+        var pipelineId = created.Data;
+
+        await using var replayDb = fixture.CreateDbContext();
+        var handler = new CreateMediaPipelineCommandHandler(replayDb);
+        var replay = await handler.Handle(request, CancellationToken.None);
+        Assert.True(replay.Success);
+        Assert.Equal(pipelineId, replay.Data);
+        var conflict = await handler.Handle(request with { Title = "Different production" }, CancellationToken.None);
+        Assert.False(conflict.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", conflict.Errors!);
+        Assert.Equal(pipelineCount + 1, await replayDb.MediaProductionPipelines.CountAsync());
+        Assert.Equal(1, await replayDb.AuthoritativeOperationReceipts.CountAsync(item => item.OperationId == operationId));
+        var recovered = await new AdminAIMediaPipelineCreateResultResolver(replayDb)
+            .ResolveAsync(operationId, operationId, CancellationToken.None);
+        Assert.NotNull(recovered);
+        Assert.Contains(pipelineId.ToString(), System.Text.Json.JsonSerializer.Serialize(recovered));
+
+        var studentRole = await db.Roles.FirstAsync(item => item.Type == RoleType.Student);
+        db.UserRoles.Add(new UserRole { UserId = agent.Id, RoleId = studentRole.Id });
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<AdminAIActionPreviewUnavailableException>(() =>
+            previewSource.PreviewAsync("admin.tools.media-pipeline.create", actor.Id, input, CancellationToken.None));
+    }
+
     [Fact]
     public async Task RealPostgres_TaskCreation_ReplaysTaskAndWorkroomWithoutDuplicatingEither()
     {
