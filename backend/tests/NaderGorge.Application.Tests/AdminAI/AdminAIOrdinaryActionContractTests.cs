@@ -63,6 +63,21 @@ public sealed class AdminAIOrdinaryActionContractTests
     }
 
     [Fact]
+    public async Task SubjectUpdateAdapter_BindsActorAndOperationIdentity()
+    {
+        var actor = Guid.NewGuid();
+        var mediator = new CapturingMediator();
+        var adapter = new AdminAIUpdateSubjectAction(mediator, new PreviewSource());
+
+        await adapter.ExecuteAsync(actor, new AdminAIUpdateSubjectInput(Guid.NewGuid(), "History", "Course"),
+            "subject-update-1", default);
+
+        var command = Assert.IsType<UpdateSubjectCommand>(mediator.Request);
+        Assert.Equal(actor, command.ActorUserId);
+        Assert.Equal("subject-update-1", command.OperationId);
+    }
+
+    [Fact]
     public async Task OrdinaryAdapters_AcceptOnlyExactCamelCaseWireFields()
     {
         var mediator = new CapturingMediator();

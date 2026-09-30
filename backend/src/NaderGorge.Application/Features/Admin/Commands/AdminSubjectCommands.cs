@@ -81,7 +81,11 @@ public class CreateSubjectCommandHandler : IRequestHandler<CreateSubjectCommand,
     }
 }
 
-public record UpdateSubjectCommand(Guid Id, string Name, string Description) : IRequest<ApiResponse>;
+public record UpdateSubjectCommand(Guid Id, string Name, string Description) : IRequest<ApiResponse>
+{
+    public string? OperationId { get; init; }
+    public Guid? ActorUserId { get; init; }
+}
 
 public class UpdateSubjectCommandHandler : IRequestHandler<UpdateSubjectCommand, ApiResponse>
 {
@@ -93,6 +97,24 @@ public class UpdateSubjectCommandHandler : IRequestHandler<UpdateSubjectCommand,
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse.Fail("Subject name cannot be empty");
+
+        var operationId = request.OperationId?.Trim();
+        if (request.OperationId is not null && (string.IsNullOrEmpty(operationId) || operationId.Length > 200))
+            return ApiResponse.Fail("Invalid operation identifier", ["INVALID_OPERATION_ID"]);
+        if (operationId is not null)
+        {
+            if (request.ActorUserId is null || request.ActorUserId == Guid.Empty)
+                return ApiResponse.Fail("Operation actor is required", ["ACTOR_REQUIRED"]);
+            var requestHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+                JsonSerializer.Serialize(new
+                {
+                    request.Id,
+                    Name = request.Name.Trim(),
+                    Description = request.Description?.Trim() ?? string.Empty,
+                    request.ActorUserId
+                }))));
+            return await UpdateWithReceiptAsync(request, operationId, request.ActorUserId.Value, requestHash, ct);
+        }
 
         var subject = await _db.Subjects.FindAsync(new object[] { request.Id }, ct);
         if (subject == null)
@@ -109,6 +131,40 @@ public class UpdateSubjectCommandHandler : IRequestHandler<UpdateSubjectCommand,
 
         await _db.SaveChangesAsync(ct);
 
+        return ApiResponse.Ok();
+    }
+
+    private async Task<ApiResponse> UpdateWithReceiptAsync(
+        UpdateSubjectCommand request, string operationId, Guid actorId, string requestHash, CancellationToken ct)
+    {
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var prior = await _db.AuthoritativeOperationReceipts.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.OperationId == operationId, ct);
+        if (prior is not null)
+            return prior.Scope == "subject.update" && prior.ActorUserId == actorId
+                && prior.RequestHash == requestHash
+                    ? ApiResponse.Ok()
+                    : ApiResponse.Fail("Operation identifier already used for another action", ["IDEMPOTENCY_CONFLICT"]);
+
+        var subject = await _db.Subjects.FindAsync(new object[] { request.Id }, ct);
+        if (subject is null)
+            return ApiResponse.Fail("Subject not found");
+        var normalized = request.Name.Trim().ToUpperInvariant();
+        if (await _db.Subjects.AnyAsync(item => item.NormalizedName == normalized && item.Id != request.Id, ct))
+            return ApiResponse.Fail("Another subject with this name already exists");
+        subject.Name = request.Name.Trim();
+        subject.NormalizedName = normalized;
+        subject.Description = request.Description?.Trim() ?? string.Empty;
+        _db.AuthoritativeOperationReceipts.Add(new AuthoritativeOperationReceipt
+        {
+            OperationId = operationId,
+            Scope = "subject.update",
+            ActorUserId = actorId,
+            RequestHash = requestHash,
+            ResultEntityId = subject.Id
+        });
+        await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return ApiResponse.Ok();
     }
 }

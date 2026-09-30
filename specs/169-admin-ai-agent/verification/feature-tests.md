@@ -4,6 +4,8 @@ The student-note operation now has a source-bound receipt and recovery resolver.
 
 The subject-create candidate now shares the durable receipt mechanism and recovers the original subject ID after an ambiguous response or later deletion. Its PostgreSQL test passed 1/1. The updated full AdminAI integration group passed 30/30, focused application group 259/259, migration guard passed, and the capability inventory gate remained current at 10/10 graph and 24/24 Python checks.
 
+The subject-update candidate now rejects a conflicting replay and leaves a later Admin edit intact. Its real-PostgreSQL test passed 1/1; the full AdminAI integration group passed 31/31 and the focused application group passed 260/260. The EF guard and capability inventory gate passed. Browser/provider/manual acceptance remain open.
+
 Date: 2026-08-12 (Africa/Cairo)
 
 - Backend solution build: passed with 0 warnings and 0 errors.

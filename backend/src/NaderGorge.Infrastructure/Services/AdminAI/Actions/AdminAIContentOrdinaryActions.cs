@@ -42,7 +42,11 @@ public sealed class AdminAIUpdateSubjectAction(IMediator mediator, IAdminAIActio
 {
     public override string Key => "admin.content.subject.update";
     protected override IRequest<ApiResponse> CreateCommand(AdminAIUpdateSubjectInput input, Guid actorId, string operationId) =>
-        new UpdateSubjectCommand(input.SubjectId, input.Name, input.Description);
+        new UpdateSubjectCommand(input.SubjectId, input.Name, input.Description)
+        {
+            ActorUserId = actorId,
+            OperationId = operationId
+        };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { updated = true }, 1, ["subjects", "content"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["subjects", "content"]);

@@ -11,6 +11,11 @@
 - `CreateSubjectCommand` now uses the same unique receipt table when invoked with an AdminAI operation identity and actor. The subject and receipt commit in one serializable transaction. A replay returns the original subject ID even if that subject was later deleted; a changed request is rejected. The original Admin call still uses its existing command arguments and behavior.
 - A resolver can recover the original subject ID from the receipt without creating a second subject. The disposable-PostgreSQL replay/deletion/conflict test passed 1/1. After this change the full AdminAI PostgreSQL group passed 30/30 and the focused application group passed 259/259. The EF migration guard and capability inventory gate passed; the manifest remains blocked pending the other operations and acceptance gates.
 
+## 2026-09-30 subject-update authoritative replay slice
+
+- `UpdateSubjectCommand` now binds the actor, target, canonical requested values, and AdminAI execution identity to an immutable receipt in the same serializable transaction as the edit. A later replay returns the recorded success without rewriting newer subject values; changing the request under the same identity fails. The existing Admin call remains supported without an operation identity.
+- The recovery resolver detects the committed receipt without applying the edit again. A disposable-PostgreSQL test passed for a later edit, replay, conflict, and resolver identity; the full AdminAI PostgreSQL group passed 31/31 and the focused application group passed 260/260. `make ops-db-guard` and the capability inventory gate passed. The production registry and baseline are still read-only/blocked.
+
 ## 2026-09-30 watch-request operation recovery
 
 - The original watch-approval command now accepts an optional operation identifier. It records that identifier and the request ID on the persisted `VideoOverride`, with a unique non-null database index. Replaying the same request, actor, reason, and view increment returns success without another view increase or notification; reuse with different inputs fails. AI approvals refuse an unbounded or missing watch event because that path cannot leave a durable override marker.
