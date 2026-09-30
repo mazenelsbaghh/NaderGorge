@@ -67,7 +67,12 @@ function routeForPage(filePath) {
 function literalPath(node) {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isTemplateExpression(node)) {
-    const names = node.templateSpans.map((span) => span.expression.getText().replace(/[^A-Za-z0-9_$]/g, '') || 'value');
+    const names = node.templateSpans.map((span) => {
+      const expression = span.expression;
+      if (ts.isIdentifier(expression)) return expression.text;
+      if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+      return expression.getText().replace(/[^A-Za-z0-9_$]/g, '') || 'value';
+    });
     return `${node.head.text}${names.map((name, index) => `{${name}}${node.templateSpans[index].literal.text}`).join('')}`;
   }
   return '<dynamic>';

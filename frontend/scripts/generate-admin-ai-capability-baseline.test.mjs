@@ -36,6 +36,15 @@ test('AdminAI graph includes only student service methods invoked from Admin mod
   ]);
 });
 
+test('AdminAI graph names template route parameters after their final property', () => {
+  const graph = collectAdminCallGraph();
+  const calls = graph.calls.filter((call) =>
+    call.source.file === 'frontend/src/services/video-session-service.ts'
+    && call.path.endsWith('/track-progress'));
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((call) => call.path === '/student/video-session/{lessonVideoId}/track-progress'));
+});
+
 test('AdminAI graph excludes unused student purchase and lesson comment service methods', () => {
   const graph = collectAdminCallGraph();
   const sharedPackageCalls = graph.calls.filter((call) =>

@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `e05145fce26b401aa6b821c6322d3c88a7897662bf289291a0f1b5eb07b88757`
+Digest: `80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c`
 
-Items: 1073; external-side-effect=79, mutation=544, read=412, export=23, preview=15.
-Reviewed non-business exclusions: 29.
+Items: 1064; external-side-effect=79, mutation=536, read=411, export=23, preview=15.
+Reviewed non-business exclusions: 38.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -807,7 +807,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:public-forms-slug:frontend-src-services-forms-service-ts:153 | GET | /public/forms/{slug} | read | other | none | candidate |
 | fe:get:public-settings:frontend-src-components-video-securevideoplayer-tsx:323 | GET | /public/settings | read | content | none | candidate |
 | fe:get:scope-content-summary:frontend-src-services-content-service-ts:402 | GET | /{scope}/content/summary | read | content | none | candidate |
-| fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181 | GET | /student/video-session/{lessonVideoId}/request-status | read | identity | none | candidate |
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | GET | /video-learning/{id}/author | read | identity | none | candidate |
 | fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:48 | GET | /video-learning/{id}/report | read | content | none | candidate |
@@ -841,7 +840,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-content-contenttype-id-image:frontend-src-services-admin-service-ts:1526 | POST | /admin/content/{contentType}/{id}/image | external-side-effect | content | ordinary | blocked |
 | fe:post:admin-content-lessons-lessonid-homework:frontend-src-services-admin-service-ts:2023 | POST | /admin/content/lessons/{lessonId}/homework | mutation | content | ordinary | blocked |
 | fe:post:admin-emthntak-request:frontend-src-app-admin-emthntak-page-tsx:40 | POST | /admin/emthntak/request | mutation | other | ordinary | blocked |
-| fe:post:admin-exams-definitionassessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:57 | POST | /admin/exams/{definitionassessmentId}/revision-preview | preview | content | none | candidate |
+| fe:post:admin-exams-assessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:57 | POST | /admin/exams/{assessmentId}/revision-preview | preview | content | none | candidate |
 | fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2135 | POST | /admin/exams/inline | mutation | content | ordinary | blocked |
 | fe:post:admin-finance-payouts-payoutid-resolve:frontend-src-services-finance-service-ts:363 | POST | /admin/finance/payouts/{payoutId}/resolve | mutation | finance | strong | blocked |
 | fe:post:admin-finance-payroll-generate:frontend-src-services-finance-service-ts:309 | POST | /admin/finance/payroll/generate | mutation | finance | strong | blocked |
@@ -853,7 +852,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-forms:frontend-src-services-forms-service-ts:92 | POST | /admin/forms | mutation | other | ordinary | blocked |
 | fe:post:admin-gifts-id-revoke:frontend-src-services-admin-gifts-service-ts:136 | POST | /admin/gifts/{id}/revoke | mutation | commercial | strong | blocked |
 | fe:post:admin-gifts:frontend-src-services-admin-gifts-service-ts:132 | POST | /admin/gifts | mutation | commercial | ordinary | blocked |
-| fe:post:admin-homework-definitionassessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:58 | POST | /admin/homework/{definitionassessmentId}/revision-preview | preview | content | none | candidate |
+| fe:post:admin-homework-assessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:58 | POST | /admin/homework/{assessmentId}/revision-preview | preview | content | none | candidate |
 | fe:post:admin-hr-employees-provision:frontend-src-services-hr-service-ts:230 | POST | /admin/hr/employees/provision | mutation | hr | ordinary | blocked |
 | fe:post:admin-hr-employees:frontend-src-services-hr-service-ts:220 | POST | /admin/hr/employees | mutation | hr | ordinary | blocked |
 | fe:post:admin-lessons-lessonid-mim-game-disable:frontend-src-services-admin-service-ts:1682 | POST | /admin/lessons/{lessonId}/mim-game/disable | mutation | content | strong | blocked |
@@ -874,8 +873,8 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-platform-finance-expenses-expenseid-reverse:frontend-src-services-platform-finance-service-ts:166 | POST | /admin/platform-finance/expenses/{expenseId}/reverse | mutation | finance | strong | blocked |
 | fe:post:admin-platform-finance-expenses:frontend-src-services-platform-finance-service-ts:142 | POST | /admin/platform-finance/expenses | mutation | finance | strong | blocked |
 | fe:post:admin-platform-finance-migration-post:frontend-src-services-platform-finance-service-ts:205 | POST | /admin/platform-finance/migration/post | mutation | finance | strong | blocked |
-| fe:post:admin-platform-finance-periods-periodid-close:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12 | POST | /admin/platform-finance/periods/{periodid}/close | mutation | finance | strong | blocked |
-| fe:post:admin-platform-finance-periods-periodid-reopen:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12 | POST | /admin/platform-finance/periods/{periodid}/reopen | mutation | finance | strong | blocked |
+| fe:post:admin-platform-finance-periods-id-close:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12 | POST | /admin/platform-finance/periods/{id}/close | mutation | finance | strong | blocked |
+| fe:post:admin-platform-finance-periods-id-reopen:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12 | POST | /admin/platform-finance/periods/{id}/reopen | mutation | finance | strong | blocked |
 | fe:post:admin-platform-finance-refunds-external-package:frontend-src-services-platform-finance-service-ts:172 | POST | /admin/platform-finance/refunds/external-package | mutation | finance | strong | blocked |
 | fe:post:admin-platform-finance-refunds-refundid-post:frontend-src-services-platform-finance-service-ts:175 | POST | /admin/platform-finance/refunds/{refundId}/post | mutation | finance | strong | blocked |
 | fe:post:admin-platform-finance-refunds-refundid-reverse:frontend-src-services-platform-finance-service-ts:181 | POST | /admin/platform-finance/refunds/{refundId}/reverse | mutation | finance | strong | blocked |
@@ -947,8 +946,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:admin-watch-requests-id-approve:frontend-src-services-admin-service-ts:2338 | POST | /admin/watch-requests/{id}/approve | mutation | identity | strong | blocked |
 | fe:post:admin-watch-requests-id-reject:frontend-src-services-admin-service-ts:2346 | POST | /admin/watch-requests/{id}/reject | mutation | identity | ordinary | blocked |
 | fe:post:api-base-url-auth-refresh:frontend-src-services-api-client-ts:64 | POST | /{API_BASE_URL}/auth/refresh | mutation | identity | ordinary | blocked |
-| fe:post:api-video-session:frontend-src-services-video-session-service-ts:151 | POST | /api/video/session | mutation | content | ordinary | blocked |
-| fe:post:api-video-session:frontend-src-services-video-session-service-ts:157 | POST | /api/video/session | mutation | content | ordinary | blocked |
 | fe:post:chat-messages-messageid-pin:frontend-src-services-chat-service-ts:60 | POST | /chat/messages/{messageId}/pin | mutation | support | strong | blocked |
 | fe:post:chat-rooms-roomid-archive:frontend-src-services-chat-service-ts:57 | POST | /chat/rooms/{roomId}/archive | mutation | support | ordinary | blocked |
 | fe:post:chat-rooms-roomid-read:frontend-src-services-chat-service-ts:63 | POST | /chat/rooms/{roomId}/read | mutation | support | ordinary | blocked |
@@ -1027,12 +1024,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:live-support-whatsapp-templates-sync:frontend-src-services-live-support-service-ts:706 | POST | /live-support/whatsapp/templates/sync | external-side-effect | support | ordinary | blocked |
 | fe:post:public-forms-slug-submit:frontend-src-services-forms-service-ts:161 | POST | /public/forms/{slug}/submit | mutation | other | ordinary | blocked |
 | fe:post:student-upload-audio:frontend-src-services-student-service-ts:437 | POST | /student/upload-audio | external-side-effect | identity | ordinary | blocked |
-| fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:177 | POST | /student/video-session/{lessonVideoId}/request-extra | mutation | identity | ordinary | blocked |
-| fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:186 | POST | /student/video-session/{requestlessonVideoId}/track-progress | mutation | identity | ordinary | blocked |
-| fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:194 | POST | /student/video-session/{requestlessonVideoId}/track-progress | mutation | identity | ordinary | blocked |
-| fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:173 | POST | /student/video-session/{sessionId}/client-event | mutation | identity | ordinary | blocked |
-| fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:169 | POST | /student/video-session/{sessionId}/consume | mutation | identity | ordinary | blocked |
-| fe:post:student-video-session:frontend-src-services-video-session-service-ts:163 | POST | /student/video-session | mutation | identity | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84 | POST | /v1/assistant/tasks/my/{taskId}/comments | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-status:frontend-src-services-assistant-service-ts:78 | POST | /v1/assistant/tasks/my/{taskId}/status | mutation | other | ordinary | blocked |
 | fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:46 | POST | /video-learning/{id}/ai | mutation | content | ordinary | blocked |
@@ -1043,13 +1034,13 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:put:admin-codes-groups-id-settings:frontend-src-services-admin-service-ts:1420 | PUT | /admin/codes/groups/{id}/settings | mutation | content | ordinary | blocked |
 | fe:put:admin-content-targettype-id-archive:frontend-src-services-admin-service-ts:1077 | PUT | /admin/content/{targetType}/{id}/archive | mutation | content | ordinary | blocked |
 | fe:put:admin-exams-assessmentid-attempts-attemptid-grade:frontend-src-components-admin-assessmentattemptreview-tsx:62 | PUT | /admin/exams/{assessmentId}/attempts/{attemptId}/grade | mutation | content | ordinary | blocked |
+| fe:put:admin-exams-assessmentid-definition:frontend-src-services-assessment-revision-service-ts:61 | PUT | /admin/exams/{assessmentId}/definition | mutation | content | ordinary | blocked |
 | fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2095 | PUT | /admin/exams/{examId}/status | mutation | content | ordinary | blocked |
-| fe:put:admin-exams-requestdefinitionassessmentid-definition:frontend-src-services-assessment-revision-service-ts:61 | PUT | /admin/exams/{requestdefinitionassessmentId}/definition | mutation | content | ordinary | blocked |
 | fe:put:admin-forms-id:frontend-src-services-forms-service-ts:113 | PUT | /admin/forms/{id} | mutation | other | ordinary | blocked |
 | fe:put:admin-forms-submissions-submissionid-status:frontend-src-services-forms-service-ts:141 | PUT | /admin/forms/submissions/{submissionId}/status | mutation | other | ordinary | blocked |
+| fe:put:admin-homework-assessmentid-definition:frontend-src-services-assessment-revision-service-ts:62 | PUT | /admin/homework/{assessmentId}/definition | mutation | content | ordinary | blocked |
 | fe:put:admin-homework-assessmentid-submissions-attemptid-grade:frontend-src-components-admin-assessmentattemptreview-tsx:61 | PUT | /admin/homework/{assessmentId}/submissions/{attemptId}/grade | mutation | content | ordinary | blocked |
 | fe:put:admin-homework-homeworkid-status:frontend-src-services-admin-service-ts:2102 | PUT | /admin/homework/{homeworkId}/status | mutation | content | ordinary | blocked |
-| fe:put:admin-homework-requestdefinitionassessmentid-definition:frontend-src-services-assessment-revision-service-ts:62 | PUT | /admin/homework/{requestdefinitionassessmentId}/definition | mutation | content | ordinary | blocked |
 | fe:put:admin-lessons-id:frontend-src-services-admin-service-ts:1635 | PUT | /admin/lessons/{id} | mutation | content | ordinary | blocked |
 | fe:put:admin-lessons-lessonid-exam:frontend-src-services-admin-service-ts:2075 | PUT | /admin/lessons/{lessonId}/exam | mutation | content | ordinary | blocked |
 | fe:put:admin-lessons-lessonid-homework-coming-soon:frontend-src-services-admin-service-ts:1645 | PUT | /admin/lessons/{lessonId}/homework-coming-soon | mutation | content | ordinary | blocked |

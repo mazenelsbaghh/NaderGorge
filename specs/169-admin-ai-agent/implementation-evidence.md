@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 current-viewer playback inventory
+
+- Admin lesson previews reach `videoSessionService`, whose routes create and consume the current viewer's session or authorize its playback source. The backend preview policy explicitly accepts Admin and binds session material to `session.UserId`; these are viewer self-service calls rather than Admin platform actions. Nine exact frontend calls are documented `self-service` exclusions. The frontend extractor now uses the final property name in a template parameter, so both progress routes correctly show `{lessonVideoId}`.
+- The regenerated baseline has 1,064 items, 615 blocked entries, 14 unresolved frontend calls (three mutations), and 38 reviewed exclusions. Digest: `80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c`. The full capability gate passed 11/11 frontend graph tests and 26/26 Python tests. Activation remains blocked.
+
 ## 2026-09-30 remaining Teacher-only branches
 
 - Seven additional `/teacher` frontend calls came from shared code-group, subscriber, context, and finance services. Their backend `TeacherController` and `TeacherFinanceController` require the Teacher role. Admin alternatives for code groups and teacher statements remain in the inventory. The seven calls are now reviewed `teacher-surface` exclusions alongside the nine Teacher-only report calls.

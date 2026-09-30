@@ -177,6 +177,11 @@ function build() {
     });
   const selfServicePath = 'frontend/src/services/admin-ai-agent-service.ts';
   const selfServiceItems = frontendItems.filter((item) => item.source.file === selfServicePath);
+  // The shared player appears in Admin lesson previews. Its calls operate on
+  // the current viewer's playback session, not an Admin business resource.
+  const playbackPath = 'frontend/src/services/video-session-service.ts';
+  const playbackItems = frontendItems.filter((item) => item.source.file === playbackPath
+    && (item.route === '/api/video/session' || item.route.startsWith('/student/video-session')));
   const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
   const teacherReportItems = frontendItems.filter((item) =>
     item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
@@ -196,7 +201,7 @@ function build() {
   const additionalTeacherItems = frontendItems.filter((item) =>
     reviewedTeacherCalls.get(item.source.file)?.has(`${item.method}:${item.route}`));
   const teacherOnlyItems = [...teacherReportItems, ...additionalTeacherItems];
-  const excludedIds = new Set([...selfServiceItems, ...teacherOnlyItems].map((item) => item.id));
+  const excludedIds = new Set([...selfServiceItems, ...playbackItems, ...teacherOnlyItems].map((item) => item.id));
   const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
     .sort((left, right) => left.id.localeCompare(right.id));
   const exclusions = [
@@ -204,6 +209,11 @@ function build() {
       id: item.id,
       reason: 'self-service',
       detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...playbackItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Current-viewer playback session used by Admin lesson preview is not an Admin business capability: ${item.method} ${item.route}`,
     })),
     ...teacherOnlyItems.map((item) => ({
       id: item.id,

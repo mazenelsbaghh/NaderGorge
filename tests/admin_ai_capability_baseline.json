@@ -9,11 +9,11 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "066a83c9b715bc2341c8e1d1a9e44daf0c353c74e36694b03a22a5edeffe9163"
+      "digest": "715beee696b8382a7f5f4d02425ec60807965e7b59cc3d6aefceaa2bab9d00be"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "cfd79095095743a71001c649a0d3e869c9289a9c9daccb715260ab05bfab04e3"
+      "digest": "ebf11dc1cbcb4725dc787e8972380366fe079ed104581588704efa026c3f342a"
     }
   },
   "items": [
@@ -22650,33 +22650,6 @@
       }
     },
     {
-      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/student/video-session/{lessonVideoId}/request-status",
-      "effect": "read",
-      "domain": "identity",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 181
-      }
-    },
-    {
       "id": "fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74",
       "kind": "frontend-call",
       "method": "GET",
@@ -23649,10 +23622,10 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-exams-definitionassessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:57",
+      "id": "fe:post:admin-exams-assessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:57",
       "kind": "frontend-call",
       "method": "POST",
-      "route": "/admin/exams/{definitionassessmentId}/revision-preview",
+      "route": "/admin/exams/{assessmentId}/revision-preview",
       "effect": "preview",
       "domain": "content",
       "risk": "none",
@@ -24006,10 +23979,10 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-homework-definitionassessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:58",
+      "id": "fe:post:admin-homework-assessmentid-revision-preview:frontend-src-services-assessment-revision-service-ts:58",
       "kind": "frontend-call",
       "method": "POST",
-      "route": "/admin/homework/{definitionassessmentId}/revision-preview",
+      "route": "/admin/homework/{assessmentId}/revision-preview",
       "effect": "preview",
       "domain": "content",
       "risk": "none",
@@ -24633,10 +24606,10 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-platform-finance-periods-periodid-close:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12",
+      "id": "fe:post:admin-platform-finance-periods-id-close:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12",
       "kind": "frontend-call",
       "method": "POST",
-      "route": "/admin/platform-finance/periods/{periodid}/close",
+      "route": "/admin/platform-finance/periods/{id}/close",
       "effect": "mutation",
       "domain": "finance",
       "risk": "strong",
@@ -24663,10 +24636,10 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:admin-platform-finance-periods-periodid-reopen:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12",
+      "id": "fe:post:admin-platform-finance-periods-id-reopen:frontend-src-components-admin-platform-finance-accountingperiodmanager-tsx:12",
       "kind": "frontend-call",
       "method": "POST",
-      "route": "/admin/platform-finance/periods/{periodid}/reopen",
+      "route": "/admin/platform-finance/periods/{id}/reopen",
       "effect": "mutation",
       "domain": "finance",
       "risk": "strong",
@@ -26816,66 +26789,6 @@
       "source": {
         "file": "frontend/src/services/api-client.ts",
         "line": 64
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:151",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/api/video/session",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 151
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:157",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/api/video/session",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 157
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29208,186 +29121,6 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:177",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session/{lessonVideoId}/request-extra",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 177
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:186",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session/{requestlessonVideoId}/track-progress",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 186
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:student-video-session-requestlessonvideoid-track-progress:frontend-src-services-video-session-service-ts:194",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session/{requestlessonVideoId}/track-progress",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 194
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:173",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session/{sessionId}/client-event",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 173
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:169",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session/{sessionId}/consume",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 169
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:163",
-      "kind": "frontend-call",
-      "method": "POST",
-      "route": "/student/video-session",
-      "effect": "mutation",
-      "domain": "identity",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-video-session-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-video-session-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "identity"
-      ],
-      "source": {
-        "file": "frontend/src/services/video-session-service.ts",
-        "line": 163
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
       "id": "fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84",
       "kind": "frontend-call",
       "method": "POST",
@@ -29688,6 +29421,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:put:admin-exams-assessmentid-definition:frontend-src-services-assessment-revision-service-ts:61",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/admin/exams/{assessmentId}/definition",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveExamRevision",
+      "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 61
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:put:admin-exams-examid-status:frontend-src-services-admin-service-ts:2095",
       "kind": "frontend-call",
       "method": "PUT",
@@ -29714,36 +29477,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2095
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:put:admin-exams-requestdefinitionassessmentid-definition:frontend-src-services-assessment-revision-service-ts:61",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/exams/{requestdefinitionassessmentId}/definition",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveExamRevision",
-      "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 61
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29808,6 +29541,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:put:admin-homework-assessmentid-definition:frontend-src-services-assessment-revision-service-ts:62",
+      "kind": "frontend-call",
+      "method": "PUT",
+      "route": "/admin/homework/{assessmentId}/definition",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveHomeworkRevision",
+      "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "frontend/src/services/assessment-revision-service.ts",
+        "line": 62
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:put:admin-homework-assessmentid-submissions-attemptid-grade:frontend-src-components-admin-assessmentattemptreview-tsx:61",
       "kind": "frontend-call",
       "method": "PUT",
@@ -29864,36 +29627,6 @@
       "source": {
         "file": "frontend/src/services/admin-service.ts",
         "line": 2102
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
-    },
-    {
-      "id": "fe:put:admin-homework-requestdefinitionassessmentid-definition:frontend-src-services-assessment-revision-service-ts:62",
-      "kind": "frontend-call",
-      "method": "PUT",
-      "route": "/admin/homework/{requestdefinitionassessmentId}/definition",
-      "effect": "mutation",
-      "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
-      "authoritativeOperation": "diagnostic:AssessmentReviewController.SaveHomeworkRevision",
-      "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
-      "limits": {
-        "maxRows": 0,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
-      "source": {
-        "file": "frontend/src/services/assessment-revision-service.ts",
-        "line": 62
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -30880,6 +30613,11 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: GET <dynamic>"
     },
     {
+      "id": "fe:get:student-video-session-lessonvideoid-request-status:frontend-src-services-video-session-service-ts:181",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: GET /student/video-session/{lessonVideoId}/request-status"
+    },
+    {
       "id": "fe:get:teacher-codes-groups-id-details:frontend-src-services-admin-service-ts:1411",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: GET /teacher/codes/groups/{id}/details"
@@ -30940,6 +30678,16 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: PATCH <dynamic>"
     },
     {
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:151",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /api/video/session"
+    },
+    {
+      "id": "fe:post:api-video-session:frontend-src-services-video-session-service-ts:157",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /api/video/session"
+    },
+    {
       "id": "fe:post:dynamic:frontend-src-services-admin-ai-agent-service-ts:100",
       "reason": "self-service",
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: POST <dynamic>"
@@ -30985,6 +30733,36 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: POST <dynamic>"
     },
     {
+      "id": "fe:post:student-video-session-lessonvideoid-request-extra:frontend-src-services-video-session-service-ts:177",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{lessonVideoId}/request-extra"
+    },
+    {
+      "id": "fe:post:student-video-session-lessonvideoid-track-progress:frontend-src-services-video-session-service-ts:186",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{lessonVideoId}/track-progress"
+    },
+    {
+      "id": "fe:post:student-video-session-lessonvideoid-track-progress:frontend-src-services-video-session-service-ts:194",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{lessonVideoId}/track-progress"
+    },
+    {
+      "id": "fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:173",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{sessionId}/client-event"
+    },
+    {
+      "id": "fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:169",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session/{sessionId}/consume"
+    },
+    {
+      "id": "fe:post:student-video-session:frontend-src-services-video-session-service-ts:163",
+      "reason": "self-service",
+      "detail": "Current-viewer playback session used by Admin lesson preview is not an Admin business capability: POST /student/video-session"
+    },
+    {
       "id": "fe:post:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:175",
       "reason": "teacher-surface",
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: POST /teacher/reports/definitions"
@@ -31005,5 +30783,5 @@
       "detail": "Teacher-only route retained by the shared Admin frontend graph; Admin authority must use its own workflow: PUT /teacher/reports/definitions/{id}"
     }
   ],
-  "digest": "e05145fce26b401aa6b821c6322d3c88a7897662bf289291a0f1b5eb07b88757"
+  "digest": "80cc1170062cf7f1ab85bc22e1d81031ab55922fea9cf00c19e9c55f7acc871c"
 }

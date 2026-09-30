@@ -50,11 +50,29 @@ def test_baseline_uses_only_approved_exclusion_reasons():
 
     assert all(exclusion["reason"] in allowed for exclusion in baseline.get("exclusions", []))
     self_service = [item for item in baseline["exclusions"] if item["reason"] == "self-service"]
+    admin_ai_transport = [item for item in self_service if "Admin AI conversation/proposal transport" in item["detail"]]
+    playback = [item for item in self_service if "Current-viewer playback session" in item["detail"]]
     teacher_surface = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
     teacher_reports = [item for item in teacher_surface if "/teacher/reports/" in item["detail"]]
     teacher_other = [item for item in teacher_surface if "/teacher/reports/" not in item["detail"]]
-    assert len(self_service) == 13
-    assert all("Admin AI conversation/proposal transport" in item["detail"] for item in self_service)
+    assert len(admin_ai_transport) == 13
+    assert len(playback) == 9
+    assert len(self_service) == len(admin_ai_transport) + len(playback)
+    playback_calls = [call for call in json.loads(
+        (ROOT / "tests/admin_ai_frontend_reachable_calls.json").read_text())["calls"]
+        if call["source"]["file"] == "frontend/src/services/video-session-service.ts"
+        and (call["path"] == "/api/video/session" or call["path"].startswith("/student/video-session"))]
+    assert len(playback_calls) == len(playback)
+    assert all(any(item["detail"].endswith(f'{call["method"]} {call["path"]}')
+                   for item in playback) for call in playback_calls)
+    assert not any(item["kind"] == "frontend-call"
+                   and item["source"]["file"] == "frontend/src/services/video-session-service.ts"
+                   for item in baseline["items"])
+    video_auth = (ROOT / "backend/src/NaderGorge.API/Authorization/VideoPlaybackAuthorization.cs").read_text()
+    video_controller = (ROOT / "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs").read_text()
+    assert 'user.IsInRole("Admin")' in video_auth
+    assert 'VideoSessionMode.AdminPreview' in video_controller
+    assert 'session.UserId == userId' in video_controller
     assert len(teacher_reports) == 9
     assert len(teacher_other) == 7
     assert len(baseline["exclusions"]) == len(self_service) + len(teacher_surface)
