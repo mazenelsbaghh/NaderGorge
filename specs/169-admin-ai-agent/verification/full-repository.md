@@ -25,3 +25,9 @@ The reviewed source-only Git tree was wrapped in a one-parent candidate commit w
 ## 2026-09-30 after authoritative receipt changes
 
 `make ops-check` passed again after the additive receipt migrations and video-type replay work: API build and EF pending-model check passed with zero warnings/errors, 1,647 application tests passed with 20 integration-dependent skips, frontend lint/typecheck passed with one existing hook warning, worker tests passed 228/228, and Docker Compose configuration passed. The AdminAI PostgreSQL group passed separately at 33/33 against a disposable migrated PostgreSQL 16.10 database. This does not replace the blocked `make verify` performance evidence or owner acceptance.
+
+## 2026-09-30 current candidate full gate
+
+`make verify` rebuilt the .NET solution with zero warnings and errors, ran its configured application tests (PostgreSQL integration was skipped because `ConnectionStrings__DefaultConnection` was unset), passed 165 focused frontend playback/security tests, completed the Next.js production build and worker TypeScript build, and validated Docker Compose. ESLint reported one pre-existing React hook warning and zero errors. The first run stopped when the default `python3` lacked `pytest`.
+
+`make verify-performance-budget-contracts PYTHON='uv run --no-project --with pytest python'` passed five route-budget tests and 26 Python performance-contract tests. With the same Python setting, `make verify-performance-budgets` stopped with exit code 6 because `artifacts/performance-167/baseline/frontend-routes.json` is absent; the candidate and source-bound raw evidence are also absent. The verifier requires genuine regular, non-symlink evidence files, so this is not a full-repository pass. The current AdminAI capability gate passed separately: 11/11 frontend graph tests and 30/30 Python checks, with activation still blocked by 620 mutation/external-effect entries. Shared Production source and services remain unchanged.
