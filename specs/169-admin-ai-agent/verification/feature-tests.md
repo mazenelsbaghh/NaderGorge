@@ -2,6 +2,7 @@
 
 ## 2026-09-30 current restart and inventory checks
 
+- The PostgreSQL restart sweep now cancels an active worker step with its cancelled turn and excludes cancellation-requested/terminal turns from stale-worker recovery. The first focused run exposed a same-sweep stale-step reclassification (1/2 passed); after the query fix, `dotnet test backend/tests/NaderGorge.Integration.Tests/NaderGorge.Integration.Tests.csproj --filter FullyQualifiedName~AdminAIRecoveryIntegrationTests` passed 2/2 against a disposable PostgreSQL 16.10 instance. The instance was removed. This closes the inconsistent cancellation state; the combined backend/worker/Redis restart gate T181 remains open.
 - `make verify-admin-ai-capabilities PYTHON='uv run --no-project --with pytest python'` passed 12/12 frontend graph tests, both generated-artifact checks, and 30/30 Python endpoint/capability/source tests. The graph now detects the computed HTTP method used by Learning Center writes; the activation baseline remains blocked.
 - `npm run test:admin-ai-redis-restart --prefix worker` passed 1/1 with a disposable Redis 7 container: the replacement worker replayed saved callback completion without a second inference. `dotnet test backend/tests/NaderGorge.Integration.Tests/NaderGorge.Integration.Tests.csproj --no-build --filter FullyQualifiedName~AdminAIRecoveryIntegrationTests` passed 2/2 against an isolated PostgreSQL 16.10 container. Both containers were removed. These are separate restart tests; the combined real-backend/worker/Redis restart gate T181 remains open.
 

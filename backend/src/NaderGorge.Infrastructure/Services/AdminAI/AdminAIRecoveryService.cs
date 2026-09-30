@@ -14,6 +14,7 @@ public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter
         var changed = 0;
         var cancelledTurns = await db.AdminAITurns
             .Where(x => x.CancellationRequestedAt != null && x.Status != AdminAITurnStatus.Completed && x.Status != AdminAITurnStatus.Cancelled && x.Status != AdminAITurnStatus.Failed && x.Status != AdminAITurnStatus.AccessRevoked)
+            .Include(x => x.Steps)
             .OrderBy(x => x.CancellationRequestedAt).Take(batchSize).ToListAsync(cancellationToken);
         foreach (var turn in cancelledTurns)
         {
@@ -21,6 +22,13 @@ public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter
             turn.FailureCode = "CANCELLED";
             turn.CompletedAt = now;
             turn.Version++;
+            foreach (var step in turn.Steps.Where(x => x.Status is not (AdminAITurnStepStatus.Completed or AdminAITurnStepStatus.Cancelled or AdminAITurnStepStatus.Failed or AdminAITurnStepStatus.Superseded)))
+            {
+                step.Status = AdminAITurnStepStatus.Cancelled;
+                step.FailureCode = "CANCELLED";
+                step.CompletedAt = now;
+                step.Version++;
+            }
             changed++;
         }
         var remaining = batchSize - changed;
@@ -71,6 +79,9 @@ public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter
             .Where(x => (x.Status == AdminAITurnStepStatus.Claimed ||
                          x.Status == AdminAITurnStepStatus.ProviderRunning ||
                          x.Status == AdminAITurnStepStatus.ReadsCompleted) &&
+                        db.AdminAITurns.Any(turn => turn.Id == x.TurnId && turn.CancellationRequestedAt == null &&
+                            turn.Status != AdminAITurnStatus.Completed && turn.Status != AdminAITurnStatus.Cancelled &&
+                            turn.Status != AdminAITurnStatus.Failed && turn.Status != AdminAITurnStatus.AccessRevoked) &&
                         x.StartedAt != null && x.StartedAt < now.AddMinutes(-2) &&
                         (x.NextCallbackAttemptAt == null || x.NextCallbackAttemptAt <= now))
             .OrderBy(x => x.StartedAt).Take(remaining).ToListAsync(cancellationToken);

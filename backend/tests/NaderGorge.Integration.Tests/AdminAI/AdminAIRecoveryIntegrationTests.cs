@@ -18,6 +18,8 @@ public sealed class AdminAIRecoveryIntegrationTests
 
         var cancelled = AddTurn(seedDb, seed, 1, AdminAITurnStatus.CancelRequested);
         cancelled.CancellationRequestedAt = DateTime.UtcNow.AddMinutes(-1);
+        var cancelledStep = AddStep(seedDb, cancelled, AdminAITurnStepStatus.ProviderRunning, DateTime.UtcNow.AddMinutes(-3));
+        cancelledStep.NextCallbackAttemptAt = DateTime.UtcNow.AddMinutes(-1);
         var queued = AddTurn(seedDb, seed, 2, AdminAITurnStatus.Queued);
         queued.QueuedAt = DateTime.UtcNow.AddMinutes(-3);
         var claimed = AddTurn(seedDb, seed, 3, AdminAITurnStatus.Planning);
@@ -46,6 +48,8 @@ public sealed class AdminAIRecoveryIntegrationTests
         var steps = await verifyDb.AdminAITurnSteps.AsNoTracking().ToDictionaryAsync(x => x.Id);
         Assert.Equal(AdminAITurnStatus.Cancelled, turns[cancelled.Id].Status);
         Assert.Equal("CANCELLED", turns[cancelled.Id].FailureCode);
+        Assert.Equal(AdminAITurnStepStatus.Cancelled, steps[cancelledStep.Id].Status);
+        Assert.Equal("CANCELLED", steps[cancelledStep.Id].FailureCode);
         Assert.Equal("admin_ai_queue_stale", turns[queued.Id].FailureCode);
         foreach (var step in new[] { claimedStep, providerStep, readsStep })
         {
