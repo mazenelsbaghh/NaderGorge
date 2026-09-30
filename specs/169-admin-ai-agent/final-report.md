@@ -16,6 +16,8 @@ Proposal input validation now enforces closed nested schemas before preview and 
 
 Two PostgreSQL restart-context recovery tests passed, and the complete AdminAI PostgreSQL integration group passed 23/23. Actual worker/Redis restart delivery and callback acceptance remain unverified, so T181 remains open.
 
+The action bridges now consume exact camelCase JSON from the worker and reject casing drift before dispatch. The AdminAI application group passed 246/246 after ordinary and secure-action wire tests. The missing production action catalog remains a release blocker.
+
 ## Disable and rollback
 
 Keep or restore `ADMIN_AI_ENABLED=false`; this prevents admission and worker readiness from exposing the feature. Use the normal immutable production rollback lane for the deployed release. Database changes are additive and evidence records must not be deleted during rollback.

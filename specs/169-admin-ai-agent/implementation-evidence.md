@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 action wire contract
+
+- The three authoritative action bridges now deserialize exact camelCase JSON field names, matching the worker's proposed `arguments` and the closed action schemas. They still reject unknown or incorrectly cased fields before command dispatch.
+- All 14 currently implemented ordinary bridges accepted camelCase inputs during preview; a student-note command received the correct target and actor; the secure password-reset bridge accepted camelCase target input and rejected wrong casing before dispatch. The focused AdminAI application group passed 246/246. This corrects a shared bridge contract but does not register the missing production action catalog.
+
 ## 2026-09-30 PostgreSQL restart recovery matrix
 
 - Added a real PostgreSQL restart-context matrix for cancelled and stale queued turns, claimed/provider-running/reads-completed worker leases, exhausted pending callback delivery, and an already completed turn. A fresh DbContext performed the sweep and a separate context verified the durable outcomes and replay-safe second sweep.

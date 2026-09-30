@@ -47,6 +47,41 @@ public sealed class AdminAIOrdinaryActionContractTests
     }
 
     [Fact]
+    public async Task OrdinaryAdapters_AcceptOnlyExactCamelCaseWireFields()
+    {
+        var mediator = new CapturingMediator();
+        var preview = new PreviewSource();
+        var adapters = AdminAIActionCapabilityRegistration.CreateImplementedOrdinaryAdapters(mediator, preview);
+        var wireOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        };
+
+        foreach (var adapter in adapters)
+        {
+            var wireInput = System.Text.Json.JsonSerializer.SerializeToElement(InputFor(adapter.Key), wireOptions);
+            await adapter.PreviewAsync(Guid.NewGuid(), wireInput, default);
+        }
+        Assert.Equal(adapters.Count, preview.Calls);
+
+        var note = adapters.Single(adapter => adapter.Key == "admin.identity.student-note.create");
+        var actor = Guid.NewGuid();
+        var student = Guid.NewGuid();
+        var valid = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"studentId\":\"{student:D}\",\"content\":\"safe\",\"isPinned\":true}}");
+        await note.ExecuteAsync(actor, valid, "operation-1", default);
+        var command = Assert.IsType<AddStudentNoteCommand>(mediator.Request);
+        Assert.Equal(student, command.StudentId);
+        Assert.Equal(actor, command.AdminId);
+
+        var wrongCase = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"StudentId\":\"{student:D}\",\"content\":\"safe\",\"isPinned\":true}}");
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
+            note.ExecuteAsync(actor, wrongCase, "operation-2", default));
+        Assert.Equal(1, mediator.SendCalls);
+    }
+
+    [Fact]
     public void Registration_FailsClosedForMissingDuplicateAndWrongRiskAdapters()
     {
         var adapter = new AdminAIAddStudentNoteAction(new CapturingMediator(), new PreviewSource());

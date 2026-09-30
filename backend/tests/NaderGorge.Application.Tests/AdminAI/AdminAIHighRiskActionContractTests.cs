@@ -105,6 +105,32 @@ public sealed class AdminAIHighRiskActionContractTests
         Assert.Equal("Password", action.SecureInputKind);
     }
 
+    [Fact]
+    public async Task SecureAction_DeserializesExactCamelCaseTargetBeforeDispatch()
+    {
+        AdminResetPasswordCommand? captured = null;
+        var mediator = new BoundaryMediator(request =>
+        {
+            captured = Assert.IsType<AdminResetPasswordCommand>(request);
+            return ApiResponse.Ok("updated");
+        });
+        var action = new AdminAIResetPasswordAction(mediator, new SafePreviewSource());
+        var actor = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var input = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"userId\":\"{userId:D}\"}}");
+
+        await action.ExecuteSecureAsync(actor, input, "test-password"u8.ToArray(), "reset-1", default);
+        Assert.Equal(userId, captured!.StudentId);
+        Assert.Equal(actor, captured.AdminId);
+
+        var wrongCase = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(
+            $"{{\"UserId\":\"{userId:D}\"}}");
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
+            action.ExecuteSecureAsync(actor, wrongCase, "test-password"u8.ToArray(), "reset-2", default));
+        Assert.Equal(1, mediator.SendCalls);
+    }
+
     [Theory]
     [InlineData("ordinary", "strong")]
     [InlineData("strong", "ordinary")]
