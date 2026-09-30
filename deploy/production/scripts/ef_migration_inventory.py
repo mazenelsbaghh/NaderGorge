@@ -24,11 +24,15 @@ def migration_inventory(
             continue
         migration_id = match.group(1)
         designer = name.removesuffix(".cs") + ".Designer.cs"
-        metadata_file = designer if designer in files else name
-        attribute = MIGRATION_ATTRIBUTE.search(read_text(metadata_file))
-        if attribute is None:
+        metadata_files = [name, designer] if designer in files else [name]
+        discovered = {
+            attribute.group(1)
+            for metadata_file in metadata_files
+            if (attribute := MIGRATION_ATTRIBUTE.search(read_text(metadata_file))) is not None
+        }
+        if not discovered:
             unregistered.append(migration_id)
-        elif attribute.group(1) != migration_id:
+        elif discovered != {migration_id}:
             raise ValueError(f"EF migration metadata does not match file name: {name}")
         else:
             registered.append(migration_id)

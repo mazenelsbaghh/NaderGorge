@@ -29,3 +29,12 @@ def test_mismatched_designer_metadata_fails_closed() -> None:
 
     with pytest.raises(ValueError, match="does not match file name"):
         migration_inventory(files, files.__getitem__)
+
+
+def test_inline_metadata_still_registers_when_designer_has_no_attribute() -> None:
+    files = {
+        "20260101000000_Initial.cs": '[Migration("20260101000000_Initial")]\n',
+        "20260101000000_Initial.Designer.cs": "// model metadata only\n",
+    }
+
+    assert migration_inventory(files, files.__getitem__) == (["20260101000000_Initial"], [])
