@@ -19,6 +19,8 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
                 PreviewTaskCommentAsync(capabilityKey, actorId, comment, ct),
             AdminAIUpdateTaskStatusInput status when capabilityKey == "admin.operations.task.status.update" =>
                 PreviewTaskStatusAsync(capabilityKey, actorId, status, ct),
+            AdminAIResolveTaskApprovalInput approval when capabilityKey == "admin.operations.task.approval.resolve" =>
+                PreviewTaskApprovalAsync(capabilityKey, actorId, approval, ct),
             _ => throw new NotSupportedException("Admin AI action preview capability is unavailable.")
         };
 
@@ -103,6 +105,61 @@ public sealed class AdminAIOperationsPreviewSource(IAppDbContext db) : IAdminAIA
     private static string Fingerprint(string capabilityKey, object state) =>
         Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(
             new { capabilityKey, state })));
+
+    private async Task<AdminAIActionPreview> PreviewTaskApprovalAsync(
+        string capabilityKey, Guid actorId, AdminAIResolveTaskApprovalInput input, CancellationToken ct)
+    {
+        if (input.TaskId == Guid.Empty || input.RejectionReason?.Length > 1000)
+            throw new ArgumentException("Task approval input is invalid.", nameof(input));
+        var task = await db.TaskItems.AsNoTracking()
+            .Where(item => item.Id == input.TaskId)
+            .Select(item => new
+            {
+                item.Id, item.Title, item.Status, item.AssigneeId, item.CreatedById,
+                item.CompletedAt, item.ApprovedById, item.MediaPipelineId
+            })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new AdminAIActionPreviewUnavailableException("The task is unavailable.");
+        if (task.Status != TaskStatus.Review)
+            throw new AdminAIActionPreviewUnavailableException("The task is no longer in review.");
+        var actor = await db.Users.AsNoTracking()
+            .Where(item => item.Id == actorId)
+            .Select(item => new
+            {
+                item.Id, item.FullName,
+                IsManager = item.UserRoles.Any(role => role.Role.Type == RoleType.Admin
+                    || role.Role.Type == RoleType.Supervisor)
+            })
+            .SingleOrDefaultAsync(ct);
+        if (actor is null || !actor.IsManager)
+            throw new AdminAIActionPreviewUnavailableException("The actor cannot resolve task approval.");
+        var pipelineStage = task.MediaPipelineId.HasValue
+            ? await db.MediaProductionPipelines.AsNoTracking()
+                .Where(item => item.Id == task.MediaPipelineId.Value)
+                .Select(item => (MediaStage?)item.Stage)
+                .SingleOrDefaultAsync(ct)
+            : null;
+        var state = new
+        {
+            task.Id, task.Title, task.Status, task.AssigneeId, task.CreatedById,
+            task.CompletedAt, task.ApprovedById, task.MediaPipelineId, pipelineStage,
+            actor.FullName, actor.IsManager
+        };
+        return new AdminAIActionPreview(
+            "task", $"task:{task.Id:D}",
+            new { task.Title, task.Status, pipelineStage },
+            new { input.Approve, input.RejectionReason },
+            new
+            {
+                taskStatusAfter = input.Approve ? TaskStatus.Completed : TaskStatus.InProgress,
+                pipelineStageAfter = pipelineStage is null ? (MediaStage?)null
+                    : input.Approve ? MediaStage.Approved : MediaStage.Editing,
+                rejectionCommentWillBeAdded = !input.Approve,
+                affected = 1
+            },
+            new { valid = true },
+            Fingerprint(capabilityKey, state));
+    }
 }
 
 /// <summary>Routes supported ordinary actions to their authoritative preview source.</summary>
@@ -114,7 +171,8 @@ public sealed class AdminAIOrdinaryPreviewSource(
         string capabilityKey, Guid actorId, TInput input, CancellationToken ct) where TInput : class =>
         capabilityKey switch
         {
-            "admin.operations.task-comment.create" or "admin.operations.task.status.update" =>
+            "admin.operations.task-comment.create" or "admin.operations.task.status.update"
+                or "admin.operations.task.approval.resolve" =>
                 operations.PreviewAsync(capabilityKey, actorId, input, ct),
             _ => identityContent.PreviewAsync(capabilityKey, actorId, input, ct)
         };

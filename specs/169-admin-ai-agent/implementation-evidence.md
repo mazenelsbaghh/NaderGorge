@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 ordinary operations candidate
+
+- The reviewed candidate set now has eight ordinary capabilities: five identity/content commands plus task comment, task status, and the Admin task approval/rejection route. The operations previews read the current task, Admin/manager role, and media-pipeline stage, then bind those values to the proposal fingerprint before the authoritative MediatR commands run.
+- A migrated PostgreSQL flow passed 1/1 with ten confirmed executions: it rejected a stale comment proposal without writing a comment; then it verified task comment, status change, approval with Completed/Approved media stage, and rejection with InProgress/Editing stage and a persisted reason comment. The complete focused AdminAI application suite passed 258/258. API compilation passed with no warnings or errors.
+- These are candidate actions only. The production registry remains read-only and the baseline remains blocked; this evidence does not approve or activate the whole Admin mutation inventory.
+
 ## 2026-09-30 reviewed activation gate
 
 - Enabling AdminAI no longer manufactures or activates a read-only baseline at backend startup. Startup now requires exactly one manually approved active baseline, a catalog with actions, a matching registry hash and exact key/version list, supported unique inventory items, and no current-business exclusion. Duplicate JSON fields and stale or incomplete catalogs fail closed before policy bootstrap. The feature remains disabled in the current release configuration.

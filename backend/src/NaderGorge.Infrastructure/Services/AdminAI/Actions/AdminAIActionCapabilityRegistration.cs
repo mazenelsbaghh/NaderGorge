@@ -22,6 +22,7 @@ public static class AdminAIActionCapabilityRegistration
             new AdminAICreateTaskAction(mediator, preview),
             new AdminAIUpdateTaskStatusAction(mediator, preview),
             new AdminAIAddTaskCommentAction(mediator, preview),
+            new AdminAIResolveTaskApprovalAction(mediator, preview),
             new AdminAICreateMediaPipelineAction(mediator, preview),
             new AdminAICreateSocialPlanAction(mediator, preview)
         ]);

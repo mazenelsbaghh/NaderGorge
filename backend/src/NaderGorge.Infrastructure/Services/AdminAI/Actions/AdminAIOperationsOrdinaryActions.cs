@@ -42,3 +42,15 @@ public sealed class AdminAIAddTaskCommentAction(IMediator mediator, IAdminAIActi
         ? AdminAIActionOutcomeFactory.Success(new { commentId = response.Data }, 1, ["operations-tasks", "task-comments"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "task-comments"]);
 }
+
+public sealed record AdminAIResolveTaskApprovalInput(Guid TaskId, bool Approve, string? RejectionReason);
+public sealed class AdminAIResolveTaskApprovalAction(IMediator mediator, IAdminAIActionPreviewSource preview)
+    : AdminAIMediatRActionCapability<AdminAIResolveTaskApprovalInput, ApiResponse<bool>>(mediator, preview)
+{
+    public override string Key => "admin.operations.task.approval.resolve";
+    protected override IRequest<ApiResponse<bool>> CreateCommand(AdminAIResolveTaskApprovalInput input, Guid actorId, string operationId) =>
+        new AdminResolveApprovalCommand(input.TaskId, actorId, input.Approve, input.RejectionReason);
+    protected override AdminAIActionOutcome ToOutcome(ApiResponse<bool> response) => response.Success
+        ? AdminAIActionOutcomeFactory.Success(new { resolved = response.Data }, 1, ["operations-tasks", "media-pipelines", "task-comments"])
+        : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "media-pipelines", "task-comments"]);
+}

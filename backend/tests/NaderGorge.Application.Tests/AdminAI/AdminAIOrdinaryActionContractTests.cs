@@ -148,6 +148,7 @@ public sealed class AdminAIOrdinaryActionContractTests
             "admin.content.subject.create", "admin.content.subject.update",
             "admin.content.video-type.create", "admin.content.video-type.update",
             "admin.identity.student-note.create", "admin.operations.task-comment.create",
+            "admin.operations.task.approval.resolve",
             "admin.operations.task.create", "admin.operations.task.status.update",
             "admin.tools.media-pipeline.create", "admin.tools.social-plan.create"
         };
@@ -312,6 +313,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.operations.task.create" => new AdminAICreateTaskInput("task", "description", Guid.NewGuid(), TaskPriority.Medium, null),
         "admin.operations.task.status.update" => new AdminAIUpdateTaskStatusInput(Guid.NewGuid(), NaderGorge.Domain.Enums.TaskStatus.InProgress),
         "admin.operations.task-comment.create" => new AdminAIAddTaskCommentInput(Guid.NewGuid(), "comment", null),
+        "admin.operations.task.approval.resolve" => new AdminAIResolveTaskApprovalInput(Guid.NewGuid(), true, null),
         "admin.tools.media-pipeline.create" => new AdminAICreateMediaPipelineInput("pipeline", null, null, null),
         "admin.tools.social-plan.create" => new AdminAICreateSocialPlanInput("plan", null, null, SocialPlatform.Facebook, SocialPlanStatus.Draft, DateTime.UtcNow, null),
         _ => throw new InvalidOperationException($"No contract fixture for {key}.")
@@ -328,6 +330,7 @@ public sealed class AdminAIOrdinaryActionContractTests
         "admin.operations.task.create" => ["operations-tasks", "internal-chat"],
         "admin.operations.task.status.update" => ["operations-tasks"],
         "admin.operations.task-comment.create" => ["operations-tasks", "task-comments"],
+        "admin.operations.task.approval.resolve" => ["operations-tasks", "media-pipelines", "task-comments"],
         "admin.tools.media-pipeline.create" => ["media-pipelines"],
         "admin.tools.social-plan.create" => ["social-plans"],
         _ => throw new InvalidOperationException($"No refresh contract for {key}.")

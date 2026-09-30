@@ -21,7 +21,7 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIIdentityContentPostgresTests
 {
     [Fact]
-    public async Task RealPostgres_SevenOrdinaryActions_PersistOneEffectPerConfirmedProposal()
+    public async Task RealPostgres_OrdinaryIdentityContentAndOperations_PersistOneEffectPerConfirmedProposal()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();
         await using var db = fixture.CreateDbContext();
@@ -52,9 +52,14 @@ public sealed class AdminAIIdentityContentPostgresTests
             CapabilityBaselineId = baseline.Id, SensitiveDataPolicyVersionId = policyVersion.Id,
             CallbackIdempotencyDigest = new string('e', 64)
         };
-        var task = new TaskItem { Title = "Review lesson", Description = "Check content", AssigneeId = actor.Id, CreatedById = actor.Id };
+        var pipeline = new MediaProductionPipeline { Title = "Lesson production", Stage = MediaStage.Review };
+        var task = new TaskItem
+        {
+            Title = "Review lesson", Description = "Check content", AssigneeId = actor.Id,
+            CreatedById = actor.Id, MediaPipelineId = pipeline.Id
+        };
         db.AddRange(actor, student, baseline, policyVersion, conversation, message, turn,
-            new UserRole { User = actor, Role = adminRole }, task);
+            new UserRole { User = actor, Role = adminRole }, pipeline, task);
         await db.SaveChangesAsync();
 
         using var services = new ServiceCollection()
@@ -72,11 +77,12 @@ public sealed class AdminAIIdentityContentPostgresTests
             new AdminAICreateVideoTypeAction(mediator, preview),
             new AdminAIUpdateVideoTypeAction(mediator, preview),
             new AdminAIAddTaskCommentAction(mediator, preview),
-            new AdminAIUpdateTaskStatusAction(mediator, preview)
+            new AdminAIUpdateTaskStatusAction(mediator, preview),
+            new AdminAIResolveTaskApprovalAction(mediator, preview)
         ];
         var registry = new AdminAICapabilityRegistry(
             [.. AdminAIIdentityContentActionCatalog.CreateCandidates(), .. AdminAIOperationsActionCatalog.CreateCandidates()]);
-        Assert.Equal(7, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
+        Assert.Equal(8, AdminAIActionCapabilityRegistration.ValidateOrdinaryCoverage(registry, adapters).Count);
         var access = new AdminAIAccessGate(db);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -133,6 +139,18 @@ public sealed class AdminAIIdentityContentPostgresTests
         await ConfirmAsync(adapters[5].Key, commentInput);
         await ConfirmAsync(adapters[6].Key,
             new { taskId = task.Id, status = (int)NaderGorge.Domain.Enums.TaskStatus.Review });
+        await ConfirmAsync(adapters[7].Key,
+            new { taskId = task.Id, approve = true });
+        var approvedTask = await db.TaskItems.AsNoTracking().SingleAsync(item => item.Id == task.Id);
+        Assert.Equal(NaderGorge.Domain.Enums.TaskStatus.Completed, approvedTask.Status);
+        Assert.Equal(actor.Id, approvedTask.ApprovedById);
+        Assert.NotNull(approvedTask.CompletedAt);
+        Assert.Equal(MediaStage.Approved,
+            (await db.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
+        await ConfirmAsync(adapters[6].Key,
+            new { taskId = task.Id, status = (int)NaderGorge.Domain.Enums.TaskStatus.Review });
+        await ConfirmAsync(adapters[7].Key,
+            new { taskId = task.Id, approve = false, rejectionReason = "Needs another pass" });
 
         await using var replayDb = fixture.CreateDbContext();
         var replayPreview = new AdminAIIdentityContentPreviewSource(replayDb);
@@ -155,17 +173,23 @@ public sealed class AdminAIIdentityContentPostgresTests
             .SingleAsync(item => item.Id == videoTypeId);
         Assert.Equal("Revision", videoType.Name);
         Assert.Equal(2, videoType.SortOrder);
-        var comment = Assert.Single(await verifyDb.TaskComments.AsNoTracking().ToListAsync());
+        var comments = await verifyDb.TaskComments.AsNoTracking().OrderBy(item => item.CreatedAt).ToListAsync();
+        Assert.Equal(2, comments.Count);
+        var comment = comments.Single(item => item.Content == "Reviewed the lesson");
         Assert.Equal(task.Id, comment.TaskId);
         Assert.Equal(actor.Id, comment.UserId);
-        Assert.Equal("Reviewed the lesson", comment.Content);
-        Assert.Equal(NaderGorge.Domain.Enums.TaskStatus.Review,
-            (await verifyDb.TaskItems.AsNoTracking().SingleAsync(item => item.Id == task.Id)).Status);
+        Assert.Contains(comments, item => item.Content.Contains("Needs another pass", StringComparison.Ordinal));
+        var finalTask = await verifyDb.TaskItems.AsNoTracking().SingleAsync(item => item.Id == task.Id);
+        Assert.Equal(NaderGorge.Domain.Enums.TaskStatus.InProgress, finalTask.Status);
+        Assert.Null(finalTask.ApprovedById);
+        Assert.Null(finalTask.CompletedAt);
+        Assert.Equal(MediaStage.Editing,
+            (await verifyDb.MediaProductionPipelines.AsNoTracking().SingleAsync(item => item.Id == pipeline.Id)).Stage);
         var subjectUpdate = await verifyDb.AdminAIActionExecutions.AsNoTracking()
             .SingleAsync(item => item.CapabilityKey == "admin.content.subject.update");
         using var subjectUpdateResult = System.Text.Json.JsonDocument.Parse(subjectUpdate.SafeResultJson);
         Assert.True(subjectUpdateResult.RootElement.GetProperty("updated").GetBoolean());
-        Assert.Equal(7, await verifyDb.AdminAIActionExecutions.CountAsync());
+        Assert.Equal(10, await verifyDb.AdminAIActionExecutions.CountAsync());
     }
 
 }
