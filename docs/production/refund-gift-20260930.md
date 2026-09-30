@@ -1,6 +1,6 @@
 # Refund and gift release review — 2026-09-30
 
-The owner requested an urgent refund and gift correction before the next month and then chose to publish all pending platform changes together. The selected build scope is `all` because backend, frontend, worker, and database change together. These fixes are part of the full review candidate; Admin AI activation remains behind its required coverage and acceptance gates.
+The owner requested an urgent refund and gift correction before the next month and then chose to publish all working platform changes together. The selected build scope is `all` because backend, frontend, worker, and database change together. The owner explicitly deferred complete Admin AI coverage: it remains disabled and cannot be activated by this release.
 
 ## Changes
 
@@ -8,6 +8,7 @@ The owner requested an urgent refund and gift correction before the next month a
 - Bind each new external package refund to its access grant with an additive unique, nullable database key. Repeating an identical posted request after a lost response returns its original result; a different request for the same grant returns a conflict without a second cash journal. Existing historical refunds retain a null grant key.
 - Include the entered cancellation reason in new legacy balance refund descriptions. Existing historical descriptions cannot recover an unstored reason.
 - Let gift issuance search for a teacher and then choose package, term, section, lesson, and optionally video. Child lookups stay bound to the selected parent and expose system containers used by direct lessons.
+- In content statistics, expand a course into named terms, sections/months, and lessons. Show active direct buyers, gift-only students, and distinct students with a recorded refund for each item. The default range is all time; date filters use the grant date. Package-wide purchases remain in the package row.
 
 ## Local verification
 

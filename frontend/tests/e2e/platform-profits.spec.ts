@@ -10,12 +10,20 @@ const account = {
 };
 
 const payload = {
-  generatedAt: '2026-09-18T21:00:00Z', earliestDate: '2026-01-01', historicalPlatformNetRevenue: 480,
+  purchasingStudents: 3, generatedAt: '2026-09-18T21:00:00Z', earliestDate: '2026-01-01', historicalPlatformNetRevenue: 480,
   platform: { from: '2026-09-01', to: '2026-09-19', revenue: 500, refunds: 20, expenses: 100, netProfit: 380, cash: 4200, generalStudentLiability: 600, teacherStudentLiability: 200, teacherPayable: 550, supplierPayable: 100, accounts: [] },
   teachers: [
-    { account, period: { teacherId: 'first', teacherName: 'المدرس الأول', grossSales: 1000, teacherShare: 600, platformShare: 350, refunds: 50, paid: 200, outstanding: 400, adjustments: 0 }, historicalPeriod: { teacherShare: 600 }, currentCalculatedBalance: 400, currentAccountBalance: 400, currentLedgerBalance: 400, reconciliationDifference: 0 },
-    { account: { ...account, teacherId: 'second', teacherName: '=2+2', netPayable: 50 }, period: { teacherId: 'second', teacherName: '=2+2', grossSales: 300, teacherShare: 150, platformShare: 130, refunds: 20, paid: 0, outstanding: 150, adjustments: 0 }, historicalPeriod: { teacherShare: 150 }, currentCalculatedBalance: 150, currentAccountBalance: 100, currentLedgerBalance: 150, reconciliationDifference: 50 },
+    { purchasingStudents: 2, purchaseOperations: 4, account, period: { teacherId: 'first', teacherName: 'المدرس الأول', grossSales: 1000, teacherShare: 600, platformShare: 350, refunds: 50, paid: 200, outstanding: 400, adjustments: 0 }, historicalPeriod: { teacherShare: 600 }, currentCalculatedBalance: 400, currentAccountBalance: 400, currentLedgerBalance: 400, reconciliationDifference: 0 },
+    { purchasingStudents: 1, purchaseOperations: 1, account: { ...account, teacherId: 'second', teacherName: '=2+2', netPayable: 50 }, period: { teacherId: 'second', teacherName: '=2+2', grossSales: 300, teacherShare: 150, platformShare: 130, refunds: 20, paid: 0, outstanding: 150, adjustments: 0 }, historicalPeriod: { teacherShare: 150 }, currentCalculatedBalance: 150, currentAccountBalance: 100, currentLedgerBalance: 150, reconciliationDifference: 50 },
   ],
+};
+
+const statement = {
+  teacherId: 'first', teacherName: account.teacherName, account: { ...account, retained: 0, codeAmountDue: 0 },
+  totals: { earned: 600, platformEarned: 350, teacherPayments: 200, retainedEarnings: 0 },
+  activity: { purchasingStudents: 2, purchaseOperations: 4, purchaseValue: 1000, rechargeOperations: 2, rechargeAmount: 250, refundedStudents: 0, refundAmount: 0, activatedCodes: 0, activatedCodeValue: 0 },
+  sales: [{ students: 2, operations: 4, unitPrice: 250, total: 1000, teacherShare: 600, platformShare: 400, platformPercent: 40 }],
+  codeBatches: [], items: [], total: 0, page: 1, pageSize: 25,
 };
 
 test.beforeEach(async ({ page }) => {
@@ -24,6 +32,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem('user', JSON.stringify({ id: 'test-admin', fullName: 'Admin', roles: ['Admin'], permissions: [], profileComplete: true, allowedDomains: ['admin'], allowedNavbarItems: [] }));
   });
   await page.route('**/api/**', route => route.fulfill({ json: { success: true, data: [] } }));
+  await page.route('**/api/**/statement?*', route => route.fulfill({ json: { success: true, data: statement } }));
 });
 
 test('dedicated profit report filters teachers, exposes mismatches, and exports safe complete CSV', async ({ page }) => {
@@ -34,14 +43,14 @@ test('dedicated profit report filters teachers, exposes mismatches, and exports 
   });
   await page.goto('/admin/platform-profits');
   await expect(page.getByRole('heading', { name: 'الحسابات', exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'ملخص الأرباح' })).toContainText('380.00');
-  await expect(page.getByText('فيه أرقام محتاجة مراجعة', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'حساب =2+2' })).not.toBeVisible();
+  await expect(page.getByRole('region', { name: 'ملخص الحسابات', exact: true })).toContainText('480.00');
+  await expect(page.getByText('الرصيد محتاج مراجعة', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'ملخص الحسابات', exact: true })).toContainText('3 طالب');
   await page.getByRole('button', { name: 'فترة تانية' }).click();
   await page.getByLabel('من', { exact: true }).fill('2026-09-01');
   await page.getByLabel('إلى', { exact: true }).fill('2026-09-19');
   await page.getByRole('button', { name: 'عرض الحسابات', exact: true }).click();
-  await expect(page.getByRole('list', { name: 'مستحقات المدرسين' })).toContainText('250.00');
+  await expect(page.getByRole('table', { name: 'مبيعات المدرسين ونصيب المنصة في الفترة المختارة' })).toContainText('250.00');
   expect(requestedDates).toContain('from=2026-09-01');
   expect(requestedDates).toContain('to=2026-09-19');
   const downloadPromise = page.waitForEvent('download');
@@ -52,15 +61,10 @@ test('dedicated profit report filters teachers, exposes mismatches, and exports 
   const csv = Buffer.concat(chunks).toString('utf8');
   expect(csv).toContain('"\'=2+2"');
   expect(csv).toContain('"صافي الربح المسجل","380"');
-  expect(csv).toContain('"المدرس الأول","1000","600","350","50","200"');
+  expect(csv).toContain('"المدرس الأول","2","4","950","600","350","200"');
   await page.getByRole('combobox', { name: 'اختار المدرّس', exact: true }).selectOption('second');
-  await expect(page.getByRole('list', { name: 'مستحقات المدرسين' })).not.toContainText('المدرس الأول');
-  await page.locator('summary').filter({ hasText: '=2+2' }).focus();
-  await page.keyboard.press('Enter');
-  const detail = page.getByRole('region', { name: 'حساب =2+2' });
-  await detail.getByText('مراجعة فرق الحساب', { exact: true }).click();
-  await expect(detail.getByText('الفرق بين الرصيدين', { exact: true }).locator('..')).toContainText('50.00');
-  await expect(detail.getByRole('link')).toHaveAttribute('href', '/admin/teachers/second/account');
+  await expect(page.getByRole('table', { name: 'مبيعات المدرسين ونصيب المنصة في الفترة المختارة' })).not.toContainText('المدرس الأول');
+  await expect(page.getByRole('link', { name: '=2+2', exact: true })).toHaveAttribute('href', '/admin/teachers/second/account');
   await page.getByRole('combobox', { name: 'اختار المدرّس', exact: true }).selectOption('');
   await page.setViewportSize({ width: 1440, height: 1050 });
   await page.getByRole('heading', { name: 'الحسابات', exact: true }).scrollIntoViewIfNeeded();
@@ -74,10 +78,10 @@ test('failed profit report does not present zero earnings and can be retried on 
     ? route.fulfill({ status: 503, json: { message: 'Unavailable' } }) : route.fulfill({ json: payload }));
   await page.goto('/admin/platform-profits');
   await expect(page.getByRole('alert').filter({ hasText: 'تعذر تحميل الحسابات' })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'مستحقات المدرسين' })).toHaveCount(0);
+  await expect(page.getByRole('table', { name: 'مبيعات المدرسين ونصيب المنصة في الفترة المختارة' })).toHaveCount(0);
   failing = false;
   await page.getByRole('button', { name: 'إعادة المحاولة' }).click();
-  await expect(page.getByRole('list', { name: 'مستحقات المدرسين' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'مبيعات المدرسين ونصيب المنصة في الفترة المختارة' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: '/tmp/simple-finance-mobile.png', fullPage: true });
 });
@@ -89,10 +93,11 @@ test('loss and negative teacher balance stay explicit in the simple summary', as
     teachers: [{ ...payload.teachers[0], account: { ...account, netPayable: 0, netBalance: -100 }, period: { ...payload.teachers[0].period, outstanding: -100 } }],
   } }));
   await page.goto('/admin/platform-profits');
+  await page.getByText('المصروفات وصافي ربح المنصة', { exact: true }).click();
   const summary = page.getByRole('region', { name: 'ملخص الأرباح' });
   await expect(summary).toContainText('صافي الخسارة');
   await expect(summary).toContainText('120.00');
-  const teachers = page.getByRole('list', { name: 'مستحقات المدرسين' });
+  const teachers = page.getByRole('table', { name: 'مبيعات المدرسين ونصيب المنصة في الفترة المختارة' });
   await expect(teachers).toContainText('مطلوب منه');
   await expect(teachers).toContainText('100.00');
 });
@@ -125,6 +130,7 @@ test('one teacher account explains sources and uses separate approval and actual
     sources: [...account.sources, { sourceType: 'Refund', count: 1, teacherShare: -50, platformShare: 0 }] };
   await page.route('**/api/admin/teachers/first', route => route.fulfill({ json: { success: true, data: teacher } }));
   await page.route('**/api/admin/teacher-finance-center/teachers/first/summary', route => route.fulfill({ json: { success: true, data: current } }));
+  await page.route('**/api/admin/teacher-finance-center/teachers/first/statement?*', route => route.fulfill({ json: { success: true, data: { ...statement, account: current, totals: { ...statement.totals, teacherPayments: current.paid } } } }));
   await page.route('**/api/admin/teacher-finance-center/teachers/first/ledger?*', route => route.fulfill({ json: { success: true, data: {
     items: [{ id: 'line', sourceType: 'DirectPurchase', contentNameSnapshot: 'مراجعة الفيزياء', occurredAt: '2026-09-20T10:00:00Z', teacherShareAmount: 87.5, platformShareAmount: 12.5, reversedAmount: 0, reviewStatus: 'Approved', payoutStatus: 'Unpaid', allocationMode: 'FixedAmount', allocationValue: 12.5, agreementAllocationMode: 'PlatformFixedPerUnit', grossBasisAmount: 100, priceBasis: 'NetAfterDiscount', agreementId: 'old-agreement' }], total: 1, page: 1, pageSize: 25,
   } } }));
@@ -143,21 +149,17 @@ test('one teacher account explains sources and uses separate approval and actual
   });
   await page.goto('/admin/platform-finance/teachers/first');
   await expect(page).toHaveURL(/\/admin\/teachers\/first\/account$/);
-  const overview = page.getByRole('region', { name: 'ملخص حساب المدرس' });
-  await expect(overview.getByText('متاح لسحب جديد', { exact: true }).first().locator('..')).toContainText('250.00');
-  await expect(page.getByRole('region', { name: 'مصادر أرباح المدرس' })).toContainText('المرتجعات');
-  await overview.getByText('المتاح للسحب اتحسب إزاي؟').click();
-  await expect(overview).toContainText('المديونية اللي لسه ما اتحجزتش');
-  await page.getByText('اتحسب إزاي؟', { exact: true }).click();
-  await expect(page.getByText('نصيب المنصّة ثابت:', { exact: false })).toContainText('12.50');
-  await page.getByText('طلبات السحب والمدفوعات', { exact: true }).click();
+  const overview = page.getByRole('region', { name: 'كشف حساب المدرس', exact: true });
+  await expect(overview.getByText('باقي له الآن ومتاح للصرف', { exact: true }).locator('..')).toContainText('250.00');
+  await expect(overview.getByRole('table', { name: 'كام عملية × كام جنيه' })).toContainText('40٪');
+  await page.getByText('طلبات السحب', { exact: true }).click();
   await page.getByRole('button', { name: 'موافقة على الطلب', exact: true }).click();
   await page.getByRole('button', { name: 'تأكيد', exact: true }).click();
   await expect(page.getByRole('button', { name: 'تسجيل الصرف الفعلي', exact: true })).toBeVisible();
-  await expect(overview.getByText('استلم فعليًا', { exact: true }).locator('..')).toContainText('200.00');
+  await expect(overview.getByText('دفعت له في الفترة', { exact: true }).locator('..')).toContainText('200.00');
   await page.getByRole('button', { name: 'تسجيل الصرف الفعلي', exact: true }).click();
   await page.getByRole('button', { name: 'تأكيد', exact: true }).click();
-  await expect(overview.getByText('استلم فعليًا', { exact: true }).locator('..')).toContainText('300.00');
+  await expect(overview.getByText('دفعت له في الفترة', { exact: true }).locator('..')).toContainText('300.00');
   expect(actions).toEqual([3, 1]);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('#main-content')).toHaveCSS('margin-inline-start', '0px');
@@ -172,10 +174,10 @@ test('one teacher account explains sources and uses separate approval and actual
 });
 
 test('teacher account failure never displays a zero balance', async ({ page }) => {
-  await page.route('**/api/admin/teacher-finance-center/teachers/first/summary', route => route.fulfill({ status: 503, json: {} }));
+  await page.route('**/api/admin/teacher-finance-center/teachers/first/statement?*', route => route.fulfill({ status: 503, json: {} }));
   await page.goto('/admin/teachers/first/account');
-  const overview = page.getByRole('region', { name: 'ملخص حساب المدرس' });
-  await expect(overview.getByRole('alert')).toContainText('تعذر تحميل حساب المدرّس');
+  const overview = page.getByRole('region', { name: 'كشف حساب المدرس', exact: true });
+  await expect(overview.getByRole('alert')).toContainText('تعذر تحميل كشف الحساب');
   await expect(overview).not.toContainText('0.00');
 });
 
@@ -188,6 +190,7 @@ test('teacher self-service shows the same account and withdrawal limit', async (
     });
     const page = await context.newPage();
     await page.route('**/api/**', route => route.fulfill({ json: { success: true, data: [] } }));
+    await page.route('**/api/teacher/finance/statement?*', route => route.fulfill({ json: { success: true, data: statement } }));
     await page.route('**/api/teacher/finance/account', route => route.fulfill({ json: { success: true, data: {
       teacherId: 'first', teacherName: account.teacherName, todayEarnings: 0, totalEarnings: account.totalEarned,
       currentBalance: account.available, reservedBalance: account.reserved, availableBalance: account.netPayable,
@@ -248,6 +251,11 @@ test('a prepaid code batch shows one agreement, records partial receipt and allo
   const teacher = { id: 'first', fullName: 'المدرس الأول', isActive: true, commissionRate: 75 };
   let delivered = false;
   let collected = 0;
+  await page.route('**/api/admin/teacher-finance-center/teachers/first/statement?*', route => route.fulfill({ json: { success: true, data: {
+    ...statement, account: { ...account, codeAmountDue: delivered ? 1500 - collected : 0 },
+    totals: { ...statement.totals, retainedEarnings: delivered ? 8500 : 0 },
+    codeBatches: delivered ? [{ name: 'دفعة ١٠٠ كود', codes: 100, value: 10000, collected, remaining: 1500 - collected }] : [],
+  } } }));
   const confirmations: any[] = [];
   const receipts: any[] = [];
   await page.route('**/api/admin/teachers/first', route => route.fulfill({ json: { success: true, data: teacher } }));
@@ -291,9 +299,10 @@ test('a prepaid code batch shows one agreement, records partial receipt and allo
   await panel.getByRole('button', { name: 'تسجيل المبلغ المستلم' }).click();
   await expect(panel).toContainText('الدفعة مسددة بالكامل');
   expect(receipts).toHaveLength(1);
-  const summary = page.getByRole('region', { name: 'حساب دفعات الأكواد' });
-  await expect(summary.getByText('نصيبه المحتفظ به', { exact: true }).locator('..')).toContainText('8,500.00');
-  await expect(summary.getByText('دفع للمنصّة', { exact: true }).locator('..')).toContainText('1,500.00');
+  const summary = page.getByRole('region', { name: 'ملخص الأكواد' });
+  await expect(summary).toContainText('100 كود');
+  await expect(summary).toContainText('استلمت منه 1,500.00');
+  await expect(summary).toContainText('باقي عليه 0.00');
   await page.setViewportSize({ width: 390, height: 844 });
   await panel.scrollIntoViewIfNeeded();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

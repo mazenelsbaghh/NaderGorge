@@ -8,7 +8,7 @@ Frontend API call count: **712**
 
 Missing frontend route count: **0**
 
-Digest: `fd34897acb4054c1c84500ed2f821bd70956351c14af17d895a66f4ff5ca20dc`
+Digest: `19600cf2a3e6446ce4078d5cd70f54a0a725d0f76aecce64d885fab46eb5b715`
 
 ## Route Findings
 
@@ -470,19 +470,19 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| GET | `/api/content/packages` | backend-api | - | `-` | frontend/src/services/content-service.ts:383 |
-| GET | `/api/content/packages/{packageid}/terms` | backend-api | dynamic:includeSystemContainers | `-` | frontend/src/services/content-service.ts:386 |
-| GET | `/api/content/packages/{packageid}/code-page` | backend-api | - | `-` | frontend/src/services/content-service.ts:389 |
-| GET | `/api/content/terms/{termid}/sections` | backend-api | - | `-` | frontend/src/services/content-service.ts:390 |
-| GET | `/api/content/sections/{sectionid}/lessons` | backend-api | - | `-` | frontend/src/services/content-service.ts:391 |
-| GET | `/api/content/lessons/{lessonid}` | backend-api | - | `-` | frontend/src/services/content-service.ts:392 |
-| GET | `/api/content/lessons/{lessonid}/comments?offset={offset}&limit={limit}` | backend-api | offset, limit | `-` | frontend/src/services/content-service.ts:393 |
-| GET | `/api/content/lessons/{lessonid}/comments` | backend-api | parentCommentId, offset, limit | `-` | frontend/src/services/content-service.ts:394 |
-| GET | `/api/content/lessons/{lessonid}/resources` | backend-api | - | `-` | frontend/src/services/content-service.ts:395 |
-| GET | `/api/content/lessons/{lessonid}/comments/mine` | backend-api | - | `-` | frontend/src/services/content-service.ts:396 |
-| POST | `/api/content/lessons/{lessonid}/comments` | backend-api | - | `{ body, parentCommentId }` | frontend/src/services/content-service.ts:398 |
-| GET | `/api/admin/content/summary/teachers` | backend-api | - | `-` | frontend/src/services/content-service.ts:400 |
-| GET | `/api/{scope}/content/summary` | backend-api | teacherId, fromUtc, toUtc | `-` | frontend/src/services/content-service.ts:402 |
+| GET | `/api/content/packages` | backend-api | - | `-` | frontend/src/services/content-service.ts:393 |
+| GET | `/api/content/packages/{packageid}/terms` | backend-api | dynamic:includeSystemContainers | `-` | frontend/src/services/content-service.ts:396 |
+| GET | `/api/content/packages/{packageid}/code-page` | backend-api | - | `-` | frontend/src/services/content-service.ts:399 |
+| GET | `/api/content/terms/{termid}/sections` | backend-api | - | `-` | frontend/src/services/content-service.ts:400 |
+| GET | `/api/content/sections/{sectionid}/lessons` | backend-api | - | `-` | frontend/src/services/content-service.ts:401 |
+| GET | `/api/content/lessons/{lessonid}` | backend-api | - | `-` | frontend/src/services/content-service.ts:402 |
+| GET | `/api/content/lessons/{lessonid}/comments?offset={offset}&limit={limit}` | backend-api | offset, limit | `-` | frontend/src/services/content-service.ts:403 |
+| GET | `/api/content/lessons/{lessonid}/comments` | backend-api | parentCommentId, offset, limit | `-` | frontend/src/services/content-service.ts:404 |
+| GET | `/api/content/lessons/{lessonid}/resources` | backend-api | - | `-` | frontend/src/services/content-service.ts:405 |
+| GET | `/api/content/lessons/{lessonid}/comments/mine` | backend-api | - | `-` | frontend/src/services/content-service.ts:406 |
+| POST | `/api/content/lessons/{lessonid}/comments` | backend-api | - | `{ body, parentCommentId }` | frontend/src/services/content-service.ts:408 |
+| GET | `/api/admin/content/summary/teachers` | backend-api | - | `-` | frontend/src/services/content-service.ts:410 |
+| GET | `/api/{scope}/content/summary` | backend-api | teacherId, fromUtc, toUtc | `-` | frontend/src/services/content-service.ts:412 |
 
 ### frontend/src/services/crm-service.ts
 
@@ -875,7 +875,7 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| GET | `/api/admin/platform-finance/profits` | backend-api | from, to | `-` | frontend/src/services/platform-profits-service.ts:23 |
+| GET | `/api/admin/platform-finance/profits` | backend-api | from, to | `-` | frontend/src/services/platform-profits-service.ts:26 |
 
 ### frontend/src/services/public-exams-service.ts
 
@@ -1358,44 +1358,44 @@ No missing frontend-called backend routes.
 
 | Method | Path | Action | Auth | Source |
 |---|---|---|---|---|
-| GET | `/api/admin/platform-finance/bootstrap` | Bootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:440 |
-| POST | `/api/admin/platform-finance/budgets` | CreateBudget | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:454 |
-| GET | `/api/admin/platform-finance/budgets/actuals` | BudgetActuals | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:464 |
-| GET | `/api/admin/platform-finance/dashboard` | Dashboard | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:38 |
-| GET | `/api/admin/platform-finance/expenses` | Expenses | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:109 |
-| POST | `/api/admin/platform-finance/expenses` | CreateExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:89 |
-| POST | `/api/admin/platform-finance/expenses/{expenseid}/payments` | PayExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:204 |
-| POST | `/api/admin/platform-finance/expenses/{expenseid}/post` | PostExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:100 |
-| POST | `/api/admin/platform-finance/expenses/{expenseid}/reverse` | ReverseExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:196 |
-| GET | `/api/admin/platform-finance/exports/{format}` | Export | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:487 |
-| GET | `/api/admin/platform-finance/journals/{journalid}` | Journal | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:64 |
-| GET | `/api/admin/platform-finance/ledger` | Ledger | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:55 |
-| POST | `/api/admin/platform-finance/migration/post` | PostHistoricalMigration | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:510 |
-| GET | `/api/admin/platform-finance/migration/preview` | MigrationPreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:505 |
-| GET | `/api/admin/platform-finance/periods` | Periods | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:515 |
-| POST | `/api/admin/platform-finance/periods/{periodid}/close` | ClosePeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:520 |
-| POST | `/api/admin/platform-finance/periods/{periodid}/reopen` | ReopenPeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:525 |
-| GET | `/api/admin/platform-finance/profits` | Profits | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:45 |
-| GET | `/api/admin/platform-finance/reconciliation` | Reconciliation | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:500 |
-| GET | `/api/admin/platform-finance/refunds` | Refunds | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:316 |
-| POST | `/api/admin/platform-finance/refunds` | CreateRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:213 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | PostRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:308 |
-| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | ReverseRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:394 |
-| GET | `/api/admin/platform-finance/refunds/bootstrap` | RefundBootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:432 |
-| POST | `/api/admin/platform-finance/refunds/external-package` | CreateExternalPackageRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:224 |
-| GET | `/api/admin/platform-finance/refunds/students` | FindRefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:402 |
-| GET | `/api/admin/platform-finance/refunds/students/{studentid}` | RefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:414 |
-| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | RefundUsagePreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:423 |
-| GET | `/api/admin/platform-finance/reports/{kind}` | Report | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:495 |
-| GET | `/api/admin/platform-finance/teachers/{teacherid}/summary` | TeacherDetail | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:81 |
-| GET | `/api/admin/platform-finance/teachers/summary` | TeacherSummary | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:69 |
-| POST | `/api/admin/platform-finance/treasury/reconciliations` | Reconcile | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:478 |
-| POST | `/api/admin/platform-finance/treasury/transfers` | Transfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:469 |
-| GET | `/api/admin/platform-finance/wallet-transfers/reviews` | WalletTransferReviews | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:119 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense` | RecordWalletTransferExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:178 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer` | RecordWalletInternalTransfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:187 |
-| POST | `/api/admin/platform-finance/wallet-transfers/reviews/backfill` | BackfillWalletTransferReviews | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:134 |
-| GET | `/api/admin/platform-finance/wallets/report` | WalletReport | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:142 |
+| GET | `/api/admin/platform-finance/bootstrap` | Bootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:476 |
+| POST | `/api/admin/platform-finance/budgets` | CreateBudget | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:490 |
+| GET | `/api/admin/platform-finance/budgets/actuals` | BudgetActuals | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:500 |
+| GET | `/api/admin/platform-finance/dashboard` | Dashboard | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:39 |
+| GET | `/api/admin/platform-finance/expenses` | Expenses | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:110 |
+| POST | `/api/admin/platform-finance/expenses` | CreateExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:90 |
+| POST | `/api/admin/platform-finance/expenses/{expenseid}/payments` | PayExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:205 |
+| POST | `/api/admin/platform-finance/expenses/{expenseid}/post` | PostExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:101 |
+| POST | `/api/admin/platform-finance/expenses/{expenseid}/reverse` | ReverseExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:197 |
+| GET | `/api/admin/platform-finance/exports/{format}` | Export | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:523 |
+| GET | `/api/admin/platform-finance/journals/{journalid}` | Journal | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:65 |
+| GET | `/api/admin/platform-finance/ledger` | Ledger | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:56 |
+| POST | `/api/admin/platform-finance/migration/post` | PostHistoricalMigration | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:546 |
+| GET | `/api/admin/platform-finance/migration/preview` | MigrationPreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:541 |
+| GET | `/api/admin/platform-finance/periods` | Periods | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:551 |
+| POST | `/api/admin/platform-finance/periods/{periodid}/close` | ClosePeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:556 |
+| POST | `/api/admin/platform-finance/periods/{periodid}/reopen` | ReopenPeriod | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:561 |
+| GET | `/api/admin/platform-finance/profits` | Profits | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:46 |
+| GET | `/api/admin/platform-finance/reconciliation` | Reconciliation | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:536 |
+| GET | `/api/admin/platform-finance/refunds` | Refunds | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:352 |
+| POST | `/api/admin/platform-finance/refunds` | CreateRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:214 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/post` | PostRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:344 |
+| POST | `/api/admin/platform-finance/refunds/{refundid}/reverse` | ReverseRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:430 |
+| GET | `/api/admin/platform-finance/refunds/bootstrap` | RefundBootstrap | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:468 |
+| POST | `/api/admin/platform-finance/refunds/external-package` | CreateExternalPackageRefund | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:225 |
+| GET | `/api/admin/platform-finance/refunds/students` | FindRefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:438 |
+| GET | `/api/admin/platform-finance/refunds/students/{studentid}` | RefundStudent | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:450 |
+| GET | `/api/admin/platform-finance/refunds/students/{studentid}/grants/{accessgrantid}/preview` | RefundUsagePreview | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:459 |
+| GET | `/api/admin/platform-finance/reports/{kind}` | Report | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:531 |
+| GET | `/api/admin/platform-finance/teachers/{teacherid}/summary` | TeacherDetail | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:82 |
+| GET | `/api/admin/platform-finance/teachers/summary` | TeacherSummary | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:70 |
+| POST | `/api/admin/platform-finance/treasury/reconciliations` | Reconcile | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:514 |
+| POST | `/api/admin/platform-finance/treasury/transfers` | Transfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:505 |
+| GET | `/api/admin/platform-finance/wallet-transfers/reviews` | WalletTransferReviews | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:120 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/expense` | RecordWalletTransferExpense | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:179 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/{reviewid}/internal-transfer` | RecordWalletInternalTransfer | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:188 |
+| POST | `/api/admin/platform-finance/wallet-transfers/reviews/backfill` | BackfillWalletTransferReviews | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:135 |
+| GET | `/api/admin/platform-finance/wallets/report` | WalletReport | authorized | backend/src/NaderGorge.API/Controllers/AdminPlatformFinanceController.cs:143 |
 
 ### AdminPublicExamsController
 

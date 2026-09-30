@@ -75,9 +75,33 @@ public sealed class RefundLedgerPostgresTests
 
         var request = new ExternalPackageRefundBody(grant.Id, null, student.Id, teacher.Id,
             75m, 0m, cashbox.Id, "طلب الطالب", "CASH-REFUND-1");
-        var result = await controller.CreateExternalPackageRefund(request, default);
+        await using var concurrentDb = fixture.CreateDbContext();
+        using var concurrentServices = new ServiceCollection()
+            .AddSingleton<IAppDbContext>(concurrentDb)
+            .AddSingleton<TeacherAccountingService>()
+            .AddMediatR(config => config.RegisterServicesFromAssembly(typeof(ApiResponse).Assembly))
+            .BuildServiceProvider();
+        var concurrentController = new AdminPlatformFinanceController(
+            null!, null!, new PlatformFinanceOperationsService(concurrentDb,
+                new FinancialPostingService(concurrentDb),
+                new BalanceService(concurrentDb, NullLogger<BalanceService>.Instance)),
+            null!, null!, null!, concurrentDb, null!, null!, null!, null!,
+            concurrentServices.GetRequiredService<IMediator>())
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(ClaimTypes.NameIdentifier, actor.Id.ToString())], "test"))
+                }
+            }
+        };
+        var results = await Task.WhenAll(
+            controller.CreateExternalPackageRefund(request, default),
+            concurrentController.CreateExternalPackageRefund(request, default));
 
-        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.All(results, result => Assert.IsType<OkObjectResult>(result.Result));
         await using var verifyDb = fixture.CreateDbContext();
         Assert.False((await verifyDb.StudentAccessGrants.SingleAsync(item => item.Id == grant.Id)).IsActive);
         var refund = await verifyDb.PlatformRefunds.SingleAsync();

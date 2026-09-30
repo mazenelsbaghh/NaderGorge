@@ -22,12 +22,19 @@ public sealed record TeacherStatementActivity(
 public sealed record TeacherStatementTotals(
     decimal Earned, decimal PendingEarnings, decimal TeacherPayments, decimal RetainedEarnings,
     decimal PlatformCodeDue, decimal PlatformCodePayments, decimal StudentCollections,
-    decimal OpenDebtAdjustments);
+    decimal OpenDebtAdjustments, decimal PlatformEarned = 0m);
+
+public sealed record TeacherStatementSale(int Students, int Operations, decimal UnitPrice,
+    decimal Total, decimal TeacherShare, decimal PlatformShare, decimal? PlatformPercent);
+
+public sealed record TeacherStatementCodeBatch(string Name, int Codes, decimal? Value,
+    decimal? PlatformDue, decimal Collected, decimal? Remaining);
 
 public sealed record TeacherStatement(
     Guid TeacherId, string TeacherName, DateTime? From, DateTime? To, DateTime GeneratedAt,
     TeacherFinanceAccountSnapshot Account, TeacherStatementTotals Totals, TeacherStatementActivity Activity,
-    IReadOnlyList<TeacherStatementRow> Items, int Total, int Page, int PageSize);
+    IReadOnlyList<TeacherStatementRow> Items, int Total, int Page, int PageSize,
+    IReadOnlyList<TeacherStatementSale> Sales, IReadOnlyList<TeacherStatementCodeBatch> CodeBatches);
 
 public interface ITeacherStatementService
 {

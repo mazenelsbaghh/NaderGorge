@@ -140,6 +140,7 @@ export interface TeacherStatement {
     platformCodePayments: number;
     studentCollections: number;
     openDebtAdjustments: number;
+    platformEarned: number;
   };
   activity: {
     purchasingStudents: number;
@@ -159,6 +160,8 @@ export interface TeacherStatement {
     codeStudents: number;
     activatedCodeValue: number;
   };
+  sales: Array<{ students: number; operations: number; unitPrice: number; total: number; teacherShare: number; platformShare: number; platformPercent: number | null }>;
+  codeBatches: Array<{ name: string; codes: number; value: number | null; platformDue: number | null; collected: number; remaining: number | null }>;
   items: TeacherStatementRow[];
   total: number;
   page: number;

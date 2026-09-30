@@ -453,7 +453,7 @@ const navItems: AdminNavItem[] = [
   },
   {
     href: '/admin/platform-profits',
-    label: 'ملخص الحسابات',
+    label: 'الحسابات',
     icon: CircleDollarSign,
     adminOnly: true,
   },
@@ -513,7 +513,7 @@ const navItems: AdminNavItem[] = [
   },
   {
     href: '/admin/teacher-finance',
-    label: 'اتفاقات وحسابات المدرسين',
+    label: 'اتفاقات المدرسين',
     icon: BadgeDollarSign,
     permission: 'finance.manage',
   },
@@ -685,24 +685,9 @@ const GROUP_CONFIG = [
     icon: CircleDollarSign,
     hrefs: [
       '/admin/platform-profits',
-      '/admin/platform-finance',
-      '/admin/platform-finance/operations',
-      '/admin/platform-finance/expenses',
       '/admin/platform-finance/refunds',
       '/admin/finance',
       '/admin/teacher-finance',
-    ],
-  },
-  {
-    id: 'finance_tools',
-    label: 'أدوات الحسابات المتقدمة',
-    icon: ChartNoAxesCombined,
-    hrefs: [
-      '/admin/platform-finance/planning',
-      '/admin/platform-finance/reports',
-      '/admin/platform-finance/wallets',
-      '/admin/platform-finance/treasury',
-      '/admin/platform-finance/migration',
     ],
   },
   {

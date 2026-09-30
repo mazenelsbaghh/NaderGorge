@@ -130,7 +130,7 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
                 $"{adjustment.Reason} · القيمة {Money(adjustment.Amount)}", adjustment.Status.ToString(), AdjustmentAmount: adjustment.Amount));
 
         var deliveries = await db.CodeGroupDeliveryConfirmations.AsNoTracking()
-            .Include(x => x.CodeGroup)
+            .Include(x => x.CodeGroup).Include(x => x.Payments)
             .Where(x => x.CodeGroup.TeacherId == teacherId
                 && (!from.HasValue || x.ConfirmedAt >= from.Value)
                 && (!to.HasValue || x.ConfirmedAt <= to.Value)).ToListAsync(ct);
@@ -162,7 +162,7 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
             var vodafoneCash = IsVodafoneCash(collection.MatchedSmsLog?.Sender);
             rows.Add(new(collection.Id, "StudentCollection", collection.ResolvedAt ?? collection.CreatedAt,
                 $"شحن رصيد: {collection.User.FullName}",
-                $"{(vodafoneCash ? "فودافون كاش مؤكد" : "مصدر آخر أو غير مؤكد")} · {collection.Wallet.Label} · {collection.SenderPhoneNumber} · المبلغ {Money(collection.Amount)} · ليس ربحًا حتى شراء المحتوى",
+                $"{(vodafoneCash ? "تحويل مقبول · فودافون كاش" : "تحويل مقبول")} · {collection.Wallet.Label} · {collection.SenderPhoneNumber} · المبلغ {Money(collection.Amount)} · ليس ربحًا حتى شراء المحتوى",
                 collection.Status.ToString(), collection.MatchedSmsLog?.TransferReference,
                 StudentCollectionAmount: collection.Amount));
         }
@@ -212,7 +212,8 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
             rows.Sum(x => x.PlatformDueAmount ?? 0m), rows.Sum(x => x.PlatformPaymentAmount ?? 0m),
             rows.Sum(x => x.StudentCollectionAmount ?? 0m),
             -rows.Where(x => x.Kind == "Adjustment" && x.Status == "Open" && x.AdjustmentAmount < 0m)
-                .Sum(x => x.AdjustmentAmount ?? 0m));
+                .Sum(x => x.AdjustmentAmount ?? 0m),
+            rows.Where(x => x.Kind == "Earning" && x.Recognized).Sum(x => x.PlatformShareAmount ?? 0m));
         var vodafoneCollections = collections.Where(x => IsVodafoneCash(x.MatchedSmsLog?.Sender)).ToArray();
         var activity = new TeacherStatementActivity(
             purchases.Where(x => x.StudentId.HasValue).Select(x => x.StudentId!.Value).Distinct().Count(),
@@ -226,9 +227,29 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
             codeActivations.Select(x => x.AccessCodeId).Distinct().Count(),
             codeActivations.Select(x => x.StudentId).Distinct().Count(),
             codeActivations.GroupBy(x => x.AccessCodeId).Sum(x => x.First().Price));
+        var purchaseIds = purchases.Select(x => x.Id).ToHashSet();
+        var purchaseAllocations = allocations.Where(x => purchaseIds.Contains(x.TeacherFinancialEventId)
+            && TeacherFinanceAccountService.RecognizedStatuses.Contains(x.ReviewStatus));
+        var sales = purchaseAllocations.GroupBy(x => x.TeacherFinancialEventId).Select(group => new {
+            Sale = group.First().TeacherFinancialEvent,
+            Teacher = group.Sum(x => x.TeacherShareAmount), Platform = group.Sum(x => x.PlatformShareAmount)
+        }).GroupBy(x => new { x.Sale.PaidAmount, x.Teacher, x.Platform })
+            .Select(group => new TeacherStatementSale(
+                group.Where(x => x.Sale.StudentId.HasValue).Select(x => x.Sale.StudentId).Distinct().Count(),
+                group.Count(), group.Key.PaidAmount, group.Sum(x => x.Sale.PaidAmount),
+                group.Sum(x => x.Teacher), group.Sum(x => x.Platform),
+                group.Key.Teacher + group.Key.Platform > 0m
+                    ? decimal.Round(100m * group.Key.Platform / (group.Key.Teacher + group.Key.Platform), 2) : null))
+            .OrderBy(x => x.UnitPrice).ToArray();
+        var batches = deliveries.Select(delivery => {
+            var collected = delivery.Payments.Where(x => !to.HasValue || x.ReceivedAt <= to.Value).Sum(x => x.Amount);
+            return new TeacherStatementCodeBatch(delivery.CodeGroup.Name, delivery.CodeGroup.TotalCodes,
+                delivery.PlatformAmountDue + delivery.TeacherRetainedAmount, delivery.PlatformAmountDue,
+                collected, delivery.PlatformAmountDue - collected);
+        }).ToArray();
         if (transaction is not null) await transaction.CommitAsync(ct);
         return new TeacherStatement(teacherId, account.TeacherName, from, to, DateTime.UtcNow,
-            account, totals, activity, rows, rows.Count, 1, rows.Count);
+            account, totals, activity, rows, rows.Count, 1, rows.Count, sales, batches);
     }
 
     private static string Money(decimal value) => $"{value:N2} ج.م";
@@ -253,70 +274,60 @@ public sealed class TeacherStatementService(IAppDbContext db) : ITeacherStatemen
 
     private static byte[] BuildPdf(TeacherStatement statement) => Document.Create(document => document.Page(page =>
     {
-        page.Size(PageSizes.A4.Landscape());
-        page.Margin(22);
+        page.Size(PageSizes.A4);
+        page.Margin(30);
         page.ContentFromRightToLeft();
-        page.DefaultTextStyle(style => style.FontFamily("Tajawal Statement").FontSize(8));
-        page.Header().Column(column =>
+        page.DefaultTextStyle(style => style.FontFamily("Tajawal Statement").FontSize(11));
+        page.Header().PaddingBottom(16).Column(column =>
         {
-            column.Item().Text("كشف حساب المدرس").Bold().FontSize(18);
-            column.Item().Text($"{statement.TeacherName} · من {(statement.From.HasValue ? CairoTime.ToLocal(statement.From.Value).ToString("yyyy-MM-dd") : "بداية الحساب")} إلى {(statement.To.HasValue ? CairoTime.ToLocal(statement.To.Value).ToString("yyyy-MM-dd") : "تاريخ التقرير")} · صدر {CairoTime.ToLocal(statement.GeneratedAt):yyyy-MM-dd HH:mm}");
-            column.Item().PaddingTop(5).Text($"اشترى {statement.Activity.PurchasingStudents} طالب محتوى بقيمة {Money(statement.Activity.PurchaseValue)} ({statement.Activity.PurchaseOperations} عملية) | شحن {statement.Activity.RechargeStudents} طالب {Money(statement.Activity.RechargeAmount)} ({statement.Activity.RechargeOperations} عملية)").Bold();
-            column.Item().Text($"فودافون كاش مؤكد: {Money(statement.Activity.VodafoneCashAmount)} من {statement.Activity.VodafoneCashStudents} طالب ({statement.Activity.VodafoneCashOperations} تحويل) | مصادر أخرى أو غير مؤكدة: {Money(statement.Activity.OtherRechargeAmount)}");
-            column.Item().Text($"استرد {statement.Activity.RefundedStudents} طالب {Money(statement.Activity.RefundAmount)} ({statement.Activity.RefundOperations} عملية) | استُخدم {statement.Activity.ActivatedCodes} كود بواسطة {statement.Activity.CodeStudents} طالب بقيمة {Money(statement.Activity.ActivatedCodeValue)}");
-            column.Item().PaddingTop(5).Text($"أرباح الفترة {Money(statement.Totals.Earned)} | صرف فعلي {Money(statement.Totals.TeacherPayments)} | محتفظ به من الأكواد {Money(statement.Totals.RetainedEarnings)} | متاح للسحب الآن {Money(statement.Account.NetPayable)}").Bold();
-            column.Item().Text($"مستحق للمنصة من الأكواد {Money(statement.Totals.PlatformCodeDue)} | سداد الأكواد {Money(statement.Totals.PlatformCodePayments)} | شحن طلاب {Money(statement.Totals.StudentCollections)} | مديونيات مفتوحة بالفترة {Money(statement.Totals.OpenDebtAdjustments)}");
-            if (Math.Abs(statement.Account.SourceDifference) >= 0.01m || Math.Abs(statement.Account.BalanceDifference) >= 0.01m)
-                column.Item().Text($"فروق تاريخية تحتاج مراجعة: فرق المصادر {Money(statement.Account.SourceDifference)}، فرق الرصيد {Money(statement.Account.BalanceDifference)}. لا تُحتسب كربح إضافي.");
-            column.Item().PaddingBottom(6).Text("الطالب محسوب مرة واحدة في كل فئة. فودافون كاش من رسائل التحويل المطابقة فقط. الأرصدة الحالية تخص كل الفترات. شحن الطلاب وقيمة الأكواد ليست أرباحًا إضافية، والمرتجع السالب محسوب مرة واحدة.").FontSize(7);
+            column.Item().Text($"كشف حساب · {statement.TeacherName}").Bold().FontSize(20);
+            column.Item().Text($"من {(statement.From.HasValue ? CairoTime.ToLocal(statement.From.Value).ToString("yyyy-MM-dd") : "بداية الحساب")} إلى {(statement.To.HasValue ? CairoTime.ToLocal(statement.To.Value).ToString("yyyy-MM-dd") : "الآن")}");
         });
-        page.Content().Table(table =>
+        page.Content().Column(column =>
         {
-            table.ColumnsDefinition(columns =>
+            column.Spacing(12);
+            column.Item().Text($"اشترى {statement.Activity.PurchasingStudents} طالب · {statement.Activity.PurchaseOperations} عملية · {Money(statement.Activity.PurchaseValue)}").Bold();
+            column.Item().Table(table =>
             {
-                columns.RelativeColumn(1.1f); columns.RelativeColumn(1.15f); columns.RelativeColumn(3.8f);
-                columns.RelativeColumn(1.1f); columns.RelativeColumn(1f); columns.RelativeColumn(1f);
-                columns.RelativeColumn(1f); columns.RelativeColumn(1f);
+                table.ColumnsDefinition(columns => { columns.RelativeColumn(2); columns.RelativeColumn(); columns.RelativeColumn(); columns.RelativeColumn(); });
+                table.Header(header => {
+                    foreach (var label in new[] { "كام عملية × السعر", "نصيب المدرس", "نصيب المنصة", "نسبة المنصة*" })
+                        header.Cell().Background(Colors.Grey.Lighten3).Padding(6).Text(label).Bold();
+                });
+                foreach (var sale in statement.Sales)
+                {
+                    Cell($"{sale.Operations} × {Money(sale.UnitPrice)} = {Money(sale.Total)}");
+                    Cell(Money(sale.TeacherShare)); Cell(Money(sale.PlatformShare));
+                    Cell(sale.PlatformPercent.HasValue ? $"{sale.PlatformPercent:0.##}%" : "—");
+                }
+                void Cell(string text) => table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).Text(text);
             });
-            table.Header(header =>
-            {
-                foreach (var label in new[] { "التاريخ", "النوع", "البيان والتفاصيل", "الحالة", "ربح المدرس", "صرف للمدرس", "مستحق للمنصة", "سداد للمنصة" })
-                    header.Cell().Background(Colors.Grey.Lighten2).Padding(4).Text(label).Bold();
+            column.Item().Text("*النسبة الفعلية من المبلغ الموزّع وقت البيع. الطالب قد يشتري أكثر من مرة؛ الباقات المشتركة قد تشمل نصيب مدرس آخر.").FontSize(9);
+            column.Item().Text($"المرتجعات: {Money(statement.Activity.RefundAmount)} إلى {statement.Activity.RefundedStudents} طالب");
+            column.Item().Background(Colors.Grey.Lighten3).Padding(12).Column(summary => {
+                summary.Spacing(6);
+                summary.Item().Text($"نصيب المدرس في الفترة بعد المرتجعات: {Money(statement.Totals.Earned)}").Bold();
+                summary.Item().Text($"نصيب المنصة في الفترة بعد المرتجعات: {Money(statement.Totals.PlatformEarned)}");
+                summary.Item().Text($"دفعت للمدرس في الفترة: {Money(statement.Totals.TeacherPayments)}");
+                summary.Item().Text($"نصيبه المحتفظ به من الأكواد: {Money(statement.Totals.RetainedEarnings)}");
+                summary.Item().Text($"باقي له الآن ومتاح للصرف: {Money(statement.Account.NetPayable)}").Bold();
+                if (statement.Account.Reserved > 0m) summary.Item().Text($"محجوز لصرف لم يكتمل: {Money(statement.Account.Reserved)}");
+                if (statement.Account.Debt > 0m) summary.Item().Text($"مديونية حالية: {Money(statement.Account.Debt)}");
             });
-            foreach (var row in statement.Items)
+            column.Item().Text($"تحويلات الطلاب المقبولة: {statement.Activity.RechargeOperations} تحويل = {Money(statement.Activity.RechargeAmount)}. تشمل القبول اليدوي والمطابقة التلقائية؛ شحن الرصيد لا يُضاف للمبيعات.").FontSize(10);
+            column.Item().Text($"الأكواد المستخدمة: {statement.Activity.ActivatedCodes} كود بقيمة {Money(statement.Activity.ActivatedCodeValue)}");
+            foreach (var batch in statement.CodeBatches)
+                column.Item().Text($"{batch.Name}: سلّمت {batch.Codes} كود · القيمة {(batch.Value.HasValue ? Money(batch.Value.Value) : "غير مسجلة")} · استلمت منه {Money(batch.Collected)} · باقي عليه {(batch.Remaining.HasValue ? Money(batch.Remaining.Value) : "غير مسجل")}");
+            column.Item().Text($"إجمالي الباقي على المدرس من الأكواد الآن: {Money(statement.Account.CodeAmountDue)}. منفصل عن المتاح لصرف أرباحه.").FontSize(10);
+            var payments = statement.Items.Where(x => x.TeacherPaymentAmount.HasValue).ToArray();
+            if (payments.Length > 0)
             {
-                Cell(CairoTime.ToLocal(row.OccurredAt).ToString("yyyy-MM-dd HH:mm"));
-                Cell(KindLabel(row.Kind));
-                Cell($"{row.Title}\n{row.Detail}" + (string.IsNullOrWhiteSpace(row.Reference) ? "" : $"\nمرجع: {row.Reference}"));
-                Cell(StatusLabel(row.Status));
-                Cell(row.Kind == "Earning" ? Money(row.TeacherShareAmount ?? 0m) : "—");
-                Cell(row.TeacherPaymentAmount.HasValue ? Money(row.TeacherPaymentAmount.Value) : "—");
-                Cell(row.PlatformDueAmount.HasValue ? Money(row.PlatformDueAmount.Value) : "—");
-                Cell(row.PlatformPaymentAmount.HasValue ? Money(row.PlatformPaymentAmount.Value) : "—");
+                column.Item().Text("الفلوس اللي دفعتها للمدرس").Bold();
+                foreach (var payment in payments)
+                    column.Item().Text($"{CairoTime.ToLocal(payment.OccurredAt):yyyy-MM-dd} · {Money(payment.TeacherPaymentAmount!.Value)} · {payment.Detail}" + (string.IsNullOrWhiteSpace(payment.Reference) ? "" : $" · مرجع {payment.Reference}"));
             }
-            void Cell(string value) => table.Cell().BorderBottom(0.4f).BorderColor(Colors.Grey.Lighten2)
-                .PaddingVertical(4).PaddingHorizontal(3).Text(value);
+            column.Item().Text("المبالغ تخص الفترة المختارة، والباقي الآن يشمل كل الفترات. تسليم الأكواد واستخدامها لا يُحسبان مرتين.").FontSize(9);
         });
         page.Footer().AlignCenter().Text(text => { text.Span("صفحة "); text.CurrentPageNumber(); });
     })).GeneratePdf();
-
-    private static string KindLabel(string kind) => kind switch
-    {
-        "Earning" => "ربح / مرتجع", "Payout" => "طلب سحب", "Settlement" => "تسوية",
-        "SettlementPayment" => "صرف تسوية", "Adjustment" => "تعديل / مديونية",
-        "CodeDelivery" => "تسليم أكواد", "CodePayment" => "سداد أكواد",
-        "StudentCollection" => "شحن طالب", "CodeActivation" => "كود مستخدم",
-        "StudentRefund" => "استرداد طالب", _ => kind
-    };
-
-    private static string StatusLabel(string status) => status switch
-    {
-        "AutoApproved" or "Approved" or "Confirmed" => "معتمد", "PendingReview" or "Pending" => "قيد المراجعة",
-        "Paid" => "تم الصرف", "Rejected" => "مرفوض", "Reserved" => "محجوز",
-        "Retained" => "محتفظ به", "Open" => "مفتوح", "Applied" => "مطبق",
-        "Voided" or "Cancelled" => "ملغي", "Received" => "تم السداد", "Matched" => "مطابق",
-        "Draft" => "مسودة", "Reviewed" => "تمت المراجعة", "Unpaid" => "غير مصروف",
-        "Debt" => "مديونية", "Reversed" => "مرتجع", "ReversedDebt" => "مرتجع / مديونية",
-        "Used" => "مستخدم", "Refunded" => "تم الاسترداد", _ => status
-    };
 }

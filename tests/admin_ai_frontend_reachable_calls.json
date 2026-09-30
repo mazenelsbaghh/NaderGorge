@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": "frontend/src/app/admin",
-  "reachableFileCount": 527,
+  "reachableFileCount": 526,
   "reachableFiles": [
     {
       "file": "frontend/src/app/admin/[...unknown]/page.tsx",
@@ -1616,10 +1616,6 @@
       "route": null
     },
     {
-      "file": "frontend/src/features/teacher-finance-center/TeacherAllocationExplanation.tsx",
-      "route": null
-    },
-    {
       "file": "frontend/src/features/teacher-finance-center/TeacherCodeBatches.tsx",
       "route": null
     },
@@ -2363,7 +2359,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 402
+        "line": 412
       }
     },
     {
@@ -2507,7 +2503,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 400
+        "line": 410
       }
     },
     {
@@ -2948,7 +2944,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/platform-profits-service.ts",
-        "line": 23
+        "line": 26
       }
     },
     {
@@ -3587,7 +3583,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 392
+        "line": 402
       }
     },
     {
@@ -3596,7 +3592,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 383
+        "line": 393
       }
     },
     {
@@ -3605,7 +3601,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 386
+        "line": 396
       }
     },
     {
@@ -3614,7 +3610,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 391
+        "line": 401
       }
     },
     {
@@ -3623,7 +3619,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 390
+        "line": 400
       }
     },
     {
@@ -7302,5 +7298,5 @@
       }
     }
   ],
-  "digest": "3893d331fa6b3f8ac5934753c6edcc8d7310696a0ad4087ef39ad333fe141513"
+  "digest": "62d8938ee98e2a8b8570d326fdaf8a66369c09c9752d306ebd73aa59cad87161"
 }

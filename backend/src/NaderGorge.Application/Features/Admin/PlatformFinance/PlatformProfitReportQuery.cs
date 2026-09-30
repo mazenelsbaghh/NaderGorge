@@ -1,4 +1,5 @@
 using System.Data;
+using NaderGorge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Admin.PlatformFinance.Teachers;
@@ -9,9 +10,9 @@ namespace NaderGorge.Application.Features.Admin.PlatformFinance;
 
 public sealed record PlatformProfitTeacherRow(TeacherFinancialSummaryDto Period,
     decimal CurrentAccountBalance, decimal CurrentLedgerBalance, decimal ReconciliationDifference,
-    decimal CurrentCalculatedBalance, TeacherFinancialSummaryDto HistoricalPeriod, TeacherFinanceAccountSnapshot? Account = null);
+    decimal CurrentCalculatedBalance, TeacherFinancialSummaryDto HistoricalPeriod, TeacherFinanceAccountSnapshot? Account = null, int PurchasingStudents = 0, int PurchaseOperations = 0);
 public sealed record PlatformProfitReportDto(DateTime GeneratedAt, string EarliestDate,
-    PlatformFinanceDashboardDto Platform, IReadOnlyList<PlatformProfitTeacherRow> Teachers, decimal HistoricalPlatformNetRevenue);
+    PlatformFinanceDashboardDto Platform, IReadOnlyList<PlatformProfitTeacherRow> Teachers, decimal HistoricalPlatformNetRevenue, int PurchasingStudents = 0);
 
 public sealed class PlatformProfitReportQuery(IAppDbContext db,
     PlatformFinanceDashboardService dashboard, GetTeacherFinancialSummaryQuery teacherSummary)
@@ -37,6 +38,15 @@ public sealed class PlatformProfitReportQuery(IAppDbContext db,
         var firstJournal = await new FinancialLedgerQuery(db).Entries.MinAsync(entry => (DateTime?)entry.OccurredAt, ct);
         var firstSale = history.Select(x => (DateTime?)x.OccurredAt).Min();
         var firstEntry = new[] { firstJournal, firstSale }.Min();
+        var purchases = await db.TeacherFinancialAllocations.AsNoTracking()
+            .Where(x => TeacherFinanceAccountService.RecognizedStatuses.Contains(x.ReviewStatus)
+                && x.TeacherFinancialEvent.OccurredAt >= start && x.TeacherFinancialEvent.OccurredAt < end
+                && (x.TeacherFinancialEvent.SourceType == TeacherFinancialSourceType.DirectPurchase
+                    || x.TeacherFinancialEvent.SourceType == TeacherFinancialSourceType.PublicExamPurchase
+                    || x.TeacherFinancialEvent.SourceType == TeacherFinancialSourceType.SharedPackagePurchase))
+            .Select(x => new { x.TeacherId, x.TeacherFinancialEventId, x.TeacherFinancialEvent.StudentId })
+            .Distinct().ToListAsync(ct);
+        var purchasesByTeacher = purchases.ToLookup(x => x.TeacherId);
         var rows = teachers.Select(teacher =>
         {
             var summary = period.GetValueOrDefault(teacher.Id)
@@ -52,11 +62,14 @@ public sealed class PlatformProfitReportQuery(IAppDbContext db,
             var account = teacherAccounts.GetValueOrDefault(teacher.Id)?.NetBalance ?? 0m;
             var ledger = currentLedger.GetValueOrDefault(teacher.Id);
             return new PlatformProfitTeacherRow(summary, account, ledger, ledger - account, calculated, historical,
-                teacherAccounts.GetValueOrDefault(teacher.Id));
+                teacherAccounts.GetValueOrDefault(teacher.Id),
+                purchasesByTeacher[teacher.Id].Where(x => x.StudentId.HasValue).Select(x => x.StudentId).Distinct().Count(),
+                purchasesByTeacher[teacher.Id].Count());
         }).OrderByDescending(x => x.Period.PlatformShare).ThenBy(x => x.Period.TeacherName).ToArray();
         var selectedHistory = history.Where(x => x.OccurredAt >= start && x.OccurredAt < end).ToArray();
         var historicalNetRevenue = selectedHistory.Sum(x => x.PlatformShare);
         if (transaction is not null) await transaction.CommitAsync(ct);
-        return new(DateTime.UtcNow, CairoTime.ToLocal(firstEntry ?? DateTime.UtcNow).ToString("yyyy-MM-dd"), platform, rows, historicalNetRevenue);
+        return new(DateTime.UtcNow, CairoTime.ToLocal(firstEntry ?? DateTime.UtcNow).ToString("yyyy-MM-dd"), platform, rows, historicalNetRevenue,
+            purchases.Where(x => x.StudentId.HasValue).Select(x => x.StudentId).Distinct().Count());
     }
 }

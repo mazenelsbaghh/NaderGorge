@@ -16,6 +16,7 @@ import {
   CONTENT_CACHE_KEYS,
   contentService,
   type ContentPackageSummaryDto,
+  type ContentSummaryNodeDto,
   type ContentSummaryDto,
 } from '@/services/content-service';
 import { cairoCurrentDate, cairoCurrentMonthPeriod, cairoDateAfterDays, cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
@@ -78,17 +79,53 @@ function buildRange(period: Period, from: string, to: string) {
   };
 }
 
+function AcquisitionCounts({ values }: { values: ContentPackageSummaryDto['package'] }) {
+  return (
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-[var(--admin-muted)]">
+      <span><strong className="tabular-nums text-[var(--admin-text)]">{number.format(values.purchased)}</strong> مشتري</span>
+      <span><strong className="tabular-nums text-[var(--admin-primary)]">{number.format(values.gifts)}</strong> هدية فقط</span>
+      <span><strong className="tabular-nums text-[var(--admin-danger)]">{number.format(values.refundedStudents)}</strong> طالب استرد</span>
+    </span>
+  );
+}
+
 function AcquisitionRow({ label, values }: { label: string; values: ContentPackageSummaryDto['package'] }) {
   return (
-    <div className="grid grid-cols-2 items-center gap-x-3 gap-y-2 border-b border-[var(--admin-border)]/60 py-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto]">
-      <span className="col-span-2 text-sm font-bold text-[var(--admin-text)] sm:col-span-1">{label}</span>
-      <span className="min-w-20 text-center text-sm text-[var(--admin-muted)]">
-        <strong className="font-black tabular-nums text-[var(--admin-text)]">{number.format(values.purchased)}</strong> مشتري
-      </span>
-      <span className="min-w-20 text-center text-sm text-[var(--admin-muted)]">
-        <strong className="font-black tabular-nums text-[var(--admin-primary)]">{number.format(values.gifts)}</strong> هدية فقط
-      </span>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--admin-border)]/60 py-3 last:border-b-0">
+      <span className="text-sm font-bold text-[var(--admin-text)]">{label}</span>
+      <AcquisitionCounts values={values} />
     </div>
+  );
+}
+
+const nodeKindLabel: Record<ContentSummaryNodeDto['kind'], string> = {
+  term: 'ترم',
+  section: 'قسم / شهر',
+  lesson: 'حصة',
+};
+
+function ContentSummaryNode({ node }: { node: ContentSummaryNodeDto }) {
+  const label = (
+    <span className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <span className="min-w-0 text-sm font-bold text-[var(--admin-text)]">
+        <span className="me-2 text-xs text-[var(--admin-muted)]">{nodeKindLabel[node.kind]}</span>
+        {node.title}
+      </span>
+      <AcquisitionCounts values={node.counts} />
+    </span>
+  );
+  if (!node.children.length) {
+    return <div className="rounded-xl bg-[var(--admin-card-soft)] px-3 py-3">{label}</div>;
+  }
+  return (
+    <details className="rounded-xl bg-[var(--admin-card-soft)] px-3 py-2">
+      <summary className="cursor-pointer py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]">
+        {label}
+      </summary>
+      <div className="mt-2 space-y-2 border-r-2 border-[var(--admin-border)] pr-3">
+        {node.children.map((child) => <ContentSummaryNode key={child.id} node={child} />)}
+      </div>
+    </details>
   );
 }
 
@@ -117,6 +154,18 @@ function PackageSummary({ packageSummary }: { packageSummary: ContentPackageSumm
         <AcquisitionRow label="الكورس / القسم" values={packageSummary.section} />
         <AcquisitionRow label="الحصة" values={packageSummary.lesson} />
       </div>
+
+      {packageSummary.breakdown?.length ? (
+        <details className="border-t border-[var(--admin-border)] px-5 py-4">
+          <summary className="cursor-pointer text-sm font-black text-[var(--admin-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]">
+            افتح تفاصيل الترمات والأقسام والشهور والحصص
+          </summary>
+          <div className="mt-4 space-y-2">
+            <p className="text-xs leading-5 text-[var(--admin-muted)]">الأعداد داخل كل بند تخص الاشتراك المباشر فيه؛ الاشتراك في الباقة الكاملة يظهر في سطر الباقة.</p>
+            {packageSummary.breakdown.map((node) => <ContentSummaryNode key={node.id} node={node} />)}
+          </div>
+        </details>
+      ) : null}
 
       <footer className="grid grid-cols-3 divide-x divide-x-reverse divide-[var(--admin-border)] border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-center">
         <div className="px-2 py-3"><ShoppingBag className="mx-auto mb-1 h-4 w-4 text-[var(--admin-secondary)]" aria-hidden="true" /><b className="tabular-nums">{number.format(packageSummary.purchasedStudents)}</b><span className="block text-xs text-[var(--admin-muted)]">مشتري</span></div>
@@ -396,7 +445,7 @@ export function ContentSummaryPanel(props: ContentSummaryPanelProps) {
       </div>
 
       <p className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs font-medium leading-6 text-[var(--admin-muted)]">
-        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. عمليات الاسترداد: عدد عمليات الاسترداد المنفَّذة لاشتراكات من نفس الفترة داخل الباقة. تُحسب كل عملية حتى لو تكررت لنفس الطالب أو اشترك مجددًا. أعداد الشراء والهدايا تشمل الاشتراكات السارية الآن فقط وتستبعد المنتهية والملغاة.
+        المشتركون الفعليون: طلاب لديهم اشتراك سارٍ الآن من اشتراكات الفترة المختارة. بجانب كل بند يظهر عدد الطلاب الذين استردوا منه، بينما إجمالي عمليات الاسترداد في أعلى الباقة يحسب كل عملية منفَّذة. خيار «كل الوقت» يعرض الإجمالي منذ البداية. أعداد الشراء والهدايا تشمل الاشتراكات السارية الآن فقط وتستبعد المنتهية والملغاة.
       </p>
 
       {period === 'custom' && (

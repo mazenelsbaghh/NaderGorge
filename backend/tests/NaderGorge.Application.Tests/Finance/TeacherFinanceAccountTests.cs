@@ -66,7 +66,7 @@ public sealed class TeacherFinanceAccountTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Statement_keeps_pending_and_cash_movements_separate_and_exports_all_rows()
+    public async Task Statement_keeps_pending_and_cash_movements_separate_and_exports_summary()
     {
         db.Add(new TeacherAccount { Teacher = teacher, TotalEarnings = 100m, CurrentBalance = 50m });
         AddIncome(TeacherFinancialSourceType.DirectPurchase, 100m);
@@ -131,15 +131,54 @@ public sealed class TeacherFinanceAccountTests : IAsyncLifetime
         Assert.Equal(125m, statement.Activity.RechargeAmount);
         Assert.Equal(100m, statement.Activity.VodafoneCashAmount);
         Assert.Equal(25m, statement.Activity.OtherRechargeAmount);
+        Assert.Equal(2, statement.Items.Count(x => x.Kind == "StudentCollection" && x.Detail.StartsWith("تحويل مقبول")));
+        Assert.DoesNotContain(statement.Items, x => x.Detail.Contains("غير مؤكد"));
         Assert.Equal(1, statement.Activity.RefundedStudents);
         Assert.Equal(50m, statement.Activity.RefundAmount);
         Assert.Equal(1, statement.Activity.ActivatedCodes);
         Assert.Equal(75m, statement.Activity.ActivatedCodeValue);
-        Assert.Contains(statement.Items, x => x.Kind == "StudentCollection" && x.Detail.Contains("فودافون كاش مؤكد"));
+        Assert.Contains(statement.Items, x => x.Kind == "StudentCollection" && x.Detail.Contains("تحويل مقبول · فودافون كاش"));
         Assert.Contains(statement.Items, x => x.Kind == "StudentRefund" && x.StudentRefundAmount == 50m);
         Assert.Contains(statement.Items, x => x.Kind == "CodeActivation" && x.Reference == "12345");
         var pdf = (await new TeacherStatementService(db).ExportPdfAsync(teacher.Id, null, null, default))!;
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf.Content, 0, 4));
+    }
+
+    [Fact]
+    public async Task Simple_statement_groups_prices_and_historical_shares_without_counting_students_twice()
+    {
+        var student = new User { FullName = "طالب تجريبي", PhoneNumber = "01099900111", PasswordHash = "test" };
+        db.Add(student);
+        foreach (var share in new[] { 80m, 80m, 70m })
+            db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = share,
+                PlatformShareAmount = 100m - share, TeacherFinancialEvent = new TeacherFinancialEvent {
+                    Student = student, SourceType = TeacherFinancialSourceType.DirectPurchase,
+                    SourceId = Guid.NewGuid(), IdempotencyKey = Guid.NewGuid().ToString("N"),
+                    PaidAmount = 100m, OccurredAt = DateTime.UtcNow } });
+        db.Add(new TeacherFinancialAllocation { Teacher = teacher, TeacherShareAmount = 999m,
+            ReviewStatus = TeacherFinancialReviewStatus.PendingReview,
+            TeacherFinancialEvent = new TeacherFinancialEvent { Student = student,
+                SourceType = TeacherFinancialSourceType.DirectPurchase,
+                IdempotencyKey = Guid.NewGuid().ToString("N"), PaidAmount = 999m } });
+        await db.SaveChangesAsync();
+        var service = new TeacherStatementService(db);
+        var statement = (await service.GetAsync(teacher.Id, null, null, 1, 1, default))!;
+        Assert.Equal(1, statement.Activity.PurchasingStudents);
+        Assert.Equal(3, statement.Activity.PurchaseOperations);
+        Assert.Equal(300m, statement.Activity.PurchaseValue);
+        Assert.Equal(70m, statement.Totals.PlatformEarned);
+        Assert.Equal(2, statement.Sales.Count);
+        var twentyPercent = Assert.Single(statement.Sales, sale => sale.PlatformPercent == 20m);
+        Assert.Equal(2, twentyPercent.Operations);
+        Assert.Equal(1, twentyPercent.Students);
+        Assert.Equal(200m, twentyPercent.Total);
+        Assert.Equal(160m, twentyPercent.TeacherShare);
+        Assert.Equal(40m, twentyPercent.PlatformShare);
+        Assert.Single(statement.Items);
+        var pdf = (await service.ExportPdfAsync(teacher.Id, null, null, default))!;
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf.Content, 0, 4));
+        if (Environment.GetEnvironmentVariable("FINANCE_PDF_SAMPLE") is { Length: > 0 } samplePath)
+            await File.WriteAllBytesAsync(samplePath, pdf.Content);
     }
 
     [Fact]

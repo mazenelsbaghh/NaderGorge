@@ -22,7 +22,7 @@ const statusLabels: Record<string, string> = {
   Used: 'مستخدم', Refunded: 'تم الاسترداد',
 };
 
-export function TeacherStatementPanel({ teacherId }: { teacherId?: string }) {
+export function TeacherStatementPanel({ teacherId, refreshVersion = 0 }: { teacherId?: string; refreshVersion?: number }) {
   const [draftFrom, setDraftFrom] = useState('');
   const [draftTo, setDraftTo] = useState('');
   const [period, setPeriod] = useState({ from: '', to: '' });
@@ -43,7 +43,7 @@ export function TeacherStatementPanel({ teacherId }: { teacherId?: string }) {
       .catch(() => { if (active) setError('تعذر تحميل كشف الحساب. حاول مرة أخرى.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [teacherId, period, page, version]);
+  }, [teacherId, period, page, version, refreshVersion]);
 
   const applyPeriod = (event: React.FormEvent) => {
     event.preventDefault();
@@ -80,10 +80,10 @@ export function TeacherStatementPanel({ teacherId }: { teacherId?: string }) {
   return <section className="admin-panel space-y-5 rounded-2xl p-5 sm:p-6" aria-label="كشف حساب المدرس">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h2 className="text-xl font-black text-[var(--admin-text)]">ملخص حساب المدرس</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--admin-muted)]">عدد الطلاب والمبالغ اللي وصلت، فودافون كاش، الاستردادات والأكواد المستخدمة، ثم تفاصيل كل عملية بالاسم والتاريخ.</p></div>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--admin-muted)]">الطلاب دفعوا كام، نصيب المدرس والمنصة، واللي اتدفع والمتبقي.</p></div>
       <button type="button" onClick={() => void downloadPdf()} disabled={downloading || loading || !!error}
         className="admin-btn-primary inline-flex min-h-11 items-center gap-2 px-4 disabled:opacity-50">
-        <Download className="h-4 w-4" aria-hidden="true" />{downloading ? 'جارٍ تجهيز PDF...' : 'تنزيل كشف الحساب PDF'}
+        <Download className="h-4 w-4" aria-hidden="true" />{downloading ? 'جارٍ تجهيز PDF...' : 'كشف حساب بسيط PDF'}
       </button>
     </div>
 
@@ -101,37 +101,51 @@ export function TeacherStatementPanel({ teacherId }: { teacherId?: string }) {
       <button type="button" onClick={() => setVersion(value => value + 1)} className="inline-flex min-h-11 items-center gap-1 underline"><RefreshCw className="h-4 w-4" />إعادة المحاولة</button></div>}
     {loading && <p role="status" className="py-5 text-sm text-[var(--admin-muted)]">جارٍ تحميل كشف الحساب...</p>}
     {!loading && statement && !error && <>
-      <div className="space-y-3"><h3 className="text-base font-black">الطلاب والتحصيل خلال الفترة</h3>
-        <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="border-b border-[var(--admin-border)] pb-3"><dt className="text-sm font-bold text-[var(--admin-muted)]">طلاب اشتروا محتوى</dt><dd className="mt-1 text-2xl font-black tabular-nums">{statement.activity.purchasingStudents} طالب</dd><p className="mt-1 text-xs text-[var(--admin-muted)]">{statement.activity.purchaseOperations} عملية · قيمة مسجلة {teacherMoney(statement.activity.purchaseValue)}</p></div>
-          <div className="border-b border-[var(--admin-border)] pb-3"><dt className="text-sm font-bold text-[var(--admin-muted)]">شحن رصيد الطلاب</dt><dd className="mt-1 text-2xl font-black tabular-nums">{teacherMoney(statement.activity.rechargeAmount)}</dd><p className="mt-1 text-xs text-[var(--admin-muted)]">{statement.activity.rechargeStudents} طالب · {statement.activity.rechargeOperations} عملية شحن</p></div>
-          <div className="border-b border-[var(--admin-border)] pb-3"><dt className="text-sm font-bold text-[var(--admin-muted)]">من فودافون كاش المؤكد</dt><dd className="mt-1 text-2xl font-black tabular-nums">{teacherMoney(statement.activity.vodafoneCashAmount)}</dd><p className="mt-1 text-xs text-[var(--admin-muted)]">{statement.activity.vodafoneCashStudents} طالب · {statement.activity.vodafoneCashOperations} تحويل · مصادر أخرى/غير مؤكدة {teacherMoney(statement.activity.otherRechargeAmount)}</p></div>
-          <div className="border-b border-[var(--admin-border)] pb-3"><dt className="text-sm font-bold text-[var(--admin-muted)]">طلاب استردوا</dt><dd className="mt-1 text-2xl font-black tabular-nums">{statement.activity.refundedStudents} طالب</dd><p className="mt-1 text-xs text-[var(--admin-muted)]">{statement.activity.refundOperations} عملية استرداد معتمدة · {teacherMoney(statement.activity.refundAmount)}</p></div>
-          <div className="border-b border-[var(--admin-border)] pb-3"><dt className="text-sm font-bold text-[var(--admin-muted)]">أكواد اتستخدمت</dt><dd className="mt-1 text-2xl font-black tabular-nums">{statement.activity.activatedCodes} كود</dd><p className="mt-1 text-xs text-[var(--admin-muted)]">بواسطة {statement.activity.codeStudents} طالب · قيمة الأكواد {teacherMoney(statement.activity.activatedCodeValue)}</p></div>
-        </dl></div>
-      <p className="text-xs leading-5 text-[var(--admin-muted)]">الطالب بيتحسب مرة واحدة في كل فئة. فودافون كاش محسوب من رسائل التحويل المطابقة فقط. شحن الرصيد وقيمة الأكواد مش أرباح إضافية للمدرس.</p>
-      <div className="space-y-3 border-t border-[var(--admin-border)] pt-4"><h3 className="text-base font-black">أرباح المدرس والصرف</h3>
-        <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div><dt className="text-sm text-[var(--admin-muted)]">طلاب اشتروا</dt><dd className="mt-2 text-2xl font-bold">{statement.activity.purchasingStudents} طالب</dd><p className="text-sm">{statement.activity.purchaseOperations} عملية شراء</p></div>
         {[
-          ['أرباح الفترة بعد المرتجعات', statement.totals.earned],
-          ['اتصرف للمدرس في الفترة', statement.totals.teacherPayments],
-          ['محتفظ به من الأكواد', statement.totals.retainedEarnings],
-          ['متاح للسحب الآن', statement.account.netPayable],
-        ].map(([label, amount]) => <div key={label} className="border-b border-[var(--admin-border)] pb-3">
-          <dt className="text-xs font-bold text-[var(--admin-muted)]">{label}</dt><dd className="mt-1 text-lg font-black tabular-nums">{teacherMoney(Number(amount))}</dd>
+          ['قيمة الشراء', statement.activity.purchaseValue],
+          ['نصيب المدرس بعد المرتجعات', statement.totals.earned],
+          ['نصيب المنصة بعد المرتجعات', statement.totals.platformEarned],
+        ].map(([label, amount]) => <div key={label}><dt className="text-sm text-[var(--admin-muted)]">{label}</dt><dd className="mt-2 text-xl font-bold tabular-nums">{teacherMoney(Number(amount))}</dd></div>)}
+      </dl>
+      <div className="overflow-x-auto border-y border-[var(--admin-border)] py-3">
+        <table className="w-full min-w-[620px] text-right text-sm">
+          <caption className="pb-3 text-start font-bold">كام عملية × كام جنيه</caption>
+          <thead><tr>{['العمليات × السعر', 'الإجمالي', 'نصيب المدرس', 'نصيب المنصة', 'نسبة المنصة الفعلية'].map(label => <th key={label} scope="col" className="p-3">{label}</th>)}</tr></thead>
+          <tbody>{statement.sales.map((sale, index) => <tr key={index} className="border-t border-[var(--admin-border)]">
+            <td className="p-3">{sale.operations} × {teacherMoney(sale.unitPrice)}<span className="block text-xs text-[var(--admin-muted)]">{sale.students} طالب</span></td>
+            <td className="p-3 tabular-nums">{teacherMoney(sale.total)}</td><td className="p-3 tabular-nums">{teacherMoney(sale.teacherShare)}</td><td className="p-3 tabular-nums">{teacherMoney(sale.platformShare)}</td><td className="p-3">{sale.platformPercent == null ? '—' : `${sale.platformPercent}٪`}</td>
+          </tr>)}{!statement.sales.length && <tr><td colSpan={5} className="p-4 text-[var(--admin-muted)]">لا توجد مشتريات في الفترة دي.</td></tr>}</tbody>
+        </table>
+        <p className="mt-2 text-xs leading-6 text-[var(--admin-muted)]">الطالب قد يشتري أكثر من مرة. النسبة من المبلغ الموزّع وقت البيع؛ الباقة المشتركة قد تشمل نصيب مدرس آخر. الأكواد معروضة تحت.</p>
+      </div>
+      <section className="space-y-4" aria-label="المدفوع والمتبقي">
+        <h3 className="font-bold">دفعت له كام وباقي له كام؟</h3>
+        <dl className="grid gap-5 sm:grid-cols-3">{[
+          ['دفعت له في الفترة', statement.totals.teacherPayments],
+          ['نصيبه اللي احتفظ به من الأكواد', statement.totals.retainedEarnings],
+          ['باقي له الآن ومتاح للصرف', statement.account.netPayable],
+        ].map(([label, amount]) => <div key={label}><dt className="text-sm text-[var(--admin-muted)]">{label}</dt><dd className="mt-1 text-xl font-bold tabular-nums">{teacherMoney(Number(amount))}</dd></div>)}</dl>
+        <p className="text-sm text-[var(--admin-muted)]">التحويلات المسجلة للمدرس، ومنها فودافون كاش، متخصّمة من المتبقي. المتبقي يشمل كل الفترات.</p>
+        {statement.account.reserved > 0 && <p className="text-sm">محجوز لصرف لم يكتمل: {teacherMoney(statement.account.reserved)}</p>}
+        {statement.account.debt > 0 && <p className="text-sm">مديونية حالية: {teacherMoney(statement.account.debt)}</p>}
+      </section>
+      <section className="space-y-3 border-t border-[var(--admin-border)] pt-4" aria-label="ملخص الأكواد">
+        <h3 className="font-bold">الأكواد اللي سلّمتها للمدرس</h3>
+        {statement.codeBatches.map((batch, index) => <div key={index} className="flex flex-wrap justify-between gap-3 border-b border-[var(--admin-border)] py-3 text-sm">
+          <span><b>{batch.name}</b> · {batch.codes} كود · قيمة {batch.value == null ? 'غير مسجلة' : teacherMoney(batch.value)}</span>
+          <span>استلمت منه {teacherMoney(batch.collected)} · باقي عليه {batch.remaining == null ? 'غير مسجل' : teacherMoney(batch.remaining)}</span>
         </div>)}
-        </dl></div>
-      <details className="text-sm"><summary className="min-h-9 cursor-pointer font-bold">تفاصيل المبالغ الأخرى</summary>
-        <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
-          ['ربح تحت المراجعة', statement.totals.pendingEarnings],
-          ['مستحق للمنصة من الأكواد', statement.totals.platformCodeDue],
-          ['سداد الأكواد للمنصة', statement.totals.platformCodePayments],
-          ['شحن الطلاب، خارج الأرباح', statement.totals.studentCollections],
-          ['مديونيات مفتوحة سُجلت بالفترة', statement.totals.openDebtAdjustments],
-          ['مديونية الحساب الحالية', statement.account.debt],
-        ].map(([label, amount]) => <div key={label}><dt className="text-[var(--admin-muted)]">{label}</dt><dd className="font-bold tabular-nums">{teacherMoney(Number(amount))}</dd></div>)}</dl>
+        {!statement.codeBatches.length && <p className="text-sm text-[var(--admin-muted)]">لا توجد دفعات تسليم في الفترة دي.</p>}
+        <p className="text-sm">اتستخدم {statement.activity.activatedCodes} كود بقيمة {teacherMoney(statement.activity.activatedCodeValue)}. إجمالي الباقي عليه من الأكواد الآن: <b>{teacherMoney(statement.account.codeAmountDue ?? 0)}</b>.</p>
+        <p className="text-xs text-[var(--admin-muted)]">سداد كل دفعة حتى نهاية الفترة. تسليم الكود واستخدامه لا يُحسبان مرتين؛ الباقي عليه من الأكواد منفصل عن المتاح لصرف أرباحه.</p>
+      </section>
+      <details className="border-t border-[var(--admin-border)] pt-3"><summary className="min-h-11 cursor-pointer font-bold">تحويلات الطلاب المقبولة والمرتجعات</summary>
+        <p className="py-2 text-sm">{statement.activity.rechargeOperations} تحويل مقبول = {teacherMoney(statement.activity.rechargeAmount)}. المقبول يدويًا والمطابق تلقائيًا محسوبين مع بعض.</p>
+        <p className="py-2 text-sm">استرد {statement.activity.refundedStudents} طالب {teacherMoney(statement.activity.refundAmount)}.</p>
+        <p className="text-xs text-[var(--admin-muted)]">شحن الرصيد لا يُضاف للمبيعات قبل شراء المحتوى.</p>
       </details>
-      <p className="text-xs leading-5 text-[var(--admin-muted)]">أرقام الفترة حسب تاريخ كل حركة. «متاح للسحب الآن» و«مديونية الحساب الحالية» من بداية الحساب حتى الآن. طلبات السحب والتسويات غير المصروفة لا تدخل في مبلغ الصرف، والمرتجع يظهر كربح سالب مرة واحدة.</p>
       <details className="border-t border-[var(--admin-border)] pt-3"><summary className="min-h-11 cursor-pointer font-bold">عرض تفاصيل الحركات ({statement.total})</summary>
       <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--admin-border)]">
         <table className="w-full min-w-[900px] text-right text-sm"><caption className="sr-only">حركات كشف حساب {statement.teacherName}</caption>
@@ -150,7 +164,7 @@ export function TeacherStatementPanel({ teacherId }: { teacherId?: string }) {
           </tr>)}{statement.items.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-[var(--admin-muted)]">مافيش حركات في الفترة دي. جرّب فترة تانية أو اعرض كل الفترات.</td></tr>}</tbody>
         </table>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"><p>صفحة {page} من {totalPages}. ملف PDF يشمل الملخص وكل الحركات في الفترة المحددة.</p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"><p>صفحة {page} من {totalPages}. ملف PDF يعرض ملخصًا بسيطًا للمبيعات والأكواد والمدفوع.</p>
         <div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="admin-btn-ghost min-h-11 px-4 disabled:opacity-40">السابق</button>
           <button type="button" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)} className="admin-btn-ghost min-h-11 px-4 disabled:opacity-40">التالي</button></div></div></details>
     </>}
