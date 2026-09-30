@@ -77,6 +77,7 @@ incompatible choice:
 | EF entities, context, migrations, Compose/Production tooling, or an unknown affected area | `all` |
 
 The scope is an explicit intent and a focused local-verification/build choice.
+It never authorizes a partial Production deployment.
 The immutable Production release contract assembles all four images into one
 digest-parity manifest. With the reviewed private registry installed, the
 builder reuses an image only when its complete context, base image identities,

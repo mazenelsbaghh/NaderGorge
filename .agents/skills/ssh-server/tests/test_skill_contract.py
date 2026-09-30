@@ -332,8 +332,8 @@ def test_schema_inventory_reports_missing_tables_and_pending_migrations(
     )
     migrations = tmp_path / "Migrations"
     migrations.mkdir()
-    (migrations / "20260101000000_Initial.cs").write_text("// migration\n")
-    (migrations / "20260102000000_AddLessons.cs").write_text("// migration\n")
+    (migrations / "20260101000000_Initial.cs").write_text('[Migration("20260101000000_Initial")]\n')
+    (migrations / "20260102000000_AddLessons.cs").write_text('[Migration("20260102000000_AddLessons")]\n')
     actual = tmp_path / "actual.json"
     actual.write_text(
         '{"status":"success","latestMigration":"20260101000000_Initial",'
@@ -360,7 +360,7 @@ def test_schema_inventory_match_is_order_independent(
     migrations = tmp_path / "Migrations"
     migrations.mkdir()
     migration = "20260101000000_Initial"
-    (migrations / f"{migration}.cs").write_text("// migration\n")
+    (migrations / f"{migration}.cs").write_text(f'[Migration("{migration}")]\n')
     actual = tmp_path / "actual.json"
     actual.write_text(
         json.dumps(
@@ -386,7 +386,7 @@ def test_schema_inventory_extra_table_is_drift(
     migrations = tmp_path / "Migrations"
     migrations.mkdir()
     migration = "20260101000000_Initial"
-    (migrations / f"{migration}.cs").write_text("// migration\n")
+    (migrations / f"{migration}.cs").write_text(f'[Migration("{migration}")]\n')
     actual = tmp_path / "actual.json"
     actual.write_text(
         json.dumps(
@@ -404,12 +404,38 @@ def test_schema_inventory_extra_table_is_drift(
     assert result["extraTables"] == ["rogue"]
 
 
+def test_schema_inventory_reports_unregistered_sources_without_claiming_pending_migrations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot = tmp_path / "Snapshot.cs"
+    snapshot.write_text('a.ToTable("expected");\n', encoding="utf-8")
+    migrations = tmp_path / "Migrations"
+    migrations.mkdir()
+    registered = "20260101000000_Initial"
+    source_only = "20260102000000_SourceOnly"
+    (migrations / f"{registered}.cs").write_text(f'[Migration("{registered}")]\n')
+    (migrations / f"{source_only}.cs").write_text("// no EF metadata\n")
+    actual = tmp_path / "actual.json"
+    actual.write_text(json.dumps({
+        "status": "success", "latestMigration": registered,
+        "migrationIds": [registered], "tableCounts": {"expected": 0},
+    }))
+    monkeypatch.setattr(schema_inventory, "MIGRATIONS", migrations)
+    result = schema_inventory.compare(actual, snapshot)
+    assert result["status"] == "match"
+    assert result["pendingMigrations"] == []
+    assert result["unregisteredMigrationSources"] == [source_only]
+
+
 def test_repository_schema_inventory_covers_full_snapshot() -> None:
     tables, migrations = schema_inventory.expected_contract()
     assert len(tables) >= 200
     assert len(migrations) >= 130
     assert "users" in tables
     assert "web_vitals_metrics" in tables
+    assert "thanaweya_results" in tables
+    assert "20260630090000_AddUserSecurityStampVersion" not in migrations
 
 
 def test_db_only_repair_requires_migrations_in_current_release(

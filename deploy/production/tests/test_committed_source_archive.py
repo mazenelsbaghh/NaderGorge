@@ -12,7 +12,7 @@ def test_release_archives_use_published_objects_despite_dirty_local_files(tmp_pa
     files = {
         'frontend/src/page.tsx': 'export default 1;',
         'deploy/production/config/example.conf': 'published config',
-        'backend/src/NaderGorge.Infrastructure/Migrations/20260924000000_Example.cs': '// migration',
+        'backend/src/NaderGorge.Infrastructure/Migrations/20260924000000_Example.cs': '[Migration("20260924000000_Example")]',
     }
     for name, content in files.items():
         path = tmp_path / name

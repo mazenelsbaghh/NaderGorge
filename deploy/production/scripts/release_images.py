@@ -19,6 +19,7 @@ from typing import Any, Mapping
 
 from source_manifest import build_manifest
 from ssh_transport import SshTarget, StrictSshTransport
+from ef_migration_inventory import migration_inventory
 
 
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -278,11 +279,12 @@ def migration_set(repo: Path) -> list[str]:
     migrations = repo / "backend/src/NaderGorge.Infrastructure/Migrations"
     if not migrations.is_dir():
         raise RuntimeError("release source is missing the EF migration set")
-    return sorted(
-        path.stem
-        for path in migrations.glob("20*.cs")
-        if not path.name.endswith(".Designer.cs")
-    )
+    files = {path.name: path for path in migrations.glob("20*.cs")
+             if path.is_file() and not path.is_symlink()}
+    registered, _ = migration_inventory(files, lambda name: files[name].read_text(encoding="utf-8"))
+    if not registered:
+        raise RuntimeError("release source has no registered EF migrations")
+    return registered
 
 
 def artifact_manifest(inputs: ReleaseManifestInputs) -> dict[str, dict[str, str]]:
@@ -484,14 +486,18 @@ def _stable_bundle_metadata(member: tarfile.TarInfo) -> tarfile.TarInfo:
 
 
 def committed_migration_set(repo: Path, commit: str) -> list[str]:
+    root = "backend/src/NaderGorge.Infrastructure/Migrations/"
     paths = command(["git", "-C", str(repo), "ls-tree", "-r", "--name-only", commit,
-                     "--", "backend/src/NaderGorge.Infrastructure/Migrations"]).splitlines()
-    migrations = sorted(Path(path).stem for path in paths
-                        if Path(path).name.startswith("20") and path.endswith(".cs")
-                        and not path.endswith(".Designer.cs"))
-    if not migrations:
+                     "--", root]).splitlines()
+    files = {path[len(root):]: path for path in paths if path.startswith(root)}
+    registered, _ = migration_inventory(
+        files,
+        lambda name: subprocess.check_output(
+            ["git", "-C", str(repo), "show", f"{commit}:{files[name]}"], text=True),
+    )
+    if not registered:
         raise RuntimeError("committed release source is missing EF migrations")
-    return migrations
+    return registered
 
 
 def create_committed_archive(repo: Path, commit: str, archive: Path, expected_sha256: str,
