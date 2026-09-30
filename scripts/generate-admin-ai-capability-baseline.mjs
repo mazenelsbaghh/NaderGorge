@@ -15,6 +15,18 @@ const checkOnly = process.argv.includes('--check');
 const strongTerms = /(delete|remove|revoke|reset|password|role|permission|disable|toggle|bulk|finance|payment|wallet|refund|settlement|treasury|expense|salary|payroll|publish|cancel|migrat|transfer|generate)/i;
 const externalTerms = /(whatsapp|bunny|upload|export|download|sync|analy[sz]e)/i;
 const reviewedStrongRoutes = new Set(['POST:/admin/watch-requests/{}/approve']);
+// These POST handlers only read persisted state or calculate a response. Review
+// each handler and its callees before adding another route to this list.
+const reviewedReadOnlyPostRoutes = new Map([
+  ['POST:/admin/exams/{}/revision-preview', 'preview'],
+  ['POST:/admin/homework/{}/revision-preview', 'preview'],
+  ['POST:/admin/teacher-finance-center/settlements/preview', 'preview'],
+  ['POST:/admin/teacher-finance-center/shared-packages/{}/allocation-preview', 'preview'],
+  ['POST:/hr/admin/shifts/assignments/validate', 'read'],
+  ['POST:/live-support/whatsapp/campaigns/audience/preview', 'preview'],
+  ['POST:/live-support/whatsapp/campaigns/spreadsheet/inspect', 'read'],
+  ['POST:/live-support/whatsapp/preferences/contacts/search', 'read'],
+]);
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -56,9 +68,10 @@ function domainFor(value) {
 function semantics(method, descriptor, route) {
   const operation = `${descriptor} ${route}`;
   const external = externalTerms.test(operation);
-  const mutation = method !== 'GET' && method !== 'ANY';
-  const effect = mutation ? (external ? 'external-side-effect' : 'mutation') :
-    (/export|download/i.test(operation) ? 'export' : /preview/i.test(operation) ? 'preview' : 'read');
+  const reviewedReadEffect = reviewedReadOnlyPostRoutes.get(routeKey(method, route));
+  const mutation = method !== 'GET' && method !== 'ANY' && !reviewedReadEffect;
+  const effect = reviewedReadEffect ?? (mutation ? (external ? 'external-side-effect' : 'mutation') :
+    (/export|download/i.test(operation) ? 'export' : /preview/i.test(operation) ? 'preview' : 'read'));
   const risk = mutation && (method === 'DELETE' || strongTerms.test(operation) || reviewedStrongRoutes.has(routeKey(method, route)))
     ? 'strong' : mutation ? 'ordinary' : 'none';
   return {
@@ -138,14 +151,23 @@ function build() {
         call.source.file, backend?.authoritativeOperation ?? 'unresolved:frontend-contract');
       // An exact route points to one authoritative operation. Its effect and risk
       // cannot be downgraded by a generic frontend service filename.
-      return backend ? {
+      if (!backend) return item;
+      const matched = {
         ...item,
         effect: backend.effect,
         domain: backend.domain,
         risk: backend.risk,
         confirmation: backend.confirmation,
+        status: backend.status,
+        limits: backend.limits,
+        idempotency: backend.idempotency,
+        concurrency: backend.concurrency,
+        audit: backend.audit,
         refreshScopes: backend.refreshScopes,
-      } : item;
+      };
+      if (backend.blocker) matched.blocker = backend.blocker;
+      else delete matched.blocker;
+      return matched;
     });
   const selfServicePath = 'frontend/src/services/admin-ai-agent-service.ts';
   const selfServiceItems = frontendItems.filter((item) => item.source.file === selfServicePath);

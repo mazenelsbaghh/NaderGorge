@@ -69,8 +69,37 @@ def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operat
                for item in matched)
     for item in matched:
         source = backend[route_key(item)]
-        for field in ("effect", "domain", "risk", "confirmation", "refreshScopes"):
-            assert item[field] == source[field], (item["route"], field)
+        for field in ("effect", "domain", "risk", "confirmation", "status", "limits",
+                      "idempotency", "concurrency", "audit", "refreshScopes", "blocker"):
+            assert item.get(field) == source.get(field), (item["route"], field)
+
+
+def test_reviewed_read_only_posts_do_not_inherit_mutation_requirements():
+    items = json.loads(BASELINE.read_text())["items"]
+    expected = {
+        "diagnostic:AssessmentReviewController.PreviewExamRevision": "preview",
+        "diagnostic:AssessmentReviewController.PreviewHomeworkRevision": "preview",
+        "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlement": "preview",
+        "diagnostic:AdminTeacherFinanceCenterController.PreviewSharedPackageAllocation": "preview",
+        "diagnostic:HrShiftsController.ValidateAssignments": "read",
+        "diagnostic:WhatsAppCampaignController.Preview": "preview",
+        "diagnostic:WhatsAppCampaignController.InspectSpreadsheet": "read",
+        "diagnostic:WhatsAppCampaignController.ContactCandidates": "read",
+    }
+    backend = {item["authoritativeOperation"]: item for item in items
+               if item["kind"] == "backend-endpoint" and item["method"] == "POST"}
+
+    assert set(expected).issubset(backend)
+    for operation, effect in expected.items():
+        item = backend[operation]
+        assert (item["effect"], item["risk"], item["status"]) == (effect, "none", "candidate")
+        assert item["idempotency"] == item["concurrency"] == "none"
+        assert item["audit"] == "read-evidence"
+        assert "blocker" not in item
+
+    # A similar name can still call an external service or mutate state.
+    assert backend["diagnostic:LiveSupportAIAdminController.Preview"]["status"] == "blocked"
+    assert backend["diagnostic:AdminFacebookMessengerController.CheckPage"]["status"] == "blocked"
 
 
 def test_unresolved_frontend_deletes_require_strong_confirmation():

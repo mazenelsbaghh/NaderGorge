@@ -13,7 +13,7 @@
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "227ed55196e36d7063a74ad3809dd628b0d552b04463c56280cb3449f1672af5"
+      "digest": "751bece88ac2947b2eaa6bd0b9dc3cb3f356f785d4da88112bd96bf4e79fa4e9"
     }
   },
   "items": [
@@ -8179,30 +8179,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/exams/{id}/revision-preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewExamRevision",
       "inputSchema": "backend-endpoint:assessmentreviewcontroller-previewexamrevision:input:v1",
       "outputSchema": "backend-endpoint:assessmentreviewcontroller-previewexamrevision:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
         "line": 58
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-admin-exams-inline:backend-src-nadergorge-api-controllers-admincontroller-cs:979",
@@ -8539,30 +8536,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/homework/{id}/revision-preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewHomeworkRevision",
       "inputSchema": "backend-endpoint:assessmentreviewcontroller-previewhomeworkrevision:input:v1",
       "outputSchema": "backend-endpoint:assessmentreviewcontroller-previewhomeworkrevision:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssessmentReviewController.cs",
         "line": 54
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-admin-hr-employees-provision:backend-src-nadergorge-api-controllers-adminhrcontroller-cs:46",
@@ -10609,30 +10603,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/settlements/preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlement",
       "inputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsettlement:input:v1",
       "outputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsettlement:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
         "line": 173
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-admin-teacher-finance-center-settlements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:182",
@@ -10669,30 +10660,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/admin/teacher-finance-center/shared-packages/{id}/allocation-preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSharedPackageAllocation",
       "inputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsharedpackageallocation:input:v1",
       "outputSchema": "backend-endpoint:adminteacherfinancecentercontroller-previewsharedpackageallocation:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminTeacherFinanceCenterController.cs",
         "line": 50
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-admin-teacher-finance-center-teachers-teacherid-agreements:backend-src-nadergorge-api-controllers-adminteacherfinancecentercontroller-cs:107",
@@ -12679,30 +12667,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/hr/admin/shifts/assignments/validate",
-      "effect": "mutation",
+      "effect": "read",
       "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:HrShiftsController.ValidateAssignments",
       "inputSchema": "backend-endpoint:hrshiftscontroller-validateassignments:input:v1",
       "outputSchema": "backend-endpoint:hrshiftscontroller-validateassignments:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "hr"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrShiftsController.cs",
         "line": 87
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-hr-admin-shifts-swaps-requestid-decision:backend-src-nadergorge-api-controllers-hrshiftscontroller-cs:164",
@@ -14449,30 +14434,27 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/live-support/whatsapp/campaigns/audience/preview",
-      "effect": "external-side-effect",
+      "effect": "preview",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preview",
       "inputSchema": "backend-endpoint:whatsappcampaigncontroller-preview:input:v1",
       "outputSchema": "backend-endpoint:whatsappcampaigncontroller-preview:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
         "line": 49
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-live-support-whatsapp-campaigns-campaignid-cancel:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:81",
@@ -14659,60 +14641,54 @@
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/live-support/whatsapp/campaigns/spreadsheet/inspect",
-      "effect": "external-side-effect",
+      "effect": "read",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.InspectSpreadsheet",
       "inputSchema": "backend-endpoint:whatsappcampaigncontroller-inspectspreadsheet:input:v1",
       "outputSchema": "backend-endpoint:whatsappcampaigncontroller-inspectspreadsheet:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
         "line": 24
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-live-support-whatsapp-preferences-contacts-search:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:103",
       "kind": "backend-endpoint",
       "method": "POST",
       "route": "/api/live-support/whatsapp/preferences/contacts/search",
-      "effect": "external-side-effect",
+      "effect": "read",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.ContactCandidates",
       "inputSchema": "backend-endpoint:whatsappcampaigncontroller-contactcandidates:input:v1",
       "outputSchema": "backend-endpoint:whatsappcampaigncontroller-contactcandidates:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
         "line": 103
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "be:post:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:96",
@@ -23890,30 +23866,27 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/exams/{definitionassessmentId}/revision-preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewExamRevision",
       "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/assessment-revision-service.ts",
         "line": 57
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:admin-exams-inline:frontend-src-services-admin-service-ts:2135",
@@ -24250,30 +24223,27 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/homework/{definitionassessmentId}/revision-preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "content",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AssessmentReviewController.PreviewHomeworkRevision",
       "inputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-assessment-revision-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "content"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/assessment-revision-service.ts",
         "line": 58
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:admin-hr-employees-provision:frontend-src-services-hr-service-ts:230",
@@ -25990,30 +25960,27 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/admin/teacher-finance-center/settlements/preview",
-      "effect": "mutation",
+      "effect": "preview",
       "domain": "finance",
-      "risk": "strong",
-      "confirmation": "strong",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:AdminTeacherFinanceCenterController.PreviewSettlement",
       "inputSchema": "frontend-call:frontend-src-services-finance-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-finance-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "finance"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/finance-service.ts",
         "line": 258
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:admin-teacher-finance-center-settlements-settlementid-approve:frontend-src-services-finance-service-ts:274",
@@ -27880,30 +27847,27 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/hr/admin/shifts/assignments/validate",
-      "effect": "mutation",
+      "effect": "read",
       "domain": "hr",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:HrShiftsController.ValidateAssignments",
       "inputSchema": "frontend-call:frontend-src-services-hr-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-hr-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "hr"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/hr-service.ts",
         "line": 277
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:hr-admin-shifts-templates:frontend-src-services-hr-service-ts:269",
@@ -29080,30 +29044,27 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/audience/preview",
-      "effect": "external-side-effect",
+      "effect": "preview",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preview",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 743
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:live-support-whatsapp-campaigns-campaignid-cancel:frontend-src-services-live-support-service-ts:813",
@@ -29290,60 +29251,54 @@
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/campaigns/spreadsheet/inspect",
-      "effect": "external-side-effect",
+      "effect": "read",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.InspectSpreadsheet",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 718
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:833",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/preferences/contacts/search",
-      "effect": "external-side-effect",
+      "effect": "read",
       "domain": "support",
-      "risk": "ordinary",
-      "confirmation": "ordinary",
-      "status": "blocked",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
       "authoritativeOperation": "diagnostic:WhatsAppCampaignController.ContactCandidates",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
-        "maxRows": 0,
+        "maxRows": 200,
         "maxBytes": 65536,
         "timeoutMs": 5000
       },
-      "idempotency": "missing",
-      "concurrency": "missing",
-      "audit": "missing",
-      "refreshScopes": [
-        "support"
-      ],
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 833
-      },
-      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+      }
     },
     {
       "id": "fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:845",
@@ -31303,5 +31258,5 @@
       "detail": "Admin AI conversation/proposal transport is not an Admin business capability: POST <dynamic>"
     }
   ],
-  "digest": "c4b39effdd96989808ec267e3bc376e1365a1fcd1daade88cae9aa619b813fae"
+  "digest": "d4c223230e148c34dfd19494ca501c4b660593228c461b2576530c7e6959874c"
 }
