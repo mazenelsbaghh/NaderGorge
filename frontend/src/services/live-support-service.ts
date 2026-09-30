@@ -633,10 +633,10 @@ export const liveSupportService = {
   },
 
   getAttachmentBlob: async (audience: 'participant' | 'staff', conversationId: string, attachmentId: string, signal?: AbortSignal) => {
-    const response = await apiClient.get<Blob>(
-      `/live-support/${audience}/conversations/${conversationId}/attachments/${attachmentId}`,
-      { responseType: 'blob', signal },
-    );
+    const options = { responseType: 'blob' as const, signal };
+    const response = audience === 'staff'
+      ? await apiClient.get<Blob>(`/live-support/staff/conversations/${conversationId}/attachments/${attachmentId}`, options)
+      : await apiClient.get<Blob>(`/live-support/participant/conversations/${conversationId}/attachments/${attachmentId}`, options);
     return response.data;
   },
 
@@ -804,11 +804,13 @@ export const liveSupportService = {
     reason?: string,
     idempotencyKey = createClientId(),
   ) => {
-    const response = await apiClient.post<ApiResponse<WhatsAppCampaignState>>(
-      `/live-support/whatsapp/campaigns/${campaignId}/${operation}`,
-      { expectedVersion, reason: reason?.trim() || null },
-      { headers: { 'Idempotency-Key': idempotencyKey } },
-    );
+    const payload = { expectedVersion, reason: reason?.trim() || null };
+    const options = { headers: { 'Idempotency-Key': idempotencyKey } };
+    const response = operation === 'pause'
+      ? await apiClient.post<ApiResponse<WhatsAppCampaignState>>(`/live-support/whatsapp/campaigns/${campaignId}/pause`, payload, options)
+      : operation === 'resume'
+        ? await apiClient.post<ApiResponse<WhatsAppCampaignState>>(`/live-support/whatsapp/campaigns/${campaignId}/resume`, payload, options)
+        : await apiClient.post<ApiResponse<WhatsAppCampaignState>>(`/live-support/whatsapp/campaigns/${campaignId}/cancel`, payload, options);
     invalidateSupport(['support:dashboard', 'whatsapp:campaigns']);
     return response.data.data;
   },

@@ -9,11 +9,11 @@
     },
     "frontend": {
       "path": "tests/admin_ai_frontend_reachable_calls.json",
-      "digest": "15281afdd7d36244111e3cb727d337f116d01d91085bada6fb68b6c7a6aa3f58"
+      "digest": "688e8120ab98d04de8505aee3640dc6399361b99d7b90d3569533929319ba379"
     },
     "semantic": {
       "path": "scripts/generate-admin-ai-capability-baseline.mjs",
-      "digest": "b4eb2e958f52d1ab522e60b13dbd43671e842bd7ead537be739bd04dbae36b38"
+      "digest": "19653147391f4d004ac2fcdc5fa4271adc73cf72f00d13ef853a5276a98f37f0"
     }
   },
   "items": [
@@ -704,6 +704,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrEmployeesController.cs",
         "line": 80
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:delete:api-live-support-staff-conversations-conversationid-messages-messageid:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:71",
+      "kind": "backend-endpoint",
+      "method": "DELETE",
+      "route": "/api/live-support/staff/conversations/{conversationid}/messages/{messageid}",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.DeleteMessage",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-deletemessage:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-deletemessage:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 71
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -6216,6 +6246,546 @@
       }
     },
     {
+      "id": "be:get:api-live-support-connections-conversations-id-block:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:44",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/connections/conversations/{id}/block",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.BlockStatus",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-blockstatus:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-blockstatus:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 44
+      }
+    },
+    {
+      "id": "be:get:api-live-support-connections-whatsapp:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:19",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/connections/whatsapp",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.List",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-list:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-list:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 19
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-bootstrap:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:21",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/bootstrap",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Bootstrap",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-bootstrap:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-bootstrap:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 21
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-canned-replies:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:28",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/canned-replies",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.CannedReplies",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-cannedreplies:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-cannedreplies:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 28
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-actions-actionkey-draft:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:204",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/actions/{actionkey}/draft",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.ActionDraft",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-actiondraft:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-actiondraft:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 204
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-actions-context:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:197",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/actions/context",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.StudentActionContext",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-studentactioncontext:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-studentactioncontext:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 197
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-actions:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:190",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/actions",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.ActionCatalog",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-actioncatalog:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-actioncatalog:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 190
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-attachments-attachmentid:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:91",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/attachments/{attachmentid}",
+      "effect": "export",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Download",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-download:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-download:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 91
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-messages:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:116",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/messages",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Messages",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-messages:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-messages:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 116
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-student-context-section:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:169",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/student-context/{section}",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.StudentContextSection",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-studentcontextsection:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-studentcontextsection:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 169
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-student-context:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:162",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/student-context",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.StudentContext",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-studentcontext:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-studentcontext:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 162
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-student-history-historyconversationid-messages:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:183",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/student-history/{historyconversationid}/messages",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.StudentHistoryMessages",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-studenthistorymessages:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-studenthistorymessages:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 183
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-student-history:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:176",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/student-history",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.StudentHistory",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-studenthistory:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-studenthistory:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 176
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-students-search:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:148",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/students/search",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.SearchStudents",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-searchstudents:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-searchstudents:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 148
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-whatsapp-thread-attachments-attachmentid:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:103",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/attachments/{attachmentid}",
+      "effect": "export",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.DownloadWhatsAppThreadAttachment",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-downloadwhatsappthreadattachment:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-downloadwhatsappthreadattachment:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 103
+      }
+    },
+    {
+      "id": "be:get:api-live-support-staff-conversations-conversationid-whatsapp-thread-messages:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:123",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/staff/conversations/{conversationid}/whatsapp-thread/messages",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.WhatsAppThreadMessages",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-whatsappthreadmessages:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-whatsappthreadmessages:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 123
+      }
+    },
+    {
+      "id": "be:get:api-live-support-whatsapp-campaigns-bootstrap:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:14",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/whatsapp/campaigns/bootstrap",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Bootstrap",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-bootstrap:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-bootstrap:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 14
+      }
+    },
+    {
+      "id": "be:get:api-live-support-whatsapp-campaigns:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:19",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/whatsapp/campaigns",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.List",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-list:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-list:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 19
+      }
+    },
+    {
+      "id": "be:get:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:88",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/whatsapp/preferences",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preferences",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-preferences:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-preferences:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 88
+      }
+    },
+    {
+      "id": "be:get:api-live-support-whatsapp-templates:backend-src-nadergorge-api-controllers-whatsapplivesupportcontroller-cs:51",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/live-support/whatsapp/templates",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:WhatsAppLiveSupportController.Templates",
+      "inputSchema": "backend-endpoint:whatsapplivesupportcontroller-templates:input:v1",
+      "outputSchema": "backend-endpoint:whatsapplivesupportcontroller-templates:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppLiveSupportController.cs",
+        "line": 51
+      }
+    },
+    {
       "id": "be:get:api-v1-internal-admin-ai-readiness:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:28",
       "kind": "backend-endpoint",
       "method": "GET",
@@ -6240,6 +6810,60 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
         "line": 28
+      }
+    },
+    {
+      "id": "be:get:api-video-learning-videoid-author:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:19",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/video-learning/{videoid}/author",
+      "effect": "read",
+      "domain": "identity",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Author",
+      "inputSchema": "backend-endpoint:videolearningcontroller-author:input:v1",
+      "outputSchema": "backend-endpoint:videolearningcontroller-author:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 19
+      }
+    },
+    {
+      "id": "be:get:api-video-learning-videoid-report:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:31",
+      "kind": "backend-endpoint",
+      "method": "GET",
+      "route": "/api/video-learning/{videoid}/report",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Report",
+      "inputSchema": "backend-endpoint:videolearningcontroller-report:input:v1",
+      "outputSchema": "backend-endpoint:videolearningcontroller-report:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 31
       }
     },
     {
@@ -6503,6 +7127,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HrShiftsController.cs",
         "line": 41
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:patch:api-live-support-staff-conversations-conversationid-messages-messageid:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:64",
+      "kind": "backend-endpoint",
+      "method": "PATCH",
+      "route": "/api/live-support/staff/conversations/{conversationid}/messages/{messageid}",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.UpdateMessage",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-updatemessage:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-updatemessage:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 64
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -11037,6 +11691,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:post:api-exams-admin-lessons-lessonid-students-studentid-unlock:backend-src-nadergorge-api-controllers-examscontroller-cs:144",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock",
+      "effect": "mutation",
+      "domain": "identity",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:ExamsController.ManualUnlock",
+      "inputSchema": "backend-endpoint:examscontroller-manualunlock:input:v1",
+      "outputSchema": "backend-endpoint:examscontroller-manualunlock:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "identity"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 144
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:post:api-hr-admin-assets-assetid-assign:backend-src-nadergorge-api-controllers-hrdocumentsassetscontroller-cs:64",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -13347,6 +14031,696 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:post:api-live-support-connections-conversations-id-block-retry:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:51",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/conversations/{id}/block/retry",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.RetryBlock",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-retryblock:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-retryblock:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 51
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-connections-whatsapp-id-connect:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:28",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/whatsapp/{id}/connect",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Connect",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-connect:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-connect:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 28
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-connections-whatsapp-id-connection:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:36",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/whatsapp/{id}/connection",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Connection",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-connection:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-connection:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 36
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-connections-whatsapp-id-disconnect:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:40",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/whatsapp/{id}/disconnect",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Disconnect",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-disconnect:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-disconnect:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 40
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-connections-whatsapp-id-refresh:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:32",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/whatsapp/{id}/refresh",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Refresh",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-refresh:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-refresh:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 32
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-connections-whatsapp:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:23",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/connections/whatsapp",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Create",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-create:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-create:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 23
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-actions-actionkey:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:211",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/actions/{actionkey}",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.ExecuteAction",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-executeaction:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-executeaction:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 211
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-attachments:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:78",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/attachments",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Upload",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-upload:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-upload:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 78
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-close:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:134",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/close",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Close",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-close:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-close:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 134
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-messages:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:38",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/messages",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Send",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-send:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-send:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 38
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-transfer:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:141",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/transfer",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Transfer",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-transfer:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-transfer:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 141
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-staff-conversations-conversationid-whatsapp-template:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:53",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/staff/conversations/{conversationid}/whatsapp-template",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.SendWhatsAppTemplate",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-sendwhatsapptemplate:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-sendwhatsapptemplate:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 53
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-audience-preview:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:49",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/audience/preview",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preview",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-preview:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-preview:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 49
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-campaignid-cancel:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:81",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/{campaignid}/cancel",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Cancel",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-cancel:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-cancel:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 81
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-campaignid-launch:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:60",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/{campaignid}/launch",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Launch",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-launch:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-launch:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 60
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-campaignid-pause:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:67",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/{campaignid}/pause",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Pause",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-pause:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-pause:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 67
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-campaignid-resume:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:74",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/{campaignid}/resume",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Resume",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-resume:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-resume:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 74
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-drafts:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:53",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/drafts",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.CreateDraft",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-createdraft:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-createdraft:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 53
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-media-header-image:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:36",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/media/header-image",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.UploadHeaderImage",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-uploadheaderimage:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-uploadheaderimage:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 36
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-campaigns-spreadsheet-inspect:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:24",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/campaigns/spreadsheet/inspect",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.InspectSpreadsheet",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-inspectspreadsheet:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-inspectspreadsheet:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 24
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-preferences-contacts-search:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:103",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/preferences/contacts/search",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.ContactCandidates",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-contactcandidates:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-contactcandidates:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 103
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-preferences:backend-src-nadergorge-api-controllers-whatsappcampaigncontroller-cs:96",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/preferences",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.RecordPreference",
+      "inputSchema": "backend-endpoint:whatsappcampaigncontroller-recordpreference:input:v1",
+      "outputSchema": "backend-endpoint:whatsappcampaigncontroller-recordpreference:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppCampaignController.cs",
+        "line": 96
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-live-support-whatsapp-templates-sync:backend-src-nadergorge-api-controllers-whatsapplivesupportcontroller-cs:56",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/live-support/whatsapp/templates/sync",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppLiveSupportController.SyncTemplates",
+      "inputSchema": "backend-endpoint:whatsapplivesupportcontroller-synctemplates:input:v1",
+      "outputSchema": "backend-endpoint:whatsapplivesupportcontroller-synctemplates:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppLiveSupportController.cs",
+        "line": 56
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "be:post:api-v1-internal-admin-ai-turns-turnid-claim:backend-src-nadergorge-api-controllers-adminaiinternalcontroller-cs:43",
       "kind": "backend-endpoint",
       "method": "POST",
@@ -13493,6 +14867,36 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminAIInternalController.cs",
         "line": 110
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:post:api-video-learning-videoid-ai:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:29",
+      "kind": "backend-endpoint",
+      "method": "POST",
+      "route": "/api/video-learning/{videoid}/ai",
+      "effect": "mutation",
+      "domain": "content",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Ai",
+      "inputSchema": "backend-endpoint:videolearningcontroller-ai:input:v1",
+      "outputSchema": "backend-endpoint:videolearningcontroller-ai:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "content"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 29
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -14997,6 +16401,126 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "be:put:api-live-support-connections-conversations-id-block:backend-src-nadergorge-api-controllers-livesupportconnectionscontroller-cs:47",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/live-support/connections/conversations/{id}/block",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Block",
+      "inputSchema": "backend-endpoint:livesupportconnectionscontroller-block:input:v1",
+      "outputSchema": "backend-endpoint:livesupportconnectionscontroller-block:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportConnectionsController.cs",
+        "line": 47
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-live-support-staff-canned-replies:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:31",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/live-support/staff/canned-replies",
+      "effect": "mutation",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.UpdateCannedReplies",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-updatecannedreplies:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-updatecannedreplies:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 31
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-live-support-staff-conversations-conversationid-student-link:backend-src-nadergorge-api-controllers-livesupportstaffcontroller-cs:155",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/live-support/staff/conversations/{conversationid}/student-link",
+      "effect": "mutation",
+      "domain": "identity",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.LinkStudent",
+      "inputSchema": "backend-endpoint:livesupportstaffcontroller-linkstudent:input:v1",
+      "outputSchema": "backend-endpoint:livesupportstaffcontroller-linkstudent:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "identity"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/LiveSupportStaffController.cs",
+        "line": 155
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "be:put:api-video-learning-videoid-author:backend-src-nadergorge-api-controllers-videolearningcontroller-cs:21",
+      "kind": "backend-endpoint",
+      "method": "PUT",
+      "route": "/api/video-learning/{videoid}/author",
+      "effect": "mutation",
+      "domain": "identity",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Save",
+      "inputSchema": "backend-endpoint:videolearningcontroller-save:input:v1",
+      "outputSchema": "backend-endpoint:videolearningcontroller-save:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "identity"
+      ],
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoLearningController.cs",
+        "line": 21
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:delete:admin-bunny-libraries-encodeuricomponentlibraryrecordid:frontend-src-services-admin-service-ts:1891",
       "kind": "frontend-call",
       "method": "DELETE",
@@ -15687,7 +17211,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:865",
+      "id": "fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:867",
       "kind": "frontend-call",
       "method": "DELETE",
       "route": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
@@ -15696,7 +17220,7 @@
       "risk": "strong",
       "confirmation": "strong",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.DeleteMessage",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -15712,7 +17236,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 865
+        "line": 867
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -20577,7 +22101,7 @@
       }
     },
     {
-      "id": "fe:get:live-support-admin-config:frontend-src-services-live-support-service-ts:892",
+      "id": "fe:get:live-support-admin-config:frontend-src-services-live-support-service-ts:894",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/config",
@@ -20600,11 +22124,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 892
+        "line": 894
       }
     },
     {
-      "id": "fe:get:live-support-admin-conversations-conversationid-timeline:frontend-src-services-live-support-service-ts:901",
+      "id": "fe:get:live-support-admin-conversations-conversationid-timeline:frontend-src-services-live-support-service-ts:903",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/conversations/{conversationId}/timeline",
@@ -20627,11 +22151,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 901
+        "line": 903
       }
     },
     {
-      "id": "fe:get:live-support-admin-dashboard:frontend-src-services-live-support-service-ts:895",
+      "id": "fe:get:live-support-admin-dashboard:frontend-src-services-live-support-service-ts:897",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/dashboard",
@@ -20654,11 +22178,11 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 895
+        "line": 897
       }
     },
     {
-      "id": "fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:898",
+      "id": "fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:900",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/admin/ratings",
@@ -20681,34 +22205,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 898
-      }
-    },
-    {
-      "id": "fe:get:live-support-audience-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:636",
-      "kind": "frontend-call",
-      "method": "GET",
-      "route": "/live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId}",
-      "effect": "read",
-      "domain": "support",
-      "risk": "none",
-      "confirmation": "none",
-      "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
-      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
-      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
-      "limits": {
-        "maxRows": 200,
-        "maxBytes": 65536,
-        "timeoutMs": 5000
-      },
-      "idempotency": "none",
-      "concurrency": "none",
-      "audit": "read-evidence",
-      "refreshScopes": [],
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 636
+        "line": 900
       }
     },
     {
@@ -20721,7 +22218,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.BlockStatus",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20748,7 +22245,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.List",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20766,10 +22263,10 @@
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:871",
+      "id": "fe:get:live-support-participant-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:639",
       "kind": "frontend-call",
       "method": "GET",
-      "route": "/live-support/staff/conversations/{conversationId}/messages",
+      "route": "/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}",
       "effect": "read",
       "domain": "support",
       "risk": "none",
@@ -20789,7 +22286,61 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 871
+        "line": 639
+      }
+    },
+    {
+      "id": "fe:get:live-support-staff-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:638",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/live-support/staff/conversations/{conversationId}/attachments/{attachmentId}",
+      "effect": "export",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Download",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 638
+      }
+    },
+    {
+      "id": "fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:873",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/live-support/staff/conversations/{conversationId}/messages",
+      "effect": "read",
+      "domain": "support",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Messages",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 873
       }
     },
     {
@@ -20797,12 +22348,12 @@
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId}",
-      "effect": "read",
+      "effect": "export",
       "domain": "support",
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.DownloadWhatsAppThreadAttachment",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20820,7 +22371,7 @@
       }
     },
     {
-      "id": "fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-messages:frontend-src-services-live-support-service-ts:874",
+      "id": "fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-messages:frontend-src-services-live-support-service-ts:876",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/staff/conversations/{conversationId}/whatsapp-thread/messages",
@@ -20829,7 +22380,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.WhatsAppThreadMessages",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20843,7 +22394,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 874
+        "line": 876
       }
     },
     {
@@ -20856,7 +22407,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Bootstrap",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20883,7 +22434,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.List",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20901,7 +22452,7 @@
       }
     },
     {
-      "id": "fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:820",
+      "id": "fe:get:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:822",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/live-support/whatsapp/preferences",
@@ -20910,7 +22461,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preferences",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -20924,7 +22475,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 822
       }
     },
     {
@@ -20937,7 +22488,7 @@
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppLiveSupportController.Templates",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -21171,16 +22722,16 @@
       }
     },
     {
-      "id": "fe:get:video-learning-id-authorauthor:frontend-src-services-video-learning-service-ts:35",
+      "id": "fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36",
       "kind": "frontend-call",
       "method": "GET",
-      "route": "/video-learning/{id}{authorauthor}",
+      "route": "/video-learning/{id}/author",
       "effect": "read",
       "domain": "identity",
       "risk": "none",
       "confirmation": "none",
       "status": "candidate",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Author",
       "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
       "limits": {
@@ -21194,14 +22745,41 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 35
+        "line": 36
       }
     },
     {
-      "id": "fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:46",
+      "id": "fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:48",
       "kind": "frontend-call",
       "method": "GET",
       "route": "/video-learning/{id}/report",
+      "effect": "read",
+      "domain": "content",
+      "risk": "none",
+      "confirmation": "none",
+      "status": "candidate",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Report",
+      "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
+      "limits": {
+        "maxRows": 200,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "none",
+      "concurrency": "none",
+      "audit": "read-evidence",
+      "refreshScopes": [],
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 48
+      }
+    },
+    {
+      "id": "fe:get:video-learning-id:frontend-src-services-video-learning-service-ts:37",
+      "kind": "frontend-call",
+      "method": "GET",
+      "route": "/video-learning/{id}",
       "effect": "read",
       "domain": "content",
       "risk": "none",
@@ -21221,7 +22799,7 @@
       "refreshScopes": [],
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 46
+        "line": 37
       }
     },
     {
@@ -21489,7 +23067,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:patch:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:859",
+      "id": "fe:patch:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:861",
       "kind": "frontend-call",
       "method": "PATCH",
       "route": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
@@ -21498,7 +23076,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.UpdateMessage",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -21514,7 +23092,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 859
+        "line": 861
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -25818,7 +27396,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:ExamsController.ManualUnlock",
       "inputSchema": "frontend-call:frontend-src-services-admin-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-admin-service-ts:output:v1",
       "limits": {
@@ -27339,7 +28917,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:live-support-admin-conversations-conversationid-intervene:frontend-src-services-live-support-service-ts:904",
+      "id": "fe:post:live-support-admin-conversations-conversationid-intervene:frontend-src-services-live-support-service-ts:906",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/admin/conversations/{conversationId}/intervene",
@@ -27364,7 +28942,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 904
+        "line": 906
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27378,7 +28956,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.RetryBlock",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27408,7 +28986,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Connect",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27438,7 +29016,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Connection",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27468,7 +29046,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Disconnect",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27498,7 +29076,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Create",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27528,7 +29106,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.Send",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27549,7 +29127,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:live-support-staff-conversations-conversationid-whatsapp-template:frontend-src-services-live-support-service-ts:853",
+      "id": "fe:post:live-support-staff-conversations-conversationid-whatsapp-template:frontend-src-services-live-support-service-ts:855",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/staff/conversations/{conversationId}/whatsapp-template",
@@ -27558,7 +29136,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportStaffController.SendWhatsAppTemplate",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27574,7 +29152,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 853
+        "line": 855
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27588,7 +29166,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Preview",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27609,6 +29187,36 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
+      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-cancel:frontend-src-services-live-support-service-ts:813",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/live-support/whatsapp/campaigns/{campaignId}/cancel",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "strong",
+      "confirmation": "strong",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Cancel",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 813
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
       "id": "fe:post:live-support-whatsapp-campaigns-campaignid-launch:frontend-src-services-live-support-service-ts:777",
       "kind": "frontend-call",
       "method": "POST",
@@ -27618,7 +29226,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Launch",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27639,16 +29247,16 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-operation:frontend-src-services-live-support-service-ts:807",
+      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-pause:frontend-src-services-live-support-service-ts:810",
       "kind": "frontend-call",
       "method": "POST",
-      "route": "/live-support/whatsapp/campaigns/{campaignId}/{operation}",
+      "route": "/live-support/whatsapp/campaigns/{campaignId}/pause",
       "effect": "external-side-effect",
       "domain": "support",
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Pause",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27664,7 +29272,37 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 807
+        "line": 810
+      },
+      "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
+    },
+    {
+      "id": "fe:post:live-support-whatsapp-campaigns-campaignid-resume:frontend-src-services-live-support-service-ts:812",
+      "kind": "frontend-call",
+      "method": "POST",
+      "route": "/live-support/whatsapp/campaigns/{campaignId}/resume",
+      "effect": "external-side-effect",
+      "domain": "support",
+      "risk": "ordinary",
+      "confirmation": "ordinary",
+      "status": "blocked",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.Resume",
+      "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
+      "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
+      "limits": {
+        "maxRows": 0,
+        "maxBytes": 65536,
+        "timeoutMs": 5000
+      },
+      "idempotency": "missing",
+      "concurrency": "missing",
+      "audit": "missing",
+      "refreshScopes": [
+        "support"
+      ],
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 812
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27678,7 +29316,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.CreateDraft",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27708,7 +29346,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.UploadHeaderImage",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27738,7 +29376,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.InspectSpreadsheet",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27759,7 +29397,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:831",
+      "id": "fe:post:live-support-whatsapp-preferences-contacts-search:frontend-src-services-live-support-service-ts:833",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/preferences/contacts/search",
@@ -27768,7 +29406,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.ContactCandidates",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27784,12 +29422,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 831
+        "line": 833
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:843",
+      "id": "fe:post:live-support-whatsapp-preferences:frontend-src-services-live-support-service-ts:845",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/live-support/whatsapp/preferences",
@@ -27798,7 +29436,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppCampaignController.RecordPreference",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -27814,7 +29452,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 843
+        "line": 845
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -27828,7 +29466,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:WhatsAppLiveSupportController.SyncTemplates",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -28149,7 +29787,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:44",
+      "id": "fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:46",
       "kind": "frontend-call",
       "method": "POST",
       "route": "/video-learning/{id}/ai",
@@ -28158,7 +29796,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Ai",
       "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
       "limits": {
@@ -28174,7 +29812,7 @@
       ],
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 44
+        "line": 46
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29409,7 +31047,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:live-support-admin-canned-replies:frontend-src-services-live-support-service-ts:922",
+      "id": "fe:put:live-support-admin-canned-replies:frontend-src-services-live-support-service-ts:924",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/canned-replies",
@@ -29434,12 +31072,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 922
+        "line": 924
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:910",
+      "id": "fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:912",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/feature",
@@ -29464,12 +31102,12 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 910
+        "line": 912
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:916",
+      "id": "fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:918",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/live-support/admin/staff/{staffUserId}",
@@ -29494,7 +31132,7 @@
       ],
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 916
+        "line": 918
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
@@ -29508,7 +31146,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:LiveSupportConnectionsController.Block",
       "inputSchema": "frontend-call:frontend-src-services-live-support-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-live-support-service-ts:output:v1",
       "limits": {
@@ -29529,7 +31167,7 @@
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     },
     {
-      "id": "fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:36",
+      "id": "fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:38",
       "kind": "frontend-call",
       "method": "PUT",
       "route": "/video-learning/{id}/author",
@@ -29538,7 +31176,7 @@
       "risk": "ordinary",
       "confirmation": "ordinary",
       "status": "blocked",
-      "authoritativeOperation": "unresolved:frontend-contract",
+      "authoritativeOperation": "diagnostic:VideoLearningController.Save",
       "inputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:input:v1",
       "outputSchema": "frontend-call:frontend-src-services-video-learning-service-ts:output:v1",
       "limits": {
@@ -29554,11 +31192,11 @@
       ],
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 36
+        "line": 38
       },
       "blocker": "Requires a reviewed authoritative adapter with durable idempotency/recovery, concurrency, audit, and refresh contracts."
     }
   ],
   "exclusions": [],
-  "digest": "fb133883aa4f548d6a6366e4a12e8dd513435c0fb7f2ca91e7d8624b53c5e856"
+  "digest": "edec328fbd6464ef25a680978f6f66de9aff78c9b9a08c88fb811c4e5f00c596"
 }

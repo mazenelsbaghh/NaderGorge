@@ -72,6 +72,10 @@ function semantics(method, descriptor, route) {
 
 function includeEndpoint(endpoint) {
   return /^\/api\/admin(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/live-support\/(?:connections|staff)(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/live-support\/whatsapp\/(?:campaigns|preferences|templates)(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/exams\/admin(?:\/|$)/.test(endpoint.path) ||
+    /^\/api\/video-learning\/[^/]+\/(?:author|report|ai)$/.test(endpoint.path) ||
     endpoint.controller.startsWith('Admin') ||
     endpoint.controller.startsWith('Hr') ||
     ['CrmController', 'InternalChatController', 'LiveSupportAdminController', 'LiveSupportAIAdminController', 'WhatsAppController'].includes(endpoint.controller) ||

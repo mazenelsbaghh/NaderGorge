@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 506,
+  "callCount": 510,
   "calls": [
     {
       "method": "DELETE",
@@ -2327,7 +2327,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 865
+        "line": 867
       }
     },
     {
@@ -3844,15 +3844,6 @@
     },
     {
       "method": "GET",
-      "path": "/live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 636
-      }
-    },
-    {
-      "method": "GET",
       "path": "/live-support/admin/ai/active-conversations",
       "dynamic": false,
       "source": {
@@ -3902,7 +3893,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 892
+        "line": 894
       }
     },
     {
@@ -3911,7 +3902,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 901
+        "line": 903
       }
     },
     {
@@ -3920,7 +3911,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 895
+        "line": 897
       }
     },
     {
@@ -3929,7 +3920,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 898
+        "line": 900
       }
     },
     {
@@ -3952,11 +3943,29 @@
     },
     {
       "method": "GET",
+      "path": "/live-support/participant/conversations/{conversationId}/attachments/{attachmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 639
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/live-support/staff/conversations/{conversationId}/attachments/{attachmentId}",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 638
+      }
+    },
+    {
+      "method": "GET",
       "path": "/live-support/staff/conversations/{conversationId}/messages",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 871
+        "line": 873
       }
     },
     {
@@ -3974,7 +3983,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 874
+        "line": 876
       }
     },
     {
@@ -4001,7 +4010,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 820
+        "line": 822
       }
     },
     {
@@ -4078,11 +4087,20 @@
     },
     {
       "method": "GET",
-      "path": "/video-learning/{id}{authorauthor}",
+      "path": "/video-learning/{id}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 35
+        "line": 37
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/video-learning/{id}/author",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/video-learning-service.ts",
+        "line": 36
       }
     },
     {
@@ -4091,7 +4109,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 46
+        "line": 48
       }
     },
     {
@@ -4244,7 +4262,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 859
+        "line": 861
       }
     },
     {
@@ -5918,7 +5936,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 904
+        "line": 906
       }
     },
     {
@@ -5981,16 +5999,16 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 853
+        "line": 855
       }
     },
     {
       "method": "POST",
-      "path": "/live-support/whatsapp/campaigns/{campaignId}/{operation}",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/cancel",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 807
+        "line": 813
       }
     },
     {
@@ -6000,6 +6018,24 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 777
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/pause",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 810
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/live-support/whatsapp/campaigns/{campaignId}/resume",
+      "dynamic": true,
+      "source": {
+        "file": "frontend/src/services/live-support-service.ts",
+        "line": 812
       }
     },
     {
@@ -6044,7 +6080,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 843
+        "line": 845
       }
     },
     {
@@ -6053,7 +6089,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 831
+        "line": 833
       }
     },
     {
@@ -6161,7 +6197,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 44
+        "line": 46
       }
     },
     {
@@ -6629,7 +6665,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 922
+        "line": 924
       }
     },
     {
@@ -6638,7 +6674,7 @@
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 910
+        "line": 912
       }
     },
     {
@@ -6647,7 +6683,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
-        "line": 916
+        "line": 918
       }
     },
     {
@@ -6665,7 +6701,7 @@
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
-        "line": 36
+        "line": 38
       }
     }
   ],
@@ -7140,5 +7176,5 @@
       }
     }
   ],
-  "digest": "108b1c7da99392a09b4893557d59724fd72345d3cb3f45026f5d5abc5e7dab63"
+  "digest": "87c0313ca054127c9d2ce6a3540cd1bbd5a8a7afcb905a4e43fdb9ae109cec67"
 }

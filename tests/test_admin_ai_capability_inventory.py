@@ -101,6 +101,22 @@ def test_literal_admin_and_hr_frontend_routes_resolve_to_backend_operations():
     assert len({item["authoritativeOperation"] for item in subscribers}) == 8
 
 
+def test_staff_and_whatsapp_admin_capabilities_exclude_public_webhook():
+    items = json.loads(BASELINE.read_text())["items"]
+    backend = [item for item in items if item["kind"] == "backend-endpoint"]
+    routes = {item["route"] for item in backend}
+
+    assert "/api/live-support/whatsapp/campaigns/{campaignid}/launch" in routes
+    assert all(f"/api/live-support/whatsapp/campaigns/{{campaignid}}/{action}" in routes
+               for action in ("pause", "resume", "cancel"))
+    assert "/api/live-support/staff/conversations/{conversationid}/messages" in routes
+    assert "/api/live-support/connections/whatsapp/{id}/disconnect" in routes
+    assert "/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock" in routes
+    assert "/api/video-learning/{videoid}/author" in routes
+    assert "/api/video-learning/{videoid}/ai" in routes
+    assert "/api/live-support/whatsapp/webhook" not in routes
+
+
 def test_watch_request_approval_requires_strong_confirmation_on_both_surfaces():
     items = json.loads(BASELINE.read_text())["items"]
     approvals = [item for item in items

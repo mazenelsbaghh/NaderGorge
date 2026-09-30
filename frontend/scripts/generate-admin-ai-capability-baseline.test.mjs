@@ -54,7 +54,8 @@ test('AdminAI graph excludes participant support methods unused by Admin modules
     call.source.file === 'frontend/src/services/live-support-service.ts');
 
   assert.ok(supportCalls.length > 0);
-  assert.ok(supportCalls.every((call) => !call.path.startsWith('/live-support/participant/')));
+  assert.ok(supportCalls.every((call) => !call.path.startsWith('/live-support/participant/')
+    || (call.method === 'GET' && call.path.endsWith('/attachments/{attachmentId}'))));
 });
 
 test('AdminAI graph excludes unused self-service mutations from imported service objects', () => {
