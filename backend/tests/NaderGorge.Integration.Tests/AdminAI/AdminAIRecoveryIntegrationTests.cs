@@ -26,6 +26,9 @@ public sealed class AdminAIRecoveryIntegrationTests
         var providerStep = AddStep(seedDb, provider, AdminAITurnStepStatus.ProviderRunning, DateTime.UtcNow.AddMinutes(-3));
         var reads = AddTurn(seedDb, seed, 5, AdminAITurnStatus.Retrieving);
         var readsStep = AddStep(seedDb, reads, AdminAITurnStepStatus.ReadsCompleted, DateTime.UtcNow.AddMinutes(-3));
+        var active = AddTurn(seedDb, seed, 8, AdminAITurnStatus.Planning);
+        var activeStep = AddStep(seedDb, active, AdminAITurnStepStatus.ProviderRunning, DateTime.UtcNow.AddMinutes(-3));
+        activeStep.NextCallbackAttemptAt = DateTime.UtcNow.AddMinutes(1);
         var callback = AddTurn(seedDb, seed, 6, AdminAITurnStatus.Answering);
         var callbackStep = AddStep(seedDb, callback, AdminAITurnStepStatus.ProviderRunning, DateTime.UtcNow);
         callbackStep.CallbackStatus = "Pending";
@@ -52,6 +55,8 @@ public sealed class AdminAIRecoveryIntegrationTests
         }
         Assert.Equal("Failed", steps[callbackStep.Id].CallbackStatus);
         Assert.Equal("CALLBACK_UNAVAILABLE", turns[callback.Id].FailureCode);
+        Assert.Equal(AdminAITurnStatus.Planning, turns[active.Id].Status);
+        Assert.Equal(AdminAITurnStepStatus.ProviderRunning, steps[activeStep.Id].Status);
         Assert.Equal(AdminAITurnStatus.Completed, turns[completed.Id].Status);
         Assert.Null(turns[completed.Id].FailureCode);
         Assert.Equal(0, await new AdminAIRecoveryService(verifyDb).ReconcileAsync(20, default));

@@ -16,6 +16,8 @@ Proposal input validation now enforces closed nested schemas before preview and 
 
 Two PostgreSQL restart-context recovery tests passed, and the complete AdminAI PostgreSQL integration group passed 23/23. Actual worker/Redis restart delivery and callback acceptance remain unverified, so T181 remains open.
 
+Internal lease renewal and read continuation now cap expiry at the absolute turn deadline; completion and failure callbacks also reject an expired turn. Recovery preserves a worker step while its renewed lease is still live. The focused controller tests passed 2/2, the AdminAI application group 262/262, and both PostgreSQL restart tests passed with a disposable database. Worker/Redis restart delivery remains unverified, so T181 and activation remain open.
+
 The action bridges now consume exact camelCase JSON from the worker and reject casing drift before dispatch. The AdminAI application group passed 246/246 after ordinary and secure-action wire tests. The missing production action catalog remains a release blocker.
 
 The latest `make verify` run passed the backend, frontend, worker, Compose, and performance contract stages but stopped at the performance budget gate because authentic baseline and candidate evidence files are absent. It cannot be treated as a full verification pass.

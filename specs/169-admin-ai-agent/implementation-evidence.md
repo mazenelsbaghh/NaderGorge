@@ -1,5 +1,11 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 turn deadline and restart lease safety
+
+- Internal claim, lease renewal, read continuation, completion, and failure callbacks now use the same absolute turn deadline. Renewal cannot extend a live lease beyond it; expired callbacks return HTTP 410. The application test covers renewal near the deadline and rejection of all four callback paths after it, and passed 2/2 with the existing readiness test.
+- The recovery sweep now leaves a step with an unexpired worker lease in progress even when its original start time is old. A disposable PostgreSQL 16.10 run passed both restart recovery integration tests, including this live-lease case, the expired worker/callback paths, and a second no-op sweep. The temporary database container was removed afterward.
+- T181 remains open for actual worker and Redis delivery restart evidence; these checks cover backend lease and PostgreSQL recovery only.
+
 ## 2026-09-30 student-note authoritative replay slice
 
 - `AddStudentNoteCommand` now accepts the AdminAI execution identity while retaining the original Admin call. A PostgreSQL serializable transaction commits the note and a unique, payload-bound receipt together. The receipt stores a SHA-256 request digest and note identity, not the note text; it survives later note deletion. Reusing the identity with a different request is rejected. An AdminAI result resolver reads the receipt after an ambiguous completion without issuing another write.

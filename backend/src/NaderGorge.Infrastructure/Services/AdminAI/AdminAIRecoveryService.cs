@@ -66,7 +66,8 @@ public sealed class AdminAIRecoveryService(IAppDbContext db, IAdminAIAuditWriter
             .Where(x => (x.Status == AdminAITurnStepStatus.Claimed ||
                          x.Status == AdminAITurnStepStatus.ProviderRunning ||
                          x.Status == AdminAITurnStepStatus.ReadsCompleted) &&
-                        x.StartedAt != null && x.StartedAt < now.AddMinutes(-2))
+                        x.StartedAt != null && x.StartedAt < now.AddMinutes(-2) &&
+                        (x.NextCallbackAttemptAt == null || x.NextCallbackAttemptAt <= now))
             .OrderBy(x => x.StartedAt).Take(remaining).ToListAsync(cancellationToken);
         foreach (var step in staleSteps)
         {
