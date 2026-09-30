@@ -1,9 +1,9 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `890be11ad9d7d3bf06bdc7a95a5059f3f4babf7e314f82c5b53b6c397675c797`
+Digest: `ea7b19ead4582cdf5e07a3aa2fbe332e0a20caad130b771d63c1e009ef7bc999`
 
-Items: 1089; external-side-effect=80, mutation=548, read=421, export=25, preview=15.
-Reviewed non-business exclusions: 13.
+Items: 1080; external-side-effect=79, mutation=544, read=418, export=24, preview=15.
+Reviewed non-business exclusions: 22.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -612,7 +612,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1819 | DELETE | /admin/videos/{videoId} | mutation | content | strong | blocked |
 | fe:delete:hr-employees-employeeid:frontend-src-services-hr-service-ts:249 | DELETE | /hr/employees/{employeeId} | mutation | hr | strong | blocked |
 | fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:867 | DELETE | /live-support/staff/conversations/{conversationId}/messages/{messageId} | mutation | support | strong | blocked |
-| fe:delete:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:187 | DELETE | /teacher/reports/definitions/{id} | mutation | content | strong | blocked |
 | fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2508 | GET | /admin/assistants/{assistantId}/homework-reviews | read | content | none | candidate |
 | fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2486 | GET | /admin/assistants/{assistantId}/stats | read | other | none | candidate |
 | fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2497 | GET | /admin/assistants/{assistantId}/tasks | read | other | none | candidate |
@@ -816,10 +815,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:teacher-context:frontend-src-services-teacher-service-ts:278 | GET | /teacher/context | read | content | none | candidate |
 | fe:get:teacher-finance-statement-pdf:frontend-src-services-finance-service-ts:208 | GET | /teacher/finance/statement/pdf | read | finance | none | candidate |
 | fe:get:teacher-finance-statement:frontend-src-services-finance-service-ts:198 | GET | /teacher/finance/statement | read | finance | none | candidate |
-| fe:get:teacher-reports-catalog:frontend-src-services-advanced-report-service-ts:149 | GET | /teacher/reports/catalog | read | content | none | candidate |
-| fe:get:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:168 | GET | /teacher/reports/definitions | read | content | none | candidate |
-| fe:get:teacher-reports-filter-options:frontend-src-services-advanced-report-service-ts:155 | GET | /teacher/reports/filter-options | read | content | none | candidate |
-| fe:get:teacher-reports-student-ledger-export:frontend-src-services-advanced-report-service-ts:201 | GET | /teacher/reports/student-ledger/export | export | identity | none | candidate |
 | fe:get:v1-assistant-tasks-my-taskid:frontend-src-services-assistant-service-ts:74 | GET | /v1/assistant/tasks/my/{taskId} | read | other | none | candidate |
 | fe:get:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | GET | /video-learning/{id}/author | read | identity | none | candidate |
 | fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:48 | GET | /video-learning/{id}/report | read | content | none | candidate |
@@ -1045,9 +1040,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:student-video-session-sessionid-client-event:frontend-src-services-video-session-service-ts:173 | POST | /student/video-session/{sessionId}/client-event | mutation | identity | ordinary | blocked |
 | fe:post:student-video-session-sessionid-consume:frontend-src-services-video-session-service-ts:169 | POST | /student/video-session/{sessionId}/consume | mutation | identity | ordinary | blocked |
 | fe:post:student-video-session:frontend-src-services-video-session-service-ts:163 | POST | /student/video-session | mutation | identity | ordinary | blocked |
-| fe:post:teacher-reports-definitions:frontend-src-services-advanced-report-service-ts:175 | POST | /teacher/reports/definitions | mutation | content | ordinary | blocked |
-| fe:post:teacher-reports-execute:frontend-src-services-advanced-report-service-ts:162 | POST | /teacher/reports/execute | mutation | content | ordinary | blocked |
-| fe:post:teacher-reports-export-format:frontend-src-services-advanced-report-service-ts:194 | POST | /teacher/reports/export/{format} | external-side-effect | content | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-comments:frontend-src-services-assistant-service-ts:84 | POST | /v1/assistant/tasks/my/{taskId}/comments | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-my-taskid-status:frontend-src-services-assistant-service-ts:78 | POST | /v1/assistant/tasks/my/{taskId}/status | mutation | other | ordinary | blocked |
 | fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:46 | POST | /video-learning/{id}/ai | mutation | content | ordinary | blocked |
@@ -1096,5 +1088,4 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:912 | PUT | /live-support/admin/feature | mutation | support | ordinary | blocked |
 | fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:918 | PUT | /live-support/admin/staff/{staffUserId} | mutation | identity | ordinary | blocked |
 | fe:put:live-support-connections-conversations-id-block:frontend-src-services-live-support-service-ts:595 | PUT | /live-support/connections/conversations/{id}/block | mutation | support | ordinary | blocked |
-| fe:put:teacher-reports-definitions-id:frontend-src-services-advanced-report-service-ts:182 | PUT | /teacher/reports/definitions/{id} | mutation | content | ordinary | blocked |
 | fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:38 | PUT | /video-learning/{id}/author | mutation | identity | ordinary | blocked |

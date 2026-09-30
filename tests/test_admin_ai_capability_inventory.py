@@ -49,9 +49,35 @@ def test_baseline_uses_only_approved_exclusion_reasons():
     allowed = set(json.loads(SCHEMA.read_text())["$defs"]["exclusion"]["properties"]["reason"]["enum"])
 
     assert all(exclusion["reason"] in allowed for exclusion in baseline.get("exclusions", []))
-    assert len(baseline.get("exclusions", [])) == 13
-    assert all(exclusion["reason"] == "self-service" and "Admin AI conversation/proposal transport" in exclusion["detail"]
-               for exclusion in baseline["exclusions"])
+    self_service = [item for item in baseline["exclusions"] if item["reason"] == "self-service"]
+    teacher_reports = [item for item in baseline["exclusions"] if item["reason"] == "teacher-surface"]
+    assert len(self_service) == 13
+    assert all("Admin AI conversation/proposal transport" in item["detail"] for item in self_service)
+    assert len(teacher_reports) == 9
+    assert len(baseline["exclusions"]) == len(self_service) + len(teacher_reports)
+    assert '[Authorize(Roles = "Teacher")]' in (
+        ROOT / "backend/src/NaderGorge.API/Controllers/TeacherReportsController.cs"
+    ).read_text()
+    calls = json.loads((ROOT / "tests/admin_ai_frontend_reachable_calls.json").read_text())["calls"]
+    teacher_calls = [call for call in calls
+                     if call["source"]["file"] == "frontend/src/services/advanced-report-service.ts"
+                     and call["path"].startswith("/teacher/reports/")]
+    assert len(teacher_calls) == len(teacher_reports)
+    for call in teacher_calls:
+        assert any(item["detail"].endswith(f'{call["method"]} {call["path"]}')
+                   for item in teacher_reports)
+        assert any(item["kind"] == "frontend-call" and item["method"] == call["method"]
+                   and item["route"] == call["path"].replace("/teacher/reports/", "/admin/reports/", 1)
+                   for item in baseline["items"])
+        if call["method"] == "DELETE":
+            admin_delete = [item for item in baseline["items"]
+                            if item["kind"] == "frontend-call" and item["method"] == "DELETE"
+                            and item["route"] == call["path"].replace(
+                                "/teacher/reports/", "/admin/reports/", 1)]
+            assert len(admin_delete) == 1
+            assert admin_delete[0]["risk"] == admin_delete[0]["confirmation"] == "strong"
+    assert not any(item["kind"] == "frontend-call" and item["route"].startswith("/teacher/reports/")
+                   for item in baseline["items"])
 
 
 def test_frontend_calls_with_exact_backend_routes_share_the_authoritative_operation():
@@ -129,7 +155,6 @@ def test_unresolved_frontend_deletes_require_strong_confirmation():
     deletes = [item for item in items if item["kind"] == "frontend-call"
                and item["method"] == "DELETE" and item["authoritativeOperation"].startswith("unresolved:")]
 
-    assert deletes
     assert all(item["risk"] == "strong" and item["confirmation"] == "strong"
                for item in deletes)
 

@@ -177,13 +177,24 @@ function build() {
     });
   const selfServicePath = 'frontend/src/services/admin-ai-agent-service.ts';
   const selfServiceItems = frontendItems.filter((item) => item.source.file === selfServicePath);
-  const items = [...backendItems, ...frontendItems.filter((item) => item.source.file !== selfServicePath)]
+  const teacherReportsPath = 'frontend/src/services/advanced-report-service.ts';
+  const teacherReportItems = frontendItems.filter((item) =>
+    item.source.file === teacherReportsPath && item.route.startsWith('/teacher/reports/'));
+  const excludedIds = new Set([...selfServiceItems, ...teacherReportItems].map((item) => item.id));
+  const items = [...backendItems, ...frontendItems.filter((item) => !excludedIds.has(item.id))]
     .sort((left, right) => left.id.localeCompare(right.id));
-  const exclusions = selfServiceItems.map((item) => ({
-    id: item.id,
-    reason: 'self-service',
-    detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
-  })).sort((left, right) => left.id.localeCompare(right.id));
+  const exclusions = [
+    ...selfServiceItems.map((item) => ({
+      id: item.id,
+      reason: 'self-service',
+      detail: `Admin AI conversation/proposal transport is not an Admin business capability: ${item.method} ${item.route}`,
+    })),
+    ...teacherReportItems.map((item) => ({
+      id: item.id,
+      reason: 'teacher-surface',
+      detail: `Teacher-only report route in a shared audience service; Admin uses the matching /admin/reports route: ${item.method} ${item.route}`,
+    })),
+  ].sort((left, right) => left.id.localeCompare(right.id));
   const payload = {
     schemaVersion: 1,
     generatedAtUtc: '2026-08-11T00:00:00.000Z',

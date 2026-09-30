@@ -1,5 +1,10 @@
 # Admin AI Agent — Implementation Evidence
 
+## 2026-09-30 Teacher-only report branch exclusion
+
+- The shared `advancedReportService` contains both `/admin/reports` and `/teacher/reports` branches. `TeacherReportsController` requires the Teacher role, while the Admin route uses its separate Admin controller. The nine Teacher-only frontend calls are now reviewed `teacher-surface` exclusions; the matching Admin calls remain in the capability inventory, including strong confirmation for Admin report-definition deletion.
+- The generated baseline now contains 1,080 items, 623 blocked mutation/external-effect entries, 30 unresolved frontend calls (11 mutations), and 22 reviewed exclusions. Its digest is `ea7b19ead4582cdf5e07a3aa2fbe332e0a20caad130b771d63c1e009ef7bc999`. The full capability gate passed 10/10 frontend graph tests and 26/26 Python tests. The production catalog remains read-only and activation remains blocked.
+
 ## 2026-09-30 shared Admin task inventory coverage
 
 - The Admin-accessible Assistant task details, status, and comments routes are now included in the diagnostic backend inventory. The two mutation routes map to their original `UpdateTaskStatusCommand` and `AddTaskCommentCommand`, and the frontend calls inherit those exact operation labels instead of remaining unresolved. The baseline now has 1,089 items, including 628 blocked mutation/external-effect entries; 39 frontend calls remain unresolved, 16 of them mutations. The production registry stays read-only.
