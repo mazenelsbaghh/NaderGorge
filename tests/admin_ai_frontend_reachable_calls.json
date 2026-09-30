@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 592,
+  "callCount": 549,
   "calls": [
     {
       "method": "DELETE",
@@ -2341,29 +2341,11 @@
     },
     {
       "method": "DELETE",
-      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 664
-      }
-    },
-    {
-      "method": "DELETE",
       "path": "/live-support/staff/conversations/{conversationId}/messages/{messageId}",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 865
-      }
-    },
-    {
-      "method": "DELETE",
-      "path": "/video-learning/{id}/entries/{entryId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 42
       }
     },
     {
@@ -3952,15 +3934,6 @@
     },
     {
       "method": "GET",
-      "path": "/live-support/availability",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 600
-      }
-    },
-    {
-      "method": "GET",
       "path": "/live-support/connections/conversations/{id}/block",
       "dynamic": true,
       "source": {
@@ -3979,155 +3952,11 @@
     },
     {
       "method": "GET",
-      "path": "/live-support/participant/conversations",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 603
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 612
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/pending-action",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1019
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/snapshot",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 621
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/session",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1022
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/participant/conversations/{conversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 615
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/bootstrap",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 682
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/canned-replies",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 927
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 956
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}/draft",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 962
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/context",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 959
-      }
-    },
-    {
-      "method": "GET",
       "path": "/live-support/staff/conversations/{conversationId}/messages",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 871
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-context",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 944
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-context/{section}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 947
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-history",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 950
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/student-history/{historyConversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 953
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/live-support/staff/conversations/{conversationId}/students/search",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 935
       }
     },
     {
@@ -4438,29 +4267,11 @@
     },
     {
       "method": "GET",
-      "path": "/video-learning/{id}/entries/{entryId}/replies",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 41
-      }
-    },
-    {
-      "method": "GET",
       "path": "/video-learning/{id}/report",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
         "line": 46
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/video-learning/review",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 47
       }
     },
     {
@@ -4632,15 +4443,6 @@
       "source": {
         "file": "frontend/src/services/hr-service.ts",
         "line": 262
-      }
-    },
-    {
-      "method": "PATCH",
-      "path": "/live-support/participant/conversations/{conversationId}/messages/{messageId}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 658
       }
     },
     {
@@ -6373,173 +6175,11 @@
     },
     {
       "method": "POST",
-      "path": "/live-support/connections/whatsapp/{id}/refresh",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 589
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 606
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/abandon",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 670
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{payloaddecisionId}/register",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1013
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/cancel",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 977
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/confirm",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 971
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/cancel",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 995
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/confirm",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 983
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/handoff/request",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 989
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/{payloadsessionId}/answer",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1007
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/ai/verification/lookup",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 1001
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/attachments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 626
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/messages",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 652
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/participant/conversations/{conversationId}/rating",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 676
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/actions/{actionKey}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 965
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/attachments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 688
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/close",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 880
-      }
-    },
-    {
-      "method": "POST",
       "path": "/live-support/staff/conversations/{conversationId}/messages",
       "dynamic": true,
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 697
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/live-support/staff/conversations/{conversationId}/transfer",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 886
       }
     },
     {
@@ -6855,15 +6495,6 @@
       "source": {
         "file": "frontend/src/services/video-learning-service.ts",
         "line": 44
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/video-learning/{id}/entries",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/video-learning-service.ts",
-        "line": 40
       }
     },
     {
@@ -7408,24 +7039,6 @@
     },
     {
       "method": "PUT",
-      "path": "/live-support/staff/canned-replies",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 930
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/live-support/staff/conversations/{conversationId}/student-link",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/live-support-service.ts",
-        "line": 938
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/teacher/profile",
       "dynamic": false,
       "source": {
@@ -7914,5 +7527,5 @@
       }
     }
   ],
-  "digest": "51f137ab2e831847f72ae4bd5c1260a20704c9947142433307b88d4e03583f3f"
+  "digest": "5fbe6f1d88c628638219ec810287256928c25eea24e23e083f45b01191b32696"
 }

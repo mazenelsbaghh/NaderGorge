@@ -48,6 +48,15 @@ test('AdminAI graph excludes unused student purchase and lesson comment service 
   assert.ok(contentCalls.every((call) => !call.path.includes('/comments')));
 });
 
+test('AdminAI graph excludes participant support methods unused by Admin modules', () => {
+  const graph = collectAdminCallGraph();
+  const supportCalls = graph.calls.filter((call) =>
+    call.source.file === 'frontend/src/services/live-support-service.ts');
+
+  assert.ok(supportCalls.length > 0);
+  assert.ok(supportCalls.every((call) => !call.path.startsWith('/live-support/participant/')));
+});
+
 test('AdminAI graph keeps all service methods when the imported object escapes', () => {
   const target = fileURLToPath(new URL('../src/services/student-service.ts', import.meta.url));
   const importer = fileURLToPath(new URL('../src/components/admin/QuestionEditor.tsx', import.meta.url));

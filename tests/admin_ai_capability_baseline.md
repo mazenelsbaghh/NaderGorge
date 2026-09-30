@@ -1,8 +1,8 @@
 # Admin AI capability baseline (blocked candidate)
 
-Digest: `e66a974fab4a1c6d31a17c64416195b388c7534d6a2e949e64e194010ac6e651`
+Digest: `5c3b9e8396210e076185d7fb42ed39724e8b896f1cd02b7e8b5ec1bf922c4108`
 
-Items: 1097; external-side-effect=26, mutation=626, read=431, export=11, preview=3.
+Items: 1054; external-side-effect=26, mutation=602, read=412, export=11, preview=3.
 
 This candidate is intentionally blocked. Every mutation remains blocked until an authoritative command/service adapter, idempotency, concurrency, audit, and confirmation contract are reviewed.
 
@@ -538,9 +538,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:delete:admin-videos-videoid:frontend-src-services-admin-service-ts:1818 | DELETE | /admin/videos/{videoId} | mutation | content | ordinary | blocked |
 | fe:delete:endpointaudience-definitions-id:frontend-src-services-advanced-report-service-ts:180 | DELETE | /{endpointaudience}/definitions/{id} | mutation | reporting | ordinary | blocked |
 | fe:delete:hr-employees-employeeid:frontend-src-services-hr-service-ts:249 | DELETE | /hr/employees/{employeeId} | mutation | hr | ordinary | blocked |
-| fe:delete:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:664 | DELETE | /live-support/participant/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
 | fe:delete:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:865 | DELETE | /live-support/staff/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
-| fe:delete:video-learning-id-entries-entryid:frontend-src-services-video-learning-service-ts:42 | DELETE | /video-learning/{id}/entries/{entryId} | mutation | content | ordinary | blocked |
 | fe:get:admin-assistants-assistantid-homework-reviews:frontend-src-services-admin-service-ts:2507 | GET | /admin/assistants/{assistantId}/homework-reviews | read | content | none | candidate |
 | fe:get:admin-assistants-assistantid-stats:frontend-src-services-admin-service-ts:2485 | GET | /admin/assistants/{assistantId}/stats | read | other | none | candidate |
 | fe:get:admin-assistants-assistantid-tasks:frontend-src-services-admin-service-ts:2496 | GET | /admin/assistants/{assistantId}/tasks | read | other | none | candidate |
@@ -727,26 +725,9 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:live-support-admin-dashboard:frontend-src-services-live-support-service-ts:895 | GET | /live-support/admin/dashboard | read | support | none | candidate |
 | fe:get:live-support-admin-ratings:frontend-src-services-live-support-service-ts:898 | GET | /live-support/admin/ratings | read | support | none | candidate |
 | fe:get:live-support-audience-conversations-conversationid-attachments-attachmentid:frontend-src-services-live-support-service-ts:636 | GET | /live-support/{audience}/conversations/{conversationId}/attachments/{attachmentId} | read | support | none | candidate |
-| fe:get:live-support-availability:frontend-src-services-live-support-service-ts:600 | GET | /live-support/availability | read | support | none | candidate |
 | fe:get:live-support-connections-conversations-id-block:frontend-src-services-live-support-service-ts:592 | GET | /live-support/connections/conversations/{id}/block | read | support | none | candidate |
 | fe:get:live-support-connections-whatsapp:frontend-src-services-live-support-service-ts:586 | GET | /live-support/connections/whatsapp | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid-ai-pending-action:frontend-src-services-live-support-service-ts:1019 | GET | /live-support/participant/conversations/{conversationId}/ai/pending-action | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid-ai-snapshot:frontend-src-services-live-support-service-ts:621 | GET | /live-support/participant/conversations/{conversationId}/ai/snapshot | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid-ai-verification-session:frontend-src-services-live-support-service-ts:1022 | GET | /live-support/participant/conversations/{conversationId}/ai/verification/session | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:615 | GET | /live-support/participant/conversations/{conversationId}/messages | read | support | none | candidate |
-| fe:get:live-support-participant-conversations-conversationid:frontend-src-services-live-support-service-ts:612 | GET | /live-support/participant/conversations/{conversationId} | read | support | none | candidate |
-| fe:get:live-support-participant-conversations:frontend-src-services-live-support-service-ts:603 | GET | /live-support/participant/conversations | read | support | none | candidate |
-| fe:get:live-support-staff-bootstrap:frontend-src-services-live-support-service-ts:682 | GET | /live-support/staff/bootstrap | read | support | none | candidate |
-| fe:get:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:927 | GET | /live-support/staff/canned-replies | read | support | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-actions-actionkey-draft:frontend-src-services-live-support-service-ts:962 | GET | /live-support/staff/conversations/{conversationId}/actions/{actionKey}/draft | read | support | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-actions-context:frontend-src-services-live-support-service-ts:959 | GET | /live-support/staff/conversations/{conversationId}/actions/context | read | support | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-actions:frontend-src-services-live-support-service-ts:956 | GET | /live-support/staff/conversations/{conversationId}/actions | read | support | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:871 | GET | /live-support/staff/conversations/{conversationId}/messages | read | support | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-student-context-section:frontend-src-services-live-support-service-ts:947 | GET | /live-support/staff/conversations/{conversationId}/student-context/{section} | read | identity | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-student-context:frontend-src-services-live-support-service-ts:944 | GET | /live-support/staff/conversations/{conversationId}/student-context | read | identity | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-student-history-historyconversationid-messages:frontend-src-services-live-support-service-ts:953 | GET | /live-support/staff/conversations/{conversationId}/student-history/{historyConversationId}/messages | read | identity | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-student-history:frontend-src-services-live-support-service-ts:950 | GET | /live-support/staff/conversations/{conversationId}/student-history | read | identity | none | candidate |
-| fe:get:live-support-staff-conversations-conversationid-students-search:frontend-src-services-live-support-service-ts:935 | GET | /live-support/staff/conversations/{conversationId}/students/search | read | identity | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-attachments-attachmentid:frontend-src-services-live-support-service-ts:644 | GET | /live-support/staff/conversations/{conversationId}/whatsapp-thread/attachments/{attachmentId} | read | hr | none | candidate |
 | fe:get:live-support-staff-conversations-conversationid-whatsapp-thread-messages:frontend-src-services-live-support-service-ts:874 | GET | /live-support/staff/conversations/{conversationId}/whatsapp-thread/messages | read | hr | none | candidate |
 | fe:get:live-support-whatsapp-campaigns-bootstrap:frontend-src-services-live-support-service-ts:711 | GET | /live-support/whatsapp/campaigns/bootstrap | read | support | none | candidate |
@@ -782,9 +763,7 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:get:v1-assistant-tasks-my:frontend-src-services-assistant-service-ts:70 | GET | /v1/assistant/tasks/my | read | other | none | candidate |
 | fe:get:v1-assistant-tasks-pending-queryparams:frontend-src-services-assistant-service-ts:59 | GET | /v1/assistant/tasks/pending{queryParams} | read | other | none | candidate |
 | fe:get:video-learning-id-authorauthor:frontend-src-services-video-learning-service-ts:35 | GET | /video-learning/{id}{authorauthor} | read | identity | none | candidate |
-| fe:get:video-learning-id-entries-entryid-replies:frontend-src-services-video-learning-service-ts:41 | GET | /video-learning/{id}/entries/{entryId}/replies | read | content | none | candidate |
 | fe:get:video-learning-id-report:frontend-src-services-video-learning-service-ts:46 | GET | /video-learning/{id}/report | read | content | none | candidate |
-| fe:get:video-learning-review:frontend-src-services-video-learning-service-ts:47 | GET | /video-learning/review | read | content | none | candidate |
 | fe:get:whatsapp-admin-assessment-parent-recovery-preview:frontend-src-services-admin-service-ts:1102 | GET | /whatsapp/admin/assessment-parent-recovery/preview | read | other | none | candidate |
 | fe:get:whatsapp-admin-assessment-parent-recovery-status-encodeuricomponentoperationid:frontend-src-services-admin-service-ts:1120 | GET | /whatsapp/admin/assessment-parent-recovery/status/{encodeURIComponentoperationId} | read | content | none | candidate |
 | fe:patch:admin-bunny-libraries-encodeuricomponentlibraryrecordid-status:frontend-src-services-admin-service-ts:1883 | PATCH | /admin/bunny/libraries/{encodeURIComponentlibraryRecordId}/status | mutation | content | ordinary | blocked |
@@ -794,7 +773,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:patch:dynamic:frontend-src-services-admin-ai-agent-service-ts:74 | PATCH | <dynamic> | mutation | other | ordinary | blocked |
 | fe:patch:hr-admin-shifts-assignments-assignmentid:frontend-src-services-hr-service-ts:288 | PATCH | /hr/admin/shifts/assignments/{assignmentId} | mutation | hr | ordinary | blocked |
 | fe:patch:hr-admin-shifts-calendars-calendarid:frontend-src-services-hr-service-ts:262 | PATCH | /hr/admin/shifts/calendars/{calendarId} | mutation | hr | ordinary | blocked |
-| fe:patch:live-support-participant-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:658 | PATCH | /live-support/participant/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
 | fe:patch:live-support-staff-conversations-conversationid-messages-messageid:frontend-src-services-live-support-service-ts:859 | PATCH | /live-support/staff/conversations/{conversationId}/messages/{messageId} | mutation | support | ordinary | blocked |
 | fe:patch:teacher-staff-staffmemberid-permissions:frontend-src-services-teacher-service-ts:322 | PATCH | /teacher/staff/{staffMemberId}/permissions | mutation | content | ordinary | blocked |
 | fe:patch:teacher-staff-staffmemberid-status:frontend-src-services-teacher-service-ts:317 | PATCH | /teacher/staff/{staffMemberId}/status | mutation | content | ordinary | blocked |
@@ -996,26 +974,8 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:live-support-connections-whatsapp-id-connect:frontend-src-services-live-support-service-ts:588 | POST | /live-support/connections/whatsapp/{id}/connect | mutation | support | ordinary | blocked |
 | fe:post:live-support-connections-whatsapp-id-connection:frontend-src-services-live-support-service-ts:590 | POST | /live-support/connections/whatsapp/{id}/connection | mutation | support | ordinary | blocked |
 | fe:post:live-support-connections-whatsapp-id-disconnect:frontend-src-services-live-support-service-ts:591 | POST | /live-support/connections/whatsapp/{id}/disconnect | mutation | support | ordinary | blocked |
-| fe:post:live-support-connections-whatsapp-id-refresh:frontend-src-services-live-support-service-ts:589 | POST | /live-support/connections/whatsapp/{id}/refresh | mutation | support | ordinary | blocked |
 | fe:post:live-support-connections-whatsapp:frontend-src-services-live-support-service-ts:587 | POST | /live-support/connections/whatsapp | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-abandon:frontend-src-services-live-support-service-ts:670 | POST | /live-support/participant/conversations/{conversationId}/abandon | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-decisions-payloaddecisionid-register:frontend-src-services-live-support-service-ts:1013 | POST | /live-support/participant/conversations/{conversationId}/ai/decisions/{payloaddecisionId}/register | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-cancel:frontend-src-services-live-support-service-ts:977 | POST | /live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/cancel | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-decisions-proposalid-confirm:frontend-src-services-live-support-service-ts:971 | POST | /live-support/participant/conversations/{conversationId}/ai/decisions/{proposalId}/confirm | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-handoff-cancel:frontend-src-services-live-support-service-ts:995 | POST | /live-support/participant/conversations/{conversationId}/ai/handoff/cancel | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-handoff-confirm:frontend-src-services-live-support-service-ts:983 | POST | /live-support/participant/conversations/{conversationId}/ai/handoff/confirm | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-handoff-request:frontend-src-services-live-support-service-ts:989 | POST | /live-support/participant/conversations/{conversationId}/ai/handoff/request | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-verification-lookup:frontend-src-services-live-support-service-ts:1001 | POST | /live-support/participant/conversations/{conversationId}/ai/verification/lookup | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-ai-verification-payloadsessionid-answer:frontend-src-services-live-support-service-ts:1007 | POST | /live-support/participant/conversations/{conversationId}/ai/verification/{payloadsessionId}/answer | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:626 | POST | /live-support/participant/conversations/{conversationId}/attachments | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:652 | POST | /live-support/participant/conversations/{conversationId}/messages | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations-conversationid-rating:frontend-src-services-live-support-service-ts:676 | POST | /live-support/participant/conversations/{conversationId}/rating | mutation | support | ordinary | blocked |
-| fe:post:live-support-participant-conversations:frontend-src-services-live-support-service-ts:606 | POST | /live-support/participant/conversations | mutation | support | ordinary | blocked |
-| fe:post:live-support-staff-conversations-conversationid-actions-actionkey:frontend-src-services-live-support-service-ts:965 | POST | /live-support/staff/conversations/{conversationId}/actions/{actionKey} | mutation | support | ordinary | blocked |
-| fe:post:live-support-staff-conversations-conversationid-attachments:frontend-src-services-live-support-service-ts:688 | POST | /live-support/staff/conversations/{conversationId}/attachments | mutation | support | ordinary | blocked |
-| fe:post:live-support-staff-conversations-conversationid-close:frontend-src-services-live-support-service-ts:880 | POST | /live-support/staff/conversations/{conversationId}/close | mutation | support | ordinary | blocked |
 | fe:post:live-support-staff-conversations-conversationid-messages:frontend-src-services-live-support-service-ts:697 | POST | /live-support/staff/conversations/{conversationId}/messages | mutation | support | ordinary | blocked |
-| fe:post:live-support-staff-conversations-conversationid-transfer:frontend-src-services-live-support-service-ts:886 | POST | /live-support/staff/conversations/{conversationId}/transfer | mutation | support | ordinary | blocked |
 | fe:post:live-support-staff-conversations-conversationid-whatsapp-template:frontend-src-services-live-support-service-ts:853 | POST | /live-support/staff/conversations/{conversationId}/whatsapp-template | mutation | support | ordinary | blocked |
 | fe:post:live-support-whatsapp-campaigns-audience-preview:frontend-src-services-live-support-service-ts:743 | POST | /live-support/whatsapp/campaigns/audience/preview | mutation | support | ordinary | blocked |
 | fe:post:live-support-whatsapp-campaigns-campaignid-launch:frontend-src-services-live-support-service-ts:777 | POST | /live-support/whatsapp/campaigns/{campaignId}/launch | mutation | support | ordinary | blocked |
@@ -1051,7 +1011,6 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:post:v1-assistant-tasks-my-taskid-status:frontend-src-services-assistant-service-ts:78 | POST | /v1/assistant/tasks/my/{taskId}/status | mutation | other | ordinary | blocked |
 | fe:post:v1-assistant-tasks-taskid-resolve:frontend-src-services-assistant-service-ts:63 | POST | /v1/assistant/tasks/{taskId}/resolve | mutation | other | ordinary | blocked |
 | fe:post:video-learning-id-ai:frontend-src-services-video-learning-service-ts:44 | POST | /video-learning/{id}/ai | mutation | content | ordinary | blocked |
-| fe:post:video-learning-id-entries:frontend-src-services-video-learning-service-ts:40 | POST | /video-learning/{id}/entries | mutation | content | ordinary | blocked |
 | fe:post:whatsapp-admin-assessment-parent-recovery-apply:frontend-src-services-admin-service-ts:1113 | POST | /whatsapp/admin/assessment-parent-recovery/apply | mutation | other | ordinary | blocked |
 | fe:post:whatsapp-admin-exam-result-message:frontend-src-services-admin-service-ts:1095 | POST | /whatsapp/admin/exam-result-message | mutation | content | ordinary | blocked |
 | fe:post:whatsapp-admin-test-message:frontend-src-services-admin-service-ts:1086 | POST | /whatsapp/admin/test-message | mutation | other | ordinary | blocked |
@@ -1101,7 +1060,5 @@ This candidate is intentionally blocked. Every mutation remains blocked until an
 | fe:put:live-support-admin-feature:frontend-src-services-live-support-service-ts:910 | PUT | /live-support/admin/feature | mutation | support | ordinary | blocked |
 | fe:put:live-support-admin-staff-staffuserid:frontend-src-services-live-support-service-ts:916 | PUT | /live-support/admin/staff/{staffUserId} | mutation | identity | ordinary | blocked |
 | fe:put:live-support-connections-conversations-id-block:frontend-src-services-live-support-service-ts:595 | PUT | /live-support/connections/conversations/{id}/block | mutation | support | ordinary | blocked |
-| fe:put:live-support-staff-canned-replies:frontend-src-services-live-support-service-ts:930 | PUT | /live-support/staff/canned-replies | mutation | support | ordinary | blocked |
-| fe:put:live-support-staff-conversations-conversationid-student-link:frontend-src-services-live-support-service-ts:938 | PUT | /live-support/staff/conversations/{conversationId}/student-link | mutation | identity | ordinary | blocked |
 | fe:put:teacher-profile:frontend-src-services-teacher-service-ts:259 | PUT | /teacher/profile | mutation | identity | ordinary | blocked |
 | fe:put:video-learning-id-author:frontend-src-services-video-learning-service-ts:36 | PUT | /video-learning/{id}/author | mutation | identity | ordinary | blocked |

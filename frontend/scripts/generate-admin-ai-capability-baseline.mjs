@@ -197,6 +197,8 @@ export function collectAdminCallGraph() {
     ['student-service', 'studentService'],
     ['content-service', 'contentService'],
     ['shared-package-service', 'sharedPackageService'],
+    ['live-support-service', 'liveSupportService'],
+    ['video-learning-service', 'videoLearningService'],
   ]) {
     const filePath = resolve(sourceRoot, `services/${moduleName}.ts`);
     const sourceFile = sourceFiles.get(filePath);
