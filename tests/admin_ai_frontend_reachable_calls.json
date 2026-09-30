@@ -2112,7 +2112,7 @@
       "route": null
     }
   ],
-  "callCount": 538,
+  "callCount": 509,
   "calls": [
     {
       "method": "DELETE",
@@ -3178,15 +3178,6 @@
     },
     {
       "method": "GET",
-      "path": "/admin/subjects/{id}",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 166
-      }
-    },
-    {
-      "method": "GET",
       "path": "/admin/system-logs",
       "dynamic": false,
       "source": {
@@ -4015,42 +4006,6 @@
     },
     {
       "method": "GET",
-      "path": "/teacher/activity",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 276
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/comments",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 385
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/community/comments/pending",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 345
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/community/posts",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 339
-      }
-    },
-    {
-      "method": "GET",
       "path": "/teacher/content/{contentType}/{id}/subscribers",
       "dynamic": true,
       "source": {
@@ -4074,24 +4029,6 @@
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
         "line": 278
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/dashboard/stats",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 237
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/essays",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 241
       }
     },
     {
@@ -4137,69 +4074,6 @@
       "source": {
         "file": "frontend/src/services/finance-service.ts",
         "line": 438
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/lessons/{lessonId}/comments",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 369
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 248
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/profile/active-photo",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 274
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/public-exams",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 327
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/staff",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 310
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/students",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 239
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/teacher/subjects",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 280
       }
     },
     {
@@ -4380,24 +4254,6 @@
       "source": {
         "file": "frontend/src/services/live-support-service.ts",
         "line": 859
-      }
-    },
-    {
-      "method": "PATCH",
-      "path": "/teacher/staff/{staffMemberId}/permissions",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 322
-      }
-    },
-    {
-      "method": "PATCH",
-      "path": "/teacher/staff/{staffMemberId}/status",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 317
       }
     },
     {
@@ -6256,119 +6112,11 @@
     },
     {
       "method": "POST",
-      "path": "/teacher/comments/{commentId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 375
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/comments/{commentId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 380
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/comments/{commentId}/reply",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 389
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/comments/{commentId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 359
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/comments/{commentId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 364
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/posts/{postId}/approve",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 349
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/community/posts/{postId}/reject",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 354
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/essays/{id}/grade",
-      "dynamic": true,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 243
-      }
-    },
-    {
-      "method": "POST",
       "path": "/teacher/finance/payouts",
       "dynamic": false,
       "source": {
         "file": "frontend/src/services/finance-service.ts",
         "line": 472
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/profile/upload-ai-photo",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 269
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/profile/upload-image",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 264
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/public-exams/new",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 331
-      }
-    },
-    {
-      "method": "POST",
-      "path": "/teacher/staff",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 312
       }
     },
     {
@@ -6940,15 +6688,6 @@
     },
     {
       "method": "PUT",
-      "path": "/teacher/profile",
-      "dynamic": false,
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 259
-      }
-    },
-    {
-      "method": "PUT",
       "path": "/video-learning/{id}/author",
       "dynamic": true,
       "source": {
@@ -7428,5 +7167,5 @@
       }
     }
   ],
-  "digest": "28071598fe36b4936df7bafeb42c309655a12e7d9adf1bb232d369795d1b8e43"
+  "digest": "9d943485d3476ded8048748f2c6b742949859a4aebc9e2aba44255ac591f19b6"
 }

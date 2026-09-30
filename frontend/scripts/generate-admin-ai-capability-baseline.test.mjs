@@ -66,6 +66,18 @@ test('AdminAI graph excludes unused self-service mutations from imported service
   assert.ok(!routes.includes('POST /v1/assistant/tasks/{taskId}/resolve'));
 });
 
+test('AdminAI graph keeps shared subscriber methods without unrelated teacher actions', () => {
+  const graph = collectAdminCallGraph();
+  const teacherCalls = graph.calls.filter((call) =>
+    call.source.file === 'frontend/src/services/teacher-service.ts');
+  const routes = teacherCalls.map((call) => `${call.method} ${call.path}`);
+
+  assert.ok(routes.includes('GET /teacher/content/{contentType}/{id}/subscribers'));
+  assert.ok(routes.includes('GET /teacher/content/{contentType}/{id}/subscribers/export'));
+  assert.ok(!routes.includes('POST /teacher/essays/{id}/grade'));
+  assert.ok(!routes.includes('POST /teacher/profile/upload-image'));
+});
+
 test('AdminAI graph keeps all service methods when the imported object escapes', () => {
   const target = fileURLToPath(new URL('../src/services/student-service.ts', import.meta.url));
   const importer = fileURLToPath(new URL('../src/components/admin/QuestionEditor.tsx', import.meta.url));
