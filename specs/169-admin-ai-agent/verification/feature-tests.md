@@ -1,5 +1,10 @@
 # Feature test evidence
 
+## 2026-09-30 current restart and inventory checks
+
+- `make verify-admin-ai-capabilities PYTHON='uv run --no-project --with pytest python'` passed 12/12 frontend graph tests, both generated-artifact checks, and 30/30 Python endpoint/capability/source tests. The graph now detects the computed HTTP method used by Learning Center writes; the activation baseline remains blocked.
+- `npm run test:admin-ai-redis-restart --prefix worker` passed 1/1 with a disposable Redis 7 container: the replacement worker replayed saved callback completion without a second inference. `dotnet test backend/tests/NaderGorge.Integration.Tests/NaderGorge.Integration.Tests.csproj --no-build --filter FullyQualifiedName~AdminAIRecoveryIntegrationTests` passed 2/2 against an isolated PostgreSQL 16.10 container. Both containers were removed. These are separate restart tests; the combined real-backend/worker/Redis restart gate T181 remains open.
+
 The student-note operation now has a source-bound receipt and recovery resolver. Its two disposable-PostgreSQL tests passed after the final review, and the full AdminAI PostgreSQL integration group passed 29/29. The focused AdminAI application group passed 258/258; the capability inventory gate passed 10/10 frontend graph and 24/24 Python checks. This is candidate coverage only: the production action catalog and remaining acceptance tests still block activation.
 
 The subject-create candidate now shares the durable receipt mechanism and recovers the original subject ID after an ambiguous response or later deletion. Its PostgreSQL test passed 1/1. The updated full AdminAI integration group passed 30/30, focused application group 259/259, migration guard passed, and the capability inventory gate remained current at 10/10 graph and 24/24 Python checks.
