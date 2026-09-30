@@ -197,7 +197,7 @@ verify: verify-backend verify-frontend verify-worker verify-docker verify-perfor
 verify-admin-ai-capabilities: ## Fail when the sealed Admin AI endpoint, route, or capability baseline drifts
 	node frontend/scripts/generate-admin-ai-capability-baseline.mjs --check
 	node scripts/generate-admin-ai-capability-baseline.mjs --check
-	python3 -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py
+	$(PYTHON) -m pytest -q tests/test_endpoint_inventory.py tests/test_admin_ai_capability_inventory.py tests/test_admin_ai_agent.py
 
 verify-performance-budget-contracts: ## Run local performance budget and production cache/matrix contracts
 	cd frontend && node --test scripts/check-route-performance-budgets.test.mjs
