@@ -25,6 +25,11 @@
 - The original task-status and manager approval/rejection commands now accept optional server-owned operation identities. Their task/pipeline/comment/audit effects and safe result receipts commit in one PostgreSQL transaction for AdminAI calls. Original screen calls without the identity retain their command paths.
 - The full proposal/confirmation PostgreSQL scenario replayed the final status change and rejection after later state changes, preserved the task and pipeline, created no second rejection comment, and rejected a changed payload under the same identity. Both recovery resolvers returned the receipt-backed safe result. The complete AdminAI PostgreSQL group passed 37/37 and the application group passed 264/264. The production action catalog remains read-only.
 
+## 2026-09-30 task creation identity
+
+- The original task-create command now accepts an optional server-owned operation identity. Task, audit, workroom, participants, and result receipt save together, replacing the prior two-save sequence. The AdminAI bridge supplies the execution identity and a receipt-backed resolver returns the task ID after an ambiguous outcome.
+- A disposable PostgreSQL test created one task and one workroom, replayed the same identity without another effect, rejected changed input, and recovered the task ID. The focused test passed 1/1; the complete AdminAI PostgreSQL group passed 38/38 and the AdminAI plus operations application tests passed 273/273. The production action catalog remains read-only.
+
 ## 2026-09-30 concurrent worker claim
 
 - The internal claim endpoint now turns a PostgreSQL optimistic-concurrency collision into a safe lease conflict. A barrier forced two separate database contexts to load the same queued turn before either claimed it. The real PostgreSQL test passed twice: exactly one worker received a lease, one received HTTP 409, and the durable turn and step advanced once. The disposable PostgreSQL 16.10 container was removed afterward.

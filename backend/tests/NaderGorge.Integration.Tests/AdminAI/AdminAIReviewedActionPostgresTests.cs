@@ -24,6 +24,44 @@ namespace NaderGorge.Integration.Tests.AdminAI;
 public sealed class AdminAIReviewedActionPostgresTests
 {
     [Fact]
+    public async Task RealPostgres_TaskCreation_ReplaysTaskAndWorkroomWithoutDuplicatingEither()
+    {
+        await using var fixture = await PostgresAdminAIFixture.CreateAsync();
+        await using var db = fixture.CreateDbContext();
+        await db.Database.MigrateAsync();
+        var actor = new User { FullName = "Task Creator", PhoneNumber = "01000000996", PasswordHash = "test" };
+        db.Users.Add(actor);
+        await db.SaveChangesAsync();
+        var operationId = $"admin-ai-task-create-{Guid.NewGuid():N}";
+        var request = new CreateTaskCommand("Review upload", "Check video", actor.Id,
+            TaskPriority.High, null, actor.Id) { OperationId = operationId };
+        var created = await new CreateTaskCommandHandler(db).Handle(request, CancellationToken.None);
+        Assert.True(created.Success);
+        var taskId = created.Data;
+        Assert.Equal(1, await db.TaskItems.CountAsync(item => item.Id == taskId));
+        Assert.Equal(1, await db.ChatRooms.CountAsync(item => item.TaskItemId == taskId));
+        Assert.Equal(1, await db.AuthoritativeOperationReceipts.CountAsync(item => item.OperationId == operationId));
+
+        await using var replayDb = fixture.CreateDbContext();
+        var replayHandler = new CreateTaskCommandHandler(replayDb);
+        var replay = await replayHandler.Handle(request, CancellationToken.None);
+        Assert.True(replay.Success);
+        Assert.Equal(taskId, replay.Data);
+        var conflict = await replayHandler.Handle(request with { Title = "Different title" }, CancellationToken.None);
+        Assert.False(conflict.Success);
+        Assert.Contains("IDEMPOTENCY_CONFLICT", conflict.Errors!);
+        Assert.Equal(1, await replayDb.TaskItems.CountAsync(item => item.Id == taskId));
+        Assert.Equal(1, await replayDb.ChatRooms.CountAsync(item => item.TaskItemId == taskId));
+
+        var recovered = await new AdminAITaskCreateResultResolver(replayDb)
+            .ResolveAsync(operationId, operationId, CancellationToken.None);
+        Assert.NotNull(recovered);
+        Assert.Contains(taskId.ToString(), System.Text.Json.JsonSerializer.Serialize(recovered));
+        Assert.Null(await new AdminAITaskCreateResultResolver(replayDb)
+            .ResolveAsync(operationId, "wrong-execution", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task RealPostgres_ReviewedActionCandidates_PersistOneEffectPerConfirmedProposal()
     {
         await using var fixture = await PostgresAdminAIFixture.CreateAsync();

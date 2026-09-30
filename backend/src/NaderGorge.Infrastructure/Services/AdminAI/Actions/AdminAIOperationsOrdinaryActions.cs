@@ -13,7 +13,8 @@ public sealed class AdminAICreateTaskAction(IMediator mediator, IAdminAIActionPr
 {
     public override string Key => "admin.operations.task.create";
     protected override IRequest<ApiResponse<Guid>> CreateCommand(AdminAICreateTaskInput input, Guid actorId, string operationId) =>
-        new CreateTaskCommand(input.Title, input.Description, input.AssigneeId, input.Priority, input.DueDate, actorId);
+        new CreateTaskCommand(input.Title, input.Description, input.AssigneeId, input.Priority, input.DueDate, actorId)
+        { OperationId = operationId };
     protected override AdminAIActionOutcome ToOutcome(ApiResponse<Guid> response) => response.Success
         ? AdminAIActionOutcomeFactory.Success(new { taskId = response.Data }, 1, ["operations-tasks", "internal-chat"])
         : AdminAIActionOutcomeFactory.Rejected(new { response.Message, response.Errors }, ["operations-tasks", "internal-chat"]);
