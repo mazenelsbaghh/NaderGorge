@@ -24,6 +24,8 @@ Startup no longer auto-approves a read-only AdminAI baseline when the feature fl
 
 Five ordinary identity/content adapters now have read-only authoritative previews for student notes, subjects, and video types. A removed or duplicate target invalidates a pending confirmation before any execution claim. The focused AdminAI application suite passed 258/258; the removed-target path also passed against a real PostgreSQL database with a fresh verification context. These adapters remain hidden behind the read-only production catalog until the complete action matrix and activation gates are ready.
 
+The five identity/content actions now have closed candidate input definitions. One migrated PostgreSQL integration test covered their complete preview, proposal, confirmation, original command, persisted result, and fresh-context replay path, using a real Admin role and the real access gate. It passed 1/1; the focused AdminAI application group remained 258/258. The subject-update result was corrected from a misleading `subjectId=true` field to an accurate `updated=true` field. This is candidate coverage only: the production registry still exposes reads, and the generated mutation inventory remains blocked.
+
 ## Disable and rollback
 
 Keep or restore `ADMIN_AI_ENABLED=false`; this prevents admission and worker readiness from exposing the feature. Use the normal immutable production rollback lane for the deployed release. Database changes are additive and evidence records must not be deleted during rollback.
