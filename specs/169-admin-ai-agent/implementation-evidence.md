@@ -32,6 +32,7 @@
 - Two PostgreSQL tests passed: durable replay/conflict plus eight concurrent review attempts with exactly one balance effect. A third PostgreSQL test ran the AdminAI proposal, typed strong confirmation, original command, and result resolver on a migrated database. The three-test focused run passed 3/3; the full AdminAI PostgreSQL integration group passed 27/27. The focused AdminAI application group passed 258/258.
 - The frontend graph generator now recognizes direct calls through imported service objects whenever their use is proven; uncertain object escapes retain all members. Its 7/7 contract suite passed. The frontend check passed at 527 reachable files and 538 calls; the complete baseline check passed at 1,043 items, 625 blocked effects, 398 exact frontend/backend route links, and 140 unresolved frontend routes (76 mutations). All five Python inventory assertions passed. The semantic digest now tracks the generator source; watch-request approval is classified under identity.
 - The production registry remains read-only. This one finance candidate does not resolve the other blocked mutations or satisfy T151, T171, T172, T176, or release acceptance.
+- The existing local preview allowed the AdminAI Chromium UI contract suite to run with installed Chrome: 16 passed, one real-backend reconnect case skipped while the E2E seed API was unavailable. This does not close T066 or owner manual QA.
 
 ## 2026-09-30 reviewed activation gate
 
